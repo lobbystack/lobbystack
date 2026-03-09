@@ -75,7 +75,7 @@ export function LoginForm({
           </Field>
 
           <Field>
-            <Button disabled={isSubmitting} type="submit">
+            <Button className="h-12" disabled={isSubmitting} type="submit">
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
           </Field>
