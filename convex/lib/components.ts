@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { ActionRetrier } from "@convex-dev/action-retrier";
 import { Agent } from "@convex-dev/agent";
 import { Crons } from "@convex-dev/crons";
@@ -20,15 +20,16 @@ type KnowledgeFilters = {
 
 export const receptionistAgent = new Agent(components.agent, {
   name: "Receptionist Preview Agent",
-  languageModel: openai.chat("gpt-4o-mini"),
+  // Keep non-realtime text work on Gemini. OpenAI stays reserved for live voice.
+  languageModel: google("gemini-2.5-flash"),
   instructions:
     "You are the admin-side receptionist preview agent. Use the supplied snapshot and retrieved knowledge. Never invent hours, bookings, or transfer policy.",
   maxSteps: 4,
 });
 
 export const rag = new RAG<KnowledgeFilters>(components.rag, {
-  textEmbeddingModel: openai.embedding("text-embedding-3-small"),
-  embeddingDimension: 1536,
+  textEmbeddingModel: google.embedding("gemini-embedding-001"),
+  embeddingDimension: 3072,
   filterNames: ["businessId", "sourceType", "businessAndSource"],
 });
 

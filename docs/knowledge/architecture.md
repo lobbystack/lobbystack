@@ -37,6 +37,13 @@ The snapshot keeps the common receptionist context close to the live voice runti
 - `@convex-dev/persistent-text-streaming` is reserved for streamed preview/test flows.
 - `@convex-dev/workflow` and `@convex-dev/workpool` handle ingestion and follow-up work.
 
+## Provider Split
+
+- `OpenAI Realtime` is reserved for the live voice runtime in `apps/voice-gateway`.
+- `Gemini` handles non-realtime text generation and embeddings in Convex for SMS, preview, summaries, and knowledge retrieval.
+
+This keeps the expensive low-latency voice path separate from the cheaper async text path.
+
 ## Current Admin Surface
 
 The web dashboard already exposes:

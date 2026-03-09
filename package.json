@@ -8,7 +8,7 @@
     "pnpm": ">=10.0.0"
   },
   "dependencies": {
-    "@ai-sdk/openai": "latest",
+    "@ai-sdk/google": "^3.0.43",
     "@convex-dev/action-retrier": "latest",
     "@convex-dev/agent": "latest",
     "@convex-dev/auth": "latest",

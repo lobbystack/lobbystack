@@ -15,25 +15,31 @@ import {
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { transferLiveCall } from "./transferCall";
-
-type MediaStreamQuery = {
-  callSid?: string;
-  businessId?: string;
-  from?: string;
-  to?: string;
-};
+import {
+  buildTwilioRequestUrl,
+  validateTwilioSignature,
+} from "./twilioRequest";
 
 type TwilioMediaMessage = {
   event: string;
   sequenceNumber?: string;
   streamSid?: string;
+  connected?: {
+    protocol?: string;
+    version?: string;
+  };
   start?: {
     callSid?: string;
     streamSid?: string;
+    customParameters?: Record<string, string>;
   };
   media?: {
     payload: string;
     timestamp?: string;
+    track?: string;
+  };
+  mark?: {
+    name?: string;
   };
 };
 
@@ -53,11 +59,11 @@ type OpenAiRealtimeMessage = {
 };
 
 type ActiveVoiceSession = {
-  businessId: string;
-  snapshot: BusinessContextSnapshot;
-  callSid: string;
-  from: string;
-  to: string;
+  businessId: string | null;
+  snapshot: BusinessContextSnapshot | null;
+  callSid: string | null;
+  from: string | null;
+  to: string | null;
   gatewaySessionId: string;
   startedAtIso: string;
   startedAtMs: number;
@@ -211,7 +217,7 @@ async function performTransfer(
   server: FastifyInstance,
   session: ActiveVoiceSession,
 ): Promise<void> {
-  if (!session.pendingTransferDestination || session.transferExecuted) {
+  if (!session.pendingTransferDestination || session.transferExecuted || !session.callSid) {
     return;
   }
 
@@ -240,7 +246,7 @@ async function performTransfer(
 
 async function finalizeCall(
   server: FastifyInstance,
-  openAiSocket: WebSocket,
+  openAiSocket: WebSocket | null,
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
   disposition: string,
@@ -277,7 +283,7 @@ async function finalizeCall(
   } catch (error) {
     server.log.error(error);
   } finally {
-    if (openAiSocket.readyState === WebSocket.OPEN) {
+    if (openAiSocket?.readyState === WebSocket.OPEN) {
       openAiSocket.close();
     }
     if (twilioSocket.readyState === WebSocket.OPEN) {
@@ -295,7 +301,12 @@ function queueTranscriptWrite(
     confidence?: number;
   },
 ): void {
-  if (!session.callId || !input.text || input.text.trim().length === 0) {
+  if (
+    !session.businessId ||
+    !session.callId ||
+    !input.text ||
+    input.text.trim().length === 0
+  ) {
     return;
   }
 
@@ -318,6 +329,10 @@ async function configureOpenAiSession(
   openAiSocket: WebSocket,
   session: ActiveVoiceSession,
 ): Promise<void> {
+  if (!session.snapshot) {
+    throw new Error("Voice session snapshot is not ready.");
+  }
+
   const runtimeConfig = loadVoiceGatewayEnv(process.env);
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
@@ -329,18 +344,28 @@ async function configureOpenAiSession(
         "Use tools for authoritative actions like booking, transfer, and message taking.",
         "Do not make up availability, hours, or business policy.",
       ].join("\n\n"),
-      modalities: ["audio", "text"],
-      voice: runtimeConfig.OPENAI_REALTIME_VOICE,
-      input_audio_format: "g711_ulaw",
-      output_audio_format: "g711_ulaw",
-      input_audio_transcription: {
-        model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+      audio: {
+        input: {
+          format: {
+            type: "audio/pcmu",
+          },
+          transcription: {
+            model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+          },
+          turn_detection: {
+            type: "server_vad",
+            create_response: true,
+            interrupt_response: true,
+          },
+        },
+        output: {
+          format: {
+            type: "audio/pcmu",
+          },
+          voice: runtimeConfig.OPENAI_REALTIME_VOICE,
+        },
       },
-      turn_detection: {
-        type: "server_vad",
-        create_response: true,
-        interrupt_response: true,
-      },
+      output_modalities: ["audio"],
       tools: createRealtimeToolDefinitions(),
       tool_choice: "auto",
     },
@@ -360,6 +385,10 @@ async function initializeCallRecord(
   server: FastifyInstance,
   session: ActiveVoiceSession,
 ): Promise<void> {
+  if (!session.businessId || !session.callSid || !session.from || !session.to) {
+    throw new Error("Voice session metadata is incomplete.");
+  }
+
   try {
     const result = await startVoiceCall({
       businessId: session.businessId,
@@ -387,6 +416,10 @@ async function handleToolCall(
   },
 ): Promise<void> {
   try {
+    if (!session.snapshot || !session.businessId) {
+      throw new Error("Voice session has not been initialized.");
+    }
+
     const result = await executeVoiceTool({
       toolName: message.name,
       rawArguments: message.arguments,
@@ -396,7 +429,7 @@ async function handleToolCall(
       ...(session.conversationId !== null
         ? { conversationId: session.conversationId }
         : {}),
-      callerPhone: session.from,
+      callerPhone: session.from ?? "unknown",
     });
 
     if (result.pendingTransferDestination) {
@@ -443,7 +476,8 @@ function handleOpenAiMessage(
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
 
   switch (payload.type) {
-    case "response.audio.delta": {
+    case "response.audio.delta":
+    case "response.output_audio.delta": {
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
         twilioSocket.send(
           JSON.stringify({
@@ -465,7 +499,8 @@ function handleOpenAiMessage(
       });
       return;
     }
-    case "response.audio_transcript.done": {
+    case "response.audio_transcript.done":
+    case "response.output_audio_transcript.done": {
       queueTranscriptWrite(server, session, {
         speaker: "assistant",
         text: payload.transcript,
@@ -518,24 +553,12 @@ export async function handleMediaStreamConnection(
   twilioSocket: WebSocket,
   request: FastifyRequest,
 ): Promise<void> {
-  const query = (request.query as MediaStreamQuery | undefined) ?? {};
-  const callSid = query.callSid ?? "unknown-call";
-  const to = query.to ?? "";
-  const from = query.from ?? "";
-
-  let snapshot =
-    query.businessId !== undefined ? server.snapshotCache.get(query.businessId) : null;
-  if (!snapshot) {
-    snapshot = await fetchSnapshotForPhoneNumber(to);
-    server.snapshotCache.set(snapshot.businessId, snapshot);
-  }
-
   const session: ActiveVoiceSession = {
-    businessId: snapshot.businessId,
-    snapshot,
-    callSid,
-    from,
-    to,
+    businessId: null,
+    snapshot: null,
+    callSid: null,
+    from: null,
+    to: null,
     gatewaySessionId: crypto.randomUUID(),
     startedAtIso: new Date().toISOString(),
     startedAtMs: Date.now(),
@@ -554,62 +577,122 @@ export async function handleMediaStreamConnection(
   };
 
   const runtimeConfig = server.runtimeConfig;
+  const requestUrl = buildTwilioRequestUrl(runtimeConfig.VOICE_GATEWAY_BASE_URL, request.url);
+  const hasValidTwilioSignature = validateTwilioSignature({
+    authToken: runtimeConfig.TWILIO_AUTH_TOKEN,
+    signatureHeader: request.headers["x-twilio-signature"],
+    url: requestUrl,
+  });
+
+  if (!hasValidTwilioSignature) {
+    server.log.warn({ requestUrl }, "Rejected Twilio Media Stream websocket with invalid signature");
+    twilioSocket.close(1008, "invalid signature");
+    return;
+  }
+
   if (!runtimeConfig.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is required for live voice calls.");
   }
 
-  const openAiSocket = new WebSocket(
-    `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
-        "OpenAI-Beta": "realtime=v1",
-      },
-    },
-  );
+  let openAiSocket: WebSocket | null = null;
 
-  const startCallTask = initializeCallRecord(server, session);
-  trackTask(session, startCallTask);
+  async function startRealtimeSession(message: TwilioMediaMessage): Promise<void> {
+    if (openAiSocket) {
+      return;
+    }
+
+    const customParameters = message.start?.customParameters ?? {};
+    session.callSid = message.start?.callSid ?? customParameters.callSid ?? "unknown-call";
+    session.streamSid = message.start?.streamSid ?? message.streamSid ?? null;
+    session.businessId = customParameters.businessId ?? null;
+    session.from = customParameters.from ?? null;
+    session.to = customParameters.to ?? null;
+    session.startedAtIso = new Date().toISOString();
+    session.startedAtMs = Date.now();
+
+    let snapshot =
+      session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
+    if (!snapshot) {
+      if (!session.to) {
+        throw new Error("Twilio stream start did not include the called phone number.");
+      }
+      snapshot = await fetchSnapshotForPhoneNumber(session.to);
+      server.snapshotCache.set(snapshot.businessId, snapshot);
+      session.businessId = snapshot.businessId;
+    }
+
+    session.snapshot = snapshot;
+    await initializeCallRecord(server, session);
+
+    openAiSocket = new WebSocket(
+      `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
+          "OpenAI-Beta": "realtime=v1",
+        },
+      },
+    );
+
+    openAiSocket.on("open", () => {
+      void configureOpenAiSession(openAiSocket as WebSocket, session);
+    });
+
+    openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {
+      handleOpenAiMessage(server, openAiSocket as WebSocket, twilioSocket, session, rawMessage);
+    });
+
+    openAiSocket.on("error", (error: Error) => {
+      server.log.error(error);
+    });
+
+    openAiSocket.on("close", () => {
+      if (!session.finalized) {
+        void finalizeCall(server, openAiSocket, twilioSocket, session, "openai_socket_closed");
+      }
+    });
+  }
 
   twilioSocket.on("message", (rawMessage: WebSocket.RawData) => {
-    const payload = JSON.parse(rawMessage.toString()) as TwilioMediaMessage;
+    void (async () => {
+      const payload = JSON.parse(rawMessage.toString()) as TwilioMediaMessage;
 
-    if (payload.event === "start") {
-      session.streamSid = payload.start?.streamSid ?? payload.streamSid ?? null;
-      return;
-    }
-
-    if (payload.event === "media" && payload.media?.payload) {
-      session.inboundAudio.push({
-        offsetMs: Number(payload.media.timestamp ?? 0),
-        payload: payload.media.payload,
-      });
-      if (openAiSocket.readyState === WebSocket.OPEN && session.openAiReady) {
-        postRealtimeEvent(openAiSocket, {
-          type: "input_audio_buffer.append",
-          audio: payload.media.payload,
-        });
-      } else {
-        session.pendingInboundAudio.push(payload.media.payload);
+      if (payload.event === "connected") {
+        return;
       }
-      return;
-    }
 
-    if (payload.event === "stop") {
-      void finalizeCall(server, openAiSocket, twilioSocket, session, "stream_stopped");
-    }
-  });
+      if (payload.event === "start") {
+        await startRealtimeSession(payload);
+        return;
+      }
 
-  openAiSocket.on("open", () => {
-    void configureOpenAiSession(openAiSocket, session);
-  });
+      if (payload.event === "media" && payload.media?.payload) {
+        if (payload.media.track && payload.media.track !== "inbound") {
+          return;
+        }
 
-  openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {
-    handleOpenAiMessage(server, openAiSocket, twilioSocket, session, rawMessage);
-  });
+        session.inboundAudio.push({
+          offsetMs: Number(payload.media.timestamp ?? 0),
+          payload: payload.media.payload,
+        });
+        if (openAiSocket?.readyState === WebSocket.OPEN && session.openAiReady) {
+          postRealtimeEvent(openAiSocket, {
+            type: "input_audio_buffer.append",
+            audio: payload.media.payload,
+          });
+        } else {
+          session.pendingInboundAudio.push(payload.media.payload);
+        }
+        return;
+      }
 
-  openAiSocket.on("error", (error: Error) => {
-    server.log.error(error);
+      if (payload.event === "stop") {
+        await finalizeCall(server, openAiSocket, twilioSocket, session, "stream_stopped");
+      }
+    })().catch((error) => {
+      server.log.error(error);
+      void finalizeCall(server, openAiSocket, twilioSocket, session, "stream_start_failed");
+    });
   });
 
   twilioSocket.on("close", () => {
@@ -618,11 +701,5 @@ export async function handleMediaStreamConnection(
 
   twilioSocket.on("error", (error: Error) => {
     server.log.error(error);
-  });
-
-  openAiSocket.on("close", () => {
-    if (!session.finalized) {
-      void finalizeCall(server, openAiSocket, twilioSocket, session, "openai_socket_closed");
-    }
   });
 }

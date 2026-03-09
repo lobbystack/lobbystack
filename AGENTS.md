@@ -31,12 +31,6 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Prioritize coverage for booking logic, snapshot generation, authz helpers, webhook handling, and telemetry redaction.
 - Before opening a PR, run `pnpm typecheck`, `pnpm build`, and `pnpm test`.
 
-## Commit & Pull Request Guidelines
-- The repo has no stable commit history yet, so use imperative commit messages and include the Linear issue key when available, for example `OPE-19 validate Twilio realtime bridge`.
-- Create branches as `codex/OPE-123-short-slug`.
-- PRs should link the Linear issue, summarize behavior changes, list verification steps, and include screenshots for dashboard changes.
-- Keep Linear as the planning system of record; GitHub tracks code and review only.
-
 ## Architecture Guardrails
 - `convex/` is the main backend. Do not move durable business logic into the voice gateway.
 - For live calls, fetch the business context snapshot once at call start; avoid per-turn backend round-trips for common replies.

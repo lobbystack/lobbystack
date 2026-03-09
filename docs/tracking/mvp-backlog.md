@@ -4,7 +4,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M1 Tenant Core
 
-### Ready
+### Todo
 
 - `Expand admin CRUD for staff assignments and closures`
   - labels: `area/web`, `area/convex`, `type/feature`
@@ -18,7 +18,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M2 Business Context MCP
 
-### Ready
+### Todo
 
 - `Support real file-backed knowledge uploads for pdf txt md`
   - labels: `area/web`, `area/convex`, `area/knowledge`, `type/feature`, `risk/high`
@@ -34,7 +34,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M3 Booking + Calendars
 
-### Ready
+### Todo
 
 - `Implement real Google Calendar event CRUD and busy-time sync`
   - labels: `area/convex`, `area/booking`, `type/integration`, `provider/google`, `risk/high`
@@ -50,7 +50,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M4 SMS
 
-### Ready
+### Todo
 
 - `Implement real outbound SMS sending and delivery status handling`
   - labels: `area/convex`, `type/integration`, `provider/twilio`, `risk/high`
@@ -64,7 +64,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M5 Voice
 
-### Ready
+### Todo
 
 - `Validate live Twilio Media Streams with OpenAI Realtime`
   - labels: `area/voice`, `type/testing`, `provider/twilio`, `provider/openai`, `risk/high`
@@ -84,7 +84,7 @@ This backlog is intentionally opinionated. It is the exact queue that should be 
 
 ## M6 Hardening
 
-### Ready
+### Todo
 
 - `Create Docker Compose self-hosted path`
   - labels: `area/devops`, `type/feature`, `risk/high`

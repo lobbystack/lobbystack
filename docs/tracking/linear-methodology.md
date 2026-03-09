@@ -9,7 +9,7 @@ This project needs execution discipline, not just a plan. The tracking model mus
 - what has been validated against real providers
 - what is actually pilot-ready
 
-Until the Linear MCP is reachable from this Codex session, this document is the source of truth for how the Linear project should be structured.
+This document is the source of truth for how the Linear project should be structured.
 
 ## Canonical Linear Setup
 
@@ -23,20 +23,21 @@ Until the Linear MCP is reachable from this Codex session, this document is the 
 
 ## Workflow States
 
+Use the real statuses configured for the `Opendesk` team:
+
 - `Backlog`
   - accepted as real work, not ready to start
-- `Ready`
-  - scoped, dependencies known, clear acceptance criteria
+- `Todo`
+  - scoped, dependencies known, clear acceptance criteria, ready to start
 - `In Progress`
   - actively being coded or tested
-- `Blocked`
-  - waiting on credentials, provider access, product decision, or infrastructure
 - `In Review`
-  - implemented and waiting on manual validation or merge review
+  - implemented and waiting on merge review or manual validation
 - `Done`
-  - code merged, docs updated, and acceptance criteria met
+  - code accepted, docs updated when needed, and acceptance criteria met
 
-Do not use extra states for MVP. Keep the board easy to read.
+Use `Canceled` and `Duplicate` only when they are literally true.
+Do not invent extra MVP states if the team does not actually have them.
 
 ## Execution Stages
 
@@ -86,9 +87,9 @@ Use a small fixed label set.
 
 Do not create custom labels casually. Label sprawl kills the board.
 
-## Definition Of Ready
+## Definition Of Todo
 
-An issue is `Ready` only if:
+An issue is `Todo` only if:
 
 - it has one clear outcome
 - its dependencies are named
@@ -100,7 +101,7 @@ An issue is `Ready` only if:
 
 An issue is `Done` only if:
 
-- code is merged
+- code is committed to the accepted project baseline or merged into the main line of development
 - `pnpm typecheck` passes
 - `pnpm build` passes
 - relevant tests pass or the manual validation gap is called out explicitly
@@ -109,11 +110,10 @@ An issue is `Done` only if:
 
 ## WIP Rules
 
-- Max 1 active epic in deep implementation mode per runtime risk area:
-  - one for `voice`
-  - one for `convex/web`
 - Max 3 `In Progress` issues at once for MVP
-- Any blocked issue must name the blocker in one sentence
+- Any blocked issue must name the blocker in one sentence in a comment or description update
+
+Retrospective baseline issues are not active work. Once the baseline is captured in the repo, move those issues to `Done` and rely on `stage/*` labels to describe maturity.
 
 ## Validation Rules
 
@@ -135,7 +135,7 @@ This avoids marking risky work done too early.
 
 At the start of a work cycle:
 
-- move only a few issues to `Ready`
+- move only a few issues to `Todo`
 - keep the next 1-2 provider validation tasks visible
 
 At the end of a work cycle:
@@ -165,7 +165,7 @@ Every epic should include these issue types where relevant:
 
 ## MCP Mirror Rule
 
-Once Linear MCP becomes reachable, mirror the following artifacts exactly:
+Mirror the following artifacts into Linear project documentation:
 
 - [mvp-status.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/mvp-status.md)
 - [mvp-backlog.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/mvp-backlog.md)
