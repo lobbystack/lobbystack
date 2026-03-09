@@ -78,14 +78,18 @@ export function LoginForm({
             />
           </Field>
 
+          {statusMessage || errorMessage ? (
+            <div className="space-y-2">
+              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+            </div>
+          ) : null}
+
           <Field>
             <Button disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
           </Field>
-
-          {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-          {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
         </FieldGroup>
       </form>
 

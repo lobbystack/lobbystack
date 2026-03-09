@@ -78,14 +78,18 @@ export function SignupForm({
             />
           </Field>
 
+          {statusMessage || errorMessage ? (
+            <div className="space-y-2">
+              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+            </div>
+          ) : null}
+
           <Field>
             <Button disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Creating account..." : "Create account"}
             </Button>
           </Field>
-
-          {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-          {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
         </FieldGroup>
       </form>
 
