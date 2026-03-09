@@ -102,12 +102,11 @@ function LoginPage() {
       }
 
       if (result.signingIn) {
-        setStatusMessage("Signed in. Loading your workspace...");
-        window.location.assign("/");
+        setStatusMessage("Signed in. Finishing your session...");
         return;
       }
 
-      setStatusMessage("Sign-in completed. If the dashboard does not appear, refresh the page.");
+      setStatusMessage("Sign-in completed. Finalizing your session...");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
     } finally {
@@ -158,12 +157,11 @@ function SignupPage() {
       }
 
       if (result.signingIn) {
-        setStatusMessage("Account created. Loading your workspace...");
-        window.location.assign("/");
+        setStatusMessage("Account created. Finishing your session...");
         return;
       }
 
-      setStatusMessage("Account created. If you stay on this page, try signing in once.");
+      setStatusMessage("Account created. Finalizing your session...");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to create account.");
     } finally {
