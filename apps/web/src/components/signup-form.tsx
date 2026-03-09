@@ -81,7 +81,7 @@ export function SignupForm({
           </Field>
 
           <Field>
-            <Button disabled={isSubmitting} type="submit">
+            <Button disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Creating account..." : "Create account"}
             </Button>
           </Field>
