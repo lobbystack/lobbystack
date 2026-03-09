@@ -63,62 +63,11 @@ function LoadingScreen() {
   );
 }
 
-function AuthShell(props: { children: ReactNode; title: string; description: string }) {
+function AuthShell(props: { children: ReactNode }) {
   return (
-    <div className="grid min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(24,24,27,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,244,245,0.94))] lg:grid-cols-[1.1fr_0.9fr]">
-      <section className="flex flex-col justify-between border-b border-border/70 px-6 py-10 lg:border-b-0 lg:border-r lg:px-10 xl:px-14">
-        <div className="space-y-10">
-          <div className="space-y-4">
-            <p className="text-xs font-medium tracking-[0.32em] text-muted-foreground uppercase">
-              AI Receptionist
-            </p>
-            <h1 className="max-w-xl text-5xl font-semibold tracking-tight text-balance text-foreground xl:text-6xl">
-              Run calls, messages, and booking from one operator workspace.
-            </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground xl:text-lg">
-              Configure your receptionist, review conversations, and keep the live voice
-              experience grounded in structured business data.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border border-border/70 bg-card/85 shadow-sm">
-              <CardHeader>
-                <CardDescription>Voice runtime</CardDescription>
-                <CardTitle className="text-lg">Snapshot-first</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="border border-border/70 bg-card/85 shadow-sm">
-              <CardHeader>
-                <CardDescription>Knowledge</CardDescription>
-                <CardTitle className="text-lg">FAQs + docs</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card className="border border-border/70 bg-card/85 shadow-sm">
-              <CardHeader>
-                <CardDescription>Booking</CardDescription>
-                <CardTitle className="text-lg">Calendar-aware</CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-
-        <div className="mt-10 rounded-3xl border border-border/70 bg-card/90 p-6 shadow-sm">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            Operator flow
-          </p>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Sign in to update hours, services, transfer rules, FAQs, and the receptionist preview.
-          </p>
-        </div>
-      </section>
-
-      <section className="flex items-center justify-center px-6 py-10 lg:px-10 xl:px-14">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(24,24,27,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,244,245,0.94))] px-6 py-10">
+      <section className="flex w-full items-center justify-center">
         <div className="w-full max-w-md rounded-[2rem] border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
-          <div className="mb-8 space-y-2">
-            <h2 className="text-3xl font-semibold tracking-tight">{props.title}</h2>
-            <p className="text-sm leading-6 text-muted-foreground">{props.description}</p>
-          </div>
           {props.children}
         </div>
       </section>
@@ -167,10 +116,7 @@ function LoginPage() {
   }
 
   return (
-    <AuthShell
-      description="Sign in to manage the receptionist your business uses for calls and SMS."
-      title="Welcome back"
-    >
+    <AuthShell>
       <LoginForm
         email={email}
         errorMessage={errorMessage}
@@ -226,10 +172,7 @@ function SignupPage() {
   }
 
   return (
-    <AuthShell
-      description="Create an operator workspace for configuring calls, booking, and receptionist knowledge."
-      title="Create account"
-    >
+    <AuthShell>
       <SignupForm
         email={email}
         errorMessage={errorMessage}
