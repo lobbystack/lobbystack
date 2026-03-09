@@ -47,10 +47,8 @@ export function SignupForm({
               <IconLayoutRows className="size-5" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight">Create your workspace</h1>
-              <FieldDescription>
-                Set up the operator console for your AI receptionist.
-              </FieldDescription>
+              <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
+              <FieldDescription>Use your work email to get started.</FieldDescription>
             </div>
           </div>
 

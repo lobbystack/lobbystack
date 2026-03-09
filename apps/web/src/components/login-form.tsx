@@ -41,11 +41,9 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
         <FieldGroup>
-          <div className="space-y-1 text-left">
+          <div className="space-y-1 text-center">
             <h1 className="text-xl font-semibold tracking-tight">Welcome back</h1>
-            <FieldDescription>
-              Sign in to manage calls, booking, messages, and receptionist settings.
-            </FieldDescription>
+            <FieldDescription>Sign in to your account to continue.</FieldDescription>
           </div>
 
           <Field>
@@ -86,7 +84,7 @@ export function LoginForm({
       </form>
 
       <FieldDescription className="text-center">
-        Need an account?{" "}
+        Don't have an account?{" "}
         <Link className="font-medium text-foreground underline underline-offset-4" to="/signup">
           Create one
         </Link>
