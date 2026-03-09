@@ -1,0 +1,17 @@
+{
+  "name": "@ai-receptionist/telemetry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/telemetry/src/index.js",
+  "types": "./dist/telemetry/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-receptionist/shared": "workspace:*"
+  }
+}

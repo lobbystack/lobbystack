@@ -1,0 +1,158 @@
+import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
+
+type StartCallResponse = {
+  callId: string;
+  conversationId?: string;
+  contactId: string;
+};
+
+type CheckAvailabilityResponse = {
+  serviceId: string;
+  serviceName: string;
+  availability: Array<{
+    staffId: string;
+    serviceId: string;
+    startsAt: string;
+    endsAt: string;
+  }>;
+};
+
+type BookAppointmentResponse = {
+  appointmentId: string;
+  contactId: string;
+  serviceId: string;
+  serviceName: string;
+};
+
+type TakeMessageResponse = {
+  inboxItemId: string;
+};
+
+function getRuntimeBaseUrl(): string {
+  return loadVoiceGatewayEnv(process.env).CONVEX_SITE_URL;
+}
+
+function getRuntimeHeaders(): HeadersInit {
+  const env = loadVoiceGatewayEnv(process.env);
+  return {
+    "Content-Type": "application/json",
+    "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
+  };
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return (await response.json()) as T;
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
+    method: "POST",
+    headers: getRuntimeHeaders(),
+    body: JSON.stringify(body),
+  });
+  return await parseJsonResponse<T>(response);
+}
+
+export async function startVoiceCall(input: {
+  businessId: string;
+  twilioCallSid: string;
+  gatewaySessionId: string;
+  from: string;
+  to: string;
+  startedAt: string;
+}): Promise<StartCallResponse> {
+  return await postJson<StartCallResponse>("/voice/call/start", input);
+}
+
+export async function appendVoiceTranscript(input: {
+  businessId: string;
+  callId: string;
+  sequence: number;
+  speaker: string;
+  text: string;
+  final: boolean;
+  confidence?: number;
+}): Promise<void> {
+  await postJson("/voice/call/transcript", input);
+}
+
+export async function updateVoiceTransferState(input: {
+  callId: string;
+  transferState: string;
+}): Promise<void> {
+  await postJson("/voice/call/transfer-state", input);
+}
+
+export async function completeVoiceCall(input: {
+  callId: string;
+  status: string;
+  endedAt: string;
+  disposition?: string;
+}): Promise<void> {
+  await postJson("/voice/call/complete", input);
+}
+
+export async function uploadVoiceRecording(input: {
+  callId: string;
+  durationMs: number;
+  audio: Buffer;
+}): Promise<void> {
+  const env = loadVoiceGatewayEnv(process.env);
+  const url = new URL("/voice/call/recording", env.CONVEX_SITE_URL);
+  url.searchParams.set("callId", input.callId);
+  url.searchParams.set("durationMs", String(input.durationMs));
+
+  const bytes = Uint8Array.from(input.audio);
+  const arrayBuffer = bytes.buffer as ArrayBuffer;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "audio/wav",
+      "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
+    },
+    body: new Blob([arrayBuffer], { type: "audio/wav" }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+}
+
+export async function checkVoiceAvailability(input: {
+  businessId: string;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  preferredStaffId?: string;
+}): Promise<CheckAvailabilityResponse> {
+  return await postJson<CheckAvailabilityResponse>("/voice/tool/check-availability", input);
+}
+
+export async function bookVoiceAppointment(input: {
+  businessId: string;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  preferredStaffId?: string;
+  contactName?: string;
+  contactPhone: string;
+}): Promise<BookAppointmentResponse> {
+  return await postJson<BookAppointmentResponse>("/voice/tool/book-appointment", input);
+}
+
+export async function takeVoiceMessage(input: {
+  businessId: string;
+  callId: string;
+  conversationId?: string;
+  callerName?: string;
+  callbackPhone?: string;
+  message: string;
+  urgency?: string;
+  callbackWindow?: string;
+}): Promise<TakeMessageResponse> {
+  return await postJson<TakeMessageResponse>("/voice/tool/take-message", input);
+}

@@ -1,0 +1,220 @@
+import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import { z } from "zod";
+
+import {
+  bookVoiceAppointment,
+  checkVoiceAvailability,
+  takeVoiceMessage,
+  updateVoiceTransferState,
+} from "../convex/runtimeClient";
+
+function normalizeComparable(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+}
+
+function formatMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const normalizedHours = ((hours + 11) % 12) + 1;
+  return `${normalizedHours}:${minutes.toString().padStart(2, "0")} ${suffix}`;
+}
+
+function buildHoursSummary(snapshot: BusinessContextSnapshot): string {
+  if (snapshot.hours.length === 0) {
+    return `No structured business hours are configured for ${snapshot.displayName}.`;
+  }
+
+  const ordered = snapshot.hours.slice().sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+  return ordered
+    .map(
+      (row) =>
+        `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][row.dayOfWeek]}: ${formatMinutes(row.openMinutes)} to ${formatMinutes(row.closeMinutes)}`,
+    )
+    .join("\n");
+}
+
+function searchSnapshotKnowledge(snapshot: BusinessContextSnapshot, query: string) {
+  const comparable = normalizeComparable(query);
+  const faqMatches = snapshot.priorityFaqs
+    .filter((faq) => {
+      const haystack = normalizeComparable(`${faq.title} ${faq.content} ${faq.tags.join(" ")}`);
+      return comparable
+        .split(" ")
+        .filter(Boolean)
+        .every((term) => haystack.includes(term));
+    })
+    .slice(0, 4)
+    .map((faq) => ({
+      title: faq.title,
+      text: faq.content,
+    }));
+
+  return {
+    faqMatches,
+    knowledgeDigest:
+      snapshot.knowledgeDigest || "No long-form knowledge has been configured for this business.",
+  };
+}
+
+function isTransferAllowed(snapshot: BusinessContextSnapshot): boolean {
+  return snapshot.transferPolicy.mode !== "never" && Boolean(snapshot.transferPolicy.transferNumber);
+}
+
+const checkAvailabilitySchema = z.object({
+  serviceName: z.string(),
+  startsAt: z.string(),
+  timezone: z.string().optional(),
+  preferredStaffId: z.string().optional(),
+});
+
+const bookAppointmentSchema = z.object({
+  serviceName: z.string(),
+  startsAt: z.string(),
+  timezone: z.string().optional(),
+  preferredStaffId: z.string().optional(),
+  contactName: z.string().optional(),
+  contactPhone: z.string().optional(),
+});
+
+const transferCallSchema = z.object({
+  reason: z.string().optional(),
+});
+
+const takeMessageSchema = z.object({
+  callerName: z.string().optional(),
+  callbackPhone: z.string().optional(),
+  message: z.string(),
+  urgency: z.string().optional(),
+  callbackWindow: z.string().optional(),
+});
+
+const searchKnowledgeSchema = z.object({
+  query: z.string(),
+});
+
+export type ExecutedToolResult = {
+  result: Record<string, unknown>;
+  pendingTransferDestination?: string;
+};
+
+export async function executeVoiceTool(input: {
+  toolName: string;
+  rawArguments: string;
+  snapshot: BusinessContextSnapshot;
+  businessId: string;
+  callId?: string;
+  conversationId?: string;
+  callerPhone: string;
+}): Promise<ExecutedToolResult> {
+  switch (input.toolName) {
+    case "getBusinessHours": {
+      return {
+        result: {
+          timezone: input.snapshot.timezone,
+          summary: buildHoursSummary(input.snapshot),
+          closures: input.snapshot.closures,
+        },
+      };
+    }
+    case "searchKnowledge": {
+      const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+      const searchResult = searchSnapshotKnowledge(input.snapshot, parsed.query);
+      return {
+        result: searchResult,
+      };
+    }
+    case "checkAvailability": {
+      const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
+      const result = await checkVoiceAvailability({
+        businessId: input.businessId,
+        serviceName: parsed.serviceName,
+        startsAt: parsed.startsAt,
+        timezone: parsed.timezone ?? input.snapshot.timezone,
+        ...(parsed.preferredStaffId !== undefined
+          ? { preferredStaffId: parsed.preferredStaffId }
+          : {}),
+      });
+      return {
+        result,
+      };
+    }
+    case "bookAppointment": {
+      const parsed = bookAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
+      const result = await bookVoiceAppointment({
+        businessId: input.businessId,
+        serviceName: parsed.serviceName,
+        startsAt: parsed.startsAt,
+        timezone: parsed.timezone ?? input.snapshot.timezone,
+        ...(parsed.preferredStaffId !== undefined
+          ? { preferredStaffId: parsed.preferredStaffId }
+          : {}),
+        ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
+        contactPhone: parsed.contactPhone ?? input.callerPhone,
+      });
+      return {
+        result,
+      };
+    }
+    case "transferCall": {
+      const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
+      if (!isTransferAllowed(input.snapshot) || !input.snapshot.transferPolicy.transferNumber) {
+        return {
+          result: {
+            ok: false,
+            reason:
+              "Transfers are not enabled for this business or no transfer number is configured.",
+          },
+        };
+      }
+
+      if (input.callId) {
+        await updateVoiceTransferState({
+          callId: input.callId,
+          transferState: "requested",
+        });
+      }
+
+      return {
+        result: {
+          ok: true,
+          destination: input.snapshot.transferPolicy.transferNumber,
+          reason: parsed.reason ?? "Caller requested a human handoff.",
+        },
+        pendingTransferDestination: input.snapshot.transferPolicy.transferNumber,
+      };
+    }
+    case "takeMessage": {
+      const parsed = takeMessageSchema.parse(JSON.parse(input.rawArguments || "{}"));
+      if (!input.callId) {
+        throw new Error("Call has not been initialized yet.");
+      }
+
+      const result = await takeVoiceMessage({
+        businessId: input.businessId,
+        callId: input.callId,
+        ...(input.conversationId !== undefined
+          ? { conversationId: input.conversationId }
+          : {}),
+        ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
+        callbackPhone: parsed.callbackPhone ?? input.callerPhone,
+        message: parsed.message,
+        ...(parsed.urgency !== undefined ? { urgency: parsed.urgency } : {}),
+        ...(parsed.callbackWindow !== undefined
+          ? { callbackWindow: parsed.callbackWindow }
+          : {}),
+      });
+      return {
+        result,
+      };
+    }
+    default: {
+      return {
+        result: {
+          ok: false,
+          reason: `Unsupported tool: ${input.toolName}`,
+        },
+      };
+    }
+  }
+}

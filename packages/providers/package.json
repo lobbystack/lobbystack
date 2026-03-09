@@ -1,0 +1,17 @@
+{
+  "name": "@ai-receptionist/providers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/providers/src/index.js",
+  "types": "./dist/providers/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-receptionist/shared": "workspace:*"
+  }
+}

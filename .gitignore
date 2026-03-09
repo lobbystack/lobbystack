@@ -1,0 +1,17 @@
+.DS_Store
+.idea
+.turbo
+.vscode
+coverage
+dist
+node_modules
+pnpm-lock.yaml
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+apps/web/dist
+convex/.generated
+convex/_generated
+*.tsbuildinfo

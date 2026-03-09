@@ -1,0 +1,31 @@
+{
+  "name": "@ai-receptionist/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-receptionist/ai": "workspace:*",
+    "@ai-receptionist/config": "workspace:*",
+    "@ai-receptionist/shared": "workspace:*",
+    "@ai-receptionist/testing": "workspace:*",
+    "@convex-dev/auth": "latest",
+    "@convex-dev/persistent-text-streaming": "latest",
+    "convex": "^1.31.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.3"
+  }
+}

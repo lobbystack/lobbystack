@@ -1,0 +1,18 @@
+{
+  "name": "@ai-receptionist/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/config/src/index.js",
+  "types": "./dist/config/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-receptionist/shared": "workspace:*",
+    "zod": "^3.24.2"
+  }
+}

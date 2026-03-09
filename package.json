@@ -1,0 +1,42 @@
+{
+  "name": "ai-receptionist",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "latest",
+    "@convex-dev/action-retrier": "latest",
+    "@convex-dev/agent": "latest",
+    "@convex-dev/auth": "latest",
+    "@convex-dev/crons": "latest",
+    "@convex-dev/persistent-text-streaming": "latest",
+    "@convex-dev/rag": "latest",
+    "@convex-dev/workflow": "latest",
+    "@convex-dev/workpool": "latest",
+    "ai": "latest",
+    "convex": "^1.31.2",
+    "zod": "^3.24.2"
+  },
+  "scripts": {
+    "dev": "concurrently -n convex,web,voice \"pnpm dev:convex\" \"pnpm dev:web\" \"pnpm dev:voice\"",
+    "dev:convex": "convex dev",
+    "dev:web": "pnpm --filter @ai-receptionist/web dev",
+    "dev:voice": "pnpm --filter @ai-receptionist/voice-gateway dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "seed:demo": "tsx scripts/seed-demo.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.1.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
+  }
+}

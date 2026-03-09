@@ -1,0 +1,29 @@
+{
+  "name": "@ai-receptionist/voice-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  },
+  "dependencies": {
+    "@ai-receptionist/ai": "workspace:*",
+    "@ai-receptionist/config": "workspace:*",
+    "@ai-receptionist/providers": "workspace:*",
+    "@ai-receptionist/shared": "workspace:*",
+    "@ai-receptionist/testing": "workspace:*",
+    "@ai-receptionist/telemetry": "workspace:*",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/websocket": "^11.2.0",
+    "fastify": "^5.2.1",
+    "ws": "^8.18.3",
+    "zod": "^3.24.2"
+  }
+}
