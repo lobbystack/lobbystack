@@ -65,31 +65,31 @@ export function SignupForm({
             />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="signup-password">Password</FieldLabel>
-            <Input
-              id="signup-password"
-              autoComplete="new-password"
-              onChange={(event) => onPasswordChange(event.target.value)}
-              placeholder="Create a password"
-              required
-              type="password"
-              value={password}
-            />
-          </Field>
+          <div className="space-y-3">
+            <Field>
+              <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+              <Input
+                id="signup-password"
+                autoComplete="new-password"
+                onChange={(event) => onPasswordChange(event.target.value)}
+                placeholder="Create a password"
+                required
+                type="password"
+                value={password}
+              />
+            </Field>
 
-          {statusMessage || errorMessage ? (
-            <div className="space-y-2">
-              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
-            </div>
-          ) : null}
+            {statusMessage || errorMessage ? (
+              <div className="space-y-1 pb-1">
+                {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+                {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+              </div>
+            ) : null}
 
-          <Field>
-            <Button disabled={isSubmitting} size="lg" type="submit">
+            <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Creating account..." : "Create account"}
             </Button>
-          </Field>
+          </div>
         </FieldGroup>
       </form>
 

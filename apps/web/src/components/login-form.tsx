@@ -65,31 +65,31 @@ export function LoginForm({
             />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="login-password">Password</FieldLabel>
-            <Input
-              id="login-password"
-              autoComplete="current-password"
-              onChange={(event) => onPasswordChange(event.target.value)}
-              placeholder="••••••••"
-              required
-              type="password"
-              value={password}
-            />
-          </Field>
+          <div className="space-y-3">
+            <Field>
+              <FieldLabel htmlFor="login-password">Password</FieldLabel>
+              <Input
+                id="login-password"
+                autoComplete="current-password"
+                onChange={(event) => onPasswordChange(event.target.value)}
+                placeholder="••••••••"
+                required
+                type="password"
+                value={password}
+              />
+            </Field>
 
-          {statusMessage || errorMessage ? (
-            <div className="space-y-2">
-              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
-            </div>
-          ) : null}
+            {statusMessage || errorMessage ? (
+              <div className="space-y-1 pb-1">
+                {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+                {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+              </div>
+            ) : null}
 
-          <Field>
-            <Button disabled={isSubmitting} size="lg" type="submit">
+            <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Signing in..." : "Sign in"}
             </Button>
-          </Field>
+          </div>
         </FieldGroup>
       </form>
 
