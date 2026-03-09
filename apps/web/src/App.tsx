@@ -501,9 +501,6 @@ function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  if (businesses === undefined) {
-    return <LoadingScreen />;
-  }
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
   const snapshot = useQuery(
@@ -537,6 +534,10 @@ function WorkspaceShell() {
       description: "Track operational readiness for calls, messages, and booking.",
     };
   }, [location.pathname]);
+
+  if (businesses === undefined) {
+    return <LoadingScreen />;
+  }
 
   return (
     <SidebarProvider
