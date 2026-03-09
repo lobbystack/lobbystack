@@ -48,7 +48,7 @@ export function SignupForm({
             </div>
             <div className="space-y-1">
               <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-              <FieldDescription>Use your work email to get started.</FieldDescription>
+              <FieldDescription>Use your email to get started.</FieldDescription>
             </div>
           </div>
 
@@ -58,7 +58,7 @@ export function SignupForm({
               id="signup-email"
               autoComplete="email"
               onChange={(event) => onEmailChange(event.target.value)}
-              placeholder="you@business.com"
+              placeholder="you@example.com"
               required
               type="email"
               value={email}
