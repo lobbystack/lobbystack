@@ -2,7 +2,6 @@
 
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { IconLayoutRows } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,16 +41,11 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
         <FieldGroup>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <IconLayoutRows className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight">Welcome back</h1>
-              <FieldDescription>
-                Sign in to manage calls, booking, messages, and receptionist settings.
-              </FieldDescription>
-            </div>
+          <div className="space-y-1 text-left">
+            <h1 className="text-xl font-semibold tracking-tight">Welcome back</h1>
+            <FieldDescription>
+              Sign in to manage calls, booking, messages, and receptionist settings.
+            </FieldDescription>
           </div>
 
           <Field>
