@@ -75,6 +75,27 @@ function AuthShell(props: { children: ReactNode }) {
   );
 }
 
+function getAuthErrorMessage(error: unknown, flow: "signIn" | "signUp"): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (flow === "signIn") {
+    if (message.includes("InvalidSecret") || message.includes("Invalid credentials")) {
+      return "Incorrect email or password.";
+    }
+    return "We couldn't sign you in. Please try again.";
+  }
+
+  if (message.includes("already exists")) {
+    return "An account with that email already exists. Try signing in instead.";
+  }
+
+  if (message.includes("Invalid password")) {
+    return "Use a password with at least 8 characters.";
+  }
+
+  return "We couldn't create your account. Please try again.";
+}
+
 function LoginPage() {
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
@@ -108,7 +129,7 @@ function LoginPage() {
 
       setStatusMessage("Sign-in completed. Finalizing your session...");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Authentication failed.");
+      setErrorMessage(getAuthErrorMessage(error, "signIn"));
     } finally {
       setIsSubmitting(false);
     }
@@ -163,7 +184,7 @@ function SignupPage() {
 
       setStatusMessage("Account created. Finalizing your session...");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to create account.");
+      setErrorMessage(getAuthErrorMessage(error, "signUp"));
     } finally {
       setIsSubmitting(false);
     }
