@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { IconCalendarPlus } from "@tabler/icons-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 type ServicesCardProps = {
   businessId: Id<"businesses">;
@@ -59,38 +62,42 @@ export function ServicesCard(props: ServicesCardProps) {
   }
 
   return (
-    <Card>
+    <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Services</CardTitle>
-        <CardDescription>
-          Services are part of the snapshot and are also used by the booking engine.
-        </CardDescription>
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+            <IconCalendarPlus className="size-5" />
+          </div>
+          <div className="space-y-1">
+            <CardTitle>Services</CardTitle>
+            <CardDescription>
+              Service definitions power both booking logic and the receptionist snapshot callers hear.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="stack">
-        <form className="stack" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="field-grid">
-            <label className="stack">
-              <span className="kpi-label">Service name</span>
-              <input
-                className="text-input"
+      <CardContent className="space-y-6">
+        <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Service name</span>
+              <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
             </label>
-            <label className="stack">
-              <span className="kpi-label">Slug</span>
-              <input
-                className="text-input"
+            <label className="space-y-2">
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Slug</span>
+              <Input
                 value={slug}
                 onChange={(event) => setSlug(event.target.value)}
               />
             </label>
           </div>
-          <div className="field-grid">
-            <label className="stack">
-              <span className="kpi-label">Duration (minutes)</span>
-              <input
-                className="text-input"
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Duration (minutes)</span>
+              <Input
                 min="5"
                 step="5"
                 type="number"
@@ -98,34 +105,37 @@ export function ServicesCard(props: ServicesCardProps) {
                 onChange={(event) => setDurationMinutes(event.target.value)}
               />
             </label>
-            <label className="stack">
-              <span className="kpi-label">Description</span>
-              <input
-                className="text-input"
+            <label className="space-y-2">
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Description</span>
+              <Input
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
             </label>
           </div>
-          <div className="inline-actions">
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
               {isSaving ? "Saving..." : "Add service"}
             </Button>
-            {status ? <span className="status-note">{status}</span> : null}
+            {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
         </form>
-        <div className="mini-list">
+        <div className="space-y-3">
           {services.map((service) => (
-            <div className="mini-list-item" key={service._id}>
-              <strong>{service.name}</strong>
-              <span className="muted">
-                {service.durationMinutes} min
-                {service.description ? ` • ${service.description}` : ""}
-              </span>
+            <div className="rounded-2xl border border-border/70 bg-background/80 p-4" key={service._id}>
+              <div className="flex items-start justify-between gap-3">
+                <strong className="text-sm text-foreground">{service.name}</strong>
+                <Badge variant="outline">{service.durationMinutes} min</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {service.description || "No description yet."}
+              </p>
             </div>
           ))}
           {configuration && services.length === 0 ? (
-            <span className="muted">No services configured yet.</span>
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
+              No services configured yet.
+            </div>
           ) : null}
         </div>
       </CardContent>

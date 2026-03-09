@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
+import { IconSparkles } from "@tabler/icons-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import { demoSnapshot } from "@ai-receptionist/testing";
 
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 type PreviewPanelProps = {
   businessId?: Id<"businesses"> | undefined;
@@ -39,32 +41,51 @@ export function PreviewPanel(props: PreviewPanelProps) {
   }
 
   return (
-    <Card>
+    <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Preview Receptionist</CardTitle>
-        <CardDescription>
-          This preview uses the same business context layer as SMS. Live voice still uses
-          the precomputed snapshot at call start instead of per-turn backend retrieval.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle>Preview Receptionist</CardTitle>
+            <CardDescription>
+              Test the same business context layer used for SMS and async AI flows before you put it in front of callers.
+            </CardDescription>
+          </div>
+          <IconSparkles className="size-5 text-muted-foreground" />
+        </div>
       </CardHeader>
-      <CardContent className="stack">
-        <label className="stack">
-          <span className="kpi-label">Prompt</span>
-          <textarea
-            className="prompt-preview"
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            Prompt
+          </p>
+          <Textarea
             disabled={!props.enabled || isLoading}
             rows={5}
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
           />
-        </label>
+        </div>
         <Button disabled={!props.enabled || isLoading} onClick={() => void handlePreview()}>
           {isLoading ? "Generating..." : "Run Preview"}
         </Button>
-        <div className="preview-bubble preview-user">{prompt}</div>
-        <div className="preview-bubble preview-agent">{response}</div>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+            <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              Customer
+            </div>
+            <div className="text-sm leading-6 text-foreground">{prompt}</div>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-muted/25 p-4">
+            <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              Receptionist
+            </div>
+            <div className="text-sm leading-6 text-foreground">{response}</div>
+          </div>
+        </div>
         {!props.enabled ? (
-          <p className="muted">Sign in and create a business to run the real preview flow.</p>
+          <p className="text-sm text-muted-foreground">
+            Sign in and create a business to run the real preview flow.
+          </p>
         ) : null}
       </CardContent>
     </Card>

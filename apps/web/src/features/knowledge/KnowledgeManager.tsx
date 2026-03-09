@@ -1,10 +1,14 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { IconBook2, IconFileText, IconQuestionMark } from "@tabler/icons-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type KnowledgeManagerProps = {
   businessId: Id<"businesses">;
@@ -85,91 +89,111 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
   }
 
   return (
-    <Card>
+    <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Knowledge Base</CardTitle>
-        <CardDescription>
-          Add FAQs and long-form docs. Convex indexes them for preview and SMS, then rolls
-          a compact digest into the voice snapshot.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle>Knowledge Base</CardTitle>
+            <CardDescription>
+              Add FAQs and documents the receptionist can use across preview, SMS, and the voice snapshot refresh.
+            </CardDescription>
+          </div>
+          <Badge variant="outline">{snippets.length + documents.length} items</Badge>
+        </div>
       </CardHeader>
-      <CardContent className="stack">
-        <form className="stack" onSubmit={(event) => void handleFaqSubmit(event)}>
-          <span className="kpi-label">FAQ Snippet</span>
-          <input
-            className="text-input"
+      <CardContent className="space-y-8">
+        <form className="space-y-4" onSubmit={(event) => void handleFaqSubmit(event)}>
+          <div className="flex items-center gap-2">
+            <IconQuestionMark className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">FAQ snippet</p>
+          </div>
+          <Input
             value={faqTitle}
             onChange={(event) => setFaqTitle(event.target.value)}
           />
-          <textarea
-            className="text-area"
+          <Textarea
             rows={3}
             value={faqContent}
             onChange={(event) => setFaqContent(event.target.value)}
           />
-          <input
-            className="text-input"
+          <Input
             placeholder="faq,booking"
             value={faqTags}
             onChange={(event) => setFaqTags(event.target.value)}
           />
-          <div className="inline-actions">
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSavingFaq} type="submit">
               {isSavingFaq ? "Saving..." : "Add FAQ"}
             </Button>
           </div>
         </form>
-        <form className="stack section-divider" onSubmit={(event) => void handleDocumentSubmit(event)}>
-          <span className="kpi-label">Manual Document</span>
-          <input
-            className="text-input"
+        <form className="space-y-4 border-t border-border/70 pt-8" onSubmit={(event) => void handleDocumentSubmit(event)}>
+          <div className="flex items-center gap-2">
+            <IconBook2 className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Manual document</p>
+          </div>
+          <Input
             value={documentTitle}
             onChange={(event) => setDocumentTitle(event.target.value)}
           />
-          <textarea
-            className="text-area"
+          <Textarea
             rows={5}
             value={documentBody}
             onChange={(event) => setDocumentBody(event.target.value)}
           />
-          <input
-            className="text-input"
+          <Input
             placeholder="policy,intake"
             value={documentTags}
             onChange={(event) => setDocumentTags(event.target.value)}
           />
-          <div className="inline-actions">
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSavingDocument} type="submit">
               {isSavingDocument ? "Queue document..." : "Add document"}
             </Button>
-            {status ? <span className="status-note">{status}</span> : null}
+            {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
         </form>
-        <div className="mini-list">
-          <span className="kpi-label">Current FAQs</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <IconQuestionMark className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Current FAQs</p>
+          </div>
           {snippets.map((snippet) => (
-            <div className="mini-list-item" key={snippet._id}>
-              <strong>{snippet.title}</strong>
-              <span className="muted">{snippet.content}</span>
+            <div className="rounded-2xl border border-border/70 bg-background/80 p-4" key={snippet._id}>
+              <div className="flex items-start justify-between gap-3">
+                <strong className="text-sm text-foreground">{snippet.title}</strong>
+                {snippet.tags?.length ? <Badge variant="secondary">{snippet.tags[0]}</Badge> : null}
+              </div>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{snippet.content}</p>
             </div>
           ))}
           {knowledge && snippets.length === 0 ? (
-            <span className="muted">No FAQ snippets yet.</span>
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
+              No FAQ snippets yet.
+            </div>
           ) : null}
         </div>
-        <div className="mini-list">
-          <span className="kpi-label">Current Documents</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <IconFileText className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">Current documents</p>
+          </div>
           {documents.map((document) => (
-            <div className="mini-list-item" key={document._id}>
-              <strong>{document.title}</strong>
-              <span className="muted">
+            <div className="rounded-2xl border border-border/70 bg-background/80 p-4" key={document._id}>
+              <div className="flex items-start justify-between gap-3">
+                <strong className="text-sm text-foreground">{document.title}</strong>
+                <Badge variant="outline">{document.status}</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {document.status}
                 {document.textContent ? ` • ${document.textContent.slice(0, 120)}` : ""}
-              </span>
+              </p>
             </div>
           ))}
           {knowledge && documents.length === 0 ? (
-            <span className="muted">No documents yet.</span>
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
+              No documents yet.
+            </div>
           ) : null}
         </div>
       </CardContent>
