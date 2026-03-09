@@ -33,7 +33,6 @@
     "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
     "tsx": "^4.20.3",
