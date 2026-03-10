@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { IconClockHour4 } from "@tabler/icons-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 type BusinessHoursFormProps = {
   businessId: Id<"businesses">;
@@ -120,28 +122,37 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
   }
 
   return (
-    <Card>
+    <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Opening Hours</CardTitle>
-        <CardDescription>
-          Opening and closing hours are stored as structured data and stay authoritative
-          over any retrieved documents.
-        </CardDescription>
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+            <IconClockHour4 className="size-5" />
+          </div>
+          <div className="space-y-1">
+            <CardTitle>Opening Hours</CardTitle>
+            <CardDescription>
+              Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <form className="stack" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="table-like">
+        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="space-y-3">
             {rows.map((row, index) => (
-              <div className="table-row" key={dayLabels[index]}>
-                <strong>{dayLabels[index]}</strong>
-                <input
-                  className="text-input"
+              <div
+                className="grid gap-3 rounded-2xl border border-border/70 bg-background/70 p-4 md:grid-cols-[160px_1fr_1fr]"
+                key={dayLabels[index]}
+              >
+                <div className="flex items-center text-sm font-medium text-foreground">
+                  {dayLabels[index]}
+                </div>
+                <Input
                   placeholder="09:00"
                   value={row.open}
                   onChange={(event) => updateRow(index, "open", event.target.value)}
                 />
-                <input
-                  className="text-input"
+                <Input
                   placeholder="17:00"
                   value={row.close}
                   onChange={(event) => updateRow(index, "close", event.target.value)}
@@ -149,13 +160,13 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
               </div>
             ))}
           </div>
-          <div className="inline-actions">
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
               {isSaving ? "Saving..." : "Save hours"}
             </Button>
-            <span className="muted">Leave a day blank to mark it closed.</span>
+            <span className="text-sm text-muted-foreground">Leave a day blank to mark it closed.</span>
           </div>
-          {status ? <span className="status-note">{status}</span> : null}
+          {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
         </form>
       </CardContent>
     </Card>
