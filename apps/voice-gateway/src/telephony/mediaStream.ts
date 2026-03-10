@@ -536,18 +536,54 @@ async function recoverFromProviderFailure(
     if (transferAvailable && transferDestination) {
       session.transferExecuted = true;
       if (session.callId) {
-        await updateVoiceTransferState({
-          callId: session.callId,
-          transferState: "requested",
-        });
+        try {
+          await updateVoiceTransferState({
+            callId: session.callId,
+            transferState: "requested",
+          });
+        } catch (error) {
+          server.log.error(
+            {
+              callId: session.callId,
+              callSid: session.callSid,
+              transferState: "requested",
+            },
+            error instanceof Error
+              ? error.message
+              : "Failed to persist requested transfer state during provider recovery",
+          );
+        }
       }
 
-      await transferLiveCall({
-        callSid: session.callSid,
-        destination: transferDestination,
-        sayMessage: fallbackMessage,
-        ...(session.callId ? { actionUrl: getTransferActionUrl(server, session.callId) } : {}),
-      });
+      try {
+        await transferLiveCall({
+          callSid: session.callSid,
+          destination: transferDestination,
+          sayMessage: fallbackMessage,
+          ...(session.callId ? { actionUrl: getTransferActionUrl(server, session.callId) } : {}),
+        });
+      } catch (error) {
+        if (session.callId) {
+          try {
+            await updateVoiceTransferState({
+              callId: session.callId,
+              transferState: "failed",
+            });
+          } catch (stateError) {
+            server.log.error(
+              {
+                callId: session.callId,
+                callSid: session.callSid,
+                transferState: "failed",
+              },
+              stateError instanceof Error
+                ? stateError.message
+                : "Failed to persist failed transfer state during provider recovery",
+            );
+          }
+        }
+        throw error;
+      }
       return;
     }
 
@@ -564,7 +600,11 @@ async function recoverFromProviderFailure(
       },
       error instanceof Error ? error.message : "Provider recovery failed",
     );
-    await finalizeCall(server, null, twilioSocket, session, input.disposition);
+
+    // Let the recovery task settle before finalization waits on pending tasks.
+    queueMicrotask(() => {
+      void finalizeCall(server, null, twilioSocket, session, input.disposition);
+    });
   }
 }
 
