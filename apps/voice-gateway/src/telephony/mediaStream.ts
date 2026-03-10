@@ -1,7 +1,9 @@
 import { buildVoiceSystemPrompt } from "@ai-receptionist/ai";
 import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
 import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import { demoBusinessId } from "@ai-receptionist/testing";
+import type { IncomingHttpHeaders } from "node:http";
+import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
@@ -16,7 +18,6 @@ import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { transferLiveCall } from "./transferCall";
 import {
-  buildTwilioRequestUrl,
   validateTwilioSignature,
 } from "./twilioRequest";
 
@@ -80,6 +81,18 @@ type ActiveVoiceSession = {
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
 };
+
+type MediaStreamRequestContext = {
+  url: string;
+  headers: IncomingHttpHeaders;
+};
+
+function buildMediaStreamValidationUrls(baseUrl: string): string[] {
+  const httpsUrl = new URL("/media-stream", baseUrl);
+  const websocketUrl = new URL(httpsUrl.toString());
+  websocketUrl.protocol = websocketUrl.protocol === "https:" ? "wss:" : "ws:";
+  return [websocketUrl.toString(), httpsUrl.toString()];
+}
 
 function createRealtimeToolDefinitions() {
   return [
@@ -337,6 +350,8 @@ async function configureOpenAiSession(
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
+      type: "realtime",
+      model: runtimeConfig.OPENAI_REALTIME_MODEL,
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
         "You are speaking on a live phone call.",
@@ -385,6 +400,11 @@ async function initializeCallRecord(
   server: FastifyInstance,
   session: ActiveVoiceSession,
 ): Promise<void> {
+  if (session.businessId === demoBusinessId) {
+    server.log.info("Skipping call record initialization for demo fallback snapshot");
+    return;
+  }
+
   if (!session.businessId || !session.callSid || !session.from || !session.to) {
     throw new Error("Voice session metadata is incomplete.");
   }
@@ -475,6 +495,13 @@ function handleOpenAiMessage(
 ): void {
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
 
+  if (
+    payload.type !== "response.audio.delta" &&
+    payload.type !== "response.output_audio.delta"
+  ) {
+    server.log.info({ type: payload.type }, "Received OpenAI Realtime event");
+  }
+
   switch (payload.type) {
     case "response.audio.delta":
     case "response.output_audio.delta": {
@@ -551,111 +578,22 @@ function handleOpenAiMessage(
 export async function handleMediaStreamConnection(
   server: FastifyInstance,
   twilioSocket: WebSocket,
-  request: FastifyRequest,
+  request: MediaStreamRequestContext,
 ): Promise<void> {
-  const session: ActiveVoiceSession = {
-    businessId: null,
-    snapshot: null,
-    callSid: null,
-    from: null,
-    to: null,
-    gatewaySessionId: crypto.randomUUID(),
-    startedAtIso: new Date().toISOString(),
-    startedAtMs: Date.now(),
-    streamSid: null,
-    callId: null,
-    conversationId: null,
-    openAiReady: false,
-    pendingTransferDestination: null,
-    transferExecuted: false,
-    finalized: false,
-    transcriptSequence: 1,
-    inboundAudio: [],
-    outboundAudio: [],
-    pendingInboundAudio: [],
-    pendingTasks: new Set(),
-  };
-
-  const runtimeConfig = server.runtimeConfig;
-  const requestUrl = buildTwilioRequestUrl(runtimeConfig.VOICE_GATEWAY_BASE_URL, request.url);
-  const hasValidTwilioSignature = validateTwilioSignature({
-    authToken: runtimeConfig.TWILIO_AUTH_TOKEN,
-    signatureHeader: request.headers["x-twilio-signature"],
-    url: requestUrl,
-  });
-
-  if (!hasValidTwilioSignature) {
-    server.log.warn({ requestUrl }, "Rejected Twilio Media Stream websocket with invalid signature");
-    twilioSocket.close(1008, "invalid signature");
-    return;
-  }
-
-  if (!runtimeConfig.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is required for live voice calls.");
-  }
-
   let openAiSocket: WebSocket | null = null;
-
-  async function startRealtimeSession(message: TwilioMediaMessage): Promise<void> {
-    if (openAiSocket) {
-      return;
-    }
-
-    const customParameters = message.start?.customParameters ?? {};
-    session.callSid = message.start?.callSid ?? customParameters.callSid ?? "unknown-call";
-    session.streamSid = message.start?.streamSid ?? message.streamSid ?? null;
-    session.businessId = customParameters.businessId ?? null;
-    session.from = customParameters.from ?? null;
-    session.to = customParameters.to ?? null;
-    session.startedAtIso = new Date().toISOString();
-    session.startedAtMs = Date.now();
-
-    let snapshot =
-      session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
-    if (!snapshot) {
-      if (!session.to) {
-        throw new Error("Twilio stream start did not include the called phone number.");
-      }
-      snapshot = await fetchSnapshotForPhoneNumber(session.to);
-      server.snapshotCache.set(snapshot.businessId, snapshot);
-      session.businessId = snapshot.businessId;
-    }
-
-    session.snapshot = snapshot;
-    await initializeCallRecord(server, session);
-
-    openAiSocket = new WebSocket(
-      `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
-          "OpenAI-Beta": "realtime=v1",
-        },
-      },
-    );
-
-    openAiSocket.on("open", () => {
-      void configureOpenAiSession(openAiSocket as WebSocket, session);
-    });
-
-    openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {
-      handleOpenAiMessage(server, openAiSocket as WebSocket, twilioSocket, session, rawMessage);
-    });
-
-    openAiSocket.on("error", (error: Error) => {
-      server.log.error(error);
-    });
-
-    openAiSocket.on("close", () => {
-      if (!session.finalized) {
-        void finalizeCall(server, openAiSocket, twilioSocket, session, "openai_socket_closed");
-      }
-    });
-  }
+  let signatureValidated = false;
 
   twilioSocket.on("message", (rawMessage: WebSocket.RawData) => {
     void (async () => {
+      if (!ensureMediaStreamRequestIsAllowed()) {
+        return;
+      }
+
       const payload = JSON.parse(rawMessage.toString()) as TwilioMediaMessage;
+      server.log.info(
+        { event: payload.event, streamSid: payload.streamSid, callSid: payload.start?.callSid },
+        "Received Twilio Media Stream event",
+      );
 
       if (payload.event === "connected") {
         return;
@@ -696,10 +634,193 @@ export async function handleMediaStreamConnection(
   });
 
   twilioSocket.on("close", () => {
+    server.log.info(
+      {
+        callSid: session.callSid,
+        streamSid: session.streamSid,
+      },
+      "Twilio Media Stream websocket closed",
+    );
     void finalizeCall(server, openAiSocket, twilioSocket, session, "twilio_socket_closed");
   });
 
   twilioSocket.on("error", (error: Error) => {
     server.log.error(error);
   });
+
+  server.log.info(
+    {
+      url: request.url,
+      host: request.headers.host,
+      upgrade: request.headers.upgrade,
+      connection: request.headers.connection,
+    },
+    "Accepted Media Stream websocket route",
+  );
+  const session: ActiveVoiceSession = {
+    businessId: null,
+    snapshot: null,
+    callSid: null,
+    from: null,
+    to: null,
+    gatewaySessionId: crypto.randomUUID(),
+    startedAtIso: new Date().toISOString(),
+    startedAtMs: Date.now(),
+    streamSid: null,
+    callId: null,
+    conversationId: null,
+    openAiReady: false,
+    pendingTransferDestination: null,
+    transferExecuted: false,
+    finalized: false,
+    transcriptSequence: 1,
+    inboundAudio: [],
+    outboundAudio: [],
+    pendingInboundAudio: [],
+    pendingTasks: new Set(),
+  };
+
+  const runtimeConfig = server.runtimeConfig;
+  const validationUrls = buildMediaStreamValidationUrls(
+    runtimeConfig.VOICE_GATEWAY_BASE_URL,
+  );
+  function ensureMediaStreamRequestIsAllowed(): boolean {
+    if (signatureValidated) {
+      return true;
+    }
+
+    const hasValidTwilioSignature = validationUrls.some((candidateUrl) =>
+      validateTwilioSignature({
+        authToken: runtimeConfig.TWILIO_AUTH_TOKEN,
+        signatureHeader: request.headers["x-twilio-signature"],
+        url: candidateUrl,
+      }),
+    );
+
+    if (!hasValidTwilioSignature) {
+      if (runtimeConfig.DEPLOYMENT_MODE === "development") {
+        server.log.warn(
+          { validationUrls },
+          "Skipping Twilio Media Stream signature enforcement in development mode",
+        );
+      } else {
+        server.log.warn(
+          { validationUrls },
+          "Rejected Twilio Media Stream websocket with invalid signature",
+        );
+        if (typeof twilioSocket.close === "function") {
+          twilioSocket.close(1008, "invalid signature");
+        }
+        return false;
+      }
+    }
+
+    if (!runtimeConfig.OPENAI_API_KEY) {
+      server.log.error("OPENAI_API_KEY is required for live voice calls.");
+      if (typeof twilioSocket.close === "function") {
+        twilioSocket.close(1011, "missing openai api key");
+      }
+      return false;
+    }
+
+    signatureValidated = true;
+    return true;
+  }
+
+  async function startRealtimeSession(message: TwilioMediaMessage): Promise<void> {
+    if (openAiSocket) {
+      return;
+    }
+
+    const customParameters = message.start?.customParameters ?? {};
+    session.callSid = message.start?.callSid ?? customParameters.callSid ?? "unknown-call";
+    session.streamSid = message.start?.streamSid ?? message.streamSid ?? null;
+    session.businessId = customParameters.businessId ?? null;
+    session.from = customParameters.from ?? null;
+    session.to = customParameters.to ?? null;
+    session.startedAtIso = new Date().toISOString();
+    session.startedAtMs = Date.now();
+
+    let snapshot =
+      session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
+    if (!snapshot) {
+      if (!session.to) {
+        throw new Error("Twilio stream start did not include the called phone number.");
+      }
+      snapshot = await fetchSnapshotForPhoneNumber(session.to);
+      server.snapshotCache.set(snapshot.businessId, snapshot);
+      session.businessId = snapshot.businessId;
+    }
+
+    session.snapshot = snapshot;
+    await initializeCallRecord(server, session);
+
+    openAiSocket = new WebSocket(
+      `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
+          "OpenAI-Beta": "realtime=v1",
+        },
+      },
+    );
+
+    openAiSocket.on("open", () => {
+      server.log.info(
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          businessId: session.businessId,
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+        },
+        "OpenAI Realtime websocket opened",
+      );
+      void configureOpenAiSession(openAiSocket as WebSocket, session);
+    });
+
+    openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {
+      handleOpenAiMessage(server, openAiSocket as WebSocket, twilioSocket, session, rawMessage);
+    });
+
+    openAiSocket.on("error", (error: Error) => {
+      server.log.error(
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          message: error.message,
+          stack: error.stack,
+        },
+        "OpenAI Realtime websocket error",
+      );
+    });
+
+    openAiSocket.on("unexpected-response", (_request, response) => {
+      server.log.error(
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          statusCode: response.statusCode,
+          statusMessage: response.statusMessage,
+          headers: response.headers,
+        },
+        "OpenAI Realtime websocket handshake failed",
+      );
+    });
+
+    openAiSocket.on("close", (code, reason) => {
+      server.log.info(
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          code,
+          reason: reason.toString(),
+        },
+        "OpenAI Realtime websocket closed",
+      );
+      if (!session.finalized) {
+        void finalizeCall(server, openAiSocket, twilioSocket, session, "openai_socket_closed");
+      }
+    });
+  }
+
 }
