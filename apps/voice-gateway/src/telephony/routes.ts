@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
-import { handleMediaStreamConnection } from "./mediaStream";
 import {
   buildTwilioRequestUrl,
   normalizeFormFields,
@@ -59,7 +58,6 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     const twiml = [
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
       "<Response>",
-      `<Say voice=\"Polly.Joanna\">${escapeXml(snapshot.greeting)}</Say>`,
       "<Connect>",
       `<Stream url=\"${escapeXml(streamUrl.toString())}\" statusCallback=\"${escapeXml(
         statusCallbackUrl.toString(),
@@ -114,7 +112,15 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     return null;
   });
 
-  server.get("/media-stream", { websocket: true }, (socket, request) => {
-    void handleMediaStreamConnection(server, socket, request);
+  server.get("/media-stream", async (request, reply) => {
+    server.log.warn(
+      {
+        headers: request.headers,
+      },
+      "Received non-upgrade request for media stream endpoint",
+    );
+
+    reply.code(426);
+    return "Upgrade Required";
   });
 }

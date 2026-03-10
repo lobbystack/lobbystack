@@ -446,6 +446,17 @@ async function configureOpenAiSession(
     });
   }
   session.pendingInboundAudio = [];
+
+  postRealtimeEvent(openAiSocket, {
+    type: "response.create",
+    response: {
+      instructions: [
+        `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
+        "After the greeting, stop speaking and wait for the caller to respond.",
+        "Do not add any extra sentence before or after the greeting.",
+      ].join(" "),
+    },
+  });
 }
 
 async function initializeCallRecord(
