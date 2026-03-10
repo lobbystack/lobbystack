@@ -10,6 +10,43 @@ function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
 }
 
+function tokenizeComparable(value: string): Array<string> {
+  return normalizeComparable(value)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function scoreServiceMatch(service: Doc<"services">, serviceName: string): number {
+  const comparable = normalizeComparable(serviceName);
+  const nameComparable = normalizeComparable(service.name);
+  const slugComparable = normalizeComparable(service.slug);
+
+  if (nameComparable === comparable || slugComparable === comparable) {
+    return 100;
+  }
+
+  if (nameComparable.includes(comparable) || comparable.includes(nameComparable)) {
+    return 80;
+  }
+
+  if (slugComparable.includes(comparable) || comparable.includes(slugComparable)) {
+    return 75;
+  }
+
+  const queryTokens = tokenizeComparable(serviceName);
+  const serviceTokens = new Set([
+    ...tokenizeComparable(service.name),
+    ...tokenizeComparable(service.slug),
+  ]);
+  const overlap = queryTokens.filter((token) => serviceTokens.has(token)).length;
+  if (overlap > 0) {
+    return overlap * 10;
+  }
+
+  return 0;
+}
+
 async function resolveServiceDocument(
   ctx: Parameters<typeof internalQuery>[0]["handler"] extends never ? never : {
     runQuery: <T>(
@@ -24,14 +61,15 @@ async function resolveServiceDocument(
     internal.voice.runtime.getActiveServicesForBusiness,
     { businessId },
   );
-  const comparable = normalizeComparable(serviceName);
+  const ranked = services
+    .map((service) => ({
+      service,
+      score: scoreServiceMatch(service, serviceName),
+    }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((left, right) => right.score - left.score);
 
-  return (
-    services.find((service) => normalizeComparable(service.name) === comparable) ??
-    services.find((service) => normalizeComparable(service.slug) === comparable) ??
-    services.find((service) => normalizeComparable(service.name).includes(comparable)) ??
-    null
-  );
+  return ranked[0]?.service ?? null;
 }
 
 export const getActiveServicesForBusiness = internalQuery({
@@ -43,6 +81,39 @@ export const getActiveServicesForBusiness = internalQuery({
       .query("services")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
       .collect();
+  },
+});
+
+export const getActiveStaffAssignmentsForService = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    serviceId: v.id("services"),
+  },
+  handler: async (ctx, args) => {
+    const [staff, assignments] = await Promise.all([
+      ctx.db
+        .query("staff")
+        .withIndex("by_business_id_and_active", (q) =>
+          q.eq("businessId", args.businessId).eq("active", true),
+        )
+        .collect(),
+      ctx.db
+        .query("staff_service_assignments")
+        .withIndex("by_service_id_and_staff_id", (q) => q.eq("serviceId", args.serviceId))
+        .collect(),
+    ]);
+
+    const activeStaffIds = new Set(staff.map((member) => String(member._id)));
+    const eligibleAssignments = assignments.filter(
+      (assignment) =>
+        assignment.businessId === args.businessId &&
+        activeStaffIds.has(String(assignment.staffId)),
+    );
+
+    return {
+      activeStaffCount: activeStaffIds.size,
+      assignmentCount: eligibleAssignments.length,
+    };
   },
 });
 
@@ -306,6 +377,23 @@ export const checkAvailabilityForVoice = internalAction({
       throw new Error("Service not found for this business.");
     }
 
+    const setup = await ctx.runQuery(
+      internal.voice.runtime.getActiveStaffAssignmentsForService,
+      {
+        businessId: args.businessId,
+        serviceId: service._id,
+      },
+    );
+    if (setup.assignmentCount === 0) {
+      return {
+        serviceId: service._id,
+        serviceName: service.name,
+        availability: [],
+        setupIssue:
+          setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned",
+      };
+    }
+
     const availability: Array<{
       staffId: string;
       serviceId: string;
@@ -325,6 +413,86 @@ export const checkAvailabilityForVoice = internalAction({
       serviceId: service._id,
       serviceName: service.name,
       availability,
+      setupIssue: null,
+    };
+  },
+});
+
+export const findAvailabilityForVoice = internalAction({
+  args: {
+    businessId: v.id("businesses"),
+    serviceName: v.string(),
+    date: v.string(),
+    timezone: v.string(),
+    preferredStaffId: v.optional(v.id("staff")),
+    preferredHour24: v.optional(v.number()),
+    preferredMinute: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
+    if (!service || service.businessId !== args.businessId || !service.active) {
+      throw new Error("Service not found for this business.");
+    }
+
+    const setup = await ctx.runQuery(
+      internal.voice.runtime.getActiveStaffAssignmentsForService,
+      {
+        businessId: args.businessId,
+        serviceId: service._id,
+      },
+    );
+    if (setup.assignmentCount === 0) {
+      const setupIssue =
+        setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned";
+      return {
+        serviceId: service._id,
+        serviceName: service.name,
+        timezone: args.timezone,
+        date: args.date,
+        slots: [],
+        setupIssue,
+        summary:
+          setupIssue === "no_active_staff"
+            ? `${service.name} cannot be booked yet because no active team members are configured for booking.`
+            : `${service.name} cannot be booked yet because no active team member is assigned to that service.`,
+      };
+    }
+
+    const slots: Array<{
+      startsAt: string;
+      endsAt: string;
+      displayTime: string;
+    }> = await ctx.runQuery(internal.appointments.booking.findAvailabilityForBusiness, {
+      businessId: args.businessId,
+      serviceId: service._id,
+      date: args.date,
+      timezone: args.timezone,
+      ...(args.preferredStaffId !== undefined
+        ? { preferredStaffId: args.preferredStaffId }
+        : {}),
+      ...(args.preferredHour24 !== undefined
+        ? { preferredHour24: args.preferredHour24 }
+        : {}),
+      ...(args.preferredMinute !== undefined
+        ? { preferredMinute: args.preferredMinute }
+        : {}),
+      ...(args.limit !== undefined ? { limit: args.limit } : {}),
+    });
+
+    return {
+      serviceId: service._id,
+      serviceName: service.name,
+      timezone: args.timezone,
+      date: args.date,
+      slots,
+      setupIssue: null,
+      summary:
+        slots.length === 0
+          ? `No availability found for ${service.name} on ${args.date}.`
+          : `Available ${service.name} slots on ${args.date}: ${slots
+              .map((slot) => slot.displayTime)
+              .join(", ")}.`,
     };
   },
 });

@@ -4,6 +4,7 @@ import type {
   ClosureWindow,
   HoursWindow,
 } from "@ai-receptionist/shared";
+import { DateTime } from "luxon";
 
 type ExistingAppointment = {
   startsAt: string;
@@ -24,6 +25,14 @@ function isoToDate(value: string): Date {
   return new Date(value);
 }
 
+function isoToDateTime(value: string) {
+  return DateTime.fromISO(value, { setZone: true });
+}
+
+function weekdayToSnapshotDay(weekday: number): number {
+  return weekday % 7;
+}
+
 function overlaps(
   candidateStart: Date,
   candidateEnd: Date,
@@ -34,19 +43,23 @@ function overlaps(
 }
 
 export function computeAvailability(input: AvailabilityInput): Array<AvailabilitySlot> {
-  const requestedStart = isoToDate(input.request.startsAt);
-  const requestedEnd = new Date(
-    requestedStart.getTime() + input.serviceDurationMinutes * 60_000,
-  );
-  const weekday = requestedStart.getUTCDay();
-  const minutes =
-    requestedStart.getUTCHours() * 60 + requestedStart.getUTCMinutes();
+  const requestedStartUtc = isoToDateTime(input.request.startsAt);
+  const requestedEndUtc = requestedStartUtc.plus({
+    minutes: input.serviceDurationMinutes,
+  });
+  const requestedStartLocal = requestedStartUtc.setZone(input.request.timezone);
+  const requestedEndLocal = requestedEndUtc.setZone(input.request.timezone);
+  const weekday = weekdayToSnapshotDay(requestedStartLocal.weekday);
+  const startMinutes = requestedStartLocal.hour * 60 + requestedStartLocal.minute;
+  const endMinutes = requestedEndLocal.hour * 60 + requestedEndLocal.minute;
+  const endsSameLocalDay = requestedEndLocal.hasSame(requestedStartLocal, "day");
 
   const openWindow = input.hours.find(
     (window) =>
       window.dayOfWeek === weekday &&
-      minutes >= window.openMinutes &&
-      minutes + input.serviceDurationMinutes <= window.closeMinutes,
+      startMinutes >= window.openMinutes &&
+      endsSameLocalDay &&
+      endMinutes <= window.closeMinutes,
   );
 
   if (!openWindow) {
@@ -55,8 +68,8 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
 
   const blockedByClosure = input.closures.some((closure) =>
     overlaps(
-      requestedStart,
-      requestedEnd,
+      requestedStartUtc.toJSDate(),
+      requestedEndUtc.toJSDate(),
       isoToDate(closure.startsAt),
       isoToDate(closure.endsAt),
     ),
@@ -76,8 +89,8 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
       return !input.existingAppointments.some((appointment) =>
         appointment.staffId === staffId &&
         overlaps(
-          requestedStart,
-          requestedEnd,
+          requestedStartUtc.toJSDate(),
+          requestedEndUtc.toJSDate(),
           isoToDate(appointment.startsAt),
           isoToDate(appointment.endsAt),
         ),
@@ -86,7 +99,9 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
     .map((staffId) => ({
       staffId,
       serviceId: input.request.serviceId,
-      startsAt: requestedStart.toISOString(),
-      endsAt: requestedEnd.toISOString(),
+      startsAt: requestedStartUtc.toUTC().toISO() ?? input.request.startsAt,
+      endsAt:
+        requestedEndUtc.toUTC().toISO() ??
+        requestedEndUtc.toJSDate().toISOString(),
     }));
 }

@@ -43,6 +43,7 @@ import { RecentCallsPanel } from "@/features/calls/RecentCallsPanel";
 import { KnowledgeManager } from "@/features/knowledge/KnowledgeManager";
 import { PreviewPanel } from "@/features/knowledge/PreviewPanel";
 import { BusinessHoursForm } from "@/features/settings/BusinessHoursForm";
+import { BookableTeamCard } from "@/features/settings/BookableTeamCard";
 import { PhoneNumbersCard } from "@/features/settings/PhoneNumbersCard";
 import { BusinessProfileForm } from "@/features/settings/BusinessProfileForm";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
@@ -490,6 +491,7 @@ function SettingsPage(props: {
         <PhoneNumbersCard businessId={props.businessId} />
         <BusinessHoursForm businessId={props.businessId} />
         <ServicesCard businessId={props.businessId} />
+        <BookableTeamCard businessId={props.businessId} />
       </div>
       <div className="space-y-6">
         <BusinessSnapshotCard snapshot={props.snapshot} />
@@ -503,7 +505,7 @@ function SettingsPage(props: {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
               <IconChecklist className="mt-0.5 size-4 text-foreground" />
-              <span>Set hours and services so booking answers stay deterministic.</span>
+              <span>Set hours, services, and bookable team assignments so booking can suggest real times.</span>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
               <IconHeadphones className="mt-0.5 size-4 text-foreground" />

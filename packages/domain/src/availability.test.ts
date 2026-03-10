@@ -93,4 +93,45 @@ describe("computeAvailability", () => {
     expect(outsideHours).toEqual([]);
     expect(closed).toEqual([]);
   });
+
+  it("interprets business hours in the provided timezone instead of UTC", () => {
+    const result = computeAvailability({
+      request: {
+        serviceId: "svc-1",
+        startsAt: "2026-03-09T20:00:00.000Z",
+        timezone: "America/Toronto",
+      },
+      serviceDurationMinutes: 30,
+      staffIds: ["staff-1"],
+      hours: [{ dayOfWeek: 1, openMinutes: 9 * 60, closeMinutes: 17 * 60 }],
+      closures: [],
+      existingAppointments: [],
+    });
+
+    expect(result).toEqual([
+      {
+        staffId: "staff-1",
+        serviceId: "svc-1",
+        startsAt: "2026-03-09T20:00:00.000Z",
+        endsAt: "2026-03-09T20:30:00.000Z",
+      },
+    ]);
+  });
+
+  it("rejects slots that roll past midnight in the business timezone", () => {
+    const result = computeAvailability({
+      request: {
+        serviceId: "svc-1",
+        startsAt: "2026-03-10T03:30:00.000Z",
+        timezone: "America/Toronto",
+      },
+      serviceDurationMinutes: 60,
+      staffIds: ["staff-1"],
+      hours: [{ dayOfWeek: 1, openMinutes: 23 * 60, closeMinutes: 23 * 60 + 59 }],
+      closures: [],
+      existingAppointments: [],
+    });
+
+    expect(result).toEqual([]);
+  });
 });

@@ -242,6 +242,47 @@ http.route({
 });
 
 http.route({
+  path: "/voice/tool/find-availability",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = (await request.json()) as {
+      businessId: string;
+      serviceName: string;
+      date: string;
+      timezone: string;
+      preferredStaffId?: string;
+      preferredHour24?: number;
+      preferredMinute?: number;
+      limit?: number;
+    };
+
+    const result = await ctx.runAction(internal.voice.runtime.findAvailabilityForVoice, {
+      businessId: body.businessId as Id<"businesses">,
+      serviceName: body.serviceName,
+      date: body.date,
+      timezone: body.timezone,
+      ...(body.preferredStaffId !== undefined
+        ? { preferredStaffId: body.preferredStaffId as Id<"staff"> }
+        : {}),
+      ...(body.preferredHour24 !== undefined
+        ? { preferredHour24: body.preferredHour24 }
+        : {}),
+      ...(body.preferredMinute !== undefined
+        ? { preferredMinute: body.preferredMinute }
+        : {}),
+      ...(body.limit !== undefined ? { limit: body.limit } : {}),
+    });
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
   path: "/voice/tool/check-availability",
   method: "POST",
   handler: httpAction(async (ctx, request) => {

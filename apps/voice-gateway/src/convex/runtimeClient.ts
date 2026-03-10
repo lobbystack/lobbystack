@@ -9,11 +9,26 @@ type StartCallResponse = {
 type CheckAvailabilityResponse = {
   serviceId: string;
   serviceName: string;
+  setupIssue?: string | null;
   availability: Array<{
     staffId: string;
     serviceId: string;
     startsAt: string;
     endsAt: string;
+  }>;
+};
+
+type FindAvailabilityResponse = {
+  serviceId: string;
+  serviceName: string;
+  timezone: string;
+  date: string;
+  summary: string;
+  setupIssue?: string | null;
+  slots: Array<{
+    startsAt: string;
+    endsAt: string;
+    displayTime: string;
   }>;
 };
 
@@ -120,6 +135,19 @@ export async function uploadVoiceRecording(input: {
   if (!response.ok) {
     throw new Error(await response.text());
   }
+}
+
+export async function findVoiceAvailability(input: {
+  businessId: string;
+  serviceName: string;
+  date: string;
+  timezone: string;
+  preferredStaffId?: string;
+  preferredHour24?: number;
+  preferredMinute?: number;
+  limit?: number;
+}): Promise<FindAvailabilityResponse> {
+  return await postJson<FindAvailabilityResponse>("/voice/tool/find-availability", input);
 }
 
 export async function checkVoiceAvailability(input: {

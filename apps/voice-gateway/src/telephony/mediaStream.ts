@@ -128,12 +128,44 @@ function buildMediaStreamValidationUrls(baseUrl: string): string[] {
   return [websocketUrl.toString(), httpsUrl.toString()];
 }
 
+function buildBusinessNowLabel(timezone: string): string | null {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      weekday: "long",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(new Date());
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 function createRealtimeToolDefinitions() {
   return [
     {
       type: "function",
       name: "getBusinessHours",
       description: "Get the authoritative business hours and closure information.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "getBusinessServices",
+      description:
+        "List the structured services configured for this business, including duration and short descriptions when available.",
       parameters: {
         type: "object",
         properties: {},
@@ -151,6 +183,29 @@ function createRealtimeToolDefinitions() {
           query: { type: "string" },
         },
         required: ["query"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "findAvailability",
+      description:
+        "Find candidate appointment slots for a service on a specific local date, optionally near a preferred hour, before asking the caller to confirm a precise time.",
+      parameters: {
+        type: "object",
+        properties: {
+          serviceName: { type: "string" },
+          date: {
+            type: "string",
+            description: "Local business date in YYYY-MM-DD format.",
+          },
+          timezone: { type: "string" },
+          preferredStaffId: { type: "string" },
+          preferredHour24: { type: "integer" },
+          preferredMinute: { type: "integer" },
+          limit: { type: "integer" },
+        },
+        required: ["serviceName", "date"],
         additionalProperties: false,
       },
     },
@@ -424,12 +479,21 @@ function queueTranscriptWriteIfNew(
 async function configureOpenAiSession(
   openAiSocket: WebSocket,
   session: ActiveVoiceSession,
+  server: FastifyInstance,
 ): Promise<void> {
   if (!session.snapshot) {
     throw new Error("Voice session snapshot is not ready.");
   }
 
   const runtimeConfig = loadVoiceGatewayEnv(process.env);
+  const businessNowLabel = buildBusinessNowLabel(session.snapshot.timezone);
+  if (!businessNowLabel) {
+    server.log.warn(
+      { timezone: session.snapshot.timezone, businessId: session.businessId },
+      "Skipping business-local time prompt because the configured timezone is invalid",
+    );
+  }
+
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
@@ -439,6 +503,20 @@ async function configureOpenAiSession(
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, transfer, and message taking.",
         "Do not make up availability, hours, or business policy.",
+        ...(businessNowLabel
+          ? [
+              `The current local business time is ${businessNowLabel} in ${session.snapshot.timezone}.`,
+            ]
+          : [
+              `The business timezone is configured as ${session.snapshot.timezone}. Interpret relative dates and times using that timezone.`,
+            ]),
+        "If the caller asks what services the business offers, use getBusinessServices instead of guessing or saying the list is unavailable.",
+        "For booking, first collect the service, local day/date, and approximate time preference.",
+        "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
+        "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
+        "Only call bookAppointment after the caller confirms a specific offered time.",
+        "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
+        "Interpret relative dates and times in the business timezone.",
       ].join("\n\n"),
       modalities: ["audio", "text"],
       voice: runtimeConfig.OPENAI_REALTIME_VOICE,
@@ -876,7 +954,7 @@ export async function handleMediaStreamConnection(
         },
         "OpenAI Realtime websocket opened",
       );
-      void configureOpenAiSession(openAiSocket as WebSocket, session);
+      void configureOpenAiSession(openAiSocket as WebSocket, session, server);
     });
 
     openAiSocket.on("message", (rawMessage: WebSocket.RawData) => {

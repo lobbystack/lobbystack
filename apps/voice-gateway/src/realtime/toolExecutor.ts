@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   bookVoiceAppointment,
   checkVoiceAvailability,
+  findVoiceAvailability,
   takeVoiceMessage,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
@@ -31,6 +32,21 @@ function buildHoursSummary(snapshot: BusinessContextSnapshot): string {
       (row) =>
         `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][row.dayOfWeek]}: ${formatMinutes(row.openMinutes)} to ${formatMinutes(row.closeMinutes)}`,
     )
+    .join("\n");
+}
+
+function buildServicesSummary(snapshot: BusinessContextSnapshot): string {
+  if (snapshot.services.length === 0) {
+    return `No structured services are configured for ${snapshot.displayName}.`;
+  }
+
+  return snapshot.services
+    .map((service) => {
+      const description = service.description?.trim();
+      return description
+        ? `${service.name} (${service.durationMinutes} min): ${description}`
+        : `${service.name} (${service.durationMinutes} min)`;
+    })
     .join("\n");
 }
 
@@ -66,6 +82,16 @@ const checkAvailabilitySchema = z.object({
   startsAt: z.string(),
   timezone: z.string().optional(),
   preferredStaffId: z.string().optional(),
+});
+
+const findAvailabilitySchema = z.object({
+  serviceName: z.string(),
+  date: z.string(),
+  timezone: z.string().optional(),
+  preferredStaffId: z.string().optional(),
+  preferredHour24: z.number().int().min(0).max(23).optional(),
+  preferredMinute: z.number().int().min(0).max(59).optional(),
+  limit: z.number().int().min(1).max(12).optional(),
 });
 
 const bookAppointmentSchema = z.object({
@@ -117,6 +143,15 @@ export async function executeVoiceTool(input: {
         },
       };
     }
+    case "getBusinessServices": {
+      return {
+        result: {
+          summary: buildServicesSummary(input.snapshot),
+          services: input.snapshot.services,
+          count: input.snapshot.services.length,
+        },
+      };
+    }
     case "searchKnowledge": {
       const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
       const searchResult = searchSnapshotKnowledge(input.snapshot, parsed.query);
@@ -134,6 +169,28 @@ export async function executeVoiceTool(input: {
         ...(parsed.preferredStaffId !== undefined
           ? { preferredStaffId: parsed.preferredStaffId }
           : {}),
+      });
+      return {
+        result,
+      };
+    }
+    case "findAvailability": {
+      const parsed = findAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
+      const result = await findVoiceAvailability({
+        businessId: input.businessId,
+        serviceName: parsed.serviceName,
+        date: parsed.date,
+        timezone: parsed.timezone ?? input.snapshot.timezone,
+        ...(parsed.preferredStaffId !== undefined
+          ? { preferredStaffId: parsed.preferredStaffId }
+          : {}),
+        ...(parsed.preferredHour24 !== undefined
+          ? { preferredHour24: parsed.preferredHour24 }
+          : {}),
+        ...(parsed.preferredMinute !== undefined
+          ? { preferredMinute: parsed.preferredMinute }
+          : {}),
+        ...(parsed.limit !== undefined ? { limit: parsed.limit } : {}),
       });
       return {
         result,

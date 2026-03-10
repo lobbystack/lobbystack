@@ -12,6 +12,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-receptionist/shared": "workspace:*"
+    "@ai-receptionist/shared": "workspace:*",
+    "luxon": "^3.7.2"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.1"
   }
 }

@@ -108,7 +108,9 @@ export type SmsConversationInput = {
 
 export type VoiceToolName =
   | "getBusinessHours"
+  | "getBusinessServices"
   | "searchKnowledge"
+  | "findAvailability"
   | "checkAvailability"
   | "bookAppointment"
   | "transferCall"
