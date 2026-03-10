@@ -19,5 +19,6 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile=false
+      - run: pnpm exec convex codegen --typecheck disable
       - run: pnpm typecheck
       - run: pnpm test

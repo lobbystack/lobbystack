@@ -4,7 +4,14 @@
     "baseUrl": ".",
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ai-receptionist/ai": ["../../packages/ai/src"],
+      "@ai-receptionist/config": ["../../packages/config/src"],
+      "@ai-receptionist/domain": ["../../packages/domain/src"],
+      "@ai-receptionist/providers": ["../../packages/providers/src"],
+      "@ai-receptionist/shared": ["../../packages/shared/src"],
+      "@ai-receptionist/telemetry": ["../../packages/telemetry/src"],
+      "@ai-receptionist/testing": ["../../packages/testing/src"]
     },
     "types": ["vite/client", "react", "react-dom"],
     "noEmit": true
