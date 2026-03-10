@@ -23,6 +23,24 @@ It is not responsible for:
 
 Those remain in Convex.
 
+## Architecture Choice
+
+For the receptionist itself, the live call path is intentionally **speech-to-speech** with the Realtime API.
+
+That is the right default for this product because we care about:
+
+- low latency on phone calls
+- natural turn-taking
+- consistent voice quality from greeting through conversation
+
+We still use a **chained** pattern for specialized work, but only behind tools and backend workflows. For example:
+
+- Convex-backed booking checks and mutations
+- Gemini-backed non-realtime text tasks
+- future policy validation or specialist sub-agents
+
+The live phone loop should not be rebuilt as a full chained STT -> text agent -> TTS pipeline unless there is a very strong product reason.
+
 ## Low-Latency Rule
 
 The gateway does not ask Convex for every conversational turn.
@@ -51,8 +69,13 @@ Instead:
 
 - The OpenAI Realtime websocket is opened only after the Twilio `start` event arrives.
 - The gateway waits for Twilio stream metadata, resolves the cached business snapshot, initializes the call record in Convex, then starts the Realtime session.
+- The initial greeting is generated inside the same Realtime session as the rest of the call, so the greeting and conversation share one consistent voice.
 - Audio received before OpenAI is ready is buffered in memory and flushed once the session is configured.
 - OpenAI is used only for this live audio path. Non-realtime text and embeddings stay on Gemini inside Convex.
+- Transcript persistence should stay narrow and final-event based:
+  - caller turns from `conversation.item.input_audio_transcription.completed`
+  - assistant turns from `response.output_audio_transcript.done`
+- Avoid persisting assistant transcript text from multiple overlapping final events, or duplicate transcript rows will appear.
 
 ## Failure Mode
 

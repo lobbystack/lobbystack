@@ -18,10 +18,16 @@ type KnowledgeFilters = {
   };
 };
 
+export const KNOWLEDGE_INDEX_VERSION = "gemini-embedding-001-v1";
+
+export function getKnowledgeNamespace(businessId: string): string {
+  return `knowledge:${KNOWLEDGE_INDEX_VERSION}:business:${businessId}`;
+}
+
 export const receptionistAgent = new Agent(components.agent, {
   name: "Receptionist Preview Agent",
   // Keep non-realtime text work on Gemini. OpenAI stays reserved for live voice.
-  languageModel: google("gemini-2.5-flash"),
+  languageModel: google("gemini-3.1-flash-lite-preview"),
   instructions:
     "You are the admin-side receptionist preview agent. Use the supplied snapshot and retrieved knowledge. Never invent hours, bookings, or transfer policy.",
   maxSteps: 4,

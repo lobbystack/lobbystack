@@ -1,0 +1,25 @@
+FROM node:20-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+
+RUN corepack enable
+
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @ai-receptionist/voice-gateway... build
+RUN pnpm deploy --filter @ai-receptionist/voice-gateway --prod --legacy /prod/voice-gateway
+
+FROM node:20-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY --from=build /prod/voice-gateway/ ./
+
+EXPOSE 3001
+
+CMD ["./node_modules/.bin/tsx", "src/index.ts"]

@@ -110,6 +110,8 @@ type ActiveVoiceSession = {
   seenTranscriptKeys: Set<string>;
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
+  outboundCursorMs: number;
+  activeAssistantResponseId: string | null;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
 };
@@ -235,11 +237,29 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   }
 }
 
-function captureOutboundAudio(session: ActiveVoiceSession, payload: string): void {
+function estimatePayloadDurationMs(payload: string, sampleRate = 8000): number {
+  const sampleCount = Buffer.from(payload, "base64").length;
+  return (sampleCount / sampleRate) * 1000;
+}
+
+function captureOutboundAudio(
+  session: ActiveVoiceSession,
+  payload: string,
+  responseId?: string,
+): void {
+  const currentOffsetMs = Date.now() - session.startedAtMs;
+  if (responseId && responseId !== session.activeAssistantResponseId) {
+    session.activeAssistantResponseId = responseId;
+    session.outboundCursorMs = Math.max(session.outboundCursorMs, currentOffsetMs);
+  } else if (!session.activeAssistantResponseId) {
+    session.outboundCursorMs = Math.max(session.outboundCursorMs, currentOffsetMs);
+  }
+
   session.outboundAudio.push({
-    offsetMs: Date.now() - session.startedAtMs,
+    offsetMs: session.outboundCursorMs,
     payload,
   });
+  session.outboundCursorMs += estimatePayloadDurationMs(payload);
 }
 
 function cancelAssistantAudio(
@@ -413,7 +433,6 @@ async function configureOpenAiSession(
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
-      model: runtimeConfig.OPENAI_REALTIME_MODEL,
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
         "You are speaking on a live phone call.",
@@ -578,7 +597,7 @@ function handleOpenAiMessage(
             },
           }),
         );
-        captureOutboundAudio(session, payload.delta);
+        captureOutboundAudio(session, payload.delta, payload.response_id);
       }
       return;
     }
@@ -608,6 +627,7 @@ function handleOpenAiMessage(
     }
     case "response.audio_transcript.done":
     case "response.output_audio_transcript.done": {
+      session.activeAssistantResponseId = null;
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -762,6 +782,8 @@ export async function handleMediaStreamConnection(
     seenTranscriptKeys: new Set(),
     inboundAudio: [],
     outboundAudio: [],
+    outboundCursorMs: 0,
+    activeAssistantResponseId: null,
     pendingInboundAudio: [],
     pendingTasks: new Set(),
   };

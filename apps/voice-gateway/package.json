@@ -18,11 +18,13 @@
     "@ai-receptionist/config": "workspace:*",
     "@ai-receptionist/providers": "workspace:*",
     "@ai-receptionist/shared": "workspace:*",
-    "@ai-receptionist/testing": "workspace:*",
     "@ai-receptionist/telemetry": "workspace:*",
+    "@ai-receptionist/testing": "workspace:*",
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
+    "dotenv": "^17.3.1",
     "fastify": "^5.2.1",
+    "tsx": "^4.21.0",
     "ws": "^8.18.3",
     "zod": "^3.24.2"
   }

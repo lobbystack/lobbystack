@@ -266,6 +266,11 @@ export const upsertPhoneNumber = mutation({
     await requireMembership(ctx, args.businessId);
 
     if (args.phoneNumberId) {
+      const existingPhoneNumber = await ctx.db.get(args.phoneNumberId);
+      if (!existingPhoneNumber || existingPhoneNumber.businessId !== args.businessId) {
+        throw new Error("Phone number not found for this business.");
+      }
+
       await ctx.db.patch(args.phoneNumberId, {
         e164: args.e164,
         ...(args.twilioPhoneSid !== undefined

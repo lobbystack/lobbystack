@@ -32,14 +32,23 @@ const closureWindowValidator = v.object({
 export default defineSchema({
   ...authTables,
   users: defineTable({
-    authSubject: v.string(),
+    // Keep this optional for older internal lookups while Convex Auth
+    // continues to own the canonical user document lifecycle.
+    authSubject: v.optional(v.string()),
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
     email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
     displayName: v.optional(v.string()),
     activeBusinessId: v.optional(v.id("businesses")),
     platformRole: v.optional(v.string()),
   })
     .index("by_auth_subject", ["authSubject"])
-    .index("by_email", ["email"]),
+    .index("email", ["email"])
+    .index("phone", ["phone"]),
 
   businesses: defineTable({
     slug: v.string(),
@@ -139,6 +148,7 @@ export default defineSchema({
     contentHash: v.optional(v.string()),
     lastIndexedAt: v.optional(v.string()),
     indexedEntryId: v.optional(v.string()),
+    indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
@@ -151,6 +161,10 @@ export default defineSchema({
     tags: v.array(v.string()),
     priority: v.number(),
     active: v.boolean(),
+    lastIndexedAt: v.optional(v.string()),
+    indexedEntryId: v.optional(v.string()),
+    indexVersion: v.optional(v.string()),
+    error: v.optional(v.string()),
   }).index("by_business_id_and_active", ["businessId", "active"]),
 
   business_context_snapshots: defineTable({

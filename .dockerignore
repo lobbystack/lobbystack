@@ -1,4 +1,6 @@
 .DS_Store
+.git
+.github
 .idea
 .turbo
 .vscode
@@ -12,6 +14,6 @@ node_modules
 .env.development.local
 .env.test.local
 apps/web/dist
-convex/.generated
 convex/_generated
+convex/.generated
 *.tsbuildinfo

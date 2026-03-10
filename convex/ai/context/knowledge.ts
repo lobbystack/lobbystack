@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createThread } from "@convex-dev/agent";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import {
   action,
@@ -11,7 +12,13 @@ import {
 } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import { requireIdentity, requireMembership } from "../../lib/auth";
-import { bulkWorkpool, rag, receptionistAgent } from "../../lib/components";
+import {
+  bulkWorkpool,
+  getKnowledgeNamespace,
+  KNOWLEDGE_INDEX_VERSION,
+  rag,
+  receptionistAgent,
+} from "../../lib/components";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 export const getDocumentForIndexing = internalQuery({
@@ -28,12 +35,32 @@ export const markDocumentIndexed = internalMutation({
     documentId: v.id("knowledge_documents"),
     status: v.string(),
     indexedEntryId: v.optional(v.string()),
+    indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.documentId, {
       status: args.status,
       indexedEntryId: args.indexedEntryId,
+      indexVersion: args.indexVersion,
+      error: args.error,
+      lastIndexedAt: new Date().toISOString(),
+    });
+    return null;
+  },
+});
+
+export const markSnippetIndexed = internalMutation({
+  args: {
+    snippetId: v.id("knowledge_snippets"),
+    indexedEntryId: v.optional(v.string()),
+    indexVersion: v.optional(v.string()),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.snippetId, {
+      indexedEntryId: args.indexedEntryId,
+      indexVersion: args.indexVersion,
       error: args.error,
       lastIndexedAt: new Date().toISOString(),
     });
@@ -149,8 +176,27 @@ export const searchKnowledgeInternal = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const staleEntries = await ctx.runQuery(
+      internal["ai/context/knowledge"].getKnowledgeEntriesNeedingReindex,
+      {
+        businessId: args.businessId,
+      },
+    );
+
+    for (const documentId of staleEntries.documentIds) {
+      await ctx.runAction(internal["ai/context/knowledge"].indexKnowledgeDocument, {
+        documentId,
+      });
+    }
+
+    for (const snippetId of staleEntries.snippetIds) {
+      await ctx.runAction(internal["ai/context/knowledge"].indexKnowledgeSnippet, {
+        snippetId,
+      });
+    }
+
     const { entries } = await rag.search(ctx, {
-      namespace: `business:${String(args.businessId)}`,
+      namespace: getKnowledgeNamespace(String(args.businessId)),
       query: args.query,
       limit: args.limit ?? 5,
     });
@@ -169,18 +215,16 @@ export const searchKnowledgeForDashboard = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Array<{ title?: string; text: string }>> => {
-    const identity = await requireIdentity(ctx);
-    const user = await ctx.runQuery(internal.users.getByAuthSubject, {
-      authSubject: identity.subject,
-    });
-    if (!user) {
+    await requireIdentity(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new Error("User profile not initialized.");
     }
     const membership = await ctx.runQuery(
       internal["ai/agents/runtime"].requireMembershipByUserId,
       {
         businessId: args.businessId,
-        userId: user._id,
+        userId,
       },
     );
 
@@ -212,7 +256,7 @@ export const indexKnowledgeDocument = internalAction({
     }
 
     const result = await rag.add(ctx, {
-      namespace: `business:${String(document.businessId)}`,
+      namespace: getKnowledgeNamespace(String(document.businessId)),
       title: document.title,
       text: document.textContent,
       key: `document:${String(args.documentId)}`,
@@ -234,6 +278,7 @@ export const indexKnowledgeDocument = internalAction({
       documentId: args.documentId,
       status: result.status === "ready" ? "indexed" : "indexing",
       indexedEntryId: String(result.entryId),
+      indexVersion: KNOWLEDGE_INDEX_VERSION,
     });
     await ctx.runMutation(internal["ai/context/snapshots"].refreshSnapshot, {
       businessId: document.businessId,
@@ -256,7 +301,7 @@ export const indexKnowledgeSnippet = internalAction({
     }
 
     const result = await rag.add(ctx, {
-      namespace: `business:${String(snippet.businessId)}`,
+      namespace: getKnowledgeNamespace(String(snippet.businessId)),
       title: snippet.title,
       text: snippet.content,
       key: `snippet:${String(args.snippetId)}`,
@@ -274,6 +319,11 @@ export const indexKnowledgeSnippet = internalAction({
       ],
     });
 
+    await ctx.runMutation(internal["ai/context/knowledge"].markSnippetIndexed, {
+      snippetId: args.snippetId,
+      indexedEntryId: String(result.entryId),
+      indexVersion: KNOWLEDGE_INDEX_VERSION,
+    });
     await ctx.runMutation(internal["ai/context/snapshots"].refreshSnapshot, {
       businessId: snippet.businessId,
     });
@@ -287,6 +337,43 @@ export const getSnippetForIndexing = internalQuery({
   },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.snippetId);
+  },
+});
+
+export const getKnowledgeEntriesNeedingReindex = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const [documents, snippets] = await Promise.all([
+      ctx.db
+        .query("knowledge_documents")
+        .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+      ctx.db
+        .query("knowledge_snippets")
+        .withIndex("by_business_id_and_active", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+    ]);
+
+    return {
+      documentIds: documents
+        .filter(
+          (document) =>
+            !!document.textContent &&
+            (!document.indexedEntryId ||
+              document.status !== "indexed" ||
+              document.indexVersion !== KNOWLEDGE_INDEX_VERSION),
+        )
+        .map((document) => document._id),
+      snippetIds: snippets
+        .filter(
+          (snippet) =>
+            snippet.active &&
+            (!snippet.indexedEntryId || snippet.indexVersion !== KNOWLEDGE_INDEX_VERSION),
+        )
+        .map((snippet) => snippet._id),
+    };
   },
 });
 
@@ -341,18 +428,16 @@ export const previewKnowledgeAnswer = action({
     prompt: v.string(),
   },
   handler: async (ctx, args): Promise<{ text: string; threadId: string }> => {
-    const identity = await requireIdentity(ctx);
-    const user = await ctx.runQuery(internal.users.getByAuthSubject, {
-      authSubject: identity.subject,
-    });
-    if (!user) {
+    await requireIdentity(ctx);
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       throw new Error("User profile not initialized.");
     }
     const membership = await ctx.runQuery(
       internal["ai/agents/runtime"].requireMembershipByUserId,
       {
         businessId: args.businessId,
-        userId: user._id,
+        userId,
       },
     );
 
