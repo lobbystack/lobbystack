@@ -215,8 +215,13 @@ export const searchKnowledgeForDashboard = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Array<{ title?: string; text: string }>> => {
-    await requireIdentity(ctx);
-    const userId = await getAuthUserId(ctx);
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const userId = await ctx.runQuery(internal.users.resolveAuthenticatedUserForBusiness, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     if (!userId) {
       throw new Error("User profile not initialized.");
     }
@@ -428,8 +433,13 @@ export const previewKnowledgeAnswer = action({
     prompt: v.string(),
   },
   handler: async (ctx, args): Promise<{ text: string; threadId: string }> => {
-    await requireIdentity(ctx);
-    const userId = await getAuthUserId(ctx);
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const userId = await ctx.runQuery(internal.users.resolveAuthenticatedUserForBusiness, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     if (!userId) {
       throw new Error("User profile not initialized.");
     }

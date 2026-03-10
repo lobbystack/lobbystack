@@ -19,7 +19,7 @@ export async function fetchSnapshotForPhoneNumber(
         "Content-Type": "application/json",
         "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
       },
-      body: JSON.stringify({ phoneNumber }),
+      body: JSON.stringify({ phoneNumber, channel: "voice" }),
     });
 
     if (!response.ok) {

@@ -60,11 +60,15 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as { phoneNumber: string };
+    const body = (await request.json()) as {
+      phoneNumber: string;
+      channel?: "voice" | "sms";
+    };
     const phoneNumber = await ctx.runQuery(
       internal.businesses.catalog.resolveBusinessByPhoneNumber,
       {
         e164: body.phoneNumber,
+        channel: body.channel ?? "voice",
       },
     );
 

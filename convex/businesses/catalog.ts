@@ -6,12 +6,30 @@ import { scheduleSnapshotRefresh } from "./admin";
 export const resolveBusinessByPhoneNumber = internalQuery({
   args: {
     e164: v.string(),
+    channel: v.union(v.literal("voice"), v.literal("sms")),
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const matches = await ctx.db
       .query("phone_numbers")
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))
-      .unique();
+      .collect();
+    const eligibleMatches = matches.filter((phoneNumber) => {
+      if (phoneNumber.status !== "active") {
+        return false;
+      }
+
+      return args.channel === "voice"
+        ? phoneNumber.voiceEnabled
+        : phoneNumber.smsEnabled;
+    });
+
+    if (eligibleMatches.length > 1) {
+      throw new Error(
+        `Multiple active ${args.channel} routes are configured for ${args.e164}.`,
+      );
+    }
+
+    return eligibleMatches[0] ?? null;
   },
 });
 
@@ -264,6 +282,17 @@ export const upsertPhoneNumber = mutation({
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
+    const conflictingPhoneNumber = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_e164", (q) => q.eq("e164", args.e164))
+      .collect();
+    const duplicate = conflictingPhoneNumber.find(
+      (phoneNumber) => phoneNumber._id !== args.phoneNumberId,
+    );
+
+    if (duplicate) {
+      throw new Error(`The phone number ${args.e164} is already mapped to a business.`);
+    }
 
     if (args.phoneNumberId) {
       const existingPhoneNumber = await ctx.db.get(args.phoneNumberId);

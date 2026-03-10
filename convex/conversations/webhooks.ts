@@ -202,7 +202,7 @@ export const handleTwilioSmsInbound = internalAction({
   handler: async (ctx, args) => {
     const phoneNumber = await ctx.runQuery(
       internal.businesses.catalog.resolveBusinessByPhoneNumber,
-      { e164: args.to },
+      { e164: args.to, channel: "sms" },
     );
 
     if (!phoneNumber) {

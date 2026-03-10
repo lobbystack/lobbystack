@@ -153,8 +153,11 @@ export const refreshSnapshot = internalMutation({
       throw new Error("Receptionist profile not found.");
     }
 
-    const primaryPhone = phoneNumbers.find((row) => row.voiceEnabled) ?? phoneNumbers[0];
-    const primarySms = phoneNumbers.find((row) => row.smsEnabled) ?? phoneNumbers[0];
+    const activePhoneNumbers = phoneNumbers.filter((row) => row.status === "active");
+    const primaryPhone =
+      activePhoneNumbers.find((row) => row.voiceEnabled) ?? activePhoneNumbers[0];
+    const primarySms =
+      activePhoneNumbers.find((row) => row.smsEnabled) ?? activePhoneNumbers[0];
     const snapshotPayload = buildBusinessContextSnapshot({
       businessId: String(args.businessId),
       version: `${Date.now()}`,
