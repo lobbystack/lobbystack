@@ -359,6 +359,15 @@ function queueTranscriptWrite(
   }).catch((error) => {
     server.log.error(error);
   });
+  server.log.info(
+    {
+      callId: session.callId,
+      sequence: session.transcriptSequence,
+      speaker: input.speaker,
+      text: input.text,
+    },
+    "Persisting transcript segment",
+  );
   session.transcriptSequence += 1;
   trackTask(session, transcriptPromise);
 }
@@ -571,14 +580,17 @@ function handleOpenAiMessage(
       queueTranscriptWriteIfNew(
         server,
         session,
-        `caller-segment:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.text ?? ""}`,
+        `caller-segment:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.delta ?? payload.text ?? ""}`,
         {
           speaker: "caller",
-          text: payload.text,
+          text: payload.delta ?? payload.text,
         },
       );
       return;
     }
+    case "response.output_audio_transcript.delta":
+    case "response.output_text.delta":
+      return;
     case "conversation.item.input_audio_transcription.failed": {
       server.log.warn(
         {
@@ -606,7 +618,10 @@ function handleOpenAiMessage(
       return;
     }
     case "response.content_part.done": {
-      if (payload.part?.type === "audio" && payload.part.transcript) {
+      if (
+        (payload.part?.type === "audio" || payload.part?.type === "output_audio") &&
+        payload.part.transcript
+      ) {
         queueTranscriptWriteIfNew(
           server,
           session,
@@ -614,6 +629,20 @@ function handleOpenAiMessage(
           {
             speaker: "assistant",
             text: payload.part.transcript,
+          },
+        );
+      }
+      if (
+        (payload.part?.type === "text" || payload.part?.type === "output_text") &&
+        payload.part.text
+      ) {
+        queueTranscriptWriteIfNew(
+          server,
+          session,
+          `assistant-content-part-text:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.part.text}`,
+          {
+            speaker: "assistant",
+            text: payload.part.text,
           },
         );
       }
@@ -641,7 +670,10 @@ function handleOpenAiMessage(
     case "response.output_item.done": {
       if (payload.item?.type === "message" && payload.item.content) {
         for (const contentPart of payload.item.content) {
-          if (contentPart.type === "audio" && contentPart.transcript) {
+          if (
+            (contentPart.type === "audio" || contentPart.type === "output_audio") &&
+            contentPart.transcript
+          ) {
             queueTranscriptWriteIfNew(
               server,
               session,
@@ -649,6 +681,20 @@ function handleOpenAiMessage(
               {
                 speaker: "assistant",
                 text: contentPart.transcript,
+              },
+            );
+          }
+          if (
+            (contentPart.type === "text" || contentPart.type === "output_text") &&
+            contentPart.text
+          ) {
+            queueTranscriptWriteIfNew(
+              server,
+              session,
+              `assistant-output-item-text:${payload.item_id ?? "unknown"}:${contentPart.text}`,
+              {
+                speaker: "assistant",
+                text: contentPart.text,
               },
             );
           }
@@ -672,7 +718,10 @@ function handleOpenAiMessage(
     case "response.done": {
       for (const outputItem of payload.response?.output ?? []) {
         for (const contentPart of outputItem.content ?? []) {
-          if (contentPart.type === "audio" && contentPart.transcript) {
+          if (
+            (contentPart.type === "audio" || contentPart.type === "output_audio") &&
+            contentPart.transcript
+          ) {
             queueTranscriptWriteIfNew(
               server,
               session,
@@ -683,8 +732,34 @@ function handleOpenAiMessage(
               },
             );
           }
+          if (
+            (contentPart.type === "text" || contentPart.type === "output_text") &&
+            contentPart.text
+          ) {
+            queueTranscriptWriteIfNew(
+              server,
+              session,
+              `assistant-response-done-text:${payload.output_index ?? 0}:${contentPart.text}`,
+              {
+                speaker: "assistant",
+                text: contentPart.text,
+              },
+            );
+          }
         }
       }
+      return;
+    }
+    case "response.output_text.done": {
+      queueTranscriptWriteIfNew(
+        server,
+        session,
+        `assistant-output-text:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.text ?? ""}`,
+        {
+          speaker: "assistant",
+          text: payload.text,
+        },
+      );
       return;
     }
     default: {
