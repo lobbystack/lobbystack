@@ -65,7 +65,7 @@ export function SignupForm({
             />
           </Field>
 
-          <div className="space-y-7">
+          <div>
             <Field>
               <FieldLabel htmlFor="signup-password">Password</FieldLabel>
               <Input
@@ -80,11 +80,13 @@ export function SignupForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="space-y-1">
+              <div className="mb-7 mt-2 space-y-1">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>
-            ) : null}
+            ) : (
+              <div aria-hidden="true" className="h-7" />
+            )}
 
             <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Creating account..." : "Create account"}
