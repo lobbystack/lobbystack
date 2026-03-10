@@ -65,7 +65,7 @@ export function LoginForm({
             />
           </Field>
 
-          <div>
+          <div className="space-y-7">
             <Field>
               <FieldLabel htmlFor="login-password">Password</FieldLabel>
               <Input
@@ -80,13 +80,11 @@ export function LoginForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="mb-6 mt-3 space-y-1">
+              <div className="space-y-1">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>
-            ) : (
-              <div aria-hidden="true" className="h-7" />
-            )}
+            ) : null}
 
             <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
               {isSubmitting ? "Signing in..." : "Sign in"}
