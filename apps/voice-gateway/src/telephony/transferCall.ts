@@ -9,23 +9,43 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
-export async function transferLiveCall(input: {
-  callSid: string;
-  destination: string;
+export function buildLiveCallUpdateTwiml(input: {
+  sayMessage?: string;
+  destination?: string;
   actionUrl?: string;
+  hangup?: boolean;
+}): string {
+  const parts = ["<Response>"];
+
+  if (input.sayMessage) {
+    parts.push(`<Say>${escapeXml(input.sayMessage)}</Say>`);
+  }
+
+  if (input.destination) {
+    const actionAttribute = input.actionUrl
+      ? ` action="${escapeXml(input.actionUrl)}" method="POST"`
+      : "";
+    parts.push(`<Dial${actionAttribute}>${escapeXml(input.destination)}</Dial>`);
+  } else if (input.hangup ?? !input.sayMessage) {
+    parts.push("<Hangup />");
+  }
+
+  parts.push("</Response>");
+  return parts.join("");
+}
+
+async function updateLiveCallTwiml(input: {
+  callSid: string;
+  twiml: string;
 }): Promise<void> {
   const env = loadVoiceGatewayEnv(process.env);
 
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) {
-    throw new Error("Twilio credentials are required to transfer a live call.");
+    throw new Error("Twilio credentials are required to update a live call.");
   }
 
-  const actionAttribute = input.actionUrl
-    ? ` action="${escapeXml(input.actionUrl)}" method="POST"`
-    : "";
-  const twiml = `<Response><Dial${actionAttribute}>${escapeXml(input.destination)}</Dial></Response>`;
   const formData = new URLSearchParams();
-  formData.set("Twiml", twiml);
+  formData.set("Twiml", input.twiml);
 
   const authorization = Buffer.from(
     `${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`,
@@ -45,4 +65,33 @@ export async function transferLiveCall(input: {
   if (!response.ok) {
     throw new Error(await response.text());
   }
+}
+
+export async function transferLiveCall(input: {
+  callSid: string;
+  destination: string;
+  actionUrl?: string;
+  sayMessage?: string;
+}): Promise<void> {
+  await updateLiveCallTwiml({
+    callSid: input.callSid,
+    twiml: buildLiveCallUpdateTwiml({
+      ...(input.sayMessage ? { sayMessage: input.sayMessage } : {}),
+      destination: input.destination,
+      ...(input.actionUrl ? { actionUrl: input.actionUrl } : {}),
+    }),
+  });
+}
+
+export async function endLiveCallWithMessage(input: {
+  callSid: string;
+  sayMessage: string;
+}): Promise<void> {
+  await updateLiveCallTwiml({
+    callSid: input.callSid,
+    twiml: buildLiveCallUpdateTwiml({
+      sayMessage: input.sayMessage,
+      hangup: true,
+    }),
+  });
 }

@@ -16,7 +16,14 @@ import {
 } from "../convex/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import { executeVoiceTool } from "../realtime/toolExecutor";
-import { transferLiveCall } from "./transferCall";
+import {
+  endLiveCallWithMessage,
+  transferLiveCall,
+} from "./transferCall";
+import {
+  buildProviderFailureMessage,
+  buildToolFailureRecoveryInstructions,
+} from "./failureRecovery";
 import {
   validateTwilioSignature,
 } from "./twilioRequest";
@@ -106,7 +113,9 @@ type ActiveVoiceSession = {
   pendingTransferDestination: string | null;
   pendingTransferMarkName: string | null;
   transferExecuted: boolean;
+  providerRecoveryStarted: boolean;
   finalized: boolean;
+  finalDispositionOverride: string | null;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
   inboundAudio: Array<TimedAudioChunk>;
@@ -372,10 +381,7 @@ async function performTransfer(
       destination: session.pendingTransferDestination,
       ...(session.callId
         ? {
-            actionUrl: new URL(
-              `/twilio/voice/transfer-action?callId=${encodeURIComponent(session.callId)}`,
-              server.runtimeConfig.VOICE_GATEWAY_BASE_URL,
-            ).toString(),
+            actionUrl: getTransferActionUrl(server, session.callId),
           }
         : {}),
     });
@@ -394,6 +400,13 @@ async function performTransfer(
       });
     }
   }
+}
+
+function getTransferActionUrl(server: FastifyInstance, callId: string): string {
+  return new URL(
+    `/twilio/voice/transfer-action?callId=${encodeURIComponent(callId)}`,
+    server.runtimeConfig.VOICE_GATEWAY_BASE_URL,
+  ).toString();
 }
 
 function queueTransferAfterPlayback(
@@ -450,6 +463,7 @@ async function finalizeCall(
 
   try {
     await Promise.allSettled(Array.from(session.pendingTasks));
+    const finalDisposition = session.finalDispositionOverride ?? disposition;
 
     if (session.callId) {
       const durationMs = Math.max(0, Date.now() - session.startedAtMs);
@@ -467,9 +481,9 @@ async function finalizeCall(
 
       await completeVoiceCall({
         callId: session.callId,
-        status: disposition === "transferred" ? "transferred" : "completed",
+        status: finalDisposition === "transferred" ? "transferred" : "completed",
         endedAt: new Date().toISOString(),
-        disposition,
+        disposition: finalDisposition,
       });
     }
   } catch (error) {
@@ -481,6 +495,76 @@ async function finalizeCall(
     if (twilioSocket.readyState === WebSocket.OPEN) {
       twilioSocket.close();
     }
+  }
+}
+
+async function recoverFromProviderFailure(
+  server: FastifyInstance,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  input: {
+    disposition: string;
+  },
+): Promise<void> {
+  if (
+    session.finalized ||
+    session.providerRecoveryStarted ||
+    !session.callSid
+  ) {
+    return;
+  }
+
+  session.providerRecoveryStarted = true;
+  session.finalDispositionOverride = input.disposition;
+
+  clearPendingTransferPlaybackWait(server, session, "provider_failure_recovery");
+  if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+    twilioSocket.send(
+      JSON.stringify({
+        event: "clear",
+        streamSid: session.streamSid,
+      }),
+    );
+  }
+
+  const transferDestination = session.snapshot?.transferPolicy.transferNumber ?? null;
+  const transferAvailable =
+    session.snapshot?.transferPolicy.mode !== "never" && Boolean(transferDestination);
+  const fallbackMessage = buildProviderFailureMessage({ transferAvailable });
+
+  try {
+    if (transferAvailable && transferDestination) {
+      session.transferExecuted = true;
+      if (session.callId) {
+        await updateVoiceTransferState({
+          callId: session.callId,
+          transferState: "requested",
+        });
+      }
+
+      await transferLiveCall({
+        callSid: session.callSid,
+        destination: transferDestination,
+        sayMessage: fallbackMessage,
+        ...(session.callId ? { actionUrl: getTransferActionUrl(server, session.callId) } : {}),
+      });
+      return;
+    }
+
+    await endLiveCallWithMessage({
+      callSid: session.callSid,
+      sayMessage: fallbackMessage,
+    });
+  } catch (error) {
+    server.log.error(
+      {
+        callSid: session.callSid,
+        streamSid: session.streamSid,
+        disposition: input.disposition,
+      },
+      error instanceof Error ? error.message : "Provider recovery failed",
+    );
+    await finalizeCall(server, null, twilioSocket, session, input.disposition);
   }
 }
 
@@ -701,6 +785,9 @@ async function handleToolCall(
     });
   } catch (error) {
     server.log.error(error);
+    const transferAvailable =
+      session.snapshot?.transferPolicy.mode !== "never" &&
+      Boolean(session.snapshot?.transferPolicy.transferNumber);
     postRealtimeEvent(openAiSocket, {
       type: "conversation.item.create",
       item: {
@@ -709,11 +796,18 @@ async function handleToolCall(
         output: JSON.stringify({
           ok: false,
           error: error instanceof Error ? error.message : "Unknown tool error",
+          transferAvailable,
         }),
       },
     });
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
+      response: {
+        instructions: buildToolFailureRecoveryInstructions({
+          toolName: message.name,
+          transferAvailable,
+        }),
+      },
     });
   }
 }
@@ -915,7 +1009,10 @@ export async function handleMediaStreamConnection(
       }
     })().catch((error) => {
       server.log.error(error);
-      void finalizeCall(server, openAiSocket, twilioSocket, session, "stream_start_failed");
+      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+        disposition: "stream_start_failed",
+      });
+      trackTask(session, recoveryTask);
     });
   });
 
@@ -959,7 +1056,9 @@ export async function handleMediaStreamConnection(
     pendingTransferDestination: null,
     pendingTransferMarkName: null,
     transferExecuted: false,
+    providerRecoveryStarted: false,
     finalized: false,
+    finalDispositionOverride: null,
     transcriptSequence: 1,
     seenTranscriptKeys: new Set(),
     inboundAudio: [],
@@ -1075,6 +1174,10 @@ export async function handleMediaStreamConnection(
         },
         "OpenAI Realtime websocket error",
       );
+      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+        disposition: "openai_socket_error",
+      });
+      trackTask(session, recoveryTask);
     });
 
     openAiSocket.on("unexpected-response", (_request, response) => {
@@ -1088,6 +1191,10 @@ export async function handleMediaStreamConnection(
         },
         "OpenAI Realtime websocket handshake failed",
       );
+      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+        disposition: "openai_handshake_failed",
+      });
+      trackTask(session, recoveryTask);
     });
 
     openAiSocket.on("close", (code, reason) => {
@@ -1101,7 +1208,10 @@ export async function handleMediaStreamConnection(
         "OpenAI Realtime websocket closed",
       );
       if (!session.finalized) {
-        void finalizeCall(server, openAiSocket, twilioSocket, session, "openai_socket_closed");
+        const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+          disposition: "openai_socket_closed",
+        });
+        trackTask(session, recoveryTask);
       }
     });
   }
