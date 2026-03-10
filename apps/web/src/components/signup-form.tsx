@@ -80,7 +80,7 @@ export function SignupForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="my-3 space-y-1">
+              <div className="mb-6 mt-3 space-y-1">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>

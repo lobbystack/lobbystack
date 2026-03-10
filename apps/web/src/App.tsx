@@ -80,9 +80,9 @@ function getAuthErrorMessage(error: unknown, flow: "signIn" | "signUp"): string 
 
   if (flow === "signIn") {
     if (message.includes("InvalidSecret") || message.includes("Invalid credentials")) {
-      return "Incorrect email or password.";
+      return "Wrong email or password. Please try again.";
     }
-    return "We couldn't sign you in. Please try again.";
+    return "Wrong email or password. Please try again.";
   }
 
   if (message.includes("already exists")) {
