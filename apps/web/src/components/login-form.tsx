@@ -80,7 +80,7 @@ export function LoginForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="mb-4 mt-2 space-y-1">
+              <div className="my-3 space-y-1">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>
