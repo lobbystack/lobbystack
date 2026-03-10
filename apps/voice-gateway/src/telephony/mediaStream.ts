@@ -48,14 +48,38 @@ type OpenAiRealtimeMessage = {
   type: string;
   delta?: string;
   transcript?: string;
+  text?: string;
   name?: string;
   call_id?: string;
   arguments?: string;
+  item_id?: string;
+  content_index?: number;
+  output_index?: number;
+  part?: {
+    type?: string;
+    transcript?: string;
+    text?: string;
+  };
   item?: {
     type?: string;
     name?: string;
     call_id?: string;
     arguments?: string;
+    content?: Array<{
+      type?: string;
+      transcript?: string;
+      text?: string;
+    }>;
+  };
+  response?: {
+    output?: Array<{
+      type?: string;
+      content?: Array<{
+        type?: string;
+        transcript?: string;
+        text?: string;
+      }>;
+    }>;
   };
 };
 
@@ -76,6 +100,7 @@ type ActiveVoiceSession = {
   transferExecuted: boolean;
   finalized: boolean;
   transcriptSequence: number;
+  seenTranscriptKeys: Set<string>;
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
   pendingInboundAudio: Array<string>;
@@ -338,6 +363,28 @@ function queueTranscriptWrite(
   trackTask(session, transcriptPromise);
 }
 
+function queueTranscriptWriteIfNew(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+  dedupeKey: string,
+  input: {
+    speaker: string;
+    text: string | undefined;
+    confidence?: number;
+  },
+): void {
+  if (!input.text || input.text.trim().length === 0) {
+    return;
+  }
+
+  if (session.seenTranscriptKeys.has(dedupeKey)) {
+    return;
+  }
+
+  session.seenTranscriptKeys.add(dedupeKey);
+  queueTranscriptWrite(server, session, input);
+}
+
 async function configureOpenAiSession(
   openAiSocket: WebSocket,
   session: ActiveVoiceSession,
@@ -509,18 +556,67 @@ function handleOpenAiMessage(
       return;
     }
     case "conversation.item.input_audio_transcription.completed": {
-      queueTranscriptWrite(server, session, {
+      queueTranscriptWriteIfNew(
+        server,
+        session,
+        `caller-completed:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.transcript ?? ""}`,
+        {
         speaker: "caller",
         text: payload.transcript,
-      });
+      },
+      );
+      return;
+    }
+    case "conversation.item.input_audio_transcription.segment": {
+      queueTranscriptWriteIfNew(
+        server,
+        session,
+        `caller-segment:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.text ?? ""}`,
+        {
+          speaker: "caller",
+          text: payload.text,
+        },
+      );
+      return;
+    }
+    case "conversation.item.input_audio_transcription.failed": {
+      server.log.warn(
+        {
+          itemId: payload.item_id,
+        },
+        "Input audio transcription failed",
+      );
       return;
     }
     case "response.audio_transcript.done":
     case "response.output_audio_transcript.done": {
-      queueTranscriptWrite(server, session, {
-        speaker: "assistant",
-        text: payload.transcript,
-      });
+      queueTranscriptWriteIfNew(
+        server,
+        session,
+        `assistant-output-transcript:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.transcript ?? ""}`,
+        {
+          speaker: "assistant",
+          text: payload.transcript,
+        },
+      );
+      if (session.pendingTransferDestination && !session.transferExecuted) {
+        const transferTask = performTransfer(server, session);
+        trackTask(session, transferTask);
+      }
+      return;
+    }
+    case "response.content_part.done": {
+      if (payload.part?.type === "audio" && payload.part.transcript) {
+        queueTranscriptWriteIfNew(
+          server,
+          session,
+          `assistant-content-part:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.part.transcript}`,
+          {
+            speaker: "assistant",
+            text: payload.part.transcript,
+          },
+        );
+      }
       if (session.pendingTransferDestination && !session.transferExecuted) {
         const transferTask = performTransfer(server, session);
         trackTask(session, transferTask);
@@ -543,6 +639,21 @@ function handleOpenAiMessage(
       return;
     }
     case "response.output_item.done": {
+      if (payload.item?.type === "message" && payload.item.content) {
+        for (const contentPart of payload.item.content) {
+          if (contentPart.type === "audio" && contentPart.transcript) {
+            queueTranscriptWriteIfNew(
+              server,
+              session,
+              `assistant-output-item:${payload.item_id ?? "unknown"}:${contentPart.transcript}`,
+              {
+                speaker: "assistant",
+                text: contentPart.transcript,
+              },
+            );
+          }
+        }
+      }
       if (
         payload.item?.type === "function_call" &&
         payload.item.name &&
@@ -555,6 +666,24 @@ function handleOpenAiMessage(
           arguments: payload.item.arguments,
         });
         trackTask(session, task);
+      }
+      return;
+    }
+    case "response.done": {
+      for (const outputItem of payload.response?.output ?? []) {
+        for (const contentPart of outputItem.content ?? []) {
+          if (contentPart.type === "audio" && contentPart.transcript) {
+            queueTranscriptWriteIfNew(
+              server,
+              session,
+              `assistant-response-done:${payload.output_index ?? 0}:${contentPart.transcript}`,
+              {
+                speaker: "assistant",
+                text: contentPart.transcript,
+              },
+            );
+          }
+        }
       }
       return;
     }
@@ -663,6 +792,7 @@ export async function handleMediaStreamConnection(
     transferExecuted: false,
     finalized: false,
     transcriptSequence: 1,
+    seenTranscriptKeys: new Set(),
     inboundAudio: [],
     outboundAudio: [],
     pendingInboundAudio: [],
