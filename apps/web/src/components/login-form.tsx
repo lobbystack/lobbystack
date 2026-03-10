@@ -85,7 +85,7 @@ export function LoginForm({
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>
             ) : (
-              <div aria-hidden="true" className="h-7" />
+              <div aria-hidden="true" className="h-8" />
             )}
 
             <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
