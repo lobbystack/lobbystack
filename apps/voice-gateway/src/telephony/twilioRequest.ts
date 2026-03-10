@@ -34,7 +34,7 @@ export function normalizeFormFields(
 
 export function validateTwilioSignature(input: TwilioSignatureInput): boolean {
   if (!input.authToken) {
-    return true;
+    return false;
   }
 
   const providedSignature = Array.isArray(input.signatureHeader)

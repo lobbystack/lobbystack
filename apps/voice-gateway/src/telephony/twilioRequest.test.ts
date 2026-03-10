@@ -63,13 +63,13 @@ describe("twilioRequest helpers", () => {
     ).toBe(true);
   });
 
-  it("allows requests when no auth token is configured", () => {
+  it("rejects requests when no auth token is configured", () => {
     expect(
       validateTwilioSignature({
         authToken: undefined,
         url: "https://voice.example.com/media-stream",
         signatureHeader: undefined,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });

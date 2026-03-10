@@ -806,21 +806,14 @@ export async function handleMediaStreamConnection(
     );
 
     if (!hasValidTwilioSignature) {
-      if (runtimeConfig.DEPLOYMENT_MODE === "development") {
-        server.log.warn(
-          { validationUrls },
-          "Skipping Twilio Media Stream signature enforcement in development mode",
-        );
-      } else {
-        server.log.warn(
-          { validationUrls },
-          "Rejected Twilio Media Stream websocket with invalid signature",
-        );
-        if (typeof twilioSocket.close === "function") {
-          twilioSocket.close(1008, "invalid signature");
-        }
-        return false;
+      server.log.warn(
+        { validationUrls },
+        "Rejected Twilio Media Stream websocket with invalid signature",
+      );
+      if (typeof twilioSocket.close === "function") {
+        twilioSocket.close(1008, "invalid signature");
       }
+      return false;
     }
 
     if (!runtimeConfig.OPENAI_API_KEY) {
