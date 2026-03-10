@@ -43,6 +43,7 @@ import { RecentCallsPanel } from "@/features/calls/RecentCallsPanel";
 import { KnowledgeManager } from "@/features/knowledge/KnowledgeManager";
 import { PreviewPanel } from "@/features/knowledge/PreviewPanel";
 import { BusinessHoursForm } from "@/features/settings/BusinessHoursForm";
+import { PhoneNumbersCard } from "@/features/settings/PhoneNumbersCard";
 import { BusinessProfileForm } from "@/features/settings/BusinessProfileForm";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { ServicesCard } from "@/features/settings/ServicesCard";
@@ -486,6 +487,7 @@ function SettingsPage(props: {
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
       <div className="space-y-6">
         <BusinessProfileForm businessId={props.businessId} />
+        <PhoneNumbersCard businessId={props.businessId} />
         <BusinessHoursForm businessId={props.businessId} />
         <ServicesCard businessId={props.businessId} />
       </div>
