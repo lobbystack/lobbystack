@@ -104,6 +104,7 @@ type ActiveVoiceSession = {
   conversationId: string | null;
   openAiReady: boolean;
   pendingTransferDestination: string | null;
+  pendingTransferMarkName: string | null;
   transferExecuted: boolean;
   finalized: boolean;
   transcriptSequence: number;
@@ -317,13 +318,36 @@ function captureOutboundAudio(
   session.outboundCursorMs += estimatePayloadDurationMs(payload);
 }
 
+function clearPendingTransferPlaybackWait(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+  reason: string,
+): void {
+  if (!session.pendingTransferMarkName) {
+    return;
+  }
+
+  server.log.info(
+    {
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      markName: session.pendingTransferMarkName,
+      reason,
+    },
+    "Canceled pending transfer playback wait",
+  );
+  session.pendingTransferMarkName = null;
+}
+
 function cancelAssistantAudio(
+  server: FastifyInstance,
   openAiSocket: WebSocket,
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
   postRealtimeEvent(openAiSocket, { type: "response.cancel" });
   if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+    clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
     twilioSocket.send(
       JSON.stringify({
         event: "clear",
@@ -346,6 +370,14 @@ async function performTransfer(
     await transferLiveCall({
       callSid: session.callSid,
       destination: session.pendingTransferDestination,
+      ...(session.callId
+        ? {
+            actionUrl: new URL(
+              `/twilio/voice/transfer-action?callId=${encodeURIComponent(session.callId)}`,
+              server.runtimeConfig.VOICE_GATEWAY_BASE_URL,
+            ).toString(),
+          }
+        : {}),
     });
     if (session.callId) {
       await updateVoiceTransferState({
@@ -362,6 +394,46 @@ async function performTransfer(
       });
     }
   }
+}
+
+function queueTransferAfterPlayback(
+  server: FastifyInstance,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  if (
+    !session.pendingTransferDestination ||
+    session.transferExecuted ||
+    session.pendingTransferMarkName
+  ) {
+    return;
+  }
+
+  if (!session.streamSid || twilioSocket.readyState !== WebSocket.OPEN) {
+    const transferTask = performTransfer(server, session);
+    trackTask(session, transferTask);
+    return;
+  }
+
+  const markName = `transfer-${crypto.randomUUID()}`;
+  session.pendingTransferMarkName = markName;
+  twilioSocket.send(
+    JSON.stringify({
+      event: "mark",
+      streamSid: session.streamSid,
+      mark: {
+        name: markName,
+      },
+    }),
+  );
+  server.log.info(
+    {
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      markName,
+    },
+    "Queued transfer to wait for Twilio playback completion",
+  );
 }
 
 async function finalizeCall(
@@ -691,6 +763,10 @@ function handleOpenAiMessage(
       );
       return;
     }
+    case "response.audio.done":
+    case "response.output_audio.done": {
+      return;
+    }
     case "response.output_audio_transcript.delta":
     case "response.output_text.delta":
       return;
@@ -715,14 +791,20 @@ function handleOpenAiMessage(
           text: payload.transcript,
         },
       );
-      if (session.pendingTransferDestination && !session.transferExecuted) {
-        const transferTask = performTransfer(server, session);
-        trackTask(session, transferTask);
+      return;
+    }
+    case "response.done": {
+      if (
+        payload.response?.status === "completed" &&
+        session.pendingTransferDestination &&
+        !session.transferExecuted
+      ) {
+        queueTransferAfterPlayback(server, twilioSocket, session);
       }
       return;
     }
     case "input_audio_buffer.speech_started": {
-      cancelAssistantAudio(openAiSocket, twilioSocket, session);
+      cancelAssistantAudio(server, openAiSocket, twilioSocket, session);
       return;
     }
     case "response.function_call_arguments.done": {
@@ -784,6 +866,27 @@ export async function handleMediaStreamConnection(
 
       if (payload.event === "start") {
         await startRealtimeSession(payload);
+        return;
+      }
+
+      if (payload.event === "mark") {
+        if (
+          payload.mark?.name &&
+          session.pendingTransferMarkName &&
+          payload.mark.name === session.pendingTransferMarkName
+        ) {
+          server.log.info(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              markName: payload.mark.name,
+            },
+            "Twilio confirmed assistant playback before transfer",
+          );
+          session.pendingTransferMarkName = null;
+          const transferTask = performTransfer(server, session);
+          trackTask(session, transferTask);
+        }
         return;
       }
 
@@ -854,6 +957,7 @@ export async function handleMediaStreamConnection(
     conversationId: null,
     openAiReady: false,
     pendingTransferDestination: null,
+    pendingTransferMarkName: null,
     transferExecuted: false,
     finalized: false,
     transcriptSequence: 1,

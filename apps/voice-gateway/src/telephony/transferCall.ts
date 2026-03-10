@@ -12,6 +12,7 @@ function escapeXml(value: string): string {
 export async function transferLiveCall(input: {
   callSid: string;
   destination: string;
+  actionUrl?: string;
 }): Promise<void> {
   const env = loadVoiceGatewayEnv(process.env);
 
@@ -19,7 +20,10 @@ export async function transferLiveCall(input: {
     throw new Error("Twilio credentials are required to transfer a live call.");
   }
 
-  const twiml = `<Response><Dial>${escapeXml(input.destination)}</Dial></Response>`;
+  const actionAttribute = input.actionUrl
+    ? ` action="${escapeXml(input.actionUrl)}" method="POST"`
+    : "";
+  const twiml = `<Response><Dial${actionAttribute}>${escapeXml(input.destination)}</Dial></Response>`;
   const formData = new URLSearchParams();
   formData.set("Twiml", twiml);
 

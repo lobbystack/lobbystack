@@ -2,10 +2,15 @@ import type { FastifyInstance } from "fastify";
 
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
+  completeVoiceCall,
+  updateVoiceTransferState,
+} from "../convex/runtimeClient";
+import {
   buildTwilioRequestUrl,
   normalizeFormFields,
   validateTwilioSignature,
 } from "./twilioRequest";
+import { mapDialCallStatusToTransferOutcome } from "./transferOutcome";
 
 function escapeXml(value: string): string {
   return value
@@ -110,6 +115,61 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
 
     reply.code(204);
     return null;
+  });
+
+  server.post("/twilio/voice/transfer-action", async (request, reply) => {
+    const payload = normalizeFormFields(
+      (request.body as Record<string, unknown> | undefined) ?? {},
+    );
+    const requestUrl = buildTwilioRequestUrl(
+      server.runtimeConfig.VOICE_GATEWAY_BASE_URL,
+      request.url,
+    );
+    const isValid = validateTwilioSignature({
+      authToken: server.runtimeConfig.TWILIO_AUTH_TOKEN,
+      signatureHeader: request.headers["x-twilio-signature"],
+      url: requestUrl,
+      params: payload,
+    });
+
+    if (!isValid) {
+      reply.code(403);
+      return "Invalid Twilio signature";
+    }
+
+    const url = new URL(requestUrl);
+    const callId = url.searchParams.get("callId");
+    if (!callId) {
+      reply.code(400);
+      return "Missing callId";
+    }
+
+    const outcome = mapDialCallStatusToTransferOutcome(payload.DialCallStatus);
+    server.log.info(
+      {
+        callId,
+        callSid: payload.CallSid,
+        dialCallSid: payload.DialCallSid,
+        dialCallStatus: payload.DialCallStatus,
+        dialCallDuration: payload.DialCallDuration,
+        outcome,
+      },
+      "Twilio transfer action callback",
+    );
+
+    await updateVoiceTransferState({
+      callId,
+      transferState: outcome.transferState,
+    });
+    await completeVoiceCall({
+      callId,
+      status: outcome.callStatus,
+      disposition: outcome.disposition,
+      endedAt: new Date().toISOString(),
+    });
+
+    reply.header("Content-Type", "text/xml");
+    return '<?xml version="1.0" encoding="UTF-8"?><Response><Hangup /></Response>';
   });
 
   server.get("/media-stream", async (request, reply) => {
