@@ -350,7 +350,6 @@ async function configureOpenAiSession(
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
-      type: "realtime",
       model: runtimeConfig.OPENAI_REALTIME_MODEL,
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
@@ -359,28 +358,18 @@ async function configureOpenAiSession(
         "Use tools for authoritative actions like booking, transfer, and message taking.",
         "Do not make up availability, hours, or business policy.",
       ].join("\n\n"),
-      audio: {
-        input: {
-          format: {
-            type: "audio/pcmu",
-          },
-          transcription: {
-            model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
-          },
-          turn_detection: {
-            type: "server_vad",
-            create_response: true,
-            interrupt_response: true,
-          },
-        },
-        output: {
-          format: {
-            type: "audio/pcmu",
-          },
-          voice: runtimeConfig.OPENAI_REALTIME_VOICE,
-        },
+      modalities: ["audio", "text"],
+      voice: runtimeConfig.OPENAI_REALTIME_VOICE,
+      input_audio_format: "g711_ulaw",
+      output_audio_format: "g711_ulaw",
+      input_audio_transcription: {
+        model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
       },
-      output_modalities: ["audio"],
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+      },
       tools: createRealtimeToolDefinitions(),
       tool_choice: "auto",
     },
