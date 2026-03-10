@@ -36,7 +36,7 @@ function toTimeString(totalMinutes: number): string {
 }
 
 function parseTimeString(value: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(value.trim());
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
   if (!match) {
     return null;
   }
