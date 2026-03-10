@@ -108,16 +108,11 @@ type ActiveVoiceSession = {
   finalized: boolean;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
-  pendingTranscriptItemIds: Set<string>;
-  transcriptResponseIds: Map<string, string>;
-  completedTranscriptItemIds: Set<string>;
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
 };
-
-const OUT_OF_BAND_TRANSCRIPT_PURPOSE = "caller_transcript";
 
 type MediaStreamRequestContext = {
   url: string;
@@ -406,44 +401,6 @@ function queueTranscriptWriteIfNew(
   queueTranscriptWrite(server, session, input);
 }
 
-function buildOutOfBandTranscriptRequest(itemId: string): Record<string, unknown> {
-  return {
-    type: "response.create",
-    response: {
-      conversation: "none",
-      metadata: {
-        purpose: OUT_OF_BAND_TRANSCRIPT_PURPOSE,
-        itemId,
-      },
-      output_modalities: ["text"],
-      max_output_tokens: 256,
-      instructions:
-        "Transcribe the referenced caller audio exactly. Return only the transcript text with no commentary, no labels, and no quotation marks. If the speech is unintelligible, return an empty string.",
-      input: [
-        {
-          type: "item_reference",
-          id: itemId,
-        },
-      ],
-    },
-  };
-}
-
-function queueOutOfBandTranscript(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  session: ActiveVoiceSession,
-  itemId: string | undefined,
-): void {
-  if (!itemId || session.pendingTranscriptItemIds.has(itemId)) {
-    return;
-  }
-
-  session.pendingTranscriptItemIds.add(itemId);
-  server.log.info({ itemId }, "Queueing out-of-band caller transcript");
-  postRealtimeEvent(openAiSocket, buildOutOfBandTranscriptRequest(itemId));
-}
-
 async function configureOpenAiSession(
   openAiSocket: WebSocket,
   session: ActiveVoiceSession,
@@ -615,71 +572,15 @@ function handleOpenAiMessage(
       return;
     }
     case "conversation.item.input_audio_transcription.completed": {
-      if (
-        payload.item_id &&
-        (session.pendingTranscriptItemIds.has(payload.item_id) ||
-          session.completedTranscriptItemIds.has(payload.item_id))
-      ) {
-        server.log.info(
-          { itemId: payload.item_id },
-          "Ignoring built-in caller transcript because out-of-band transcription is active",
-        );
-        return;
-      }
       queueTranscriptWriteIfNew(
         server,
         session,
         `caller-completed:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.transcript ?? ""}`,
         {
-        speaker: "caller",
-        text: payload.transcript,
-      },
-      );
-      return;
-    }
-    case "conversation.item.input_audio_transcription.segment": {
-      if (
-        payload.item_id &&
-        (session.pendingTranscriptItemIds.has(payload.item_id) ||
-          session.completedTranscriptItemIds.has(payload.item_id))
-      ) {
-        return;
-      }
-      queueTranscriptWriteIfNew(
-        server,
-        session,
-        `caller-segment:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.delta ?? payload.text ?? ""}`,
-        {
           speaker: "caller",
-          text: payload.delta ?? payload.text,
+          text: payload.transcript,
         },
       );
-      return;
-    }
-    case "input_audio_buffer.committed": {
-      if (openAiSocket.readyState === WebSocket.OPEN) {
-        queueOutOfBandTranscript(server, openAiSocket, session, payload.item_id);
-      }
-      return;
-    }
-    case "response.created": {
-      if (
-        payload.response?.metadata?.purpose === OUT_OF_BAND_TRANSCRIPT_PURPOSE &&
-        payload.response.id &&
-        payload.response.metadata.itemId
-      ) {
-        session.transcriptResponseIds.set(
-          payload.response.id,
-          payload.response.metadata.itemId,
-        );
-        server.log.info(
-          {
-            responseId: payload.response.id,
-            itemId: payload.response.metadata.itemId,
-          },
-          "Started out-of-band caller transcript response",
-        );
-      }
       return;
     }
     case "response.output_audio_transcript.delta":
@@ -711,41 +612,6 @@ function handleOpenAiMessage(
       }
       return;
     }
-    case "response.content_part.done": {
-      if (
-        (payload.part?.type === "audio" || payload.part?.type === "output_audio") &&
-        payload.part.transcript
-      ) {
-        queueTranscriptWriteIfNew(
-          server,
-          session,
-          `assistant-content-part:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.part.transcript}`,
-          {
-            speaker: "assistant",
-            text: payload.part.transcript,
-          },
-        );
-      }
-      if (
-        (payload.part?.type === "text" || payload.part?.type === "output_text") &&
-        payload.part.text
-      ) {
-        queueTranscriptWriteIfNew(
-          server,
-          session,
-          `assistant-content-part-text:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.part.text}`,
-          {
-            speaker: "assistant",
-            text: payload.part.text,
-          },
-        );
-      }
-      if (session.pendingTransferDestination && !session.transferExecuted) {
-        const transferTask = performTransfer(server, session);
-        trackTask(session, transferTask);
-      }
-      return;
-    }
     case "input_audio_buffer.speech_started": {
       cancelAssistantAudio(openAiSocket, twilioSocket, session);
       return;
@@ -762,63 +628,6 @@ function handleOpenAiMessage(
       return;
     }
     case "response.output_item.done": {
-      const transcriptItemId = payload.response_id
-        ? session.transcriptResponseIds.get(payload.response_id)
-        : undefined;
-      if (transcriptItemId) {
-        if (payload.item?.type === "message" && payload.item.content) {
-          const textContent = payload.item.content.find(
-            (contentPart) =>
-              (contentPart.type === "text" || contentPart.type === "output_text") &&
-              contentPart.text,
-          );
-          if (textContent?.text) {
-            queueTranscriptWriteIfNew(
-              server,
-              session,
-              `caller-oob-output-item:${transcriptItemId}:${textContent.text}`,
-              {
-                speaker: "caller",
-                text: textContent.text,
-              },
-            );
-            session.completedTranscriptItemIds.add(transcriptItemId);
-          }
-        }
-        return;
-      }
-      if (payload.item?.type === "message" && payload.item.content) {
-        for (const contentPart of payload.item.content) {
-          if (
-            (contentPart.type === "audio" || contentPart.type === "output_audio") &&
-            contentPart.transcript
-          ) {
-            queueTranscriptWriteIfNew(
-              server,
-              session,
-              `assistant-output-item:${payload.item_id ?? "unknown"}:${contentPart.transcript}`,
-              {
-                speaker: "assistant",
-                text: contentPart.transcript,
-              },
-            );
-          }
-          if (
-            (contentPart.type === "text" || contentPart.type === "output_text") &&
-            contentPart.text
-          ) {
-            queueTranscriptWriteIfNew(
-              server,
-              session,
-              `assistant-output-item-text:${payload.item_id ?? "unknown"}:${contentPart.text}`,
-              {
-                speaker: "assistant",
-                text: contentPart.text,
-              },
-            );
-          }
-        }
-      }
       if (
         payload.item?.type === "function_call" &&
         payload.item.name &&
@@ -832,124 +641,6 @@ function handleOpenAiMessage(
         });
         trackTask(session, task);
       }
-      return;
-    }
-    case "response.done": {
-      if (payload.response?.metadata?.purpose === OUT_OF_BAND_TRANSCRIPT_PURPOSE) {
-        const transcriptItemId =
-          payload.response.metadata.itemId ??
-          (payload.response.id
-            ? session.transcriptResponseIds.get(payload.response.id)
-            : undefined);
-        let transcriptText: string | undefined;
-
-        for (const outputItem of payload.response.output ?? []) {
-          for (const contentPart of outputItem.content ?? []) {
-            if (
-              (contentPart.type === "text" || contentPart.type === "output_text") &&
-              contentPart.text
-            ) {
-              transcriptText = contentPart.text;
-              break;
-            }
-          }
-          if (transcriptText) {
-            break;
-          }
-        }
-
-        if (transcriptItemId && transcriptText) {
-          queueTranscriptWriteIfNew(
-            server,
-            session,
-            `caller-oob-response-done:${transcriptItemId}:${transcriptText}`,
-            {
-              speaker: "caller",
-              text: transcriptText,
-            },
-          );
-          session.completedTranscriptItemIds.add(transcriptItemId);
-        } else {
-          server.log.warn(
-            {
-              responseId: payload.response.id,
-              itemId: transcriptItemId,
-              status: payload.response.status,
-            },
-            "Out-of-band caller transcript completed without text",
-          );
-        }
-
-        if (transcriptItemId) {
-          session.pendingTranscriptItemIds.delete(transcriptItemId);
-        }
-        if (payload.response.id) {
-          session.transcriptResponseIds.delete(payload.response.id);
-        }
-        return;
-      }
-      for (const outputItem of payload.response?.output ?? []) {
-        for (const contentPart of outputItem.content ?? []) {
-          if (
-            (contentPart.type === "audio" || contentPart.type === "output_audio") &&
-            contentPart.transcript
-          ) {
-            queueTranscriptWriteIfNew(
-              server,
-              session,
-              `assistant-response-done:${payload.output_index ?? 0}:${contentPart.transcript}`,
-              {
-                speaker: "assistant",
-                text: contentPart.transcript,
-              },
-            );
-          }
-          if (
-            (contentPart.type === "text" || contentPart.type === "output_text") &&
-            contentPart.text
-          ) {
-            queueTranscriptWriteIfNew(
-              server,
-              session,
-              `assistant-response-done-text:${payload.output_index ?? 0}:${contentPart.text}`,
-              {
-                speaker: "assistant",
-                text: contentPart.text,
-              },
-            );
-          }
-        }
-      }
-      return;
-    }
-    case "response.output_text.done": {
-      const transcriptItemId = payload.response_id
-        ? session.transcriptResponseIds.get(payload.response_id)
-        : undefined;
-      if (transcriptItemId) {
-        if (payload.text) {
-          queueTranscriptWriteIfNew(
-            server,
-            session,
-            `caller-oob-output-text:${transcriptItemId}:${payload.text}`,
-            {
-              speaker: "caller",
-              text: payload.text,
-            },
-          );
-          session.completedTranscriptItemIds.add(transcriptItemId);
-        }
-        return;
-      }
-      queueTranscriptWriteIfNew(
-        server,
-        session,
-        `assistant-output-text:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.text ?? ""}`,
-        {
-          speaker: "assistant",
-          text: payload.text,
-        },
-      );
       return;
     }
     default: {
@@ -1058,9 +749,6 @@ export async function handleMediaStreamConnection(
     finalized: false,
     transcriptSequence: 1,
     seenTranscriptKeys: new Set(),
-    pendingTranscriptItemIds: new Set(),
-    transcriptResponseIds: new Map(),
-    completedTranscriptItemIds: new Set(),
     inboundAudio: [],
     outboundAudio: [],
     pendingInboundAudio: [],
