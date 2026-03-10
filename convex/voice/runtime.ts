@@ -383,12 +383,20 @@ export const listRecentCalls = query({
       .take(args.limit ?? 20);
 
     return await Promise.all(
-      calls.map(async (call) => ({
-        ...call,
-        recordingUrl: call.recordingStorageId
-          ? await ctx.storage.getUrl(call.recordingStorageId)
-          : null,
-      })),
+      calls.map(async (call) => {
+        const transcriptPreview = await ctx.db
+          .query("transcripts")
+          .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+          .take(1);
+
+        return {
+          ...call,
+          recordingUrl: call.recordingStorageId
+            ? await ctx.storage.getUrl(call.recordingStorageId)
+            : null,
+          transcriptReady: transcriptPreview.length > 0,
+        };
+      }),
     );
   },
 });
@@ -408,6 +416,7 @@ export const getCallTranscript = query({
     return await ctx.db
       .query("transcripts")
       .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", args.callId))
+      .order("asc")
       .collect();
   },
 });
