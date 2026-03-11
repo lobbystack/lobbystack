@@ -1,17 +1,33 @@
-// @ts-nocheck
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "../../_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "../../_generated/server";
+import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
+type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
+type BusinessIdArgs = { businessId: Id<"businesses"> };
+type UpdateReceptionistProfileArgs = {
+  businessId: Id<"businesses">;
+  greeting: string;
+  tone: string;
+  summary: string;
+  bookingPolicy: string;
+  voiceInstructions?: string;
+  smsInstructions?: string;
+  transferMode: string;
+  transferNumber?: string;
+};
+
 function buildKnowledgeDigest(
-  documents: Array<{
-    title: string;
-    textContent?: string;
-    importance: number;
-    status: string;
-  }>,
+  documents: Array<Pick<Doc<"knowledge_documents">, "title" | "textContent" | "importance" | "status">>,
 ): string {
   const ranked = documents
     .filter((document) => document.status !== "error" && document.textContent)
@@ -34,7 +50,7 @@ export const getByBusinessId = internalQuery({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
     return await ctx.db
       .query("business_context_snapshots")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
@@ -46,7 +62,7 @@ export const getForDashboard = query({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
     await requireMembership(ctx, args.businessId);
     return await ctx.db
       .query("business_context_snapshots")
@@ -67,7 +83,7 @@ export const updateReceptionistProfile = mutation({
     transferMode: v.string(),
     transferNumber: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
     await requireMembership(ctx, args.businessId);
     const existing = await ctx.db
       .query("receptionist_profiles")
@@ -86,7 +102,21 @@ export const updateReceptionistProfile = mutation({
         transferNumber: args.transferNumber,
       });
     } else {
-      await ctx.db.insert("receptionist_profiles", args);
+      await ctx.db.insert("receptionist_profiles", {
+        businessId: args.businessId,
+        greeting: args.greeting,
+        tone: args.tone,
+        summary: args.summary,
+        bookingPolicy: args.bookingPolicy,
+        ...(args.voiceInstructions !== undefined
+          ? { voiceInstructions: args.voiceInstructions }
+          : {}),
+        ...(args.smsInstructions !== undefined
+          ? { smsInstructions: args.smsInstructions }
+          : {}),
+        transferMode: args.transferMode,
+        ...(args.transferNumber !== undefined ? { transferNumber: args.transferNumber } : {}),
+      });
     }
 
     await scheduleSnapshotRefresh(ctx, args.businessId);
@@ -101,7 +131,7 @@ export const refreshSnapshot = internalMutation({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: BusinessIdArgs) => {
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");
@@ -164,17 +194,16 @@ export const refreshSnapshot = internalMutation({
       generatedAt: new Date().toISOString(),
       displayName: business.name,
       timezone: business.timezone,
-      businessType: business.businessType as
-        | "clinic"
-        | "repair_shop"
-        | "salon"
-        | "service_company"
-        | "other",
+      businessType: business.businessType as SnapshotBuilderInput["businessType"],
       greeting: profile.greeting,
       tone: profile.tone,
       bookingPolicy: profile.bookingPolicy,
-      voiceInstructions: profile.voiceInstructions,
-      smsInstructions: profile.smsInstructions,
+      ...(profile.voiceInstructions !== undefined
+        ? { voiceInstructions: profile.voiceInstructions }
+        : {}),
+      ...(profile.smsInstructions !== undefined
+        ? { smsInstructions: profile.smsInstructions }
+        : {}),
       summary: profile.summary,
       knowledgeDigest: buildKnowledgeDigest(documents),
       hours: hours.map((row) => ({
@@ -193,7 +222,7 @@ export const refreshSnapshot = internalMutation({
           id: String(row._id),
           name: row.name,
           durationMinutes: row.durationMinutes,
-          description: row.description,
+          ...(row.description !== undefined ? { description: row.description } : {}),
         })),
       snippets: snippets.map((row) => ({
         id: String(row._id),
@@ -203,16 +232,13 @@ export const refreshSnapshot = internalMutation({
         priority: row.priority,
       })),
       transferPolicy: {
-        mode: profile.transferMode as
-          | "never"
-          | "always"
-          | "on_request"
-          | "on_urgent"
-          | "during_business_hours",
-        transferNumber: profile.transferNumber,
+        mode: profile.transferMode as SnapshotBuilderInput["transferPolicy"]["mode"],
+        ...(profile.transferNumber !== undefined
+          ? { transferNumber: profile.transferNumber }
+          : {}),
       },
-      phoneNumber: primaryPhone?.e164,
-      smsNumber: primarySms?.e164,
+      ...(primaryPhone?.e164 !== undefined ? { phoneNumber: primaryPhone.e164 } : {}),
+      ...(primarySms?.e164 !== undefined ? { smsNumber: primarySms.e164 } : {}),
     });
     const { businessId: _unusedBusinessId, ...snapshot } = snapshotPayload;
 

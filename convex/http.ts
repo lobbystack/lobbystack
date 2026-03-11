@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { z } from "zod";
 import {
   escapeXmlText,
   normalizeTwilioFormFields,
@@ -11,6 +12,161 @@ import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
 
 const http = httpRouter();
+
+type ParseResult<T> = { ok: true; data: T } | { ok: false; response: Response };
+
+const twilioSmsInboundSchema = z.object({
+  From: z.string().min(1),
+  To: z.string().min(1),
+  Body: z.string(),
+  MessageSid: z.string().min(1).optional(),
+});
+
+const voiceContextSchema = z.object({
+  phoneNumber: z.string().min(1),
+  channel: z.enum(["voice", "sms"]).optional(),
+});
+
+const startCallSchema = z.object({
+  businessId: z.string().min(1),
+  twilioCallSid: z.string().min(1),
+  gatewaySessionId: z.string().min(1).optional(),
+  from: z.string().min(1),
+  to: z.string().min(1),
+  startedAt: z.string().min(1),
+});
+
+const appendTranscriptSchema = z.object({
+  businessId: z.string().min(1),
+  callId: z.string().min(1),
+  sequence: z.number(),
+  speaker: z.string().min(1),
+  text: z.string(),
+  final: z.boolean(),
+  confidence: z.number().optional(),
+});
+
+const transferStateSchema = z.object({
+  callId: z.string().min(1),
+  transferState: z.string().min(1),
+});
+
+const completeCallSchema = z.object({
+  callId: z.string().min(1),
+  status: z.string().min(1),
+  endedAt: z.string().min(1),
+  disposition: z.string().min(1).optional(),
+});
+
+const reconcileStatusSchema = z.object({
+  twilioCallSid: z.string().min(1),
+  callStatus: z.string().min(1),
+  sequenceNumber: z.number().optional(),
+  callbackSource: z.string().min(1).optional(),
+  providerUpdatedAt: z.string().min(1),
+  providerDurationSeconds: z.number().optional(),
+});
+
+const recordingQuerySchema = z.object({
+  callId: z.string().min(1),
+  durationMs: z.coerce.number().optional(),
+});
+
+const findAvailabilitySchema = z.object({
+  businessId: z.string().min(1),
+  serviceName: z.string().min(1),
+  date: z.string().min(1),
+  timezone: z.string().min(1),
+  preferredStaffId: z.string().min(1).optional(),
+  preferredHour24: z.number().optional(),
+  preferredMinute: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+const checkAvailabilitySchema = z.object({
+  businessId: z.string().min(1),
+  serviceName: z.string().min(1),
+  startsAt: z.string().min(1),
+  timezone: z.string().min(1),
+  preferredStaffId: z.string().min(1).optional(),
+});
+
+const bookAppointmentSchema = z.object({
+  businessId: z.string().min(1),
+  serviceName: z.string().min(1),
+  startsAt: z.string().min(1),
+  timezone: z.string().min(1),
+  preferredStaffId: z.string().min(1).optional(),
+  contactName: z.string().min(1).optional(),
+  contactPhone: z.string().min(1),
+});
+
+const takeMessageSchema = z.object({
+  businessId: z.string().min(1),
+  callId: z.string().min(1),
+  conversationId: z.string().min(1).optional(),
+  callerName: z.string().min(1).optional(),
+  callbackPhone: z.string().min(1).optional(),
+  message: z.string().min(1),
+  urgency: z.string().min(1).optional(),
+  callbackWindow: z.string().min(1).optional(),
+});
+
+function badRequest(message: string): Response {
+  return new Response(message, { status: 400 });
+}
+
+function asId<TableName extends keyof IdFieldMap>(_table: TableName, value: string): Id<TableName> {
+  return value as Id<TableName>;
+}
+
+type IdFieldMap = {
+  _storage: "_storage";
+  appointments: "appointments";
+  businesses: "businesses";
+  calls: "calls";
+  contacts: "contacts";
+  conversations: "conversations";
+  staff: "staff";
+};
+
+async function parseJsonBody<TSchema extends z.ZodTypeAny>(
+  request: Request,
+  schema: TSchema,
+): Promise<ParseResult<z.infer<TSchema>>> {
+  try {
+    const parsed = schema.safeParse(await request.json());
+    if (!parsed.success) {
+      return { ok: false, response: badRequest("Invalid JSON body") };
+    }
+    return { ok: true, data: parsed.data };
+  } catch {
+    return { ok: false, response: badRequest("Invalid JSON body") };
+  }
+}
+
+async function parseNormalizedForm(request: Request): Promise<ParseResult<Record<string, string>>> {
+  try {
+    const form = await request.formData();
+    return {
+      ok: true,
+      data: normalizeTwilioFormFields(form.entries()),
+    };
+  } catch {
+    return { ok: false, response: badRequest("Invalid form body") };
+  }
+}
+
+function parseSearchParams<TSchema extends z.ZodTypeAny>(
+  url: URL,
+  schema: TSchema,
+): ParseResult<z.infer<TSchema>> {
+  const parsed = schema.safeParse(Object.fromEntries(url.searchParams.entries()));
+  if (!parsed.success) {
+    return { ok: false, response: badRequest("Invalid query parameters") };
+  }
+  return { ok: true, data: parsed.data };
+}
 
 async function requireTwilioSignature(
   request: Request,
@@ -46,18 +202,25 @@ http.route({
   path: "/twilio/sms/inbound",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    const form = await request.formData();
-    const payload = normalizeTwilioFormFields(form.entries());
+    const parsedForm = await parseNormalizedForm(request);
+    if (!parsedForm.ok) {
+      return parsedForm.response;
+    }
+    const payload = parsedForm.data;
     const invalidSignature = await requireTwilioSignature(request, payload);
     if (invalidSignature) {
       return invalidSignature;
     }
+    const parsedPayload = twilioSmsInboundSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+      return badRequest("Invalid Twilio SMS payload");
+    }
 
     const result = await ctx.runAction(internal.conversations.webhooks.handleTwilioSmsInbound, {
-      from: payload.From ?? "",
-      to: payload.To ?? "",
-      body: payload.Body ?? "",
-      messageSid: payload.MessageSid ?? "",
+      from: parsedPayload.data.From,
+      to: parsedPayload.data.To,
+      body: parsedPayload.data.Body,
+      messageSid: parsedPayload.data.MessageSid,
     });
 
     const twiml = [
@@ -89,15 +252,15 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      phoneNumber: string;
-      channel?: "voice" | "sms";
-    };
+    const body = await parseJsonBody(request, voiceContextSchema);
+    if (!body.ok) {
+      return body.response;
+    }
     const phoneNumber = await ctx.runQuery(
       internal.businesses.catalog.resolveBusinessByPhoneNumber,
       {
-        e164: body.phoneNumber,
-        channel: body.channel ?? "voice",
+        e164: body.data.phoneNumber,
+        channel: body.data.channel ?? "voice",
       },
     );
 
@@ -129,24 +292,20 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      twilioCallSid: string;
-      gatewaySessionId?: string;
-      from: string;
-      to: string;
-      startedAt: string;
-    };
+    const body = await parseJsonBody(request, startCallSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runMutation(internal.voice.runtime.startCall, {
-      businessId: body.businessId as Id<"businesses">,
-      twilioCallSid: body.twilioCallSid,
-      ...(body.gatewaySessionId !== undefined
-        ? { gatewaySessionId: body.gatewaySessionId }
+      businessId: asId("businesses", body.data.businessId),
+      twilioCallSid: body.data.twilioCallSid,
+      ...(body.data.gatewaySessionId !== undefined
+        ? { gatewaySessionId: body.data.gatewaySessionId }
         : {}),
-      from: body.from,
-      to: body.to,
-      startedAt: body.startedAt,
+      from: body.data.from,
+      to: body.data.to,
+      startedAt: body.data.startedAt,
     });
 
     return Response.json(result);
@@ -162,24 +321,19 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      callId: string;
-      sequence: number;
-      speaker: string;
-      text: string;
-      final: boolean;
-      confidence?: number;
-    };
+    const body = await parseJsonBody(request, appendTranscriptSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const transcriptId = await ctx.runMutation(internal.voice.runtime.appendTranscriptSegment, {
-      businessId: body.businessId as Id<"businesses">,
-      callId: body.callId as Id<"calls">,
-      sequence: body.sequence,
-      speaker: body.speaker,
-      text: body.text,
-      final: body.final,
-      ...(body.confidence !== undefined ? { confidence: body.confidence } : {}),
+      businessId: asId("businesses", body.data.businessId),
+      callId: asId("calls", body.data.callId),
+      sequence: body.data.sequence,
+      speaker: body.data.speaker,
+      text: body.data.text,
+      final: body.data.final,
+      ...(body.data.confidence !== undefined ? { confidence: body.data.confidence } : {}),
     });
 
     return Response.json({ transcriptId });
@@ -195,14 +349,14 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      callId: string;
-      transferState: string;
-    };
+    const body = await parseJsonBody(request, transferStateSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     await ctx.runMutation(internal.voice.runtime.setTransferState, {
-      callId: body.callId as Id<"calls">,
-      transferState: body.transferState,
+      callId: asId("calls", body.data.callId),
+      transferState: body.data.transferState,
     });
 
     return Response.json({ ok: true });
@@ -218,18 +372,16 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      callId: string;
-      status: string;
-      endedAt: string;
-      disposition?: string;
-    };
+    const body = await parseJsonBody(request, completeCallSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     await ctx.runMutation(internal.voice.runtime.completeCall, {
-      callId: body.callId as Id<"calls">,
-      status: body.status,
-      endedAt: body.endedAt,
-      ...(body.disposition !== undefined ? { disposition: body.disposition } : {}),
+      callId: asId("calls", body.data.callId),
+      status: body.data.status,
+      endedAt: body.data.endedAt,
+      ...(body.data.disposition !== undefined ? { disposition: body.data.disposition } : {}),
     });
 
     return Response.json({ ok: true });
@@ -245,27 +397,23 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      twilioCallSid: string;
-      callStatus: string;
-      sequenceNumber?: number;
-      callbackSource?: string;
-      providerUpdatedAt: string;
-      providerDurationSeconds?: number;
-    };
+    const body = await parseJsonBody(request, reconcileStatusSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runMutation(internal.voice.runtime.reconcileTwilioCallStatus, {
-      twilioCallSid: body.twilioCallSid,
-      callStatus: body.callStatus,
-      providerUpdatedAt: body.providerUpdatedAt,
-      ...(body.sequenceNumber !== undefined
-        ? { sequenceNumber: body.sequenceNumber }
+      twilioCallSid: body.data.twilioCallSid,
+      callStatus: body.data.callStatus,
+      providerUpdatedAt: body.data.providerUpdatedAt,
+      ...(body.data.sequenceNumber !== undefined
+        ? { sequenceNumber: body.data.sequenceNumber }
         : {}),
-      ...(body.callbackSource !== undefined
-        ? { callbackSource: body.callbackSource }
+      ...(body.data.callbackSource !== undefined
+        ? { callbackSource: body.data.callbackSource }
         : {}),
-      ...(body.providerDurationSeconds !== undefined
-        ? { providerDurationSeconds: body.providerDurationSeconds }
+      ...(body.data.providerDurationSeconds !== undefined
+        ? { providerDurationSeconds: body.data.providerDurationSeconds }
         : {}),
     });
 
@@ -283,22 +431,22 @@ http.route({
     }
 
     const url = new URL(request.url);
-    const callId = url.searchParams.get("callId");
-    const durationMs = url.searchParams.get("durationMs");
-
-    if (!callId) {
-      return new Response("Missing callId", { status: 400 });
+    const query = parseSearchParams(url, recordingQuerySchema);
+    if (!query.ok) {
+      return query.response;
     }
 
     const blob = await request.blob();
     const recordingStorageId = await ctx.storage.store(blob);
 
     await ctx.runMutation(internal.voice.runtime.attachCallRecording, {
-      callId: callId as Id<"calls">,
+      callId: asId("calls", query.data.callId),
       recordingStorageId,
       recordingContentType: blob.type || "audio/wav",
       recordingByteLength: blob.size,
-      ...(durationMs ? { recordingDurationMs: Number(durationMs) } : {}),
+      ...(query.data.durationMs !== undefined
+        ? { recordingDurationMs: query.data.durationMs }
+        : {}),
     });
 
     return Response.json({
@@ -316,32 +464,26 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      serviceName: string;
-      date: string;
-      timezone: string;
-      preferredStaffId?: string;
-      preferredHour24?: number;
-      preferredMinute?: number;
-      limit?: number;
-    };
+    const body = await parseJsonBody(request, findAvailabilitySchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runAction(internal.voice.runtime.findAvailabilityForVoice, {
-      businessId: body.businessId as Id<"businesses">,
-      serviceName: body.serviceName,
-      date: body.date,
-      timezone: body.timezone,
-      ...(body.preferredStaffId !== undefined
-        ? { preferredStaffId: body.preferredStaffId as Id<"staff"> }
+      businessId: asId("businesses", body.data.businessId),
+      serviceName: body.data.serviceName,
+      date: body.data.date,
+      timezone: body.data.timezone,
+      ...(body.data.preferredStaffId !== undefined
+        ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
         : {}),
-      ...(body.preferredHour24 !== undefined
-        ? { preferredHour24: body.preferredHour24 }
+      ...(body.data.preferredHour24 !== undefined
+        ? { preferredHour24: body.data.preferredHour24 }
         : {}),
-      ...(body.preferredMinute !== undefined
-        ? { preferredMinute: body.preferredMinute }
+      ...(body.data.preferredMinute !== undefined
+        ? { preferredMinute: body.data.preferredMinute }
         : {}),
-      ...(body.limit !== undefined ? { limit: body.limit } : {}),
+      ...(body.data.limit !== undefined ? { limit: body.data.limit } : {}),
     });
 
     return Response.json(result);
@@ -357,21 +499,18 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      serviceName: string;
-      startsAt: string;
-      timezone: string;
-      preferredStaffId?: string;
-    };
+    const body = await parseJsonBody(request, checkAvailabilitySchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runAction(internal.voice.runtime.checkAvailabilityForVoice, {
-      businessId: body.businessId as Id<"businesses">,
-      serviceName: body.serviceName,
-      startsAt: body.startsAt,
-      timezone: body.timezone,
-      ...(body.preferredStaffId !== undefined
-        ? { preferredStaffId: body.preferredStaffId as Id<"staff"> }
+      businessId: asId("businesses", body.data.businessId),
+      serviceName: body.data.serviceName,
+      startsAt: body.data.startsAt,
+      timezone: body.data.timezone,
+      ...(body.data.preferredStaffId !== undefined
+        ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
         : {}),
     });
 
@@ -388,26 +527,21 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      serviceName: string;
-      startsAt: string;
-      timezone: string;
-      preferredStaffId?: string;
-      contactName?: string;
-      contactPhone: string;
-    };
+    const body = await parseJsonBody(request, bookAppointmentSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runAction(internal.voice.runtime.bookAppointmentForVoice, {
-      businessId: body.businessId as Id<"businesses">,
-      serviceName: body.serviceName,
-      startsAt: body.startsAt,
-      timezone: body.timezone,
-      ...(body.preferredStaffId !== undefined
-        ? { preferredStaffId: body.preferredStaffId as Id<"staff"> }
+      businessId: asId("businesses", body.data.businessId),
+      serviceName: body.data.serviceName,
+      startsAt: body.data.startsAt,
+      timezone: body.data.timezone,
+      ...(body.data.preferredStaffId !== undefined
+        ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
         : {}),
-      ...(body.contactName !== undefined ? { contactName: body.contactName } : {}),
-      contactPhone: body.contactPhone,
+      ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
+      contactPhone: body.data.contactPhone,
     });
 
     return Response.json(result);
@@ -423,31 +557,25 @@ http.route({
       return unauthorized;
     }
 
-    const body = (await request.json()) as {
-      businessId: string;
-      callId: string;
-      conversationId?: string;
-      callerName?: string;
-      callbackPhone?: string;
-      message: string;
-      urgency?: string;
-      callbackWindow?: string;
-    };
+    const body = await parseJsonBody(request, takeMessageSchema);
+    if (!body.ok) {
+      return body.response;
+    }
 
     const result = await ctx.runMutation(internal.voice.runtime.takeMessageForVoice, {
-      businessId: body.businessId as Id<"businesses">,
-      callId: body.callId as Id<"calls">,
-      ...(body.conversationId !== undefined
-        ? { conversationId: body.conversationId as Id<"conversations"> }
+      businessId: asId("businesses", body.data.businessId),
+      callId: asId("calls", body.data.callId),
+      ...(body.data.conversationId !== undefined
+        ? { conversationId: asId("conversations", body.data.conversationId) }
         : {}),
-      ...(body.callerName !== undefined ? { callerName: body.callerName } : {}),
-      ...(body.callbackPhone !== undefined
-        ? { callbackPhone: body.callbackPhone }
+      ...(body.data.callerName !== undefined ? { callerName: body.data.callerName } : {}),
+      ...(body.data.callbackPhone !== undefined
+        ? { callbackPhone: body.data.callbackPhone }
         : {}),
-      message: body.message,
-      ...(body.urgency !== undefined ? { urgency: body.urgency } : {}),
-      ...(body.callbackWindow !== undefined
-        ? { callbackWindow: body.callbackWindow }
+      message: body.data.message,
+      ...(body.data.urgency !== undefined ? { urgency: body.data.urgency } : {}),
+      ...(body.data.callbackWindow !== undefined
+        ? { callbackWindow: body.data.callbackWindow }
         : {}),
     });
 

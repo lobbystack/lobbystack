@@ -1,7 +1,9 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import type { MutationCtx, QueryCtx } from "../_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import { reassignPreviewSessions } from "./indexedQueries";
 
+type AuthContext = Pick<QueryCtx, "auth"> | Pick<MutationCtx, "auth"> | Pick<ActionCtx, "auth">;
 type Identity = NonNullable<Awaited<ReturnType<QueryCtx["auth"]["getUserIdentity"]>>>;
 
 type ReaderAuthContext = Pick<QueryCtx, "auth" | "db"> | Pick<MutationCtx, "auth" | "db">;
@@ -109,12 +111,10 @@ async function migrateLegacyUser(
     await ctx.db.patch(membership._id, { userId: current._id });
   }
 
-  const previewSessions = await ctx.db.query("preview_sessions").collect();
-  for (const previewSession of previewSessions) {
-    if (previewSession.userId === legacy._id) {
-      await ctx.db.patch(previewSession._id, { userId: current._id });
-    }
-  }
+  await reassignPreviewSessions(ctx, {
+    fromUserId: legacy._id,
+    toUserId: current._id,
+  });
 
   const patch = buildUserPatch({ identity, current, legacy });
   if (Object.keys(patch).length > 0) {
@@ -128,7 +128,7 @@ async function migrateLegacyUser(
   return (await ctx.db.get(current._id)) ?? current;
 }
 
-export async function requireIdentity(ctx: ReaderAuthContext): Promise<Identity> {
+export async function requireIdentity(ctx: AuthContext): Promise<Identity> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("Authentication required.");

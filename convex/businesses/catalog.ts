@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { requireMembership } from "../lib/auth";
+import {
+  listStaffServiceAssignmentsForBusiness,
+  replaceBusinessStaffServiceAssignments,
+} from "../lib/indexedQueries";
 import { scheduleSnapshotRefresh } from "./admin";
 
 export const resolveBusinessByPhoneNumber = internalQuery({
@@ -54,7 +58,7 @@ export const getBusinessConfiguration = query({
           .query("staff")
           .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
           .collect(),
-        ctx.db.query("staff_service_assignments").collect(),
+        listStaffServiceAssignmentsForBusiness(ctx, args.businessId),
         ctx.db
           .query("business_hours")
           .withIndex("by_business_id_and_day_of_week", (q) =>
@@ -78,7 +82,7 @@ export const getBusinessConfiguration = query({
       profile,
       services,
       staff,
-      assignments: assignments.filter((row) => row.businessId === args.businessId),
+      assignments,
       hours,
       closures,
       phoneNumbers,
@@ -249,21 +253,10 @@ export const replaceStaffServiceAssignments = mutation({
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
-    const existing = await ctx.db.query("staff_service_assignments").collect();
-
-    for (const row of existing) {
-      if (row.businessId === args.businessId) {
-        await ctx.db.delete(row._id);
-      }
-    }
-
-    for (const assignment of args.assignments) {
-      await ctx.db.insert("staff_service_assignments", {
-        businessId: args.businessId,
-        staffId: assignment.staffId,
-        serviceId: assignment.serviceId,
-      });
-    }
+    await replaceBusinessStaffServiceAssignments(ctx, {
+      businessId: args.businessId,
+      assignments: args.assignments,
+    });
 
     await scheduleSnapshotRefresh(ctx, args.businessId);
     return null;

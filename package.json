@@ -34,9 +34,11 @@
     "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/luxon": "^3.7.1",
     "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
+    "convex-test": "^0.0.41",
     "tsx": "^4.20.3",
     "typescript": "^5.8.2",
     "vitest": "^3.2.4"

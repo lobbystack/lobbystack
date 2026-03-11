@@ -1,7 +1,13 @@
-// @ts-nocheck
 import { v } from "convex/values";
 import { DateTime } from "luxon";
-import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "../_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type MutationCtx,
+  type QueryCtx,
+} from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
@@ -92,7 +98,7 @@ function buildCandidateSlotOrder(input: {
 }
 
 async function loadBookingContext(
-  ctx: { db: MutationCtx["db"] },
+  ctx: Pick<MutationCtx, "db"> | Pick<QueryCtx, "db">,
   args: {
     businessId: Id<"businesses">;
     serviceId: Id<"services">;
@@ -301,8 +307,8 @@ export const findAvailabilityForBusiness = internalQuery({
       dayStart,
       dayWindows,
       serviceDurationMinutes: context.serviceDurationMinutes,
-      preferredHour24: args.preferredHour24,
-      preferredMinute: args.preferredMinute,
+      ...(args.preferredHour24 !== undefined ? { preferredHour24: args.preferredHour24 } : {}),
+      ...(args.preferredMinute !== undefined ? { preferredMinute: args.preferredMinute } : {}),
     });
     const ranked: Array<{
       startsAt: string;
@@ -337,6 +343,9 @@ export const findAvailabilityForBusiness = internalQuery({
       }
 
       const slot = result[0];
+      if (!slot) {
+        continue;
+      }
       ranked.push({
         startsAt: slot.startsAt,
         endsAt: slot.endsAt,
