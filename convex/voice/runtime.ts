@@ -1,4 +1,8 @@
 // @ts-nocheck
+import {
+  getTerminalTwilioCallReconciliationFields,
+  isTerminalTwilioCallStatus,
+} from "@ai-receptionist/shared";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -70,57 +74,6 @@ async function resolveServiceDocument(
     .sort((left, right) => right.score - left.score);
 
   return ranked[0]?.service ?? null;
-}
-
-const TERMINAL_TWILIO_CALL_STATUSES = new Set([
-  "busy",
-  "canceled",
-  "completed",
-  "failed",
-  "no-answer",
-]);
-
-function normalizeTwilioCallStatus(status: string): string {
-  return status.trim().toLowerCase();
-}
-
-function isTerminalTwilioCallStatus(status: string): boolean {
-  return TERMINAL_TWILIO_CALL_STATUSES.has(normalizeTwilioCallStatus(status));
-}
-
-function mapTwilioCallStatusToDisposition(status: string): string {
-  switch (normalizeTwilioCallStatus(status)) {
-    case "busy":
-      return "call_busy";
-    case "canceled":
-      return "call_canceled";
-    case "completed":
-      return "call_completed";
-    case "failed":
-      return "call_failed";
-    case "no-answer":
-      return "call_no_answer";
-    default:
-      return "call_unknown";
-  }
-}
-
-function isGenericCallDisposition(disposition: string | undefined): boolean {
-  return disposition?.startsWith("call_") ?? false;
-}
-
-function isNormalizableRuntimeDisposition(disposition: string | undefined): boolean {
-  return disposition === "stream_stopped";
-}
-
-function shouldPreserveSpecificCallOutcome(call: Doc<"calls">): boolean {
-  return (
-    call.status === "transferred" ||
-    call.disposition?.startsWith("transfer_") === true ||
-    (call.disposition !== undefined &&
-      !isGenericCallDisposition(call.disposition) &&
-      !isNormalizableRuntimeDisposition(call.disposition))
-  );
 }
 
 export const getActiveServicesForBusiness = internalQuery({
@@ -470,14 +423,13 @@ export const reconcileTwilioCallStatus = internalMutation({
     };
 
     if (isTerminalTwilioCallStatus(args.callStatus)) {
-      if (call.endedAt === undefined) {
-        patch.endedAt = args.providerUpdatedAt;
-      }
-
-      if (!shouldPreserveSpecificCallOutcome(call)) {
-        patch.status = "completed";
-        patch.disposition = mapTwilioCallStatusToDisposition(args.callStatus);
-      }
+      Object.assign(
+        patch,
+        getTerminalTwilioCallReconciliationFields(call, {
+          callStatus: args.callStatus,
+          providerUpdatedAt: args.providerUpdatedAt,
+        }),
+      );
     }
 
     await ctx.db.patch(call._id, patch);

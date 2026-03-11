@@ -1,8 +1,11 @@
 import type { FastifyInstance } from "fastify";
 
+import { demoBusinessId } from "@ai-receptionist/testing";
+
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   completeVoiceCall,
+  startVoiceCall,
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
@@ -24,6 +27,39 @@ function escapeXml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+async function initializeInboundCallRecord(
+  server: FastifyInstance,
+  payload: Record<string, string>,
+  businessId: string,
+): Promise<void> {
+  const callSid = payload.CallSid?.trim();
+  const from = payload.From?.trim();
+  const to = payload.To?.trim();
+
+  if (businessId === demoBusinessId || !callSid || !from || !to) {
+    return;
+  }
+
+  try {
+    await startVoiceCall({
+      businessId,
+      twilioCallSid: callSid,
+      from,
+      to,
+      startedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    server.log.error(
+      {
+        err: error,
+        callSid,
+        businessId,
+      },
+      "Failed to initialize inbound call record",
+    );
+  }
 }
 
 /**
@@ -57,6 +93,7 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     const snapshot = await fetchSnapshotForPhoneNumber(calledNumber);
 
     server.snapshotCache.set(snapshot.businessId, snapshot);
+    await initializeInboundCallRecord(server, payload, snapshot.businessId);
 
     const streamUrl = new URL("/media-stream", server.runtimeConfig.VOICE_GATEWAY_BASE_URL);
     streamUrl.protocol = streamUrl.protocol === "https:" ? "wss:" : "ws:";
@@ -185,6 +222,19 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         ? { providerDurationSeconds: normalized.durationSeconds }
         : {}),
     });
+
+    if (result.ignored && result.reason === "unknown_call") {
+      server.log.warn(
+        {
+          callSid: normalized.callSid,
+          callStatus: normalized.callStatus,
+        },
+        "Twilio call status callback arrived before call record initialization",
+      );
+      reply.header("Retry-After", "1");
+      reply.code(503);
+      return "Call record not ready";
+    }
 
     server.log.info(
       {

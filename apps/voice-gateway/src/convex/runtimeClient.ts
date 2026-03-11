@@ -74,7 +74,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 export async function startVoiceCall(input: {
   businessId: string;
   twilioCallSid: string;
-  gatewaySessionId: string;
+  gatewaySessionId?: string;
   from: string;
   to: string;
   startedAt: string;

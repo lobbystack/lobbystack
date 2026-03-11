@@ -115,3 +115,16 @@ export type VoiceToolName =
   | "bookAppointment"
   | "transferCall"
   | "takeMessage";
+
+export {
+  getTerminalTwilioCallReconciliationFields,
+  isNormalizableRuntimeDisposition,
+  isTerminalTwilioCallStatus,
+  mapTwilioCallStatusToDisposition,
+  normalizeTwilioCallStatus,
+  shouldPreserveSpecificCallOutcome,
+} from "./voiceCallStatus";
+export type {
+  CallOutcomeRecord,
+  TerminalTwilioCallReconciliationFields,
+} from "./voiceCallStatus";
