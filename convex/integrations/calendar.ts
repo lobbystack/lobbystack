@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { v } from "convex/values";
 import {
   action,

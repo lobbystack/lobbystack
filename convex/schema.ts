@@ -217,7 +217,13 @@ export default defineSchema({
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_channel", ["businessId", "channel"])
-    .index("by_business_id_and_contact_id", ["businessId", "contactId"]),
+    .index("by_business_id_and_contact_id", ["businessId", "contactId"])
+    .index("by_business_id_and_contact_id_and_channel_and_status", [
+      "businessId",
+      "contactId",
+      "channel",
+      "status",
+    ]),
 
   conversation_ai_state: defineTable({
     businessId: v.id("businesses"),
@@ -380,5 +386,6 @@ export default defineSchema({
     response: v.optional(v.string()),
   })
     .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_user_id", ["userId"])
     .index("by_stream_id", ["streamId"]),
 });

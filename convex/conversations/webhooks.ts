@@ -1,17 +1,73 @@
-// @ts-nocheck
 import { v } from "convex/values";
 import {
+  type ActionCtx,
+  type MutationCtx,
+  type QueryCtx,
   internalAction,
   internalMutation,
   internalQuery,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
+import { getOpenConversationForContact } from "../lib/indexedQueries";
+
+function asConversationId(value: string): Id<"conversations"> {
+  return value as Id<"conversations">;
+}
+
+type ConversationIdArgs = { conversationId: Id<"conversations"> };
+type ClaimInboundMessageSidArgs = { scope: string; key: string };
+type ClaimInboundMessageSidResult =
+  | { claimed: false; existing: Doc<"idempotency_keys"> }
+  | { claimed: true; id: Id<"idempotency_keys"> };
+type LinkIdempotencyKeyArgs = {
+  idempotencyKeyId: Id<"idempotency_keys">;
+  resourceTable: string;
+  resourceId: string;
+  status: string;
+};
+type ConversationForContactArgs = {
+  businessId: Id<"businesses">;
+  contactId: Id<"contacts">;
+  channel: string;
+};
+type GetOrCreateContactArgs = {
+  businessId: Id<"businesses">;
+  phone: string;
+};
+type StoreInboundMessageArgs = {
+  businessId: Id<"businesses">;
+  contactId: Id<"contacts">;
+  channel: string;
+  body: string;
+  providerMessageSid?: string;
+};
+type StoreOutboundMessageArgs = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  channel: string;
+  body: string;
+};
+type HandleTwilioSmsInboundArgs = {
+  from: string;
+  to: string;
+  body: string;
+  messageSid?: string;
+};
+type HandleTwilioSmsInboundResult = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  reply: string;
+};
 
 export const getLatestOutboundReply = internalQuery({
   args: {
     conversationId: v.id("conversations"),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: ConversationIdArgs,
+  ): Promise<Doc<"messages"> | null> => {
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
@@ -28,7 +84,10 @@ export const claimInboundMessageSid = internalMutation({
     scope: v.string(),
     key: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: MutationCtx,
+    args: ClaimInboundMessageSidArgs,
+  ): Promise<ClaimInboundMessageSidResult> => {
     const existing = await ctx.db
       .query("idempotency_keys")
       .withIndex("by_scope_and_key", (q) => q.eq("scope", args.scope).eq("key", args.key))
@@ -53,7 +112,7 @@ export const findIdempotencyKey = internalQuery({
     scope: v.string(),
     key: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: ClaimInboundMessageSidArgs) => {
     return await ctx.db
       .query("idempotency_keys")
       .withIndex("by_scope_and_key", (q) => q.eq("scope", args.scope).eq("key", args.key))
@@ -68,7 +127,7 @@ export const linkIdempotencyKey = internalMutation({
     resourceId: v.string(),
     status: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: LinkIdempotencyKeyArgs) => {
     await ctx.db.patch(args.idempotencyKeyId, {
       resourceTable: args.resourceTable,
       resourceId: args.resourceId,
@@ -82,7 +141,7 @@ export const getConversationById = internalQuery({
   args: {
     conversationId: v.id("conversations"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: ConversationIdArgs) => {
     return await ctx.db.get(args.conversationId);
   },
 });
@@ -93,17 +152,11 @@ export const getConversationForContact = internalQuery({
     contactId: v.id("contacts"),
     channel: v.string(),
   },
-  handler: async (ctx, args) => {
-    const conversations = await ctx.db
-      .query("conversations")
-      .withIndex("by_business_id_and_contact_id", (q) =>
-        q.eq("businessId", args.businessId).eq("contactId", args.contactId),
-      )
-      .collect();
-
-    return conversations.find(
-      (conversation) => conversation.channel === args.channel && conversation.status === "open",
-    ) ?? null;
+  handler: async (
+    ctx: QueryCtx,
+    args: ConversationForContactArgs,
+  ): Promise<Doc<"conversations"> | null> => {
+    return await getOpenConversationForContact(ctx, args);
   },
 });
 
@@ -112,7 +165,7 @@ export const getOrCreateContact = internalMutation({
     businessId: v.id("businesses"),
     phone: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: GetOrCreateContactArgs): Promise<Id<"contacts">> => {
     const existing = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
@@ -138,8 +191,11 @@ export const storeInboundMessage = internalMutation({
     body: v.string(),
     providerMessageSid: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const existing = await ctx.runQuery(
+  handler: async (
+    ctx: MutationCtx,
+    args: StoreInboundMessageArgs,
+  ): Promise<{ conversationId: Id<"conversations"> }> => {
+    const existing: Doc<"conversations"> | null = await ctx.runQuery(
       internal.conversations.webhooks.getConversationForContact,
       {
         businessId: args.businessId,
@@ -148,7 +204,7 @@ export const storeInboundMessage = internalMutation({
       },
     );
 
-    const conversationId =
+    const conversationId: Id<"conversations"> =
       existing?._id ??
       (await ctx.db.insert("conversations", {
         businessId: args.businessId,
@@ -162,7 +218,9 @@ export const storeInboundMessage = internalMutation({
       conversationId,
       direction: "inbound",
       channel: args.channel,
-      providerMessageSid: args.providerMessageSid,
+      ...(args.providerMessageSid !== undefined
+        ? { providerMessageSid: args.providerMessageSid }
+        : {}),
       body: args.body,
       status: "received",
       aiGenerated: false,
@@ -179,7 +237,7 @@ export const storeOutboundMessage = internalMutation({
     channel: v.string(),
     body: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     return await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId: args.conversationId,
@@ -199,8 +257,11 @@ export const handleTwilioSmsInbound = internalAction({
     body: v.string(),
     messageSid: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const phoneNumber = await ctx.runQuery(
+  handler: async (
+    ctx: ActionCtx,
+    args: HandleTwilioSmsInboundArgs,
+  ): Promise<HandleTwilioSmsInboundResult> => {
+    const phoneNumber: Doc<"phone_numbers"> | null = await ctx.runQuery(
       internal.businesses.catalog.resolveBusinessByPhoneNumber,
       { e164: args.to, channel: "sms" },
     );
@@ -210,7 +271,7 @@ export const handleTwilioSmsInbound = internalAction({
     }
 
     if (args.messageSid) {
-      const claim = await ctx.runMutation(
+      const claim: ClaimInboundMessageSidResult = await ctx.runMutation(
         internal.conversations.webhooks.claimInboundMessageSid,
         {
           scope: "twilio_sms_inbound",
@@ -223,16 +284,16 @@ export const handleTwilioSmsInbound = internalAction({
           claim.existing.resourceTable === "conversations" &&
           claim.existing.resourceId
         ) {
-          const conversation = await ctx.runQuery(
+          const conversation: Doc<"conversations"> | null = await ctx.runQuery(
             internal.conversations.webhooks.getConversationById,
             {
-              conversationId: claim.existing.resourceId as any,
+              conversationId: asConversationId(claim.existing.resourceId),
             },
           );
-          const latestReply = await ctx.runQuery(
+          const latestReply: Doc<"messages"> | null = await ctx.runQuery(
             internal.conversations.webhooks.getLatestOutboundReply,
             {
-              conversationId: claim.existing.resourceId as any,
+              conversationId: asConversationId(claim.existing.resourceId),
             },
           );
           if (conversation) {
@@ -246,7 +307,7 @@ export const handleTwilioSmsInbound = internalAction({
       }
     }
 
-    const contactId = await ctx.runMutation(
+    const contactId: Id<"contacts"> = await ctx.runMutation(
       internal.conversations.webhooks.getOrCreateContact,
       {
         businessId: phoneNumber.businessId,
@@ -254,7 +315,7 @@ export const handleTwilioSmsInbound = internalAction({
       },
     );
 
-    const { conversationId } = await ctx.runMutation(
+    const { conversationId }: { conversationId: Id<"conversations"> } = await ctx.runMutation(
       internal.conversations.webhooks.storeInboundMessage,
       {
         businessId: phoneNumber.businessId,
@@ -265,7 +326,7 @@ export const handleTwilioSmsInbound = internalAction({
       },
     );
 
-    const reply = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
+    const reply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,
       conversationId,
       prompt: args.body,

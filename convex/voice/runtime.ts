@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
@@ -6,9 +5,149 @@ import {
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import { internalAction, internalMutation, internalQuery, query } from "../_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  query,
+  type ActionCtx,
+  type MutationCtx,
+  type QueryCtx,
+} from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { getOpenConversationForContact } from "../lib/indexedQueries";
+
+type BusinessIdArgs = { businessId: Id<"businesses"> };
+type ServicesForBusinessArgs = BusinessIdArgs;
+type StaffAssignmentsForServiceArgs = {
+  businessId: Id<"businesses">;
+  serviceId: Id<"services">;
+};
+type StartCallArgs = {
+  businessId: Id<"businesses">;
+  twilioCallSid: string;
+  gatewaySessionId?: string;
+  from: string;
+  to: string;
+  startedAt: string;
+};
+type StartCallResult = {
+  callId: Id<"calls">;
+  conversationId: Id<"conversations">;
+  contactId: Id<"contacts">;
+};
+type AppendTranscriptArgs = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+  sequence: number;
+  speaker: string;
+  text: string;
+  final: boolean;
+  confidence?: number;
+};
+type SetTransferStateArgs = {
+  callId: Id<"calls">;
+  transferState: string;
+};
+type TakeMessageForVoiceArgs = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+  conversationId?: Id<"conversations">;
+  callerName?: string;
+  callbackPhone?: string;
+  message: string;
+  urgency?: string;
+  callbackWindow?: string;
+};
+type AttachCallRecordingArgs = {
+  callId: Id<"calls">;
+  recordingStorageId: Id<"_storage">;
+  recordingContentType: string;
+  recordingByteLength: number;
+  recordingDurationMs?: number;
+};
+type CompleteCallArgs = {
+  callId: Id<"calls">;
+  status: string;
+  endedAt: string;
+  disposition?: string;
+};
+type ReconcileTwilioCallStatusArgs = {
+  twilioCallSid: string;
+  callStatus: string;
+  sequenceNumber?: number;
+  callbackSource?: string;
+  providerUpdatedAt: string;
+  providerDurationSeconds?: number;
+};
+type ReconcileTwilioCallStatusResult =
+  | { ignored: true; reason: "unknown_call" | "missing_sequence" | "stale_sequence" }
+  | { ignored: false; callId: Id<"calls"> };
+type CheckAvailabilityForVoiceArgs = {
+  businessId: Id<"businesses">;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  preferredStaffId?: Id<"staff">;
+};
+type CheckAvailabilityForVoiceResult = {
+  serviceId: Id<"services">;
+  serviceName: string;
+  setupIssue: string | null;
+  availability: Array<{
+    staffId: string;
+    serviceId: string;
+    startsAt: string;
+    endsAt: string;
+  }>;
+};
+type FindAvailabilityForVoiceArgs = {
+  businessId: Id<"businesses">;
+  serviceName: string;
+  date: string;
+  timezone: string;
+  preferredStaffId?: Id<"staff">;
+  preferredHour24?: number;
+  preferredMinute?: number;
+  limit?: number;
+};
+type FindAvailabilityForVoiceResult = {
+  serviceId: Id<"services">;
+  serviceName: string;
+  timezone: string;
+  date: string;
+  slots: Array<{
+    startsAt: string;
+    endsAt: string;
+    displayTime: string;
+  }>;
+  setupIssue: string | null;
+  summary: string;
+};
+type BookAppointmentForVoiceArgs = {
+  businessId: Id<"businesses">;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  preferredStaffId?: Id<"staff">;
+  contactName?: string;
+  contactPhone: string;
+};
+type BookAppointmentForVoiceResult = {
+  appointmentId: Id<"appointments">;
+  contactId: Id<"contacts">;
+  serviceId: Id<"services">;
+  serviceName: string;
+};
+type ListRecentCallsArgs = {
+  businessId: Id<"businesses">;
+  limit?: number;
+};
+type GetCallTranscriptArgs = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+};
 
 function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
@@ -52,12 +191,7 @@ function scoreServiceMatch(service: Doc<"services">, serviceName: string): numbe
 }
 
 async function resolveServiceDocument(
-  ctx: Parameters<typeof internalQuery>[0]["handler"] extends never ? never : {
-    runQuery: <T>(
-      reference: typeof internal.voice.runtime.getActiveServicesForBusiness,
-      args: { businessId: Id<"businesses"> },
-    ) => Promise<T>;
-  },
+  ctx: Pick<ActionCtx, "runQuery">,
   businessId: Id<"businesses">,
   serviceName: string,
 ): Promise<Doc<"services"> | null> {
@@ -80,7 +214,10 @@ export const getActiveServicesForBusiness = internalQuery({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: ServicesForBusinessArgs,
+  ): Promise<Array<Doc<"services">>> => {
     return await ctx.db
       .query("services")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
@@ -93,7 +230,10 @@ export const getActiveStaffAssignmentsForService = internalQuery({
     businessId: v.id("businesses"),
     serviceId: v.id("services"),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: QueryCtx,
+    args: StaffAssignmentsForServiceArgs,
+  ): Promise<{ activeStaffCount: number; assignmentCount: number }> => {
     const [staff, assignments] = await Promise.all([
       ctx.db
         .query("staff")
@@ -130,8 +270,8 @@ export const startCall = internalMutation({
     to: v.string(),
     startedAt: v.string(),
   },
-  handler: async (ctx, args) => {
-    let contact = await ctx.db
+  handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
+    let contact: Doc<"contacts"> | null = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
         q.eq("businessId", args.businessId).eq("phone", args.from),
@@ -150,17 +290,14 @@ export const startCall = internalMutation({
       throw new Error("Failed to initialize contact for call.");
     }
 
-    const existingConversation = await ctx.db
-      .query("conversations")
-      .withIndex("by_business_id_and_contact_id", (q) =>
-        q.eq("businessId", args.businessId).eq("contactId", contact._id),
-      )
-      .collect();
-
-    const openConversation =
-      existingConversation.find(
-        (conversation) => conversation.channel === "voice" && conversation.status === "open",
-      ) ?? null;
+    const openConversation: Doc<"conversations"> | null = await getOpenConversationForContact(
+      ctx,
+      {
+        businessId: args.businessId,
+        contactId: contact._id,
+        channel: "voice",
+      },
+    );
 
     const conversationId =
       openConversation?._id ??
@@ -171,7 +308,7 @@ export const startCall = internalMutation({
         status: "open",
       }));
 
-    const existingCall = await ctx.db
+    const existingCall: Doc<"calls"> | null = await ctx.db
       .query("calls")
       .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
       .unique();
@@ -220,7 +357,7 @@ export const appendTranscriptSegment = internalMutation({
     final: v.boolean(),
     confidence: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: AppendTranscriptArgs): Promise<Id<"transcripts">> => {
     const existing = await ctx.db
       .query("transcripts")
       .withIndex("by_call_id_and_sequence", (q) =>
@@ -255,7 +392,7 @@ export const setTransferState = internalMutation({
     callId: v.id("calls"),
     transferState: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: SetTransferStateArgs) => {
     await ctx.db.patch(args.callId, {
       transferState: args.transferState,
     });
@@ -263,6 +400,7 @@ export const setTransferState = internalMutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex mutation builder.
 export const takeMessageForVoice = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -274,7 +412,10 @@ export const takeMessageForVoice = internalMutation({
     urgency: v.optional(v.string()),
     callbackWindow: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: MutationCtx,
+    args: TakeMessageForVoiceArgs,
+  ): Promise<{ inboxItemId: Id<"inbox_items"> }> => {
     const title = args.callerName
       ? `Voice message from ${args.callerName}`
       : `Voice message from ${args.callbackPhone ?? "unknown caller"}`;
@@ -317,6 +458,7 @@ export const takeMessageForVoice = internalMutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex mutation builder.
 export const attachCallRecording = internalMutation({
   args: {
     callId: v.id("calls"),
@@ -325,7 +467,7 @@ export const attachCallRecording = internalMutation({
     recordingByteLength: v.number(),
     recordingDurationMs: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: MutationCtx, args: AttachCallRecordingArgs) => {
     await ctx.db.patch(args.callId, {
       recordingStorageId: args.recordingStorageId,
       recordingContentType: args.recordingContentType,
@@ -338,6 +480,7 @@ export const attachCallRecording = internalMutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex mutation builder.
 export const completeCall = internalMutation({
   args: {
     callId: v.id("calls"),
@@ -345,8 +488,8 @@ export const completeCall = internalMutation({
     endedAt: v.string(),
     disposition: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const call = await ctx.db.get(args.callId);
+  handler: async (ctx: MutationCtx, args: CompleteCallArgs) => {
+    const call: Doc<"calls"> | null = await ctx.db.get(args.callId);
     if (!call) {
       throw new Error("Call not found.");
     }
@@ -374,6 +517,7 @@ export const completeCall = internalMutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex mutation builder.
 export const reconcileTwilioCallStatus = internalMutation({
   args: {
     twilioCallSid: v.string(),
@@ -383,8 +527,11 @@ export const reconcileTwilioCallStatus = internalMutation({
     providerUpdatedAt: v.string(),
     providerDurationSeconds: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const call = await ctx.db
+  handler: async (
+    ctx: MutationCtx,
+    args: ReconcileTwilioCallStatusArgs,
+  ): Promise<ReconcileTwilioCallStatusResult> => {
+    const call: Doc<"calls"> | null = await ctx.db
       .query("calls")
       .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
       .unique();
@@ -447,6 +594,7 @@ export const reconcileTwilioCallStatus = internalMutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex action builder.
 export const checkAvailabilityForVoice = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -455,13 +603,16 @@ export const checkAvailabilityForVoice = internalAction({
     timezone: v.string(),
     preferredStaffId: v.optional(v.id("staff")),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: CheckAvailabilityForVoiceArgs,
+  ): Promise<CheckAvailabilityForVoiceResult> => {
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
 
-    const setup = await ctx.runQuery(
+    const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
       {
         businessId: args.businessId,
@@ -502,6 +653,7 @@ export const checkAvailabilityForVoice = internalAction({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex action builder.
 export const findAvailabilityForVoice = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -513,13 +665,16 @@ export const findAvailabilityForVoice = internalAction({
     preferredMinute: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: FindAvailabilityForVoiceArgs,
+  ): Promise<FindAvailabilityForVoiceResult> => {
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
 
-    const setup = await ctx.runQuery(
+    const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
       {
         businessId: args.businessId,
@@ -581,6 +736,7 @@ export const findAvailabilityForVoice = internalAction({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex action builder.
 export const bookAppointmentForVoice = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -591,7 +747,10 @@ export const bookAppointmentForVoice = internalAction({
     contactName: v.optional(v.string()),
     contactPhone: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx: ActionCtx,
+    args: BookAppointmentForVoiceArgs,
+  ): Promise<BookAppointmentForVoiceResult> => {
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
@@ -621,14 +780,15 @@ export const bookAppointmentForVoice = internalAction({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex query builder.
 export const listRecentCalls = query({
   args: {
     businessId: v.id("businesses"),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: ListRecentCallsArgs) => {
     await requireMembership(ctx, args.businessId);
-    const calls = await ctx.db
+    const calls: Array<Doc<"calls">> = await ctx.db
       .query("calls")
       .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
       .order("desc")
@@ -658,9 +818,9 @@ export const getCallTranscript = query({
     businessId: v.id("businesses"),
     callId: v.id("calls"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: QueryCtx, args: GetCallTranscriptArgs) => {
     await requireMembership(ctx, args.businessId);
-    const call = await ctx.db.get(args.callId);
+    const call: Doc<"calls"> | null = await ctx.db.get(args.callId);
     if (!call || call.businessId !== args.businessId) {
       throw new Error("Call not found.");
     }
