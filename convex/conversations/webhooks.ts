@@ -10,12 +10,32 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
 }
 
+function asMessageId(value: string): Id<"messages"> {
+  return value as Id<"messages">;
+}
+
+function buildTwilioSmsStatusCallbackUrl(): string {
+  const siteUrl = process.env.CONVEX_SITE_URL;
+  if (!siteUrl) {
+    throw new Error("CONVEX_SITE_URL is required to receive Twilio SMS callbacks.");
+  }
+
+  return new URL("/twilio/sms/status", siteUrl).toString();
+}
+
+type MessageMediaAttachment = {
+  url: string;
+  contentType?: string;
+};
+
 type ConversationIdArgs = { conversationId: Id<"conversations"> };
+type MessageIdArgs = { messageId: Id<"messages"> };
 type ClaimInboundMessageSidArgs = { scope: string; key: string };
 type ClaimInboundMessageSidResult =
   | { claimed: false; existing: Doc<"idempotency_keys"> }
@@ -41,6 +61,7 @@ type StoreInboundMessageArgs = {
   channel: string;
   body: string;
   providerMessageSid?: string;
+  media?: Array<MessageMediaAttachment>;
 };
 type StoreOutboundMessageArgs = {
   businessId: Id<"businesses">;
@@ -48,11 +69,43 @@ type StoreOutboundMessageArgs = {
   channel: string;
   body: string;
 };
+type OutboundMessageDeliveryContext = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  messageId: Id<"messages">;
+  body: string;
+  from: string;
+  to: string;
+  providerMessageSid?: string;
+  status: string;
+  media?: Array<MessageMediaAttachment>;
+};
+type MarkOutboundMessageAcceptedArgs = {
+  messageId: Id<"messages">;
+  providerMessageSid: string;
+  providerStatus: string;
+  providerUpdatedAt: string;
+};
+type MarkOutboundMessageSendFailedArgs = {
+  messageId: Id<"messages">;
+  providerUpdatedAt: string;
+  providerStatus?: string;
+};
+type SendStoredOutboundMessageResult = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  messageId: Id<"messages">;
+  reply: string;
+  providerMessageSid?: string;
+  status: string;
+};
 type HandleTwilioSmsInboundArgs = {
   from: string;
   to: string;
   body: string;
   messageSid?: string;
+  smsSid?: string;
+  media?: Array<MessageMediaAttachment>;
 };
 type HandleTwilioSmsInboundResult = {
   businessId: Id<"businesses">;
@@ -68,14 +121,18 @@ export const getLatestOutboundReply = internalQuery({
     ctx: QueryCtx,
     args: ConversationIdArgs,
   ): Promise<Doc<"messages"> | null> => {
-    const messages = await ctx.db
+    const messages = ctx.db
       .query("messages")
       .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
-      .collect();
+      .order("desc");
 
-    return messages
-      .filter((message) => message.direction === "outbound")
-      .sort((left, right) => right._creationTime - left._creationTime)[0] ?? null;
+    for await (const message of messages) {
+      if (message.direction === "outbound") {
+        return message;
+      }
+    }
+
+    return null;
   },
 });
 
@@ -107,19 +164,6 @@ export const claimInboundMessageSid = internalMutation({
   },
 });
 
-export const findIdempotencyKey = internalQuery({
-  args: {
-    scope: v.string(),
-    key: v.string(),
-  },
-  handler: async (ctx: QueryCtx, args: ClaimInboundMessageSidArgs) => {
-    return await ctx.db
-      .query("idempotency_keys")
-      .withIndex("by_scope_and_key", (q) => q.eq("scope", args.scope).eq("key", args.key))
-      .unique();
-  },
-});
-
 export const linkIdempotencyKey = internalMutation({
   args: {
     idempotencyKeyId: v.id("idempotency_keys"),
@@ -143,6 +187,15 @@ export const getConversationById = internalQuery({
   },
   handler: async (ctx: QueryCtx, args: ConversationIdArgs) => {
     return await ctx.db.get(args.conversationId);
+  },
+});
+
+export const getMessageById = internalQuery({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx: QueryCtx, args: MessageIdArgs) => {
+    return await ctx.db.get(args.messageId);
   },
 });
 
@@ -183,6 +236,66 @@ export const getOrCreateContact = internalMutation({
   },
 });
 
+export const getOutboundMessageDeliveryContext = internalQuery({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: MessageIdArgs,
+  ): Promise<OutboundMessageDeliveryContext | null> => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || message.direction !== "outbound" || message.channel !== "sms") {
+      return null;
+    }
+
+    const conversation = await ctx.db.get(message.conversationId);
+    if (!conversation || !conversation.contactId) {
+      throw new Error("Conversation is missing a contact for SMS delivery.");
+    }
+
+    const [contact, phoneNumbers] = await Promise.all([
+      ctx.db.get(conversation.contactId),
+      ctx.db
+        .query("phone_numbers")
+        .withIndex("by_business_id", (q) => q.eq("businessId", message.businessId))
+        .collect(),
+    ]);
+
+    if (!contact) {
+      throw new Error("Contact not found for SMS delivery.");
+    }
+
+    const eligiblePhoneNumbers = phoneNumbers.filter(
+      (phoneNumber) => phoneNumber.status === "active" && phoneNumber.smsEnabled,
+    );
+
+    if (eligiblePhoneNumbers.length !== 1) {
+      throw new Error(
+        "Exactly one active SMS-enabled phone number must be mapped to the business.",
+      );
+    }
+    const senderPhoneNumber = eligiblePhoneNumbers[0];
+    if (!senderPhoneNumber) {
+      throw new Error("SMS sender phone number is missing.");
+    }
+
+    return {
+      businessId: message.businessId,
+      conversationId: message.conversationId,
+      messageId: message._id,
+      body: message.body,
+      from: senderPhoneNumber.e164,
+      to: contact.phone,
+      ...(message.providerMessageSid !== undefined
+        ? { providerMessageSid: message.providerMessageSid }
+        : {}),
+      status: message.status,
+      ...(message.media !== undefined ? { media: message.media } : {}),
+    };
+  },
+});
+
 export const storeInboundMessage = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -190,6 +303,14 @@ export const storeInboundMessage = internalMutation({
     channel: v.string(),
     body: v.string(),
     providerMessageSid: v.optional(v.string()),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          contentType: v.optional(v.string()),
+        }),
+      ),
+    ),
   },
   handler: async (
     ctx: MutationCtx,
@@ -221,6 +342,7 @@ export const storeInboundMessage = internalMutation({
       ...(args.providerMessageSid !== undefined
         ? { providerMessageSid: args.providerMessageSid }
         : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       body: args.body,
       status: "received",
       aiGenerated: false,
@@ -250,12 +372,121 @@ export const storeOutboundMessage = internalMutation({
   },
 });
 
+export const markOutboundMessageAccepted = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    providerMessageSid: v.string(),
+    providerStatus: v.string(),
+    providerUpdatedAt: v.string(),
+  },
+  handler: async (ctx: MutationCtx, args: MarkOutboundMessageAcceptedArgs) => {
+    await ctx.db.patch(args.messageId, {
+      providerMessageSid: args.providerMessageSid,
+      status: mapTwilioStatusToMessageStatus(args.providerStatus),
+      providerStatus: args.providerStatus,
+      providerUpdatedAt: args.providerUpdatedAt,
+    });
+    return null;
+  },
+});
+
+export const markOutboundMessageSendFailed = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    providerUpdatedAt: v.string(),
+    providerStatus: v.optional(v.string()),
+  },
+  handler: async (ctx: MutationCtx, args: MarkOutboundMessageSendFailedArgs) => {
+    await ctx.db.patch(args.messageId, {
+      status: "failed",
+      providerStatus: args.providerStatus ?? "failed",
+      providerUpdatedAt: args.providerUpdatedAt,
+    });
+    return null;
+  },
+});
+
+export const sendStoredOutboundMessage = internalAction({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: MessageIdArgs,
+  ): Promise<SendStoredOutboundMessageResult> => {
+    const context: OutboundMessageDeliveryContext | null = await ctx.runQuery(
+      internal.conversations.webhooks.getOutboundMessageDeliveryContext,
+      {
+        messageId: args.messageId,
+      },
+    );
+
+    if (!context) {
+      throw new Error("Outbound message not found.");
+    }
+
+    if (context.providerMessageSid) {
+      return {
+        businessId: context.businessId,
+        conversationId: context.conversationId,
+        messageId: context.messageId,
+        reply: context.body,
+        providerMessageSid: context.providerMessageSid,
+        status: context.status,
+      };
+    }
+
+    try {
+      const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
+        to: context.to,
+        from: context.from,
+        body: context.body,
+        statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+        ...(context.media !== undefined && context.media.length > 0
+          ? { mediaUrls: context.media.map((attachment) => attachment.url) }
+          : {}),
+      });
+
+      await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageAccepted, {
+        messageId: context.messageId,
+        providerMessageSid: result.providerMessageSid,
+        providerStatus: result.providerStatus,
+        providerUpdatedAt: new Date().toISOString(),
+      });
+
+      return {
+        businessId: context.businessId,
+        conversationId: context.conversationId,
+        messageId: context.messageId,
+        reply: context.body,
+        providerMessageSid: result.providerMessageSid,
+        status: mapTwilioStatusToMessageStatus(result.providerStatus),
+      };
+    } catch (error) {
+      await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
+        messageId: context.messageId,
+        providerUpdatedAt: new Date().toISOString(),
+      });
+      throw error;
+    }
+  },
+});
+
 export const handleTwilioSmsInbound = internalAction({
   args: {
     from: v.string(),
     to: v.string(),
     body: v.string(),
     messageSid: v.optional(v.string()),
+    smsSid: v.optional(v.string()),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          contentType: v.optional(v.string()),
+        }),
+      ),
+    ),
   },
   handler: async (
     ctx: ActionCtx,
@@ -270,20 +501,35 @@ export const handleTwilioSmsInbound = internalAction({
       throw new Error("No business is mapped to this phone number.");
     }
 
-    if (args.messageSid) {
+    const providerInboundSid = args.messageSid ?? args.smsSid;
+    let idempotencyKeyId: Id<"idempotency_keys"> | null = null;
+
+    if (providerInboundSid) {
       const claim: ClaimInboundMessageSidResult = await ctx.runMutation(
         internal.conversations.webhooks.claimInboundMessageSid,
         {
           scope: "twilio_sms_inbound",
-          key: args.messageSid,
+          key: providerInboundSid,
         },
       );
 
       if (!claim.claimed) {
-        if (
-          claim.existing.resourceTable === "conversations" &&
-          claim.existing.resourceId
-        ) {
+        if (claim.existing.resourceTable === "messages" && claim.existing.resourceId) {
+          const resent: SendStoredOutboundMessageResult = await ctx.runAction(
+            internal.conversations.webhooks.sendStoredOutboundMessage,
+            {
+              messageId: asMessageId(claim.existing.resourceId),
+            },
+          );
+
+          return {
+            businessId: resent.businessId,
+            conversationId: resent.conversationId,
+            reply: resent.reply,
+          };
+        }
+
+        if (claim.existing.resourceTable === "conversations" && claim.existing.resourceId) {
           const conversation: Doc<"conversations"> | null = await ctx.runQuery(
             internal.conversations.webhooks.getConversationById,
             {
@@ -304,6 +550,8 @@ export const handleTwilioSmsInbound = internalAction({
             };
           }
         }
+      } else {
+        idempotencyKeyId = claim.id;
       }
     }
 
@@ -322,7 +570,8 @@ export const handleTwilioSmsInbound = internalAction({
         contactId,
         channel: "sms",
         body: args.body,
-        providerMessageSid: args.messageSid,
+        ...(providerInboundSid !== undefined ? { providerMessageSid: providerInboundSid } : {}),
+        ...(args.media !== undefined ? { media: args.media } : {}),
       },
     );
 
@@ -332,30 +581,36 @@ export const handleTwilioSmsInbound = internalAction({
       prompt: args.body,
     });
 
-    await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
-      businessId: phoneNumber.businessId,
-      conversationId,
-      channel: "sms",
-      body: reply,
+    const messageId: Id<"messages"> = await ctx.runMutation(
+      internal.conversations.webhooks.storeOutboundMessage,
+      {
+        businessId: phoneNumber.businessId,
+        conversationId,
+        channel: "sms",
+        body: reply,
+      },
+    );
+
+    if (idempotencyKeyId) {
+      await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+        idempotencyKeyId,
+        resourceTable: "messages",
+        resourceId: String(messageId),
+        status: "reply_generated",
+      });
+    }
+
+    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+      messageId,
     });
 
-    if (args.messageSid) {
-      const existing = await ctx.runQuery(
-        internal.conversations.webhooks.findIdempotencyKey,
-        {
-          scope: "twilio_sms_inbound",
-          key: args.messageSid,
-        },
-      );
-
-      if (existing) {
-        await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
-          idempotencyKeyId: existing._id,
-          resourceTable: "conversations",
-          resourceId: String(conversationId),
-          status: "processed",
-        });
-      }
+    if (idempotencyKeyId) {
+      await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+        idempotencyKeyId,
+        resourceTable: "messages",
+        resourceId: String(messageId),
+        status: "processed",
+      });
     }
 
     return { businessId: phoneNumber.businessId, conversationId, reply };

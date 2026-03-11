@@ -29,6 +29,11 @@ const closureWindowValidator = v.object({
   reason: v.string(),
 });
 
+const messageMediaValidator = v.object({
+  url: v.string(),
+  contentType: v.optional(v.string()),
+});
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -240,8 +245,13 @@ export default defineSchema({
     direction: v.string(),
     channel: v.string(),
     providerMessageSid: v.optional(v.string()),
+    media: v.optional(v.array(messageMediaValidator)),
     body: v.string(),
     status: v.string(),
+    providerStatus: v.optional(v.string()),
+    providerErrorCode: v.optional(v.string()),
+    providerUpdatedAt: v.optional(v.string()),
+    providerRawDlrDoneDate: v.optional(v.string()),
     aiGenerated: v.boolean(),
   })
     .index("by_conversation_id", ["conversationId"])
@@ -331,6 +341,10 @@ export default defineSchema({
     scheduledFor: v.string(),
     status: v.string(),
     providerMessageId: v.optional(v.string()),
+    providerStatus: v.optional(v.string()),
+    providerErrorCode: v.optional(v.string()),
+    providerUpdatedAt: v.optional(v.string()),
+    providerRawDlrDoneDate: v.optional(v.string()),
   })
     .index("by_business_id_and_scheduled_for", ["businessId", "scheduledFor"])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
