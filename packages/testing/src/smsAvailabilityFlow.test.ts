@@ -304,14 +304,14 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
-        "General Checkup is currently available on Thursday, Mar 12 at 4:00 PM.",
+        "I have General Checkup available for Thursday, Mar 12 at 4:00 PM. Does that work for you?",
       );
     });
 
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550999",
       from: smsNumber,
-      body: "General Checkup is currently available on Thursday, Mar 12 at 4:00 PM.",
+      body: "I have General Checkup available for Thursday, Mar 12 at 4:00 PM. Does that work for you?",
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
   });
@@ -338,7 +338,7 @@ describe("SMS scheduling flow", () => {
 
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
-      expect(outboundBody).toBe("What date would you like to come in?");
+      expect(outboundBody).toBe("What date would you prefer for your General Checkup?");
     });
 
     await postTwilioForm(t, "/twilio/sms/inbound", {
@@ -351,7 +351,7 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
-        "General Checkup is currently available on Thursday, Mar 12 at 4:00 PM.",
+        "I have General Checkup available for Thursday, Mar 12 at 4:00 PM. Does that work for you?",
       );
     });
   });
@@ -381,9 +381,9 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toMatch(
-        /^The next available General Checkup times on Monday, Mar 16 are /,
+        /^The next available General Checkup times on Monday, Mar 16 are .* What time would you prefer\?$/,
       );
-      expect(outboundBody).not.toBe("What date would you like to come in?");
+      expect(outboundBody).not.toBe("What date would you prefer for your General Checkup?");
     });
   });
 
@@ -416,12 +416,14 @@ describe("SMS scheduling flow", () => {
 
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
-      expect(outboundBody).toMatch(/^The next available Initial Consultation times on Tuesday, Mar 17 are /);
+      expect(outboundBody).toMatch(
+        /^The next available Initial Consultation times on Tuesday, Mar 17 are .* What time would you prefer\?$/,
+      );
       expect(outboundBody).not.toContain("Support Consultation");
     });
   });
 
-  it("books the previously selected service when the customer confirms an offered slot", async () => {
+  it("asks for confirmation before booking an exact available time", async () => {
     const t = createConvexHarness();
 
     const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
@@ -444,7 +446,7 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
-        "Initial Consultation is currently available on Tuesday, Mar 17 at 2:00 PM.",
+        "I have Initial Consultation available for Tuesday, Mar 17 at 2:00 PM. Does that work for you?",
       );
 
       const conversation = await ctx.db
@@ -460,19 +462,113 @@ describe("SMS scheduling flow", () => {
             .unique()
         : null;
       expect(bookingState).toBeTruthy();
+      expect(bookingState?.pendingStartsAt).toBe("2026-03-17T18:00:00.000Z");
     });
 
     await postTwilioForm(t, "/twilio/sms/inbound", {
       MessageSid: "SM-slot-confirmation-2",
       From: "+14165550995",
       To: smsNumber,
-      Body: "Yes, 2pm",
+      Body: "Good",
     });
 
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
         "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      expect(appointments[0]?.sourceChannel).toBe("sms");
+    });
+  });
+
+  it("keeps the selected service through date changes, alternative times, and slot confirmation", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-multi-turn-confirmation",
+        name: "SMS Multi Turn Confirmation",
+        smsNumber: "+14165550905",
+      });
+      return { businessId, initialConsultationId, smsNumber: "+14165550905" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-multi-turn-confirmation-1",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "Hello, do you have room for an initial consultation next monday?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-multi-turn-confirmation-2",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "What about on the 17?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-multi-turn-confirmation-3",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "Any other times?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "The next available Initial Consultation times on Tuesday, Mar 17 are Tuesday at 9:45 AM, Tuesday at 10:00 AM, Tuesday at 10:15 AM. What time would you prefer?",
+      );
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-multi-turn-confirmation-4",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "I take 10 am",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "I have Initial Consultation available for Tuesday, Mar 17 at 10:00 AM. Does that work for you?",
+      );
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation).toBeTruthy();
+
+      const bookingState = conversation
+        ? await ctx.db
+            .query("conversation_booking_state")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .unique()
+        : null;
+      expect(bookingState?.selectedServiceId).toBe(initialConsultationId);
+      expect(bookingState?.pendingStartsAt).toBe("2026-03-17T14:00:00.000Z");
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-multi-turn-confirmation-5",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 10:00 AM.",
       );
 
       const appointments = await ctx.db

@@ -153,7 +153,7 @@ function looksLikeAlternativeTimesRequest(text: string): boolean {
 }
 
 function looksLikeBookingConfirmation(text: string): boolean {
-  return /\b(yes|yeah|yep|sure|book it|please book|that works|works for me|let's do|confirm)\b/i.test(
+  return /\b(yes|yeah|yep|sure|book it|please book|that works|works for me|let's do|confirm|good|sounds good|perfect|ok(?:ay)?)\b/i.test(
     text,
   );
 }
@@ -524,10 +524,22 @@ function buildAvailabilityReply(input: {
 
   const slotSummary = input.slots.map((slot) => slot.displayTime).join(", ");
   if (input.requestedTime) {
-    return `I do not have ${input.serviceName} available on ${input.dateLabel} at ${input.requestedTime.label}. The closest available times are ${slotSummary}.`;
+    return `I do not have ${input.serviceName} available on ${input.dateLabel} at ${input.requestedTime.label}. The closest available times are ${slotSummary}. Would any of those work for you?`;
   }
 
-  return `The next available ${input.serviceName} times on ${input.dateLabel} are ${slotSummary}.`;
+  return `The next available ${input.serviceName} times on ${input.dateLabel} are ${slotSummary}. What time would you prefer?`;
+}
+
+function buildPendingBookingReply(
+  serviceName: string,
+  startsAt: string,
+  timezone: string,
+): string {
+  const localStart = DateTime.fromISO(startsAt, { setZone: true }).setZone(timezone);
+  const formatted = localStart.isValid
+    ? localStart.toFormat("cccc, LLL d 'at' h:mm a")
+    : startsAt;
+  return `I have ${serviceName} available for ${formatted}. Does that work for you?`;
 }
 
 function buildBookedAppointmentReply(
@@ -540,6 +552,39 @@ function buildBookedAppointmentReply(
     ? localStart.toFormat("cccc, LLL d 'at' h:mm a")
     : startsAt;
   return `Great, I booked your ${serviceName} for ${formatted}.`;
+}
+
+async function bookConversationAppointment(
+  ctx: ActionCtx,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId: Id<"conversations">;
+    service: Doc<"services">;
+    startsAt: string;
+    timezone: string;
+  },
+): Promise<string> {
+  const contact: ConversationSmsContact | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationSmsContact,
+    { conversationId: input.conversationId },
+  );
+  if (!contact) {
+    throw new Error("SMS conversation is missing a contact for booking.");
+  }
+
+  await ctx.runMutation(internal.appointments.booking.bookAppointmentForBusiness, {
+    businessId: input.businessId,
+    serviceId: input.service._id,
+    startsAt: input.startsAt,
+    timezone: input.timezone,
+    contactPhone: contact.contactPhone,
+    ...(contact.contactName !== undefined ? { contactName: contact.contactName } : {}),
+    sourceChannel: "sms",
+  });
+  await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
+    conversationId: input.conversationId,
+  });
+  return buildBookedAppointmentReply(input.service.name, input.startsAt, input.timezone);
 }
 
 async function maybeGenerateSmsSchedulingReply(
@@ -639,7 +684,28 @@ async function maybeGenerateSmsSchedulingReply(
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
       lastOfferedStartsAt: [],
     });
-    return "What date would you like to come in?";
+    return `What date would you prefer for your ${service.name}?`;
+  }
+
+  const shouldConfirmPendingSlot =
+    bookingState?.pendingStartsAt !== undefined &&
+    looksLikeBookingConfirmation(prompt) &&
+    explicitDate === null &&
+    explicitTime === null &&
+    !looksLikeAlternativeTimesRequest(prompt);
+  if (shouldConfirmPendingSlot) {
+    const pendingStartsAt = bookingState?.pendingStartsAt;
+    if (!pendingStartsAt) {
+      throw new Error("Pending SMS booking state is missing the slot to confirm.");
+    }
+
+    return await bookConversationAppointment(ctx, {
+      businessId,
+      conversationId,
+      service,
+      startsAt: pendingStartsAt,
+      timezone: snapshot.timezone,
+    });
   }
 
   const wantsAlternativeTimes = looksLikeAlternativeTimesRequest(prompt);
@@ -690,31 +756,38 @@ async function maybeGenerateSmsSchedulingReply(
   }
 
   const shouldBookRequestedTime =
-    (looksLikeBookingConfirmation(prompt) || isTimeOnlyReply(prompt)) &&
+    looksLikeBookingConfirmation(prompt) &&
     findMatchingOfferedSlot(bookingState, snapshot.timezone, requestedDate, requestedTime) !==
       null;
   if (shouldBookRequestedTime) {
-    const contact: ConversationSmsContact | null = await ctx.runQuery(
-      internal.ai.agents.runtime.getConversationSmsContact,
-      { conversationId },
-    );
-    if (!contact) {
-      throw new Error("SMS conversation is missing a contact for booking.");
-    }
-
-    await ctx.runMutation(internal.appointments.booking.bookAppointmentForBusiness, {
+    return await bookConversationAppointment(ctx, {
       businessId,
-      serviceId: service._id,
       startsAt,
+      service,
       timezone: snapshot.timezone,
-      contactPhone: contact.contactPhone,
-      ...(contact.contactName !== undefined ? { contactName: contact.contactName } : {}),
-      sourceChannel: "sms",
-    });
-    await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
       conversationId,
     });
-    return buildBookedAppointmentReply(service.name, startsAt, snapshot.timezone);
+  }
+
+  const selectedOfferedSlot = findMatchingOfferedSlot(
+    bookingState,
+    snapshot.timezone,
+    requestedDate,
+    requestedTime,
+  );
+  if (selectedOfferedSlot !== null) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      selectedServiceId: service._id,
+      requestedDate: requestedDate.isoDate,
+      preferredHour24: requestedTime.hour24,
+      preferredMinute: requestedTime.minute,
+      lastOfferedDate: requestedDate.isoDate,
+      lastOfferedStartsAt: [selectedOfferedSlot],
+      pendingStartsAt: selectedOfferedSlot,
+    });
+    return buildPendingBookingReply(service.name, selectedOfferedSlot, snapshot.timezone);
   }
 
   const exactAvailability: Array<{
@@ -739,8 +812,9 @@ async function maybeGenerateSmsSchedulingReply(
       preferredMinute: requestedTime.minute,
       lastOfferedDate: requestedDate.isoDate,
       lastOfferedStartsAt: [startsAt],
+      pendingStartsAt: startsAt,
     });
-    return `${service.name} is currently available on ${requestedDate.label} at ${requestedTime.label}.`;
+    return buildPendingBookingReply(service.name, startsAt, snapshot.timezone);
   }
 
   const nearbySlots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
@@ -825,6 +899,7 @@ export const saveConversationBookingState = internalMutation({
     preferredMinute: v.optional(v.number()),
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
+    pendingStartsAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -846,6 +921,7 @@ export const saveConversationBookingState = internalMutation({
       ...(args.lastOfferedStartsAt !== undefined
         ? { lastOfferedStartsAt: args.lastOfferedStartsAt }
         : {}),
+      ...(args.pendingStartsAt !== undefined ? { pendingStartsAt: args.pendingStartsAt } : {}),
     };
 
     if (existing) {

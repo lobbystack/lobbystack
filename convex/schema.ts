@@ -248,6 +248,7 @@ export default defineSchema({
     preferredMinute: v.optional(v.number()),
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
+    pendingStartsAt: v.optional(v.string()),
     updatedAt: v.string(),
   }).index("by_conversation_id", ["conversationId"]),
 
