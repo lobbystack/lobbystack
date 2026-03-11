@@ -63,7 +63,11 @@ Instead:
 - The inbound voice webhook returns TwiML with `<Connect><Stream>`.
 - Stream metadata is passed with Twilio custom `<Parameter>` tags, not WebSocket query strings.
 - The gateway validates Twilio signatures on both the inbound webhook and the Media Stream websocket handshake when `TWILIO_AUTH_TOKEN` is configured.
-- The gateway also exposes a Twilio stream status callback for `stream-started`, `stream-stopped`, and stream error diagnostics during provider validation.
+- The gateway exposes three distinct Twilio callback paths:
+  - `POST /twilio/voice/stream-status` for Media Stream lifecycle diagnostics
+  - `POST /twilio/voice/transfer-action` for `<Dial>` child-leg transfer outcomes
+  - `POST /twilio/voice/call-status` for authoritative parent call progress and final call reconciliation
+- Parent call status callbacks should be treated as provider truth for generic terminal outcomes, but they must not overwrite more specific dispositions the gateway already knows, such as transfer results or provider-outage recoveries.
 
 ## Realtime Session Notes
 

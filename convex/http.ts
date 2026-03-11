@@ -208,6 +208,43 @@ http.route({
 });
 
 http.route({
+  path: "/voice/call/reconcile-status",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = (await request.json()) as {
+      twilioCallSid: string;
+      callStatus: string;
+      sequenceNumber?: number;
+      callbackSource?: string;
+      providerUpdatedAt: string;
+      providerDurationSeconds?: number;
+    };
+
+    const result = await ctx.runMutation(internal.voice.runtime.reconcileTwilioCallStatus, {
+      twilioCallSid: body.twilioCallSid,
+      callStatus: body.callStatus,
+      providerUpdatedAt: body.providerUpdatedAt,
+      ...(body.sequenceNumber !== undefined
+        ? { sequenceNumber: body.sequenceNumber }
+        : {}),
+      ...(body.callbackSource !== undefined
+        ? { callbackSource: body.callbackSource }
+        : {}),
+      ...(body.providerDurationSeconds !== undefined
+        ? { providerDurationSeconds: body.providerDurationSeconds }
+        : {}),
+    });
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
   path: "/voice/call/recording",
   method: "POST",
   handler: httpAction(async (ctx, request) => {

@@ -3,8 +3,13 @@ import type { FastifyInstance } from "fastify";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   completeVoiceCall,
+  reconcileVoiceCallStatus,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
+import {
+  isTerminalTwilioCallStatus,
+  normalizeTwilioCallStatusPayload,
+} from "./callStatus";
 import {
   buildTwilioRequestUrl,
   normalizeFormFields,
@@ -111,6 +116,84 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         streamError: payload.StreamError,
       },
       "Twilio Media Stream status callback",
+    );
+
+    reply.code(204);
+    return null;
+  });
+
+  server.post("/twilio/voice/call-status", async (request, reply) => {
+    const payload = normalizeFormFields(
+      (request.body as Record<string, unknown> | undefined) ?? {},
+    );
+    const requestUrl = buildTwilioRequestUrl(
+      server.runtimeConfig.VOICE_GATEWAY_BASE_URL,
+      request.url,
+    );
+    const isValid = validateTwilioSignature({
+      authToken: server.runtimeConfig.TWILIO_AUTH_TOKEN,
+      signatureHeader: request.headers["x-twilio-signature"],
+      url: requestUrl,
+      params: payload,
+    });
+
+    if (!isValid) {
+      reply.code(403);
+      return "Invalid Twilio signature";
+    }
+
+    const normalized = normalizeTwilioCallStatusPayload(payload);
+    server.log.info(
+      {
+        callSid: normalized?.callSid,
+        callStatus: normalized?.callStatus,
+        sequenceNumber: normalized?.sequenceNumber,
+        callbackSource: normalized?.callbackSource,
+        timestamp: normalized?.timestamp,
+        durationSeconds: normalized?.durationSeconds,
+      },
+      "Twilio call status callback",
+    );
+
+    if (!normalized) {
+      reply.code(204);
+      return null;
+    }
+
+    const providerUpdatedAt = (() => {
+      if (!normalized.timestamp) {
+        return new Date().toISOString();
+      }
+
+      const parsed = new Date(normalized.timestamp);
+      return Number.isNaN(parsed.getTime())
+        ? new Date().toISOString()
+        : parsed.toISOString();
+    })();
+
+    const result = await reconcileVoiceCallStatus({
+      twilioCallSid: normalized.callSid,
+      callStatus: normalized.callStatus,
+      providerUpdatedAt,
+      ...(normalized.sequenceNumber !== undefined
+        ? { sequenceNumber: normalized.sequenceNumber }
+        : {}),
+      ...(normalized.callbackSource !== undefined
+        ? { callbackSource: normalized.callbackSource }
+        : {}),
+      ...(normalized.durationSeconds !== undefined
+        ? { providerDurationSeconds: normalized.durationSeconds }
+        : {}),
+    });
+
+    server.log.info(
+      {
+        callSid: normalized.callSid,
+        callStatus: normalized.callStatus,
+        terminal: isTerminalTwilioCallStatus(normalized.callStatus),
+        reconcileResult: result,
+      },
+      "Reconciled Twilio call status callback",
     );
 
     reply.code(204);

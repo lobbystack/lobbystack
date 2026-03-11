@@ -110,6 +110,20 @@ export async function completeVoiceCall(input: {
   await postJson("/voice/call/complete", input);
 }
 
+export async function reconcileVoiceCallStatus(input: {
+  twilioCallSid: string;
+  callStatus: string;
+  sequenceNumber?: number;
+  callbackSource?: string;
+  providerUpdatedAt: string;
+  providerDurationSeconds?: number;
+}): Promise<{ ignored: boolean; reason?: string; callId?: string }> {
+  return await postJson<{ ignored: boolean; reason?: string; callId?: string }>(
+    "/voice/call/reconcile-status",
+    input,
+  );
+}
+
 export async function uploadVoiceRecording(input: {
   callId: string;
   durationMs: number;

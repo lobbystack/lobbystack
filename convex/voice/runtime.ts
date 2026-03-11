@@ -72,6 +72,57 @@ async function resolveServiceDocument(
   return ranked[0]?.service ?? null;
 }
 
+const TERMINAL_TWILIO_CALL_STATUSES = new Set([
+  "busy",
+  "canceled",
+  "completed",
+  "failed",
+  "no-answer",
+]);
+
+function normalizeTwilioCallStatus(status: string): string {
+  return status.trim().toLowerCase();
+}
+
+function isTerminalTwilioCallStatus(status: string): boolean {
+  return TERMINAL_TWILIO_CALL_STATUSES.has(normalizeTwilioCallStatus(status));
+}
+
+function mapTwilioCallStatusToDisposition(status: string): string {
+  switch (normalizeTwilioCallStatus(status)) {
+    case "busy":
+      return "call_busy";
+    case "canceled":
+      return "call_canceled";
+    case "completed":
+      return "call_completed";
+    case "failed":
+      return "call_failed";
+    case "no-answer":
+      return "call_no_answer";
+    default:
+      return "call_unknown";
+  }
+}
+
+function isGenericCallDisposition(disposition: string | undefined): boolean {
+  return disposition?.startsWith("call_") ?? false;
+}
+
+function isNormalizableRuntimeDisposition(disposition: string | undefined): boolean {
+  return disposition === "stream_stopped";
+}
+
+function shouldPreserveSpecificCallOutcome(call: Doc<"calls">): boolean {
+  return (
+    call.status === "transferred" ||
+    call.disposition?.startsWith("transfer_") === true ||
+    (call.disposition !== undefined &&
+      !isGenericCallDisposition(call.disposition) &&
+      !isNormalizableRuntimeDisposition(call.disposition))
+  );
+}
+
 export const getActiveServicesForBusiness = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -347,10 +398,17 @@ export const completeCall = internalMutation({
       throw new Error("Call not found.");
     }
 
+    const disposition =
+      args.disposition === "stream_stopped" &&
+      call.disposition !== undefined &&
+      call.disposition !== "stream_stopped"
+        ? call.disposition
+        : args.disposition;
+
     await ctx.db.patch(args.callId, {
       status: args.status,
       endedAt: args.endedAt,
-      ...(args.disposition !== undefined ? { disposition: args.disposition } : {}),
+      ...(disposition !== undefined ? { disposition } : {}),
     });
 
     if (call.conversationId) {
@@ -360,6 +418,80 @@ export const completeCall = internalMutation({
     }
 
     return null;
+  },
+});
+
+export const reconcileTwilioCallStatus = internalMutation({
+  args: {
+    twilioCallSid: v.string(),
+    callStatus: v.string(),
+    sequenceNumber: v.optional(v.number()),
+    callbackSource: v.optional(v.string()),
+    providerUpdatedAt: v.string(),
+    providerDurationSeconds: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const call = await ctx.db
+      .query("calls")
+      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
+      .unique();
+
+    if (!call) {
+      return { ignored: true, reason: "unknown_call" } as const;
+    }
+
+    if (
+      call.providerCallStatusSequence !== undefined &&
+      args.sequenceNumber === undefined
+    ) {
+      return { ignored: true, reason: "missing_sequence" } as const;
+    }
+
+    if (
+      call.providerCallStatusSequence !== undefined &&
+      args.sequenceNumber !== undefined &&
+      args.sequenceNumber <= call.providerCallStatusSequence
+    ) {
+      return { ignored: true, reason: "stale_sequence" } as const;
+    }
+
+    const patch: Record<string, unknown> = {
+      providerCallStatus: args.callStatus,
+      providerUpdatedAt: args.providerUpdatedAt,
+      ...(args.sequenceNumber !== undefined
+        ? { providerCallStatusSequence: args.sequenceNumber }
+        : {}),
+      ...(args.callbackSource !== undefined
+        ? { providerCallStatusSource: args.callbackSource }
+        : {}),
+      ...(args.providerDurationSeconds !== undefined
+        ? { providerCallDurationSeconds: args.providerDurationSeconds }
+        : {}),
+    };
+
+    if (isTerminalTwilioCallStatus(args.callStatus)) {
+      if (call.endedAt === undefined) {
+        patch.endedAt = args.providerUpdatedAt;
+      }
+
+      if (!shouldPreserveSpecificCallOutcome(call)) {
+        patch.status = "completed";
+        patch.disposition = mapTwilioCallStatusToDisposition(args.callStatus);
+      }
+    }
+
+    await ctx.db.patch(call._id, patch);
+
+    if (isTerminalTwilioCallStatus(args.callStatus) && call.conversationId) {
+      const conversation = await ctx.db.get(call.conversationId);
+      if (conversation && conversation.status !== "closed") {
+        await ctx.db.patch(call.conversationId, {
+          status: "closed",
+        });
+      }
+    }
+
+    return { ignored: false, callId: call._id } as const;
   },
 });
 
