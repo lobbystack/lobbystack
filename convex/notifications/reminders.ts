@@ -1,12 +1,13 @@
-// @ts-nocheck
 import { v } from "convex/values";
 import {
+  type ActionCtx,
   internalAction,
   internalMutation,
   internalQuery,
   mutation,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
 import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
 
@@ -149,8 +150,8 @@ export const deliverNotification = internalAction({
 
 export const dispatchDueNotifications = internalAction({
   args: {},
-  handler: async (ctx) => {
-    const due = await ctx.runQuery(
+  handler: async (ctx: ActionCtx): Promise<{ count: number }> => {
+    const due: Array<Doc<"notifications">> = await ctx.runQuery(
       internal.notifications.reminders.listDueScheduledNotifications,
       {
         nowIso: new Date().toISOString(),
