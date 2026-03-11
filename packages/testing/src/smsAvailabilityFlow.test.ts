@@ -11,9 +11,10 @@ declare global {
   }
 }
 
-const { sendTwilioMessageMock, validateTwilioRequestMock } = vi.hoisted(() => ({
+const { sendTwilioMessageMock, validateTwilioRequestMock, workflowStartMock } = vi.hoisted(() => ({
   sendTwilioMessageMock: vi.fn(),
   validateTwilioRequestMock: vi.fn(),
+  workflowStartMock: vi.fn(),
 }));
 
 vi.mock("twilio", () => {
@@ -33,6 +34,20 @@ vi.mock("twilio", () => {
   };
 });
 
+vi.mock("../../../convex/lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
+    "../../../convex/lib/components",
+  );
+
+  return {
+    ...actual,
+    workflowManager: {
+      define: actual.workflowManager.define.bind(actual.workflowManager),
+      start: workflowStartMock,
+    },
+  };
+});
+
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
@@ -41,6 +56,10 @@ const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalGoogleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+function createConvexHarness(): TestConvex<typeof schema> {
+  return convexTest(schema, convexModules);
+}
 
 async function insertBusiness(
   ctx: TestContext,
@@ -122,6 +141,77 @@ async function seedSchedulableBusiness(
   return { businessId, serviceId };
 }
 
+async function seedMultiServiceBusiness(
+  ctx: TestContext,
+  input: { slug: string; name: string; smsNumber: string },
+): Promise<{
+  businessId: Id<"businesses">;
+  initialConsultationId: Id<"services">;
+  supportConsultationId: Id<"services">;
+}> {
+  const businessId = await insertBusiness(ctx, {
+    slug: input.slug,
+    name: input.name,
+  });
+  await insertSmsPhoneNumber(ctx, {
+    businessId,
+    e164: input.smsNumber,
+  });
+  await ctx.db.insert("receptionist_profiles", {
+    businessId,
+    greeting: `Thanks for contacting ${input.name}.`,
+    tone: "warm and direct",
+    summary: `${input.name} handles consultation scheduling over SMS.`,
+    bookingPolicy: "Only confirm a booking after availability is checked.",
+    smsInstructions:
+      "Reply clearly in short SMS messages. Do not sound like a phone call. Remember the service the customer already selected.",
+    transferMode: "on_request",
+  });
+
+  for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {
+    await ctx.db.insert("business_hours", {
+      businessId,
+      dayOfWeek,
+      openMinutes: 9 * 60,
+      closeMinutes: 17 * 60,
+    });
+  }
+
+  const staffId = await ctx.db.insert("staff", {
+    businessId,
+    name: "Taylor Consultant",
+    timezone: "America/Toronto",
+    active: true,
+  });
+  const initialConsultationId = await ctx.db.insert("services", {
+    businessId,
+    name: "Initial Consultation",
+    slug: "initial-consultation",
+    durationMinutes: 30,
+    active: true,
+  });
+  const supportConsultationId = await ctx.db.insert("services", {
+    businessId,
+    name: "Support Consultation",
+    slug: "support-consultation",
+    durationMinutes: 30,
+    active: true,
+  });
+
+  await ctx.db.insert("staff_service_assignments", {
+    businessId,
+    staffId,
+    serviceId: initialConsultationId,
+  });
+  await ctx.db.insert("staff_service_assignments", {
+    businessId,
+    staffId,
+    serviceId: supportConsultationId,
+  });
+
+  return { businessId, initialConsultationId, supportConsultationId };
+}
+
 async function fetchLatestOutboundBody(
   ctx: TestContext,
   businessId: Id<"businesses">,
@@ -172,6 +262,7 @@ beforeEach(() => {
     sid: "SM-scheduling-reply",
     status: "queued",
   });
+  workflowStartMock.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -179,15 +270,17 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
-  process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
-  process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY = originalGoogleApiKey;
+  if (typeof process !== "undefined") {
+    process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
+    process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
+    process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = originalGoogleApiKey;
+  }
 });
 
 describe("SMS scheduling flow", () => {
   it("returns actual availability immediately for a tomorrow-at-4pm request", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedSchedulableBusiness(ctx, {
@@ -224,7 +317,7 @@ describe("SMS scheduling flow", () => {
   });
 
   it("uses the previous inbound message when a follow-up only says tomorrow", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedSchedulableBusiness(ctx, {
@@ -264,7 +357,7 @@ describe("SMS scheduling flow", () => {
   });
 
   it("resolves weekday requests like next monday without asking for another date", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedSchedulableBusiness(ctx, {
@@ -291,6 +384,104 @@ describe("SMS scheduling flow", () => {
         /^The next available General Checkup times on Monday, Mar 16 are /,
       );
       expect(outboundBody).not.toBe("What date would you like to come in?");
+    });
+  });
+
+  it("remembers the selected service across date-only follow-ups", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-service-memory",
+        name: "SMS Service Memory",
+        smsNumber: "+14165550903",
+      });
+      return { businessId, smsNumber: "+14165550903" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-service-memory-1",
+      From: "+14165550996",
+      To: smsNumber,
+      Body: "Hello, do you have room for an initial consultation next monday?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-service-memory-2",
+      From: "+14165550996",
+      To: smsNumber,
+      Body: "What about on the 17?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toMatch(/^The next available Initial Consultation times on Tuesday, Mar 17 are /);
+      expect(outboundBody).not.toContain("Support Consultation");
+    });
+  });
+
+  it("books the previously selected service when the customer confirms an offered slot", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-slot-confirmation",
+        name: "SMS Slot Confirmation",
+        smsNumber: "+14165550904",
+      });
+      return { businessId, initialConsultationId, smsNumber: "+14165550904" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-slot-confirmation-1",
+      From: "+14165550995",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Initial Consultation is currently available on Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation).toBeTruthy();
+
+      const bookingState = conversation
+        ? await ctx.db
+            .query("conversation_booking_state")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .unique()
+        : null;
+      expect(bookingState).toBeTruthy();
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-slot-confirmation-2",
+      From: "+14165550995",
+      To: smsNumber,
+      Body: "Yes, 2pm",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      expect(appointments[0]?.sourceChannel).toBe("sms");
     });
   });
 });

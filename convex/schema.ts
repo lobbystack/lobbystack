@@ -239,6 +239,18 @@ export default defineSchema({
     .index("by_conversation_id", ["conversationId"])
     .index("by_thread_id", ["threadId"]),
 
+  conversation_booking_state: defineTable({
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    selectedServiceId: v.optional(v.id("services")),
+    requestedDate: v.optional(v.string()),
+    preferredHour24: v.optional(v.number()),
+    preferredMinute: v.optional(v.number()),
+    lastOfferedDate: v.optional(v.string()),
+    lastOfferedStartsAt: v.optional(v.array(v.string())),
+    updatedAt: v.string(),
+  }).index("by_conversation_id", ["conversationId"]),
+
   messages: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),

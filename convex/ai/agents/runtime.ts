@@ -43,6 +43,7 @@ function buildGroundedPrompt(input: {
 }
 
 type RecentConversationMessage = Pick<Doc<"messages">, "direction" | "body" | "_creationTime">;
+type ConversationBookingStateRecord = Doc<"conversation_booking_state">;
 type SmsTimePreference = {
   hour24: number;
   minute: number;
@@ -53,6 +54,10 @@ type SmsDatePreference = {
   isoDate: string;
   dayStart: DateTime;
   label: string;
+};
+type ConversationSmsContact = {
+  contactPhone: string;
+  contactName?: string;
 };
 
 const WEEKDAY_INDEX_BY_NAME: Record<string, number> = {
@@ -141,20 +146,69 @@ function looksLikeSchedulingRequest(text: string): boolean {
   return /\b(appointment|book|booking|schedule|availability|available|slot|room)\b/i.test(text);
 }
 
+function looksLikeAlternativeTimesRequest(text: string): boolean {
+  return /\b(any other times|other times|another time|another slot|anything else|later that day|earlier that day)\b/i.test(
+    text,
+  );
+}
+
+function looksLikeBookingConfirmation(text: string): boolean {
+  return /\b(yes|yeah|yep|sure|book it|please book|that works|works for me|let's do|confirm)\b/i.test(
+    text,
+  );
+}
+
+function isTimeOnlyReply(text: string): boolean {
+  const normalized = text.trim().replace(/[?.!,]+$/g, "");
+  return (
+    /^(?:at\s*)?\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)$/i.test(normalized) ||
+    /^(?:at\s*)?(?:[01]?\d|2[0-3]):[0-5]\d$/i.test(normalized) ||
+    /^(morning|afternoon|evening|noon)$/i.test(normalized)
+  );
+}
+
 function looksLikeSchedulingFollowUp(text: string): boolean {
   return (
-    /\b(today|tomorrow|morning|afternoon|evening|noon|next week)\b/i.test(text) ||
+    /\b(today|tomorrow|morning|afternoon|evening|noon|next week|this week)\b/i.test(text) ||
+    /\b(?:(next|this)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(
+      text,
+    ) ||
+    /\b(?:what about|how about)\b/i.test(text) ||
+    /\bon\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
+    /\bthe\s+\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i.test(text) ||
     /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
-    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text)
+    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
+    looksLikeAlternativeTimesRequest(text) ||
+    looksLikeBookingConfirmation(text)
   );
+}
+
+function resolveServiceFromState(
+  services: Array<Doc<"services">>,
+  state: ConversationBookingStateRecord | null,
+): Doc<"services"> | null {
+  if (!state?.selectedServiceId) {
+    return null;
+  }
+
+  return services.find((service) => service._id === state.selectedServiceId) ?? null;
 }
 
 function resolveRequestedDate(
   text: string,
   timezone: string,
+  referenceIsoDate?: string,
 ): SmsDatePreference | null {
   const localNow = DateTime.now().setZone(timezone);
+  const referenceDay =
+    referenceIsoDate === undefined
+      ? null
+      : DateTime.fromISO(referenceIsoDate, { zone: timezone }).startOf("day");
+  const baseDay =
+    referenceDay && referenceDay.isValid
+      ? referenceDay
+      : localNow.startOf("day");
 
   if (/\bday after tomorrow\b/i.test(text)) {
     return toSmsDatePreference(localNow.plus({ days: 2 }).startOf("day"));
@@ -185,6 +239,35 @@ function resolveRequestedDate(
       }
 
       return toSmsDatePreference(localNow.plus({ days: daysAhead }).startOf("day"));
+    }
+  }
+
+  const bareDayMatch =
+    text.match(/\bon\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i) ??
+    text.match(/\bthe\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+  if (bareDayMatch?.[1]) {
+    const day = Number(bareDayMatch[1]);
+    if (day >= 1 && day <= 31) {
+      let candidate = DateTime.fromObject(
+        { year: baseDay.year, month: baseDay.month, day },
+        { zone: timezone },
+      ).startOf("day");
+      if (!candidate.isValid) {
+        candidate = DateTime.fromObject(
+          { year: baseDay.plus({ months: 1 }).year, month: baseDay.plus({ months: 1 }).month, day },
+          { zone: timezone },
+        ).startOf("day");
+      } else if (candidate < baseDay) {
+        const nextMonth = baseDay.plus({ months: 1 });
+        candidate = DateTime.fromObject(
+          { year: nextMonth.year, month: nextMonth.month, day },
+          { zone: timezone },
+        ).startOf("day");
+      }
+
+      if (candidate.isValid) {
+        return toSmsDatePreference(candidate);
+      }
     }
   }
 
@@ -285,16 +368,91 @@ function resolveRequestedTime(text: string): SmsTimePreference | null {
   return null;
 }
 
+function getRequestedDateFromState(
+  state: ConversationBookingStateRecord | null,
+  timezone: string,
+): SmsDatePreference | null {
+  if (!state?.requestedDate) {
+    return null;
+  }
+
+  const dayStart = DateTime.fromISO(state.requestedDate, { zone: timezone }).startOf("day");
+  return dayStart.isValid ? toSmsDatePreference(dayStart) : null;
+}
+
+function getRequestedTimeFromState(
+  state: ConversationBookingStateRecord | null,
+): SmsTimePreference | null {
+  if (state?.preferredHour24 === undefined) {
+    return null;
+  }
+
+  const minute = state.preferredMinute ?? 0;
+  return {
+    hour24: state.preferredHour24,
+    minute,
+    approximate: false,
+    label: DateTime.fromObject({ hour: state.preferredHour24, minute }).toFormat("h:mm a"),
+  };
+}
+
+function shouldReuseStoredDate(
+  text: string,
+  state: ConversationBookingStateRecord | null,
+): boolean {
+  if (!state?.requestedDate) {
+    return false;
+  }
+
+  return looksLikeAlternativeTimesRequest(text) || isTimeOnlyReply(text) || looksLikeBookingConfirmation(text);
+}
+
+function findMatchingOfferedSlot(
+  state: ConversationBookingStateRecord | null,
+  timezone: string,
+  requestedDate: SmsDatePreference,
+  requestedTime: SmsTimePreference,
+): string | null {
+  if (!state?.lastOfferedStartsAt || state.lastOfferedStartsAt.length === 0) {
+    return null;
+  }
+
+  for (const startsAt of state.lastOfferedStartsAt) {
+    const localStart = DateTime.fromISO(startsAt, { setZone: true }).setZone(timezone);
+    if (
+      localStart.isValid &&
+      localStart.toISODate() === requestedDate.isoDate &&
+      localStart.hour === requestedTime.hour24 &&
+      localStart.minute === requestedTime.minute
+    ) {
+      return startsAt;
+    }
+  }
+
+  return null;
+}
+
 async function getRelevantSchedulingText(
   ctx: ActionCtx,
   conversationId: Id<"conversations">,
   prompt: string,
+  state: ConversationBookingStateRecord | null,
+  services: Array<Doc<"services">>,
 ): Promise<string | null> {
   if (looksLikeSchedulingRequest(prompt)) {
     return prompt;
   }
 
-  if (!looksLikeSchedulingFollowUp(prompt)) {
+  const hasState = state !== null;
+  const serviceMention = services.some((service) => scoreServiceMatch(service, prompt) > 0);
+  if (serviceMention && looksLikeSchedulingFollowUp(prompt)) {
+    return prompt;
+  }
+  if (hasState && (looksLikeSchedulingFollowUp(prompt) || serviceMention)) {
+    return prompt;
+  }
+
+  if (!looksLikeSchedulingFollowUp(prompt) && !serviceMention) {
     return null;
   }
 
@@ -320,11 +478,8 @@ async function getRelevantSchedulingText(
 function resolveRequestedService(
   services: Array<Doc<"services">>,
   schedulingText: string,
+  state: ConversationBookingStateRecord | null,
 ): Doc<"services"> | null {
-  if (services.length === 1) {
-    return services[0] ?? null;
-  }
-
   const ranked = services
     .map((service) => ({
       service,
@@ -335,15 +490,24 @@ function resolveRequestedService(
 
   const topCandidate = ranked[0];
   const runnerUp = ranked[1];
-  if (!topCandidate) {
-    return null;
+  if (topCandidate && runnerUp && topCandidate.score === runnerUp.score) {
+    return resolveServiceFromState(services, state);
   }
 
-  if (runnerUp && topCandidate.score === runnerUp.score) {
-    return null;
+  if (topCandidate) {
+    return topCandidate.service;
   }
 
-  return topCandidate.service;
+  const fromState = resolveServiceFromState(services, state);
+  if (fromState) {
+    return fromState;
+  }
+
+  if (services.length === 1) {
+    return services[0] ?? null;
+  }
+
+  return null;
 }
 
 function buildAvailabilityReply(input: {
@@ -366,6 +530,18 @@ function buildAvailabilityReply(input: {
   return `The next available ${input.serviceName} times on ${input.dateLabel} are ${slotSummary}.`;
 }
 
+function buildBookedAppointmentReply(
+  serviceName: string,
+  startsAt: string,
+  timezone: string,
+): string {
+  const localStart = DateTime.fromISO(startsAt, { setZone: true }).setZone(timezone);
+  const formatted = localStart.isValid
+    ? localStart.toFormat("cccc, LLL d 'at' h:mm a")
+    : startsAt;
+  return `Great, I booked your ${serviceName} for ${formatted}.`;
+}
+
 async function maybeGenerateSmsSchedulingReply(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -379,21 +555,56 @@ async function maybeGenerateSmsSchedulingReply(
     throw new Error("Business context snapshot is missing.");
   }
 
-  const schedulingText = await getRelevantSchedulingText(ctx, conversationId, prompt);
-  if (!schedulingText) {
-    return null;
-  }
-
+  const bookingState: ConversationBookingStateRecord | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationBookingState,
+    { conversationId },
+  );
   const services: Array<Doc<"services">> = await ctx.runQuery(
     internal.voice.runtime.getActiveServicesForBusiness,
     { businessId },
   );
+  const schedulingText = await getRelevantSchedulingText(
+    ctx,
+    conversationId,
+    prompt,
+    bookingState,
+    services,
+  );
+  if (!schedulingText) {
+    return null;
+  }
+
   if (services.length === 0) {
+    await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
+      conversationId,
+    });
     return "I can help with scheduling, but no bookable services are configured yet.";
   }
 
-  const service = resolveRequestedService(services, schedulingText);
+  const stateDate = getRequestedDateFromState(bookingState, snapshot.timezone);
+  const explicitDate = resolveRequestedDate(
+    schedulingText,
+    snapshot.timezone,
+    bookingState?.requestedDate ?? bookingState?.lastOfferedDate,
+  );
+  const service = resolveRequestedService(services, schedulingText, bookingState);
+  const requestedDate =
+    explicitDate ??
+    ((shouldReuseStoredDate(prompt, bookingState) || service !== null) ? stateDate : null);
+  const explicitTime = resolveRequestedTime(schedulingText);
+  const requestedTime =
+    explicitTime ??
+    ((requestedDate !== null && service !== null) ? getRequestedTimeFromState(bookingState) : null);
+
   if (!service) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
+      ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+      ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+      lastOfferedStartsAt: [],
+    });
     return buildServiceSelectionReply(services);
   }
 
@@ -407,29 +618,65 @@ async function maybeGenerateSmsSchedulingReply(
   if (setup.assignmentCount === 0) {
     const setupIssue =
       setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned";
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      selectedServiceId: service._id,
+      ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
+      ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+      ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+      lastOfferedStartsAt: [],
+    });
     return buildSetupIssueReply(service.name, setupIssue);
   }
 
-  const requestedDate = resolveRequestedDate(schedulingText, snapshot.timezone);
   if (!requestedDate) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      selectedServiceId: service._id,
+      ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+      ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+      lastOfferedStartsAt: [],
+    });
     return "What date would you like to come in?";
   }
 
-  const requestedTime = resolveRequestedTime(schedulingText);
-  if (!requestedTime) {
+  const wantsAlternativeTimes = looksLikeAlternativeTimesRequest(prompt);
+  if (!requestedTime || wantsAlternativeTimes) {
     const slots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
       await ctx.runQuery(internal.appointments.booking.findAvailabilityForBusiness, {
         businessId,
         serviceId: service._id,
         date: requestedDate.isoDate,
         timezone: snapshot.timezone,
-        limit: 3,
+        ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+        ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+        limit: wantsAlternativeTimes ? 6 : 3,
       });
+
+    const unseenSlots =
+      wantsAlternativeTimes && bookingState?.lastOfferedStartsAt?.length
+        ? slots.filter((slot) => !bookingState.lastOfferedStartsAt?.includes(slot.startsAt))
+        : slots;
+    const responseSlots = (unseenSlots.length > 0 ? unseenSlots : slots).slice(0, 3);
+
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      selectedServiceId: service._id,
+      requestedDate: requestedDate.isoDate,
+      ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+      ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+      lastOfferedDate: requestedDate.isoDate,
+      lastOfferedStartsAt: responseSlots.map((slot) => slot.startsAt),
+    });
 
     return buildAvailabilityReply({
       serviceName: service.name,
       dateLabel: requestedDate.label,
-      slots,
+      requestedTime,
+      slots: responseSlots,
     });
   }
 
@@ -440,6 +687,34 @@ async function maybeGenerateSmsSchedulingReply(
   const startsAt = requestedStartLocal.toUTC().toISO() ?? requestedStartLocal.toISO();
   if (!startsAt) {
     throw new Error("Unable to compute the requested appointment time.");
+  }
+
+  const shouldBookRequestedTime =
+    (looksLikeBookingConfirmation(prompt) || isTimeOnlyReply(prompt)) &&
+    findMatchingOfferedSlot(bookingState, snapshot.timezone, requestedDate, requestedTime) !==
+      null;
+  if (shouldBookRequestedTime) {
+    const contact: ConversationSmsContact | null = await ctx.runQuery(
+      internal.ai.agents.runtime.getConversationSmsContact,
+      { conversationId },
+    );
+    if (!contact) {
+      throw new Error("SMS conversation is missing a contact for booking.");
+    }
+
+    await ctx.runMutation(internal.appointments.booking.bookAppointmentForBusiness, {
+      businessId,
+      serviceId: service._id,
+      startsAt,
+      timezone: snapshot.timezone,
+      contactPhone: contact.contactPhone,
+      ...(contact.contactName !== undefined ? { contactName: contact.contactName } : {}),
+      sourceChannel: "sms",
+    });
+    await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
+      conversationId,
+    });
+    return buildBookedAppointmentReply(service.name, startsAt, snapshot.timezone);
   }
 
   const exactAvailability: Array<{
@@ -455,6 +730,16 @@ async function maybeGenerateSmsSchedulingReply(
   });
 
   if (exactAvailability.length > 0) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      selectedServiceId: service._id,
+      requestedDate: requestedDate.isoDate,
+      preferredHour24: requestedTime.hour24,
+      preferredMinute: requestedTime.minute,
+      lastOfferedDate: requestedDate.isoDate,
+      lastOfferedStartsAt: [startsAt],
+    });
     return `${service.name} is currently available on ${requestedDate.label} at ${requestedTime.label}.`;
   }
 
@@ -468,6 +753,17 @@ async function maybeGenerateSmsSchedulingReply(
       preferredMinute: requestedTime.minute,
       limit: 3,
     });
+
+  await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+    businessId,
+    conversationId,
+    selectedServiceId: service._id,
+    requestedDate: requestedDate.isoDate,
+    preferredHour24: requestedTime.hour24,
+    preferredMinute: requestedTime.minute,
+    lastOfferedDate: requestedDate.isoDate,
+    lastOfferedStartsAt: nearbySlots.map((slot) => slot.startsAt),
+  });
 
   return buildAvailabilityReply({
     serviceName: service.name,
@@ -501,6 +797,104 @@ export const getConversationAiState = internalQuery({
       .query("conversation_ai_state")
       .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
       .unique();
+  },
+});
+
+export const getConversationBookingState = internalQuery({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<ConversationBookingStateRecord | null> => {
+    return await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+  },
+});
+
+export const saveConversationBookingState = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    selectedServiceId: v.optional(v.id("services")),
+    requestedDate: v.optional(v.string()),
+    preferredHour24: v.optional(v.number()),
+    preferredMinute: v.optional(v.number()),
+    lastOfferedDate: v.optional(v.string()),
+    lastOfferedStartsAt: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+
+    const nextState = {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      updatedAt: new Date().toISOString(),
+      ...(args.selectedServiceId !== undefined
+        ? { selectedServiceId: args.selectedServiceId }
+        : {}),
+      ...(args.requestedDate !== undefined ? { requestedDate: args.requestedDate } : {}),
+      ...(args.preferredHour24 !== undefined ? { preferredHour24: args.preferredHour24 } : {}),
+      ...(args.preferredMinute !== undefined ? { preferredMinute: args.preferredMinute } : {}),
+      ...(args.lastOfferedDate !== undefined ? { lastOfferedDate: args.lastOfferedDate } : {}),
+      ...(args.lastOfferedStartsAt !== undefined
+        ? { lastOfferedStartsAt: args.lastOfferedStartsAt }
+        : {}),
+    };
+
+    if (existing) {
+      await ctx.db.replace(existing._id, nextState);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("conversation_booking_state", nextState);
+  },
+});
+
+export const clearConversationBookingState = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    return null;
+  },
+});
+
+export const getConversationSmsContact = internalQuery({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<ConversationSmsContact | null> => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation?.contactId) {
+      return null;
+    }
+
+    const contact = await ctx.db.get(conversation.contactId);
+    if (!contact) {
+      return null;
+    }
+
+    return {
+      contactPhone: contact.phone,
+      ...(contact.name !== undefined ? { contactName: contact.name } : {}),
+    };
   },
 });
 
