@@ -1,7 +1,11 @@
-// @ts-nocheck
 import { createThread } from "@convex-dev/agent";
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery } from "../../_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  type ActionCtx,
+} from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
@@ -73,25 +77,24 @@ export const storeConversationThread = internalMutation({
 });
 
 async function ensureConversationThread(
-  ctx: Parameters<typeof createThread>[0],
+  ctx: ActionCtx,
   businessId: Id<"businesses">,
   conversationId: Id<"conversations">,
 ): Promise<string> {
-  const existing = await (ctx as any).runQuery(
-    internal["ai/agents/runtime"].getConversationAiState,
-    { conversationId },
-  );
+  const existing = await ctx.runQuery(internal.ai.agents.runtime.getConversationAiState, {
+    conversationId,
+  });
 
   if (existing) {
     return existing.threadId;
   }
 
-  const threadId = await createThread(ctx as any, receptionistAgent.component, {
+  const threadId = await createThread(ctx, receptionistAgent.component, {
     title: `Conversation ${String(conversationId)}`,
     summary: `Business ${String(businessId)} conversation`,
   });
 
-  await (ctx as any).runMutation(internal["ai/agents/runtime"].storeConversationThread, {
+  await ctx.runMutation(internal.ai.agents.runtime.storeConversationThread, {
     businessId,
     conversationId,
     threadId,
@@ -101,20 +104,20 @@ async function ensureConversationThread(
 }
 
 async function generateGroundedReply(
-  ctx: Parameters<typeof createThread>[0],
+  ctx: ActionCtx,
   businessId: Id<"businesses">,
   conversationId: Id<"conversations">,
   prompt: string,
 ): Promise<string> {
-  const snapshot = await (ctx as any).runQuery(internal["ai/context/snapshots"].getByBusinessId, {
+  const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
     businessId,
   });
   if (!snapshot) {
     throw new Error("Business context snapshot is missing.");
   }
 
-  const knowledge = await (ctx as any).runAction(
-    internal["ai/context/knowledge"].searchKnowledgeInternal,
+  const knowledge = await ctx.runAction(
+    internal.ai.context.knowledge.searchKnowledgeInternal,
     {
       businessId,
       query: prompt,
@@ -124,7 +127,7 @@ async function generateGroundedReply(
 
   const threadId = await ensureConversationThread(ctx, businessId, conversationId);
   const result = await receptionistAgent.generateText(
-    ctx as any,
+    ctx,
     { threadId },
     {
       prompt: buildGroundedPrompt({
@@ -140,6 +143,8 @@ async function generateGroundedReply(
   return result.text;
 }
 
+// Convex action builder types can exceed local tsc recursion depth here.
+// @ts-ignore Deep type instantiation from Convex action generics.
 export const generateSmsReply = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -156,6 +161,7 @@ export const generateSmsReply = internalAction({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex action generics.
 export const previewReplyInternal = internalAction({
   args: {
     businessId: v.id("businesses"),

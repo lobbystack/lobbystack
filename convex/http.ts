@@ -3,7 +3,7 @@ import {
   escapeXmlText,
   normalizeTwilioFormFields,
   validateTwilioSignature,
-} from "../packages/shared/src/twilioSecurity";
+} from "./lib/twilioSecurity";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";

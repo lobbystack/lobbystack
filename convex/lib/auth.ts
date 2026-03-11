@@ -218,12 +218,10 @@ export async function requireMembership(
   businessId: Id<"businesses">,
 ): Promise<Doc<"business_memberships">> {
   const user = await requireCurrentUser(ctx);
-  const membership = await ctx.db
-    .query("business_memberships")
-    .withIndex("by_user_id_and_business_id", (q) =>
-      q.eq("userId", user._id).eq("businessId", businessId),
-    )
-    .unique();
+  const membership =
+    (await listMembershipsForUser(ctx, user._id)).find(
+      (candidate) => candidate.businessId === businessId,
+    ) ?? null;
 
   if (!membership || membership.status !== "active") {
     throw new Error("You do not have access to this business.");

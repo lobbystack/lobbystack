@@ -25,6 +25,8 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
+import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
+import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
 import type * as users from "../users.js";
 import type * as voice_runtime from "../voice/runtime.js";
@@ -53,6 +55,8 @@ declare const fullApi: ApiFromModules<{
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
   "lib/snapshot": typeof lib_snapshot;
+  "lib/twilioSecurity": typeof lib_twilioSecurity;
+  "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "notifications/reminders": typeof notifications_reminders;
   users: typeof users;
   "voice/runtime": typeof voice_runtime;

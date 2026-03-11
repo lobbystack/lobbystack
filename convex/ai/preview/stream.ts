@@ -1,14 +1,16 @@
-// @ts-nocheck
 import {
   StreamId,
   StreamIdValidator,
 } from "@convex-dev/persistent-text-streaming";
 import { httpAction, mutation, query } from "../../_generated/server";
 import { internal } from "../../_generated/api";
+import type { Id } from "../../_generated/dataModel";
 import { v } from "convex/values";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
 import { persistentTextStreaming } from "../../lib/components";
 
+// Convex component types can exceed local tsc recursion depth on these builders.
+// @ts-ignore Deep type instantiation from Convex component generics.
 export const createPreviewSession = mutation({
   args: {
     businessId: v.id("businesses"),
@@ -18,6 +20,7 @@ export const createPreviewSession = mutation({
     const user = await ensureCurrentUser(ctx);
     await requireMembership(ctx, args.businessId);
     const streamId = await persistentTextStreaming.createStream(ctx);
+    // @ts-ignore Deep type instantiation from Convex component generics.
     const previewSessionId = await ctx.db.insert("preview_sessions", {
       businessId: args.businessId,
       userId: user._id,
@@ -28,6 +31,7 @@ export const createPreviewSession = mutation({
   },
 });
 
+// @ts-ignore Deep type instantiation from Convex component generics.
 export const getPreviewBody = query({
   args: {
     streamId: StreamIdValidator,
@@ -62,15 +66,15 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
   }
 
   const body = (await request.json()) as {
-    businessId: string;
+    businessId: Id<"businesses">;
     prompt: string;
-    streamId: string;
+    streamId: StreamId;
   };
 
   const preview = await ctx.runAction(
     internal["ai/context/knowledge"].generatePreviewKnowledgeAnswer,
     {
-      businessId: body.businessId as any,
+      businessId: body.businessId,
       prompt: body.prompt,
     },
   );
@@ -78,7 +82,7 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
   const response = await persistentTextStreaming.stream(
     ctx,
     request,
-    body.streamId as StreamId,
+    body.streamId,
     async (_streamCtx, _streamRequest, _streamId, appendChunk) => {
       const chunks = preview.text
         .split(/(?<=[.!?])\s+/)

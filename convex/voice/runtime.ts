@@ -2,7 +2,7 @@
 import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
-} from "../../packages/shared/src/voiceCallStatus";
+} from "../lib/voiceCallStatus";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
