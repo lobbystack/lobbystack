@@ -36,11 +36,14 @@ The snapshot keeps the common receptionist context close to the live voice runti
 - `@convex-dev/agent` powers SMS and admin preview threads.
 - `@convex-dev/persistent-text-streaming` is reserved for streamed preview/test flows.
 - `@convex-dev/workflow` and `@convex-dev/workpool` handle ingestion and follow-up work.
+- `convex/lib/components.ts` is the Convex composition root for those orchestration primitives.
+- `convex/lib/providers/*` chooses the concrete vendor/model implementation that each Convex component uses.
 
 ## Provider Split
 
 - `OpenAI Realtime` is reserved for the live voice runtime in `apps/voice-gateway`.
 - `Gemini` handles non-realtime text generation and embeddings in Convex for SMS, preview, summaries, and knowledge retrieval.
+- The provider choice lives behind internal Convex provider adapters, so component wiring stays separate from vendor SDK selection.
 
 This keeps the expensive low-latency voice path separate from the cheaper async text path.
 
