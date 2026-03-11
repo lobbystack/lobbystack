@@ -1,4 +1,3 @@
-import { google } from "@ai-sdk/google";
 import { ActionRetrier } from "@convex-dev/action-retrier";
 import { Agent } from "@convex-dev/agent";
 import { Crons } from "@convex-dev/crons";
@@ -8,6 +7,12 @@ import { WorkflowManager } from "@convex-dev/workflow";
 import { Workpool } from "@convex-dev/workpool";
 
 import { components } from "../_generated/api";
+import {
+  createEmbeddingModel,
+  EMBEDDING_DIMENSION,
+  getEmbeddingModelId,
+} from "./providers/embeddings";
+import { createNonRealtimeTextModel } from "./providers/nonRealtimeText";
 
 type KnowledgeFilters = {
   businessId: string;
@@ -18,7 +23,7 @@ type KnowledgeFilters = {
   };
 };
 
-export const KNOWLEDGE_INDEX_VERSION = "gemini-embedding-001-v1";
+export const KNOWLEDGE_INDEX_VERSION = `${getEmbeddingModelId()}-v1`;
 
 export function getKnowledgeNamespace(businessId: string): string {
   return `knowledge:${KNOWLEDGE_INDEX_VERSION}:business:${businessId}`;
@@ -27,15 +32,15 @@ export function getKnowledgeNamespace(businessId: string): string {
 export const receptionistAgent = new Agent(components.agent, {
   name: "Receptionist Preview Agent",
   // Keep non-realtime text work on Gemini. OpenAI stays reserved for live voice.
-  languageModel: google("gemini-3.1-flash-lite-preview"),
+  languageModel: createNonRealtimeTextModel(),
   instructions:
     "You are the admin-side receptionist preview agent. Use the supplied snapshot and retrieved knowledge. Never invent hours, bookings, or transfer policy.",
   maxSteps: 4,
 });
 
 export const rag = new RAG<KnowledgeFilters>(components.rag, {
-  textEmbeddingModel: google.embedding("gemini-embedding-001"),
-  embeddingDimension: 3072,
+  textEmbeddingModel: createEmbeddingModel(),
+  embeddingDimension: EMBEDDING_DIMENSION,
   filterNames: ["businessId", "sourceType", "businessAndSource"],
 });
 
