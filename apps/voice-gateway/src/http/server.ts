@@ -45,12 +45,6 @@ export function createServer(): ReturnType<typeof Fastify> {
     return { ok: true };
   });
 
-  server.get("/internal/context/:businessId", async (request) => {
-    const params = request.params as { businessId: string };
-    const snapshot = cache.get(params.businessId);
-    return { snapshot };
-  });
-
   registerVoiceRoutes(server);
   return server;
 }

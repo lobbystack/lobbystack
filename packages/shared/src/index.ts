@@ -128,3 +128,11 @@ export type {
   CallOutcomeRecord,
   TerminalTwilioCallReconciliationFields,
 } from "./voiceCallStatus";
+export {
+  buildTwilioSignaturePayload,
+  computeTwilioSignature,
+  escapeXmlText,
+  normalizeTwilioFormFields,
+  validateTwilioSignature,
+} from "./twilioSecurity";
+export type { TwilioSignatureInput } from "./twilioSecurity";

@@ -6,7 +6,7 @@ import {
 import { httpAction, mutation, query } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import { v } from "convex/values";
-import { ensureCurrentUser, requireMembership } from "../../lib/auth";
+import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
 import { persistentTextStreaming } from "../../lib/components";
 
 export const createPreviewSession = mutation({
@@ -33,6 +33,18 @@ export const getPreviewBody = query({
     streamId: StreamIdValidator,
   },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const previewSession = await ctx.db
+      .query("preview_sessions")
+      .withIndex("by_stream_id", (q) => q.eq("streamId", String(args.streamId)))
+      .unique();
+
+    if (!previewSession || previewSession.userId !== user._id) {
+      throw new Error("Preview session not found.");
+    }
+
+    await requireMembership(ctx, previewSession.businessId);
+
     return await persistentTextStreaming.getStreamBody(
       ctx,
       args.streamId as StreamId,

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createThread } from "@convex-dev/agent";
 import { v } from "convex/values";
-import { action, internalAction, internalMutation, internalQuery } from "../../_generated/server";
+import { internalAction, internalMutation, internalQuery } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
@@ -156,7 +156,7 @@ export const generateSmsReply = internalAction({
   },
 });
 
-export const previewReply = action({
+export const previewReplyInternal = internalAction({
   args: {
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),

@@ -1,4 +1,9 @@
 import { httpRouter } from "convex/server";
+import {
+  escapeXmlText,
+  normalizeTwilioFormFields,
+  validateTwilioSignature,
+} from "../packages/shared/src/twilioSecurity";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -6,6 +11,24 @@ import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
 
 const http = httpRouter();
+
+async function requireTwilioSignature(
+  request: Request,
+  params: Record<string, string>,
+): Promise<Response | null> {
+  const isValid = await validateTwilioSignature({
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    signatureHeader: request.headers.get("x-twilio-signature"),
+    url: request.url,
+    params,
+  });
+
+  if (!isValid) {
+    return new Response("Invalid Twilio signature", { status: 403 });
+  }
+
+  return null;
+}
 
 function requireServiceToken(request: Request): Response | null {
   if (
@@ -24,17 +47,23 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     const form = await request.formData();
+    const payload = normalizeTwilioFormFields(form.entries());
+    const invalidSignature = await requireTwilioSignature(request, payload);
+    if (invalidSignature) {
+      return invalidSignature;
+    }
+
     const result = await ctx.runAction(internal.conversations.webhooks.handleTwilioSmsInbound, {
-      from: String(form.get("From") ?? ""),
-      to: String(form.get("To") ?? ""),
-      body: String(form.get("Body") ?? ""),
-      messageSid: String(form.get("MessageSid") ?? ""),
+      from: payload.From ?? "",
+      to: payload.To ?? "",
+      body: payload.Body ?? "",
+      messageSid: payload.MessageSid ?? "",
     });
 
     const twiml = [
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
       "<Response>",
-      `<Message>${result.reply}</Message>`,
+      `<Message>${escapeXmlText(result.reply)}</Message>`,
       "</Response>",
     ].join("");
 

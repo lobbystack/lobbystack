@@ -377,5 +377,7 @@ export default defineSchema({
     streamId: v.string(),
     threadId: v.optional(v.string()),
     response: v.optional(v.string()),
-  }).index("by_business_id_and_user_id", ["businessId", "userId"]),
+  })
+    .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_stream_id", ["streamId"]),
 });
