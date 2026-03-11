@@ -24,6 +24,7 @@ import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
+import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
 import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
+  "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/snapshot": typeof lib_snapshot;
   "lib/twilioSecurity": typeof lib_twilioSecurity;
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
