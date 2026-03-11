@@ -94,6 +94,7 @@ export default defineSchema({
     staffId: v.id("staff"),
     serviceId: v.id("services"),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_staff_id_and_service_id", ["staffId", "serviceId"])
     .index("by_service_id_and_staff_id", ["serviceId", "staffId"]),
 

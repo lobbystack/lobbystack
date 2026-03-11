@@ -54,7 +54,10 @@ export const getBusinessConfiguration = query({
           .query("staff")
           .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
           .collect(),
-        ctx.db.query("staff_service_assignments").collect(),
+        ctx.db
+          .query("staff_service_assignments")
+          .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+          .collect(),
         ctx.db
           .query("business_hours")
           .withIndex("by_business_id_and_day_of_week", (q) =>
@@ -78,7 +81,7 @@ export const getBusinessConfiguration = query({
       profile,
       services,
       staff,
-      assignments: assignments.filter((row) => row.businessId === args.businessId),
+      assignments,
       hours,
       closures,
       phoneNumbers,
@@ -249,12 +252,13 @@ export const replaceStaffServiceAssignments = mutation({
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
-    const existing = await ctx.db.query("staff_service_assignments").collect();
+    const existing = await ctx.db
+      .query("staff_service_assignments")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
 
     for (const row of existing) {
-      if (row.businessId === args.businessId) {
-        await ctx.db.delete(row._id);
-      }
+      await ctx.db.delete(row._id);
     }
 
     for (const assignment of args.assignments) {

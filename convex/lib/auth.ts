@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { IndexRangeBuilder } from "convex/server";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 
@@ -109,11 +110,22 @@ async function migrateLegacyUser(
     await ctx.db.patch(membership._id, { userId: current._id });
   }
 
-  const previewSessions = await ctx.db.query("preview_sessions").collect();
+  const previewSessions = (
+    await Promise.all(
+      legacyMemberships.map((membership) =>
+        ctx.db
+          .query("preview_sessions")
+          .withIndex(
+            "by_business_id_and_user_id",
+            (q: IndexRangeBuilder<Doc<"preview_sessions">, ["businessId", "userId"]>) =>
+              q.eq("businessId", membership.businessId).eq("userId", legacy._id),
+          )
+          .collect(),
+      ),
+    )
+  ).flat();
   for (const previewSession of previewSessions) {
-    if (previewSession.userId === legacy._id) {
-      await ctx.db.patch(previewSession._id, { userId: current._id });
-    }
+    await ctx.db.patch(previewSession._id, { userId: current._id });
   }
 
   const patch = buildUserPatch({ identity, current, legacy });

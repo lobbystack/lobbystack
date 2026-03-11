@@ -104,7 +104,7 @@ export const upsertKnowledgeSnippet = mutation({
 
     await bulkWorkpool.enqueueAction(
       ctx,
-      internal["ai/context/knowledge"].indexKnowledgeSnippet,
+      internal.ai.context.knowledge.indexKnowledgeSnippet,
       {
         snippetId,
       },
@@ -141,7 +141,7 @@ export const createKnowledgeDocument = mutation({
 
     await bulkWorkpool.enqueueAction(
       ctx,
-      internal["ai/context/knowledge"].indexKnowledgeDocument,
+      internal.ai.context.knowledge.indexKnowledgeDocument,
       { documentId },
     );
     return { documentId };
@@ -177,20 +177,20 @@ export const searchKnowledgeInternal = internalAction({
   },
   handler: async (ctx, args) => {
     const staleEntries = await ctx.runQuery(
-      internal["ai/context/knowledge"].getKnowledgeEntriesNeedingReindex,
+      internal.ai.context.knowledge.getKnowledgeEntriesNeedingReindex,
       {
         businessId: args.businessId,
       },
     );
 
     for (const documentId of staleEntries.documentIds) {
-      await ctx.runAction(internal["ai/context/knowledge"].indexKnowledgeDocument, {
+      await ctx.runAction(internal.ai.context.knowledge.indexKnowledgeDocument, {
         documentId,
       });
     }
 
     for (const snippetId of staleEntries.snippetIds) {
-      await ctx.runAction(internal["ai/context/knowledge"].indexKnowledgeSnippet, {
+      await ctx.runAction(internal.ai.context.knowledge.indexKnowledgeSnippet, {
         snippetId,
       });
     }
@@ -226,7 +226,7 @@ export const searchKnowledgeForDashboard = action({
       throw new Error("User profile not initialized.");
     }
     const membership = await ctx.runQuery(
-      internal["ai/agents/runtime"].requireMembershipByUserId,
+      internal.ai.agents.runtime.requireMembershipByUserId,
       {
         businessId: args.businessId,
         userId,
@@ -237,7 +237,7 @@ export const searchKnowledgeForDashboard = action({
       throw new Error("Unauthorized.");
     }
 
-    return await ctx.runAction(internal["ai/context/knowledge"].searchKnowledgeInternal, args);
+    return await ctx.runAction(internal.ai.context.knowledge.searchKnowledgeInternal, args);
   },
 });
 
@@ -247,12 +247,12 @@ export const indexKnowledgeDocument = internalAction({
   },
   handler: async (ctx, args) => {
     const document = await ctx.runQuery(
-      internal["ai/context/knowledge"].getDocumentForIndexing,
+      internal.ai.context.knowledge.getDocumentForIndexing,
       { documentId: args.documentId },
     );
 
     if (!document || !document.textContent) {
-      await ctx.runMutation(internal["ai/context/knowledge"].markDocumentIndexed, {
+      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
         documentId: args.documentId,
         status: "error",
         error: "No text content available for indexing.",
@@ -279,13 +279,13 @@ export const indexKnowledgeDocument = internalAction({
       ],
     });
 
-    await ctx.runMutation(internal["ai/context/knowledge"].markDocumentIndexed, {
+    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
       documentId: args.documentId,
       status: result.status === "ready" ? "indexed" : "indexing",
       indexedEntryId: String(result.entryId),
       indexVersion: KNOWLEDGE_INDEX_VERSION,
     });
-    await ctx.runMutation(internal["ai/context/snapshots"].refreshSnapshot, {
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
     });
     return null;
@@ -297,7 +297,7 @@ export const indexKnowledgeSnippet = internalAction({
     snippetId: v.id("knowledge_snippets"),
   },
   handler: async (ctx, args) => {
-    const snippet = await ctx.runQuery(internal["ai/context/knowledge"].getSnippetForIndexing, {
+    const snippet = await ctx.runQuery(internal.ai.context.knowledge.getSnippetForIndexing, {
       snippetId: args.snippetId,
     });
 
@@ -324,12 +324,12 @@ export const indexKnowledgeSnippet = internalAction({
       ],
     });
 
-    await ctx.runMutation(internal["ai/context/knowledge"].markSnippetIndexed, {
+    await ctx.runMutation(internal.ai.context.knowledge.markSnippetIndexed, {
       snippetId: args.snippetId,
       indexedEntryId: String(result.entryId),
       indexVersion: KNOWLEDGE_INDEX_VERSION,
     });
-    await ctx.runMutation(internal["ai/context/snapshots"].refreshSnapshot, {
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: snippet.businessId,
     });
     return String(result.entryId);
@@ -388,7 +388,7 @@ export const generatePreviewKnowledgeAnswer = internalAction({
     prompt: v.string(),
   },
   handler: async (ctx, args): Promise<{ text: string; threadId: string }> => {
-    const snapshot = await ctx.runQuery(internal["ai/context/snapshots"].getByBusinessId, {
+    const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
       businessId: args.businessId,
     });
     if (!snapshot) {
@@ -396,7 +396,7 @@ export const generatePreviewKnowledgeAnswer = internalAction({
     }
 
     const context: Array<{ title?: string; text: string }> = await ctx.runAction(
-      internal["ai/context/knowledge"].searchKnowledgeInternal,
+      internal.ai.context.knowledge.searchKnowledgeInternal,
       {
         businessId: args.businessId,
         query: args.prompt,
@@ -444,7 +444,7 @@ export const previewKnowledgeAnswer = action({
       throw new Error("User profile not initialized.");
     }
     const membership = await ctx.runQuery(
-      internal["ai/agents/runtime"].requireMembershipByUserId,
+      internal.ai.agents.runtime.requireMembershipByUserId,
       {
         businessId: args.businessId,
         userId,
@@ -455,7 +455,7 @@ export const previewKnowledgeAnswer = action({
       throw new Error("Unauthorized.");
     }
 
-    return await ctx.runAction(internal["ai/context/knowledge"].generatePreviewKnowledgeAnswer, {
+    return await ctx.runAction(internal.ai.context.knowledge.generatePreviewKnowledgeAnswer, {
       businessId: args.businessId,
       prompt: args.prompt,
     });

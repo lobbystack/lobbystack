@@ -265,7 +265,7 @@ export const handleTwilioSmsInbound = internalAction({
       },
     );
 
-    const reply = await ctx.runAction(internal["ai/agents/runtime"].generateSmsReply, {
+    const reply = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,
       conversationId,
       prompt: args.body,
