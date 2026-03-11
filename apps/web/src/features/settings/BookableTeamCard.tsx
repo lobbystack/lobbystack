@@ -128,13 +128,14 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
     setErrorMessage(null);
 
     try {
+      const trimmedTransferNumber = transferNumber.trim();
       const result = await upsertStaff({
         businessId: props.businessId,
-        staffId: selectedStaff?._id,
         name: name.trim(),
         timezone: timezone.trim() || businessTimezone,
         active,
-        transferNumber: transferNumber.trim() || undefined,
+        ...(selectedStaff?._id !== undefined ? { staffId: selectedStaff._id } : {}),
+        ...(trimmedTransferNumber ? { transferNumber: trimmedTransferNumber } : {}),
       });
       setSelectedStaffKey(String(result.staffId));
       setStaffSaveMessage(selectedStaff ? "Saved team member." : "Added team member.");

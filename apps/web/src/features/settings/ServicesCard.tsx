@@ -43,13 +43,14 @@ export function ServicesCard(props: ServicesCardProps) {
     setIsSaving(true);
     setStatus(null);
     try {
+      const trimmedDescription = description.trim();
       await upsertService({
         businessId: props.businessId,
         name,
         slug,
-        description: description.trim() || undefined,
         durationMinutes: Number(durationMinutes),
         active: true,
+        ...(trimmedDescription ? { description: trimmedDescription } : {}),
       });
       setStatus("Saved service.");
       setName("");

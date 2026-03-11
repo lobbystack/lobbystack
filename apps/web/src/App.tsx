@@ -16,7 +16,7 @@ import {
   IconHeadphones,
 } from "@tabler/icons-react";
 
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import type { BusinessContextSnapshot, BusinessType } from "@ai-receptionist/shared";
 import { demoSnapshot } from "@ai-receptionist/testing";
 
 import { api } from "../../../convex/_generated/api";
@@ -48,6 +48,37 @@ import { PhoneNumbersCard } from "@/features/settings/PhoneNumbersCard";
 import { BusinessProfileForm } from "@/features/settings/BusinessProfileForm";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { ServicesCard } from "@/features/settings/ServicesCard";
+
+const BUSINESS_TYPES: ReadonlyArray<BusinessType> = [
+  "clinic",
+  "repair_shop",
+  "salon",
+  "service_company",
+  "other",
+];
+const TRANSFER_MODES: ReadonlyArray<BusinessContextSnapshot["transferPolicy"]["mode"]> = [
+  "never",
+  "always",
+  "on_request",
+  "on_urgent",
+  "during_business_hours",
+];
+
+function normalizeBusinessType(value: string): BusinessType {
+  return BUSINESS_TYPES.includes(value as BusinessType)
+    ? (value as BusinessType)
+    : "other";
+}
+
+function normalizeTransferMode(
+  value: string,
+): BusinessContextSnapshot["transferPolicy"]["mode"] {
+  return TRANSFER_MODES.includes(
+    value as BusinessContextSnapshot["transferPolicy"]["mode"],
+  )
+    ? (value as BusinessContextSnapshot["transferPolicy"]["mode"])
+    : "on_request";
+}
 
 function LoadingScreen() {
   return (
@@ -532,7 +563,19 @@ function WorkspaceShell() {
     api.ai.context.snapshots.getForDashboard,
     businessId ? { businessId } : "skip",
   );
-  const resolvedSnapshot = snapshot ?? demoSnapshot;
+  const resolvedSnapshot: BusinessContextSnapshot = snapshot
+    ? {
+        ...snapshot,
+        businessType: normalizeBusinessType(snapshot.businessType),
+        transferPolicy: {
+          ...snapshot.transferPolicy,
+          mode: normalizeTransferMode(snapshot.transferPolicy.mode),
+        },
+      }
+    : demoSnapshot;
+  const routeBusinessProps = businessId ? { businessId } : {};
+  const sidebarBusinessSlug =
+    activeBusiness?.slug !== undefined ? { businessSlug: activeBusiness.slug } : {};
 
   const headerCopy = useMemo(() => {
     const path = location.pathname;
@@ -575,8 +618,8 @@ function WorkspaceShell() {
     >
       <AppSidebar
         businessName={activeBusiness?.name ?? "AI Receptionist"}
-        businessSlug={activeBusiness?.slug}
         onSignOut={() => void signOut()}
+        {...sidebarBusinessSlug}
       />
       <SidebarInset>
         <SiteHeader description={headerCopy.description} title={headerCopy.title} />
@@ -585,20 +628,20 @@ function WorkspaceShell() {
             <Route
               element={
                 <DashboardHome
-                  businessId={businessId}
                   businessName={activeBusiness?.name ?? resolvedSnapshot.displayName}
                   snapshot={resolvedSnapshot}
+                  {...routeBusinessProps}
                 />
               }
               path="/"
             />
-            <Route element={<InboxPage businessId={businessId} />} path="/inbox" />
+            <Route element={<InboxPage {...routeBusinessProps} />} path="/inbox" />
             <Route
-              element={<KnowledgePage businessId={businessId} snapshot={resolvedSnapshot} />}
+              element={<KnowledgePage snapshot={resolvedSnapshot} {...routeBusinessProps} />}
               path="/knowledge"
             />
             <Route
-              element={<SettingsPage businessId={businessId} snapshot={resolvedSnapshot} />}
+              element={<SettingsPage snapshot={resolvedSnapshot} {...routeBusinessProps} />}
               path="/settings"
             />
             <Route element={<Navigate replace to="/" />} path="*" />

@@ -50,16 +50,21 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
     setIsSaving(true);
     setStatus(null);
     try {
+      const trimmedVoiceInstructions = voiceInstructions.trim();
+      const trimmedSmsInstructions = smsInstructions.trim();
+      const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId: props.businessId,
         greeting,
         tone,
         summary,
         bookingPolicy,
-        voiceInstructions: voiceInstructions.trim() || undefined,
-        smsInstructions: smsInstructions.trim() || undefined,
         transferMode,
-        transferNumber: transferNumber.trim() || undefined,
+        ...(trimmedVoiceInstructions
+          ? { voiceInstructions: trimmedVoiceInstructions }
+          : {}),
+        ...(trimmedSmsInstructions ? { smsInstructions: trimmedSmsInstructions } : {}),
+        ...(trimmedTransferNumber ? { transferNumber: trimmedTransferNumber } : {}),
       });
       setStatus("Saved receptionist profile.");
     } finally {

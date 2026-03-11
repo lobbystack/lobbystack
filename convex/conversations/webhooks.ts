@@ -322,7 +322,9 @@ export const handleTwilioSmsInbound = internalAction({
         contactId,
         channel: "sms",
         body: args.body,
-        providerMessageSid: args.messageSid,
+        ...(args.messageSid !== undefined
+          ? { providerMessageSid: args.messageSid }
+          : {}),
       },
     );
 

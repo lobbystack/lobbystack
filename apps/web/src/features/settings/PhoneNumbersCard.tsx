@@ -88,14 +88,17 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
     setErrorMessage(null);
 
     try {
+      const trimmedTwilioPhoneSid = twilioPhoneSid.trim();
       const result = await upsertPhoneNumber({
         businessId: props.businessId,
-        phoneNumberId: selectedPhoneNumber?._id,
         e164: e164.replace(/\s+/g, ""),
-        twilioPhoneSid: twilioPhoneSid.trim() || undefined,
         voiceEnabled,
         smsEnabled,
         status,
+        ...(selectedPhoneNumber?._id !== undefined
+          ? { phoneNumberId: selectedPhoneNumber._id }
+          : {}),
+        ...(trimmedTwilioPhoneSid ? { twilioPhoneSid: trimmedTwilioPhoneSid } : {}),
       });
 
       setSelectedPhoneNumberKey(String(result.phoneNumberId));

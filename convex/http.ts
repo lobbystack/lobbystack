@@ -220,7 +220,9 @@ http.route({
       from: parsedPayload.data.From,
       to: parsedPayload.data.To,
       body: parsedPayload.data.Body,
-      messageSid: parsedPayload.data.MessageSid,
+      ...(parsedPayload.data.MessageSid !== undefined
+        ? { messageSid: parsedPayload.data.MessageSid }
+        : {}),
     });
 
     const twiml = [
