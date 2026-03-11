@@ -9,8 +9,7 @@ import { Workpool } from "@convex-dev/workpool";
 import { components } from "../_generated/api";
 import {
   createEmbeddingModel,
-  EMBEDDING_DIMENSION,
-  getEmbeddingModelId,
+  getEmbeddingConfig,
 } from "./providers/embeddings";
 import { createNonRealtimeTextModel } from "./providers/nonRealtimeText";
 
@@ -23,7 +22,9 @@ type KnowledgeFilters = {
   };
 };
 
-export const KNOWLEDGE_INDEX_VERSION = `${getEmbeddingModelId()}-v1`;
+const embeddingConfig = getEmbeddingConfig();
+
+export const KNOWLEDGE_INDEX_VERSION = `${embeddingConfig.modelId}-v1`;
 
 export function getKnowledgeNamespace(businessId: string): string {
   return `knowledge:${KNOWLEDGE_INDEX_VERSION}:business:${businessId}`;
@@ -39,8 +40,8 @@ export const receptionistAgent = new Agent(components.agent, {
 });
 
 export const rag = new RAG<KnowledgeFilters>(components.rag, {
-  textEmbeddingModel: createEmbeddingModel(),
-  embeddingDimension: EMBEDDING_DIMENSION,
+  textEmbeddingModel: createEmbeddingModel(embeddingConfig.modelId),
+  embeddingDimension: embeddingConfig.dimension,
   filterNames: ["businessId", "sourceType", "businessAndSource"],
 });
 
