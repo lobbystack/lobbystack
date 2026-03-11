@@ -32,6 +32,14 @@ Do not edit generated files in `convex/_generated/` by hand.
 - For Convex behavior, follow the official Convex testing guidance and prefer `convex-test` with the real schema over ad hoc mocked `ctx.db` chains.
 - Put Convex-backed regression tests in `packages/testing/src/` unless they are pure helper tests that naturally belong next to a package module.
 - Use the `edge-runtime` Vitest environment for `convex-test`, and pass an explicit module map such as `import.meta.glob("../../../convex/**/*.ts")` when creating the test harness in this repo.
+- Default Convex harness pattern in this repo:
+  - `const convexModules = import.meta.glob("../../../convex/**/*.ts")`
+  - `const t = convexTest(schema, convexModules)`
+  - use `await t.run(async (ctx) => ...)` for deterministic fixture setup and direct DB assertions
+  - use `t.query(...)`, `t.mutation(...)`, and `t.action(...)` with generated `api` / `internal` references instead of calling handlers directly
+  - use `t.withIdentity({ subject: ... })` when testing membership, auth, or other identity-sensitive behavior
+- Reach for `convex-test` whenever the behavior depends on indexes, auth boundaries, document mutations, internal/public function contracts, or snapshot regeneration. Keep pure string/data helpers as normal unit tests.
+- Prefer function-level Convex tests by default. Do not register Convex components such as `RAG`, `Workpool`, or `Agent` unless the ticket is specifically about component integration behavior.
 - Keep pure data and string helpers as normal Vitest unit tests, but test index-dependent reads, auth-sensitive flows, and Convex document mutations against the in-memory Convex backend.
 - Before opening a PR, run `pnpm typecheck`, `pnpm build`, and `pnpm test`.
 
