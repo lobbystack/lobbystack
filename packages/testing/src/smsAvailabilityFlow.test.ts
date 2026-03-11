@@ -262,4 +262,35 @@ describe("SMS scheduling flow", () => {
       );
     });
   });
+
+  it("resolves weekday requests like next monday without asking for another date", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-scheduling-next-monday",
+        name: "SMS Scheduling Next Monday",
+        smsNumber: "+14165550902",
+      });
+      return { businessId, smsNumber: "+14165550902" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-scheduling-next-monday-1",
+      From: "+14165550997",
+      To: smsNumber,
+      Body: "Hello, do you have room for an initial consultation next monday?",
+    });
+
+    expect(response.status).toBe(200);
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toMatch(
+        /^The next available General Checkup times on Monday, Mar 16 are /,
+      );
+      expect(outboundBody).not.toBe("What date would you like to come in?");
+    });
+  });
 });

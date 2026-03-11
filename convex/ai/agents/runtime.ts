@@ -55,6 +55,16 @@ type SmsDatePreference = {
   label: string;
 };
 
+const WEEKDAY_INDEX_BY_NAME: Record<string, number> = {
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  sunday: 7,
+};
+
 function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
 }
@@ -107,6 +117,14 @@ function formatRequestedDateLabel(dayStart: DateTime): string {
   return dayStart.toFormat("cccc, LLL d");
 }
 
+function toSmsDatePreference(dayStart: DateTime): SmsDatePreference {
+  return {
+    isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
+    dayStart,
+    label: formatRequestedDateLabel(dayStart),
+  };
+}
+
 function buildServiceSelectionReply(services: Array<Pick<Doc<"services">, "name">>): string {
   return `Which service would you like to book? Available services: ${services
     .map((service) => service.name)
@@ -139,41 +157,42 @@ function resolveRequestedDate(
   const localNow = DateTime.now().setZone(timezone);
 
   if (/\bday after tomorrow\b/i.test(text)) {
-    const dayStart = localNow.plus({ days: 2 }).startOf("day");
-    return {
-      isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-      dayStart,
-      label: formatRequestedDateLabel(dayStart),
-    };
+    return toSmsDatePreference(localNow.plus({ days: 2 }).startOf("day"));
   }
 
   if (/\btomorrow\b/i.test(text)) {
-    const dayStart = localNow.plus({ days: 1 }).startOf("day");
-    return {
-      isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-      dayStart,
-      label: formatRequestedDateLabel(dayStart),
-    };
+    return toSmsDatePreference(localNow.plus({ days: 1 }).startOf("day"));
   }
 
   if (/\btoday\b/i.test(text)) {
-    const dayStart = localNow.startOf("day");
-    return {
-      isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-      dayStart,
-      label: formatRequestedDateLabel(dayStart),
-    };
+    return toSmsDatePreference(localNow.startOf("day"));
+  }
+
+  const weekdayMatch = text.match(
+    /\b(?:(next|this)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
+  );
+  if (weekdayMatch) {
+    const modifier = weekdayMatch[1]?.toLowerCase() ?? null;
+    const weekdayName = weekdayMatch[2]?.toLowerCase();
+    const targetWeekday = weekdayName ? WEEKDAY_INDEX_BY_NAME[weekdayName] : undefined;
+    if (targetWeekday !== undefined) {
+      const currentWeekday = localNow.weekday;
+      let daysAhead = (targetWeekday - currentWeekday + 7) % 7;
+      if (modifier === "this") {
+        daysAhead = daysAhead === 0 ? 0 : daysAhead;
+      } else if (daysAhead === 0) {
+        daysAhead = 7;
+      }
+
+      return toSmsDatePreference(localNow.plus({ days: daysAhead }).startOf("day"));
+    }
   }
 
   const isoDateMatch = text.match(/\b(\d{4}-\d{1,2}-\d{1,2})\b/);
   if (isoDateMatch?.[1]) {
     const dayStart = DateTime.fromISO(isoDateMatch[1], { zone: timezone }).startOf("day");
     if (dayStart.isValid) {
-      return {
-        isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-        dayStart,
-        label: formatRequestedDateLabel(dayStart),
-      };
+      return toSmsDatePreference(dayStart);
     }
   }
 
@@ -190,11 +209,7 @@ function resolveRequestedDate(
           : Number(yearText);
     const dayStart = DateTime.fromObject({ year, month, day }, { zone: timezone }).startOf("day");
     if (dayStart.isValid) {
-      return {
-        isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-        dayStart,
-        label: formatRequestedDateLabel(dayStart),
-      };
+      return toSmsDatePreference(dayStart);
     }
   }
 
@@ -207,11 +222,7 @@ function resolveRequestedDate(
     const value = `${monthName} ${dayText} ${yearText ?? localNow.year}`;
     const dayStart = DateTime.fromFormat(value, format, { zone: timezone }).startOf("day");
     if (dayStart.isValid) {
-      return {
-        isoDate: dayStart.toISODate() ?? dayStart.toFormat("yyyy-MM-dd"),
-        dayStart,
-        label: formatRequestedDateLabel(dayStart),
-      };
+      return toSmsDatePreference(dayStart);
     }
   }
 
