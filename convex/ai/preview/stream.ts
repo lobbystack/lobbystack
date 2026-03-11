@@ -72,7 +72,7 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
   };
 
   const preview = await ctx.runAction(
-    internal["ai/context/knowledge"].generatePreviewKnowledgeAnswer,
+    internal.ai.context.knowledge.generatePreviewKnowledgeAnswer,
     {
       businessId: body.businessId,
       prompt: body.prompt,
