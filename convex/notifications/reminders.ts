@@ -10,6 +10,7 @@ import {
 import { internal } from "../_generated/api";
 import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
+import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 
 function buildTwilioSmsStatusCallbackUrl(): string {
   const siteUrl = process.env.CONVEX_SITE_URL;
@@ -77,13 +78,10 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Contact not found for notification.");
     }
 
-    const eligiblePhoneNumbers = phoneNumbers.filter(
-      (phoneNumber) => phoneNumber.status === "active" && phoneNumber.smsEnabled,
-    );
-
-    if (eligiblePhoneNumbers.length !== 1) {
+    const senderPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
+    if (!senderPhoneNumber) {
       throw new Error(
-        "Exactly one active SMS-enabled phone number must be mapped to the business.",
+        "At least one active SMS-enabled phone number must be mapped to the business.",
       );
     }
 
@@ -96,7 +94,7 @@ export const getNotificationDeliveryContext = internalQuery({
     return {
       notificationId: notification._id,
       to: contact.phone,
-      from: eligiblePhoneNumbers[0].e164,
+      from: senderPhoneNumber,
       body,
     };
   },
@@ -175,20 +173,18 @@ export const createAppointmentNotifications = internalMutation({
       throw new Error("Appointment not found.");
     }
 
-    if (appointment.sourceChannel !== "sms") {
-      const immediateNotificationId = await ctx.db.insert("notifications", {
-        businessId: appointment.businessId,
-        channel: "sms",
-        kind: "booking_confirmation",
-        relatedId: String(args.appointmentId),
-        scheduledFor: new Date().toISOString(),
-        status: "pending",
-      });
+    const immediateNotificationId = await ctx.db.insert("notifications", {
+      businessId: appointment.businessId,
+      channel: "sms",
+      kind: "booking_confirmation",
+      relatedId: String(args.appointmentId),
+      scheduledFor: new Date().toISOString(),
+      status: "pending",
+    });
 
-      await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
-        notificationId: immediateNotificationId,
-      });
-    }
+    await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
+      notificationId: immediateNotificationId,
+    });
 
     const reminderDate = new Date(appointment.startsAt);
     reminderDate.setHours(reminderDate.getHours() - 24);

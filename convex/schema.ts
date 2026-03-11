@@ -261,6 +261,7 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     direction: v.string(),
     channel: v.string(),
+    fromPhoneNumber: v.optional(v.string()),
     providerMessageSid: v.optional(v.string()),
     media: v.optional(v.array(messageMediaValidator)),
     body: v.string(),

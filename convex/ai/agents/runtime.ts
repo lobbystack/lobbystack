@@ -655,6 +655,81 @@ function buildCurrentAppointmentReply(summary: CurrentAppointmentSummary): strin
   return `Yes, you are booked for ${summary.serviceName} on ${summary.formattedStart}.`;
 }
 
+function subtractClosureFromHoursWindows(
+  windows: Array<{ openMinutes: number; closeMinutes: number }>,
+  closure: { openMinutes: number; closeMinutes: number },
+): Array<{ openMinutes: number; closeMinutes: number }> {
+  return windows.flatMap((window) => {
+    if (
+      closure.closeMinutes <= window.openMinutes ||
+      closure.openMinutes >= window.closeMinutes
+    ) {
+      return [window];
+    }
+
+    const remaining: Array<{ openMinutes: number; closeMinutes: number }> = [];
+    if (closure.openMinutes > window.openMinutes) {
+      remaining.push({
+        openMinutes: window.openMinutes,
+        closeMinutes: Math.min(closure.openMinutes, window.closeMinutes),
+      });
+    }
+    if (closure.closeMinutes < window.closeMinutes) {
+      remaining.push({
+        openMinutes: Math.max(closure.closeMinutes, window.openMinutes),
+        closeMinutes: window.closeMinutes,
+      });
+    }
+    return remaining.filter((candidate) => candidate.openMinutes < candidate.closeMinutes);
+  });
+}
+
+function applyClosuresToHoursWindows(input: {
+  windows: Array<{ openMinutes: number; closeMinutes: number }>;
+  closures: Array<{ startsAt: string; endsAt: string }>;
+  dayStart: DateTime;
+  timezone: string;
+}): Array<{ openMinutes: number; closeMinutes: number }> {
+  let remainingWindows = [...input.windows];
+  const dayEnd = input.dayStart.endOf("day");
+
+  for (const closure of input.closures) {
+    const closureStart = DateTime.fromISO(closure.startsAt, { setZone: true }).setZone(
+      input.timezone,
+    );
+    const closureEnd = DateTime.fromISO(closure.endsAt, { setZone: true }).setZone(
+      input.timezone,
+    );
+    if (
+      !closureStart.isValid ||
+      !closureEnd.isValid ||
+      closureEnd <= input.dayStart ||
+      closureStart >= dayEnd
+    ) {
+      continue;
+    }
+
+    const clippedStart = closureStart < input.dayStart ? input.dayStart : closureStart;
+    const clippedEnd = closureEnd > dayEnd ? dayEnd : closureEnd;
+    const closureWindow = {
+      openMinutes: Math.max(
+        0,
+        Math.floor(clippedStart.diff(input.dayStart, "minutes").minutes),
+      ),
+      closeMinutes: Math.min(
+        24 * 60,
+        Math.ceil(clippedEnd.diff(input.dayStart, "minutes").minutes),
+      ),
+    };
+    remainingWindows = subtractClosureFromHoursWindows(remainingWindows, closureWindow);
+    if (remainingWindows.length === 0) {
+      break;
+    }
+  }
+
+  return remainingWindows;
+}
+
 function buildBookingStateSummary(input: {
   state: ConversationBookingStateRecord | null;
   services: Array<Doc<"services">>;
@@ -727,9 +802,16 @@ function resolveBusinessHoursReply(
     return `We are closed on ${dayLabel} for ${fullDayClosure.reason}.`;
   }
 
+  const openWindows = applyClosuresToHoursWindows({
+    windows,
+    closures: snapshot.closures,
+    dayStart,
+    timezone: snapshot.timezone,
+  });
+
   return buildBusinessHoursReply({
     dayLabel,
-    windows,
+    windows: openWindows,
     requestedClosingTime: didAskForClosingTime(prompt),
   });
 }
@@ -1002,9 +1084,13 @@ async function maybeGenerateSmsSchedulingReply(
     bookingState?.requestedDate ?? bookingState?.lastOfferedDate,
   );
   const service = resolveRequestedService(services, schedulingText, bookingState);
+  const bookingMode = getConversationBookingMode(bookingState);
   const requestedDate =
     explicitDate ??
-    ((shouldReuseStoredDate(prompt, bookingState) || service !== null) ? stateDate : null);
+    (bookingMode === "booking_in_progress" &&
+    (shouldReuseStoredDate(prompt, bookingState) || service !== null)
+      ? stateDate
+      : null);
   const explicitTime = resolveRequestedTime(schedulingText);
   const requestedTime =
     explicitTime ??

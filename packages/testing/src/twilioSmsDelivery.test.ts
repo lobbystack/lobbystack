@@ -13,10 +13,12 @@ declare global {
 
 const {
   generateSmsReplyMock,
+  retrierRunMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
 } = vi.hoisted(() => ({
   generateSmsReplyMock: vi.fn(),
+  retrierRunMock: vi.fn(),
   sendTwilioMessageMock: vi.fn(),
   validateTwilioRequestMock: vi.fn(),
 }));
@@ -57,6 +59,19 @@ vi.mock("../../../convex/ai/agents/runtime.ts", async () => {
         return await generateSmsReplyMock(args);
       },
     }),
+  };
+});
+
+vi.mock("../../../convex/lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
+    "../../../convex/lib/components",
+  );
+
+  return {
+    ...actual,
+    retrier: {
+      run: retrierRunMock,
+    },
   };
 });
 
@@ -130,6 +145,7 @@ beforeEach(() => {
   generateSmsReplyMock.mockImplementation(async ({ prompt }: { prompt: string }) => {
     return `Auto-reply: ${prompt}`;
   });
+  retrierRunMock.mockResolvedValue(null);
 });
 
 afterAll(() => {
@@ -297,6 +313,44 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("replies from the same inbound business number when multiple SMS numbers are active", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-multi-number-reply",
+      status: "queued",
+    });
+
+    await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-multi-number-reply",
+        name: "Twilio Multi Number Reply",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550110",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550111",
+      });
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-multi-number-1",
+      From: "+14165550187",
+      To: "+14165550111",
+      Body: "Which line replies?",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550187",
+      from: "+14165550111",
+      body: "Auto-reply: Which line replies?",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+  });
+
   it("applies delivered callbacks and ignores stale regressions", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
@@ -424,6 +478,10 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         e164: "+14165550104",
       });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550114",
+      });
 
       const contactId = await ctx.db.insert("contacts", {
         businessId,
@@ -498,7 +556,7 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
-  it("skips immediate booking confirmation notifications for sms-booked appointments", async () => {
+  it("creates an immediate booking confirmation notification for sms-booked appointments", async () => {
     const t = convexTest(schema, convexModules);
 
     const { appointmentId } = await t.run(async (ctx) => {
@@ -558,14 +616,25 @@ describe("Twilio SMS delivery flow", () => {
       const allNotifications = await ctx.db
         .query("notifications")
         .collect();
-      expect(allNotifications).toHaveLength(1);
+      const bookingConfirmation = allNotifications.find(
+        (notification) => notification.kind === "booking_confirmation",
+      );
+      const appointmentReminder = allNotifications.find(
+        (notification) => notification.kind === "appointment_reminder",
+      );
+      expect(allNotifications).toHaveLength(2);
       expect(scheduledNotifications).toHaveLength(1);
-      expect(allNotifications[0]).toMatchObject({
+      expect(bookingConfirmation).toMatchObject({
+        kind: "booking_confirmation",
+        status: "pending",
+      });
+      expect(appointmentReminder).toMatchObject({
         kind: "appointment_reminder",
         status: "scheduled",
       });
     });
 
+    expect(retrierRunMock).toHaveBeenCalledTimes(1);
     expect(sendTwilioMessageMock).not.toHaveBeenCalled();
   });
 });

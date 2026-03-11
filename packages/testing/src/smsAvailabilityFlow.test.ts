@@ -642,6 +642,90 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("asks for a fresh date when starting a new booking after one is already confirmed", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-new-booking-after-confirmed",
+        name: "SMS New Booking After Confirmed",
+        smsNumber: "+14165550908",
+      });
+      return { businessId, smsNumber: "+14165550908" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-new-booking-after-confirmed-1",
+      From: "+14165550991",
+      To: smsNumber,
+      Body: "Hello, do you have room for an initial consultation next monday?",
+    });
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-new-booking-after-confirmed-2",
+      From: "+14165550991",
+      To: smsNumber,
+      Body: "What about on the 17?",
+    });
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-new-booking-after-confirmed-3",
+      From: "+14165550991",
+      To: smsNumber,
+      Body: "Any other times?",
+    });
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-new-booking-after-confirmed-4",
+      From: "+14165550991",
+      To: smsNumber,
+      Body: "I'll take at 10h00",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-new-booking-after-confirmed-5",
+      From: "+14165550991",
+      To: smsNumber,
+      Body: "Can I book a support consultation?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe("What date would you prefer for your Support Consultation?");
+      expect(outboundBody).not.toContain("Tuesday, Mar 17");
+    });
+  });
+
+  it("removes partial closures from business-hours replies", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-hours-partial-closure",
+        name: "SMS Hours Partial Closure",
+        smsNumber: "+14165550909",
+      });
+      await ctx.db.insert("closures", {
+        businessId,
+        startsAt: "2026-03-13T16:00:00.000Z",
+        endsAt: "2026-03-13T18:00:00.000Z",
+        reason: "Team lunch",
+      });
+      return { businessId, smsNumber: "+14165550909" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-hours-partial-closure-1",
+      From: "+14165550990",
+      To: smsNumber,
+      Body: "What are your hours on Friday?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe("We are open 9:00 AM to 12:00 PM, 2:00 PM to 5:00 PM on Friday.");
+    });
+  });
+
   it("acknowledges the confirmed appointment instead of reopening booking", async () => {
     const t = createConvexHarness();
 

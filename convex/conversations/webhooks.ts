@@ -10,6 +10,7 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 
 function asConversationId(value: string): Id<"conversations"> {
@@ -68,6 +69,7 @@ type StoreOutboundMessageArgs = {
   conversationId: Id<"conversations">;
   channel: string;
   body: string;
+  fromPhoneNumber?: string;
 };
 type OutboundMessageDeliveryContext = {
   businessId: Id<"businesses">;
@@ -266,18 +268,14 @@ export const getOutboundMessageDeliveryContext = internalQuery({
       throw new Error("Contact not found for SMS delivery.");
     }
 
-    const eligiblePhoneNumbers = phoneNumbers.filter(
-      (phoneNumber) => phoneNumber.status === "active" && phoneNumber.smsEnabled,
+    const senderPhoneNumber = selectSmsSenderPhoneNumber(
+      phoneNumbers,
+      message.fromPhoneNumber,
     );
-
-    if (eligiblePhoneNumbers.length !== 1) {
-      throw new Error(
-        "Exactly one active SMS-enabled phone number must be mapped to the business.",
-      );
-    }
-    const senderPhoneNumber = eligiblePhoneNumbers[0];
     if (!senderPhoneNumber) {
-      throw new Error("SMS sender phone number is missing.");
+      throw new Error(
+        "At least one active SMS-enabled phone number must be mapped to the business.",
+      );
     }
 
     return {
@@ -285,7 +283,7 @@ export const getOutboundMessageDeliveryContext = internalQuery({
       conversationId: message.conversationId,
       messageId: message._id,
       body: message.body,
-      from: senderPhoneNumber.e164,
+      from: senderPhoneNumber,
       to: contact.phone,
       ...(message.providerMessageSid !== undefined
         ? { providerMessageSid: message.providerMessageSid }
@@ -358,6 +356,7 @@ export const storeOutboundMessage = internalMutation({
     conversationId: v.id("conversations"),
     channel: v.string(),
     body: v.string(),
+    fromPhoneNumber: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     return await ctx.db.insert("messages", {
@@ -365,6 +364,7 @@ export const storeOutboundMessage = internalMutation({
       conversationId: args.conversationId,
       direction: "outbound",
       channel: args.channel,
+      ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
       body: args.body,
       status: "queued",
       aiGenerated: true,
@@ -588,6 +588,7 @@ export const handleTwilioSmsInbound = internalAction({
         conversationId,
         channel: "sms",
         body: reply,
+        fromPhoneNumber: phoneNumber.e164,
       },
     );
 
