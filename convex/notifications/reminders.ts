@@ -175,18 +175,20 @@ export const createAppointmentNotifications = internalMutation({
       throw new Error("Appointment not found.");
     }
 
-    const immediateNotificationId = await ctx.db.insert("notifications", {
-      businessId: appointment.businessId,
-      channel: "sms",
-      kind: "booking_confirmation",
-      relatedId: String(args.appointmentId),
-      scheduledFor: new Date().toISOString(),
-      status: "pending",
-    });
+    if (appointment.sourceChannel !== "sms") {
+      const immediateNotificationId = await ctx.db.insert("notifications", {
+        businessId: appointment.businessId,
+        channel: "sms",
+        kind: "booking_confirmation",
+        relatedId: String(args.appointmentId),
+        scheduledFor: new Date().toISOString(),
+        status: "pending",
+      });
 
-    await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
-      notificationId: immediateNotificationId,
-    });
+      await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
+        notificationId: immediateNotificationId,
+      });
+    }
 
     const reminderDate = new Date(appointment.startsAt);
     reminderDate.setHours(reminderDate.getHours() - 24);

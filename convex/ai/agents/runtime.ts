@@ -1,6 +1,7 @@
-import { createThread } from "@convex-dev/agent";
+import { createThread, createTool, stepCountIs } from "@convex-dev/agent";
 import { DateTime } from "luxon";
 import { v } from "convex/values";
+import { z } from "zod";
 import {
   internalAction,
   internalMutation,
@@ -11,7 +12,7 @@ import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
 
-function buildGroundedPrompt(input: {
+function buildGroundedSystemPrompt(input: {
   smsInstructions: string;
   summary: string;
   bookingPolicy: string;
@@ -19,9 +20,9 @@ function buildGroundedPrompt(input: {
   hoursCount: number;
   timezone: string;
   businessNowLabel: string;
+  bookingStateSummary: string;
   services: Array<{ name: string; durationMinutes: number }>;
   knowledge: Array<{ text: string }>;
-  prompt: string;
 }): string {
   return [
     `SMS instructions: ${input.smsInstructions}`,
@@ -34,16 +35,23 @@ function buildGroundedPrompt(input: {
       .join(", ") || "No services configured."}`,
     `Knowledge digest: ${input.knowledgeDigest || "No long-form knowledge configured."}`,
     `Business hours count: ${input.hoursCount}`,
+    `Current booking state: ${input.bookingStateSummary}`,
     "This is an SMS conversation, not a live phone call.",
+    "Respond naturally like a helpful SMS assistant, not a rules engine.",
     "Do not say things like 'one moment, please' or claim you are checking something unless the answer you send already includes the result.",
     "Interpret relative dates and times using the business timezone.",
+    "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
+    "If a tool returns replyText, use that reply directly or with only very light editing.",
+    "Do not reopen scheduling after a booking is already confirmed unless the user explicitly asks to book, reschedule, cancel, or make another appointment.",
+    "If you list multiple times on the same day, list only the times and do not repeat the weekday before every slot.",
+    "If a booking tool already confirmed or booked a slot, do not ask for another confirmation.",
     `Relevant knowledge:\n${input.knowledge.map((entry) => entry.text).join("\n---\n")}`,
-    `User message: ${input.prompt}`,
   ].join("\n\n");
 }
 
 type RecentConversationMessage = Pick<Doc<"messages">, "direction" | "body" | "_creationTime">;
 type ConversationBookingStateRecord = Doc<"conversation_booking_state">;
+type ConversationBookingMode = "idle" | "booking_in_progress" | "booked";
 type SmsTimePreference = {
   hour24: number;
   minute: number;
@@ -58,6 +66,14 @@ type SmsDatePreference = {
 type ConversationSmsContact = {
   contactPhone: string;
   contactName?: string;
+};
+type CurrentAppointmentSummary = {
+  appointmentId?: Id<"appointments">;
+  serviceId: Id<"services">;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  formattedStart: string;
 };
 
 const WEEKDAY_INDEX_BY_NAME: Record<string, number> = {
@@ -142,6 +158,16 @@ function buildSetupIssueReply(serviceName: string, setupIssue: "no_active_staff"
     : `${serviceName} cannot be booked yet because no active team member is assigned to that service.`;
 }
 
+function looksLikeBusinessHoursQuestion(text: string): boolean {
+  return /\b(hours|open|close|closing|opening)\b/i.test(text);
+}
+
+function looksLikeCurrentAppointmentQuestion(text: string): boolean {
+  return /\b(didn['’]?t i just book|did i just book|already book(?:ed)?|my appointment|existing appointment|current appointment)\b/i.test(
+    text,
+  );
+}
+
 function looksLikeSchedulingRequest(text: string): boolean {
   return /\b(appointment|book|booking|schedule|availability|available|slot|room)\b/i.test(text);
 }
@@ -153,7 +179,7 @@ function looksLikeAlternativeTimesRequest(text: string): boolean {
 }
 
 function looksLikeBookingConfirmation(text: string): boolean {
-  return /\b(yes|yeah|yep|sure|book it|please book|that works|works for me|let's do|confirm|good|sounds good|perfect|ok(?:ay)?)\b/i.test(
+  return /\b(yes|yeah|yep|sure|book it|please book|that works|works for me|let's do|confirm|good|sounds good|perfect|ok(?:ay)?|i(?:\s*['’]ll|\s+will)?\s+take|i\s+take|take\s+at|take\s+\d)\b/i.test(
     text,
   );
 }
@@ -177,6 +203,7 @@ function looksLikeSchedulingFollowUp(text: string): boolean {
     /\bon\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\bthe\s+\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i.test(text) ||
+    /\b\d{1,2}h(?:\d{2})?\b/i.test(text) ||
     /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
     /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
     looksLikeAlternativeTimesRequest(text) ||
@@ -313,6 +340,21 @@ function resolveRequestedDate(
 }
 
 function resolveRequestedTime(text: string): SmsTimePreference | null {
+  const hSeparatorMatch = text.match(/\b(?:at\s*)?(\d{1,2})h(\d{2})\b/i);
+  if (hSeparatorMatch) {
+    const [, hourText, minuteText] = hSeparatorMatch;
+    const hour24 = Number(hourText);
+    const minute = Number(minuteText);
+    if (hour24 >= 0 && hour24 <= 23 && minute >= 0 && minute <= 59) {
+      return {
+        hour24,
+        minute,
+        approximate: false,
+        label: DateTime.fromObject({ hour: hour24, minute }).toFormat("h:mm a"),
+      };
+    }
+  }
+
   const meridiemMatch = text.match(/\b(?:at\s*)?(\d{1,2})(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?)\b/i);
   if (meridiemMatch) {
     const [, hourText, minuteText, meridiem] = meridiemMatch;
@@ -439,6 +481,10 @@ async function getRelevantSchedulingText(
   state: ConversationBookingStateRecord | null,
   services: Array<Doc<"services">>,
 ): Promise<string | null> {
+  if (looksLikeBusinessHoursQuestion(prompt) || looksLikeCurrentAppointmentQuestion(prompt)) {
+    return null;
+  }
+
   if (looksLikeSchedulingRequest(prompt)) {
     return prompt;
   }
@@ -510,19 +556,31 @@ function resolveRequestedService(
   return null;
 }
 
+function formatSmsSlotSummary(slotLabel: string): string {
+  return slotLabel.replace(/^[A-Za-z]+\s+at\s+/u, "");
+}
+
 function buildAvailabilityReply(input: {
   serviceName: string;
   dateLabel: string;
   requestedTime?: SmsTimePreference | null;
   slots: Array<{ displayTime: string }>;
+  alternativeTimes?: boolean;
 }): string {
   if (input.slots.length === 0) {
+    if (input.alternativeTimes) {
+      return `I do not have any other ${input.serviceName} times on ${input.dateLabel}.`;
+    }
     return input.requestedTime
       ? `I do not have ${input.serviceName} available on ${input.dateLabel} around ${input.requestedTime.label}.`
       : `I do not have any ${input.serviceName} availability on ${input.dateLabel}.`;
   }
 
-  const slotSummary = input.slots.map((slot) => slot.displayTime).join(", ");
+  const slotSummary = input.slots.map((slot) => formatSmsSlotSummary(slot.displayTime)).join(", ");
+  if (input.alternativeTimes) {
+    return `Other available ${input.serviceName} times on ${input.dateLabel} are ${slotSummary}. Would any of those work for you?`;
+  }
+
   if (input.requestedTime) {
     return `I do not have ${input.serviceName} available on ${input.dateLabel} at ${input.requestedTime.label}. The closest available times are ${slotSummary}. Would any of those work for you?`;
   }
@@ -554,6 +612,296 @@ function buildBookedAppointmentReply(
   return `Great, I booked your ${serviceName} for ${formatted}.`;
 }
 
+function getConversationBookingMode(
+  state: ConversationBookingStateRecord | null,
+): ConversationBookingMode {
+  if (state?.mode === "booking_in_progress" || state?.mode === "booked") {
+    return state.mode;
+  }
+  return "idle";
+}
+
+function formatMinutesOfDay(totalMinutes: number): string {
+  return DateTime.fromObject({
+    hour: Math.floor(totalMinutes / 60),
+    minute: totalMinutes % 60,
+  }).toFormat("h:mm a");
+}
+
+function buildBusinessHoursReply(input: {
+  dayLabel: string;
+  windows: Array<{ openMinutes: number; closeMinutes: number }>;
+  requestedClosingTime?: boolean;
+}): string {
+  if (input.windows.length === 0) {
+    return `We are closed on ${input.dayLabel}.`;
+  }
+
+  if (input.requestedClosingTime) {
+    const latestClose = input.windows.reduce(
+      (max, window) => Math.max(max, window.closeMinutes),
+      input.windows[0]?.closeMinutes ?? 0,
+    );
+    return `We are open until ${formatMinutesOfDay(latestClose)} on ${input.dayLabel}.`;
+  }
+
+  const windowsText = input.windows
+    .map((window) => `${formatMinutesOfDay(window.openMinutes)} to ${formatMinutesOfDay(window.closeMinutes)}`)
+    .join(", ");
+  return `We are open ${windowsText} on ${input.dayLabel}.`;
+}
+
+function buildCurrentAppointmentReply(summary: CurrentAppointmentSummary): string {
+  return `Yes, you are booked for ${summary.serviceName} on ${summary.formattedStart}.`;
+}
+
+function buildBookingStateSummary(input: {
+  state: ConversationBookingStateRecord | null;
+  services: Array<Doc<"services">>;
+  timezone: string;
+}): string {
+  const mode = getConversationBookingMode(input.state);
+  if (mode === "idle") {
+    return "No booking is currently in progress.";
+  }
+
+  if (mode === "booked" && input.state?.lastConfirmedStartsAt && input.state.lastConfirmedServiceId) {
+    const service = input.services.find(
+      (candidate) => candidate._id === input.state?.lastConfirmedServiceId,
+    );
+    const formattedStart = DateTime.fromISO(input.state.lastConfirmedStartsAt, {
+      setZone: true,
+    })
+      .setZone(input.timezone)
+      .toFormat("cccc, LLL d 'at' h:mm a");
+    return `A booking is already confirmed${service ? ` for ${service.name}` : ""} on ${formattedStart}. Answer unrelated questions directly unless the user asks to change that appointment.`;
+  }
+
+  const selectedService = input.services.find(
+    (candidate) => candidate._id === input.state?.selectedServiceId,
+  );
+  const requestedDate = input.state?.requestedDate
+    ? DateTime.fromISO(input.state.requestedDate, { zone: input.timezone }).toFormat("cccc, LLL d")
+    : null;
+  const preferredTime =
+    input.state?.preferredHour24 !== undefined
+      ? DateTime.fromObject({
+          hour: input.state.preferredHour24,
+          minute: input.state.preferredMinute ?? 0,
+        }).toFormat("h:mm a")
+      : null;
+
+  return `Booking is in progress${selectedService ? ` for ${selectedService.name}` : ""}${requestedDate ? ` on ${requestedDate}` : ""}${preferredTime ? ` around ${preferredTime}` : ""}.`;
+}
+
+function didAskForClosingTime(text: string): boolean {
+  return /\b(closing|close|until what time)\b/i.test(text);
+}
+
+function resolveBusinessHoursReply(
+  snapshot: Doc<"business_context_snapshots">,
+  prompt: string,
+): string | null {
+  if (!looksLikeBusinessHoursQuestion(prompt)) {
+    return null;
+  }
+
+  const requestedDate =
+    resolveRequestedDate(prompt, snapshot.timezone) ??
+    toSmsDatePreference(DateTime.now().setZone(snapshot.timezone).startOf("day"));
+  const dayLabel = requestedDate.dayStart.toFormat("cccc");
+  const dayOfWeek = requestedDate.dayStart.weekday % 7;
+  const windows = snapshot.hours
+    .filter((window) => window.dayOfWeek === dayOfWeek)
+    .sort((left, right) => left.openMinutes - right.openMinutes);
+
+  const dayStart = requestedDate.dayStart;
+  const dayEnd = requestedDate.dayStart.endOf("day");
+  const fullDayClosure = snapshot.closures.find((closure) => {
+    const closureStart = DateTime.fromISO(closure.startsAt, { setZone: true }).setZone(snapshot.timezone);
+    const closureEnd = DateTime.fromISO(closure.endsAt, { setZone: true }).setZone(snapshot.timezone);
+    return closureStart.isValid && closureEnd.isValid && closureStart <= dayStart && closureEnd >= dayEnd;
+  });
+
+  if (fullDayClosure) {
+    return `We are closed on ${dayLabel} for ${fullDayClosure.reason}.`;
+  }
+
+  return buildBusinessHoursReply({
+    dayLabel,
+    windows,
+    requestedClosingTime: didAskForClosingTime(prompt),
+  });
+}
+
+async function resolveCurrentAppointmentReply(
+  ctx: ActionCtx,
+  conversationId: Id<"conversations">,
+  prompt: string,
+): Promise<string | null> {
+  if (!looksLikeCurrentAppointmentQuestion(prompt)) {
+    return null;
+  }
+
+  const summary: CurrentAppointmentSummary | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getCurrentAppointmentSummary,
+    { conversationId },
+  );
+  return summary ? buildCurrentAppointmentReply(summary) : "I do not see a confirmed appointment yet.";
+}
+
+function createSmsAgentTools(input: {
+  ctx: ActionCtx;
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  snapshot: Doc<"business_context_snapshots">;
+  services: Array<Doc<"services">>;
+}) {
+  return {
+    getBusinessHours: createTool({
+      description:
+        "Get the business hours or closing time for a requested day or date. Use this for hours, opening, or closing questions.",
+      args: z.object({
+        messageText: z.string().describe("The user's latest SMS about hours."),
+      }),
+      handler: async (_toolCtx, args) => {
+        const replyText = resolveBusinessHoursReply(input.snapshot, args.messageText);
+        return {
+          handled: replyText !== null,
+          replyText: replyText ?? "Please ask which day you mean.",
+        };
+      },
+    }),
+    getCurrentAppointment: createTool({
+      description:
+        "Look up the currently confirmed appointment for this SMS conversation. Use this when the user asks whether they already booked or asks about their current appointment.",
+      args: z.object({
+        messageText: z.string().describe("The user's latest SMS about an existing appointment."),
+      }),
+      handler: async (_toolCtx, args) => {
+        const summary = await input.ctx.runQuery(
+          internal.ai.agents.runtime.getCurrentAppointmentSummary,
+          { conversationId: input.conversationId },
+        );
+        return {
+          handled: looksLikeCurrentAppointmentQuestion(args.messageText),
+          replyText: summary
+            ? buildCurrentAppointmentReply(summary)
+            : "I do not see a confirmed appointment yet.",
+          appointment: summary,
+        };
+      },
+    }),
+    listBookableServices: createTool({
+      description:
+        "List the active bookable services when the user wants to book but has not specified which service.",
+      args: z.object({}),
+      handler: async () => ({
+        handled: true,
+        services: input.services.map((service) => ({
+          id: service._id,
+          name: service.name,
+          durationMinutes: service.durationMinutes,
+        })),
+        replyText: buildServiceSelectionReply(input.services),
+      }),
+    }),
+    findAppointmentAvailability: createTool({
+      description:
+        "Check appointment availability for the user's requested service/date/time and return the grounded scheduling reply. Use this for availability or scheduling questions.",
+      args: z.object({
+        messageText: z.string().describe("The user's latest SMS asking about availability."),
+      }),
+      handler: async (_toolCtx, args) => {
+        const replyText = await maybeGenerateSmsSchedulingReply(
+          input.ctx,
+          input.businessId,
+          input.conversationId,
+          args.messageText,
+        );
+        return {
+          handled: replyText !== null,
+          replyText: replyText ?? "Please tell me which date or time you would like to check.",
+        };
+      },
+    }),
+    listAlternativeTimes: createTool({
+      description:
+        "List additional appointment times for the same service and date when the user asks for other times.",
+      args: z.object({
+        messageText: z.string().describe("The user's latest SMS asking for other times."),
+      }),
+      handler: async (_toolCtx, args) => {
+        const replyText = await maybeGenerateSmsSchedulingReply(
+          input.ctx,
+          input.businessId,
+          input.conversationId,
+          args.messageText,
+        );
+        return {
+          handled: replyText !== null,
+          replyText: replyText ?? "Please tell me which date you want other times for.",
+        };
+      },
+    }),
+    bookAppointmentSlot: createTool({
+      description:
+        "Book or confirm a slot that was just offered. Use this when the user clearly selects or confirms a time, such as 'I'll take 10h30', 'Yes', or 'That works.'",
+      args: z.object({
+        messageText: z.string().describe("The user's latest SMS choosing or confirming a slot."),
+      }),
+      handler: async (_toolCtx, args) => {
+        const replyText = await maybeGenerateSmsSchedulingReply(
+          input.ctx,
+          input.businessId,
+          input.conversationId,
+          args.messageText,
+        );
+        return {
+          handled: replyText !== null,
+          replyText: replyText ?? "Please tell me which time you want to book.",
+        };
+      },
+    }),
+  };
+}
+
+async function generateDeterministicSmsReplyWithoutAgent(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  conversationId: Id<"conversations">,
+  prompt: string,
+): Promise<string> {
+  const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
+    businessId,
+  });
+  if (!snapshot) {
+    throw new Error("Business context snapshot is missing.");
+  }
+
+  const currentAppointmentReply = await resolveCurrentAppointmentReply(ctx, conversationId, prompt);
+  if (currentAppointmentReply) {
+    return currentAppointmentReply;
+  }
+
+  const businessHoursReply = resolveBusinessHoursReply(snapshot, prompt);
+  if (businessHoursReply) {
+    return businessHoursReply;
+  }
+
+  const schedulingReply = await maybeGenerateSmsSchedulingReply(
+    ctx,
+    businessId,
+    conversationId,
+    prompt,
+  );
+  if (schedulingReply) {
+    return schedulingReply;
+  }
+
+  return "I can help with hours and appointment scheduling, but the AI reply model is not configured right now.";
+}
+
 async function bookConversationAppointment(
   ctx: ActionCtx,
   input: {
@@ -572,7 +920,10 @@ async function bookConversationAppointment(
     throw new Error("SMS conversation is missing a contact for booking.");
   }
 
-  await ctx.runMutation(internal.appointments.booking.bookAppointmentForBusiness, {
+  const bookingResult: {
+    appointmentId: Id<"appointments">;
+    contactId: Id<"contacts">;
+  } = await ctx.runMutation(internal.appointments.booking.bookAppointmentForBusiness, {
     businessId: input.businessId,
     serviceId: input.service._id,
     startsAt: input.startsAt,
@@ -581,7 +932,25 @@ async function bookConversationAppointment(
     ...(contact.contactName !== undefined ? { contactName: contact.contactName } : {}),
     sourceChannel: "sms",
   });
-  await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
+
+  const localStart = DateTime.fromISO(input.startsAt, { setZone: true }).setZone(input.timezone);
+  await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+    businessId: input.businessId,
+    conversationId: input.conversationId,
+    mode: "booked",
+    selectedServiceId: input.service._id,
+    ...(localStart.isValid
+      ? {
+          requestedDate:
+            localStart.toISODate() ?? localStart.toFormat("yyyy-MM-dd"),
+        }
+      : {}),
+    lastConfirmedAppointmentId: bookingResult.appointmentId,
+    lastConfirmedServiceId: input.service._id,
+    lastConfirmedStartsAt: input.startsAt,
+    lastOfferedStartsAt: [],
+  });
+  await ctx.runMutation(internal.ai.agents.runtime.clearConversationAiState, {
     conversationId: input.conversationId,
   });
   return buildBookedAppointmentReply(input.service.name, input.startsAt, input.timezone);
@@ -645,6 +1014,7 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
       ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
@@ -666,6 +1036,7 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       selectedServiceId: service._id,
       ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
       ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
@@ -679,6 +1050,7 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       selectedServiceId: service._id,
       ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
@@ -725,15 +1097,22 @@ async function maybeGenerateSmsSchedulingReply(
       wantsAlternativeTimes && bookingState?.lastOfferedStartsAt?.length
         ? slots.filter((slot) => !bookingState.lastOfferedStartsAt?.includes(slot.startsAt))
         : slots;
-    const responseSlots = (unseenSlots.length > 0 ? unseenSlots : slots).slice(0, 3);
+    const responseSlots = (unseenSlots.length > 0 ? unseenSlots : slots)
+      .slice(0, 3)
+      .sort((left, right) => left.startsAt.localeCompare(right.startsAt));
 
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       selectedServiceId: service._id,
       requestedDate: requestedDate.isoDate,
-      ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
-      ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+      ...(!wantsAlternativeTimes && requestedTime !== null
+        ? { preferredHour24: requestedTime.hour24 }
+        : {}),
+      ...(!wantsAlternativeTimes && requestedTime !== null
+        ? { preferredMinute: requestedTime.minute }
+        : {}),
       lastOfferedDate: requestedDate.isoDate,
       lastOfferedStartsAt: responseSlots.map((slot) => slot.startsAt),
     });
@@ -741,7 +1120,8 @@ async function maybeGenerateSmsSchedulingReply(
     return buildAvailabilityReply({
       serviceName: service.name,
       dateLabel: requestedDate.label,
-      requestedTime,
+      requestedTime: wantsAlternativeTimes ? null : requestedTime,
+      alternativeTimes: wantsAlternativeTimes,
       slots: responseSlots,
     });
   }
@@ -779,6 +1159,7 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       selectedServiceId: service._id,
       requestedDate: requestedDate.isoDate,
       preferredHour24: requestedTime.hour24,
@@ -806,6 +1187,7 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
+      mode: "booking_in_progress",
       selectedServiceId: service._id,
       requestedDate: requestedDate.isoDate,
       preferredHour24: requestedTime.hour24,
@@ -827,23 +1209,27 @@ async function maybeGenerateSmsSchedulingReply(
       preferredMinute: requestedTime.minute,
       limit: 3,
     });
+  const sortedNearbySlots = [...nearbySlots].sort((left, right) =>
+    left.startsAt.localeCompare(right.startsAt),
+  );
 
   await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
     businessId,
     conversationId,
+    mode: "booking_in_progress",
     selectedServiceId: service._id,
     requestedDate: requestedDate.isoDate,
     preferredHour24: requestedTime.hour24,
     preferredMinute: requestedTime.minute,
     lastOfferedDate: requestedDate.isoDate,
-    lastOfferedStartsAt: nearbySlots.map((slot) => slot.startsAt),
+    lastOfferedStartsAt: sortedNearbySlots.map((slot) => slot.startsAt),
   });
 
   return buildAvailabilityReply({
     serviceName: service.name,
     dateLabel: requestedDate.label,
     requestedTime,
-    slots: nearbySlots,
+    slots: sortedNearbySlots,
   });
 }
 
@@ -893,6 +1279,7 @@ export const saveConversationBookingState = internalMutation({
   args: {
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),
+    mode: v.optional(v.string()),
     selectedServiceId: v.optional(v.id("services")),
     requestedDate: v.optional(v.string()),
     preferredHour24: v.optional(v.number()),
@@ -900,6 +1287,9 @@ export const saveConversationBookingState = internalMutation({
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
     pendingStartsAt: v.optional(v.string()),
+    lastConfirmedAppointmentId: v.optional(v.id("appointments")),
+    lastConfirmedServiceId: v.optional(v.id("services")),
+    lastConfirmedStartsAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -911,6 +1301,7 @@ export const saveConversationBookingState = internalMutation({
       businessId: args.businessId,
       conversationId: args.conversationId,
       updatedAt: new Date().toISOString(),
+      ...(args.mode !== undefined ? { mode: args.mode } : {}),
       ...(args.selectedServiceId !== undefined
         ? { selectedServiceId: args.selectedServiceId }
         : {}),
@@ -922,6 +1313,15 @@ export const saveConversationBookingState = internalMutation({
         ? { lastOfferedStartsAt: args.lastOfferedStartsAt }
         : {}),
       ...(args.pendingStartsAt !== undefined ? { pendingStartsAt: args.pendingStartsAt } : {}),
+      ...(args.lastConfirmedAppointmentId !== undefined
+        ? { lastConfirmedAppointmentId: args.lastConfirmedAppointmentId }
+        : {}),
+      ...(args.lastConfirmedServiceId !== undefined
+        ? { lastConfirmedServiceId: args.lastConfirmedServiceId }
+        : {}),
+      ...(args.lastConfirmedStartsAt !== undefined
+        ? { lastConfirmedStartsAt: args.lastConfirmedStartsAt }
+        : {}),
     };
 
     if (existing) {
@@ -930,6 +1330,22 @@ export const saveConversationBookingState = internalMutation({
     }
 
     return await ctx.db.insert("conversation_booking_state", nextState);
+  },
+});
+
+export const clearConversationAiState = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("conversation_ai_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    return null;
   },
 });
 
@@ -971,6 +1387,76 @@ export const getConversationSmsContact = internalQuery({
       contactPhone: contact.phone,
       ...(contact.name !== undefined ? { contactName: contact.name } : {}),
     };
+  },
+});
+
+export const getCurrentAppointmentSummary = internalQuery({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<CurrentAppointmentSummary | null> => {
+    const conversation = await ctx.db.get(args.conversationId);
+    const bookingState = await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+
+    if (bookingState?.lastConfirmedServiceId && bookingState.lastConfirmedStartsAt) {
+      const service = await ctx.db.get(bookingState.lastConfirmedServiceId);
+      const business = conversation
+        ? await ctx.db.get(conversation.businessId)
+        : null;
+      const timezone = business?.timezone ?? "UTC";
+      const formattedStart =
+        DateTime.fromISO(bookingState.lastConfirmedStartsAt, { setZone: true })
+          .setZone(timezone)
+          .toFormat("cccc, LLL d 'at' h:mm a");
+      return {
+        ...(bookingState.lastConfirmedAppointmentId !== undefined
+          ? { appointmentId: bookingState.lastConfirmedAppointmentId }
+          : {}),
+        serviceId: bookingState.lastConfirmedServiceId,
+        serviceName: service?.name ?? "appointment",
+        startsAt: bookingState.lastConfirmedStartsAt,
+        timezone,
+        formattedStart: formattedStart || bookingState.lastConfirmedStartsAt,
+      };
+    }
+
+    if (!conversation?.contactId) {
+      return null;
+    }
+    const contactId = conversation.contactId;
+
+    const appointments = await ctx.db
+      .query("appointments")
+      .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+      .order("desc")
+      .take(10);
+
+    for (const appointment of appointments) {
+      if (appointment.businessId !== conversation.businessId || appointment.status !== "confirmed") {
+        continue;
+      }
+
+      const service = await ctx.db.get(appointment.serviceId);
+      return {
+        appointmentId: appointment._id,
+        serviceId: appointment.serviceId,
+        serviceName: service?.name ?? "appointment",
+        startsAt: appointment.startsAt,
+        timezone: appointment.timezone,
+        formattedStart:
+          DateTime.fromISO(appointment.startsAt, { setZone: true })
+            .setZone(appointment.timezone)
+            .toFormat("cccc, LLL d 'at' h:mm a") || appointment.startsAt,
+      };
+    }
+
+    return null;
   },
 });
 
@@ -1058,16 +1544,23 @@ async function generateGroundedReply(
     throw new Error("Business context snapshot is missing.");
   }
 
-  const schedulingReply = await maybeGenerateSmsSchedulingReply(
-    ctx,
-    businessId,
-    conversationId,
-    prompt,
-  );
-  if (schedulingReply) {
-    return schedulingReply;
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return await generateDeterministicSmsReplyWithoutAgent(
+      ctx,
+      businessId,
+      conversationId,
+      prompt,
+    );
   }
 
+  const services: Array<Doc<"services">> = await ctx.runQuery(
+    internal.voice.runtime.getActiveServicesForBusiness,
+    { businessId },
+  );
+  const bookingState: ConversationBookingStateRecord | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationBookingState,
+    { conversationId },
+  );
   const knowledge = await ctx.runAction(
     internal.ai.context.knowledge.searchKnowledgeInternal,
     {
@@ -1078,11 +1571,18 @@ async function generateGroundedReply(
   );
 
   const threadId = await ensureConversationThread(ctx, businessId, conversationId);
+  const tools = createSmsAgentTools({
+    ctx,
+    businessId,
+    conversationId,
+    snapshot,
+    services,
+  });
   const result = await receptionistAgent.generateText(
     ctx,
     { threadId },
     {
-      prompt: buildGroundedPrompt({
+      system: buildGroundedSystemPrompt({
         smsInstructions: snapshot.smsInstructions,
         summary: snapshot.summary,
         bookingPolicy: snapshot.bookingPolicy,
@@ -1091,9 +1591,16 @@ async function generateGroundedReply(
         timezone: snapshot.timezone,
         businessNowLabel: buildBusinessNowLabel(snapshot.timezone),
         services: snapshot.services,
+        bookingStateSummary: buildBookingStateSummary({
+          state: bookingState,
+          services,
+          timezone: snapshot.timezone,
+        }),
         knowledge,
-        prompt,
       }),
+      prompt,
+      tools,
+      stopWhen: stepCountIs(4),
     } as any,
   );
   return result.text;

@@ -242,6 +242,7 @@ export default defineSchema({
   conversation_booking_state: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),
+    mode: v.optional(v.string()),
     selectedServiceId: v.optional(v.id("services")),
     requestedDate: v.optional(v.string()),
     preferredHour24: v.optional(v.number()),
@@ -249,6 +250,9 @@ export default defineSchema({
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
     pendingStartsAt: v.optional(v.string()),
+    lastConfirmedAppointmentId: v.optional(v.id("appointments")),
+    lastConfirmedServiceId: v.optional(v.id("services")),
+    lastConfirmedStartsAt: v.optional(v.string()),
     updatedAt: v.string(),
   }).index("by_conversation_id", ["conversationId"]),
 

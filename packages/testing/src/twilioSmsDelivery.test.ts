@@ -497,4 +497,75 @@ describe("Twilio SMS delivery flow", () => {
       });
     });
   });
+
+  it("skips immediate booking confirmation notifications for sms-booked appointments", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { appointmentId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-sms-booked-notification-skip",
+        name: "Twilio SMS Booked Notification Skip",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550105",
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550154",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-17T13:30:00.000Z",
+        endsAt: "2026-03-17T14:00:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "sms",
+        calendarSyncState: "pending",
+      });
+
+      return { appointmentId };
+    });
+
+    await t.mutation(internal.notifications.reminders.createAppointmentNotifications, {
+      appointmentId,
+    });
+
+    await t.run(async (ctx) => {
+      const scheduledNotifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_status_and_scheduled_for", (q) => q.eq("status", "scheduled"))
+        .collect();
+
+      const allNotifications = await ctx.db
+        .query("notifications")
+        .collect();
+      expect(allNotifications).toHaveLength(1);
+      expect(scheduledNotifications).toHaveLength(1);
+      expect(allNotifications[0]).toMatchObject({
+        kind: "appointment_reminder",
+        status: "scheduled",
+      });
+    });
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+  });
 });
