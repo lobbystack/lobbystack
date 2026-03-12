@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "../../_generated/server";
 import { internal } from "../../_generated/api";
+import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../integrations/calendar";
 import { workflowManager, runtimeCrons } from "../../lib/components";
 
 export const refreshBusinessContextSnapshotWorkflow = workflowManager.define({
@@ -63,7 +64,7 @@ export const registerCalendarReconciliationCron = internalMutation({
 
     await runtimeCrons.register(
       ctx,
-      { kind: "interval", ms: 60 * 60 * 1000 },
+      { kind: "interval", ms: CALENDAR_RECONCILIATION_INTERVAL_MS },
       internal.integrations.calendar.runBusinessCalendarReconciliation,
       { businessId: args.businessId },
       name,

@@ -223,6 +223,17 @@ async function bookAppointmentWithSource(
     throw new Error("Failed to create contact.");
   }
 
+  const calendarState: {
+    hasConnectedCalendar: boolean;
+    connectionCount: number;
+    selectedConnectionId?: Id<"calendar_connections">;
+    selectedCalendarId?: string;
+  } = await ctx.runQuery(
+    internal.integrations.calendar.getBusinessCalendarConnectionState,
+    {
+      businessId: args.businessId,
+    },
+  );
   const selected = availability[0];
   const appointmentId = await ctx.db.insert("appointments", {
     businessId: args.businessId,
@@ -234,7 +245,7 @@ async function bookAppointmentWithSource(
     timezone: args.timezone,
     status: "confirmed",
     sourceChannel: args.sourceChannel,
-    calendarSyncState: "pending",
+    calendarSyncState: calendarState.hasConnectedCalendar ? "pending" : "not_required",
   });
 
   await workflowManager.start(
