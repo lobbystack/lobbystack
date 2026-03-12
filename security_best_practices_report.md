@@ -1,103 +1,108 @@
-# Security Review: `feature/ope-16-twilio-sms-status` vs `main`
+# Security Review: `feature/ope-47-bilingual-sms-runtime` vs `main`
 
 ## Executive Summary
 
-I reviewed the SMS/Twilio/agent changes on this branch against `main`, with special attention to webhook trust boundaries, prompt injection, tool abuse, tenant isolation, and confirmation fallback behavior.
+I reviewed the bilingual SMS runtime branch against `main`, focusing on branch-introduced risks in runtime locale persistence, prompt construction, tool usage, reminder localization, and the new operator control for default customer language.
 
-No new critical, high, medium, or low-severity security vulnerabilities remain in this diff after the prompt-hardening follow-up. The branch improves several security-relevant areas: Twilio SMS ingress and status callbacks now require signed webhooks, prompt context explicitly labels customer and knowledge inputs as untrusted, the booking tools ignore model-supplied freeform arguments and instead operate on the actual SMS text plus stored conversation state, and the SMS runtime no longer injects raw tenant `smsInstructions` into the hidden system prompt.
+I did not identify any new critical, high, medium, or low-severity security vulnerabilities in this diff. I also did not identify a new prompt-injection weakness introduced by the French runtime work. The branch keeps untrusted customer SMS and retrieved knowledge clearly separated from hidden instructions, constrains locale switching to the latest customer message plus server-side state, and keeps all privileged writes behind existing internal actions or membership-gated mutations.
 
 I also ran `pnpm audit --prod --dev`, which reported no known dependency vulnerabilities at the time of review.
 
 ## Critical
 
-No critical findings in the branch diff reviewed.
+No critical findings in this branch diff.
 
 ## High
 
-No high-severity findings in the branch diff reviewed.
+No high-severity findings in this branch diff.
 
 ## Medium
 
-No medium-severity findings in the branch diff reviewed.
+No medium-severity findings in this branch diff.
 
 ## Low
 
-No low-severity findings remain in the reviewed diff after the prompt-hardening follow-up.
+No low-severity findings in this branch diff.
 
-## Prompt Injection Review
+## Prompt Injection and Tool Abuse Review
 
 ### What I checked
 
-- Separation of untrusted inputs from system instructions
-- Whether tool calls can be induced from retrieved knowledge instead of the actual customer SMS
-- Whether model output alone can cause booking, cancellation, or resend side effects
-- Whether stale thread or booking state could enable cross-turn unsafe actions
+- Whether the new bilingual prompt logic lets customer text override hidden instructions
+- Whether retrieved knowledge can steer locale switching or privileged tool calls
+- Whether the new locale-aware SMS flow can be induced to book, cancel, or reschedule solely from model output
+- Whether French-language prompt-extraction attempts are blocked as well as English ones
 
 ### What looks good
 
-- Customer SMS and retrieved knowledge are explicitly marked untrusted in the prompt construction:
-  - `convex/ai/agents/runtime.ts:39-45`
-  - `convex/ai/agents/runtime.ts:69-75`
-- The tool layer does not accept model-supplied freeform arguments for privileged actions; each tool ignores model parameters and uses the real `conversationPrompt` plus stored server-side state instead:
-  - `convex/ai/agents/runtime.ts:1001-1078`
-- Knowledge lookup stays business-scoped by namespace:
-  - `convex/ai/context/knowledge.ts:211-219`
-- Blank or malformed model output no longer creates an empty outbound SMS body; the runtime falls back to a safe reply:
-  - `convex/ai/agents/runtime.ts:1900-1905`
-  - `convex/conversations/webhooks.ts:615-620`
-- The runtime explicitly instructs the model not to claim bookings, cancellations, or reschedules unless a tool-backed reply already confirmed that state:
-  - `convex/ai/agents/runtime.ts:34-47`
+- Hidden instructions still explicitly rank above customer and knowledge content, and both customer SMS and retrieved knowledge are labeled untrusted in the runtime prompt:
+  - `convex/ai/agents/runtime.ts:31-67`
+  - `convex/ai/agents/runtime.ts:78-95`
+- The branch broadens prompt-extraction refusal logic to cover French probes as well as English:
+  - `convex/ai/agents/runtime.ts:145-209`
+- Locale switching is based only on the latest inbound customer SMS plus persisted conversation/contact state; it does not use retrieved knowledge or model output to pick a language:
+  - `convex/lib/runtimeLocale.ts:177-207`
+  - `convex/ai/agents/runtime.ts:2173-2215`
+- Locale persistence remains an internal-only server mutation; customers cannot call a public endpoint to set another contact or conversation's locale:
+  - `convex/ai/agents/runtime.ts:1833-1884`
+- The agent tool layer still routes booking and hours actions through deterministic server-side helpers instead of trusting freeform model-generated arguments:
+  - `convex/ai/agents/runtime.ts:1233-1338`
 
-### Residual prompt-injection risk
+### Conclusion on prompt injection
 
-- Retrieved knowledge and customer content are labeled untrusted, and the tool handlers materially reduce the risk of model-driven unauthorized booking actions.
-- The branch now removes raw tenant `smsInstructions` from the hidden SMS system prompt and short-circuits direct prompt-extraction attempts with a refusal response.
-- Hidden prompt leakage is still a general LLM risk category, but I did not identify a remaining branch-specific prompt-injection issue in the current diff.
+I did not find a branch-introduced prompt-injection issue in the bilingual SMS runtime changes. The branch preserves the earlier prompt hardening and extends it to French-language extraction attempts without widening tool authority.
 
-## Webhook Authenticity and Trust Boundaries
+## Tenant Isolation and Conversation-State Integrity
 
-### What looks good
+### What I checked
 
-- Both inbound SMS and SMS status callbacks require a valid `X-Twilio-Signature` before side effects:
-  - `convex/http.ts:203-231`
-  - `convex/http.ts:246-320`
-- Signature validation is delegated to the official Twilio SDK:
-  - `convex/integrations/twilioSms.ts:23-36`
-- Status callbacks only mutate records matched by `providerMessageSid`, and transition guards prevent regressions from terminal states:
-  - `convex/integrations/twilioMessageStatus.ts:24-73`
-  - `packages/shared/src/twilioMessageStatus.ts`
-
-### Operational note
-
-- Twilio signature validation depends on the runtime seeing the same URL Twilio signed. I did not find a branch-introduced bug here, but this should still be verified in production behind any proxy or custom-domain setup.
-
-## Delivery Failure Confirmation Fallback
+- Whether new locale fields create a cross-tenant or cross-contact write path
+- Whether the new operator-facing default language control is membership-protected
+- Whether reminders derive language from the correct business/contact pair
 
 ### What looks good
 
-- The branch correctly adds a fallback confirmation path if the conversational booking confirmation SMS fails synchronously or later reconciles to `failed` / `undelivered`:
-  - `convex/conversations/webhooks.ts:444-507`
-  - `convex/integrations/twilioMessageStatus.ts:55-65`
-  - `convex/notifications/reminders.ts:210-252`
-- The notification dedupe path on `kind + relatedId` prevents duplicate fallback confirmations for the same appointment:
-  - `convex/notifications/reminders.ts:220-252`
-  - `convex/schema.ts:361-371`
+- The new dashboard mutation for `defaultLocale` is still guarded by `requireMembership`, and it only patches the current business:
+  - `convex/ai/context/snapshots.ts:76-121`
+- Snapshot refresh now safely resolves legacy or missing business locale values to `"en"` instead of failing validation on older tenants:
+  - `convex/ai/context/snapshots.ts:195-202`
+- Reminder localization derives locale from the appointment's actual contact first and then the appointment's business, preventing unrelated user preferences from leaking across tenants:
+  - `convex/notifications/reminders.ts:59-105`
+- New locale fields are schema-constrained to the explicit runtime locale/source validators rather than accepting arbitrary strings:
+  - `convex/lib/runtimeLocale.ts:3-17`
+  - `convex/schema.ts:63-66`
+  - `convex/schema.ts:188-188`
+  - `convex/schema.ts:217-217`
+  - `convex/schema.ts:229-230`
+
+## Secret Handling and Provider Usage
+
+### What I checked
+
+- Whether the branch introduces any new secret material or external provider credentials into prompts, storage, or public APIs
+- Whether localized reminders affect Twilio sender or recipient trust boundaries
+
+### What looks good
+
+- The branch does not add any new provider credentials, outbound webhook paths, or public HTTP endpoints.
+- Reminder localization changes only the body text and locale selection; sender selection and recipient lookup remain on the existing server-side SMS path:
+  - `convex/notifications/reminders.ts:81-105`
+- No new secrets are copied into snapshots, prompts, or public queries as part of the locale work.
 
 ## Validation Performed
 
 - Reviewed `git diff --stat main...HEAD`
 - Inspected security-relevant diffs in:
-  - `convex/http.ts`
-  - `convex/conversations/webhooks.ts`
-  - `convex/integrations/twilioSms.ts`
-  - `convex/integrations/twilioMessageStatus.ts`
   - `convex/ai/agents/runtime.ts`
-  - `convex/ai/context/knowledge.ts`
+  - `convex/lib/runtimeLocale.ts`
   - `convex/notifications/reminders.ts`
+  - `convex/ai/context/snapshots.ts`
+  - `convex/businesses/admin.ts`
   - `convex/schema.ts`
+  - `apps/web/src/features/settings/BusinessProfileForm.tsx`
 - Ran:
   - `pnpm audit --prod --dev`
 
 ## Conclusion
 
-This branch does not appear to introduce new critical, high, medium, or low security vulnerabilities relative to `main` after the prompt-hardening follow-up. The prompt-injection posture is materially improved by separating untrusted content from the system prompt, removing raw tenant `smsInstructions` from the hidden SMS prompt, refusing direct prompt-extraction attempts, and constraining tool handlers to server-side conversation state instead of model-supplied arguments.
+This branch does not appear to introduce new critical, high, medium, or low security vulnerabilities relative to `main`. The bilingual SMS/runtime changes preserve the existing trust boundaries, keep locale persistence scoped to the correct conversation/contact/business records, and maintain a strong prompt-injection posture by continuing to label customer and knowledge inputs as untrusted while refusing hidden-prompt disclosure attempts in both English and French.
