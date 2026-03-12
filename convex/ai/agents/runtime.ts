@@ -352,15 +352,19 @@ function looksLikeBookingConfirmation(text: string): boolean {
   );
 }
 
+function looksLikeDaypartFollowUp(text: string): boolean {
+  return /^(?:(?:and|et|for|pour)\s+)?(?:(?:the|in|this|le|la|l|en|cet|cette)\s+)?(?:morning|afternoon|evening|noon|matin|apres midi|soir|soiree|midi)$/i.test(
+    normalizeComparable(text.trim().replace(/[?.!,]+$/g, "")),
+  );
+}
+
 function isTimeOnlyReply(text: string): boolean {
   const normalized = text.trim().replace(/[?.!,]+$/g, "");
   return (
     /^(?:at\s*)?\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)$/i.test(normalized) ||
     /^(?:at\s*)?(?:[01]?\d|2[0-3]):[0-5]\d$/i.test(normalized) ||
     /^(?:a\s+)?\d{1,2}h(?:\d{2})?$/i.test(normalized) ||
-    /^(morning|afternoon|evening|noon|matin|apres midi|après midi|soir|midi)$/i.test(
-      normalizeComparable(normalized),
-    )
+    looksLikeDaypartFollowUp(normalized)
   );
 }
 
@@ -383,6 +387,7 @@ function looksLikeSchedulingFollowUp(text: string): boolean {
     /\b\d{1,2}h(?:\d{2})?\b/i.test(text) ||
     /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
     /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
+    looksLikeDaypartFollowUp(text) ||
     looksLikeAlternativeTimesRequest(text) ||
     looksLikeBookingConfirmation(text)
   );
@@ -538,6 +543,7 @@ function looksLikeRelativeDayReference(text: string): boolean {
 }
 
 function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePreference | null {
+  const comparableText = normalizeComparable(text);
   const hSeparatorMatch = text.match(/\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\b/i);
   if (hSeparatorMatch) {
     const [, hourText, minuteText] = hSeparatorMatch;
@@ -600,7 +606,7 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
       label: localizeRuntimeText(locale, { en: "morning", fr: "le matin" }),
     };
   }
-  if (/\b(afternoon|apres midi|après midi)\b/i.test(normalizeComparable(text))) {
+  if (/\b(afternoon|apres midi)\b/i.test(comparableText)) {
     return {
       hour24: 14,
       minute: 0,
@@ -608,7 +614,7 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
       label: localizeRuntimeText(locale, { en: "the afternoon", fr: "l'après-midi" }),
     };
   }
-  if (/\b(evening|soir|soiree|soirée)\b/i.test(normalizeComparable(text))) {
+  if (/\b(evening|soir|soiree)\b/i.test(comparableText)) {
     return {
       hour24: 18,
       minute: 0,
@@ -816,11 +822,22 @@ function buildAvailabilityReply(input: {
   times: Array<string>;
   alternativeTimes?: boolean;
 }): string {
+  const isApproximateTime = input.requestedTime?.approximate === true;
   if (input.times.length === 0) {
     if (input.alternativeTimes) {
       return localizeRuntimeText(input.locale, {
         en: `I do not have any other ${input.serviceName} times on ${input.dateLabel}.`,
         fr: `Je n'ai pas d'autres disponibilités pour ${input.serviceName} le ${input.dateLabel}.`,
+      });
+    }
+    if (isApproximateTime && input.requestedTime) {
+      const approximateWindow = formatApproximateTimeWindow(
+        input.requestedTime,
+        input.locale,
+      );
+      return localizeRuntimeText(input.locale, {
+        en: `I do not have any ${input.serviceName} availability on ${input.dateLabel} in ${approximateWindow}.`,
+        fr: `Je n'ai pas de disponibilité pour ${input.serviceName} le ${input.dateLabel} en ${approximateWindow}.`,
       });
     }
     if (input.requestedTime) {
@@ -840,6 +857,17 @@ function buildAvailabilityReply(input: {
     return localizeRuntimeText(input.locale, {
       en: `Other available ${input.serviceName} times on ${input.dateLabel} are ${slotSummary}. Would any of those work for you?`,
       fr: `Les autres disponibilités pour ${input.serviceName} le ${input.dateLabel} sont ${slotSummary}. Est-ce qu'une de ces heures vous conviendrait?`,
+    });
+  }
+
+  if (isApproximateTime && input.requestedTime) {
+    const approximateWindow = formatApproximateTimeWindow(
+      input.requestedTime,
+      input.locale,
+    );
+    return localizeRuntimeText(input.locale, {
+      en: `I have ${input.serviceName} availability on ${input.dateLabel} in ${approximateWindow}: ${slotSummary}. What time would you prefer?`,
+      fr: `J'ai des disponibilités pour ${input.serviceName} le ${input.dateLabel} en ${approximateWindow} : ${slotSummary}. Quelle heure préférez-vous?`,
     });
   }
 
@@ -893,6 +921,32 @@ function getConversationBookingMode(
 
 function formatMinutesOfDay(totalMinutes: number, locale: RuntimeLocale): string {
   return formatRuntimeTimeOfDay(totalMinutes, locale);
+}
+
+function formatApproximateTimeWindow(
+  requestedTime: SmsTimePreference,
+  locale: RuntimeLocale,
+): string {
+  if (!requestedTime.approximate) {
+    return requestedTime.label;
+  }
+
+  if (locale === "fr") {
+    if (requestedTime.hour24 === 10) {
+      return "matin";
+    }
+    if (requestedTime.hour24 === 14) {
+      return "après-midi";
+    }
+    if (requestedTime.hour24 === 18) {
+      return "soirée";
+    }
+    if (requestedTime.hour24 === 12) {
+      return "midi";
+    }
+  }
+
+  return requestedTime.label;
 }
 
 function buildBusinessHoursReply(input: {
@@ -1623,7 +1677,7 @@ async function maybeGenerateSmsSchedulingReply(
   }
 
   const wantsAlternativeTimes = looksLikeAlternativeTimesRequest(prompt);
-  if (!requestedTime || wantsAlternativeTimes) {
+  if (!requestedTime || wantsAlternativeTimes || requestedTime.approximate) {
     const slots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
       await ctx.runQuery(internal.appointments.booking.findAvailabilityForBusiness, {
         businessId,

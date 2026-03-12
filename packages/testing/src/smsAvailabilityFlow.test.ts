@@ -1051,6 +1051,43 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("parses French daypart follow-ups like et l'après-midi without asking to rephrase", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-french-daypart-followup",
+        name: "SMS French Daypart Followup",
+        smsNumber: "+14165550919",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550919" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-daypart-followup-1",
+      From: "+14165550984",
+      To: smsNumber,
+      Body: "Avez-vous un rendez-vous le 19 mars?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-daypart-followup-2",
+      From: "+14165550984",
+      To: smsNumber,
+      Body: "Et l'après-midi?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("en après-midi");
+      expect(outboundBody).toMatch(/\b(13 h 45|14 h 00|14 h 15)\b/);
+      expect(outboundBody).toContain("Quelle heure préférez-vous");
+      expect(outboundBody).not.toContain("reformuler");
+    });
+  });
+
   it("treats ce mercredi as the same day instead of next week in French flows", async () => {
     const t = createConvexHarness();
 
