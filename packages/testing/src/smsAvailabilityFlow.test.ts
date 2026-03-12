@@ -97,13 +97,19 @@ function createConvexHarness(): TestConvex<typeof schema> {
 
 async function insertBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string; businessType?: string },
+  input: {
+    slug: string;
+    name: string;
+    businessType?: string;
+    defaultLocale?: "en" | "fr";
+  },
 ): Promise<Id<"businesses">> {
   return await ctx.db.insert("businesses", {
     slug: input.slug,
     name: input.name,
     timezone: "America/Toronto",
     businessType: input.businessType ?? "clinic",
+    defaultLocale: input.defaultLocale ?? "en",
     deploymentMode: "manual",
     status: "active",
   });
@@ -124,11 +130,12 @@ async function insertSmsPhoneNumber(
 
 async function seedSchedulableBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string; smsNumber: string },
+  input: { slug: string; name: string; smsNumber: string; defaultLocale?: "en" | "fr" },
 ): Promise<{ businessId: Id<"businesses">; serviceId: Id<"services"> }> {
   const businessId = await insertBusiness(ctx, {
     slug: input.slug,
     name: input.name,
+    ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale } : {}),
   });
   await insertSmsPhoneNumber(ctx, {
     businessId,
@@ -177,7 +184,7 @@ async function seedSchedulableBusiness(
 
 async function seedMultiServiceBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string; smsNumber: string },
+  input: { slug: string; name: string; smsNumber: string; defaultLocale?: "en" | "fr" },
 ): Promise<{
   businessId: Id<"businesses">;
   initialConsultationId: Id<"services">;
@@ -186,6 +193,7 @@ async function seedMultiServiceBusiness(
   const businessId = await insertBusiness(ctx, {
     slug: input.slug,
     name: input.name,
+    ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale } : {}),
   });
   await insertSmsPhoneNumber(ctx, {
     businessId,
@@ -960,6 +968,182 @@ describe("SMS scheduling flow", () => {
       expect(outboundBody).toContain("Tuesday, Mar 17 at 10:00 AM");
       expect(outboundBody).not.toContain("I have cancelled your appointment");
     });
+  });
+
+  it("replies in French for a French-default business and remembers the locale", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-french-default-business",
+        name: "Clinique SMS Française",
+        smsNumber: "+14165550913",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550913" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-default-business-1",
+      From: "+14165550986",
+      To: smsNumber,
+      Body: "Avez-vous un rendez-vous demain à 16h?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("J'ai une disponibilité pour General Checkup");
+      expect(outboundBody).toContain("Est-ce que cela vous convient?");
+      expect(outboundBody).not.toContain("Does that work for you?");
+
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550986"),
+        )
+        .unique();
+      expect(contact?.preferredLocale).toBe("fr");
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
+  it("switches back to English when the customer explicitly requests it", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-explicit-english-switch",
+        name: "SMS Explicit English Switch",
+        smsNumber: "+14165550914",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550914" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-explicit-english-switch-1",
+      From: "+14165550985",
+      To: smsNumber,
+      Body: "Avez-vous un rendez-vous demain à 16h?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-explicit-english-switch-2",
+      From: "+14165550985",
+      To: smsNumber,
+      Body: "Please answer in English. What time do you close on Friday?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe("We are open until 5:00 PM on Friday.");
+
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550985"),
+        )
+        .unique();
+      expect(contact?.preferredLocale).toBe("en");
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?.locale).toBe("en");
+      expect(conversation?.localeSource).toBe("explicit_customer");
+    });
+  });
+
+  it("answers current appointment questions in French when the conversation is French", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-current-appointment-french",
+        name: "SMS Current Appointment French",
+        smsNumber: "+14165550915",
+        defaultLocale: "fr",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550984",
+      });
+      await ctx.db.patch(conversationId, {
+        locale: "fr",
+        localeSource: "business_default",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T20:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "À quelle heure est mon rendez-vous?",
+    });
+
+    expect(reply).toContain("Oui, vous avez un rendez-vous pour Initial Consultation");
+    expect(reply).toContain("17 mars");
+  });
+
+  it("keeps unsupported cancellation replies localized in French", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-cancel-french",
+        name: "SMS Cancel French",
+        smsNumber: "+14165550916",
+        defaultLocale: "fr",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550983",
+      });
+      await ctx.db.patch(conversationId, {
+        locale: "fr",
+        localeSource: "business_default",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T20:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Je dois annuler mon rendez-vous.",
+    });
+
+    expect(reply).toContain("Je peux vous aider par SMS");
+    expect(reply).toContain("je ne peux pas encore annuler ou déplacer un rendez-vous ici");
+    expect(reply).toContain("Initial Consultation");
   });
 
   it("removes partial closures from business-hours replies", async () => {

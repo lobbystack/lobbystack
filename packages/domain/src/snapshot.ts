@@ -14,6 +14,7 @@ type SnapshotBuilderInput = {
   displayName: string;
   legalName?: string;
   timezone: string;
+  defaultLocale: BusinessContextSnapshot["defaultLocale"];
   businessType: BusinessContextSnapshot["businessType"];
   greeting: string;
   tone: string;
@@ -49,6 +50,7 @@ export function buildBusinessContextSnapshot(
     displayName: input.displayName,
     ...(input.legalName ? { legalName: input.legalName } : {}),
     timezone: input.timezone,
+    defaultLocale: input.defaultLocale,
     businessType: input.businessType,
     greeting: input.greeting,
     voiceInstructions:

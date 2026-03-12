@@ -36,6 +36,7 @@ const snapshot: BusinessContextSnapshot = {
   generatedAt: "2026-03-10T20:00:00.000Z",
   displayName: "Northwind Clinic",
   timezone: "America/Toronto",
+  defaultLocale: "en",
   businessType: "clinic",
   greeting: "Hello and welcome.",
   voiceInstructions: "Keep it short.",

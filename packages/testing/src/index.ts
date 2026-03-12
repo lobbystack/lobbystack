@@ -8,6 +8,7 @@ export const demoSnapshot: BusinessContextSnapshot = {
   generatedAt: new Date("2026-03-08T00:00:00.000Z").toISOString(),
   displayName: "Maple Family Clinic",
   timezone: "America/Toronto",
+  defaultLocale: "en",
   businessType: "clinic",
   greeting: "Thank you for calling Maple Family Clinic.",
   voiceInstructions:

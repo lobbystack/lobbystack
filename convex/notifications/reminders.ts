@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { DateTime } from "luxon";
 import { v } from "convex/values";
 import {
   internalAction,
@@ -10,6 +9,10 @@ import {
 import { internal } from "../_generated/api";
 import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
+import {
+  buildLocalizedAppointmentNotificationBody,
+  normalizeRuntimeLocale,
+} from "../lib/runtimeLocale";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 
 function buildTwilioSmsStatusCallbackUrl(): string {
@@ -19,14 +22,6 @@ function buildTwilioSmsStatusCallbackUrl(): string {
   }
 
   return new URL("/twilio/sms/status", siteUrl).toString();
-}
-
-function formatAppointmentTime(startsAt: string, timezone: string): string {
-  return (
-    DateTime.fromISO(startsAt, { setZone: true })
-      .setZone(timezone)
-      .toFormat("cccc, LLL d 'at' h:mm a z") || startsAt
-  );
 }
 
 export const getNotification = internalQuery({
@@ -61,9 +56,10 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Appointment not found for notification.");
     }
 
-    const [service, contact, phoneNumbers] = await Promise.all([
+    const [service, contact, business, phoneNumbers] = await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
+      ctx.db.get(notification.businessId),
       ctx.db
         .query("phone_numbers")
         .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
@@ -78,6 +74,10 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Contact not found for notification.");
     }
 
+    if (!business) {
+      throw new Error("Business not found for notification.");
+    }
+
     const senderPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
     if (!senderPhoneNumber) {
       throw new Error(
@@ -85,11 +85,17 @@ export const getNotificationDeliveryContext = internalQuery({
       );
     }
 
-    const formattedTime = formatAppointmentTime(appointment.startsAt, appointment.timezone);
-    const body =
-      notification.kind === "appointment_reminder"
-        ? `Reminder: your ${service.name} appointment is ${formattedTime}. Reply if you need to reschedule.`
-        : `Your ${service.name} appointment is booked for ${formattedTime}. Reply if you need to reschedule.`;
+    const locale =
+      normalizeRuntimeLocale(contact.preferredLocale) ??
+      normalizeRuntimeLocale(business.defaultLocale) ??
+      "en";
+    const body = buildLocalizedAppointmentNotificationBody({
+      kind: notification.kind,
+      serviceName: service.name,
+      startsAt: appointment.startsAt,
+      timezone: appointment.timezone,
+      locale,
+    });
 
     return {
       notificationId: notification._id,

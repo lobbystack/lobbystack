@@ -26,6 +26,9 @@ export type DocumentMimeType =
   | "application/pdf"
   | "text/plain"
   | "text/markdown";
+export type RuntimeLocale = "en" | "fr";
+
+export const runtimeLocales = ["en", "fr"] as const satisfies ReadonlyArray<RuntimeLocale>;
 
 export type HoursWindow = {
   dayOfWeek: number;
@@ -66,6 +69,7 @@ export type BusinessContextSnapshot = {
   displayName: string;
   legalName?: string;
   timezone: string;
+  defaultLocale: RuntimeLocale;
   businessType: BusinessType;
   greeting: string;
   voiceInstructions: string;

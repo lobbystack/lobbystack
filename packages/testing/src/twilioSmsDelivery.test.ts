@@ -85,13 +85,14 @@ const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
 async function insertBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string },
+  input: { slug: string; name: string; defaultLocale?: "en" | "fr" },
 ): Promise<Id<"businesses">> {
   return await ctx.db.insert("businesses", {
     slug: input.slug,
     name: input.name,
     timezone: "America/Toronto",
     businessType: "service_company",
+    defaultLocale: input.defaultLocale ?? "en",
     deploymentMode: "manual",
     status: "active",
   });
@@ -554,6 +555,158 @@ describe("Twilio SMS delivery flow", () => {
         providerRawDlrDoneDate: "2606141505",
       });
     });
+  });
+
+  it("localizes reminders to the contact's remembered French preference", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-notification-fr-contact",
+      status: "accepted",
+    });
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-notification-french-contact",
+        name: "Twilio Notification French Contact",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550115",
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550156",
+        preferredLocale: "fr",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut and Style",
+        slug: "cut-and-style-fr-contact",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    await t.action(internal.notifications.reminders.deliverNotification, {
+      notificationId,
+    });
+
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550156",
+      from: "+14165550115",
+      body: expect.stringContaining("Rappel : votre rendez-vous pour Cut and Style est prévu"),
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
+      }),
+    );
+  });
+
+  it("falls back to the business default French locale for booking confirmations", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-notification-fr-business",
+      status: "accepted",
+    });
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-notification-french-business",
+        name: "Twilio Notification French Business",
+        defaultLocale: "fr",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550116",
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550157",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut and Style",
+        slug: "cut-and-style-fr-business",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "dashboard",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "booking_confirmation",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    await t.action(internal.notifications.reminders.deliverNotification, {
+      notificationId,
+    });
+
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550157",
+      from: "+14165550116",
+      body: expect.stringContaining("Votre rendez-vous pour Cut and Style est confirmé pour"),
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
+      }),
+    );
   });
 
   it("skips the immediate booking confirmation notification for sms-booked appointments", async () => {

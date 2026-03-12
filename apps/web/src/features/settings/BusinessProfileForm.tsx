@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconPhone, IconRobotFace } from "@tabler/icons-react";
+import type { RuntimeLocale } from "@ai-receptionist/shared";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -21,6 +22,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const [greeting, setGreeting] = useState("");
   const [tone, setTone] = useState("");
+  const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [summary, setSummary] = useState("");
   const [bookingPolicy, setBookingPolicy] = useState("");
   const [voiceInstructions, setVoiceInstructions] = useState("");
@@ -37,6 +39,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
     }
     setGreeting(profile.greeting);
     setTone(profile.tone);
+    setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setSummary(profile.summary);
     setBookingPolicy(profile.bookingPolicy);
     setVoiceInstructions(profile.voiceInstructions ?? "");
@@ -52,6 +55,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
     try {
       await saveProfile({
         businessId: props.businessId,
+        defaultLocale,
         greeting,
         tone,
         summary,
@@ -100,6 +104,18 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               />
             </label>
           </div>
+          <label className="space-y-2">
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Default customer language</span>
+            <Select value={defaultLocale} onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a default language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="fr">Français</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
           <label className="space-y-2">
             <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Business summary</span>
             <Textarea
