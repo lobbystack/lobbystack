@@ -10,6 +10,7 @@ import {
 } from "react-router-dom";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useTranslation } from "react-i18next";
 import {
   IconChecklist,
   IconClockHour4,
@@ -50,15 +51,17 @@ import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { ServicesCard } from "@/features/settings/ServicesCard";
 
 function LoadingScreen() {
+  const { t } = useTranslation("common");
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/20 px-6">
       <div className="w-full max-w-sm rounded-3xl border border-border/70 bg-card/90 p-8 text-center shadow-sm">
         <p className="text-sm font-medium tracking-[0.24em] text-muted-foreground uppercase">
-          AI Receptionist
+          {t("appName")}
         </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">Loading workspace</h1>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">{t("loading.title")}</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Syncing your operator console and receptionist settings.
+          {t("loading.description")}
         </p>
       </div>
     </div>
@@ -77,28 +80,33 @@ function AuthShell(props: { children: ReactNode }) {
   );
 }
 
-function getAuthErrorMessage(error: unknown, flow: "signIn" | "signUp"): string {
+function getAuthErrorMessage(
+  error: unknown,
+  flow: "signIn" | "signUp",
+  t: (key: string) => string,
+): string {
   const message = error instanceof Error ? error.message : "";
 
   if (flow === "signIn") {
     if (message.includes("InvalidSecret") || message.includes("Invalid credentials")) {
-      return "Incorrect email or password. Please try again.";
+      return t("errors.incorrectCredentials");
     }
-    return "Incorrect email or password. Please try again.";
+    return t("errors.incorrectCredentials");
   }
 
   if (message.includes("already exists")) {
-    return "An account with that email already exists. Try signing in instead.";
+    return t("errors.accountExists");
   }
 
   if (message.includes("Invalid password")) {
-    return "Use a password with at least 8 characters.";
+    return t("errors.invalidPassword");
   }
 
-  return "We couldn't create your account. Please try again.";
+  return t("errors.signupFailed");
 }
 
 function LoginPage() {
+  const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -120,18 +128,18 @@ function LoginPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage("Continuing sign-in in a new browser flow...");
+        setStatusMessage(t("status.continuingSignIn"));
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage("Signed in. Finishing your session...");
+        setStatusMessage(t("status.signedInFinishing"));
         return;
       }
 
-      setStatusMessage("Sign-in completed. Finalizing your session...");
+      setStatusMessage(t("status.signInCompleted"));
     } catch (error) {
-      setErrorMessage(getAuthErrorMessage(error, "signIn"));
+      setErrorMessage(getAuthErrorMessage(error, "signIn", t));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,6 +162,7 @@ function LoginPage() {
 }
 
 function SignupPage() {
+  const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -175,18 +184,18 @@ function SignupPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage("Continuing sign-up in a new browser flow...");
+        setStatusMessage(t("status.continuingSignUp"));
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage("Account created. Finishing your session...");
+        setStatusMessage(t("status.accountCreatedFinishing"));
         return;
       }
 
-      setStatusMessage("Account created. Finalizing your session...");
+      setStatusMessage(t("status.accountCreatedFinalizing"));
     } catch (error) {
-      setErrorMessage(getAuthErrorMessage(error, "signUp"));
+      setErrorMessage(getAuthErrorMessage(error, "signUp", t));
     } finally {
       setIsSubmitting(false);
     }
@@ -245,9 +254,10 @@ function slugify(value: string): string {
 }
 
 function BusinessSetupCard() {
+  const { t } = useTranslation("dashboard");
   const bootstrapBusiness = useMutation(api.businesses.admin.bootstrapBusiness);
-  const [name, setName] = useState("Maple Family Clinic");
-  const [slug, setSlug] = useState("maple-family-clinic");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
   const [timezone, setTimezone] = useState("America/Toronto");
   const [businessType, setBusinessType] = useState("clinic");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -267,9 +277,9 @@ function BusinessSetupCard() {
 
     try {
       await bootstrapBusiness({ name, slug, timezone, businessType });
-      setStatus("Business created. The receptionist snapshot is refreshing now.");
+      setStatus(t("setup.created"));
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "Failed to create business.");
+      setError(submissionError instanceof Error ? submissionError.message : t("setup.failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -278,55 +288,64 @@ function BusinessSetupCard() {
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Create your first business</CardTitle>
-        <CardDescription>
-          This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.
-        </CardDescription>
+        <CardTitle>{t("setup.title")}</CardTitle>
+        <CardDescription>{t("setup.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Business name
+                {t("setup.businessName")}
               </span>
-              <Input onChange={(event) => handleNameChange(event.target.value)} value={name} />
+              <Input
+                onChange={(event) => handleNameChange(event.target.value)}
+                placeholder={t("setup.placeholders.businessName")}
+                value={name}
+              />
             </label>
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Slug
+                {t("setup.slug")}
               </span>
-              <Input onChange={(event) => setSlug(slugify(event.target.value))} value={slug} />
+              <Input
+                onChange={(event) => setSlug(slugify(event.target.value))}
+                placeholder={t("setup.placeholders.slug")}
+                value={slug}
+              />
             </label>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Timezone
+                {t("setup.timezone")}
               </span>
               <Input onChange={(event) => setTimezone(event.target.value)} value={timezone} />
             </label>
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Business type
+                {t("setup.businessType")}
               </span>
               <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
+                  <SelectValue placeholder={t("setup.selectBusinessType")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="clinic">Clinic</SelectItem>
-                  <SelectItem value="repair_shop">Repair shop</SelectItem>
-                  <SelectItem value="salon">Salon</SelectItem>
-                  <SelectItem value="service_company">Service company</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="clinic">{t("setup.businessTypes.clinic")}</SelectItem>
+                  <SelectItem value="repair_shop">{t("setup.businessTypes.repair_shop")}</SelectItem>
+                  <SelectItem value="salon">{t("setup.businessTypes.salon")}</SelectItem>
+                  <SelectItem value="service_company">{t("setup.businessTypes.service_company")}</SelectItem>
+                  <SelectItem value="other">{t("setup.businessTypes.other")}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? "Creating..." : "Create business"}
+            <Button
+              disabled={isSubmitting || name.trim().length === 0 || slug.trim().length === 0}
+              type="submit"
+            >
+              {isSubmitting ? t("setup.creating") : t("setup.create")}
             </Button>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
             {error ? <span className="text-sm text-destructive">{error}</span> : null}
@@ -346,40 +365,42 @@ function QuickActionsCard(props: {
   phoneNumberCount: number;
   greeting: string;
 }) {
+  const { t } = useTranslation("dashboard");
+
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
-        <CardTitle>Quick actions</CardTitle>
+        <CardTitle>{t("quickActions.title")}</CardTitle>
         <CardDescription>
-          Keep {props.businessName} ready for calls, SMS, and booking workflows.
+          {t("quickActions.description", { businessName: props.businessName })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-3">
           <Link className={buttonVariants({ variant: "default" })} to="/settings">
-            Configure receptionist profile
+            {t("quickActions.configureProfile")}
           </Link>
           <Link className={buttonVariants({ variant: "outline" })} to="/knowledge">
-            Add FAQs and documents
+            {t("quickActions.addKnowledge")}
           </Link>
           <Link className={buttonVariants({ variant: "outline" })} to="/inbox">
-            Review call inbox
+            {t("quickActions.reviewInbox")}
           </Link>
         </div>
         <div className="rounded-2xl border border-border/70 bg-muted/25 p-4">
           <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            Setup readiness
+            {t("quickActions.readiness")}
           </p>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-            <li>{props.serviceCount} services configured</li>
-            <li>{props.configuredDays} days with operating hours</li>
-            <li>{props.knowledgeCount} knowledge items indexed</li>
-            <li>{props.phoneNumberCount} phone numbers mapped</li>
+            <li>{t("quickActions.servicesConfigured", { count: props.serviceCount })}</li>
+            <li>{t("quickActions.daysConfigured", { count: props.configuredDays })}</li>
+            <li>{t("quickActions.knowledgeItems", { count: props.knowledgeCount })}</li>
+            <li>{t("quickActions.phoneNumbers", { count: props.phoneNumberCount })}</li>
           </ul>
         </div>
         <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
           <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            Current greeting
+            {t("quickActions.currentGreeting")}
           </p>
           <p className="mt-3 text-sm leading-6 text-foreground">{props.greeting}</p>
         </div>
@@ -480,6 +501,8 @@ function SettingsPage(props: {
   businessId?: Id<"businesses">;
   snapshot: BusinessContextSnapshot;
 }) {
+  const { t } = useTranslation("settings");
+
   if (!props.businessId) {
     return <BusinessSetupCard />;
   }
@@ -497,23 +520,21 @@ function SettingsPage(props: {
         <BusinessSnapshotCard snapshot={props.snapshot} />
         <Card className="border border-border/70 bg-card/90 shadow-sm">
           <CardHeader>
-            <CardTitle>What to do next</CardTitle>
-            <CardDescription>
-              Tighten the live receptionist behavior before you route real traffic.
-            </CardDescription>
+            <CardTitle>{t("nextSteps.title")}</CardTitle>
+            <CardDescription>{t("nextSteps.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
               <IconChecklist className="mt-0.5 size-4 text-foreground" />
-              <span>Set hours, services, and bookable team assignments so booking can suggest real times.</span>
+              <span>{t("nextSteps.hours")}</span>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
               <IconHeadphones className="mt-0.5 size-4 text-foreground" />
-              <span>Add transfer rules and a fallback number before handing off urgent calls.</span>
+              <span>{t("nextSteps.transfer")}</span>
             </div>
             <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
               <IconClockHour4 className="mt-0.5 size-4 text-foreground" />
-              <span>Refresh your snapshot after major policy changes so voice picks them up quickly.</span>
+              <span>{t("nextSteps.snapshot")}</span>
             </div>
           </CardContent>
         </Card>
@@ -523,6 +544,7 @@ function SettingsPage(props: {
 }
 
 function WorkspaceShell() {
+  const { t } = useTranslation(["dashboard", "inbox", "knowledge", "settings"]);
   const { signOut } = useAuthActions();
   const location = useLocation();
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
@@ -538,27 +560,27 @@ function WorkspaceShell() {
     const path = location.pathname;
     if (path.startsWith("/inbox")) {
       return {
-        title: "Inbox",
-        description: "Review captured calls, transcripts, and audio downloads.",
+        title: t("inbox:header.title"),
+        description: t("inbox:header.description"),
       };
     }
     if (path.startsWith("/knowledge")) {
       return {
-        title: "Knowledge",
-        description: "Manage FAQs, documents, and preview conversations.",
+        title: t("knowledge:header.title"),
+        description: t("knowledge:header.description"),
       };
     }
     if (path.startsWith("/settings")) {
       return {
-        title: "Settings",
-        description: "Configure the receptionist, hours, services, and transfer policy.",
+        title: t("settings:header.title"),
+        description: t("settings:header.description"),
       };
     }
     return {
-      title: "Dashboard",
-      description: "Track operational readiness for calls, messages, and booking.",
+      title: t("dashboard:headers.dashboardTitle"),
+      description: t("dashboard:headers.dashboardDescription"),
     };
-  }, [location.pathname]);
+  }, [location.pathname, t]);
 
   if (businesses === undefined) {
     return <LoadingScreen />;
@@ -574,7 +596,7 @@ function WorkspaceShell() {
       }
     >
       <AppSidebar
-        businessName={activeBusiness?.name ?? "AI Receptionist"}
+        businessName={activeBusiness?.name ?? t("common:appName")}
         businessSlug={activeBusiness?.slug}
         onSignOut={() => void signOut()}
       />

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconCalendarPlus } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -22,14 +23,15 @@ function slugify(value: string): string {
 }
 
 export function ServicesCard(props: ServicesCardProps) {
+  const { t } = useTranslation("settings");
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
   const services = (configuration?.services ?? []) as Array<Doc<"services">>;
   const upsertService = useMutation(api.businesses.catalog.upsertService);
-  const [name, setName] = useState("Initial Consultation");
-  const [slug, setSlug] = useState("initial-consultation");
-  const [description, setDescription] = useState("A 30 minute first appointment.");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("30");
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,7 +53,7 @@ export function ServicesCard(props: ServicesCardProps) {
         durationMinutes: Number(durationMinutes),
         active: true,
       });
-      setStatus("Saved service.");
+      setStatus(t("services.saved"));
       setName("");
       setSlug("");
       setDescription("");
@@ -69,10 +71,8 @@ export function ServicesCard(props: ServicesCardProps) {
             <IconCalendarPlus className="size-5" />
           </div>
           <div className="space-y-1">
-            <CardTitle>Services</CardTitle>
-            <CardDescription>
-              Service definitions power both booking logic and the receptionist snapshot callers hear.
-            </CardDescription>
+            <CardTitle>{t("services.title")}</CardTitle>
+            <CardDescription>{t("services.description")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -80,14 +80,15 @@ export function ServicesCard(props: ServicesCardProps) {
         <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Service name</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.serviceName")}</span>
               <Input
+                placeholder={t("services.placeholders.serviceName")}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Slug</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.slug")}</span>
               <Input
                 value={slug}
                 onChange={(event) => setSlug(event.target.value)}
@@ -96,7 +97,7 @@ export function ServicesCard(props: ServicesCardProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Duration (minutes)</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.durationMinutes")}</span>
               <Input
                 min="5"
                 step="5"
@@ -106,8 +107,9 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Description</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.descriptionLabel")}</span>
               <Input
+                placeholder={t("services.placeholders.description")}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
@@ -115,7 +117,7 @@ export function ServicesCard(props: ServicesCardProps) {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Add service"}
+              {isSaving ? t("services.saving") : t("services.save")}
             </Button>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
@@ -128,13 +130,13 @@ export function ServicesCard(props: ServicesCardProps) {
                 <Badge variant="outline">{service.durationMinutes} min</Badge>
               </div>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {service.description || "No description yet."}
+                {service.description || t("services.noDescription")}
               </p>
             </div>
           ))}
           {configuration && services.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-              No services configured yet.
+              {t("services.empty")}
             </div>
           ) : null}
         </div>

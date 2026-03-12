@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconUsersGroup } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -36,6 +37,7 @@ function buildAssignmentState(input: {
 }
 
 export function BookableTeamCard(props: BookableTeamCardProps) {
+  const { t } = useTranslation(["common", "settings"]);
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
@@ -137,9 +139,9 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
         transferNumber: transferNumber.trim() || undefined,
       });
       setSelectedStaffKey(String(result.staffId));
-      setStaffSaveMessage(selectedStaff ? "Saved team member." : "Added team member.");
+      setStaffSaveMessage(selectedStaff ? t("settings:team.saved") : t("settings:team.added"));
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save team member.");
+      setErrorMessage(error instanceof Error ? error.message : t("settings:team.saveFailed"));
     } finally {
       setIsSavingStaff(false);
     }
@@ -165,10 +167,10 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
         businessId: props.businessId,
         assignments: nextAssignments,
       });
-      setAssignmentSaveMessage("Saved service assignments.");
+      setAssignmentSaveMessage(t("settings:team.savedAssignments"));
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to save service assignments.",
+        error instanceof Error ? error.message : t("settings:team.saveAssignmentsFailed"),
       );
     } finally {
       setIsSavingAssignments(false);
@@ -183,10 +185,8 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
             <IconUsersGroup className="size-5" />
           </div>
           <div className="space-y-1">
-            <CardTitle>Bookable Team</CardTitle>
-            <CardDescription>
-              Booking only works for services that have at least one active team member assigned.
-            </CardDescription>
+            <CardTitle>{t("settings:team.title")}</CardTitle>
+            <CardDescription>{t("settings:team.description")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -194,14 +194,14 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
         <form className="space-y-5" onSubmit={(event) => void handleStaffSubmit(event)}>
           <label className="space-y-2">
             <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-              Team member
+              {t("settings:team.member")}
             </span>
             <Select
               onValueChange={(value) => setSelectedStaffKey(value ?? NEW_STAFF_VALUE)}
               value={selectedStaffKey}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a team member" />
+                <SelectValue placeholder={t("settings:team.selectMember")} />
               </SelectTrigger>
               <SelectContent>
                 {staff.map((member) => (
@@ -209,7 +209,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                     {member.name}
                   </SelectItem>
                 ))}
-                <SelectItem value={NEW_STAFF_VALUE}>Add new team member</SelectItem>
+                <SelectItem value={NEW_STAFF_VALUE}>{t("settings:team.addNewMember")}</SelectItem>
               </SelectContent>
             </Select>
           </label>
@@ -217,21 +217,21 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Name
+                {t("settings:team.name")}
               </span>
               <Input
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Jordan Lee"
+                placeholder={t("settings:team.placeholders.name")}
                 value={name}
               />
             </label>
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Timezone
+                {t("settings:team.timezone")}
               </span>
               <Input
                 onChange={(event) => setTimezone(event.target.value)}
-                placeholder="America/Toronto"
+                placeholder={t("settings:team.placeholders.timezone")}
                 value={timezone}
               />
             </label>
@@ -240,11 +240,11 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Transfer number
+                {t("settings:team.transferNumber")}
               </span>
               <Input
                 onChange={(event) => setTransferNumber(event.target.value)}
-                placeholder="+15145550123"
+                placeholder={t("settings:team.placeholders.transferNumber")}
                 value={transferNumber}
               />
             </label>
@@ -253,17 +253,17 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                 checked={active}
                 onCheckedChange={(checked) => setActive(Boolean(checked))}
               />
-              <span className="text-sm text-foreground">Active for booking</span>
+              <span className="text-sm text-foreground">{t("settings:team.activeForBooking")}</span>
             </label>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSavingStaff || name.trim().length === 0} type="submit">
               {isSavingStaff
-                ? "Saving..."
+                ? t("settings:team.saving")
                 : selectedStaff
-                  ? "Save team member"
-                  : "Add team member"}
+                  ? t("settings:team.save")
+                  : t("settings:team.saveNew")}
             </Button>
             {staffSaveMessage ? (
               <span className="text-sm text-muted-foreground">{staffSaveMessage}</span>
@@ -274,22 +274,22 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
         <div className="space-y-4">
           <div className="space-y-1">
             <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-              Service assignments
+              {t("settings:team.serviceAssignments")}
             </p>
             <p className="text-sm text-muted-foreground">
-              Choose which services each team member can book over phone or SMS.
+              {t("settings:team.assignmentDescription")}
             </p>
           </div>
 
           {staff.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-              Add at least one team member before assigning services.
+              {t("settings:team.emptyStaff")}
             </div>
           ) : null}
 
           {staff.length > 0 && services.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-              Add services first, then come back here to make them bookable.
+              {t("settings:team.emptyServices")}
             </div>
           ) : null}
 
@@ -315,9 +315,13 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge variant={member.active ? "default" : "outline"}>
-                          {member.active ? "Active" : "Inactive"}
+                          {member.active
+                            ? t("common:badges.active")
+                            : t("common:badges.inactive")}
                         </Badge>
-                        <Badge variant="secondary">{assignedCount} services</Badge>
+                        <Badge variant="secondary">
+                          {t("settings:team.assignedServices", { count: assignedCount })}
+                        </Badge>
                       </div>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
@@ -356,7 +360,9 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
               })}
               <div className="flex flex-wrap items-center gap-3">
                 <Button disabled={isSavingAssignments} onClick={() => void handleAssignmentsSave()} type="button">
-                  {isSavingAssignments ? "Saving..." : "Save assignments"}
+                  {isSavingAssignments
+                    ? t("settings:team.savingAssignments")
+                    : t("settings:team.saveAssignments")}
                 </Button>
                 {assignmentSaveMessage ? (
                   <span className="text-sm text-muted-foreground">{assignmentSaveMessage}</span>

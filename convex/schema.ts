@@ -50,6 +50,7 @@ export default defineSchema({
     displayName: v.optional(v.string()),
     activeBusinessId: v.optional(v.id("businesses")),
     platformRole: v.optional(v.string()),
+    preferredLocale: v.optional(v.union(v.literal("en"), v.literal("fr"))),
   })
     .index("by_auth_subject", ["authSubject"])
     .index("email", ["email"])

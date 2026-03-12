@@ -25,6 +25,12 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Keep voice personalization snapshot-based: structured business facts stay authoritative in Convex; RAG augments documents and FAQs only.
 - Prefer `rg` for search. Use `apply_patch` for manual edits. Add TSDoc/JSDoc only for exported or non-obvious modules.
 
+## Localization Guidelines
+- Use translation keys for new dashboard UI copy under `apps/web/`; do not add new hardcoded user-facing English strings when the text belongs in the operator UI.
+- Keep locale files in `apps/web/public/locales/{lng}/{ns}.json` and group keys by feature/intent rather than by component implementation details.
+- Avoid string concatenation in translated sentences. Prefer interpolation through the translation layer instead.
+- Keep translated text separate from date, time, and number formatting. Use the active locale with `Intl` or Luxon for formatting instead of baking localized formats into translation strings.
+
 ## Testing Guidelines
 - Vitest is the default test runner.
 - Name tests `*.test.ts` or `*.test.tsx` and keep them close to the code they cover.
