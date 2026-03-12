@@ -1,103 +1,76 @@
-# Security Review: `feature/ope-16-twilio-sms-status` vs `main`
+# OPE-15 Security Audit
 
 ## Executive Summary
 
-I reviewed the SMS/Twilio/agent changes on this branch against `main`, with special attention to webhook trust boundaries, prompt injection, tool abuse, tenant isolation, and confirmation fallback behavior.
+Reviewed `feature/ope-15-calendar-reconciliation` against `main`, focusing on the new calendar reconciliation backend in [convex/integrations/calendar.ts](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts), the booking-state change in [convex/appointments/booking.ts](/Users/raphael/Coding/ai-receptionist/convex/appointments/booking.ts), and the schema additions in [convex/schema.ts](/Users/raphael/Coding/ai-receptionist/convex/schema.ts).
 
-No new critical, high, medium, or low-severity security vulnerabilities remain in this diff after the prompt-hardening follow-up. The branch improves several security-relevant areas: Twilio SMS ingress and status callbacks now require signed webhooks, prompt context explicitly labels customer and knowledge inputs as untrusted, the booking tools ignore model-supplied freeform arguments and instead operate on the actual SMS text plus stored conversation state, and the SMS runtime no longer injects raw tenant `smsInstructions` into the hidden system prompt.
+I did **not** identify any new critical, high, or medium security vulnerabilities in this branch. The new public read APIs are membership-scoped, the reconciliation logic remains internal-only, and the diff does not introduce new prompt/tool surfaces that would create prompt-injection risk.
 
-I also ran `pnpm audit --prod --dev`, which reported no known dependency vulnerabilities at the time of review.
+I also ran `pnpm audit --prod --dev`, which reported **no known vulnerabilities**.
 
-## Critical
+## Scope Reviewed
 
-No critical findings in the branch diff reviewed.
+- [convex/integrations/calendar.ts](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts)
+- [convex/appointments/booking.ts](/Users/raphael/Coding/ai-receptionist/convex/appointments/booking.ts)
+- [convex/schema.ts](/Users/raphael/Coding/ai-receptionist/convex/schema.ts)
+- [packages/testing/src/calendarReconciliation.test.ts](/Users/raphael/Coding/ai-receptionist/packages/testing/src/calendarReconciliation.test.ts)
 
-## High
+Audit focus:
 
-No high-severity findings in the branch diff reviewed.
+- authorization boundaries on the new member-scoped read APIs
+- integrity of the new reconciliation and retry state machine
+- operator-visible recovery record creation and dedupe
+- exposure of sensitive data in the new query/issue surfaces
+- prompt-injection risk introduced by the branch
 
-## Medium
+## Critical Findings
 
-No medium-severity findings in the branch diff reviewed.
+None.
 
-## Low
+## High Findings
 
-No low-severity findings remain in the reviewed diff after the prompt-hardening follow-up.
+None.
+
+## Medium Findings
+
+None.
+
+## Low Findings
+
+None.
+
+## Informational Notes
+
+### INF-1: New reconciliation APIs expose raw sync error strings to members
+
+The branch now persists `calendarLastSyncError` and returns it through the member-scoped reconciliation surfaces in [convex/integrations/calendar.ts:425](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L425), [convex/integrations/calendar.ts:933](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L933), and [convex/integrations/calendar.ts:986](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L986).
+
+This is acceptable in the current mocked-provider implementation because the stored errors are controlled internal strings. When real Google/Microsoft provider adapters are added, these error strings should be normalized to user-safe categories before being exposed to members or copied into `inbox_items`, to avoid leaking provider/internal detail. I am **not** counting this as a branch vulnerability today.
 
 ## Prompt Injection Review
 
-### What I checked
+I did not find any branch-introduced prompt-injection risk.
 
-- Separation of untrusted inputs from system instructions
-- Whether tool calls can be induced from retrieved knowledge instead of the actual customer SMS
-- Whether model output alone can cause booking, cancellation, or resend side effects
-- Whether stale thread or booking state could enable cross-turn unsafe actions
+Why:
 
-### What looks good
+- This diff does not modify prompt construction, RAG context assembly, or agent tool registration.
+- The new reconciliation logic is implemented entirely in backend queries, mutations, and internal actions, not in model-driven tool flows.
+- No new attacker-controlled text is inserted into hidden prompts or used to select privileged actions.
 
-- Customer SMS and retrieved knowledge are explicitly marked untrusted in the prompt construction:
-  - `convex/ai/agents/runtime.ts:39-45`
-  - `convex/ai/agents/runtime.ts:69-75`
-- The tool layer does not accept model-supplied freeform arguments for privileged actions; each tool ignores model parameters and uses the real `conversationPrompt` plus stored server-side state instead:
-  - `convex/ai/agents/runtime.ts:1001-1078`
-- Knowledge lookup stays business-scoped by namespace:
-  - `convex/ai/context/knowledge.ts:211-219`
-- Blank or malformed model output no longer creates an empty outbound SMS body; the runtime falls back to a safe reply:
-  - `convex/ai/agents/runtime.ts:1900-1905`
-  - `convex/conversations/webhooks.ts:615-620`
-- The runtime explicitly instructs the model not to claim bookings, cancellations, or reschedules unless a tool-backed reply already confirmed that state:
-  - `convex/ai/agents/runtime.ts:34-47`
+The only new text surfaces are:
 
-### Residual prompt-injection risk
+- operator-facing `inbox_items.body` strings built from appointment/contact metadata in [convex/integrations/calendar.ts:118](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L118)
+- member-scoped query responses returning reconciliation metadata in [convex/integrations/calendar.ts:892](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L892) and [convex/integrations/calendar.ts:946](/Users/raphael/Coding/ai-receptionist/convex/integrations/calendar.ts#L946)
 
-- Retrieved knowledge and customer content are labeled untrusted, and the tool handlers materially reduce the risk of model-driven unauthorized booking actions.
-- The branch now removes raw tenant `smsInstructions` from the hidden SMS system prompt and short-circuits direct prompt-extraction attempts with a refusal response.
-- Hidden prompt leakage is still a general LLM risk category, but I did not identify a remaining branch-specific prompt-injection issue in the current diff.
-
-## Webhook Authenticity and Trust Boundaries
-
-### What looks good
-
-- Both inbound SMS and SMS status callbacks require a valid `X-Twilio-Signature` before side effects:
-  - `convex/http.ts:203-231`
-  - `convex/http.ts:246-320`
-- Signature validation is delegated to the official Twilio SDK:
-  - `convex/integrations/twilioSms.ts:23-36`
-- Status callbacks only mutate records matched by `providerMessageSid`, and transition guards prevent regressions from terminal states:
-  - `convex/integrations/twilioMessageStatus.ts:24-73`
-  - `packages/shared/src/twilioMessageStatus.ts`
-
-### Operational note
-
-- Twilio signature validation depends on the runtime seeing the same URL Twilio signed. I did not find a branch-introduced bug here, but this should still be verified in production behind any proxy or custom-domain setup.
-
-## Delivery Failure Confirmation Fallback
-
-### What looks good
-
-- The branch correctly adds a fallback confirmation path if the conversational booking confirmation SMS fails synchronously or later reconciles to `failed` / `undelivered`:
-  - `convex/conversations/webhooks.ts:444-507`
-  - `convex/integrations/twilioMessageStatus.ts:55-65`
-  - `convex/notifications/reminders.ts:210-252`
-- The notification dedupe path on `kind + relatedId` prevents duplicate fallback confirmations for the same appointment:
-  - `convex/notifications/reminders.ts:220-252`
-  - `convex/schema.ts:361-371`
+Those are application-data surfaces, not prompt surfaces.
 
 ## Validation Performed
 
-- Reviewed `git diff --stat main...HEAD`
-- Inspected security-relevant diffs in:
-  - `convex/http.ts`
-  - `convex/conversations/webhooks.ts`
-  - `convex/integrations/twilioSms.ts`
-  - `convex/integrations/twilioMessageStatus.ts`
-  - `convex/ai/agents/runtime.ts`
-  - `convex/ai/context/knowledge.ts`
-  - `convex/notifications/reminders.ts`
-  - `convex/schema.ts`
-- Ran:
-  - `pnpm audit --prod --dev`
+- `git diff main...HEAD`
+- `git diff --stat main...HEAD`
+- targeted manual review of the changed backend files listed above
+- `pnpm audit --prod --dev`
 
-## Conclusion
+## Branch Conclusion
 
-This branch does not appear to introduce new critical, high, medium, or low security vulnerabilities relative to `main` after the prompt-hardening follow-up. The prompt-injection posture is materially improved by separating untrusted content from the system prompt, removing raw tenant `smsInstructions` from the hidden SMS prompt, refusing direct prompt-extraction attempts, and constraining tool handlers to server-side conversation state instead of model-supplied arguments.
+This branch’s calendar reconciliation changes are in good shape from a security perspective. They add internal-only reconciliation behavior plus member-scoped read APIs without introducing new authorization bypasses, secret-handling regressions, or prompt-injection exposure.
