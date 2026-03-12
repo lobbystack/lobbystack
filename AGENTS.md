@@ -42,6 +42,8 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Prefer function-level Convex tests by default. Do not register Convex components such as `RAG`, `Workpool`, or `Agent` unless the ticket is specifically about component integration behavior.
 - Keep pure data and string helpers as normal Vitest unit tests, but test index-dependent reads, auth-sensitive flows, and Convex document mutations against the in-memory Convex backend.
 - Before opening a PR, run `pnpm typecheck`, `pnpm build`, and `pnpm test`.
+- If you change `convex/schema.ts` or add/remove persisted Convex fields, also run `pnpm convex dev` against the real dev deployment before calling the work review-ready. Tests and typecheck do not catch legacy document/schema mismatches in existing deployment data.
+- For schema changes on existing tables, explicitly consider legacy compatibility: older documents may be missing newly required fields or may still contain removed fields. Prefer optional fields, compatibility fallbacks, or an intentional migration plan over assuming clean data.
 
 ## Architecture Guardrails
 - `convex/` is the main backend. Do not move durable business logic into the voice gateway.
