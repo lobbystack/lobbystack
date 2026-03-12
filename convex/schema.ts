@@ -250,6 +250,7 @@ export default defineSchema({
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
     pendingStartsAt: v.optional(v.string()),
+    pendingConfirmationAppointmentId: v.optional(v.id("appointments")),
     lastConfirmedAppointmentId: v.optional(v.id("appointments")),
     lastConfirmedServiceId: v.optional(v.id("services")),
     lastConfirmedStartsAt: v.optional(v.string()),
@@ -262,6 +263,7 @@ export default defineSchema({
     direction: v.string(),
     channel: v.string(),
     fromPhoneNumber: v.optional(v.string()),
+    appointmentId: v.optional(v.id("appointments")),
     providerMessageSid: v.optional(v.string()),
     media: v.optional(v.array(messageMediaValidator)),
     body: v.string(),
@@ -365,6 +367,7 @@ export default defineSchema({
     providerRawDlrDoneDate: v.optional(v.string()),
   })
     .index("by_business_id_and_scheduled_for", ["businessId", "scheduledFor"])
+    .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
     .index("by_provider_message_id", ["providerMessageId"]),
 

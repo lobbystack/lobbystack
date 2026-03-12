@@ -556,7 +556,7 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
-  it("creates an immediate booking confirmation notification for sms-booked appointments", async () => {
+  it("skips the immediate booking confirmation notification for sms-booked appointments", async () => {
     const t = convexTest(schema, convexModules);
 
     const { appointmentId } = await t.run(async (ctx) => {
@@ -622,19 +622,209 @@ describe("Twilio SMS delivery flow", () => {
       const appointmentReminder = allNotifications.find(
         (notification) => notification.kind === "appointment_reminder",
       );
-      expect(allNotifications).toHaveLength(2);
+      expect(allNotifications).toHaveLength(1);
       expect(scheduledNotifications).toHaveLength(1);
-      expect(bookingConfirmation).toMatchObject({
-        kind: "booking_confirmation",
-        status: "pending",
-      });
+      expect(bookingConfirmation).toBeUndefined();
       expect(appointmentReminder).toMatchObject({
         kind: "appointment_reminder",
         status: "scheduled",
       });
     });
 
-    expect(retrierRunMock).toHaveBeenCalledTimes(1);
+    expect(retrierRunMock).not.toHaveBeenCalled();
     expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("creates one fallback booking confirmation when a conversational booking SMS send fails", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio send failed"));
+
+    const messageId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-booking-confirmation-fallback-send-fail",
+        name: "Twilio Booking Confirmation Fallback Send Fail",
+      });
+      const smsNumber = "+14165550106";
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: smsNumber,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550153",
+      });
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-17T14:30:00.000Z",
+        endsAt: "2026-03-17T15:00:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "sms",
+        calendarSyncState: "pending",
+      });
+
+      return await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        fromPhoneNumber: smsNumber,
+        appointmentId,
+        body: "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 10:30 AM.",
+        status: "queued",
+        aiGenerated: true,
+      });
+    });
+
+    const result = await t.action(internal.conversations.webhooks.sendStoredOutboundMessage, {
+      messageId,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
+    expect(retrierRunMock).toHaveBeenCalledTimes(1);
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db.get(messageId);
+      expect(message).toMatchObject({
+        status: "failed",
+        providerStatus: "failed",
+      });
+
+      const notifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_kind_and_related_id", (q) =>
+          q.eq("kind", "booking_confirmation").eq("relatedId", String(message?.appointmentId)),
+        )
+        .collect();
+
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toMatchObject({
+        kind: "booking_confirmation",
+        status: "pending",
+      });
+    });
+  });
+
+  it("creates one fallback booking confirmation when delivery later becomes undelivered", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const appointmentId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-booking-confirmation-fallback-status",
+        name: "Twilio Booking Confirmation Fallback Status",
+      });
+      const smsNumber = "+14165550107";
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: smsNumber,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550152",
+      });
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-18T14:30:00.000Z",
+        endsAt: "2026-03-18T15:00:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "sms",
+        calendarSyncState: "pending",
+      });
+
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        fromPhoneNumber: smsNumber,
+        appointmentId,
+        providerMessageSid: "SM-booking-confirmation-undelivered",
+        body: "Great, I booked your Initial Consultation for Wednesday, Mar 18 at 10:30 AM.",
+        status: "sent",
+        providerStatus: "sent",
+        providerUpdatedAt: "2026-03-11T22:30:00.000Z",
+        aiGenerated: true,
+      });
+
+      return appointmentId;
+    });
+
+    await postTwilioForm(t, "/twilio/sms/status", {
+      MessageSid: "SM-booking-confirmation-undelivered",
+      MessageStatus: "undelivered",
+      ErrorCode: "30003",
+    });
+    await postTwilioForm(t, "/twilio/sms/status", {
+      MessageSid: "SM-booking-confirmation-undelivered",
+      MessageStatus: "undelivered",
+      ErrorCode: "30003",
+    });
+
+    expect(retrierRunMock).toHaveBeenCalledTimes(1);
+
+    await t.run(async (ctx) => {
+      const notifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_kind_and_related_id", (q) =>
+          q.eq("kind", "booking_confirmation").eq("relatedId", String(appointmentId)),
+        )
+        .collect();
+
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toMatchObject({
+        kind: "booking_confirmation",
+        status: "pending",
+      });
+    });
   });
 });

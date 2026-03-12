@@ -1072,6 +1072,7 @@ async function bookConversationAppointment(
     lastConfirmedServiceId: input.service._id,
     lastConfirmedStartsAt: input.startsAt,
     lastOfferedStartsAt: [],
+    pendingConfirmationAppointmentId: bookingResult.appointmentId,
   });
   await ctx.runMutation(internal.ai.agents.runtime.clearConversationAiState, {
     conversationId: input.conversationId,
@@ -1414,6 +1415,7 @@ export const saveConversationBookingState = internalMutation({
     lastOfferedDate: v.optional(v.string()),
     lastOfferedStartsAt: v.optional(v.array(v.string())),
     pendingStartsAt: v.optional(v.string()),
+    pendingConfirmationAppointmentId: v.optional(v.id("appointments")),
     lastConfirmedAppointmentId: v.optional(v.id("appointments")),
     lastConfirmedServiceId: v.optional(v.id("services")),
     lastConfirmedStartsAt: v.optional(v.string()),
@@ -1440,6 +1442,9 @@ export const saveConversationBookingState = internalMutation({
         ? { lastOfferedStartsAt: args.lastOfferedStartsAt }
         : {}),
       ...(args.pendingStartsAt !== undefined ? { pendingStartsAt: args.pendingStartsAt } : {}),
+      ...(args.pendingConfirmationAppointmentId !== undefined
+        ? { pendingConfirmationAppointmentId: args.pendingConfirmationAppointmentId }
+        : {}),
       ...(args.lastConfirmedAppointmentId !== undefined
         ? { lastConfirmedAppointmentId: args.lastConfirmedAppointmentId }
         : {}),
@@ -1457,6 +1462,26 @@ export const saveConversationBookingState = internalMutation({
     }
 
     return await ctx.db.insert("conversation_booking_state", nextState);
+  },
+});
+
+export const consumePendingConfirmationAppointmentId = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args): Promise<Id<"appointments"> | null> => {
+    const existing = await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+
+    if (!existing?.pendingConfirmationAppointmentId) {
+      return null;
+    }
+
+    const { pendingConfirmationAppointmentId, _id, _creationTime, ...rest } = existing;
+    await ctx.db.replace(_id, rest);
+    return pendingConfirmationAppointmentId;
   },
 });
 

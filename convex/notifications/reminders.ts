@@ -173,18 +173,14 @@ export const createAppointmentNotifications = internalMutation({
       throw new Error("Appointment not found.");
     }
 
-    const immediateNotificationId = await ctx.db.insert("notifications", {
-      businessId: appointment.businessId,
-      channel: "sms",
-      kind: "booking_confirmation",
-      relatedId: String(args.appointmentId),
-      scheduledFor: new Date().toISOString(),
-      status: "pending",
-    });
-
-    await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
-      notificationId: immediateNotificationId,
-    });
+    if (appointment.sourceChannel !== "sms") {
+      await ctx.runMutation(
+        internal.notifications.reminders.ensureBookingConfirmationNotification,
+        {
+          appointmentId: args.appointmentId,
+        },
+      );
+    }
 
     const reminderDate = new Date(appointment.startsAt);
     reminderDate.setHours(reminderDate.getHours() - 24);
@@ -208,6 +204,51 @@ export const createAppointmentNotifications = internalMutation({
     }
 
     return null;
+  },
+});
+
+export const ensureBookingConfirmationNotification = internalMutation({
+  args: {
+    appointmentId: v.id("appointments"),
+  },
+  handler: async (ctx, args) => {
+    const appointment = await ctx.db.get(args.appointmentId);
+    if (!appointment) {
+      throw new Error("Appointment not found.");
+    }
+
+    const existing = await ctx.db
+      .query("notifications")
+      .withIndex("by_kind_and_related_id", (q) =>
+        q.eq("kind", "booking_confirmation").eq("relatedId", String(args.appointmentId)),
+      )
+      .take(1);
+
+    const existingNotification = existing[0];
+    if (existingNotification) {
+      return {
+        notificationId: existingNotification._id,
+        created: false,
+      };
+    }
+
+    const notificationId = await ctx.db.insert("notifications", {
+      businessId: appointment.businessId,
+      channel: "sms",
+      kind: "booking_confirmation",
+      relatedId: String(args.appointmentId),
+      scheduledFor: new Date().toISOString(),
+      status: "pending",
+    });
+
+    await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
+      notificationId,
+    });
+
+    return {
+      notificationId,
+      created: true,
+    };
   },
 });
 

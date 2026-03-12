@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 
+import { internal } from "../_generated/api";
 import { internalMutation, type MutationCtx } from "../_generated/server";
 import { mapTwilioStatusToMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyMessageStatusTransition, shouldApplyNotificationStatusTransition } from "../lib/twilioMessageStatus";
 
@@ -50,6 +51,18 @@ async function reconcileMessageStatus(
         ? { providerRawDlrDoneDate: args.providerRawDlrDoneDate }
         : {}),
     });
+
+    if (
+      message.appointmentId &&
+      (nextStatus === "failed" || nextStatus === "undelivered")
+    ) {
+      await ctx.runMutation(
+        internal.notifications.reminders.ensureBookingConfirmationNotification,
+        {
+          appointmentId: message.appointmentId,
+        },
+      );
+    }
   }
 
   return {

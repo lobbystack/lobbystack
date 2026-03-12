@@ -70,6 +70,7 @@ type StoreOutboundMessageArgs = {
   channel: string;
   body: string;
   fromPhoneNumber?: string;
+  appointmentId?: Id<"appointments">;
 };
 type OutboundMessageDeliveryContext = {
   businessId: Id<"businesses">;
@@ -81,6 +82,7 @@ type OutboundMessageDeliveryContext = {
   providerMessageSid?: string;
   status: string;
   media?: Array<MessageMediaAttachment>;
+  appointmentId?: Id<"appointments">;
 };
 type MarkOutboundMessageAcceptedArgs = {
   messageId: Id<"messages">;
@@ -290,6 +292,7 @@ export const getOutboundMessageDeliveryContext = internalQuery({
         : {}),
       status: message.status,
       ...(message.media !== undefined ? { media: message.media } : {}),
+      ...(message.appointmentId !== undefined ? { appointmentId: message.appointmentId } : {}),
     };
   },
 });
@@ -357,6 +360,7 @@ export const storeOutboundMessage = internalMutation({
     channel: v.string(),
     body: v.string(),
     fromPhoneNumber: v.optional(v.string()),
+    appointmentId: v.optional(v.id("appointments")),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     return await ctx.db.insert("messages", {
@@ -365,6 +369,7 @@ export const storeOutboundMessage = internalMutation({
       direction: "outbound",
       channel: args.channel,
       ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
+      ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
       body: args.body,
       status: "queued",
       aiGenerated: true,
@@ -436,6 +441,23 @@ export const sendStoredOutboundMessage = internalAction({
       };
     }
 
+    if (context.appointmentId && context.status === "failed") {
+      await ctx.runMutation(
+        internal.notifications.reminders.ensureBookingConfirmationNotification,
+        {
+          appointmentId: context.appointmentId,
+        },
+      );
+
+      return {
+        businessId: context.businessId,
+        conversationId: context.conversationId,
+        messageId: context.messageId,
+        reply: context.body,
+        status: context.status,
+      };
+    }
+
     try {
       const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
         to: context.to,
@@ -467,6 +489,21 @@ export const sendStoredOutboundMessage = internalAction({
         messageId: context.messageId,
         providerUpdatedAt: new Date().toISOString(),
       });
+      if (context.appointmentId) {
+        await ctx.runMutation(
+          internal.notifications.reminders.ensureBookingConfirmationNotification,
+          {
+            appointmentId: context.appointmentId,
+          },
+        );
+        return {
+          businessId: context.businessId,
+          conversationId: context.conversationId,
+          messageId: context.messageId,
+          reply: context.body,
+          status: "failed",
+        };
+      }
       throw error;
     }
   },
@@ -580,6 +617,12 @@ export const handleTwilioSmsInbound = internalAction({
       conversationId,
       prompt: args.body,
     });
+    const appointmentId: Id<"appointments"> | null = await ctx.runMutation(
+      internal.ai.agents.runtime.consumePendingConfirmationAppointmentId,
+      {
+        conversationId,
+      },
+    );
 
     const messageId: Id<"messages"> = await ctx.runMutation(
       internal.conversations.webhooks.storeOutboundMessage,
@@ -589,6 +632,7 @@ export const handleTwilioSmsInbound = internalAction({
         channel: "sms",
         body: reply,
         fromPhoneNumber: phoneNumber.e164,
+        ...(appointmentId !== null ? { appointmentId } : {}),
       },
     );
 
