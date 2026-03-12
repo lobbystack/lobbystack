@@ -612,11 +612,12 @@ export const handleTwilioSmsInbound = internalAction({
       },
     );
 
-    const reply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
+    const rawReply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,
       conversationId,
       prompt: args.body,
     });
+    const reply = rawReply.trim() || "I'm sorry, could you rephrase that?";
     const appointmentId: Id<"appointments"> | null = await ctx.runMutation(
       internal.ai.agents.runtime.consumePendingConfirmationAppointmentId,
       {
