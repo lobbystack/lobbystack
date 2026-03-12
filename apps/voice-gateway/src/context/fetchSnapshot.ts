@@ -1,6 +1,5 @@
 import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import { demoSnapshot } from "@ai-receptionist/testing";
+import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 type VoiceContextResponse = {
   businessId: string;

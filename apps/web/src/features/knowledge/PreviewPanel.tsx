@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
 import { IconSparkles } from "@tabler/icons-react";
+import { demoSnapshot } from "@ai-receptionist/shared";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { demoSnapshot } from "@ai-receptionist/testing";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

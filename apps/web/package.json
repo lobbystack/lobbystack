@@ -14,7 +14,6 @@
     "@ai-receptionist/ai": "workspace:*",
     "@ai-receptionist/config": "workspace:*",
     "@ai-receptionist/shared": "workspace:*",
-    "@ai-receptionist/testing": "workspace:*",
     "@base-ui/react": "^1.2.0",
     "@convex-dev/auth": "latest",
     "@convex-dev/persistent-text-streaming": "latest",

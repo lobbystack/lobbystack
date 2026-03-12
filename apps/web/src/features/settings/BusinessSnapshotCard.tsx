@@ -1,5 +1,4 @@
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import { demoSnapshot } from "@ai-receptionist/testing";
+import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

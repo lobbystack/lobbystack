@@ -96,9 +96,6 @@ importers:
       '@ai-receptionist/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
-      '@ai-receptionist/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
       '@fastify/formbody':
         specifier: ^8.0.2
         version: 8.0.2
@@ -136,9 +133,6 @@ importers:
       '@ai-receptionist/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@ai-receptionist/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
       '@base-ui/react':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
