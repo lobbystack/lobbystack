@@ -1,0 +1,26 @@
+{
+  "appName": "Réceptionniste IA",
+  "loading": {
+    "title": "Chargement de l'espace de travail",
+    "description": "Synchronisation de votre console opérateur et des réglages de la réceptionniste."
+  },
+  "language": {
+    "label": "Langue",
+    "ariaLabel": "Choisir la langue du tableau de bord",
+    "english": "English",
+    "french": "Français"
+  },
+  "badges": {
+    "live": "Actif",
+    "configured": "Configuré",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "voice": "Voix",
+    "sms": "SMS"
+  },
+  "labels": {
+    "customer": "Client",
+    "receptionist": "Réceptionniste",
+    "prompt": "Demande"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "appName": "AI Receptionist",
+  "loading": {
+    "title": "Loading workspace",
+    "description": "Syncing your operator console and receptionist settings."
+  },
+  "language": {
+    "label": "Language",
+    "ariaLabel": "Select dashboard language",
+    "english": "English",
+    "french": "Français"
+  },
+  "badges": {
+    "live": "Live",
+    "configured": "Configured",
+    "active": "Active",
+    "inactive": "Inactive",
+    "voice": "Voice",
+    "sms": "SMS"
+  },
+  "labels": {
+    "customer": "Customer",
+    "receptionist": "Receptionist",
+    "prompt": "Prompt"
+  }
+}

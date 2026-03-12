@@ -1,0 +1,14 @@
+{
+  "items": {
+    "dashboard": "Tableau de bord",
+    "inbox": "Boîte de réception",
+    "knowledge": "Connaissances",
+    "settings": "Réglages"
+  },
+  "sidebar": {
+    "businessSlugFallback": "Console opérateur",
+    "signedIn": "Connecté",
+    "workspaceReady": "Espace prêt",
+    "signOut": "Se déconnecter"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "panel": {
+    "title": "Recent Calls",
+    "description": "Review captured calls, open transcripts, and download the recorded audio.",
+    "captured": "{{count}} captured",
+    "transcriptReady": "Transcript ready",
+    "transcriptPending": "Transcript pending",
+    "audioReady": "Audio ready",
+    "recordingPending": "Recording pending",
+    "viewTranscript": "View transcript",
+    "downloadAudio": "Download audio",
+    "noCalls": "No calls have been captured yet.",
+    "noBusinessTitle": "Recent Calls",
+    "noBusinessDescription": "Create a business to review recordings and transcripts."
+  },
+  "transcript": {
+    "title": "Call Transcript",
+    "descriptionWithDate": "Review the saved caller and assistant turns from {{date}}.",
+    "descriptionEmpty": "Select a call to review the saved conversation.",
+    "noSegments": "No transcript segments are available for this call yet."
+  }
+}

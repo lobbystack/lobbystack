@@ -1,9 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconClockHour4 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
+import { getWeekdayLabels } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,16 +18,6 @@ type HoursRowState = {
   open: string;
   close: string;
 };
-
-const dayLabels = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
 
 function toTimeString(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60)
@@ -49,6 +41,7 @@ function parseTimeString(value: string): number | null {
 }
 
 export function BusinessHoursForm(props: BusinessHoursFormProps) {
+  const { i18n, t } = useTranslation("settings");
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
@@ -58,6 +51,7 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
   );
   const [status, setStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const dayLabels = getWeekdayLabels(i18n.language);
 
   useEffect(() => {
     if (!configuration) {
@@ -98,7 +92,7 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
         const openMinutes = parseTimeString(row.open);
         const closeMinutes = parseTimeString(row.close);
         if (openMinutes === null || closeMinutes === null || closeMinutes <= openMinutes) {
-          throw new Error(`Invalid hours for ${dayLabels[dayOfWeek]}.`);
+          throw new Error(t("hours.invalidHours", { day: dayLabels[dayOfWeek] }));
         }
         return [
           {
@@ -113,9 +107,9 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
         businessId: props.businessId,
         hours,
       });
-      setStatus("Saved business hours.");
+      setStatus(t("hours.saved"));
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Failed to save business hours.");
+      setStatus(error instanceof Error ? error.message : t("hours.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -129,10 +123,8 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
             <IconClockHour4 className="size-5" />
           </div>
           <div className="space-y-1">
-            <CardTitle>Opening Hours</CardTitle>
-            <CardDescription>
-              Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.
-            </CardDescription>
+            <CardTitle>{t("hours.title")}</CardTitle>
+            <CardDescription>{t("hours.description")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -162,9 +154,9 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Save hours"}
+              {isSaving ? t("hours.saving") : t("hours.save")}
             </Button>
-            <span className="text-sm text-muted-foreground">Leave a day blank to mark it closed.</span>
+            <span className="text-sm text-muted-foreground">{t("hours.leaveBlank")}</span>
           </div>
           {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
         </form>

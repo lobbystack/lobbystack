@@ -36,6 +36,7 @@ import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
 import type * as users from "../users.js";
+import type * as users_preferences from "../users/preferences.js";
 import type * as voice_runtime from "../voice/runtime.js";
 
 import type {
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "notifications/reminders": typeof notifications_reminders;
   users: typeof users;
+  "users/preferences": typeof users_preferences;
   "voice/runtime": typeof voice_runtime;
 }>;
 

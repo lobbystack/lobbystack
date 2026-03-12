@@ -1,3 +1,4 @@
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -15,6 +16,9 @@ export function SiteHeader({ title, description }: SiteHeaderProps) {
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold text-foreground">{title}</h1>
           <p className="truncate text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className="ml-auto">
+          <LanguageSwitcher />
         </div>
       </div>
     </header>

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
 import { IconSparkles } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { demoSnapshot } from "@ai-receptionist/testing";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,15 +16,14 @@ type PreviewPanelProps = {
 };
 
 export function PreviewPanel(props: PreviewPanelProps) {
+  const { t } = useTranslation(["common", "knowledge"]);
   const previewKnowledgeAnswer = useAction(api.ai.context.knowledge.previewKnowledgeAnswer);
-  const [prompt, setPrompt] = useState("What time are you open tomorrow?");
-  const [response, setResponse] = useState(
-    `We are open based on the business snapshot in ${demoSnapshot.timezone}. In the full implementation this response comes from the preview agent thread, not from the live voice loop.`,
-  );
+  const [prompt, setPrompt] = useState("");
+  const [response, setResponse] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handlePreview(): Promise<void> {
-    if (!props.enabled || !props.businessId) {
+    if (!props.enabled || !props.businessId || prompt.trim().length === 0) {
       return;
     }
 
@@ -45,10 +44,8 @@ export function PreviewPanel(props: PreviewPanelProps) {
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>Preview Receptionist</CardTitle>
-            <CardDescription>
-              Test the same business context layer used for SMS and async AI flows before you put it in front of callers.
-            </CardDescription>
+            <CardTitle>{t("knowledge:preview.title")}</CardTitle>
+            <CardDescription>{t("knowledge:preview.description")}</CardDescription>
           </div>
           <IconSparkles className="size-5 text-muted-foreground" />
         </div>
@@ -56,35 +53,41 @@ export function PreviewPanel(props: PreviewPanelProps) {
       <CardContent className="space-y-5">
         <div className="space-y-2">
           <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            Prompt
+            {t("common:labels.prompt")}
           </p>
           <Textarea
             disabled={!props.enabled || isLoading}
+            placeholder={t("knowledge:preview.promptPlaceholder")}
             rows={5}
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
           />
         </div>
-        <Button disabled={!props.enabled || isLoading} onClick={() => void handlePreview()}>
-          {isLoading ? "Generating..." : "Run Preview"}
+        <Button
+          disabled={!props.enabled || isLoading || prompt.trim().length === 0}
+          onClick={() => void handlePreview()}
+        >
+          {isLoading ? t("knowledge:preview.generating") : t("knowledge:preview.generate")}
         </Button>
         <div className="space-y-3">
           <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
             <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-              Customer
+              {t("common:labels.customer")}
             </div>
             <div className="text-sm leading-6 text-foreground">{prompt}</div>
           </div>
           <div className="rounded-2xl border border-border/70 bg-muted/25 p-4">
             <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-              Receptionist
+              {t("common:labels.receptionist")}
             </div>
-            <div className="text-sm leading-6 text-foreground">{response}</div>
+            <div className="text-sm leading-6 text-foreground">
+              {response ?? t("knowledge:preview.emptyResponse")}
+            </div>
           </div>
         </div>
         {!props.enabled ? (
           <p className="text-sm text-muted-foreground">
-            Sign in and create a business to run the real preview flow.
+            {t("knowledge:preview.disabled")}
           </p>
         ) : null}
       </CardContent>

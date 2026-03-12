@@ -1,0 +1,40 @@
+{
+  "header": {
+    "title": "Connaissances",
+    "description": "Gérez les FAQ, les documents et les conversations d'aperçu."
+  },
+  "manager": {
+    "title": "Base de connaissances",
+    "description": "Ajoutez des FAQ et des documents que la réceptionniste peut utiliser dans l'aperçu, les SMS et l'actualisation de l'instantané vocal.",
+    "items": "{{count}} éléments",
+    "faqSnippet": "Extrait de FAQ",
+    "manualDocument": "Document manuel",
+    "placeholders": {
+      "faqTitle": "Prenez-vous des rendez-vous le jour même?",
+      "faqContent": "Oui, s'il reste de la capacité. La réceptionniste doit vérifier la disponibilité avant de confirmer.",
+      "documentTitle": "Politiques de la clinique",
+      "documentBody": "Les patients doivent arriver 10 minutes à l'avance. Apportez une pièce d'identité avec photo et vos renseignements d'assurance, s'il y a lieu."
+    },
+    "faqTagsPlaceholder": "faq,reservation",
+    "documentTagsPlaceholder": "politique,accueil",
+    "saveFaq": "Ajouter la FAQ",
+    "savingFaq": "Enregistrement...",
+    "saveDocument": "Ajouter le document",
+    "savingDocument": "Mise en file du document...",
+    "currentFaqs": "FAQ actuelles",
+    "currentDocuments": "Documents actuels",
+    "savedFaq": "Extrait de FAQ enregistré.",
+    "queuedDocument": "Document mis en file pour indexation.",
+    "noFaqs": "Aucune FAQ pour le moment.",
+    "noDocuments": "Aucun document pour le moment."
+  },
+  "preview": {
+    "title": "Aperçu de la réceptionniste",
+    "description": "Testez la même couche de contexte d'entreprise utilisée pour les SMS et les flux IA asynchrones avant de la mettre devant les appelants.",
+    "promptPlaceholder": "À quelle heure êtes-vous ouverts demain?",
+    "generate": "Lancer l'aperçu",
+    "generating": "Génération...",
+    "emptyResponse": "Les réponses d'aperçu apparaîtront ici après avoir lancé la réceptionniste.",
+    "disabled": "Connectez-vous et créez une entreprise pour lancer le vrai flux d'aperçu."
+  }
+}
