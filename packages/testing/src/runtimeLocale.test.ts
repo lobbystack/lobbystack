@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildLocalizedAppointmentNotificationBody,
   classifyRuntimeLocale,
   detectExplicitRuntimeLocaleRequest,
   resolveRuntimeLocale,
@@ -18,6 +19,8 @@ describe("runtime locale detection", () => {
   it("honors explicit language switch requests", () => {
     expect(detectExplicitRuntimeLocaleRequest("Pouvez-vous répondre en français?")).toBe("fr");
     expect(detectExplicitRuntimeLocaleRequest("Please answer in English.")).toBe("en");
+    expect(detectExplicitRuntimeLocaleRequest("Pouvez-vous répondre en anglais ?")).toBe("en");
+    expect(detectExplicitRuntimeLocaleRequest("Parlez anglais")).toBe("en");
   });
 
   it("treats short ambiguous messages as unknown", () => {
@@ -29,5 +32,26 @@ describe("runtime locale detection", () => {
   it("falls back to English when a stored runtime locale is missing", () => {
     expect(resolveRuntimeLocale(undefined)).toBe("en");
     expect(resolveRuntimeLocale(null)).toBe("en");
+  });
+
+  it("keeps timezone information in localized appointment notifications", () => {
+    expect(
+      buildLocalizedAppointmentNotificationBody({
+        kind: "booking_confirmation",
+        serviceName: "Initial Consultation",
+        startsAt: "2026-03-17T14:30:00.000Z",
+        timezone: "America/Toronto",
+        locale: "fr",
+      }),
+    ).toContain("(America/Toronto)");
+    expect(
+      buildLocalizedAppointmentNotificationBody({
+        kind: "appointment_reminder",
+        serviceName: "Initial Consultation",
+        startsAt: "2026-03-17T14:30:00.000Z",
+        timezone: "America/Toronto",
+        locale: "en",
+      }),
+    ).toContain("(America/Toronto)");
   });
 });

@@ -1051,6 +1051,34 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("treats ce mercredi as the same day instead of next week in French flows", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-french-same-weekday",
+        name: "SMS French Same Weekday",
+        smsNumber: "+14165550918",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550918" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-same-weekday-1",
+      From: "+14165550983",
+      To: smsNumber,
+      Body: "Avez-vous un rendez-vous ce mercredi?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("mercredi 11 mars");
+      expect(outboundBody).not.toContain("mercredi 18 mars");
+    });
+  });
+
   it("switches back to English when the customer explicitly requests it", async () => {
     const t = createConvexHarness();
 

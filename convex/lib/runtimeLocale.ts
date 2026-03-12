@@ -186,7 +186,7 @@ export function detectExplicitRuntimeLocaleRequest(text: string): RuntimeLocale 
   }
 
   if (
-    /\b(in english|english please|please answer in english|speak english|answer in english)\b/u.test(
+    /\b(en anglais|anglais svp|reponds en anglais|parle en anglais|parlez anglais|pouvez vous repondre en anglais|in english|english please|please answer in english|speak english|answer in english)\b/u.test(
       normalized,
     )
   ) {
@@ -270,6 +270,15 @@ export function formatRuntimeAppointmentDateTime(
   const dateText = formatRuntimeDateLabel(startsAt, timezone, locale);
   const timeText = formatRuntimeTimeFromIso(startsAt, timezone, locale);
   return locale === "fr" ? `${dateText} à ${timeText}` : `${dateText} at ${timeText}`;
+}
+
+export function formatRuntimeAppointmentDateTimeWithTimezone(
+  startsAt: string,
+  timezone: string,
+  locale: RuntimeLocale,
+): string {
+  const dateTime = formatRuntimeAppointmentDateTime(startsAt, timezone, locale);
+  return `${dateTime} (${timezone})`;
 }
 
 export function formatRuntimeTimeFromIso(
@@ -357,7 +366,7 @@ export function buildLocalizedAppointmentNotificationBody(input: {
   timezone: string;
   locale: RuntimeLocale;
 }): string {
-  const formattedTime = formatRuntimeAppointmentDateTime(
+  const formattedTime = formatRuntimeAppointmentDateTimeWithTimezone(
     input.startsAt,
     input.timezone,
     input.locale,

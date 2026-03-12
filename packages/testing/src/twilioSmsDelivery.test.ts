@@ -631,6 +631,11 @@ describe("Twilio SMS delivery flow", () => {
         body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
       }),
     );
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("(America/Toronto)"),
+      }),
+    );
   });
 
   it("falls back to the business default French locale for booking confirmations", async () => {
@@ -705,6 +710,11 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
+      }),
+    );
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.stringContaining("(America/Toronto)"),
       }),
     );
   });

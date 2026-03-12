@@ -442,7 +442,7 @@ function resolveRequestedDate(
     if (targetWeekday !== undefined) {
       const currentWeekday = localNow.weekday;
       let daysAhead = (targetWeekday - currentWeekday + 7) % 7;
-      if (modifier === "this") {
+      if (modifier === "this" || modifier === "ce" || modifier === "cette") {
         daysAhead = daysAhead === 0 ? 0 : daysAhead;
       } else if (daysAhead === 0) {
         daysAhead = 7;
