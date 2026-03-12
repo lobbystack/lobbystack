@@ -11,6 +11,7 @@ import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import i18n from "@/i18n";
 import { api } from "../../../../convex/_generated/api";
 import {
+  normalizeLocale,
   readStoredLocale,
   resolveLocale,
   resolveAuthenticatedLocale,
@@ -40,6 +41,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       browserLocale: i18n.resolvedLanguage ?? i18n.language,
     }),
   );
+  const [pendingLocale, setPendingLocale] = useState<SupportedLocale | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -55,7 +57,21 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
+      setPendingLocale(null);
       return;
+    }
+
+    const normalizedPreferredLocale = normalizeLocale(preferredLocale ?? undefined);
+    if (pendingLocale && normalizedPreferredLocale !== pendingLocale) {
+      writeStoredLocale(pendingLocale);
+      if (pendingLocale !== locale) {
+        void i18n.changeLanguage(pendingLocale);
+      }
+      return;
+    }
+
+    if (pendingLocale && normalizedPreferredLocale === pendingLocale) {
+      setPendingLocale(null);
     }
 
     const normalizedLocale = resolveAuthenticatedLocale({
@@ -67,7 +83,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       void i18n.changeLanguage(normalizedLocale);
     }
     writeStoredLocale(normalizedLocale);
-  }, [auth.isAuthenticated, locale, preferredLocale]);
+  }, [auth.isAuthenticated, locale, pendingLocale, preferredLocale]);
 
   const value = useMemo<LocaleContextValue>(
     () => ({
@@ -82,9 +98,13 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        setPendingLocale(nextLocale);
         setIsSaving(true);
         try {
           await updatePreferredLocale({ locale: nextLocale });
+        } catch (error) {
+          setPendingLocale(null);
+          throw error;
         } finally {
           setIsSaving(false);
         }

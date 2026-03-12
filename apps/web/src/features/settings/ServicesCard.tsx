@@ -42,13 +42,18 @@ export function ServicesCard(props: ServicesCardProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    const trimmedName = name.trim();
+    const trimmedSlug = slug.trim();
+    if (trimmedName.length === 0 || trimmedSlug.length === 0) {
+      return;
+    }
     setIsSaving(true);
     setStatus(null);
     try {
       await upsertService({
         businessId: props.businessId,
-        name,
-        slug,
+        name: trimmedName,
+        slug: trimmedSlug,
         description: description.trim() || undefined,
         durationMinutes: Number(durationMinutes),
         active: true,
@@ -116,7 +121,10 @@ export function ServicesCard(props: ServicesCardProps) {
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={isSaving} type="submit">
+            <Button
+              disabled={isSaving || name.trim().length === 0 || slug.trim().length === 0}
+              type="submit"
+            >
               {isSaving ? t("services.saving") : t("services.save")}
             </Button>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}

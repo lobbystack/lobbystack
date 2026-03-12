@@ -43,13 +43,18 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
 
   async function handleFaqSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    const trimmedFaqTitle = faqTitle.trim();
+    const trimmedFaqContent = faqContent.trim();
+    if (trimmedFaqTitle.length === 0 || trimmedFaqContent.length === 0) {
+      return;
+    }
     setIsSavingFaq(true);
     setStatus(null);
     try {
       await upsertKnowledgeSnippet({
         businessId: props.businessId,
-        title: faqTitle,
-        content: faqContent,
+        title: trimmedFaqTitle,
+        content: trimmedFaqContent,
         tags: parseTags(faqTags),
         priority: 75,
         active: true,
@@ -65,15 +70,20 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
 
   async function handleDocumentSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    const trimmedDocumentTitle = documentTitle.trim();
+    const trimmedDocumentBody = documentBody.trim();
+    if (trimmedDocumentTitle.length === 0 || trimmedDocumentBody.length === 0) {
+      return;
+    }
     setIsSavingDocument(true);
     setStatus(null);
     try {
       await createKnowledgeDocument({
         businessId: props.businessId,
         sourceType: "manual_text",
-        title: documentTitle,
+        title: trimmedDocumentTitle,
         mimeType: "text/plain",
-        textContent: documentBody,
+        textContent: trimmedDocumentBody,
         tags: parseTags(documentTags),
         importance: 50,
       });
@@ -122,7 +132,12 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
             onChange={(event) => setFaqTags(event.target.value)}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={isSavingFaq} type="submit">
+            <Button
+              disabled={
+                isSavingFaq || faqTitle.trim().length === 0 || faqContent.trim().length === 0
+              }
+              type="submit"
+            >
               {isSavingFaq ? t("manager.savingFaq") : t("manager.saveFaq")}
             </Button>
           </div>
@@ -149,7 +164,14 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
             onChange={(event) => setDocumentTags(event.target.value)}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <Button disabled={isSavingDocument} type="submit">
+            <Button
+              disabled={
+                isSavingDocument ||
+                documentTitle.trim().length === 0 ||
+                documentBody.trim().length === 0
+              }
+              type="submit"
+            >
               {isSavingDocument ? t("manager.savingDocument") : t("manager.saveDocument")}
             </Button>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
