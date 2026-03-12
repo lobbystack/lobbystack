@@ -163,6 +163,13 @@ export function normalizeRuntimeLocale(value: string | null | undefined): Runtim
   return null;
 }
 
+export function resolveRuntimeLocale(
+  value: string | null | undefined,
+  fallback: RuntimeLocale = "en",
+): RuntimeLocale {
+  return normalizeRuntimeLocale(value) ?? fallback;
+}
+
 export function getRuntimeLanguageName(locale: RuntimeLocale): string {
   return locale === "fr" ? "French" : "English";
 }

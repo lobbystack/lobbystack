@@ -10,7 +10,7 @@ import {
 import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
-import { runtimeLocaleValidator } from "../../lib/runtimeLocale";
+import { resolveRuntimeLocale, runtimeLocaleValidator } from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
 type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
@@ -198,7 +198,7 @@ export const refreshSnapshot = internalMutation({
       generatedAt: new Date().toISOString(),
       displayName: business.name,
       timezone: business.timezone,
-      defaultLocale: business.defaultLocale,
+      defaultLocale: resolveRuntimeLocale(business.defaultLocale),
       businessType: business.businessType as SnapshotBuilderInput["businessType"],
       greeting: profile.greeting,
       tone: profile.tone,

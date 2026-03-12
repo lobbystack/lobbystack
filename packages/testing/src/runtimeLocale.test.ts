@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyRuntimeLocale,
   detectExplicitRuntimeLocaleRequest,
+  resolveRuntimeLocale,
 } from "../../../convex/lib/runtimeLocale";
 
 describe("runtime locale detection", () => {
@@ -23,5 +24,10 @@ describe("runtime locale detection", () => {
     expect(classifyRuntimeLocale("bonjour")).toBe("unknown");
     expect(classifyRuntimeLocale("merci")).toBe("unknown");
     expect(classifyRuntimeLocale("ok")).toBe("unknown");
+  });
+
+  it("falls back to English when a stored runtime locale is missing", () => {
+    expect(resolveRuntimeLocale(undefined)).toBe("en");
+    expect(resolveRuntimeLocale(null)).toBe("en");
   });
 });

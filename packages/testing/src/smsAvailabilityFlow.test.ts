@@ -1014,6 +1014,43 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("parses French bare-day follow-ups like et le 17 without asking for the date again", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-french-bare-day-followup",
+        name: "SMS French Bare Day Followup",
+        smsNumber: "+14165550917",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550917" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-bare-day-followup-1",
+      From: "+14165550982",
+      To: smsNumber,
+      Body: "Avez-vous un rendez-vous lundi prochain?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-bare-day-followup-2",
+      From: "+14165550982",
+      To: smsNumber,
+      Body: "Et le 17?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Les prochaines disponibilités pour General Checkup le mardi 17 mars sont 09 h 00, 09 h 15 et 09 h 30. Quelle heure préférez-vous?",
+      );
+      expect(outboundBody).not.toContain("Quelle date préférez-vous");
+    });
+  });
+
   it("switches back to English when the customer explicitly requests it", async () => {
     const t = createConvexHarness();
 
@@ -1139,6 +1176,48 @@ describe("SMS scheduling flow", () => {
       businessId,
       conversationId,
       prompt: "Je dois annuler mon rendez-vous.",
+    });
+
+    expect(reply).toContain("Je peux vous aider par SMS");
+    expect(reply).toContain("je ne peux pas encore annuler ou déplacer un rendez-vous ici");
+    expect(reply).toContain("Initial Consultation");
+  });
+
+  it("treats accented French reschedule requests as unsupported appointment changes", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-reschedule-french-accented",
+        name: "SMS Reschedule French Accented",
+        smsNumber: "+14165550918",
+        defaultLocale: "fr",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550981",
+      });
+      await ctx.db.patch(conversationId, {
+        locale: "fr",
+        localeSource: "business_default",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T20:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Je dois déplacer mon rendez-vous.",
     });
 
     expect(reply).toContain("Je peux vous aider par SMS");

@@ -168,7 +168,13 @@ const PROMPT_EXTRACTION_MARKERS = [
 ];
 
 function normalizeComparable(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function looksLikePromptExtractionAttempt(prompt: string): boolean {
@@ -399,6 +405,7 @@ function resolveRequestedDate(
   referenceIsoDate?: string,
   locale?: RuntimeLocale,
 ): SmsDatePreference | null {
+  const comparableText = normalizeComparable(text);
   const localNow = DateTime.now().setZone(timezone);
   const referenceDay =
     referenceIsoDate === undefined
@@ -451,7 +458,8 @@ function resolveRequestedDate(
 
   const bareDayMatch =
     text.match(/\bon\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i) ??
-    text.match(/\bthe\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+    text.match(/\bthe\s+(\d{1,2})(?:st|nd|rd|th)?\b/i) ??
+    comparableText.match(/\b(?:et|pour)?\s*le\s+(\d{1,2})\b/);
   if (bareDayMatch?.[1]) {
     const day = Number(bareDayMatch[1]);
     if (day >= 1 && day <= 31) {
