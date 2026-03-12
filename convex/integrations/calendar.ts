@@ -14,7 +14,8 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
 
-const CALENDAR_SYNC_RETRY_DELAY_MS = 5 * 60 * 1000;
+export const CALENDAR_RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
+const CALENDAR_SYNC_RETRY_DELAY_MS = CALENDAR_RECONCILIATION_INTERVAL_MS;
 const CALENDAR_SYNC_PENDING_TIMEOUT_MS = 15 * 60 * 1000;
 const CALENDAR_SYNC_SYNCING_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -101,6 +102,10 @@ function isPastDue(targetIso: string | undefined, nowMs: number): boolean {
   }
 
   return Date.parse(targetIso) <= nowMs;
+}
+
+function shouldRetrySync(targetIso: string | undefined, nowMs: number): boolean {
+  return targetIso === undefined || isPastDue(targetIso, nowMs);
 }
 
 function isStale(
@@ -684,9 +689,10 @@ export const runBusinessCalendarReconciliation = internalAction({
             calendarSyncState: "drifted",
             calendarLastSyncError:
               "Connected calendar exists but the appointment was never queued for sync.",
+            calendarReconcileAfter: getRetryTime(nowIso),
           },
         );
-        await ctx.runMutation(
+        const result = await ctx.runMutation(
           internal.integrations.calendar.upsertCalendarSyncIssue,
           {
             appointmentId: appointment._id,
@@ -704,7 +710,9 @@ export const runBusinessCalendarReconciliation = internalAction({
           },
         );
         drifted += 1;
-        issuesOpened += 1;
+        if (result.created) {
+          issuesOpened += 1;
+        }
         continue;
       }
 
@@ -720,9 +728,10 @@ export const runBusinessCalendarReconciliation = internalAction({
             calendarSyncState: "drifted",
             calendarLastSyncError:
               "Appointment is marked synced but has no external calendar event ID.",
+            calendarReconcileAfter: getRetryTime(nowIso),
           },
         );
-        await ctx.runMutation(
+        const result = await ctx.runMutation(
           internal.integrations.calendar.upsertCalendarSyncIssue,
           {
             appointmentId: appointment._id,
@@ -738,7 +747,9 @@ export const runBusinessCalendarReconciliation = internalAction({
           },
         );
         drifted += 1;
-        issuesOpened += 1;
+        if (result.created) {
+          issuesOpened += 1;
+        }
         continue;
       }
 
@@ -814,14 +825,22 @@ export const runBusinessCalendarReconciliation = internalAction({
         if (result.created) {
           issuesOpened += 1;
         }
+        if (shouldRetrySync(appointment.calendarReconcileAfter, nowMs)) {
+          retried += 1;
+          const retryResult = await ctx.runAction(
+            internal.integrations.calendar.syncAppointmentToExternalCalendars,
+            {
+              appointmentId: appointment._id,
+            },
+          );
+          if (retryResult.ok) {
+            recovered += 1;
+          }
+        }
         continue;
       }
 
-      if (
-        state === "failed" &&
-        !appointment.calendarSyncIssueId &&
-        isPastDue(appointment.calendarReconcileAfter, nowMs)
-      ) {
+      if (state === "failed" && shouldRetrySync(appointment.calendarReconcileAfter, nowMs)) {
         retried += 1;
         const result = await ctx.runAction(
           internal.integrations.calendar.syncAppointmentToExternalCalendars,

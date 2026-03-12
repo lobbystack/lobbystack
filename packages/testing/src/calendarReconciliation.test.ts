@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../../convex/integrations/calendar";
 import schema from "../../../convex/schema";
 
 declare global {
@@ -11,8 +12,10 @@ declare global {
   }
 }
 
-const { workflowStartMock } = vi.hoisted(() => ({
+const { workflowStartMock, runtimeCronsGetMock, runtimeCronsRegisterMock } = vi.hoisted(() => ({
   workflowStartMock: vi.fn(),
+  runtimeCronsGetMock: vi.fn(),
+  runtimeCronsRegisterMock: vi.fn(),
 }));
 
 vi.mock("../../../convex/lib/components", async () => {
@@ -25,6 +28,10 @@ vi.mock("../../../convex/lib/components", async () => {
     workflowManager: {
       define: actual.workflowManager.define.bind(actual.workflowManager),
       start: workflowStartMock,
+    },
+    runtimeCrons: {
+      get: runtimeCronsGetMock,
+      register: runtimeCronsRegisterMock,
     },
   };
 });
@@ -138,6 +145,8 @@ async function bookAppointment(
 beforeEach(() => {
   vi.clearAllMocks();
   workflowStartMock.mockResolvedValue(null);
+  runtimeCronsGetMock.mockResolvedValue(null);
+  runtimeCronsRegisterMock.mockResolvedValue(null);
 });
 
 describe("calendar reconciliation backend", () => {
@@ -393,6 +402,7 @@ describe("calendar reconciliation backend", () => {
         sourceChannel: "dashboard",
         calendarSyncState: "drifted",
         calendarLastSyncError: "Drifted record",
+        calendarReconcileAfter: "2099-03-18T09:00:00.000Z",
       });
     });
 
@@ -420,7 +430,7 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
-  it("resolves the calendar sync issue once a failed appointment recovers", async () => {
+  it("automatically retries failed appointments after an issue exists and resolves the issue on recovery", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId } = await t.run(async (ctx) => {
       const seeded = await seedBookableBusiness(ctx, {
@@ -447,6 +457,18 @@ describe("calendar reconciliation backend", () => {
       },
     );
 
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("failed");
+      const issues = await ctx.db
+        .query("inbox_items")
+        .withIndex("by_kind_and_related_id", (q) =>
+          q.eq("kind", "calendar_sync_issue").eq("relatedId", String(appointmentId)),
+        )
+        .collect();
+      expect(issues.filter((issue) => issue.status === "open")).toHaveLength(1);
+    });
+
     const connectionId = await t.run(async (ctx) => {
       const connection = await ctx.db
         .query("calendar_connections")
@@ -460,19 +482,22 @@ describe("calendar reconciliation backend", () => {
       await ctx.db.patch(connection._id, {
         selectedCalendarId: "primary-calendar",
       });
+      await ctx.db.patch(appointmentId, {
+        calendarReconcileAfter: "2026-03-11T00:00:00.000Z",
+      });
       return connection._id;
     });
     expect(connectionId).toBeDefined();
 
     const result = await t.action(
-      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      internal.integrations.calendar.runBusinessCalendarReconciliation,
       {
-        appointmentId,
+        businessId,
       },
     );
     expect(result).toMatchObject({
-      ok: true,
-      status: "synced",
+      retried: 1,
+      recovered: 1,
     });
 
     await t.run(async (ctx) => {
@@ -486,6 +511,163 @@ describe("calendar reconciliation backend", () => {
         .collect();
       expect(issues.some((issue) => issue.status === "resolved")).toBe(true);
     });
+  });
+
+  it("keeps retrying failed appointments with open issues without duplicating the issue", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "retry-open-issue-business",
+        name: "Retry Open Issue Business",
+      });
+      await insertConnectedCalendar(ctx, {
+        businessId: seeded.businessId,
+      });
+      return seeded;
+    });
+
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+    await t.action(internal.integrations.calendar.syncAppointmentToExternalCalendars, {
+      appointmentId,
+    });
+    await t.action(internal.integrations.calendar.syncAppointmentToExternalCalendars, {
+      appointmentId,
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(appointmentId, {
+        calendarReconcileAfter: "2026-03-01T00:00:00.000Z",
+      });
+    });
+
+    const result = await t.action(
+      internal.integrations.calendar.runBusinessCalendarReconciliation,
+      {
+        businessId,
+      },
+    );
+
+    expect(result).toMatchObject({
+      retried: 1,
+      recovered: 0,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("failed");
+      expect(appointment?.calendarReconcileAfter).toBeTruthy();
+      expect(appointment?.calendarReconcileAfter).not.toBe("2026-03-01T00:00:00.000Z");
+
+      const issues = await ctx.db
+        .query("inbox_items")
+        .withIndex("by_kind_and_related_id", (q) =>
+          q.eq("kind", "calendar_sync_issue").eq("relatedId", String(appointmentId)),
+        )
+        .collect();
+      expect(issues.filter((issue) => issue.status === "open")).toHaveLength(1);
+    });
+  });
+
+  it("retries drifted appointments automatically once they are due and resolves the issue on recovery", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "drift-recovery-business",
+        name: "Drift Recovery Business",
+      });
+      await insertConnectedCalendar(ctx, {
+        businessId: seeded.businessId,
+        selectedCalendarId: "calendar-a",
+      });
+      return seeded;
+    });
+
+    const appointmentId = await t.run(async (ctx) => {
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550299",
+      });
+      return await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-18T11:00:00.000-04:00",
+        endsAt: "2026-03-18T11:30:00.000-04:00",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "dashboard",
+        calendarSyncState: "synced",
+      });
+    });
+
+    await t.action(
+      internal.integrations.calendar.runBusinessCalendarReconciliation,
+      {
+        businessId,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("drifted");
+      expect(appointment?.calendarReconcileAfter).toBeTruthy();
+      await ctx.db.patch(appointmentId, {
+        calendarReconcileAfter: "2026-03-01T00:00:00.000Z",
+      });
+    });
+
+    const result = await t.action(
+      internal.integrations.calendar.runBusinessCalendarReconciliation,
+      {
+        businessId,
+      },
+    );
+
+    expect(result).toMatchObject({
+      retried: 1,
+      recovered: 1,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("synced");
+      expect(appointment?.calendarExternalEventId).toContain(String(appointmentId));
+      const issues = await ctx.db
+        .query("inbox_items")
+        .withIndex("by_kind_and_related_id", (q) =>
+          q.eq("kind", "calendar_sync_issue").eq("relatedId", String(appointmentId)),
+        )
+        .collect();
+      expect(issues.some((issue) => issue.status === "resolved")).toBe(true);
+    });
+  });
+
+  it("registers the business reconciliation cron every five minutes", async () => {
+    const t = convexTest(schema, convexModules);
+    const businessId = await t.run(async (ctx) => {
+      return await insertBusiness(ctx, {
+        slug: "cron-registration-business",
+        name: "Cron Registration Business",
+      });
+    });
+
+    const cronName = await t.mutation(
+      internal.ai.workflows.runtime.registerCalendarReconciliationCron,
+      {
+        businessId,
+      },
+    );
+
+    expect(cronName).toBe(`calendar-reconcile-${String(businessId)}`);
+    expect(runtimeCronsGetMock).toHaveBeenCalled();
+    expect(runtimeCronsRegisterMock).toHaveBeenCalledWith(
+      expect.anything(),
+      { kind: "interval", ms: CALENDAR_RECONCILIATION_INTERVAL_MS },
+      internal.integrations.calendar.runBusinessCalendarReconciliation,
+      { businessId },
+      `calendar-reconcile-${String(businessId)}`,
+    );
   });
 
   it("scopes reconciliation queries to the requesting member's business", async () => {
