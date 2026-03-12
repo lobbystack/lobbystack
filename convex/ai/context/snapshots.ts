@@ -10,14 +10,18 @@ import {
 import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
-import { resolveRuntimeLocale, runtimeLocaleValidator } from "../../lib/runtimeLocale";
+import {
+  resolveRuntimeLocale,
+  runtimeLocaleValidator,
+  type RuntimeLocale,
+} from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
 type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {
   businessId: Id<"businesses">;
-  defaultLocale: Doc<"businesses">["defaultLocale"];
+  defaultLocale: RuntimeLocale;
   greeting: string;
   tone: string;
   summary: string;
