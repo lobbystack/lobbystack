@@ -1,9 +1,7 @@
 import { httpRouter } from "convex/server";
 import { z } from "zod";
 import {
-  escapeXmlText,
   normalizeTwilioFormFields,
-  validateTwilioSignature,
 } from "./lib/twilioSecurity";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -20,6 +18,17 @@ const twilioSmsInboundSchema = z.object({
   To: z.string().min(1),
   Body: z.string(),
   MessageSid: z.string().min(1).optional(),
+  SmsSid: z.string().min(1).optional(),
+  NumMedia: z.string().min(1).optional(),
+  OptOutType: z.string().min(1).optional(),
+});
+
+const twilioSmsStatusSchema = z.object({
+  MessageSid: z.string().min(1).optional(),
+  SmsSid: z.string().min(1).optional(),
+  MessageStatus: z.string().min(1),
+  ErrorCode: z.string().min(1).optional(),
+  RawDlrDoneDate: z.string().min(1).optional(),
 });
 
 const voiceContextSchema = z.object({
@@ -168,16 +177,52 @@ function parseSearchParams<TSchema extends z.ZodTypeAny>(
   return { ok: true, data: parsed.data };
 }
 
-async function requireTwilioSignature(
+function parseTwilioMedia(params: Record<string, string>): Array<{ url: string; contentType?: string }> {
+  const mediaCount = Number.parseInt(params.NumMedia ?? "0", 10);
+  if (!Number.isFinite(mediaCount) || mediaCount <= 0) {
+    return [];
+  }
+
+  const attachments: Array<{ url: string; contentType?: string }> = [];
+  for (let index = 0; index < mediaCount; index += 1) {
+    const url = params[`MediaUrl${index}`];
+    if (!url) {
+      continue;
+    }
+
+    const contentType = params[`MediaContentType${index}`];
+    attachments.push({
+      url,
+      ...(contentType ? { contentType } : {}),
+    });
+  }
+
+  return attachments;
+}
+
+async function requireTwilioSmsSignature(
+  ctx: {
+    runAction: (
+      action: typeof internal.integrations.twilioSms.validateWebhookSignature,
+      args: {
+        signatureHeader?: string;
+        url: string;
+        params: Record<string, string>;
+      },
+    ) => Promise<boolean>;
+  },
   request: Request,
   params: Record<string, string>,
 ): Promise<Response | null> {
-  const isValid = await validateTwilioSignature({
-    authToken: process.env.TWILIO_AUTH_TOKEN,
-    signatureHeader: request.headers.get("x-twilio-signature"),
-    url: request.url,
-    params,
-  });
+  const signatureHeader = request.headers.get("x-twilio-signature");
+  const isValid: boolean = await ctx.runAction(
+    internal.integrations.twilioSms.validateWebhookSignature,
+    {
+      ...(signatureHeader ? { signatureHeader } : {}),
+      url: request.url,
+      params,
+    },
+  );
 
   if (!isValid) {
     return new Response("Invalid Twilio signature", { status: 403 });
@@ -207,7 +252,7 @@ http.route({
       return parsedForm.response;
     }
     const payload = parsedForm.data;
-    const invalidSignature = await requireTwilioSignature(request, payload);
+    const invalidSignature = await requireTwilioSmsSignature(ctx, request, payload);
     if (invalidSignature) {
       return invalidSignature;
     }
@@ -216,24 +261,64 @@ http.route({
       return badRequest("Invalid Twilio SMS payload");
     }
 
-    const result = await ctx.runAction(internal.conversations.webhooks.handleTwilioSmsInbound, {
+    const media = parseTwilioMedia(payload);
+    await ctx.runAction(internal.conversations.webhooks.handleTwilioSmsInbound, {
       from: parsedPayload.data.From,
       to: parsedPayload.data.To,
       body: parsedPayload.data.Body,
       messageSid: parsedPayload.data.MessageSid,
+      smsSid: parsedPayload.data.SmsSid,
+      ...(media.length > 0 ? { media } : {}),
     });
 
-    const twiml = [
-      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-      "<Response>",
-      `<Message>${escapeXmlText(result.reply)}</Message>`,
-      "</Response>",
-    ].join("");
+    const twiml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>";
 
     return new Response(twiml, {
       status: 200,
       headers: { "Content-Type": "text/xml" },
     });
+  }),
+});
+
+http.route({
+  path: "/twilio/sms/status",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const parsedForm = await parseNormalizedForm(request);
+    if (!parsedForm.ok) {
+      return parsedForm.response;
+    }
+
+    const payload = parsedForm.data;
+    const invalidSignature = await requireTwilioSmsSignature(ctx, request, payload);
+    if (invalidSignature) {
+      return invalidSignature;
+    }
+
+    const parsedPayload = twilioSmsStatusSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+      return badRequest("Invalid Twilio SMS status payload");
+    }
+
+    const providerMessageSid =
+      parsedPayload.data.MessageSid ?? parsedPayload.data.SmsSid;
+    if (!providerMessageSid) {
+      return badRequest("Twilio SMS status payload is missing MessageSid");
+    }
+
+    await ctx.runMutation(internal.integrations.twilioMessageStatus.reconcileProviderStatus, {
+      providerMessageSid,
+      providerStatus: parsedPayload.data.MessageStatus,
+      providerUpdatedAt: new Date().toISOString(),
+      ...(parsedPayload.data.ErrorCode !== undefined
+        ? { providerErrorCode: parsedPayload.data.ErrorCode }
+        : {}),
+      ...(parsedPayload.data.RawDlrDoneDate !== undefined
+        ? { providerRawDlrDoneDate: parsedPayload.data.RawDlrDoneDate }
+        : {}),
+    });
+
+    return new Response("OK", { status: 200 });
   }),
 });
 

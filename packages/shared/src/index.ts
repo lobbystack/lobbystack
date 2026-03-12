@@ -136,3 +136,14 @@ export {
   validateTwilioSignature,
 } from "./twilioSecurity";
 export type { TwilioSignatureInput } from "./twilioSecurity";
+export {
+  mapTwilioStatusToMessageStatus,
+  mapTwilioStatusToNotificationStatus,
+  normalizeTwilioMessageStatus,
+  shouldApplyMessageStatusTransition,
+  shouldApplyNotificationStatusTransition,
+} from "./twilioMessageStatus";
+export type {
+  NotificationDeliveryStatus,
+  SmsMessageStatus,
+} from "./twilioMessageStatus";
