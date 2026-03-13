@@ -1,0 +1,18 @@
+{
+  "page": {
+    "title": "Contacts",
+    "description": "Manage the people behind your calls, messages, and bookings.",
+    "searchPlaceholder": "Search contacts..."
+  },
+  "table": {
+    "contact": "Contact",
+    "channels": "Channels",
+    "activity": "Activity",
+    "appointments": "Appointments",
+    "lastInteraction": "Last interaction",
+    "messages": "{{count}} messages",
+    "calls": "{{count}} calls",
+    "unknownContact": "Unknown contact",
+    "empty": "No contacts match the current search."
+  }
+}

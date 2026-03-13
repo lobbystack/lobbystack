@@ -796,10 +796,16 @@ export const listRecentCalls = query({
 
     return await Promise.all(
       calls.map(async (call) => {
-        const transcriptPreview = await ctx.db
-          .query("transcripts")
-          .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
-          .take(1);
+        const [conversation, transcriptPreview] = await Promise.all([
+          call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
+          ctx.db
+            .query("transcripts")
+            .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+            .take(1),
+        ]);
+        const contact = conversation?.contactId
+          ? await ctx.db.get(conversation.contactId)
+          : null;
 
         return {
           ...call,
@@ -807,6 +813,8 @@ export const listRecentCalls = query({
             ? await ctx.storage.getUrl(call.recordingStorageId)
             : null,
           transcriptReady: transcriptPreview.length > 0,
+          contactName: contact?.name ?? null,
+          contactPhone: contact?.phone ?? null,
         };
       }),
     );

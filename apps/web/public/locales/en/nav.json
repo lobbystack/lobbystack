@@ -1,9 +1,15 @@
 {
   "items": {
-    "dashboard": "Dashboard",
-    "inbox": "Inbox",
-    "knowledge": "Knowledge",
+    "home": "Home",
+    "calls": "Calls",
+    "messages": "Messages",
+    "automations": "Automations",
+    "agent": "Agent",
+    "contacts": "Contacts",
     "settings": "Settings"
+  },
+  "search": {
+    "placeholder": "Search workspace..."
   },
   "sidebar": {
     "businessSlugFallback": "Operator console",

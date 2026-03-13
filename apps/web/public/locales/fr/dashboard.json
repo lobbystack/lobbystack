@@ -3,6 +3,44 @@
     "dashboardTitle": "Tableau de bord",
     "dashboardDescription": "Suivez l'état de préparation pour les appels, les messages et la prise de rendez-vous."
   },
+  "delta": {
+    "flat": "Aucun changement depuis le mois dernier",
+    "up": "+{{value}} % depuis le mois dernier",
+    "down": "-{{value}} % depuis le mois dernier"
+  },
+  "home": {
+    "title": "Accueil",
+    "description": "Le shell shadcn-admin suit maintenant les indicateurs de votre réception.",
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "analytics": "Analytique"
+    },
+    "metrics": {
+      "loading": "Chargement de la comparaison mensuelle...",
+      "calls": {
+        "title": "Appels"
+      },
+      "messages": {
+        "title": "Messages"
+      },
+      "appointments": {
+        "title": "Rendez-vous"
+      },
+      "contacts": {
+        "title": "Contacts"
+      }
+    },
+    "chart": {
+      "title": "Appels par mois",
+      "description": "Volume mensuel d'appels à partir de vos enregistrements Convex."
+    },
+    "recentCalls": {
+      "title": "Appels récents",
+      "description": "{{count}} appels récents dans le flux d'activité.",
+      "unknownCaller": "Appelant inconnu",
+      "durationValue": "{{value}} sec"
+    }
+  },
   "setup": {
     "title": "Créer votre première entreprise",
     "description": "Cela initialise le locataire, le profil de la réceptionniste et le premier instantané utilisé par la voix.",

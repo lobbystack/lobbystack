@@ -1,9 +1,15 @@
 {
   "items": {
-    "dashboard": "Tableau de bord",
-    "inbox": "Boîte de réception",
-    "knowledge": "Connaissances",
+    "home": "Accueil",
+    "calls": "Appels",
+    "messages": "Messages",
+    "automations": "Automatisations",
+    "agent": "Agent",
+    "contacts": "Contacts",
     "settings": "Réglages"
+  },
+  "search": {
+    "placeholder": "Rechercher dans l'espace..."
   },
   "sidebar": {
     "businessSlugFallback": "Console opérateur",

@@ -7,6 +7,7 @@ import App from "./App";
 import "./i18n";
 import "./styles/index.css";
 import { LocaleProvider } from "@/components/locale-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
 const convex = new ConvexReactClient(convexUrl);
@@ -14,9 +15,11 @@ const convex = new ConvexReactClient(convexUrl);
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ConvexAuthProvider client={convex}>
-      <LocaleProvider>
-        <App />
-      </LocaleProvider>
+      <ThemeProvider>
+        <LocaleProvider>
+          <App />
+        </LocaleProvider>
+      </ThemeProvider>
     </ConvexAuthProvider>
   </React.StrictMode>,
 );

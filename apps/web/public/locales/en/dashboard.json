@@ -3,6 +3,44 @@
     "dashboardTitle": "Dashboard",
     "dashboardDescription": "Track operational readiness for calls, messages, and booking."
   },
+  "delta": {
+    "flat": "No change from last month",
+    "up": "+{{value}}% from last month",
+    "down": "-{{value}}% from last month"
+  },
+  "home": {
+    "title": "Home",
+    "description": "The shadcn-admin dashboard shell now tracks your live reception metrics.",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics"
+    },
+    "metrics": {
+      "loading": "Loading monthly comparison...",
+      "calls": {
+        "title": "Calls"
+      },
+      "messages": {
+        "title": "Messages"
+      },
+      "appointments": {
+        "title": "Appointments"
+      },
+      "contacts": {
+        "title": "Contacts"
+      }
+    },
+    "chart": {
+      "title": "Calls per month",
+      "description": "Monthly call volume using your Convex call records."
+    },
+    "recentCalls": {
+      "title": "Recent Calls",
+      "description": "{{count}} recent calls in the latest activity feed.",
+      "unknownCaller": "Unknown caller",
+      "durationValue": "{{value}} sec"
+    }
+  },
   "setup": {
     "title": "Create your first business",
     "description": "This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.",

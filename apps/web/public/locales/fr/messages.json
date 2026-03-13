@@ -1,0 +1,11 @@
+{
+  "page": {
+    "title": "Messages",
+    "searchPlaceholder": "Rechercher des conversations...",
+    "unknownCaller": "Contact inconnu",
+    "unknownShort": "IN",
+    "emptyPreview": "Pas encore de messages.",
+    "selectConversation": "Sélectionnez une conversation pour afficher le fil.",
+    "noChannel": "Aucun canal de contact enregistré."
+  }
+}

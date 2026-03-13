@@ -1,4 +1,30 @@
 {
+  "page": {
+    "title": "Appels",
+    "description": "Consultez le tableau des appels, puis ouvrez les transcriptions ou écoutez l'audio."
+  },
+  "filters": {
+    "searchPlaceholder": "Rechercher des appels...",
+    "status": "Statut",
+    "allStatuses": "Tous les statuts"
+  },
+  "table": {
+    "startedAt": "Début",
+    "caller": "Appelant",
+    "status": "Statut",
+    "disposition": "Résultat",
+    "transcript": "Transcription",
+    "audio": "Audio",
+    "unknownCaller": "Appelant inconnu",
+    "noDisposition": "Non défini",
+    "empty": "Aucun appel ne correspond aux filtres."
+  },
+  "actions": {
+    "viewTranscript": "Voir la transcription",
+    "pendingTranscript": "Ouvrir la transcription",
+    "listen": "Écouter",
+    "audioPending": "Enregistrement en attente"
+  },
   "panel": {
     "title": "Appels récents",
     "description": "Consultez les appels capturés, ouvrez les transcriptions et téléchargez l'audio enregistré.",
@@ -15,6 +41,8 @@
   },
   "transcript": {
     "title": "Transcription de l'appel",
+    "description": "Consultez les tours enregistrés de l'appel du {{date}}.",
+    "emptyDescription": "Sélectionnez un appel pour voir la conversation enregistrée.",
     "descriptionWithDate": "Consultez les tours enregistrés du client et de l'assistant du {{date}}.",
     "descriptionEmpty": "Sélectionnez un appel pour consulter la conversation enregistrée.",
     "noSegments": "Aucun segment de transcription n'est encore disponible pour cet appel."
