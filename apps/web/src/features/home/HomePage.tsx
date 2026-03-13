@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Analytics } from "@/features/home/components/analytics";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -228,7 +229,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                     {card.icon}
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-black leading-none tracking-tight [text-rendering:geometricPrecision]">
+                    <div className="text-2xl font-extrabold leading-none tracking-tight">
                       {card.value.toLocaleString(i18n.language)}
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -326,12 +327,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
           </div>
         </TabsContent>
         <TabsContent className="space-y-4" value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("home.analytics.title")}</CardTitle>
-              <CardDescription>{t("home.analytics.description")}</CardDescription>
-            </CardHeader>
-          </Card>
+          <Analytics businessId={businessId} />
         </TabsContent>
       </Tabs>
     </>

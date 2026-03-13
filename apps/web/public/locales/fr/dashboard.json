@@ -19,8 +19,42 @@
       "notifications": "Notifications"
     },
     "analytics": {
-      "title": "Analytique",
-      "description": "Un panneau analytique temporaire dans la mise en page de référence."
+      "chart": {
+        "title": "Vue d'ensemble de l'activite",
+        "description": "Appels et messages de la semaine dans votre espace reception."
+      },
+      "cards": {
+        "calls": "Appels cette semaine",
+        "messages": "Messages cette semaine",
+        "appointments": "Rendez-vous reserves",
+        "averageDuration": "Duree moyenne d'appel"
+      },
+      "metrics": {
+        "flat": "Aucun changement vs semaine derniere",
+        "percentUp": "+{{value}}% vs semaine derniere",
+        "percentDown": "-{{value}}% vs semaine derniere",
+        "durationUp": "+{{value}} vs semaine derniere",
+        "durationDown": "-{{value}} vs semaine derniere"
+      },
+      "outcomes": {
+        "title": "Resultats des appels",
+        "description": "Comment le volume d'appels de cette semaine s'est termine.",
+        "labels": {
+          "completed": "Termines",
+          "transferred": "Transferes",
+          "live": "En direct",
+          "missed": "Manques"
+        }
+      },
+      "channels": {
+        "title": "Canaux",
+        "description": "Comment les conversations ont atteint votre reception cette semaine.",
+        "labels": {
+          "voice": "Voix",
+          "sms": "SMS",
+          "other": "Autre"
+        }
+      }
     },
     "metrics": {
       "loading": "Chargement de la comparaison mensuelle...",
