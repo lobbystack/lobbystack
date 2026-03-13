@@ -21,6 +21,12 @@ describe("runtime locale detection", () => {
     expect(detectExplicitRuntimeLocaleRequest("Please answer in English.")).toBe("en");
     expect(detectExplicitRuntimeLocaleRequest("Pouvez-vous répondre en anglais ?")).toBe("en");
     expect(detectExplicitRuntimeLocaleRequest("Parlez anglais")).toBe("en");
+    expect(detectExplicitRuntimeLocaleRequest("Parlez-vous anglais ?")).toBe("en");
+  });
+
+  it("does not treat generic mentions of another language as a switch request", () => {
+    expect(detectExplicitRuntimeLocaleRequest("Avez-vous des services en anglais ?")).toBe(null);
+    expect(classifyRuntimeLocale("Avez-vous des services en anglais ?")).not.toBe("en");
   });
 
   it("treats short ambiguous messages as unknown", () => {

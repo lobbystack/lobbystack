@@ -114,6 +114,7 @@ function foldLanguageText(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’`-]+/g, " ")
     .toLowerCase();
 }
 
@@ -175,10 +176,13 @@ export function getRuntimeLanguageName(locale: RuntimeLocale): string {
 }
 
 export function detectExplicitRuntimeLocaleRequest(text: string): RuntimeLocale | null {
-  const normalized = foldLanguageText(text);
+  const normalized = foldLanguageText(text).replace(/\s+/g, " ").trim();
 
   if (
-    /\b(en francais|francais svp|reponds en francais|parle en francais|parlez francais|french please|in french|speak french)\b/u.test(
+    /\b(?:reponds?|repondez|peux tu repondre|pouvez vous repondre|parle|parlez(?: vous)?|speak|reply|answer)\s+(?:en\s+)?francais\b/u.test(
+      normalized,
+    ) ||
+    /\b(?:french please|please answer in french|reply in french|answer in french|speak french)\b/u.test(
       normalized,
     )
   ) {
@@ -186,7 +190,10 @@ export function detectExplicitRuntimeLocaleRequest(text: string): RuntimeLocale 
   }
 
   if (
-    /\b(en anglais|anglais svp|reponds en anglais|parle en anglais|parlez anglais|pouvez vous repondre en anglais|in english|english please|please answer in english|speak english|answer in english)\b/u.test(
+    /\b(?:reponds?|repondez|peux tu repondre|pouvez vous repondre|parle|parlez(?: vous)?|speak|reply|answer)\s+(?:en\s+)?anglais\b/u.test(
+      normalized,
+    ) ||
+    /\b(?:english please|please answer in english|reply in english|answer in english|speak english)\b/u.test(
       normalized,
     )
   ) {

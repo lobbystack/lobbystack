@@ -335,7 +335,7 @@ function looksLikeAppointmentChangeRequest(text: string): boolean {
 }
 
 function looksLikeSchedulingRequest(text: string): boolean {
-  return /\b(appointment|book|booking|schedule|availability|available|slot|room|rendez|disponibilite|disponibilité|reserver|réserver|rdv|horaire)\b/i.test(
+  return /\b(appointment|book|booking|schedule|availability|available|slot|room|rendez|disponibilite|disponibilité|reserver|réserver|rdv)\b/i.test(
     text,
   );
 }
@@ -390,6 +390,27 @@ function looksLikeSchedulingFollowUp(text: string): boolean {
     looksLikeDaypartFollowUp(text) ||
     looksLikeAlternativeTimesRequest(text) ||
     looksLikeBookingConfirmation(text)
+  );
+}
+
+function looksLikeBusinessHoursFollowUp(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  return (
+    /\b(today|tomorrow|day after tomorrow|next week|this week|demain|aujourd hui|apres demain)\b/i.test(
+      normalized,
+    ) ||
+    /\b(?:(next|this)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(
+      text,
+    ) ||
+    /\b(?:(prochain|ce|cette)\s+)?(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/i.test(
+      text,
+    ) ||
+    /\b(?:et le|pour le|le)\s+\d{1,2}\b/i.test(text) ||
+    /\bon\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
+    /\bthe\s+\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
+    /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
+    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
+    looksLikeRelativeDayReference(text)
   );
 }
 
@@ -745,6 +766,41 @@ async function getRelevantSchedulingText(
   }
 
   return `${previousInbound}\n${prompt}`;
+}
+
+async function getRelevantBusinessHoursText(
+  ctx: ActionCtx,
+  conversationId: Id<"conversations">,
+  prompt: string,
+): Promise<string | null> {
+  if (looksLikeBusinessHoursQuestion(prompt)) {
+    return prompt;
+  }
+
+  if (!looksLikeBusinessHoursFollowUp(prompt)) {
+    return null;
+  }
+
+  const recentMessages: Array<RecentConversationMessage> = await ctx.runQuery(
+    internal.ai.agents.runtime.getRecentConversationMessages,
+    {
+      conversationId,
+      limit: 6,
+    },
+  );
+  const inboundMessages = recentMessages.filter((message) => message.direction === "inbound");
+  const previousInbound =
+    inboundMessages.length >= 2
+      ? inboundMessages[inboundMessages.length - 2]?.body
+      : undefined;
+  if (!previousInbound || !looksLikeBusinessHoursQuestion(previousInbound)) {
+    return null;
+  }
+
+  const hoursIntentHint = didAskForClosingTime(previousInbound)
+    ? "closing"
+    : "hours";
+  return `${prompt}\n${hoursIntentHint}`;
 }
 
 function resolveRequestedService(
@@ -1250,6 +1306,11 @@ async function resolveBusinessHoursToolResult(
   prompt: string,
   locale: RuntimeLocale,
 ): Promise<SmsToolResult> {
+  const relevantPrompt = await getRelevantBusinessHoursText(ctx, conversationId, prompt);
+  if (!relevantPrompt) {
+    return unhandledSmsToolResult();
+  }
+
   const [bookingState, currentAppointment] = await Promise.all([
     ctx.runQuery(internal.ai.agents.runtime.getConversationBookingState, {
       conversationId,
@@ -1260,10 +1321,10 @@ async function resolveBusinessHoursToolResult(
   ]);
   const replyText = resolveBusinessHoursReply(
     snapshot,
-    prompt,
+    relevantPrompt,
     locale,
     resolveConversationReferenceDate({
-      prompt,
+      prompt: relevantPrompt,
       timezone: snapshot.timezone,
       bookingState,
       currentAppointment,
@@ -1421,17 +1482,20 @@ async function maybeGenerateDeterministicSmsReply(
       conversationId,
     }),
   ]);
-  const businessHoursReply = resolveBusinessHoursReply(
-    snapshot,
-    prompt,
-    locale,
-    resolveConversationReferenceDate({
-      prompt,
-      timezone: snapshot.timezone,
-      bookingState,
-      currentAppointment,
-    }),
-  );
+  const relevantHoursPrompt = await getRelevantBusinessHoursText(ctx, conversationId, prompt);
+  const businessHoursReply = relevantHoursPrompt
+    ? resolveBusinessHoursReply(
+        snapshot,
+        relevantHoursPrompt,
+        locale,
+        resolveConversationReferenceDate({
+          prompt: relevantHoursPrompt,
+          timezone: snapshot.timezone,
+          bookingState,
+          currentAppointment,
+        }),
+      )
+    : null;
   if (businessHoursReply) {
     return businessHoursReply;
   }

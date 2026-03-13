@@ -1322,6 +1322,43 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("keeps French hours follow-ups in the hours flow instead of reopening booking", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-french-hours-follow-up",
+        name: "SMS French Hours Follow Up",
+        smsNumber: "+14165550905",
+        defaultLocale: "fr",
+      });
+      return { businessId, smsNumber: "+14165550905" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-hours-follow-up-1",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "Quels sont vos horaires le lundi ?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-french-hours-follow-up-2",
+      From: "+14165550994",
+      To: smsNumber,
+      Body: "Et le 17 ?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("ouvert");
+      expect(outboundBody).toContain("mardi");
+      expect(outboundBody).not.toContain("Quelle date préférez-vous");
+      expect(outboundBody).not.toContain("disponibilités");
+    });
+  });
+
   it("acknowledges the confirmed appointment instead of reopening booking", async () => {
     const t = createConvexHarness();
 
