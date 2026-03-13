@@ -10,10 +10,17 @@
   },
   "home": {
     "title": "Accueil",
-    "description": "Le shell shadcn-admin suit maintenant les indicateurs de votre réception.",
+    "download": "Télécharger",
+    "liveCalls": "En direct",
     "tabs": {
       "overview": "Vue d'ensemble",
-      "analytics": "Analytique"
+      "analytics": "Analytique",
+      "reports": "Rapports",
+      "notifications": "Notifications"
+    },
+    "analytics": {
+      "title": "Analytique",
+      "description": "Un panneau analytique temporaire dans la mise en page de référence."
     },
     "metrics": {
       "loading": "Chargement de la comparaison mensuelle...",

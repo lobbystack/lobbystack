@@ -1,32 +1,64 @@
-import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { ProfileDropdown } from "@/components/profile-dropdown";
+import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = {
   onSignOut: () => void;
+  links?: Array<{
+    title: string;
+    href: string;
+    disabled?: boolean;
+  }>;
 };
 
-export function SiteHeader({ onSignOut }: SiteHeaderProps) {
+export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
   const { t } = useTranslation("nav");
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setOffset(document.body.scrollTop || document.documentElement.scrollTop);
+    };
+
+    document.addEventListener("scroll", onScroll, { passive: true });
+    return () => document.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-30 h-16 border-b border-border/70 bg-background/90 backdrop-blur">
-      <div className="flex h-full items-center gap-3 px-4 sm:gap-4 md:px-6">
+    <header
+      className={cn(
+        "z-50 h-16 header-fixed peer/header sticky top-0 w-[inherit]",
+        offset > 10 ? "shadow" : "shadow-none",
+      )}
+    >
+      <div
+        className={cn(
+          "relative flex h-full items-center gap-3 p-4 sm:gap-4",
+          offset > 10 &&
+            "after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg",
+        )}
+      >
         <SidebarTrigger className="max-md:scale-125" variant="outline" />
         <Separator className="h-6" orientation="vertical" />
-        <div className="relative hidden w-full max-w-sm items-center md:flex">
-          <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder={t("search.placeholder")} />
-        </div>
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <Search className="max-w-md" placeholder={t("search.placeholder")} />
+        <div className="ms-auto flex items-center space-x-4">
           <ThemeSwitch />
-          <LanguageSwitcher />
+          <Button
+            aria-label="Open theme settings"
+            className="rounded-full"
+            size="icon"
+            variant="ghost"
+          >
+            <Settings2 className="size-4" />
+          </Button>
           <ProfileDropdown onSignOut={onSignOut} />
         </div>
       </div>

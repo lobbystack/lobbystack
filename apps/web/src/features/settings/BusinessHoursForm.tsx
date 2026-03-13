@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconClockHour4 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { Clock4 } from "lucide-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -120,7 +120,7 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <IconClockHour4 className="size-5" />
+            <Clock4 className="size-5" />
           </div>
           <div className="space-y-1">
             <CardTitle>{t("hours.title")}</CardTitle>

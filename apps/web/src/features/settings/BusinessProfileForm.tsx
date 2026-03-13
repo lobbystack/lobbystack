@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconPhone, IconRobotFace } from "@tabler/icons-react";
 import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
+import { Bot, Phone } from "lucide-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -78,7 +78,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <IconRobotFace className="size-5" />
+            <Bot className="size-5" />
           </div>
           <div className="space-y-1">
             <CardTitle>{t("profile.title")}</CardTitle>
@@ -151,7 +151,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.transferNumber")}</span>
               <div className="relative">
-                <IconPhone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Phone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="pl-9"
                   placeholder={t("profile.placeholders.transferNumber")}

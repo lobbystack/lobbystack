@@ -1,13 +1,15 @@
-import { LogOut, Settings2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -16,22 +18,43 @@ type ProfileDropdownProps = {
 };
 
 export function ProfileDropdown({ onSignOut }: ProfileDropdownProps) {
-  const { t } = useTranslation(["common", "nav"]);
+  const { t } = useTranslation(["common", "nav", "settings"]);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
-        {t("common:appName")}
+      <DropdownMenuTrigger
+        render={<Button className="relative h-8 w-8 rounded-full" size="icon-sm" variant="ghost" />}
+      >
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>AI</AvatarFallback>
+        </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-48">
-        <DropdownMenuItem render={<Link to="/settings" />}>
-          <Settings2 data-icon="inline-start" />
-          {t("nav:items.settings")}
-        </DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="px-3 py-2.5 font-normal">
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm leading-none font-medium">AI Receptionist</p>
+            <p className="text-xs leading-none text-muted-foreground">operator@local</p>
+          </div>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem render={<Link to="/settings" />}>
+            {t("settings:sections.business")}
+            <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link to="/settings/integrations" />}>
+            {t("settings:sections.integrations")}
+            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link to="/settings" />}>
+            {t("nav:items.settings")}
+            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onSignOut} variant="destructive">
-          <LogOut data-icon="inline-start" />
           {t("nav:sidebar.signOut")}
+          <DropdownMenuShortcut className="text-current">⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

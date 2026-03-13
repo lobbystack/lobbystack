@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
-import { IconSparkles } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { Sparkles } from "lucide-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -47,7 +47,7 @@ export function PreviewPanel(props: PreviewPanelProps) {
             <CardTitle>{t("knowledge:preview.title")}</CardTitle>
             <CardDescription>{t("knowledge:preview.description")}</CardDescription>
           </div>
-          <IconSparkles className="size-5 text-muted-foreground" />
+          <Sparkles className="size-5 text-muted-foreground" />
         </div>
       </CardHeader>
       <CardContent className="space-y-5">

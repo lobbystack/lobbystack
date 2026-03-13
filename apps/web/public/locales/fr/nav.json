@@ -13,6 +13,10 @@
   },
   "sidebar": {
     "businessSlugFallback": "Console opérateur",
+    "general": "Général",
+    "other": "Autre",
+    "workspace": "Espace",
+    "openSettings": "Ouvrir les réglages",
     "signedIn": "Connecté",
     "workspaceReady": "Espace prêt",
     "signOut": "Se déconnecter"

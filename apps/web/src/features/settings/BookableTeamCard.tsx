@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconUsersGroup } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { Users } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -182,7 +182,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <IconUsersGroup className="size-5" />
+            <Users className="size-5" />
           </div>
           <div className="space-y-1">
             <CardTitle>{t("settings:team.title")}</CardTitle>

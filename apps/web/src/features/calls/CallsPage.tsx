@@ -87,10 +87,10 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="flex flex-1 flex-col gap-4 sm:gap-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t("page.title")}</h1>
+            <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
             <p className="text-muted-foreground">{t("page.description")}</p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -144,7 +144,9 @@ export function CallsPage({ businessId }: CallsPageProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span>{call.contactName ?? t("table.unknownCaller")}</span>
+                      <span className="font-semibold">
+                        {call.contactName ?? t("table.unknownCaller")}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         {call.contactPhone ?? call.twilioCallSid}
                       </span>

@@ -10,10 +10,17 @@
   },
   "home": {
     "title": "Home",
-    "description": "The shadcn-admin dashboard shell now tracks your live reception metrics.",
+    "download": "Download",
+    "liveCalls": "Live",
     "tabs": {
       "overview": "Overview",
-      "analytics": "Analytics"
+      "analytics": "Analytics",
+      "reports": "Reports",
+      "notifications": "Notifications"
+    },
+    "analytics": {
+      "title": "Analytics",
+      "description": "A placeholder analytics panel in the reference dashboard layout."
     },
     "metrics": {
       "loading": "Loading monthly comparison...",

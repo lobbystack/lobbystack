@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { FormEvent, useState } from "react";
 import {
   BrowserRouter,
@@ -14,13 +14,12 @@ import { demoSnapshot } from "@ai-receptionist/shared";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { AppSidebar } from "@/components/app-sidebar";
 import { LoadingScreen } from "@/components/loading-screen";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
+import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Main } from "@/components/layout/main";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { AgentPage } from "@/features/agent/AgentPage";
@@ -224,21 +223,20 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
+  const headerLinks = [
+    { title: "Overview", href: "/" },
+    { title: "Calls", href: "/calls" },
+    { title: "Messages", href: "/messages" },
+    { title: "Settings", href: "/settings" },
+  ];
+
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "16rem",
-        } as CSSProperties
-      }
+    <AuthenticatedLayout
+      businessName={activeBusiness?.name ?? "AI Receptionist"}
+      businessSlug={activeBusiness?.slug}
+      onSignOut={() => void signOut()}
     >
-      <AppSidebar
-        businessName={activeBusiness?.name ?? "AI Receptionist"}
-        businessSlug={activeBusiness?.slug}
-        onSignOut={() => void signOut()}
-      />
-      <SidebarInset className="@container/content">
-        <SiteHeader onSignOut={() => void signOut()} />
+        <SiteHeader links={headerLinks} onSignOut={() => void signOut()} />
         <Main className="flex flex-1 flex-col" fixed>
           <Routes>
             <Route element={<HomePage businessId={businessId} snapshot={resolvedSnapshot} />} path="/" />
@@ -266,8 +264,7 @@ function WorkspaceShell() {
             <Route element={<Navigate replace to="/" />} path="*" />
           </Routes>
         </Main>
-      </SidebarInset>
-    </SidebarProvider>
+    </AuthenticatedLayout>
   );
 }
 

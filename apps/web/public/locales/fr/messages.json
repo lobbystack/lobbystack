@@ -6,6 +6,8 @@
     "unknownShort": "IN",
     "emptyPreview": "Pas encore de messages.",
     "selectConversation": "Sélectionnez une conversation pour afficher le fil.",
-    "noChannel": "Aucun canal de contact enregistré."
+    "noChannel": "Aucun canal de contact enregistré.",
+    "composerPlaceholder": "Tapez votre message...",
+    "send": "Envoyer"
   }
 }

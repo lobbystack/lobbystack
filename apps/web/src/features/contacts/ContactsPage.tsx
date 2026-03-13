@@ -54,10 +54,10 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
+    <div className="flex flex-1 flex-col gap-4 sm:gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("page.title")}</h1>
+          <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
           <p className="text-muted-foreground">{t("page.description")}</p>
         </div>
       </div>
@@ -72,7 +72,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -88,7 +88,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
               <TableRow key={String(contact.id)}>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <span className="font-medium">{contact.name ?? t("table.unknownContact")}</span>
+                    <span className="font-semibold">{contact.name ?? t("table.unknownContact")}</span>
                     <span className="text-xs text-muted-foreground">{contact.phone}</span>
                   </div>
                 </TableCell>

@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { MessagesSquare, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  ImagePlus,
+  MessagesSquare,
+  MoreVertical,
+  Paperclip,
+  Phone,
+  Plus,
+  Search as SearchIcon,
+  Send,
+  Video,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -8,6 +20,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime } from "@/lib/locale";
@@ -62,6 +75,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     businessId ? { businessId } : "skip",
   ) as Array<ConversationSummary> | undefined;
   const [selectedConversationId, setSelectedConversationId] = useState<Id<"conversations"> | undefined>();
+  const [mobileSelectedConversationId, setMobileSelectedConversationId] = useState<
+    Id<"conversations"> | undefined
+  >();
   const [searchValue, setSearchValue] = useState("");
 
   const thread = useQuery(
@@ -90,6 +106,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   useEffect(() => {
     if (!selectedConversationId && filteredConversations[0]?.id) {
       setSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
+      setMobileSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
     }
   }, [filteredConversations, selectedConversationId]);
 
@@ -99,116 +116,229 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
   return (
     <section className="flex h-[calc(100svh-9rem)] gap-6">
-      <div className="flex w-full flex-col gap-2 sm:w-72 xl:w-80">
-        <div className="sticky top-0 z-10 bg-background pb-3">
+      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <MessagesSquare className="size-5" />
             </div>
+            <Button className="rounded-lg" size="icon" variant="ghost">
+              <Edit className="stroke-muted-foreground" size={24} />
+            </Button>
           </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
+          <label
+            className={cn(
+              "focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden",
+              "flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-2",
+            )}
+          >
+            <SearchIcon className="me-2 stroke-slate-500" size={15} />
+            <span className="sr-only">{t("page.searchPlaceholder")}</span>
+            <input
+              className="w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden"
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t("page.searchPlaceholder")}
+              type="text"
               value={searchValue}
             />
-          </div>
+          </label>
         </div>
 
-        <div className="no-scrollbar flex-1 overflow-y-auto pr-1">
+        <div className="-mx-3 no-scrollbar flex-1 overflow-y-auto p-3">
           {filteredConversations.map((conversation: ConversationSummary) => {
             const isActive = conversation.id === selectedConversationId;
+            const lastPreview =
+              conversation.lastMessageBody ?? t("page.emptyPreview");
+
             return (
-              <button
-                className={cn(
-                  "flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-accent",
-                  isActive && "bg-muted",
-                )}
-                key={String(conversation.id)}
-                onClick={() => setSelectedConversationId(conversation.id as Id<"conversations">)}
-                type="button"
-              >
-                <Avatar>
-                  <AvatarFallback>
-                    {initials(
-                      conversation.contactName,
-                      conversation.contactPhone ?? t("page.unknownShort"),
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-medium">
-                      {conversation.contactName ?? conversation.contactPhone ?? t("page.unknownCaller")}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(conversation.lastMessageAt, i18n.language, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
+              <Fragment key={String(conversation.id)}>
+                <button
+                  className={cn(
+                    "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
+                    isActive && "sm:bg-muted",
+                  )}
+                  onClick={() => {
+                    setSelectedConversationId(conversation.id as Id<"conversations">);
+                    setMobileSelectedConversationId(conversation.id as Id<"conversations">);
+                  }}
+                  type="button"
+                >
+                  <div className="flex gap-2">
+                    <Avatar>
+                      <AvatarFallback>
+                        {initials(
+                          conversation.contactName,
+                          conversation.contactPhone ?? t("page.unknownShort"),
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <span className="col-start-2 row-span-2 font-semibold">
+                        {conversation.contactName ??
+                          conversation.contactPhone ??
+                          t("page.unknownCaller")}
+                      </span>
+                      <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
+                        {lastPreview}
+                      </span>
+                    </div>
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {conversation.lastMessageBody ?? t("page.emptyPreview")}
-                  </p>
-                </div>
-              </button>
+                </button>
+                <Separator className="my-1" />
+              </Fragment>
             );
           })}
         </div>
       </div>
 
-      <div className="hidden min-w-0 flex-1 flex-col rounded-xl border bg-card shadow-sm sm:flex">
+      <div
+        className={cn(
+          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          mobileSelectedConversationId && "start-0 flex",
+        )}
+      >
         {thread ? (
           <>
-            <div className="flex items-center justify-between border-b bg-card px-4 py-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="size-10">
-                  <AvatarFallback>
-                    {initials(thread.contact?.name ?? null, thread.contact?.phone ?? t("page.unknownShort"))}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">
-                    {thread.contact?.name ?? thread.contact?.phone ?? t("page.unknownCaller")}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {thread.contact?.phone ?? thread.contact?.email ?? t("page.noChannel")}
+            <div className="mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
+              <div className="flex gap-3">
+                <Button
+                  className="-ms-2 h-full sm:hidden"
+                  onClick={() => setMobileSelectedConversationId(undefined)}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <ArrowLeft className="rtl:rotate-180" />
+                </Button>
+                <div className="flex items-center gap-2 lg:gap-4">
+                  <Avatar className="size-9 lg:size-11">
+                    <AvatarFallback>
+                      {initials(
+                        thread.contact?.name ?? null,
+                        thread.contact?.phone ?? t("page.unknownShort"),
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <span className="col-start-2 row-span-2 text-sm font-semibold lg:text-base">
+                      {thread.contact?.name ??
+                        thread.contact?.phone ??
+                        t("page.unknownCaller")}
+                    </span>
+                    <span className="col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
+                      {thread.contact?.phone ??
+                        thread.contact?.email ??
+                        t("page.noChannel")}
+                    </span>
                   </div>
                 </div>
               </div>
-              <Badge variant="outline">{thread.conversation.channel}</Badge>
-            </div>
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-              {thread.messages.map((message: ConversationThread["messages"][number]) => (
-                <div
-                  className={cn(
-                    "max-w-xl rounded-2xl px-4 py-3 text-sm shadow-sm",
-                    message.direction === "outbound"
-                      ? "self-end rounded-br-sm bg-primary text-primary-foreground"
-                      : "self-start rounded-bl-sm bg-muted",
-                  )}
-                  key={String(message.id)}
+              <div className="-me-1 flex items-center gap-1 lg:gap-2">
+                <Button
+                  className="hidden size-8 rounded-full sm:inline-flex lg:size-10"
+                  size="icon"
+                  variant="ghost"
                 >
-                  <p>{message.body}</p>
-                  <p
-                    className={cn(
-                      "mt-2 text-xs",
-                      message.direction === "outbound"
-                        ? "text-primary-foreground/75"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {formatDateTime(message.createdAt, i18n.language, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
+                  <Video className="stroke-muted-foreground" size={22} />
+                </Button>
+                <Button
+                  className="hidden size-8 rounded-full sm:inline-flex lg:size-10"
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Phone className="stroke-muted-foreground" size={22} />
+                </Button>
+                <Button
+                  className="h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6"
+                  size="icon"
+                  variant="ghost"
+                >
+                  <MoreVertical className="stroke-muted-foreground sm:size-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+              <div className="flex size-full flex-1">
+                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
+                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+                    {[...thread.messages].reverse().map((message) => (
+                      <div
+                        className={cn(
+                          "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
+                          message.direction === "outbound"
+                            ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground/75"
+                            : "self-start rounded-[16px_16px_16px_0] bg-muted",
+                        )}
+                        key={String(message.id)}
+                      >
+                        {message.body}{" "}
+                        <span
+                          className={cn(
+                            "mt-1 block text-xs font-light text-foreground/75 italic",
+                            message.direction === "outbound" &&
+                              "text-end text-primary-foreground/85",
+                          )}
+                        >
+                          {formatDateTime(message.createdAt, i18n.language, {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              </div>
+              <form className="flex w-full flex-none gap-2">
+                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4">
+                  <div className="space-x-1">
+                    <Button
+                      className="h-8 rounded-md"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Plus className="stroke-muted-foreground" size={20} />
+                    </Button>
+                    <Button
+                      className="hidden h-8 rounded-md lg:inline-flex"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ImagePlus className="stroke-muted-foreground" size={20} />
+                    </Button>
+                    <Button
+                      className="hidden h-8 rounded-md lg:inline-flex"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Paperclip className="stroke-muted-foreground" size={20} />
+                    </Button>
+                  </div>
+                  <label className="flex-1">
+                    <span className="sr-only">{t("page.composerPlaceholder")}</span>
+                    <input
+                      className="h-8 w-full bg-inherit focus-visible:outline-hidden"
+                      disabled
+                      placeholder={t("page.composerPlaceholder")}
+                      type="text"
+                    />
+                  </label>
+                  <Button
+                    className="hidden sm:inline-flex"
+                    disabled
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <Send size={20} />
+                  </Button>
+                </div>
+                <Button className="h-full sm:hidden" disabled>
+                  <Send size={18} /> {t("page.send")}
+                </Button>
+              </form>
             </div>
           </>
         ) : (

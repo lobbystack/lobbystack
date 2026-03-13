@@ -180,6 +180,10 @@ export const getHomeSummary = query({
         }),
     );
 
+    const liveCalls = calls.filter(
+      (call) => call.status === "in_progress" || call.status === "open",
+    ).length;
+
     return {
       generatedAt: new Date().toISOString(),
       kpis: {
@@ -208,6 +212,7 @@ export const getHomeSummary = query({
           deltaPercent: calculateDeltaPercent(contactsThisMonth),
         },
       },
+      liveCalls,
       monthlyCalls,
       recentCalls,
     };
