@@ -29,6 +29,7 @@ import type * as lib_components from "../lib/components.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
+import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
 import type * as lib_smsPhoneNumbers from "../lib/smsPhoneNumbers.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
 import type * as lib_twilioMessageStatus from "../lib/twilioMessageStatus.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;
+  "lib/runtimeLocale": typeof lib_runtimeLocale;
   "lib/smsPhoneNumbers": typeof lib_smsPhoneNumbers;
   "lib/snapshot": typeof lib_snapshot;
   "lib/twilioMessageStatus": typeof lib_twilioMessageStatus;

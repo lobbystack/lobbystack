@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { demoBusinessId } from "@ai-receptionist/testing";
+import { demoBusinessId } from "@ai-receptionist/shared";
 
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {

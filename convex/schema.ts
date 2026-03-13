@@ -1,6 +1,10 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+  runtimeLocaleSourceValidator,
+  runtimeLocaleValidator,
+} from "./lib/runtimeLocale";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
@@ -50,7 +54,7 @@ export default defineSchema({
     displayName: v.optional(v.string()),
     activeBusinessId: v.optional(v.id("businesses")),
     platformRole: v.optional(v.string()),
-    preferredLocale: v.optional(v.union(v.literal("en"), v.literal("fr"))),
+    preferredLocale: v.optional(runtimeLocaleValidator),
   })
     .index("by_auth_subject", ["authSubject"])
     .index("email", ["email"])
@@ -60,6 +64,7 @@ export default defineSchema({
     slug: v.string(),
     name: v.string(),
     timezone: v.string(),
+    defaultLocale: v.optional(runtimeLocaleValidator),
     businessType: v.string(),
     deploymentMode: v.string(),
     status: v.string(),
@@ -181,6 +186,7 @@ export default defineSchema({
     displayName: v.string(),
     legalName: v.optional(v.string()),
     timezone: v.string(),
+    defaultLocale: v.optional(runtimeLocaleValidator),
     businessType: v.string(),
     greeting: v.string(),
     voiceInstructions: v.string(),
@@ -209,6 +215,7 @@ export default defineSchema({
     phone: v.string(),
     email: v.optional(v.string()),
     timezone: v.optional(v.string()),
+    preferredLocale: v.optional(runtimeLocaleValidator),
   })
     .index("by_business_id_and_phone", ["businessId", "phone"])
     .index("by_business_id_and_email", ["businessId", "email"]),
@@ -220,6 +227,8 @@ export default defineSchema({
     status: v.string(),
     summary: v.optional(v.string()),
     currentIntent: v.optional(v.string()),
+    locale: v.optional(runtimeLocaleValidator),
+    localeSource: v.optional(runtimeLocaleSourceValidator),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_channel", ["businessId", "channel"])

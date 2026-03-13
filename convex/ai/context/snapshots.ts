@@ -10,12 +10,18 @@ import {
 import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
+import {
+  resolveRuntimeLocale,
+  runtimeLocaleValidator,
+  type RuntimeLocale,
+} from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
 type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {
   businessId: Id<"businesses">;
+  defaultLocale: RuntimeLocale;
   greeting: string;
   tone: string;
   summary: string;
@@ -74,6 +80,7 @@ export const getForDashboard = query({
 export const updateReceptionistProfile = mutation({
   args: {
     businessId: v.id("businesses"),
+    defaultLocale: runtimeLocaleValidator,
     greeting: v.string(),
     tone: v.string(),
     summary: v.string(),
@@ -85,6 +92,7 @@ export const updateReceptionistProfile = mutation({
   },
   handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
     await requireMembership(ctx, args.businessId);
+    await ctx.db.patch(args.businessId, { defaultLocale: args.defaultLocale });
     const existing = await ctx.db
       .query("receptionist_profiles")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
@@ -194,6 +202,7 @@ export const refreshSnapshot = internalMutation({
       generatedAt: new Date().toISOString(),
       displayName: business.name,
       timezone: business.timezone,
+      defaultLocale: resolveRuntimeLocale(business.defaultLocale),
       businessType: business.businessType as SnapshotBuilderInput["businessType"],
       greeting: profile.greeting,
       tone: profile.tone,

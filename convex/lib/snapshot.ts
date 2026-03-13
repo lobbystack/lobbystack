@@ -1,3 +1,5 @@
+import type { RuntimeLocale } from "./runtimeLocale";
+
 type BusinessType =
   | "clinic"
   | "repair_shop"
@@ -44,6 +46,7 @@ type SnapshotBuilderInput = {
   displayName: string;
   legalName?: string;
   timezone: string;
+  defaultLocale: RuntimeLocale;
   businessType: BusinessType;
   greeting: string;
   tone: string;
@@ -80,6 +83,7 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
     displayName: input.displayName,
     ...(input.legalName ? { legalName: input.legalName } : {}),
     timezone: input.timezone,
+    defaultLocale: input.defaultLocale,
     businessType: input.businessType,
     greeting: input.greeting,
     voiceInstructions:

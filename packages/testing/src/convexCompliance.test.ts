@@ -27,6 +27,7 @@ describe("Convex indexed query helpers", () => {
         name: "SMS Business",
         timezone: "America/Toronto",
         businessType: "service_company",
+        defaultLocale: "en",
         deploymentMode: "manual",
         status: "active",
       });
@@ -72,6 +73,7 @@ describe("Convex indexed query helpers", () => {
         name: "Voice Business",
         timezone: "America/Toronto",
         businessType: "service_company",
+        defaultLocale: "en",
         deploymentMode: "manual",
         status: "active",
       });
@@ -111,6 +113,7 @@ describe("Convex indexed query helpers", () => {
         name: "Assignment Business",
         timezone: "America/Toronto",
         businessType: "service_company",
+        defaultLocale: "en",
         deploymentMode: "manual",
         status: "active",
       });
@@ -119,6 +122,7 @@ describe("Convex indexed query helpers", () => {
         name: "Other Assignment Business",
         timezone: "America/Toronto",
         businessType: "service_company",
+        defaultLocale: "en",
         deploymentMode: "manual",
         status: "active",
       });
@@ -216,6 +220,7 @@ describe("Convex indexed query helpers", () => {
         name: "Preview Business",
         timezone: "America/Toronto",
         businessType: "service_company",
+        defaultLocale: "en",
         deploymentMode: "manual",
         status: "active",
       });

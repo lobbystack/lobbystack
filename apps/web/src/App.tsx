@@ -17,8 +17,7 @@ import {
   IconHeadphones,
 } from "@tabler/icons-react";
 
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import { demoSnapshot } from "@ai-receptionist/testing";
+import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";

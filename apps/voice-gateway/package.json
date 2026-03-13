@@ -19,7 +19,6 @@
     "@ai-receptionist/providers": "workspace:*",
     "@ai-receptionist/shared": "workspace:*",
     "@ai-receptionist/telemetry": "workspace:*",
-    "@ai-receptionist/testing": "workspace:*",
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
     "dotenv": "^17.3.1",

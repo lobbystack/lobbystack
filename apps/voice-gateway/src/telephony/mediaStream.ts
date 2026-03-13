@@ -1,7 +1,6 @@
 import { buildVoiceSystemPrompt } from "@ai-receptionist/ai";
 import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import { demoBusinessId } from "@ai-receptionist/testing";
+import { demoBusinessId, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";

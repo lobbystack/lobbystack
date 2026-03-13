@@ -31,6 +31,7 @@ async function insertBusiness(
     name: input.name,
     timezone: "America/Toronto",
     businessType: "service_company",
+    defaultLocale: "en",
     deploymentMode: "manual",
     status: "active",
   });

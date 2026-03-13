@@ -30,6 +30,7 @@ export const bootstrapBusiness = mutation({
       slug: args.slug,
       name: args.name,
       timezone: args.timezone,
+      defaultLocale: "en",
       businessType: args.businessType,
       deploymentMode: "development",
       status: "active",

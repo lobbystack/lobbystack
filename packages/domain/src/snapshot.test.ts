@@ -10,6 +10,7 @@ describe("buildBusinessContextSnapshot", () => {
       generatedAt: "2026-03-08T12:00:00.000Z",
       displayName: "Maple Family Clinic",
       timezone: "America/Toronto",
+      defaultLocale: "en",
       businessType: "clinic",
       greeting: "Hello",
       tone: "warm",

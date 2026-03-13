@@ -1,5 +1,4 @@
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-import { demoSnapshot } from "@ai-receptionist/testing";
+import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
