@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconPhone, IconRoute } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -23,7 +24,24 @@ function getPhoneLabel(phoneNumber: Doc<"phone_numbers">): string {
     : phoneNumber.e164;
 }
 
+function getStatusLabel(
+  status: string,
+  t: (key: string) => string,
+): string {
+  switch (status) {
+    case "active":
+      return t("settings:phoneRouting.statuses.active");
+    case "provisioning":
+      return t("settings:phoneRouting.statuses.provisioning");
+    case "inactive":
+      return t("settings:phoneRouting.statuses.inactive");
+    default:
+      return status;
+  }
+}
+
 export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
+  const { t } = useTranslation(["common", "settings"]);
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
@@ -99,10 +117,14 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
       });
 
       setSelectedPhoneNumberKey(String(result.phoneNumberId));
-      setSaveMessage(selectedPhoneNumber ? "Saved phone number routing." : "Added phone number routing.");
+      setSaveMessage(
+        selectedPhoneNumber
+          ? t("settings:phoneRouting.saved")
+          : t("settings:phoneRouting.added"),
+      );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to save phone number routing.",
+        error instanceof Error ? error.message : t("settings:phoneRouting.saveFailed"),
       );
     } finally {
       setIsSaving(false);
@@ -117,10 +139,8 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
             <IconRoute className="size-5" />
           </div>
           <div className="space-y-1">
-            <CardTitle>Phone Number Routing</CardTitle>
-            <CardDescription>
-              Map Twilio numbers to this business so live calls and SMS load the correct receptionist snapshot.
-            </CardDescription>
+            <CardTitle>{t("settings:phoneRouting.title")}</CardTitle>
+            <CardDescription>{t("settings:phoneRouting.description")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -128,14 +148,14 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <label className="space-y-2">
             <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-              Managed number
+              {t("settings:phoneRouting.managedNumber")}
             </span>
             <Select
               onValueChange={(value) => setSelectedPhoneNumberKey(value ?? NEW_PHONE_VALUE)}
               value={selectedPhoneNumberKey}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a number" />
+                <SelectValue placeholder={t("settings:phoneRouting.selectNumber")} />
               </SelectTrigger>
               <SelectContent>
                 {phoneNumbers.map((phoneNumber) => (
@@ -143,14 +163,14 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                     {phoneNumber.e164}
                   </SelectItem>
                 ))}
-                <SelectItem value={NEW_PHONE_VALUE}>Add new number</SelectItem>
+                <SelectItem value={NEW_PHONE_VALUE}>{t("settings:phoneRouting.addNewNumber")}</SelectItem>
               </SelectContent>
             </Select>
           </label>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                E.164 number
+                {t("settings:phoneRouting.e164Number")}
               </span>
               <div className="relative">
                 <IconPhone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -164,7 +184,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
             </label>
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Twilio Phone SID
+                {t("settings:phoneRouting.twilioPhoneSid")}
               </span>
               <Input
                 onChange={(event) => setTwilioPhoneSid(event.target.value)}
@@ -176,16 +196,16 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
             <label className="space-y-2">
               <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                Status
+                {t("settings:phoneRouting.status")}
               </span>
               <Select onValueChange={(value) => setStatus(value ?? "active")} value={status}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder={t("settings:phoneRouting.selectStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="provisioning">Provisioning</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="active">{t("settings:phoneRouting.statuses.active")}</SelectItem>
+                  <SelectItem value="provisioning">{t("settings:phoneRouting.statuses.provisioning")}</SelectItem>
+                  <SelectItem value="inactive">{t("settings:phoneRouting.statuses.inactive")}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
@@ -194,19 +214,23 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                 checked={voiceEnabled}
                 onCheckedChange={(checked) => setVoiceEnabled(Boolean(checked))}
               />
-              <span className="text-sm text-foreground">Voice enabled</span>
+              <span className="text-sm text-foreground">{t("settings:phoneRouting.voiceEnabled")}</span>
             </label>
             <label className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/80 px-4 py-3">
               <Checkbox
                 checked={smsEnabled}
                 onCheckedChange={(checked) => setSmsEnabled(Boolean(checked))}
               />
-              <span className="text-sm text-foreground">SMS enabled</span>
+              <span className="text-sm text-foreground">{t("settings:phoneRouting.smsEnabled")}</span>
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving || e164.trim().length === 0} type="submit">
-              {isSaving ? "Saving..." : selectedPhoneNumber ? "Save routing" : "Add number"}
+              {isSaving
+                ? t("settings:phoneRouting.saving")
+                : selectedPhoneNumber
+                  ? t("settings:phoneRouting.save")
+                  : t("settings:phoneRouting.saveNew")}
             </Button>
             {saveMessage ? <span className="text-sm text-muted-foreground">{saveMessage}</span> : null}
             {errorMessage ? <span className="text-sm text-destructive">{errorMessage}</span> : null}
@@ -215,7 +239,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
 
         <div className="space-y-3">
           <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            Current mappings
+            {t("settings:phoneRouting.currentMappings")}
           </p>
           {phoneNumbers.length > 0 ? (
             phoneNumbers.map((phoneNumber) => (
@@ -227,20 +251,22 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                   <div>
                     <p className="text-sm font-medium text-foreground">{phoneNumber.e164}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {phoneNumber.twilioPhoneSid ?? "No Twilio Phone SID saved yet."}
+                      {phoneNumber.twilioPhoneSid ?? t("settings:phoneRouting.noSid")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{phoneNumber.status}</Badge>
-                    {phoneNumber.voiceEnabled ? <Badge>Voice</Badge> : null}
-                    {phoneNumber.smsEnabled ? <Badge variant="secondary">SMS</Badge> : null}
+                    <Badge variant="outline">{getStatusLabel(phoneNumber.status, t)}</Badge>
+                    {phoneNumber.voiceEnabled ? <Badge>{t("common:badges.voice")}</Badge> : null}
+                    {phoneNumber.smsEnabled ? (
+                      <Badge variant="secondary">{t("common:badges.sms")}</Badge>
+                    ) : null}
                   </div>
                 </div>
               </div>
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-              No Twilio numbers are mapped yet. Add the live number you configured in Twilio using exact E.164 format.
+              {t("settings:phoneRouting.empty")}
             </div>
           )}
         </div>

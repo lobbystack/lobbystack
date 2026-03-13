@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { IconLayoutRows } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ export function SignupForm({
   onPasswordChange,
   onSubmit,
 }: SignupFormProps) {
+  const { t } = useTranslation("auth");
+
   return (
     <div className={cn("flex flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
@@ -47,18 +50,18 @@ export function SignupForm({
               <IconLayoutRows className="size-5" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-              <FieldDescription>Use your email to get started.</FieldDescription>
+              <h1 className="text-xl font-semibold tracking-tight">{t("signup.title")}</h1>
+              <FieldDescription>{t("signup.subtitle")}</FieldDescription>
             </div>
           </div>
 
           <Field>
-            <FieldLabel htmlFor="signup-email">Email</FieldLabel>
+            <FieldLabel htmlFor="signup-email">{t("signup.email")}</FieldLabel>
             <Input
               id="signup-email"
               autoComplete="email"
               onChange={(event) => onEmailChange(event.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("signup.emailPlaceholder")}
               required
               type="email"
               value={email}
@@ -67,12 +70,12 @@ export function SignupForm({
 
           <div>
             <Field>
-              <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+              <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
               <Input
                 id="signup-password"
                 autoComplete="new-password"
                 onChange={(event) => onPasswordChange(event.target.value)}
-                placeholder="Create a password"
+                placeholder={t("signup.passwordPlaceholder")}
                 required
                 type="password"
                 value={password}
@@ -89,16 +92,16 @@ export function SignupForm({
             )}
 
             <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-              {isSubmitting ? "Creating account..." : "Create account"}
+              {isSubmitting ? t("signup.submitting") : t("signup.submit")}
             </Button>
           </div>
         </FieldGroup>
       </form>
 
       <FieldDescription className="text-center">
-        Already have an account?{" "}
+        {t("signup.haveAccount")}{" "}
         <Link className="font-medium text-foreground underline underline-offset-4" to="/login">
-          Sign in
+          {t("signup.signIn")}
         </Link>
       </FieldDescription>
     </div>

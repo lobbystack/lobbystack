@@ -1,4 +1,5 @@
 import { IconBook2, IconClockHour4, IconPhone, IconSettingsAutomation } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,33 +19,6 @@ type SectionCardsProps = {
   snapshotVersion: string;
 };
 
-const cardMeta = [
-  {
-    key: "calls",
-    title: "Calls handled",
-    icon: IconPhone,
-    footer: "Latest inbound activity available in the inbox.",
-  },
-  {
-    key: "services",
-    title: "Services configured",
-    icon: IconSettingsAutomation,
-    footer: "These feed both the receptionist and the booking engine.",
-  },
-  {
-    key: "hours",
-    title: "Open days set",
-    icon: IconClockHour4,
-    footer: "Structured hours stay authoritative over documents.",
-  },
-  {
-    key: "knowledge",
-    title: "Knowledge items",
-    icon: IconBook2,
-    footer: "FAQs and documents strengthen preview and SMS responses.",
-  },
-] as const;
-
 export function SectionCards({
   recentCallCount,
   serviceCount,
@@ -52,6 +26,34 @@ export function SectionCards({
   knowledgeCount,
   snapshotVersion,
 }: SectionCardsProps) {
+  const { t } = useTranslation(["common", "dashboard"]);
+  const cardMeta = [
+    {
+      key: "calls",
+      title: t("dashboard:cards.calls.title"),
+      icon: IconPhone,
+      footer: t("dashboard:cards.calls.footer"),
+    },
+    {
+      key: "services",
+      title: t("dashboard:cards.services.title"),
+      icon: IconSettingsAutomation,
+      footer: t("dashboard:cards.services.footer"),
+    },
+    {
+      key: "hours",
+      title: t("dashboard:cards.hours.title"),
+      icon: IconClockHour4,
+      footer: t("dashboard:cards.hours.footer"),
+    },
+    {
+      key: "knowledge",
+      title: t("dashboard:cards.knowledge.title"),
+      icon: IconBook2,
+      footer: t("dashboard:cards.knowledge.footer"),
+    },
+  ] as const;
+
   const values = {
     calls: recentCallCount,
     services: serviceCount,
@@ -75,14 +77,16 @@ export function SectionCards({
               <CardAction>
                 <Badge variant="outline">
                   <item.icon className="size-4" />
-                  {item.key === "calls" ? "Live" : "Configured"}
+                  {item.key === "calls"
+                    ? t("common:badges.live")
+                    : t("common:badges.configured")}
                 </Badge>
               </CardAction>
             </CardHeader>
             <CardFooter className="flex-col items-start gap-2 text-sm text-muted-foreground">
               <div>{item.footer}</div>
               <div className="text-xs font-medium tracking-[0.24em] uppercase">
-                Snapshot {snapshotVersion}
+                {t("dashboard:cards.snapshot", { version: snapshotVersion })}
               </div>
             </CardFooter>
           </Card>

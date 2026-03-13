@@ -1,0 +1,136 @@
+{
+  "header": {
+    "title": "Réglages",
+    "description": "Configurez la réceptionniste, les heures, les services et la politique de transfert."
+  },
+  "profile": {
+    "title": "Profil de la réceptionniste",
+    "description": "Définissez la voix, le ton, la politique de réservation et les règles de transfert qui façonnent votre réceptionniste.",
+    "greeting": "Salutation",
+    "tone": "Ton",
+    "defaultCustomerLanguage": "Langue client par défaut",
+    "businessSummary": "Résumé de l'entreprise",
+    "bookingPolicy": "Politique de réservation",
+    "transferMode": "Mode de transfert",
+    "transferNumber": "Numéro de transfert",
+    "voiceInstructions": "Instructions vocales",
+    "smsInstructions": "Instructions SMS",
+    "selectDefaultLanguage": "Choisir une langue par défaut",
+    "selectTransferMode": "Choisir le mode de transfert",
+    "transferModes": {
+      "never": "Jamais",
+      "always": "Toujours",
+      "on_request": "Sur demande",
+      "on_urgent": "Pour les urgences",
+      "during_business_hours": "Pendant les heures d'ouverture"
+    },
+    "save": "Enregistrer le profil",
+    "saving": "Enregistrement...",
+    "saved": "Profil de la réceptionniste enregistré.",
+    "placeholders": {
+      "transferNumber": "+1 555 123 4567"
+    }
+  },
+  "hours": {
+    "title": "Heures d'ouverture",
+    "description": "Les heures structurées font autorité sur les documents et aident la réceptionniste à répondre correctement aux questions de disponibilité.",
+    "save": "Enregistrer les heures",
+    "saving": "Enregistrement...",
+    "leaveBlank": "Laissez une journée vide pour l'indiquer comme fermée.",
+    "saved": "Heures d'ouverture enregistrées.",
+    "saveFailed": "Impossible d'enregistrer les heures d'ouverture.",
+    "invalidHours": "Heures invalides pour {{day}}."
+  },
+  "services": {
+    "title": "Services",
+    "description": "Les définitions de service alimentent à la fois la logique de réservation et l'instantané entendu par les appelants.",
+    "serviceName": "Nom du service",
+    "slug": "Slug",
+    "durationMinutes": "Durée (minutes)",
+    "descriptionLabel": "Description",
+    "placeholders": {
+      "serviceName": "Consultation initiale",
+      "description": "Un premier rendez-vous de 30 minutes."
+    },
+    "save": "Ajouter le service",
+    "saving": "Enregistrement...",
+    "saved": "Service enregistré.",
+    "noDescription": "Aucune description pour le moment.",
+    "empty": "Aucun service configuré pour le moment."
+  },
+  "phoneRouting": {
+    "title": "Routage des numéros de téléphone",
+    "description": "Associez les numéros Twilio à cette entreprise pour que les appels en direct et les SMS chargent le bon instantané de réceptionniste.",
+    "managedNumber": "Numéro géré",
+    "selectNumber": "Choisir un numéro",
+    "addNewNumber": "Ajouter un numéro",
+    "e164Number": "Numéro E.164",
+    "twilioPhoneSid": "SID de téléphone Twilio",
+    "status": "Statut",
+    "selectStatus": "Choisir un statut",
+    "statuses": {
+      "active": "Actif",
+      "provisioning": "En cours de provisionnement",
+      "inactive": "Inactif"
+    },
+    "voiceEnabled": "Voix activée",
+    "smsEnabled": "SMS activé",
+    "save": "Enregistrer le routage",
+    "saveNew": "Ajouter le numéro",
+    "saving": "Enregistrement...",
+    "saved": "Routage du numéro enregistré.",
+    "added": "Routage du numéro ajouté.",
+    "saveFailed": "Impossible d'enregistrer le routage du numéro.",
+    "currentMappings": "Associations actuelles",
+    "noSid": "Aucun SID de téléphone Twilio enregistré pour le moment.",
+    "empty": "Aucun numéro Twilio n'est encore associé. Ajoutez le numéro actif configuré dans Twilio au format E.164 exact."
+  },
+  "team": {
+    "title": "Équipe réservable",
+    "description": "La réservation ne fonctionne que pour les services attribués à au moins un membre actif de l'équipe.",
+    "member": "Membre de l'équipe",
+    "selectMember": "Choisir un membre",
+    "addNewMember": "Ajouter un membre",
+    "name": "Nom",
+    "timezone": "Fuseau horaire",
+    "transferNumber": "Numéro de transfert",
+    "placeholders": {
+      "name": "Jordan Lee",
+      "timezone": "America/Toronto",
+      "transferNumber": "+15145550123"
+    },
+    "activeForBooking": "Actif pour la réservation",
+    "save": "Enregistrer le membre",
+    "saveNew": "Ajouter le membre",
+    "saving": "Enregistrement...",
+    "saved": "Membre de l'équipe enregistré.",
+    "added": "Membre de l'équipe ajouté.",
+    "saveFailed": "Impossible d'enregistrer le membre de l'équipe.",
+    "serviceAssignments": "Affectations de services",
+    "assignmentDescription": "Choisissez quels services chaque membre de l'équipe peut réserver par téléphone ou par SMS.",
+    "emptyStaff": "Ajoutez au moins un membre de l'équipe avant d'affecter des services.",
+    "emptyServices": "Ajoutez d'abord des services, puis revenez ici pour les rendre réservables.",
+    "saveAssignments": "Enregistrer les affectations",
+    "savingAssignments": "Enregistrement...",
+    "savedAssignments": "Affectations de services enregistrées.",
+    "saveAssignmentsFailed": "Impossible d'enregistrer les affectations de services.",
+    "assignedServices": "{{count}} services"
+  },
+  "snapshot": {
+    "title": "Instantané de la réceptionniste",
+    "description": "La passerelle vocale récupère ce contexte d'entreprise une fois au début d'un appel en direct.",
+    "business": "Entreprise",
+    "timezone": "Fuseau horaire",
+    "transferPolicy": "Politique de transfert",
+    "services": "Services dans l'instantané",
+    "knowledgeDigest": "Résumé des connaissances",
+    "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des FAQ ou des documents pour enrichir la réceptionniste."
+  },
+  "nextSteps": {
+    "title": "Prochaines étapes",
+    "description": "Affinez le comportement de la réceptionniste avant d'acheminer du trafic réel.",
+    "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
+    "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
+    "snapshot": "Actualisez votre instantané après d'importants changements de politique pour que la voix les prenne rapidement en compte."
+  }
+}

@@ -84,6 +84,9 @@ function buildUserPatch(input: {
   if (current.platformRole === undefined && legacy?.platformRole !== undefined) {
     patch.platformRole = legacy.platformRole;
   }
+  if (current.preferredLocale === undefined && legacy?.preferredLocale !== undefined) {
+    patch.preferredLocale = legacy.preferredLocale;
+  }
 
   return patch;
 }

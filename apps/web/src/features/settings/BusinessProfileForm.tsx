@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { IconPhone, IconRobotFace } from "@tabler/icons-react";
 import type { RuntimeLocale } from "@ai-receptionist/shared";
+import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -16,6 +17,7 @@ type BusinessProfileFormProps = {
 };
 
 export function BusinessProfileForm(props: BusinessProfileFormProps) {
+  const { t } = useTranslation(["settings", "common"]);
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
@@ -65,7 +67,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
         transferMode,
         transferNumber: transferNumber.trim() || undefined,
       });
-      setStatus("Saved receptionist profile.");
+      setStatus(t("profile.saved"));
     } finally {
       setIsSaving(false);
     }
@@ -79,10 +81,8 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             <IconRobotFace className="size-5" />
           </div>
           <div className="space-y-1">
-            <CardTitle>Receptionist Profile</CardTitle>
-            <CardDescription>
-              Define the voice, tone, booking policy, and transfer rules that shape your receptionist.
-            </CardDescription>
+            <CardTitle>{t("profile.title")}</CardTitle>
+            <CardDescription>{t("profile.description")}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -90,14 +90,14 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Greeting</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.greeting")}</span>
               <Input
                 value={greeting}
                 onChange={(event) => setGreeting(event.target.value)}
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Tone</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.tone")}</span>
               <Input
                 value={tone}
                 onChange={(event) => setTone(event.target.value)}
@@ -105,19 +105,19 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             </label>
           </div>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Default customer language</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.defaultCustomerLanguage")}</span>
             <Select value={defaultLocale} onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a default language" />
+                <SelectValue placeholder={t("profile.selectDefaultLanguage")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="fr">Français</SelectItem>
+                <SelectItem value="en">{t("common:language.english")}</SelectItem>
+                <SelectItem value="fr">{t("common:language.french")}</SelectItem>
               </SelectContent>
             </Select>
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Business summary</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.businessSummary")}</span>
             <Textarea
               rows={3}
               value={summary}
@@ -125,7 +125,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             />
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Booking policy</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.bookingPolicy")}</span>
             <Textarea
               rows={3}
               value={bookingPolicy}
@@ -134,27 +134,27 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
           </label>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Transfer mode</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.transferMode")}</span>
               <Select value={transferMode} onValueChange={(value) => setTransferMode(value ?? "on_request")}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select transfer mode" />
+                  <SelectValue placeholder={t("profile.selectTransferMode")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="never">Never</SelectItem>
-                  <SelectItem value="always">Always</SelectItem>
-                  <SelectItem value="on_request">On request</SelectItem>
-                  <SelectItem value="on_urgent">On urgent issues</SelectItem>
-                  <SelectItem value="during_business_hours">During business hours</SelectItem>
+                  <SelectItem value="never">{t("profile.transferModes.never")}</SelectItem>
+                  <SelectItem value="always">{t("profile.transferModes.always")}</SelectItem>
+                  <SelectItem value="on_request">{t("profile.transferModes.on_request")}</SelectItem>
+                  <SelectItem value="on_urgent">{t("profile.transferModes.on_urgent")}</SelectItem>
+                  <SelectItem value="during_business_hours">{t("profile.transferModes.during_business_hours")}</SelectItem>
                 </SelectContent>
               </Select>
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Transfer number</span>
+              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.transferNumber")}</span>
               <div className="relative">
                 <IconPhone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="pl-9"
-                  placeholder="+1 555 123 4567"
+                  placeholder={t("profile.placeholders.transferNumber")}
                   value={transferNumber}
                   onChange={(event) => setTransferNumber(event.target.value)}
                 />
@@ -162,7 +162,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             </label>
           </div>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">Voice instructions</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.voiceInstructions")}</span>
             <Textarea
               rows={4}
               value={voiceInstructions}
@@ -170,7 +170,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             />
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">SMS instructions</span>
+            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.smsInstructions")}</span>
             <Textarea
               rows={4}
               value={smsInstructions}
@@ -179,7 +179,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
-              {isSaving ? "Saving..." : "Save profile"}
+              {isSaving ? t("profile.saving") : t("profile.save")}
             </Button>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>

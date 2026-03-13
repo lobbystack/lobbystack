@@ -331,9 +331,28 @@ export default defineSchema({
     timezone: v.string(),
     status: v.string(),
     sourceChannel: v.string(),
-    calendarSyncState: v.string(),
+    calendarSyncState: v.union(
+      v.literal("not_required"),
+      v.literal("pending"),
+      v.literal("syncing"),
+      v.literal("synced"),
+      v.literal("failed"),
+      v.literal("drifted"),
+      v.literal("synced_mock"),
+    ),
+    calendarLastSyncAttemptAt: v.optional(v.string()),
+    calendarLastSyncedAt: v.optional(v.string()),
+    calendarLastSyncError: v.optional(v.string()),
+    calendarReconcileAfter: v.optional(v.string()),
+    calendarSyncIssueId: v.optional(v.id("inbox_items")),
+    calendarExternalEventId: v.optional(v.string()),
   })
     .index("by_business_id_and_starts_at", ["businessId", "startsAt"])
+    .index("by_business_id_and_calendar_sync_state_and_starts_at", [
+      "businessId",
+      "calendarSyncState",
+      "startsAt",
+    ])
     .index("by_staff_id_and_starts_at", ["staffId", "startsAt"])
     .index("by_contact_id_and_starts_at", ["contactId", "startsAt"]),
 
@@ -349,6 +368,7 @@ export default defineSchema({
     syncCursor: v.optional(v.string()),
   })
     .index("by_business_id_and_provider", ["businessId", "provider"])
+    .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_owner_user_id_and_provider", ["ownerUserId", "provider"])
     .index("by_provider_and_external_account_id", ["provider", "externalAccountId"]),
 
@@ -390,6 +410,8 @@ export default defineSchema({
     status: v.string(),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
+    .index("by_business_id_and_kind_and_status", ["businessId", "kind", "status"])
+    .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_related_id", ["relatedId"]),
 
   audit_logs: defineTable({

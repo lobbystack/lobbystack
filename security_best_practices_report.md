@@ -6,34 +6,36 @@ I reviewed the bilingual SMS runtime branch against `main`, focusing on branch-i
 
 I did not identify any new critical, high, medium, or low-severity security vulnerabilities in this diff. I also did not identify a new prompt-injection weakness introduced by the French runtime work. The branch keeps untrusted customer SMS and retrieved knowledge clearly separated from hidden instructions, constrains locale switching to the latest customer message plus server-side state, and keeps all privileged writes behind existing internal actions or membership-gated mutations.
 
-I also ran `pnpm audit --prod --dev`, which reported no known dependency vulnerabilities at the time of review.
+I also ran `pnpm audit --prod --dev`, which reported **no known vulnerabilities**.
 
-## Critical
+## Scope Reviewed
 
 No critical findings in this branch diff.
 
-## High
+Audit focus:
 
 No high-severity findings in this branch diff.
 
-## Medium
+## Critical Findings
 
 No medium-severity findings in this branch diff.
 
-## Low
+## High Findings
 
 No low-severity findings in this branch diff.
 
 ## Prompt Injection and Tool Abuse Review
 
-### What I checked
+I did not find any branch-introduced prompt-injection risk.
 
 - Whether the new bilingual prompt logic lets customer text override hidden instructions
 - Whether retrieved knowledge can steer locale switching or privileged tool calls
 - Whether the new locale-aware SMS flow can be induced to book, cancel, or reschedule solely from model output
 - Whether French-language prompt-extraction attempts are blocked as well as English ones
 
-### What looks good
+- This diff does not modify prompt construction, RAG context assembly, or agent tool registration.
+- The new reconciliation logic is implemented entirely in backend queries, mutations, and internal actions, not in model-driven tool flows.
+- No new attacker-controlled text is inserted into hidden prompts or used to select privileged actions.
 
 - Hidden instructions still explicitly rank above customer and knowledge content, and both customer SMS and retrieved knowledge are labeled untrusted in the runtime prompt:
   - `convex/ai/agents/runtime.ts:31-67`
@@ -103,6 +105,6 @@ I did not find a branch-introduced prompt-injection issue in the bilingual SMS r
 - Ran:
   - `pnpm audit --prod --dev`
 
-## Conclusion
+## Branch Conclusion
 
 This branch does not appear to introduce new critical, high, medium, or low security vulnerabilities relative to `main`. The bilingual SMS/runtime changes preserve the existing trust boundaries, keep locale persistence scoped to the correct conversation/contact/business records, and maintain a strong prompt-injection posture by continuing to label customer and knowledge inputs as untrusted while refusing hidden-prompt disclosure attempts in both English and French.

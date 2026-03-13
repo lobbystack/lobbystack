@@ -1,0 +1,136 @@
+{
+  "header": {
+    "title": "Settings",
+    "description": "Configure the receptionist, hours, services, and transfer policy."
+  },
+  "profile": {
+    "title": "Receptionist Profile",
+    "description": "Define the voice, tone, booking policy, and transfer rules that shape your receptionist.",
+    "greeting": "Greeting",
+    "tone": "Tone",
+    "defaultCustomerLanguage": "Default customer language",
+    "businessSummary": "Business summary",
+    "bookingPolicy": "Booking policy",
+    "transferMode": "Transfer mode",
+    "transferNumber": "Transfer number",
+    "voiceInstructions": "Voice instructions",
+    "smsInstructions": "SMS instructions",
+    "selectDefaultLanguage": "Select a default language",
+    "selectTransferMode": "Select transfer mode",
+    "transferModes": {
+      "never": "Never",
+      "always": "Always",
+      "on_request": "On request",
+      "on_urgent": "On urgent issues",
+      "during_business_hours": "During business hours"
+    },
+    "save": "Save profile",
+    "saving": "Saving...",
+    "saved": "Saved receptionist profile.",
+    "placeholders": {
+      "transferNumber": "+1 555 123 4567"
+    }
+  },
+  "hours": {
+    "title": "Opening Hours",
+    "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",
+    "save": "Save hours",
+    "saving": "Saving...",
+    "leaveBlank": "Leave a day blank to mark it closed.",
+    "saved": "Saved business hours.",
+    "saveFailed": "Failed to save business hours.",
+    "invalidHours": "Invalid hours for {{day}}."
+  },
+  "services": {
+    "title": "Services",
+    "description": "Service definitions power both booking logic and the receptionist snapshot callers hear.",
+    "serviceName": "Service name",
+    "slug": "Slug",
+    "durationMinutes": "Duration (minutes)",
+    "descriptionLabel": "Description",
+    "placeholders": {
+      "serviceName": "Initial Consultation",
+      "description": "A 30 minute first appointment."
+    },
+    "save": "Add service",
+    "saving": "Saving...",
+    "saved": "Saved service.",
+    "noDescription": "No description yet.",
+    "empty": "No services configured yet."
+  },
+  "phoneRouting": {
+    "title": "Phone Number Routing",
+    "description": "Map Twilio numbers to this business so live calls and SMS load the correct receptionist snapshot.",
+    "managedNumber": "Managed number",
+    "selectNumber": "Select a number",
+    "addNewNumber": "Add new number",
+    "e164Number": "E.164 number",
+    "twilioPhoneSid": "Twilio Phone SID",
+    "status": "Status",
+    "selectStatus": "Select status",
+    "statuses": {
+      "active": "Active",
+      "provisioning": "Provisioning",
+      "inactive": "Inactive"
+    },
+    "voiceEnabled": "Voice enabled",
+    "smsEnabled": "SMS enabled",
+    "save": "Save routing",
+    "saveNew": "Add number",
+    "saving": "Saving...",
+    "saved": "Saved phone number routing.",
+    "added": "Added phone number routing.",
+    "saveFailed": "Failed to save phone number routing.",
+    "currentMappings": "Current mappings",
+    "noSid": "No Twilio Phone SID saved yet.",
+    "empty": "No Twilio numbers are mapped yet. Add the live number you configured in Twilio using exact E.164 format."
+  },
+  "team": {
+    "title": "Bookable Team",
+    "description": "Booking only works for services that have at least one active team member assigned.",
+    "member": "Team member",
+    "selectMember": "Select a team member",
+    "addNewMember": "Add new team member",
+    "name": "Name",
+    "timezone": "Timezone",
+    "transferNumber": "Transfer number",
+    "placeholders": {
+      "name": "Jordan Lee",
+      "timezone": "America/Toronto",
+      "transferNumber": "+15145550123"
+    },
+    "activeForBooking": "Active for booking",
+    "save": "Save team member",
+    "saveNew": "Add team member",
+    "saving": "Saving...",
+    "saved": "Saved team member.",
+    "added": "Added team member.",
+    "saveFailed": "Failed to save team member.",
+    "serviceAssignments": "Service assignments",
+    "assignmentDescription": "Choose which services each team member can book over phone or SMS.",
+    "emptyStaff": "Add at least one team member before assigning services.",
+    "emptyServices": "Add services first, then come back here to make them bookable.",
+    "saveAssignments": "Save service assignments",
+    "savingAssignments": "Saving...",
+    "savedAssignments": "Saved service assignments.",
+    "saveAssignmentsFailed": "Failed to save service assignments.",
+    "assignedServices": "{{count}} services"
+  },
+  "snapshot": {
+    "title": "Receptionist Snapshot",
+    "description": "The voice gateway pulls this business context once when a live call begins.",
+    "business": "Business",
+    "timezone": "Timezone",
+    "transferPolicy": "Transfer policy",
+    "services": "Services in snapshot",
+    "knowledgeDigest": "Knowledge digest",
+    "emptyDigest": "No generated digest yet. Add FAQs or documents to enrich the receptionist."
+  },
+  "nextSteps": {
+    "title": "What to do next",
+    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
+    "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
+    "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  }
+}

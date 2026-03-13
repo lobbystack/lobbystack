@@ -6,9 +6,11 @@ import {
   IconMessageCircle,
   IconPhoneCall,
 } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
+import { formatDateTime } from "@/lib/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +39,7 @@ type RecentCall = Doc<"calls"> & {
 };
 
 export function RecentCallsPanel(props: RecentCallsPanelProps) {
+  const { i18n, t } = useTranslation(["calls", "common"]);
   const calls = useQuery(
     api.voice.runtime.listRecentCalls,
     props.businessId ? { businessId: props.businessId, limit: 12 } : "skip",
@@ -62,8 +65,8 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
     return (
       <Card className="border border-dashed border-border/80 bg-card/90 shadow-sm">
         <CardHeader>
-          <CardTitle>Recent Calls</CardTitle>
-          <CardDescription>Create a business to review recordings and transcripts.</CardDescription>
+          <CardTitle>{t("calls:panel.noBusinessTitle")}</CardTitle>
+          <CardDescription>{t("calls:panel.noBusinessDescription")}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -80,12 +83,10 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <CardTitle>Recent Calls</CardTitle>
-              <CardDescription>
-                Review captured calls, open transcripts, and download the recorded audio.
-              </CardDescription>
+              <CardTitle>{t("calls:panel.title")}</CardTitle>
+              <CardDescription>{t("calls:panel.description")}</CardDescription>
             </div>
-            <Badge variant="outline">{recentCalls.length} captured</Badge>
+            <Badge variant="outline">{t("calls:panel.captured", { count: recentCalls.length })}</Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -98,7 +99,10 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                     <IconPhoneCall className="size-4 text-muted-foreground" />
-                    {new Date(call.startedAt).toLocaleString()}
+                    {formatDateTime(call.startedAt, i18n.language, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {call.status}
@@ -107,14 +111,14 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {call.transcriptReady ? (
-                    <Badge variant="outline">Transcript ready</Badge>
+                    <Badge variant="outline">{t("calls:panel.transcriptReady")}</Badge>
                   ) : (
-                    <Badge variant="secondary">Transcript pending</Badge>
+                    <Badge variant="secondary">{t("calls:panel.transcriptPending")}</Badge>
                   )}
                   {call.recordingUrl ? (
-                    <Badge variant="outline">Audio ready</Badge>
+                    <Badge variant="outline">{t("calls:panel.audioReady")}</Badge>
                   ) : (
-                    <Badge variant="secondary">Recording pending</Badge>
+                    <Badge variant="secondary">{t("calls:panel.recordingPending")}</Badge>
                   )}
                 </div>
               </div>
@@ -124,7 +128,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" onClick={() => openTranscript(call._id)}>
                   <IconFileText className="size-4" />
-                  View transcript
+                  {t("calls:panel.viewTranscript")}
                 </Button>
                 {call.recordingUrl ? (
                   <Button
@@ -135,10 +139,12 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                     variant="outline"
                   >
                     <IconDownload className="size-4" />
-                    Download audio
+                    {t("calls:panel.downloadAudio")}
                   </Button>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Recording pending</span>
+                  <span className="text-sm text-muted-foreground">
+                    {t("calls:panel.recordingPending")}
+                  </span>
                 )}
               </div>
             </div>
@@ -146,7 +152,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
 
           {calls && recentCalls.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-              No calls have been captured yet.
+              {t("calls:panel.noCalls")}
             </div>
           ) : null}
         </CardContent>
@@ -155,11 +161,16 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
       <Sheet onOpenChange={setTranscriptSheetOpen} open={transcriptSheetOpen}>
         <SheetContent className="w-full sm:max-w-2xl" side="right">
           <SheetHeader>
-            <SheetTitle>Call Transcript</SheetTitle>
+            <SheetTitle>{t("calls:transcript.title")}</SheetTitle>
             <SheetDescription>
               {selectedCall
-                ? `Review the saved caller and assistant turns from ${new Date(selectedCall.startedAt).toLocaleString()}.`
-                : "Select a call to review the saved conversation."}
+                ? t("calls:transcript.descriptionWithDate", {
+                    date: formatDateTime(selectedCall.startedAt, i18n.language, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }),
+                  })
+                : t("calls:transcript.descriptionEmpty")}
             </SheetDescription>
           </SheetHeader>
 
@@ -167,14 +178,14 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
             {selectedCall ? (
               <div className="flex flex-wrap items-center gap-2">
                 {selectedCall.transcriptReady ? (
-                  <Badge variant="outline">Transcript ready</Badge>
+                  <Badge variant="outline">{t("calls:panel.transcriptReady")}</Badge>
                 ) : (
-                  <Badge variant="secondary">Transcript pending</Badge>
+                  <Badge variant="secondary">{t("calls:panel.transcriptPending")}</Badge>
                 )}
                 {selectedCall.recordingUrl ? (
-                  <Badge variant="outline">Audio ready</Badge>
+                  <Badge variant="outline">{t("calls:panel.audioReady")}</Badge>
                 ) : (
-                  <Badge variant="secondary">Recording pending</Badge>
+                  <Badge variant="secondary">{t("calls:panel.recordingPending")}</Badge>
                 )}
               </div>
             ) : null}
@@ -195,7 +206,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
 
               {selectedCallId && transcript && transcriptSegments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-sm text-muted-foreground">
-                  No transcript segments are available for this call yet.
+                  {t("calls:transcript.noSegments")}
                 </div>
               ) : null}
             </div>

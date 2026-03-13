@@ -1,0 +1,22 @@
+{
+  "panel": {
+    "title": "Appels récents",
+    "description": "Consultez les appels capturés, ouvrez les transcriptions et téléchargez l'audio enregistré.",
+    "captured": "{{count}} capturés",
+    "transcriptReady": "Transcription prête",
+    "transcriptPending": "Transcription en attente",
+    "audioReady": "Audio prêt",
+    "recordingPending": "Enregistrement en attente",
+    "viewTranscript": "Voir la transcription",
+    "downloadAudio": "Télécharger l'audio",
+    "noCalls": "Aucun appel n'a encore été capturé.",
+    "noBusinessTitle": "Appels récents",
+    "noBusinessDescription": "Créez une entreprise pour consulter les enregistrements et les transcriptions."
+  },
+  "transcript": {
+    "title": "Transcription de l'appel",
+    "descriptionWithDate": "Consultez les tours enregistrés du client et de l'assistant du {{date}}.",
+    "descriptionEmpty": "Sélectionnez un appel pour consulter la conversation enregistrée.",
+    "noSegments": "Aucun segment de transcription n'est encore disponible pour cet appel."
+  }
+}

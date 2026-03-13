@@ -1,0 +1,69 @@
+{
+  "headers": {
+    "dashboardTitle": "Tableau de bord",
+    "dashboardDescription": "Suivez l'état de préparation pour les appels, les messages et la prise de rendez-vous."
+  },
+  "setup": {
+    "title": "Créer votre première entreprise",
+    "description": "Cela initialise le locataire, le profil de la réceptionniste et le premier instantané utilisé par la voix.",
+    "businessName": "Nom de l'entreprise",
+    "slug": "Slug",
+    "timezone": "Fuseau horaire",
+    "businessType": "Type d'entreprise",
+    "placeholders": {
+      "businessName": "Clinique familiale Maple",
+      "slug": "clinique-familiale-maple"
+    },
+    "businessTypes": {
+      "clinic": "Clinique",
+      "repair_shop": "Atelier de réparation",
+      "salon": "Salon",
+      "service_company": "Entreprise de services",
+      "other": "Autre"
+    },
+    "selectBusinessType": "Choisir un type d'entreprise",
+    "create": "Créer l'entreprise",
+    "creating": "Création...",
+    "created": "Entreprise créée. L'instantané de la réceptionniste se met à jour.",
+    "failed": "Impossible de créer l'entreprise."
+  },
+  "cards": {
+    "calls": {
+      "title": "Appels traités",
+      "footer": "La dernière activité entrante est disponible dans la boîte de réception."
+    },
+    "services": {
+      "title": "Services configurés",
+      "footer": "Ils alimentent à la fois la réceptionniste et le moteur de réservation."
+    },
+    "hours": {
+      "title": "Jours d'ouverture définis",
+      "footer": "Les heures structurées font autorité sur les documents."
+    },
+    "knowledge": {
+      "title": "Éléments de connaissance",
+      "footer": "Les FAQ et documents renforcent les réponses d'aperçu et par SMS."
+    },
+    "snapshot": "Instantané {{version}}"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "description": "Gardez {{businessName}} prêt pour les appels, les SMS et les flux de réservation.",
+    "configureProfile": "Configurer le profil de la réceptionniste",
+    "addKnowledge": "Ajouter des FAQ et des documents",
+    "reviewInbox": "Consulter la boîte d'appels",
+    "readiness": "État de préparation",
+    "servicesConfigured": "{{count}} services configurés",
+    "daysConfigured": "{{count}} jours avec heures d'ouverture",
+    "knowledgeItems": "{{count}} éléments de connaissance indexés",
+    "phoneNumbers": "{{count}} numéros de téléphone associés",
+    "currentGreeting": "Salutation actuelle"
+  },
+  "nextSteps": {
+    "title": "Prochaines étapes",
+    "description": "Ajustez le comportement de la réceptionniste avant d'acheminer du trafic réel.",
+    "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
+    "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
+    "snapshot": "Actualisez l'instantané après des changements de politique importants pour que la voix les prenne rapidement en compte."
+  }
+}

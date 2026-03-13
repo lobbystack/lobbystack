@@ -1,0 +1,14 @@
+{
+  "items": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "knowledge": "Knowledge",
+    "settings": "Settings"
+  },
+  "sidebar": {
+    "businessSlugFallback": "Operator console",
+    "signedIn": "Signed in",
+    "workspaceReady": "Workspace ready",
+    "signOut": "Sign out"
+  }
+}

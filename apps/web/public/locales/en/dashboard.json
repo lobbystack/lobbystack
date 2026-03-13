@@ -1,0 +1,69 @@
+{
+  "headers": {
+    "dashboardTitle": "Dashboard",
+    "dashboardDescription": "Track operational readiness for calls, messages, and booking."
+  },
+  "setup": {
+    "title": "Create your first business",
+    "description": "This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.",
+    "businessName": "Business name",
+    "slug": "Slug",
+    "timezone": "Timezone",
+    "businessType": "Business type",
+    "placeholders": {
+      "businessName": "Maple Family Clinic",
+      "slug": "maple-family-clinic"
+    },
+    "businessTypes": {
+      "clinic": "Clinic",
+      "repair_shop": "Repair shop",
+      "salon": "Salon",
+      "service_company": "Service company",
+      "other": "Other"
+    },
+    "selectBusinessType": "Select business type",
+    "create": "Create business",
+    "creating": "Creating...",
+    "created": "Business created. The receptionist snapshot is refreshing now.",
+    "failed": "Failed to create business."
+  },
+  "cards": {
+    "calls": {
+      "title": "Calls handled",
+      "footer": "Latest inbound activity available in the inbox."
+    },
+    "services": {
+      "title": "Services configured",
+      "footer": "These feed both the receptionist and the booking engine."
+    },
+    "hours": {
+      "title": "Open days set",
+      "footer": "Structured hours stay authoritative over documents."
+    },
+    "knowledge": {
+      "title": "Knowledge items",
+      "footer": "FAQs and documents strengthen preview and SMS responses."
+    },
+    "snapshot": "Snapshot {{version}}"
+  },
+  "quickActions": {
+    "title": "Quick actions",
+    "description": "Keep {{businessName}} ready for calls, SMS, and booking workflows.",
+    "configureProfile": "Configure receptionist profile",
+    "addKnowledge": "Add FAQs and documents",
+    "reviewInbox": "Review call inbox",
+    "readiness": "Setup readiness",
+    "servicesConfigured": "{{count}} services configured",
+    "daysConfigured": "{{count}} days with operating hours",
+    "knowledgeItems": "{{count}} knowledge items indexed",
+    "phoneNumbers": "{{count}} phone numbers mapped",
+    "currentGreeting": "Current greeting"
+  },
+  "nextSteps": {
+    "title": "What to do next",
+    "description": "Tighten the live receptionist behavior before you route real traffic.",
+    "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
+    "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
+    "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  }
+}
