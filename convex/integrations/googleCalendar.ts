@@ -19,7 +19,8 @@ const GOOGLE_TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
 const GOOGLE_CALENDAR_SCOPES = [
   "openid",
   "email",
-  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
 ];
 
 type GoogleTokenResponse = {
