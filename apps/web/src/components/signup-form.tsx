@@ -49,7 +49,7 @@ export function SignupForm({
             <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Rows3 className="size-5" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <h1 className="text-xl font-semibold tracking-tight">{t("signup.title")}</h1>
               <FieldDescription>{t("signup.subtitle")}</FieldDescription>
             </div>
@@ -83,7 +83,7 @@ export function SignupForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="mb-7 mt-2 space-y-1">
+              <div className="mb-6 mt-2 space-y-2">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>

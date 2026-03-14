@@ -55,7 +55,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-4 sm:gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
           <p className="text-muted-foreground">{t("page.description")}</p>
@@ -65,7 +65,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="pl-9"
+          className="pl-10"
           onChange={(event) => setSearchValue(event.target.value)}
           placeholder={t("page.searchPlaceholder")}
           value={searchValue}

@@ -157,7 +157,7 @@ function SidebarMenuCollapsedDropdown({
           <ChevronRight className="ms-auto transition-transform duration-200" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right" sideOffset={4}>
-          <div className="px-3 py-2.5 text-xs text-muted-foreground">
+          <div className="px-3 py-3 text-xs text-muted-foreground">
             {item.title} {item.badge ? `(${item.badge})` : ""}
           </div>
           <DropdownMenuSeparator />

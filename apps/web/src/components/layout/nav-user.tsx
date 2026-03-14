@@ -60,7 +60,7 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <div className="px-1 py-1.5 text-start text-sm">
+            <div className="px-2 py-2 text-start text-sm">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />

@@ -116,9 +116,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
   return (
     <section className="flex h-[calc(100svh-9rem)] gap-6">
-      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between py-2">
+      <div className="flex w-full flex-col gap-4 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-4 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <MessagesSquare className="size-5" />
@@ -130,7 +130,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           <label
             className={cn(
               "focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden",
-              "flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-2",
+              "flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-3",
             )}
           >
             <SearchIcon className="me-2 stroke-slate-500" size={15} />
@@ -200,7 +200,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       >
         {thread ? (
           <>
-            <div className="mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
+            <div className="mb-4 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
               <div className="flex gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
@@ -257,10 +257,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
               <div className="flex size-full flex-1">
                 <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
-                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
                     {[...thread.messages].reverse().map((message) => (
                       <div
                         className={cn(
@@ -290,8 +290,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <form className="flex w-full flex-none gap-2">
-                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4">
-                  <div className="space-x-1">
+                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 py-2 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4">
+                  <div className="space-x-2">
                     <Button
                       className="h-8 rounded-md"
                       size="icon"

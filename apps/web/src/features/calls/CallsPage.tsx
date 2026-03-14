@@ -117,7 +117,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 pb-6 sm:gap-6 md:pb-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
             <p className="text-muted-foreground">{t("page.description")}</p>
@@ -129,7 +129,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="w-full pl-9 sm:w-72"
+                className="w-full pl-10 sm:w-72"
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder={t("filters.searchPlaceholder")}
                 value={searchValue}
@@ -228,12 +228,12 @@ export function CallsPage({ businessId }: CallsPageProps) {
           style={{ overflowClipMargin: 1 }}
         >
           <div className="flex w-full items-center justify-between">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium @2xl/content:hidden">
+            <div className="flex w-24 items-center justify-center text-sm font-medium @2xl/content:hidden">
               {t("pagination.pageOf", { page: currentPage, total: pageCount })}
             </div>
             <div className="flex items-center gap-2 @max-2xl/content:flex-row-reverse">
               <Select onValueChange={(value) => setRowsPerPage(value ?? "10")} value={rowsPerPage}>
-                <SelectTrigger className="h-8 w-[70px]">
+                <SelectTrigger className="h-8 w-20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -249,7 +249,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </div>
 
           <div className="flex items-center gap-6 lg:gap-8">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium @max-3xl/content:hidden">
+            <div className="flex w-24 items-center justify-center text-sm font-medium @max-3xl/content:hidden">
               {t("pagination.pageOf", { page: currentPage, total: pageCount })}
             </div>
             <div className="flex items-center gap-2">

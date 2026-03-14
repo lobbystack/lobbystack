@@ -25,6 +25,26 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Keep voice personalization snapshot-based: structured business facts stay authoritative in Convex; RAG augments documents and FAQs only.
 - Prefer `rg` for search. Use `apply_patch` for manual edits. Add TSDoc/JSDoc only for exported or non-obvious modules.
 
+## Design System Guidelines
+- Treat `shadcn/ui` as the default UI system for `apps/web`. Prefer composing existing shadcn primitives over custom wrappers when the primitive already solves the problem well.
+- Preserve shadcn component structure, variants, accessibility, and interaction behavior. Do not restyle component internals unless the change is clearly about spacing or consistency.
+- Use Geist Sans as the primary sans-serif font across the web app.
+- Use Lucide as the only icon set in `apps/web`. Do not introduce Tabler, Heroicons, or mixed icon families for operator UI work.
+- Keep the UI on a 4px base grid with an 8px default major rhythm.
+- Use this spacing scale for layout and component spacing: `4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96, 128`.
+- Prefer Tailwind spacing utilities from that scale. Avoid arbitrary spacing values like `p-[3px]`, `top-[0.3rem]`, or one-off offsets unless geometry or animation truly requires them.
+- Normalize spacing decisions across the app:
+  - icon gap: `8`
+  - button horizontal padding: `16`
+  - button vertical padding: `12`
+  - input padding: `12` or `16`
+  - card padding: `24`
+  - internal card gaps: `12` or `16`
+  - section spacing: `64` or `96`
+- Keep page-level rhythm consistent across dashboard surfaces. Similar pages should use the same top spacing, bottom spacing, section gaps, and card gutters unless there is a clear product reason not to.
+- When adjusting existing UI, prioritize consistency over pixel-perfect preservation of older bespoke spacing.
+- Do not redesign pages during spacing cleanup. Preserve colors, typography choices, copy, logic, responsiveness, and route architecture unless the task explicitly asks for a broader visual change.
+
 ## Localization Guidelines
 - Use translation keys for new dashboard UI copy under `apps/web/`; do not add new hardcoded user-facing English strings when the text belongs in the operator UI.
 - Keep locale files in `apps/web/public/locales/{lng}/{ns}.json` and group keys by feature/intent rather than by component implementation details.

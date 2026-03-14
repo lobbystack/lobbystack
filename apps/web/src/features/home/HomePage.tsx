@@ -184,15 +184,15 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
 
   return (
     <>
-      <div className="mb-2 flex items-center justify-between space-y-2">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">{t("home.title")}</h1>
       </div>
       <Tabs
-        className="space-y-4"
+        className="space-y-6"
         defaultValue="overview"
         orientation="vertical"
       >
-        <div className="flex items-center justify-between gap-4 pb-2">
+        <div className="flex items-center justify-between gap-4 pb-4">
           <div className="min-w-0 flex-1 overflow-x-auto">
             <TabsList>
               <TabsTrigger value="overview">{t("home.tabs.overview")}</TabsTrigger>
@@ -215,7 +215,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
             </span>
           </div>
         </div>
-        <TabsContent className="space-y-4" value="overview">
+        <TabsContent className="space-y-6" value="overview">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {metricCards.map((card) => {
               const metric = summary?.kpis[card.key];

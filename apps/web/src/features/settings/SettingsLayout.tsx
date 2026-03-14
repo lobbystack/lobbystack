@@ -18,12 +18,12 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
 
   return (
     <div>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{t("layout.title")}</h1>
         <p className="text-muted-foreground">{t("layout.description")}</p>
       </div>
       <Separator className="my-4 lg:my-6" />
-      <div className="w-full p-1">
+      <div className="w-full">
         <Outlet />
       </div>
     </div>

@@ -30,8 +30,8 @@ export function ProfileDropdown({ onSignOut }: ProfileDropdownProps) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <div className="px-3 py-2.5 font-normal">
-          <div className="flex flex-col gap-1.5">
+        <div className="px-3 py-3 font-normal">
+          <div className="flex flex-col gap-2">
             <p className="text-sm leading-none font-medium">AI Receptionist</p>
             <p className="text-xs leading-none text-muted-foreground">operator@local</p>
           </div>

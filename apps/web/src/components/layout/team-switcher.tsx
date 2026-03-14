@@ -65,7 +65,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <div className="px-3 py-2.5 text-xs text-muted-foreground">
+            <div className="px-3 py-3 text-xs text-muted-foreground">
               Teams
             </div>
             {teams.map((team, index) => (
