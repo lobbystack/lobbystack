@@ -360,14 +360,27 @@ export default defineSchema({
     businessId: v.id("businesses"),
     provider: v.string(),
     ownerUserId: v.id("users"),
+    staffId: v.optional(v.id("staff")),
     externalAccountId: v.string(),
+    externalAccountEmail: v.optional(v.string()),
     selectedCalendarId: v.optional(v.string()),
+    selectedCalendarSummary: v.optional(v.string()),
     status: v.string(),
     encryptedAccessToken: v.optional(v.string()),
     encryptedRefreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.string()),
     syncCursor: v.optional(v.string()),
+    syncWindowStartsAt: v.optional(v.string()),
+    lastSyncAttemptAt: v.optional(v.string()),
+    lastSyncedAt: v.optional(v.string()),
+    lastSyncError: v.optional(v.string()),
   })
     .index("by_business_id_and_provider", ["businessId", "provider"])
+    .index("by_business_id_and_provider_and_staff_id", [
+      "businessId",
+      "provider",
+      "staffId",
+    ])
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_owner_user_id_and_provider", ["ownerUserId", "provider"])
     .index("by_provider_and_external_account_id", ["provider", "externalAccountId"]),
@@ -378,10 +391,28 @@ export default defineSchema({
     connectionId: v.id("calendar_connections"),
     startsAt: v.string(),
     endsAt: v.string(),
+    externalEventId: v.optional(v.string()),
+    sourceCalendarId: v.optional(v.string()),
+    externalUpdatedAt: v.optional(v.string()),
   })
     .index("by_staff_id_and_starts_at", ["staffId", "startsAt"])
     .index("by_business_id_and_starts_at", ["businessId", "startsAt"])
-    .index("by_connection_id_and_starts_at", ["connectionId", "startsAt"]),
+    .index("by_connection_id_and_starts_at", ["connectionId", "startsAt"])
+    .index("by_connection_id_and_external_event_id", [
+      "connectionId",
+      "externalEventId",
+    ]),
+
+  calendar_oauth_states: defineTable({
+    provider: v.string(),
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    staffId: v.id("staff"),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  })
+    .index("by_nonce", ["nonce"])
+    .index("by_expires_at", ["expiresAt"]),
 
   notifications: defineTable({
     businessId: v.id("businesses"),

@@ -1,5 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -40,6 +40,165 @@ type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
+
+type MockGoogleEvent = {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  updated: string;
+  status?: string;
+  transparency?: string;
+};
+
+const originalGoogleClientId = process.env.GOOGLE_CLIENT_ID;
+const originalGoogleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const originalGoogleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+const originalAppBaseUrl = process.env.APP_BASE_URL;
+const originalSessionEncryptionKey = process.env.SESSION_ENCRYPTION_KEY;
+
+let googleEventCounter = 0;
+let failGoogleEventWrites = false;
+let forceInvalidGoogleSyncToken = false;
+let googleEventsByCalendar: Record<string, Record<string, MockGoogleEvent>> = {};
+
+function resetGoogleMockState(): void {
+  googleEventCounter = 0;
+  failGoogleEventWrites = false;
+  forceInvalidGoogleSyncToken = false;
+  googleEventsByCalendar = {
+    "primary-calendar": {},
+    "team-calendar": {},
+  };
+}
+
+function setGoogleCalendarEvents(calendarId: string, events: Array<MockGoogleEvent>): void {
+  googleEventsByCalendar[calendarId] = Object.fromEntries(
+    events.map((event) => [event.id, event]),
+  );
+}
+
+function installGoogleFetchMock(): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const rawUrl =
+        typeof input === "string" || input instanceof URL
+          ? String(input)
+          : input.url;
+      const url = new URL(rawUrl);
+      const method = init?.method ?? (typeof input === "object" && "method" in input ? input.method : "GET");
+
+      if (url.toString() === "https://oauth2.googleapis.com/token") {
+        const body = new URLSearchParams(String(init?.body ?? ""));
+        if (body.get("grant_type") === "authorization_code") {
+          return Response.json({
+            access_token: "test-access-token",
+            refresh_token: "test-refresh-token",
+            expires_in: 3600,
+            token_type: "Bearer",
+          });
+        }
+
+        return Response.json({
+          access_token: "refreshed-access-token",
+          expires_in: 3600,
+          token_type: "Bearer",
+        });
+      }
+
+      if (url.toString() === "https://openidconnect.googleapis.com/v1/userinfo") {
+        return Response.json({
+          sub: "google-user-1",
+          email: "owner@example.com",
+        });
+      }
+
+      if (url.pathname === "/calendar/v3/users/me/calendarList") {
+        return Response.json({
+          items: [
+            {
+              id: "primary-calendar",
+              summary: "Primary Calendar",
+              primary: true,
+              accessRole: "owner",
+            },
+            {
+              id: "team-calendar",
+              summary: "Team Calendar",
+              accessRole: "writer",
+            },
+          ],
+        });
+      }
+
+      const eventPathMatch = url.pathname.match(
+        /^\/calendar\/v3\/calendars\/([^/]+)\/events(?:\/([^/]+))?$/,
+      );
+      if (eventPathMatch) {
+        const calendarId = decodeURIComponent(eventPathMatch[1] ?? "");
+        const eventId = eventPathMatch[2] ? decodeURIComponent(eventPathMatch[2]) : null;
+        googleEventsByCalendar[calendarId] ??= {};
+
+        if (method === "GET") {
+          if (forceInvalidGoogleSyncToken && url.searchParams.has("syncToken")) {
+            return new Response(JSON.stringify({ error: { message: "Sync token expired." } }), {
+              status: 410,
+              headers: { "content-type": "application/json" },
+            });
+          }
+
+          return Response.json({
+            items: Object.values(googleEventsByCalendar[calendarId]).map((event) => ({
+              id: event.id,
+              summary: event.summary,
+              status: event.status ?? "confirmed",
+              transparency: event.transparency,
+              updated: event.updated,
+              start: { dateTime: event.start, timeZone: "America/Toronto" },
+              end: { dateTime: event.end, timeZone: "America/Toronto" },
+            })),
+            nextSyncToken: `sync-${googleEventCounter}`,
+          });
+        }
+
+        if (method === "POST" || method === "PATCH") {
+          if (failGoogleEventWrites) {
+            return new Response(JSON.stringify({ error: { message: "Google write failed." } }), {
+              status: 500,
+              headers: { "content-type": "application/json" },
+            });
+          }
+
+          const rawBody = typeof init?.body === "string" ? init.body : "";
+          const parsedBody = JSON.parse(rawBody) as {
+            summary: string;
+            start: { dateTime: string };
+            end: { dateTime: string };
+          };
+          const resolvedEventId = eventId ?? `evt-${++googleEventCounter}`;
+          googleEventsByCalendar[calendarId][resolvedEventId] = {
+            id: resolvedEventId,
+            summary: parsedBody.summary,
+            start: parsedBody.start.dateTime,
+            end: parsedBody.end.dateTime,
+            updated: new Date().toISOString(),
+          };
+          return Response.json({ id: resolvedEventId });
+        }
+
+        if (method === "DELETE" && eventId) {
+          delete googleEventsByCalendar[calendarId][eventId];
+          return new Response(null, { status: 204 });
+        }
+      }
+
+      return new Response(`Unhandled fetch: ${method} ${url.toString()}`, {
+        status: 500,
+      });
+    }),
+  );
+}
 
 async function insertBusiness(
   ctx: TestContext,
@@ -96,26 +255,47 @@ async function seedBookableBusiness(
   return { businessId, serviceId, staffId };
 }
 
-async function insertConnectedCalendar(
-  ctx: TestContext,
+async function connectGoogleCalendar(
+  t: TestConvex<typeof schema>,
   input: {
     businessId: Id<"businesses">;
-    selectedCalendarId?: string;
+    staffId: Id<"staff">;
   },
 ): Promise<Id<"calendar_connections">> {
-  const userId = await ctx.db.insert("users", {
-    authSubject: `calendar-owner:${String(input.businessId)}`,
+  const userId = await t.run(async (ctx) => {
+    return await ctx.db.insert("users", {
+      authSubject: `calendar-owner:${String(input.businessId)}:${String(input.staffId)}`,
+    });
   });
-  return await ctx.db.insert("calendar_connections", {
-    businessId: input.businessId,
+  const nonce = `state-${String(input.businessId)}-${String(input.staffId)}`;
+
+  await t.mutation(internal.integrations.calendar.createCalendarOAuthState, {
     provider: "google",
-    ownerUserId: userId,
-    externalAccountId: `acct-${String(input.businessId)}`,
-    ...(input.selectedCalendarId !== undefined
-      ? { selectedCalendarId: input.selectedCalendarId }
-      : {}),
-    status: "connected",
+    businessId: input.businessId,
+    userId,
+    staffId: input.staffId,
+    nonce,
+    expiresAt: "2099-03-20T00:00:00.000Z",
   });
+  await t.action(internal.integrations.googleCalendar.completeOAuthCallback, {
+    code: "test-auth-code",
+    state: nonce,
+  });
+
+  const connection = await t.run(async (ctx) => {
+    return await ctx.db
+      .query("calendar_connections")
+      .withIndex("by_business_id_and_provider_and_staff_id", (q) =>
+        q.eq("businessId", input.businessId).eq("provider", "google").eq("staffId", input.staffId),
+      )
+      .unique();
+  });
+
+  if (!connection) {
+    throw new Error("Expected Google Calendar connection to be created.");
+  }
+
+  return connection._id;
 }
 
 async function bookAppointment(
@@ -144,9 +324,25 @@ async function bookAppointment(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.GOOGLE_CLIENT_ID = "test-google-client-id";
+  process.env.GOOGLE_CLIENT_SECRET = "test-google-client-secret";
+  process.env.GOOGLE_REDIRECT_URI = "https://convex.example.com/integrations/google/callback";
+  process.env.APP_BASE_URL = "https://app.example.com";
+  process.env.SESSION_ENCRYPTION_KEY = "test-session-encryption-key";
   workflowStartMock.mockResolvedValue(null);
   runtimeCronsGetMock.mockResolvedValue(null);
   runtimeCronsRegisterMock.mockResolvedValue(null);
+  resetGoogleMockState();
+  installGoogleFetchMock();
+});
+
+afterEach(() => {
+  process.env.GOOGLE_CLIENT_ID = originalGoogleClientId;
+  process.env.GOOGLE_CLIENT_SECRET = originalGoogleClientSecret;
+  process.env.GOOGLE_REDIRECT_URI = originalGoogleRedirectUri;
+  process.env.APP_BASE_URL = originalAppBaseUrl;
+  process.env.SESSION_ENCRYPTION_KEY = originalSessionEncryptionKey;
+  vi.unstubAllGlobals();
 });
 
 describe("calendar reconciliation backend", () => {
@@ -169,17 +365,13 @@ describe("calendar reconciliation backend", () => {
 
   it("starts connected-calendar bookings in pending and syncs them to synced", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, serviceId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
         slug: "connected-calendar-business",
         name: "Connected Calendar Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-        selectedCalendarId: "primary-calendar",
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await bookAppointment(t, { businessId, serviceId });
 
@@ -205,23 +397,21 @@ describe("calendar reconciliation backend", () => {
       expect(appointment).toMatchObject({
         calendarSyncState: "synced",
       });
-      expect(appointment?.calendarExternalEventId).toContain(String(appointmentId));
+      expect(appointment?.calendarExternalEventId).toBe("evt-1");
       expect(appointment?.calendarLastSyncedAt).toBeTruthy();
     });
   });
 
   it("records sync failures and schedules reconciliation", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, serviceId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
         slug: "failing-calendar-business",
         name: "Failing Calendar Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    failGoogleEventWrites = true;
 
     const appointmentId = await bookAppointment(t, { businessId, serviceId });
     const result = await t.action(
@@ -239,7 +429,7 @@ describe("calendar reconciliation backend", () => {
     await t.run(async (ctx) => {
       const appointment = await ctx.db.get(appointmentId);
       expect(appointment?.calendarSyncState).toBe("failed");
-      expect(appointment?.calendarLastSyncError).toContain("selected calendar");
+      expect(appointment?.calendarLastSyncError).toContain("Google write failed");
       expect(appointment?.calendarReconcileAfter).toBeTruthy();
     });
   });
@@ -247,16 +437,12 @@ describe("calendar reconciliation backend", () => {
   it("converts stale pending and syncing appointments into failure states", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+      return await seedBookableBusiness(ctx, {
         slug: "stale-calendar-business",
         name: "Stale Calendar Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-        selectedCalendarId: "calendar-a",
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const stalePendingId = await t.run(async (ctx) => {
       const contactId = await ctx.db.insert("contacts", {
@@ -321,16 +507,12 @@ describe("calendar reconciliation backend", () => {
   it("marks synced appointments without external event IDs as drifted", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+      return await seedBookableBusiness(ctx, {
         slug: "drift-calendar-business",
         name: "Drift Calendar Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-        selectedCalendarId: "calendar-a",
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await t.run(async (ctx) => {
       const contactId = await ctx.db.insert("contacts", {
@@ -374,16 +556,12 @@ describe("calendar reconciliation backend", () => {
   it("dedupes calendar sync issues across repeated reconciliation runs", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+      return await seedBookableBusiness(ctx, {
         slug: "issue-dedupe-business",
         name: "Issue Dedupe Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-        selectedCalendarId: "calendar-a",
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await t.run(async (ctx) => {
       const contactId = await ctx.db.insert("contacts", {
@@ -432,18 +610,16 @@ describe("calendar reconciliation backend", () => {
 
   it("automatically retries failed appointments after an issue exists and resolves the issue on recovery", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, serviceId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
         slug: "recover-calendar-business",
         name: "Recover Calendar Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await bookAppointment(t, { businessId, serviceId });
+    failGoogleEventWrites = true;
     await t.action(
       internal.integrations.calendar.syncAppointmentToExternalCalendars,
       {
@@ -469,25 +645,12 @@ describe("calendar reconciliation backend", () => {
       expect(issues.filter((issue) => issue.status === "open")).toHaveLength(1);
     });
 
-    const connectionId = await t.run(async (ctx) => {
-      const connection = await ctx.db
-        .query("calendar_connections")
-        .withIndex("by_business_id_and_status", (q) =>
-          q.eq("businessId", businessId).eq("status", "connected"),
-        )
-        .unique();
-      if (!connection) {
-        throw new Error("Expected a connected calendar connection.");
-      }
-      await ctx.db.patch(connection._id, {
-        selectedCalendarId: "primary-calendar",
-      });
+    await t.run(async (ctx) => {
       await ctx.db.patch(appointmentId, {
         calendarReconcileAfter: "2026-03-11T00:00:00.000Z",
       });
-      return connection._id;
     });
-    expect(connectionId).toBeDefined();
+    failGoogleEventWrites = false;
 
     const result = await t.action(
       internal.integrations.calendar.runBusinessCalendarReconciliation,
@@ -515,18 +678,16 @@ describe("calendar reconciliation backend", () => {
 
   it("keeps retrying failed appointments with open issues without duplicating the issue", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, serviceId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
         slug: "retry-open-issue-business",
         name: "Retry Open Issue Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await bookAppointment(t, { businessId, serviceId });
+    failGoogleEventWrites = true;
     await t.action(internal.integrations.calendar.syncAppointmentToExternalCalendars, {
       appointmentId,
     });
@@ -571,16 +732,12 @@ describe("calendar reconciliation backend", () => {
   it("retries drifted appointments automatically once they are due and resolves the issue on recovery", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
-      const seeded = await seedBookableBusiness(ctx, {
+      return await seedBookableBusiness(ctx, {
         slug: "drift-recovery-business",
         name: "Drift Recovery Business",
       });
-      await insertConnectedCalendar(ctx, {
-        businessId: seeded.businessId,
-        selectedCalendarId: "calendar-a",
-      });
-      return seeded;
     });
+    await connectGoogleCalendar(t, { businessId, staffId });
 
     const appointmentId = await t.run(async (ctx) => {
       const contactId = await ctx.db.insert("contacts", {
@@ -632,7 +789,7 @@ describe("calendar reconciliation backend", () => {
     await t.run(async (ctx) => {
       const appointment = await ctx.db.get(appointmentId);
       expect(appointment?.calendarSyncState).toBe("synced");
-      expect(appointment?.calendarExternalEventId).toContain(String(appointmentId));
+      expect(appointment?.calendarExternalEventId).toBe("evt-1");
       const issues = await ctx.db
         .query("inbox_items")
         .withIndex("by_kind_and_related_id", (q) =>
@@ -641,6 +798,132 @@ describe("calendar reconciliation backend", () => {
         .collect();
       expect(issues.some((issue) => issue.status === "resolved")).toBe(true);
     });
+  });
+
+  it("imports Google busy blocks only for the mapped staff member", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "busy-block-scope-business",
+        name: "Busy Block Scope Business",
+      });
+      const secondStaffId = await ctx.db.insert("staff", {
+        businessId: seeded.businessId,
+        name: "Second Staff",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      await ctx.db.insert("staff_service_assignments", {
+        businessId: seeded.businessId,
+        staffId: secondStaffId,
+        serviceId: seeded.serviceId,
+      });
+      return seeded;
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    setGoogleCalendarEvents("primary-calendar", [
+      {
+        id: "busy-1",
+        summary: "Busy",
+        start: "2026-03-17T14:00:00.000-04:00",
+        end: "2026-03-17T14:30:00.000-04:00",
+        updated: "2026-03-10T00:00:00.000Z",
+      },
+    ]);
+
+    await t.action(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+      connectionId,
+      fullSync: true,
+    });
+
+    const availability = await t.query(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000-04:00",
+        timezone: "America/Toronto",
+      },
+    );
+
+    expect(availability).toHaveLength(1);
+    expect(availability[0]?.staffId).not.toBe(String(staffId));
+  });
+
+  it("falls back to a full busy sync when Google rejects the stored sync token", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "invalid-sync-token-business",
+        name: "Invalid Sync Token Business",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId };
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    setGoogleCalendarEvents("primary-calendar", [
+      {
+        id: "busy-2",
+        summary: "Busy",
+        start: "2026-03-17T15:00:00.000-04:00",
+        end: "2026-03-17T15:30:00.000-04:00",
+        updated: "2026-03-10T00:00:00.000Z",
+      },
+    ]);
+    forceInvalidGoogleSyncToken = true;
+
+    const result = await t.action(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+      connectionId,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      mode: "full_resync",
+    });
+
+    await t.run(async (ctx) => {
+      const blocks = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_starts_at", (q) =>
+          q.eq("connectionId", connectionId),
+        )
+        .collect();
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]?.externalEventId).toBe("busy-2");
+    });
+  });
+
+  it("rejects expired Google OAuth states", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "expired-oauth-state-business",
+        name: "Expired OAuth State Business",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId };
+    });
+    const userId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        authSubject: "expired-state-user",
+      });
+    });
+
+    await t.mutation(internal.integrations.calendar.createCalendarOAuthState, {
+      provider: "google",
+      businessId,
+      userId,
+      staffId,
+      nonce: "expired-oauth-state",
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    });
+
+    await expect(
+      t.action(internal.integrations.googleCalendar.completeOAuthCallback, {
+        code: "expired-code",
+        state: "expired-oauth-state",
+      }),
+    ).rejects.toThrow("expired");
   });
 
   it("registers the business reconciliation cron every five minutes", async () => {

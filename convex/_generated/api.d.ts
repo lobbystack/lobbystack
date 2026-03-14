@@ -24,6 +24,7 @@ import type * as dashboard_messages from "../dashboard/messages.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
+import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
 import type * as integrations_twilioMessageStatus from "../integrations/twilioMessageStatus.js";
 import type * as integrations_twilioSms from "../integrations/twilioSms.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "dashboard/overview": typeof dashboard_overview;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
+  "integrations/googleCalendar": typeof integrations_googleCalendar;
   "integrations/twilioMessageStatus": typeof integrations_twilioMessageStatus;
   "integrations/twilioSms": typeof integrations_twilioSms;
   "lib/auth": typeof lib_auth;
