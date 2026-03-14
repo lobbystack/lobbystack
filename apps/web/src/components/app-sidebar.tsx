@@ -1,9 +1,11 @@
 import * as React from "react";
 import {
   Bot,
+  Building2,
   Command,
   ContactRound,
   House,
+  Link2,
   MessageSquareMore,
   Phone,
   Settings,
@@ -68,8 +70,16 @@ export function AppSidebar({
               title: t("nav:items.settings"),
               icon: Settings,
               items: [
-                { title: t("settings:sections.business"), url: "/settings" },
-                { title: t("settings:sections.integrations"), url: "/settings/integrations" },
+                {
+                  title: t("settings:sections.business"),
+                  url: "/settings",
+                  icon: Building2,
+                },
+                {
+                  title: t("settings:sections.integrations"),
+                  url: "/settings/integrations",
+                  icon: Link2,
+                },
               ],
             },
           ],

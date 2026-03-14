@@ -6,7 +6,7 @@
   "filters": {
     "searchPlaceholder": "Search calls...",
     "status": "Status",
-    "allStatuses": "All statuses"
+    "allStatuses": "All"
   },
   "table": {
     "startedAt": "Started",
@@ -24,6 +24,15 @@
     "pendingTranscript": "Open transcript",
     "listen": "Listen",
     "audioPending": "Recording pending"
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "firstPage": "Go to first page",
+    "previousPage": "Go to previous page",
+    "nextPage": "Go to next page",
+    "lastPage": "Go to last page",
+    "goToPage": "Go to page {{page}}"
   },
   "panel": {
     "title": "Recent Calls",

@@ -18,7 +18,6 @@ import { LoadingScreen } from "@/components/loading-screen";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
-import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
@@ -223,47 +222,39 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
-  const headerLinks = [
-    { title: "Overview", href: "/" },
-    { title: "Calls", href: "/calls" },
-    { title: "Messages", href: "/messages" },
-    { title: "Settings", href: "/settings" },
-  ];
-
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
       businessSlug={activeBusiness?.slug}
       onSignOut={() => void signOut()}
     >
-        <SiteHeader links={headerLinks} onSignOut={() => void signOut()} />
-        <Main className="flex flex-1 flex-col" fixed>
-          <Routes>
-            <Route element={<HomePage businessId={businessId} snapshot={resolvedSnapshot} />} path="/" />
-            <Route element={<CallsPage businessId={businessId} />} path="/calls" />
-            <Route element={<MessagesPage businessId={businessId} />} path="/messages" />
-            <Route element={<AutomationsPage businessId={businessId} />} path="/automations" />
+      <Main className="flex flex-1 flex-col" fixed>
+        <Routes>
+          <Route element={<HomePage businessId={businessId} snapshot={resolvedSnapshot} />} path="/" />
+          <Route element={<CallsPage businessId={businessId} />} path="/calls" />
+          <Route element={<MessagesPage businessId={businessId} />} path="/messages" />
+          <Route element={<AutomationsPage businessId={businessId} />} path="/automations" />
+          <Route
+            element={<AgentPage businessId={businessId} snapshot={resolvedSnapshot} />}
+            path="/agent"
+          />
+          <Route element={<ContactsPage businessId={businessId} />} path="/contacts" />
+          <Route
+            element={<SettingsLayout businessId={businessId} />}
+            path="/settings/*"
+          >
             <Route
-              element={<AgentPage businessId={businessId} snapshot={resolvedSnapshot} />}
-              path="/agent"
+              element={<SettingsBusinessPage businessId={businessId as Id<"businesses">} snapshot={resolvedSnapshot} />}
+              index
             />
-            <Route element={<ContactsPage businessId={businessId} />} path="/contacts" />
             <Route
-              element={<SettingsLayout businessId={businessId} />}
-              path="/settings/*"
-            >
-              <Route
-                element={<SettingsBusinessPage businessId={businessId as Id<"businesses">} snapshot={resolvedSnapshot} />}
-                index
-              />
-              <Route
-                element={<IntegrationsPage businessId={businessId as Id<"businesses">} />}
-                path="integrations"
-              />
-            </Route>
-            <Route element={<Navigate replace to="/" />} path="*" />
-          </Routes>
-        </Main>
+              element={<IntegrationsPage businessId={businessId as Id<"businesses">} />}
+              path="integrations"
+            />
+          </Route>
+          <Route element={<Navigate replace to="/" />} path="*" />
+        </Routes>
+      </Main>
     </AuthenticatedLayout>
   );
 }

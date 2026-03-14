@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { Play, Search } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
+import { cn, getPageNumbers } from "@/lib/utils";
 
 type CallsPageProps = {
   businessId?: Id<"businesses">;
@@ -44,12 +45,22 @@ type CallRow = Doc<"calls"> & {
   contactPhone: string | null;
 };
 
+function formatStatusLabel(value: string): string {
+  if (value.length === 0) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const calls = useQuery(api.voice.runtime.listRecentCalls, businessId ? { businessId, limit: 50 } : "skip");
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState("10");
 
   const transcript = useQuery(
     api.voice.runtime.getCallTranscript,
@@ -76,8 +87,26 @@ export function CallsPage({ businessId }: CallsPageProps) {
       return matchesStatus && (query.length === 0 || searchText.includes(query));
     });
   }, [rows, searchValue, statusFilter]);
+  const rowsPerPageValue = Number(rowsPerPage);
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / rowsPerPageValue));
+  const currentPage = Math.min(page, pageCount);
+  const pageNumbers = getPageNumbers(currentPage, pageCount);
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPageValue;
+    return filteredRows.slice(startIndex, startIndex + rowsPerPageValue);
+  }, [currentPage, filteredRows, rowsPerPageValue]);
 
   const selectedCall = rows.find((call) => call._id === selectedCallId);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchValue, statusFilter, rowsPerPage]);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -87,7 +116,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
   return (
     <>
-      <div className="flex flex-1 flex-col gap-4 sm:gap-6">
+      <div className="flex flex-1 flex-col gap-4 pb-6 sm:gap-6 md:pb-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
@@ -108,12 +137,14 @@ export function CallsPage({ businessId }: CallsPageProps) {
             </div>
             <Select onValueChange={(value) => setStatusFilter(value ?? "all")} value={statusFilter}>
               <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder={t("filters.status")} />
+                <SelectValue placeholder={t("filters.status")}>
+                  {statusFilter === "all" ? t("filters.allStatuses") : formatStatusLabel(statusFilter)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {statuses.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status === "all" ? t("filters.allStatuses") : status}
+                    {status === "all" ? t("filters.allStatuses") : formatStatusLabel(status)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -134,7 +165,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRows.map((call) => (
+              {paginatedRows.map((call) => (
                 <TableRow key={String(call._id)}>
                   <TableCell className="font-medium">
                     {formatDateTime(call.startedAt, i18n.language, {
@@ -153,7 +184,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{call.status}</Badge>
+                    <Badge variant="outline">{formatStatusLabel(call.status)}</Badge>
                   </TableCell>
                   <TableCell>{call.disposition ?? t("table.noDisposition")}</TableCell>
                   <TableCell>
@@ -179,7 +210,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredRows.length === 0 ? (
+              {paginatedRows.length === 0 ? (
                 <TableRow>
                   <TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>
                     {t("table.empty")}
@@ -188,6 +219,98 @@ export function CallsPage({ businessId }: CallsPageProps) {
               ) : null}
             </TableBody>
           </Table>
+        </div>
+        <div
+          className={cn(
+            "flex items-center justify-between overflow-clip px-2",
+            "@max-2xl/content:flex-col-reverse @max-2xl/content:gap-4"
+          )}
+          style={{ overflowClipMargin: 1 }}
+        >
+          <div className="flex w-full items-center justify-between">
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium @2xl/content:hidden">
+              {t("pagination.pageOf", { page: currentPage, total: pageCount })}
+            </div>
+            <div className="flex items-center gap-2 @max-2xl/content:flex-row-reverse">
+              <Select onValueChange={(value) => setRowsPerPage(value ?? "10")} value={rowsPerPage}>
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 30, 40, 50].map((option) => (
+                    <SelectItem key={option} value={`${option}`}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="hidden text-sm font-medium sm:block">{t("pagination.rowsPerPage")}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 lg:gap-8">
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium @max-3xl/content:hidden">
+              {t("pagination.pageOf", { page: currentPage, total: pageCount })}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                className="size-8 p-0 @max-md/content:hidden"
+                disabled={currentPage === 1}
+                onClick={() => setPage(1)}
+                variant="outline"
+              >
+                <span className="sr-only">{t("pagination.firstPage")}</span>
+                <ChevronsLeft />
+              </Button>
+              <Button
+                className="size-8 p-0"
+                disabled={currentPage === 1}
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                variant="outline"
+              >
+                <span className="sr-only">{t("pagination.previousPage")}</span>
+                <ChevronLeft />
+              </Button>
+
+              {pageNumbers.map((pageNumber, index) => (
+                <div className="flex items-center" key={`${pageNumber}-${index}`}>
+                  {pageNumber === "..." ? (
+                    <span className="px-1 text-sm text-muted-foreground">...</span>
+                  ) : (
+                    <Button
+                      className="h-8 min-w-8 px-2"
+                      onClick={() => setPage(pageNumber)}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                    >
+                      <span className="sr-only">
+                        {t("pagination.goToPage", { page: pageNumber })}
+                      </span>
+                      {pageNumber}
+                    </Button>
+                  )}
+                </div>
+              ))}
+
+              <Button
+                className="size-8 p-0"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+                variant="outline"
+              >
+                <span className="sr-only">{t("pagination.nextPage")}</span>
+                <ChevronRight />
+              </Button>
+              <Button
+                className="size-8 p-0 @max-md/content:hidden"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage(pageCount)}
+                variant="outline"
+              >
+                <span className="sr-only">{t("pagination.lastPage")}</span>
+                <ChevronsRight />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 

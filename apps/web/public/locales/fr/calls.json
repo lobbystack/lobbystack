@@ -6,7 +6,7 @@
   "filters": {
     "searchPlaceholder": "Rechercher des appels...",
     "status": "Statut",
-    "allStatuses": "Tous les statuts"
+    "allStatuses": "Tous"
   },
   "table": {
     "startedAt": "Début",
@@ -24,6 +24,15 @@
     "pendingTranscript": "Ouvrir la transcription",
     "listen": "Écouter",
     "audioPending": "Enregistrement en attente"
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Aller a la premiere page",
+    "previousPage": "Aller a la page precedente",
+    "nextPage": "Aller a la page suivante",
+    "lastPage": "Aller a la derniere page",
+    "goToPage": "Aller a la page {{page}}"
   },
   "panel": {
     "title": "Appels récents",

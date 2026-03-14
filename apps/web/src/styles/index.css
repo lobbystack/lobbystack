@@ -131,7 +131,7 @@
   }
 
   body {
-    @apply min-h-svh w-full bg-background text-foreground antialiased has-[main[data-slot=sidebar-inset]]:bg-sidebar;
+    @apply min-h-svh w-full bg-background text-foreground antialiased;
   }
 
   #root {
