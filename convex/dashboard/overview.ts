@@ -420,6 +420,9 @@ export const getAnalyticsSummary = query({
       const timestamp = Date.parse(call.startedAt);
       return timestamp >= currentWeekStart && timestamp < nextWeekStart;
     });
+    const currentWeekMessages = allMessages.filter(
+      (message) => message._creationTime >= currentWeekStart && message._creationTime < nextWeekStart,
+    );
 
     const outcomes = {
       completed: 0,
@@ -431,17 +434,22 @@ export const getAnalyticsSummary = query({
       outcomes[categorizeCallOutcome(call)] += 1;
     }
 
-    const currentWeekConversations = conversations.filter(
-      (conversation) =>
-        conversation._creationTime >= currentWeekStart && conversation._creationTime < nextWeekStart,
+    const conversationChannels = new Map(
+      conversations.map((conversation) => [conversation._id, conversation.channel] as const),
     );
     const channels = {
       voice: 0,
       sms: 0,
       other: 0,
     };
-    for (const conversation of currentWeekConversations) {
-      channels[categorizeConversationChannel(conversation.channel)] += 1;
+    for (const call of currentWeekCalls) {
+      const channel = call.conversationId
+        ? conversationChannels.get(call.conversationId) ?? "voice"
+        : "voice";
+      channels[categorizeConversationChannel(channel)] += 1;
+    }
+    for (const message of currentWeekMessages) {
+      channels[categorizeConversationChannel(message.channel)] += 1;
     }
 
     const channelTotal = Object.values(channels).reduce((sum, value) => sum + value, 0);

@@ -39,6 +39,10 @@ export const listConversationSummaries = query({
 
         const latestMessage = messages[messages.length - 1] ?? null;
 
+        if (messages.length === 0) {
+          return null;
+        }
+
         return {
           id: conversation._id,
           channel: conversation.channel,
@@ -54,7 +58,9 @@ export const listConversationSummaries = query({
       }),
     );
 
-    return summaries.sort((left, right) => right.lastMessageAt - left.lastMessageAt);
+    return summaries
+      .filter((summary): summary is NonNullable<typeof summary> => summary !== null)
+      .sort((left, right) => right.lastMessageAt - left.lastMessageAt);
   },
 });
 
