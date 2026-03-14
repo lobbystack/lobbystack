@@ -20,6 +20,7 @@ export const listContacts = query({
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
+    const now = Date.now();
 
     const contacts = await ctx.db
       .query("contacts")
@@ -55,9 +56,12 @@ export const listContacts = query({
 
         const allCalls = callsByConversation.flat();
         const allMessages = messagesByConversation.flat();
+        const pastAppointmentTimestamps = appointments
+          .map((appointment) => Date.parse(appointment.startsAt))
+          .filter((timestamp) => timestamp <= now);
         const lastInteractionAt = Math.max(
           contact._creationTime,
-          ...appointments.map((appointment) => Date.parse(appointment.startsAt)),
+          ...pastAppointmentTimestamps,
           ...allCalls.map((call) => Date.parse(call.startedAt)),
           ...allMessages.map((message) => message._creationTime),
         );
