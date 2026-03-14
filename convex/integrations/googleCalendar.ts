@@ -103,16 +103,39 @@ function requireGoogleEnv(): {
 } {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI ??
+    (process.env.CONVEX_SITE_URL
+      ? new URL("/integrations/google/callback", process.env.CONVEX_SITE_URL).toString()
+      : undefined);
   const appBaseUrl = process.env.APP_BASE_URL;
 
-  if (!clientId || !clientSecret || !redirectUri || !appBaseUrl) {
+  const missing: Array<string> = [];
+  if (!clientId) {
+    missing.push("GOOGLE_CLIENT_ID");
+  }
+  if (!clientSecret) {
+    missing.push("GOOGLE_CLIENT_SECRET");
+  }
+  if (!redirectUri) {
+    missing.push("GOOGLE_REDIRECT_URI or CONVEX_SITE_URL");
+  }
+  if (!appBaseUrl) {
+    missing.push("APP_BASE_URL");
+  }
+
+  if (missing.length > 0) {
     throw new Error(
-      "Google Calendar OAuth requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, and APP_BASE_URL.",
+      `Google Calendar OAuth is missing required environment variables: ${missing.join(", ")}.`,
     );
   }
 
-  return { clientId, clientSecret, redirectUri, appBaseUrl };
+  return {
+    clientId: clientId!,
+    clientSecret: clientSecret!,
+    redirectUri: redirectUri!,
+    appBaseUrl: appBaseUrl!,
+  };
 }
 
 function deriveEncryptionKey(secret: string): Buffer {
