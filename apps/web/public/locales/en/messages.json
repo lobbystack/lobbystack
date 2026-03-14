@@ -1,0 +1,13 @@
+{
+  "page": {
+    "title": "Messages",
+    "searchPlaceholder": "Search conversations...",
+    "unknownCaller": "Unknown contact",
+    "unknownShort": "UK",
+    "emptyPreview": "No messages yet.",
+    "selectConversation": "Select a conversation to review the thread.",
+    "noChannel": "No contact channel saved.",
+    "composerPlaceholder": "Type your message...",
+    "send": "Send"
+  }
+}

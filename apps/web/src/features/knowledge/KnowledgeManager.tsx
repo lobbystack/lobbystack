@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconBook2, IconFileText, IconQuestionMark } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { BookOpenText, CircleQuestionMark, FileText } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -112,7 +112,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
       <CardContent className="space-y-8">
         <form className="space-y-4" onSubmit={(event) => void handleFaqSubmit(event)}>
           <div className="flex items-center gap-2">
-            <IconQuestionMark className="size-4 text-muted-foreground" />
+            <CircleQuestionMark className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.faqSnippet")}</p>
           </div>
           <Input
@@ -144,7 +144,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
         </form>
         <form className="space-y-4 border-t border-border/70 pt-8" onSubmit={(event) => void handleDocumentSubmit(event)}>
           <div className="flex items-center gap-2">
-            <IconBook2 className="size-4 text-muted-foreground" />
+            <BookOpenText className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.manualDocument")}</p>
           </div>
           <Input
@@ -179,7 +179,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
         </form>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <IconQuestionMark className="size-4 text-muted-foreground" />
+            <CircleQuestionMark className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.currentFaqs")}</p>
           </div>
           {snippets.map((snippet) => (
@@ -199,7 +199,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <IconFileText className="size-4 text-muted-foreground" />
+            <FileText className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.currentDocuments")}</p>
           </div>
           {documents.map((document) => (

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconPhone, IconRoute } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { Phone, Route } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -136,7 +136,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <IconRoute className="size-5" />
+            <Route className="size-5" />
           </div>
           <div className="space-y-1">
             <CardTitle>{t("settings:phoneRouting.title")}</CardTitle>
@@ -173,9 +173,9 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                 {t("settings:phoneRouting.e164Number")}
               </span>
               <div className="relative">
-                <IconPhone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Phone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  className="pl-9"
+                  className="pl-10"
                   onChange={(event) => setE164(event.target.value)}
                   placeholder="+18708763750"
                   value={e164}

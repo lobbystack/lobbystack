@@ -1,4 +1,39 @@
 {
+  "page": {
+    "title": "Calls",
+    "description": "Review the task-style call table, then open transcripts or listen to recorded audio."
+  },
+  "filters": {
+    "searchPlaceholder": "Search calls...",
+    "status": "Status",
+    "allStatuses": "All"
+  },
+  "table": {
+    "startedAt": "Started",
+    "caller": "Caller",
+    "status": "Status",
+    "disposition": "Disposition",
+    "transcript": "Transcript",
+    "audio": "Audio",
+    "unknownCaller": "Unknown caller",
+    "noDisposition": "Not set",
+    "empty": "No calls match the current filters."
+  },
+  "actions": {
+    "viewTranscript": "View transcript",
+    "pendingTranscript": "Open transcript",
+    "listen": "Listen",
+    "audioPending": "Recording pending"
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "firstPage": "Go to first page",
+    "previousPage": "Go to previous page",
+    "nextPage": "Go to next page",
+    "lastPage": "Go to last page",
+    "goToPage": "Go to page {{page}}"
+  },
   "panel": {
     "title": "Recent Calls",
     "description": "Review captured calls, open transcripts, and download the recorded audio.",
@@ -15,6 +50,8 @@
   },
   "transcript": {
     "title": "Call Transcript",
+    "description": "Review the saved caller and assistant turns from {{date}}.",
+    "emptyDescription": "Select a call to review the saved conversation.",
     "descriptionWithDate": "Review the saved caller and assistant turns from {{date}}.",
     "descriptionEmpty": "Select a call to review the saved conversation.",
     "noSegments": "No transcript segments are available for this call yet."

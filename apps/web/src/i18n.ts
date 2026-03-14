@@ -26,6 +26,10 @@ void i18n
       "knowledge",
       "inbox",
       "calls",
+      "messages",
+      "contacts",
+      "agent",
+      "automations",
     ],
     interpolation: {
       escapeValue: false,

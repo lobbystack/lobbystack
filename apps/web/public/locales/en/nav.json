@@ -1,12 +1,22 @@
 {
   "items": {
-    "dashboard": "Dashboard",
-    "inbox": "Inbox",
-    "knowledge": "Knowledge",
+    "home": "Home",
+    "calls": "Calls",
+    "messages": "Messages",
+    "automations": "Automations",
+    "agent": "Agent",
+    "contacts": "Contacts",
     "settings": "Settings"
+  },
+  "search": {
+    "placeholder": "Search workspace..."
   },
   "sidebar": {
     "businessSlugFallback": "Operator console",
+    "general": "General",
+    "other": "Other",
+    "workspace": "Workspace",
+    "openSettings": "Open settings",
     "signedIn": "Signed in",
     "workspaceReady": "Workspace ready",
     "signOut": "Sign out"

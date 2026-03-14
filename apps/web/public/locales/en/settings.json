@@ -3,6 +3,39 @@
     "title": "Settings",
     "description": "Configure the receptionist, hours, services, and transfer policy."
   },
+  "layout": {
+    "title": "Settings",
+    "description": "Configure business operations and integrations with the shadcn-admin settings layout."
+  },
+  "sections": {
+    "business": "Business Setup",
+    "integrations": "Integrations"
+  },
+  "integrations": {
+    "providers": {
+      "google": "Connect Google Calendar to keep bookings and operator views aligned.",
+      "microsoft": "Connect Microsoft Calendar for Exchange and Outlook-backed teams."
+    },
+    "cards": {
+      "google": {
+        "title": "Google Calendar"
+      },
+      "microsoft": {
+        "title": "Microsoft Calendar"
+      }
+    },
+    "status": {
+      "connected": "Connected",
+      "notConnected": "Not connected yet"
+    },
+    "summary": {
+      "title": "Calendar sync summary",
+      "description": "A quick view of how the integration layer is performing.",
+      "connectedCalendars": "Connected calendars",
+      "openIssues": "Open sync issues",
+      "syncedAppointments": "Synced appointments"
+    }
+  },
   "profile": {
     "title": "Receptionist Profile",
     "description": "Define the voice, tone, booking policy, and transfer rules that shape your receptionist.",

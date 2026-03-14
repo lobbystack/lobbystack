@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { IconCalendarPlus } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { CalendarPlus } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -73,7 +73,7 @@ export function ServicesCard(props: ServicesCardProps) {
       <CardHeader>
         <div className="flex items-start gap-3">
           <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <IconCalendarPlus className="size-5" />
+            <CalendarPlus className="size-5" />
           </div>
           <div className="space-y-1">
             <CardTitle>{t("services.title")}</CardTitle>

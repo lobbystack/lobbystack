@@ -1,0 +1,18 @@
+{
+  "page": {
+    "title": "Contacts",
+    "description": "Gérez les personnes derrière vos appels, messages et rendez-vous.",
+    "searchPlaceholder": "Rechercher des contacts..."
+  },
+  "table": {
+    "contact": "Contact",
+    "channels": "Canaux",
+    "activity": "Activité",
+    "appointments": "Rendez-vous",
+    "lastInteraction": "Dernière interaction",
+    "messages": "{{count}} messages",
+    "calls": "{{count}} appels",
+    "unknownContact": "Contact inconnu",
+    "empty": "Aucun contact ne correspond à la recherche."
+  }
+}

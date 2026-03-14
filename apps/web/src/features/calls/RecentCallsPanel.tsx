@@ -1,12 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import {
-  IconDownload,
-  IconFileText,
-  IconMessageCircle,
-  IconPhoneCall,
-} from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { Download, FileText, MessageCircle, PhoneCall } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -97,8 +92,8 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
             >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    <IconPhoneCall className="size-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <PhoneCall className="size-4 text-muted-foreground" />
                     {formatDateTime(call.startedAt, i18n.language, {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -127,7 +122,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" onClick={() => openTranscript(call._id)}>
-                  <IconFileText className="size-4" />
+                  <FileText className="size-4" />
                   {t("calls:panel.viewTranscript")}
                 </Button>
                 {call.recordingUrl ? (
@@ -138,7 +133,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                     size="sm"
                     variant="outline"
                   >
-                    <IconDownload className="size-4" />
+                    <Download className="size-4" />
                     {t("calls:panel.downloadAudio")}
                   </Button>
                 ) : (
@@ -197,7 +192,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                   key={segment._id}
                 >
                   <div className="mb-2 flex items-center gap-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                    <IconMessageCircle className="size-3.5" />
+                    <MessageCircle className="size-3.5" />
                     {segment.speaker}
                   </div>
                   <div className="text-sm leading-6 text-foreground">{segment.text}</div>

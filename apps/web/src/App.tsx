@@ -1,75 +1,38 @@
-import type { CSSProperties, ReactNode } from "react";
-import { FormEvent, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { FormEvent, useState } from "react";
 import {
   BrowserRouter,
-  Link,
   Navigate,
   Route,
   Routes,
-  useLocation,
 } from "react-router-dom";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
-import {
-  IconChecklist,
-  IconClockHour4,
-  IconHeadphones,
-} from "@tabler/icons-react";
 
-import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
+import { demoSnapshot } from "@ai-receptionist/shared";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { AppSidebar } from "@/components/app-sidebar";
+import { LoadingScreen } from "@/components/loading-screen";
 import { LoginForm } from "@/components/login-form";
-import { SectionCards } from "@/components/section-cards";
-import { SiteHeader } from "@/components/site-header";
 import { SignupForm } from "@/components/signup-form";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { RecentCallsPanel } from "@/features/calls/RecentCallsPanel";
-import { KnowledgeManager } from "@/features/knowledge/KnowledgeManager";
-import { PreviewPanel } from "@/features/knowledge/PreviewPanel";
-import { BusinessHoursForm } from "@/features/settings/BusinessHoursForm";
-import { BookableTeamCard } from "@/features/settings/BookableTeamCard";
-import { PhoneNumbersCard } from "@/features/settings/PhoneNumbersCard";
-import { BusinessProfileForm } from "@/features/settings/BusinessProfileForm";
-import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
-import { ServicesCard } from "@/features/settings/ServicesCard";
-
-function LoadingScreen() {
-  const { t } = useTranslation("common");
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/20 px-6">
-      <div className="w-full max-w-sm rounded-3xl border border-border/70 bg-card/90 p-8 text-center shadow-sm">
-        <p className="text-sm font-medium tracking-[0.24em] text-muted-foreground uppercase">
-          {t("appName")}
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">{t("loading.title")}</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {t("loading.description")}
-        </p>
-      </div>
-    </div>
-  );
-}
+import { Main } from "@/components/layout/main";
+import { AutomationsPage } from "@/features/automations/AutomationsPage";
+import { AgentPage } from "@/features/agent/AgentPage";
+import { CallsPage } from "@/features/calls/CallsPage";
+import { ContactsPage } from "@/features/contacts/ContactsPage";
+import { HomePage } from "@/features/home/HomePage";
+import { MessagesPage } from "@/features/messages/MessagesPage";
+import { SettingsLayout } from "@/features/settings/SettingsLayout";
+import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
+import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 
 function AuthShell(props: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(24,24,27,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,244,245,0.94))] px-6 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10">
       <section className="flex w-full items-center justify-center">
         <div className="w-full max-w-md rounded-[2rem] border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
           {props.children}
@@ -244,308 +207,8 @@ function PublicOnly(props: { children: ReactNode }) {
   return props.children;
 }
 
-function slugify(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function BusinessSetupCard() {
-  const { t } = useTranslation("dashboard");
-  const bootstrapBusiness = useMutation(api.businesses.admin.bootstrapBusiness);
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [timezone, setTimezone] = useState("America/Toronto");
-  const [businessType, setBusinessType] = useState("clinic");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  function handleNameChange(value: string) {
-    setName(value);
-    setSlug(slugify(value));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setStatus(null);
-    setError(null);
-
-    try {
-      await bootstrapBusiness({ name, slug, timezone, businessType });
-      setStatus(t("setup.created"));
-    } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : t("setup.failed"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <CardTitle>{t("setup.title")}</CardTitle>
-        <CardDescription>{t("setup.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                {t("setup.businessName")}
-              </span>
-              <Input
-                onChange={(event) => handleNameChange(event.target.value)}
-                placeholder={t("setup.placeholders.businessName")}
-                value={name}
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                {t("setup.slug")}
-              </span>
-              <Input
-                onChange={(event) => setSlug(slugify(event.target.value))}
-                placeholder={t("setup.placeholders.slug")}
-                value={slug}
-              />
-            </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                {t("setup.timezone")}
-              </span>
-              <Input onChange={(event) => setTimezone(event.target.value)} value={timezone} />
-            </label>
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                {t("setup.businessType")}
-              </span>
-              <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("setup.selectBusinessType")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="clinic">{t("setup.businessTypes.clinic")}</SelectItem>
-                  <SelectItem value="repair_shop">{t("setup.businessTypes.repair_shop")}</SelectItem>
-                  <SelectItem value="salon">{t("setup.businessTypes.salon")}</SelectItem>
-                  <SelectItem value="service_company">{t("setup.businessTypes.service_company")}</SelectItem>
-                  <SelectItem value="other">{t("setup.businessTypes.other")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              disabled={isSubmitting || name.trim().length === 0 || slug.trim().length === 0}
-              type="submit"
-            >
-              {isSubmitting ? t("setup.creating") : t("setup.create")}
-            </Button>
-            {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
-            {error ? <span className="text-sm text-destructive">{error}</span> : null}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function QuickActionsCard(props: {
-  businessId: Id<"businesses">;
-  businessName: string;
-  knowledgeCount: number;
-  serviceCount: number;
-  configuredDays: number;
-  phoneNumberCount: number;
-  greeting: string;
-}) {
-  const { t } = useTranslation("dashboard");
-
-  return (
-    <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <CardTitle>{t("quickActions.title")}</CardTitle>
-        <CardDescription>
-          {t("quickActions.description", { businessName: props.businessName })}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-3">
-          <Link className={buttonVariants({ variant: "default" })} to="/settings">
-            {t("quickActions.configureProfile")}
-          </Link>
-          <Link className={buttonVariants({ variant: "outline" })} to="/knowledge">
-            {t("quickActions.addKnowledge")}
-          </Link>
-          <Link className={buttonVariants({ variant: "outline" })} to="/inbox">
-            {t("quickActions.reviewInbox")}
-          </Link>
-        </div>
-        <div className="rounded-2xl border border-border/70 bg-muted/25 p-4">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            {t("quickActions.readiness")}
-          </p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-            <li>{t("quickActions.servicesConfigured", { count: props.serviceCount })}</li>
-            <li>{t("quickActions.daysConfigured", { count: props.configuredDays })}</li>
-            <li>{t("quickActions.knowledgeItems", { count: props.knowledgeCount })}</li>
-            <li>{t("quickActions.phoneNumbers", { count: props.phoneNumberCount })}</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-            {t("quickActions.currentGreeting")}
-          </p>
-          <p className="mt-3 text-sm leading-6 text-foreground">{props.greeting}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DashboardHome(props: {
-  businessId?: Id<"businesses">;
-  businessName: string;
-  snapshot: BusinessContextSnapshot;
-}) {
-  const configuration = useQuery(
-    api.businesses.catalog.getBusinessConfiguration,
-    props.businessId ? { businessId: props.businessId } : "skip",
-  );
-  const knowledge = useQuery(
-    api.ai.context.knowledge.listKnowledge,
-    props.businessId ? { businessId: props.businessId } : "skip",
-  );
-  const recentCalls = useQuery(
-    api.voice.runtime.listRecentCalls,
-    props.businessId ? { businessId: props.businessId, limit: 6 } : "skip",
-  );
-
-  if (!props.businessId) {
-    return (
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
-        <BusinessSetupCard />
-        <BusinessSnapshotCard snapshot={props.snapshot} />
-      </div>
-    );
-  }
-
-  const serviceCount = configuration?.services.length ?? 0;
-  const configuredDays = configuration?.hours.length ?? 0;
-  const knowledgeCount = (knowledge?.snippets.length ?? 0) + (knowledge?.documents.length ?? 0);
-  const phoneNumberCount = configuration?.phoneNumbers.length ?? 0;
-
-  return (
-    <div className="space-y-6">
-      <SectionCards
-        configuredDays={configuredDays}
-        knowledgeCount={knowledgeCount}
-        recentCallCount={recentCalls?.length ?? 0}
-        serviceCount={serviceCount}
-        snapshotVersion={props.snapshot.version}
-      />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
-        <RecentCallsPanel businessId={props.businessId} />
-        <QuickActionsCard
-          businessId={props.businessId}
-          businessName={props.businessName}
-          configuredDays={configuredDays}
-          greeting={configuration?.profile?.greeting ?? props.snapshot.greeting}
-          knowledgeCount={knowledgeCount}
-          phoneNumberCount={phoneNumberCount}
-          serviceCount={serviceCount}
-        />
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]">
-        <PreviewPanel businessId={props.businessId} enabled={Boolean(props.businessId)} />
-        <BusinessSnapshotCard snapshot={props.snapshot} />
-      </div>
-    </div>
-  );
-}
-
-function InboxPage(props: { businessId?: Id<"businesses"> }) {
-  if (!props.businessId) {
-    return <BusinessSetupCard />;
-  }
-
-  return <RecentCallsPanel businessId={props.businessId} />;
-}
-
-function KnowledgePage(props: {
-  businessId?: Id<"businesses">;
-  snapshot: BusinessContextSnapshot;
-}) {
-  if (!props.businessId) {
-    return <BusinessSetupCard />;
-  }
-
-  return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-      <KnowledgeManager businessId={props.businessId} />
-      <div className="space-y-6">
-        <PreviewPanel businessId={props.businessId} enabled />
-        <BusinessSnapshotCard snapshot={props.snapshot} />
-      </div>
-    </div>
-  );
-}
-
-function SettingsPage(props: {
-  businessId?: Id<"businesses">;
-  snapshot: BusinessContextSnapshot;
-}) {
-  const { t } = useTranslation("settings");
-
-  if (!props.businessId) {
-    return <BusinessSetupCard />;
-  }
-
-  return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-      <div className="space-y-6">
-        <BusinessProfileForm businessId={props.businessId} />
-        <PhoneNumbersCard businessId={props.businessId} />
-        <BusinessHoursForm businessId={props.businessId} />
-        <ServicesCard businessId={props.businessId} />
-        <BookableTeamCard businessId={props.businessId} />
-      </div>
-      <div className="space-y-6">
-        <BusinessSnapshotCard snapshot={props.snapshot} />
-        <Card className="border border-border/70 bg-card/90 shadow-sm">
-          <CardHeader>
-            <CardTitle>{t("nextSteps.title")}</CardTitle>
-            <CardDescription>{t("nextSteps.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-              <IconChecklist className="mt-0.5 size-4 text-foreground" />
-              <span>{t("nextSteps.hours")}</span>
-            </div>
-            <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-              <IconHeadphones className="mt-0.5 size-4 text-foreground" />
-              <span>{t("nextSteps.transfer")}</span>
-            </div>
-            <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 p-4">
-              <IconClockHour4 className="mt-0.5 size-4 text-foreground" />
-              <span>{t("nextSteps.snapshot")}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 function WorkspaceShell() {
-  const { t } = useTranslation(["dashboard", "inbox", "knowledge", "settings"]);
   const { signOut } = useAuthActions();
-  const location = useLocation();
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
@@ -555,78 +218,44 @@ function WorkspaceShell() {
   );
   const resolvedSnapshot = snapshot ?? demoSnapshot;
 
-  const headerCopy = useMemo(() => {
-    const path = location.pathname;
-    if (path.startsWith("/inbox")) {
-      return {
-        title: t("inbox:header.title"),
-        description: t("inbox:header.description"),
-      };
-    }
-    if (path.startsWith("/knowledge")) {
-      return {
-        title: t("knowledge:header.title"),
-        description: t("knowledge:header.description"),
-      };
-    }
-    if (path.startsWith("/settings")) {
-      return {
-        title: t("settings:header.title"),
-        description: t("settings:header.description"),
-      };
-    }
-    return {
-      title: t("dashboard:headers.dashboardTitle"),
-      description: t("dashboard:headers.dashboardDescription"),
-    };
-  }, [location.pathname, t]);
-
   if (businesses === undefined) {
     return <LoadingScreen />;
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "18rem",
-          "--header-height": "4.5rem",
-        } as CSSProperties
-      }
+    <AuthenticatedLayout
+      businessName={activeBusiness?.name ?? "AI Receptionist"}
+      businessSlug={activeBusiness?.slug}
+      onSignOut={() => void signOut()}
     >
-      <AppSidebar
-        businessName={activeBusiness?.name ?? t("common:appName")}
-        businessSlug={activeBusiness?.slug}
-        onSignOut={() => void signOut()}
-      />
-      <SidebarInset>
-        <SiteHeader description={headerCopy.description} title={headerCopy.title} />
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-          <Routes>
+      <Main className="flex flex-1 flex-col" fixed>
+        <Routes>
+          <Route element={<HomePage businessId={businessId} snapshot={resolvedSnapshot} />} path="/" />
+          <Route element={<CallsPage businessId={businessId} />} path="/calls" />
+          <Route element={<MessagesPage businessId={businessId} />} path="/messages" />
+          <Route element={<AutomationsPage businessId={businessId} />} path="/automations" />
+          <Route
+            element={<AgentPage businessId={businessId} snapshot={resolvedSnapshot} />}
+            path="/agent"
+          />
+          <Route element={<ContactsPage businessId={businessId} />} path="/contacts" />
+          <Route
+            element={<SettingsLayout businessId={businessId} />}
+            path="/settings/*"
+          >
             <Route
-              element={
-                <DashboardHome
-                  businessId={businessId}
-                  businessName={activeBusiness?.name ?? resolvedSnapshot.displayName}
-                  snapshot={resolvedSnapshot}
-                />
-              }
-              path="/"
-            />
-            <Route element={<InboxPage businessId={businessId} />} path="/inbox" />
-            <Route
-              element={<KnowledgePage businessId={businessId} snapshot={resolvedSnapshot} />}
-              path="/knowledge"
+              element={<SettingsBusinessPage businessId={businessId as Id<"businesses">} snapshot={resolvedSnapshot} />}
+              index
             />
             <Route
-              element={<SettingsPage businessId={businessId} snapshot={resolvedSnapshot} />}
-              path="/settings"
+              element={<IntegrationsPage businessId={businessId as Id<"businesses">} />}
+              path="integrations"
             />
-            <Route element={<Navigate replace to="/" />} path="*" />
-          </Routes>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+          </Route>
+          <Route element={<Navigate replace to="/" />} path="*" />
+        </Routes>
+      </Main>
+    </AuthenticatedLayout>
   );
 }
 

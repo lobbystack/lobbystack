@@ -14,3 +14,4 @@ node_modules
 apps/web/dist
 convex/.generated
 *.tsbuildinfo
+references/shadcn-admin

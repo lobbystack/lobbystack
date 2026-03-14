@@ -3,6 +3,85 @@
     "dashboardTitle": "Dashboard",
     "dashboardDescription": "Track operational readiness for calls, messages, and booking."
   },
+  "delta": {
+    "flat": "No change from last month",
+    "up": "+{{value}}% from last month",
+    "down": "-{{value}}% from last month"
+  },
+  "home": {
+    "title": "Home",
+    "download": "Download",
+    "liveCalls": "Live",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics",
+      "reports": "Reports",
+      "notifications": "Notifications"
+    },
+    "analytics": {
+      "chart": {
+        "title": "Engagement Overview",
+        "description": "Weekly calls and messages across your receptionist workspace."
+      },
+      "cards": {
+        "calls": "Calls This Week",
+        "messages": "Messages This Week",
+        "appointments": "Appointments Booked",
+        "averageDuration": "Avg. Call Duration"
+      },
+      "metrics": {
+        "flat": "No change vs last week",
+        "percentUp": "+{{value}}% vs last week",
+        "percentDown": "-{{value}}% vs last week",
+        "durationUp": "+{{value}} vs last week",
+        "durationDown": "-{{value}} vs last week"
+      },
+      "outcomes": {
+        "title": "Call Outcomes",
+        "description": "How this week's call volume resolved.",
+        "labels": {
+          "completed": "Completed",
+          "transferred": "Transferred",
+          "live": "Live",
+          "missed": "Missed"
+        }
+      },
+      "channels": {
+        "title": "Channels",
+        "description": "How conversations reached your receptionist this week.",
+        "labels": {
+          "voice": "Voice",
+          "sms": "SMS",
+          "other": "Other"
+        }
+      }
+    },
+    "metrics": {
+      "loading": "Loading monthly comparison...",
+      "calls": {
+        "title": "Calls"
+      },
+      "messages": {
+        "title": "Messages"
+      },
+      "appointments": {
+        "title": "Appointments"
+      },
+      "contacts": {
+        "title": "Contacts"
+      }
+    },
+    "chart": {
+      "title": "Calls per month",
+      "description": "Monthly call volume using your Convex call records."
+    },
+    "recentCalls": {
+      "title": "Recent Calls",
+      "description": "{{count}} recent calls in the latest activity feed.",
+      "unknownCaller": "Unknown caller",
+      "durationValue": "{{value}} sec"
+    }
+  },
   "setup": {
     "title": "Create your first business",
     "description": "This bootstraps the tenant, receptionist profile, and the first snapshot used by voice.",

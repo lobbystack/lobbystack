@@ -1,5 +1,5 @@
-import { IconBook2, IconClockHour4, IconPhone, IconSettingsAutomation } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import { BookOpenText, Clock4, Phone, Workflow } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,25 +31,25 @@ export function SectionCards({
     {
       key: "calls",
       title: t("dashboard:cards.calls.title"),
-      icon: IconPhone,
+      icon: Phone,
       footer: t("dashboard:cards.calls.footer"),
     },
     {
       key: "services",
       title: t("dashboard:cards.services.title"),
-      icon: IconSettingsAutomation,
+      icon: Workflow,
       footer: t("dashboard:cards.services.footer"),
     },
     {
       key: "hours",
       title: t("dashboard:cards.hours.title"),
-      icon: IconClockHour4,
+      icon: Clock4,
       footer: t("dashboard:cards.hours.footer"),
     },
     {
       key: "knowledge",
       title: t("dashboard:cards.knowledge.title"),
-      icon: IconBook2,
+      icon: BookOpenText,
       footer: t("dashboard:cards.knowledge.footer"),
     },
   ] as const;

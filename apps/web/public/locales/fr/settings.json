@@ -3,6 +3,39 @@
     "title": "Réglages",
     "description": "Configurez la réceptionniste, les heures, les services et la politique de transfert."
   },
+  "layout": {
+    "title": "Réglages",
+    "description": "Configurez les opérations métier et les intégrations avec la mise en page shadcn-admin."
+  },
+  "sections": {
+    "business": "Configuration",
+    "integrations": "Intégrations"
+  },
+  "integrations": {
+    "providers": {
+      "google": "Connectez Google Calendar pour garder les réservations et la vue opérateur synchronisées.",
+      "microsoft": "Connectez Microsoft Calendar pour les équipes Outlook et Exchange."
+    },
+    "cards": {
+      "google": {
+        "title": "Google Calendar"
+      },
+      "microsoft": {
+        "title": "Microsoft Calendar"
+      }
+    },
+    "status": {
+      "connected": "Connecté",
+      "notConnected": "Pas encore connecté"
+    },
+    "summary": {
+      "title": "Résumé de synchronisation",
+      "description": "Un aperçu rapide du fonctionnement des intégrations calendaires.",
+      "connectedCalendars": "Calendriers connectés",
+      "openIssues": "Problèmes ouverts",
+      "syncedAppointments": "Rendez-vous synchronisés"
+    }
+  },
   "profile": {
     "title": "Profil de la réceptionniste",
     "description": "Définissez la voix, le ton, la politique de réservation et les règles de transfert qui façonnent votre réceptionniste.",
