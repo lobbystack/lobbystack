@@ -805,6 +805,7 @@ export const startGoogleConnection = internalAction({
     businessId: v.id("businesses"),
     staffId: v.id("staff"),
     authSubject: v.string(),
+    authUserId: v.optional(v.id("users")),
   },
   handler: async (
     ctx,
@@ -816,6 +817,7 @@ export const startGoogleConnection = internalAction({
         businessId: args.businessId,
         staffId: args.staffId,
         authSubject: args.authSubject,
+        ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
       },
     );
 

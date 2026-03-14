@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   action,
   internalAction,
@@ -213,17 +214,6 @@ function isGoogleConnectionReady(
   );
 }
 
-async function getUserIdByAuthSubject(
-  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
-  authSubject: string,
-): Promise<Id<"users"> | null> {
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_auth_subject", (q) => q.eq("authSubject", authSubject))
-    .unique();
-  return user?._id ?? null;
-}
-
 export const listCalendarConnections = query({
   args: {
     businessId: v.id("businesses"),
@@ -295,9 +285,17 @@ export const getCalendarConnectionAccessContext = internalQuery({
     businessId: v.id("businesses"),
     staffId: v.id("staff"),
     authSubject: v.string(),
+    authUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args): Promise<CalendarAccessContext> => {
-    const userId = await getUserIdByAuthSubject(ctx, args.authSubject);
+    const userId: Id<"users"> | null = await ctx.runQuery(
+      internal.users.resolveAuthenticatedUserForBusiness,
+      {
+        businessId: args.businessId,
+        authSubject: args.authSubject,
+        ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
+      },
+    );
     if (!userId) {
       throw new Error("Authenticated user profile not found.");
     }
@@ -1604,11 +1602,13 @@ export const connectGoogle = action({
   },
   handler: async (ctx, args): Promise<GoogleConnectResult> => {
     const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
     return (await ctx.runAction(
       internal.integrations.googleCalendar.startGoogleConnection,
       {
         ...args,
         authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
       },
     )) as GoogleConnectResult;
   },
@@ -1621,12 +1621,14 @@ export const listGoogleCalendars = action({
   },
   handler: async (ctx, args): Promise<Array<GoogleCalendarOption>> => {
     const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
         businessId: args.businessId,
         staffId: args.staffId,
         authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
       },
     );
 
@@ -1654,12 +1656,14 @@ export const selectGoogleCalendar = action({
     args,
   ): Promise<{ selectedCalendarId: string; selectedCalendarSummary: string }> => {
     const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
         businessId: args.businessId,
         staffId: args.staffId,
         authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
       },
     );
 
