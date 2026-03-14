@@ -689,6 +689,142 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("treats bare h-format replies with pm as afternoon slot selections on the stored date", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId, initialConsultationId, smsNumber } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-h-format-pm-confirmation",
+          name: "SMS H Format PM Confirmation",
+          smsNumber: "+14165550919",
+        });
+        const { conversationId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550980",
+        });
+        await ctx.db.insert("conversation_booking_state", {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: initialConsultationId,
+          requestedDate: "2026-03-12",
+          preferredHour24: 10,
+          preferredMinute: 0,
+          lastOfferedDate: "2026-03-12",
+          lastOfferedStartsAt: ["2026-03-12T18:30:00.000Z"],
+          updatedAt: new Date().toISOString(),
+        });
+        return {
+          businessId,
+          conversationId,
+          initialConsultationId,
+          smsNumber: "+14165550919",
+        };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-h-format-pm-confirmation-1",
+      From: "+14165550980",
+      To: smsNumber,
+      Body: "2h30pm",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "I have Initial Consultation available for Thursday, Mar 12 at 2:30 PM. Does that work for you?",
+      );
+
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState).toMatchObject({
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        pendingStartsAt: "2026-03-12T18:30:00.000Z",
+      });
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+    });
+  });
+
+  it("treats h-format replies with pm and confirmation language as afternoon bookings", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId, initialConsultationId, smsNumber } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-h-format-pm-booking",
+          name: "SMS H Format PM Booking",
+          smsNumber: "+14165550920",
+        });
+        const { conversationId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550979",
+        });
+        await ctx.db.insert("conversation_booking_state", {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: initialConsultationId,
+          requestedDate: "2026-03-12",
+          preferredHour24: 10,
+          preferredMinute: 0,
+          lastOfferedDate: "2026-03-12",
+          lastOfferedStartsAt: ["2026-03-12T18:30:00.000Z"],
+          updatedAt: new Date().toISOString(),
+        });
+        return {
+          businessId,
+          conversationId,
+          initialConsultationId,
+          smsNumber: "+14165550920",
+        };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-h-format-pm-booking-1",
+      From: "+14165550979",
+      To: smsNumber,
+      Body: "I'll take 2h30pm",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Thursday, Mar 12 at 2:30 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      expect(appointments[0]?.startsAt).toBe("2026-03-12T18:30:00.000Z");
+
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState).toMatchObject({
+        mode: "booked",
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-12T18:30:00.000Z",
+      });
+    });
+  });
+
   it("answers hours directly after booking without reopening scheduling", async () => {
     const t = createConvexHarness();
 

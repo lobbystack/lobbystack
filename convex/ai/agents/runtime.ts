@@ -363,7 +363,7 @@ function isTimeOnlyReply(text: string): boolean {
   return (
     /^(?:at\s*)?\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)$/i.test(normalized) ||
     /^(?:at\s*)?(?:[01]?\d|2[0-3]):[0-5]\d$/i.test(normalized) ||
-    /^(?:a\s+)?\d{1,2}h(?:\d{2})?$/i.test(normalized) ||
+    /^(?:a\s+)?\d{1,2}h(?:\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?$/i.test(normalized) ||
     looksLikeDaypartFollowUp(normalized)
   );
 }
@@ -384,7 +384,7 @@ function looksLikeSchedulingFollowUp(text: string): boolean {
     /\bon\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\bthe\s+\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i.test(text) ||
-    /\b\d{1,2}h(?:\d{2})?\b/i.test(text) ||
+    /\b\d{1,2}h(?:\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?))?\b/i.test(text) ||
     /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
     /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
     looksLikeDaypartFollowUp(text) ||
@@ -565,6 +565,35 @@ function looksLikeRelativeDayReference(text: string): boolean {
 
 function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePreference | null {
   const comparableText = normalizeComparable(text);
+  const hSeparatorMeridiemMatch = text.match(
+    /\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i,
+  );
+  if (hSeparatorMeridiemMatch) {
+    const [, hourText, minuteText, meridiem] = hSeparatorMeridiemMatch;
+    if (!meridiem) {
+      return null;
+    }
+
+    const rawHour = Number(hourText);
+    const minute = minuteText ? Number(minuteText) : 0;
+    const normalizedMeridiem = meridiem.toLowerCase();
+    const hour24 =
+      normalizedMeridiem.startsWith("p")
+        ? rawHour === 12
+          ? 12
+          : rawHour + 12
+        : rawHour === 12
+          ? 0
+          : rawHour;
+
+    return {
+      hour24,
+      minute,
+      approximate: false,
+      label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+    };
+  }
+
   const hSeparatorMatch = text.match(/\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\b/i);
   if (hSeparatorMatch) {
     const [, hourText, minuteText] = hSeparatorMatch;
