@@ -26,6 +26,7 @@
       "connectedSuccess": "Google Calendar connected successfully.",
       "connectFailed": "Unable to complete the Google Calendar connection.",
       "connectedAccount": "Connected account",
+      "connectedAccountUnavailable": "Connected account unavailable",
       "selectedCalendar": "Selected calendar",
       "noCalendarSelected": "No calendar selected yet.",
       "calendarLabel": "Google calendar",

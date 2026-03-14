@@ -64,12 +64,35 @@ type CalendarConnectionState = {
   selectedCalendarId?: string;
 };
 
+type CalendarConnectionListItem = {
+  _id: Id<"calendar_connections">;
+  businessId: Id<"businesses">;
+  provider: string;
+  ownerUserId: Id<"users">;
+  staffId?: Id<"staff">;
+  externalAccountEmail?: string;
+  selectedCalendarId?: string;
+  selectedCalendarSummary?: string;
+  status: string;
+  tokenExpiresAt?: string;
+  syncWindowStartsAt?: string;
+  lastSyncAttemptAt?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+};
+
 type CalendarAccessContext = {
   businessId: Id<"businesses">;
   userId: Id<"users">;
   staffId: Id<"staff">;
   staffName: string;
   existingConnectionId?: Id<"calendar_connections">;
+};
+
+type CalendarIntegrationBusinessAccess = {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  role: string;
 };
 
 type CalendarBusyBlockInput = {
@@ -79,6 +102,18 @@ type CalendarBusyBlockInput = {
   sourceCalendarId: string;
   externalUpdatedAt?: string;
 };
+
+const CALENDAR_INTEGRATION_ADMIN_ROLES = new Set([
+  "business_owner",
+  "business_admin",
+  "owner",
+]);
+
+function requireCalendarIntegrationAdminRole(role: string): void {
+  if (!CALENDAR_INTEGRATION_ADMIN_ROLES.has(role)) {
+    throw new Error("Calendar integrations require admin access.");
+  }
+}
 
 type GoogleCalendarOption = {
   id: string;
@@ -218,14 +253,87 @@ export const listCalendarConnections = query({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
-    return await ctx.db
+  handler: async (ctx, args): Promise<Array<CalendarConnectionListItem>> => {
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    const connections = await ctx.db
       .query("calendar_connections")
       .withIndex("by_business_id_and_provider", (q) =>
         q.eq("businessId", args.businessId),
       )
       .collect();
+
+    return connections.map((connection) => ({
+      _id: connection._id,
+      businessId: connection.businessId,
+      provider: connection.provider,
+      ownerUserId: connection.ownerUserId,
+      ...(connection.staffId !== undefined ? { staffId: connection.staffId } : {}),
+      ...(connection.externalAccountEmail !== undefined
+        ? { externalAccountEmail: connection.externalAccountEmail }
+        : {}),
+      ...(connection.selectedCalendarId !== undefined
+        ? { selectedCalendarId: connection.selectedCalendarId }
+        : {}),
+      ...(connection.selectedCalendarSummary !== undefined
+        ? { selectedCalendarSummary: connection.selectedCalendarSummary }
+        : {}),
+      status: connection.status,
+      ...(connection.tokenExpiresAt !== undefined
+        ? { tokenExpiresAt: connection.tokenExpiresAt }
+        : {}),
+      ...(connection.syncWindowStartsAt !== undefined
+        ? { syncWindowStartsAt: connection.syncWindowStartsAt }
+        : {}),
+      ...(connection.lastSyncAttemptAt !== undefined
+        ? { lastSyncAttemptAt: connection.lastSyncAttemptAt }
+        : {}),
+      ...(connection.lastSyncedAt !== undefined
+        ? { lastSyncedAt: connection.lastSyncedAt }
+        : {}),
+      ...(connection.lastSyncError !== undefined
+        ? { lastSyncError: connection.lastSyncError }
+        : {}),
+    }));
+  },
+});
+
+export const getCalendarIntegrationBusinessAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    authSubject: v.string(),
+    authUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<CalendarIntegrationBusinessAccess> => {
+    const userId: Id<"users"> | null = await ctx.runQuery(
+      internal.users.resolveAuthenticatedUserForBusiness,
+      {
+        businessId: args.businessId,
+        authSubject: args.authSubject,
+        ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
+      },
+    );
+    if (!userId) {
+      throw new Error("Authenticated user profile not found.");
+    }
+
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", userId).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership || membership.status !== "active") {
+      throw new Error("You do not have access to this business.");
+    }
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    return {
+      businessId: args.businessId,
+      userId,
+      role: membership.role,
+    };
   },
 });
 
@@ -285,7 +393,7 @@ export const getCalendarConnectionAccessContext = internalQuery({
     businessId: v.id("businesses"),
     staffId: v.id("staff"),
     authSubject: v.string(),
-    authUserId: v.optional(v.id("users")),
+    authUserId: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<CalendarAccessContext> => {
     const userId: Id<"users"> | null = await ctx.runQuery(
@@ -309,6 +417,7 @@ export const getCalendarConnectionAccessContext = internalQuery({
     if (!membership || membership.status !== "active") {
       throw new Error("You do not have access to this business.");
     }
+    requireCalendarIntegrationAdminRole(membership.role);
 
     const staff = await ctx.db.get(args.staffId);
     if (!staff || staff.businessId !== args.businessId) {
@@ -701,6 +810,7 @@ export const upsertCalendarConnection = mutation({
   },
   handler: async (ctx, args) => {
     const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const existing = await ctx.db
       .query("calendar_connections")
       .withIndex("by_provider_and_external_account_id", (q) =>
@@ -1451,7 +1561,8 @@ export const getCalendarReconciliationSummary = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args): Promise<CalendarReconciliationSummary> => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const [appointments, openIssues]: [Array<Doc<"appointments">>, Array<Doc<"inbox_items">>] =
       await Promise.all([
       ctx.runQuery(internal.integrations.calendar.listAppointmentsForCalendarReconciliation, {
@@ -1493,7 +1604,8 @@ export const listCalendarReconciliationIssues = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const issues = await ctx.db
       .query("inbox_items")
       .withIndex("by_business_id_and_kind_and_status", (q) =>
@@ -1547,7 +1659,8 @@ export const listAppointmentsNeedingCalendarAttention = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const unhealthyStates: Array<NormalizedCalendarSyncState> = [
       "pending",
       "syncing",
@@ -1712,9 +1825,20 @@ export const connectMicrosoft = action({
     businessId: v.id("businesses"),
   },
   handler: async (
-    _ctx,
+    ctx,
     args,
   ): Promise<{ businessId: Id<"businesses">; authorizationUrl: string }> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    await ctx.runQuery(
+      internal.integrations.calendar.getCalendarIntegrationBusinessAccess,
+      {
+        businessId: args.businessId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
     return {
       businessId: args.businessId,
       authorizationUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",

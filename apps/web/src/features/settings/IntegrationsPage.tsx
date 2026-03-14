@@ -22,6 +22,23 @@ type GoogleCalendarOption = {
   selected: boolean;
 };
 
+type CalendarConnectionListItem = {
+  _id: Id<"calendar_connections">;
+  businessId: Id<"businesses">;
+  provider: string;
+  ownerUserId: Id<"users">;
+  staffId?: Id<"staff">;
+  externalAccountEmail?: string;
+  selectedCalendarId?: string;
+  selectedCalendarSummary?: string;
+  status: string;
+  tokenExpiresAt?: string;
+  syncWindowStartsAt?: string;
+  lastSyncAttemptAt?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+};
+
 function formatTimestamp(timestamp: string | undefined, locale: string): string | null {
   if (!timestamp) {
     return null;
@@ -46,7 +63,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   });
   const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
-  }) as Array<Doc<"calendar_connections">> | undefined;
+  }) as Array<CalendarConnectionListItem> | undefined;
   const summary = useQuery(api.integrations.calendar.getCalendarReconciliationSummary, { businessId });
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
@@ -61,7 +78,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       ((connections ?? []).filter(
         (connection) =>
           connection.provider === "google" && connection.staffId !== undefined,
-      ) as Array<Doc<"calendar_connections">>),
+      ) as Array<CalendarConnectionListItem>),
     [connections],
   );
   const microsoftConnected = (connections ?? []).some(
@@ -116,12 +133,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
     if (status === "success") {
       setStatusMessage(
-        message ? decodeURIComponent(message) : t("integrations.google.connectedSuccess"),
+        message ?? t("integrations.google.connectedSuccess"),
       );
       setErrorMessage(null);
     } else {
       setErrorMessage(
-        message ? decodeURIComponent(message) : t("integrations.google.connectFailed"),
+        message ?? t("integrations.google.connectFailed"),
       );
       setStatusMessage(null);
     }
@@ -303,7 +320,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </p>
                     <p className="text-sm text-foreground">
                       {selectedConnection.externalAccountEmail ??
-                        selectedConnection.externalAccountId}
+                        t("integrations.google.connectedAccountUnavailable")}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -447,7 +464,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                             {member?.name ?? t("integrations.google.unknownStaff")}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {connection.externalAccountEmail ?? connection.externalAccountId}
+                            {connection.externalAccountEmail ??
+                              t("integrations.google.connectedAccountUnavailable")}
                           </p>
                         </div>
                         <div className="text-right text-xs text-muted-foreground">

@@ -264,7 +264,7 @@ http.route({
         internal.integrations.googleCalendar.buildCallbackRedirect,
         {
           status: "error",
-          message: parsedQuery.data.error_description ?? parsedQuery.data.error,
+          message: "Google Calendar access was not granted.",
         },
       );
       return Response.redirect(redirect.redirectUrl, 302);
@@ -275,7 +275,7 @@ http.route({
         internal.integrations.googleCalendar.buildCallbackRedirect,
         {
           status: "error",
-          message: "Google Calendar callback was missing a code or state value.",
+          message: "Google Calendar callback was incomplete.",
         },
       );
       return Response.redirect(redirect.redirectUrl, 302);
@@ -295,8 +295,7 @@ http.route({
         internal.integrations.googleCalendar.buildCallbackRedirect,
         {
           status: "error",
-          message:
-            error instanceof Error ? error.message : "Google Calendar connection failed.",
+          message: "Google Calendar connection failed. Please try again.",
         },
       );
       return Response.redirect(redirect.redirectUrl, 302);

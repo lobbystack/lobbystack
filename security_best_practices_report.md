@@ -1,110 +1,191 @@
-# Security Review: `feature/ope-47-bilingual-sms-runtime` vs `main`
+# Security Best Practices Report
 
 ## Executive Summary
 
-I reviewed the bilingual SMS runtime branch against `main`, focusing on branch-introduced risks in runtime locale persistence, prompt construction, tool usage, reminder localization, and the new operator control for default customer language.
+I reviewed all changes on the current branch against `main`, focusing on the TypeScript/React frontend and the Convex/Node backend surfaces introduced for Google Calendar OAuth, calendar sync, and related dashboard changes.
 
-I did not identify any new critical, high, medium, or low-severity security vulnerabilities in this diff. I also did not identify a new prompt-injection weakness introduced by the French runtime work. The branch keeps untrusted customer SMS and retrieved knowledge clearly separated from hidden instructions, constrains locale switching to the latest customer message plus server-side state, and keeps all privileged writes behind existing internal actions or membership-gated mutations.
+I found 3 security issues in the branch:
 
-I also ran `pnpm audit --prod --dev`, which reported **no known vulnerabilities**.
+- 1 High severity authorization flaw that allows any active business member to manage Google calendar integrations for any staff member.
+- 1 High severity data exposure issue where encrypted Google OAuth credential material is returned to the browser.
+- 1 Low severity information disclosure issue where raw provider/internal callback errors are reflected back to operators.
 
-## Scope Reviewed
+I did not find evidence in the changed frontend surfaces of DOM XSS sinks, unsafe HTML rendering, dynamic code execution, or unsafe third-party script injection.
 
-No critical findings in this branch diff.
+## Remediation Status
 
-Audit focus:
+Status update as of March 14, 2026:
 
-No high-severity findings in this branch diff.
+- SEC-001 has been remediated by requiring admin-equivalent business roles for Google calendar integration management and related reconciliation views.
+- SEC-002 has been remediated by replacing the public `calendar_connections` response with a sanitized DTO that excludes encrypted tokens, sync cursors, and raw external account IDs.
+- SEC-003 has been remediated by replacing raw OAuth/provider/internal callback error reflection with generic operator-facing messages.
 
-## Critical Findings
+## Scope And Method
 
-No medium-severity findings in this branch diff.
-
-## High Findings
-
-No low-severity findings in this branch diff.
-
-## Prompt Injection and Tool Abuse Review
-
-I did not find any branch-introduced prompt-injection risk.
-
-- Whether the new bilingual prompt logic lets customer text override hidden instructions
-- Whether retrieved knowledge can steer locale switching or privileged tool calls
-- Whether the new locale-aware SMS flow can be induced to book, cancel, or reschedule solely from model output
-- Whether French-language prompt-extraction attempts are blocked as well as English ones
-
-- This diff does not modify prompt construction, RAG context assembly, or agent tool registration.
-- The new reconciliation logic is implemented entirely in backend queries, mutations, and internal actions, not in model-driven tool flows.
-- No new attacker-controlled text is inserted into hidden prompts or used to select privileged actions.
-
-- Hidden instructions still explicitly rank above customer and knowledge content, and both customer SMS and retrieved knowledge are labeled untrusted in the runtime prompt:
-  - `convex/ai/agents/runtime.ts:31-67`
-  - `convex/ai/agents/runtime.ts:78-95`
-- The branch broadens prompt-extraction refusal logic to cover French probes as well as English:
-  - `convex/ai/agents/runtime.ts:145-209`
-- Locale switching is based only on the latest inbound customer SMS plus persisted conversation/contact state; it does not use retrieved knowledge or model output to pick a language:
-  - `convex/lib/runtimeLocale.ts:177-207`
-  - `convex/ai/agents/runtime.ts:2173-2215`
-- Locale persistence remains an internal-only server mutation; customers cannot call a public endpoint to set another contact or conversation's locale:
-  - `convex/ai/agents/runtime.ts:1833-1884`
-- The agent tool layer still routes booking and hours actions through deterministic server-side helpers instead of trusting freeform model-generated arguments:
-  - `convex/ai/agents/runtime.ts:1233-1338`
-
-### Conclusion on prompt injection
-
-I did not find a branch-introduced prompt-injection issue in the bilingual SMS runtime changes. The branch preserves the earlier prompt hardening and extends it to French-language extraction attempts without widening tool authority.
-
-## Tenant Isolation and Conversation-State Integrity
-
-### What I checked
-
-- Whether new locale fields create a cross-tenant or cross-contact write path
-- Whether the new operator-facing default language control is membership-protected
-- Whether reminders derive language from the correct business/contact pair
-
-### What looks good
-
-- The new dashboard mutation for `defaultLocale` is still guarded by `requireMembership`, and it only patches the current business:
-  - `convex/ai/context/snapshots.ts:76-121`
-- Snapshot refresh now safely resolves legacy or missing business locale values to `"en"` instead of failing validation on older tenants:
-  - `convex/ai/context/snapshots.ts:195-202`
-- Reminder localization derives locale from the appointment's actual contact first and then the appointment's business, preventing unrelated user preferences from leaking across tenants:
-  - `convex/notifications/reminders.ts:59-105`
-- New locale fields are schema-constrained to the explicit runtime locale/source validators rather than accepting arbitrary strings:
-  - `convex/lib/runtimeLocale.ts:3-17`
-  - `convex/schema.ts:63-66`
-  - `convex/schema.ts:188-188`
-  - `convex/schema.ts:217-217`
-  - `convex/schema.ts:229-230`
-
-## Secret Handling and Provider Usage
-
-### What I checked
-
-- Whether the branch introduces any new secret material or external provider credentials into prompts, storage, or public APIs
-- Whether localized reminders affect Twilio sender or recipient trust boundaries
-
-### What looks good
-
-- The branch does not add any new provider credentials, outbound webhook paths, or public HTTP endpoints.
-- Reminder localization changes only the body text and locale selection; sender selection and recipient lookup remain on the existing server-side SMS path:
-  - `convex/notifications/reminders.ts:81-105`
-- No new secrets are copied into snapshots, prompts, or public queries as part of the locale work.
-
-## Validation Performed
-
-- Reviewed `git diff --stat main...HEAD`
-- Inspected security-relevant diffs in:
-  - `convex/ai/agents/runtime.ts`
-  - `convex/lib/runtimeLocale.ts`
-  - `convex/notifications/reminders.ts`
-  - `convex/ai/context/snapshots.ts`
-  - `convex/businesses/admin.ts`
+- Compared `main...HEAD`
+- Reviewed changed files with highest security impact:
+  - `convex/integrations/calendar.ts`
+  - `convex/integrations/googleCalendar.ts`
+  - `convex/http.ts`
   - `convex/schema.ts`
-  - `apps/web/src/features/settings/BusinessProfileForm.tsx`
-- Ran:
-  - `pnpm audit --prod --dev`
+  - `apps/web/src/features/settings/IntegrationsPage.tsx`
+  - `apps/web/src/features/agent/AgentPage.tsx`
+- Applied the repo’s React/frontend and Node/backend security guidance, plus provider-specific reasoning for OAuth/token handling.
 
-## Branch Conclusion
+## High Severity Findings
 
-This branch does not appear to introduce new critical, high, medium, or low security vulnerabilities relative to `main`. The bilingual SMS/runtime changes preserve the existing trust boundaries, keep locale persistence scoped to the correct conversation/contact/business records, and maintain a strong prompt-injection posture by continuing to label customer and knowledge inputs as untrusted while refusing hidden-prompt disclosure attempts in both English and French.
+### SEC-001: Any active business member can connect, replace, or reconfigure Google calendar integrations for any staff record
+
+- Severity: High
+- Location:
+  - `convex/integrations/calendar.ts:303-311`
+  - `convex/integrations/calendar.ts:1598-1688`
+- Impact:
+  - Any authenticated user with an active membership in the business can bind their own Google account to another staff member, change the selected calendar, or reconnect an existing integration.
+  - This can redirect appointment sync into a calendar they control and expose appointment metadata outside the intended operator boundary.
+  - It also allows malicious or compromised low-privilege members to disrupt availability by changing which calendar busy blocks are imported.
+- Evidence:
+
+```ts
+const membership = await ctx.db
+  .query("business_memberships")
+  .withIndex("by_user_id_and_business_id", (q) =>
+    q.eq("userId", userId).eq("businessId", args.businessId),
+  )
+  .unique();
+if (!membership || membership.status !== "active") {
+  throw new Error("You do not have access to this business.");
+}
+```
+
+```ts
+export const connectGoogle = action({ ... })
+export const listGoogleCalendars = action({ ... })
+export const selectGoogleCalendar = action({ ... })
+```
+
+These operations all flow through `getCalendarConnectionAccessContext`, which only checks for an active membership and does not enforce a privileged role.
+
+- Fix:
+  - Require an elevated role such as `business_owner` or `admin` for:
+    - `connectGoogle`
+    - `listGoogleCalendars`
+    - `selectGoogleCalendar`
+    - any future disconnect/reconnect actions
+  - Ideally centralize this in a dedicated helper such as `requireIntegrationAdminMembership`.
+- Mitigation:
+  - Audit existing connected calendar mappings for unexpected owner/staff pairings.
+  - Add audit-log entries for connect/reconnect/calendar-selection changes if not already present.
+- False positive notes:
+  - If every active membership in this product is intentionally admin-equivalent, risk is lower, but that is not enforced in the code shown here and should be verified explicitly.
+
+### SEC-002: The public calendar connections query returns encrypted OAuth credential material to the browser
+
+- Severity: High
+- Location:
+  - `convex/integrations/calendar.ts:217-228`
+  - `convex/schema.ts:359-376`
+- Impact:
+  - The frontend query returns full `calendar_connections` documents, including `encryptedAccessToken`, `encryptedRefreshToken`, sync cursor metadata, and external account identifiers.
+  - Even though the tokens are encrypted at rest, this still exports secret-bearing credential artifacts out of the server trust boundary and into any operator browser session.
+  - That increases exposure to browser compromise, XSS elsewhere in the app, malicious extensions, overbroad client logging, and future server-key disclosure.
+- Evidence:
+
+```ts
+export const listCalendarConnections = query({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.businessId);
+    return await ctx.db
+      .query("calendar_connections")
+      .withIndex("by_business_id_and_provider", (q) =>
+        q.eq("businessId", args.businessId),
+      )
+      .collect();
+  },
+});
+```
+
+```ts
+calendar_connections: defineTable({
+  businessId: v.id("businesses"),
+  provider: v.string(),
+  ownerUserId: v.id("users"),
+  staffId: v.optional(v.id("staff")),
+  externalAccountId: v.string(),
+  externalAccountEmail: v.optional(v.string()),
+  selectedCalendarId: v.optional(v.string()),
+  selectedCalendarSummary: v.optional(v.string()),
+  status: v.string(),
+  encryptedAccessToken: v.optional(v.string()),
+  encryptedRefreshToken: v.optional(v.string()),
+  tokenExpiresAt: v.optional(v.string()),
+  syncCursor: v.optional(v.string()),
+  ...
+})
+```
+
+- Fix:
+  - Replace `listCalendarConnections` with an explicit sanitized projection that returns only fields needed by the UI, for example:
+    - `_id`
+    - `provider`
+    - `staffId`
+    - `externalAccountEmail`
+    - `selectedCalendarId`
+    - `selectedCalendarSummary`
+    - `status`
+    - `lastSyncAttemptAt`
+    - `lastSyncedAt`
+    - `lastSyncError`
+  - Never expose encrypted tokens, sync cursors, or raw external account identifiers to the client unless there is a strong reviewed reason.
+- Mitigation:
+  - Review any existing frontend/network logs or debugging output that may already have captured `calendar_connections` payloads.
+- False positive notes:
+  - The tokens are encrypted before storage, so this is not plaintext-secret exposure.
+  - It is still a security issue because secret material is being unnecessarily sent to untrusted clients.
+
+## Low Severity Findings
+
+### SEC-003: Raw provider and internal callback errors are reflected back to operators
+
+- Severity: Low
+- Location:
+  - `convex/http.ts:262-299`
+  - `apps/web/src/features/settings/IntegrationsPage.tsx:108-125`
+- Impact:
+  - Google `error_description` values and internal exception messages are copied into the redirect URL and displayed in the operator UI.
+  - This can expose provider-specific or implementation-specific details such as credential/configuration errors or storage/crypto failure wording.
+  - I did not find a reflected-XSS issue here because the message is rendered through React escaping, but it is still unnecessary information disclosure.
+- Evidence:
+
+```ts
+message: parsedQuery.data.error_description ?? parsedQuery.data.error,
+```
+
+```ts
+message:
+  error instanceof Error ? error.message : "Google Calendar connection failed.",
+```
+
+```ts
+setErrorMessage(
+  message ? decodeURIComponent(message) : t("integrations.google.connectFailed"),
+);
+```
+
+- Fix:
+  - Redirect with a short internal error code or coarse status enum instead of raw exception text.
+  - Log detailed provider/internal errors server-side only.
+- Mitigation:
+  - Keep the UI copy generic for production tenants, even if richer detail is temporarily useful during local provider bring-up.
+- False positive notes:
+  - This is not code injection as written because the frontend renders the message as plain text.
+
+## Recommended Next Steps
+
+1. Fix SEC-001 before broadening access to the Google integration surface.
+2. Fix SEC-002 in the same pass by replacing `listCalendarConnections` with a sanitized DTO query.
+3. Fix SEC-003 as part of OAuth hardening or before pilot rollout.
+4. After fixes, rerun the Google connect flow and regression tests to ensure the UI still has all required non-sensitive fields.

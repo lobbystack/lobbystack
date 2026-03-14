@@ -829,7 +829,7 @@ export const startGoogleConnection = internalAction({
     businessId: v.id("businesses"),
     staffId: v.id("staff"),
     authSubject: v.string(),
-    authUserId: v.optional(v.id("users")),
+    authUserId: v.optional(v.string()),
   },
   handler: async (
     ctx,

@@ -1103,4 +1103,80 @@ describe("calendar reconciliation backend", () => {
       }),
     ).rejects.toThrow("You do not have access to this business.");
   });
+
+  it("requires admin access for calendar integration management", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "calendar-integration-access-business",
+        name: "Calendar Integration Access Business",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: "calendar-non-admin",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: seeded.businessId,
+        userId,
+        role: "scheduler",
+        status: "active",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId };
+    });
+
+    const authed = t.withIdentity({ subject: "calendar-non-admin" });
+
+    await expect(
+      authed.query(api.integrations.calendar.listCalendarConnections, {
+        businessId,
+      }),
+    ).rejects.toThrow("Calendar integrations require admin access.");
+
+    await expect(
+      authed.action(api.integrations.calendar.connectGoogle, {
+        businessId,
+        staffId,
+      }),
+    ).rejects.toThrow("Calendar integrations require admin access.");
+  });
+
+  it("sanitizes calendar connections before returning them to the client", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "calendar-connection-sanitization-business",
+        name: "Calendar Connection Sanitization Business",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: "calendar-admin",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: seeded.businessId,
+        userId,
+        role: "owner",
+        status: "active",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId };
+    });
+
+    await connectGoogleCalendar(t, { businessId, staffId });
+
+    const authed = t.withIdentity({ subject: "calendar-admin" });
+    const [connection] = await authed.query(api.integrations.calendar.listCalendarConnections, {
+      businessId,
+    });
+
+    expect(connection).toMatchObject({
+      businessId,
+      provider: "google",
+      staffId,
+      externalAccountEmail: "owner@example.com",
+      selectedCalendarId: "primary-calendar",
+      selectedCalendarSummary: "Primary Calendar",
+      status: "connected",
+    });
+    expect(connection).not.toHaveProperty("encryptedAccessToken");
+    expect(connection).not.toHaveProperty("encryptedRefreshToken");
+    expect(connection).not.toHaveProperty("externalAccountId");
+    expect(connection).not.toHaveProperty("syncCursor");
+  });
 });
