@@ -563,6 +563,34 @@ function looksLikeRelativeDayReference(text: string): boolean {
   );
 }
 
+function toMeridiemTimePreference(
+  rawHour: number,
+  minute: number,
+  meridiem: string,
+  locale: RuntimeLocale,
+): SmsTimePreference | null {
+  if (rawHour < 1 || rawHour > 12 || minute < 0 || minute > 59) {
+    return null;
+  }
+
+  const normalizedMeridiem = meridiem.toLowerCase();
+  const hour24 =
+    normalizedMeridiem.startsWith("p")
+      ? rawHour === 12
+        ? 12
+        : rawHour + 12
+      : rawHour === 12
+        ? 0
+        : rawHour;
+
+  return {
+    hour24,
+    minute,
+    approximate: false,
+    label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+  };
+}
+
 function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePreference | null {
   const comparableText = normalizeComparable(text);
   const hSeparatorMeridiemMatch = text.match(
@@ -576,22 +604,7 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
 
     const rawHour = Number(hourText);
     const minute = minuteText ? Number(minuteText) : 0;
-    const normalizedMeridiem = meridiem.toLowerCase();
-    const hour24 =
-      normalizedMeridiem.startsWith("p")
-        ? rawHour === 12
-          ? 12
-          : rawHour + 12
-        : rawHour === 12
-          ? 0
-          : rawHour;
-
-    return {
-      hour24,
-      minute,
-      approximate: false,
-      label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
-    };
+    return toMeridiemTimePreference(rawHour, minute, meridiem, locale);
   }
 
   const hSeparatorMatch = text.match(/\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\b/i);
@@ -617,22 +630,7 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
     }
     const rawHour = Number(hourText);
     const minute = minuteText ? Number(minuteText) : 0;
-    const normalizedMeridiem = meridiem.toLowerCase();
-    const hour24 =
-      normalizedMeridiem.startsWith("p")
-        ? rawHour === 12
-          ? 12
-          : rawHour + 12
-        : rawHour === 12
-          ? 0
-          : rawHour;
-
-    return {
-      hour24,
-      minute,
-      approximate: false,
-      label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
-    };
+    return toMeridiemTimePreference(rawHour, minute, meridiem, locale);
   }
 
   const twentyFourHourMatch = text.match(/\b(?:at\s*)?([01]?\d|2[0-3]):([0-5]\d)\b/);

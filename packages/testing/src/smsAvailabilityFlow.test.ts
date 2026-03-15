@@ -825,6 +825,34 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("rejects malformed h-format meridiem times instead of wrapping them into a different slot", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-invalid-h-format-meridiem",
+        name: "SMS Invalid H Format Meridiem",
+        smsNumber: "+14165550921",
+      });
+      return { businessId, smsNumber: "+14165550921" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-invalid-h-format-meridiem-1",
+      From: "+14165550978",
+      To: smsNumber,
+      Body: "Hello, do you have room for an initial consultation on the 17 at 13h30pm?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "The next available Initial Consultation times on Tuesday, Mar 17 are 9:00 AM, 9:15 AM, 9:30 AM. What time would you prefer?",
+      );
+    });
+  });
+
   it("answers hours directly after booking without reopening scheduling", async () => {
     const t = createConvexHarness();
 

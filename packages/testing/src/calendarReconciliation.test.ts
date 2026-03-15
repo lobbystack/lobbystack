@@ -851,6 +851,45 @@ describe("calendar reconciliation backend", () => {
     expect(availability[0]?.staffId).not.toBe(String(staffId));
   });
 
+  it("keeps legacy business-wide Google connections active for staff bookings until migrated", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "legacy-google-connection-business",
+        name: "Legacy Google Connection Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      if (!connection) {
+        throw new Error("Expected legacy connection fixture to exist.");
+      }
+
+      const { staffId: _staffId, ...legacyConnection } = connection;
+      await ctx.db.replace(connectionId, legacyConnection);
+    });
+
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("pending");
+    });
+
+    await t.action(internal.integrations.calendar.syncAppointmentToExternalCalendars, {
+      appointmentId,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("synced");
+      expect(appointment?.calendarExternalEventId).toBe("evt-1");
+      expect(appointment?.staffId).toBe(staffId);
+    });
+  });
+
   it("falls back to a full busy sync when Google rejects the stored sync token", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, staffId } = await t.run(async (ctx) => {
@@ -1178,5 +1217,55 @@ describe("calendar reconciliation backend", () => {
     expect(connection).not.toHaveProperty("encryptedRefreshToken");
     expect(connection).not.toHaveProperty("externalAccountId");
     expect(connection).not.toHaveProperty("syncCursor");
+  });
+
+  it("preserves the previous refresh token when reconnect responses omit it", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId, userId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "google-refresh-token-preservation-business",
+        name: "Google Refresh Token Preservation Business",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: "refresh-token-owner",
+      });
+      await ctx.db.insert("calendar_connections", {
+        businessId: seeded.businessId,
+        provider: "google",
+        ownerUserId: userId,
+        staffId: seeded.staffId,
+        externalAccountId: "google-account-1",
+        externalAccountEmail: "owner@example.com",
+        selectedCalendarId: "primary-calendar",
+        selectedCalendarSummary: "Primary Calendar",
+        status: "connected",
+        encryptedAccessToken: "old-access-token",
+        encryptedRefreshToken: "old-refresh-token",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId, userId };
+    });
+
+    await t.mutation(internal.integrations.calendar.upsertGoogleCalendarConnection, {
+      businessId,
+      userId,
+      staffId,
+      externalAccountId: "google-account-1",
+      externalAccountEmail: "owner@example.com",
+      selectedCalendarId: "primary-calendar",
+      selectedCalendarSummary: "Primary Calendar",
+      encryptedAccessToken: "new-access-token",
+    });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db
+        .query("calendar_connections")
+        .withIndex("by_business_id_and_provider_and_staff_id", (q) =>
+          q.eq("businessId", businessId).eq("provider", "google").eq("staffId", staffId),
+        )
+        .unique();
+
+      expect(connection?.encryptedAccessToken).toBe("new-access-token");
+      expect(connection?.encryptedRefreshToken).toBe("old-refresh-token");
+    });
   });
 });

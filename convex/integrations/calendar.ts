@@ -238,6 +238,25 @@ function selectPreferredCalendarConnection(
   );
 }
 
+async function loadPreferredGoogleConnectionsForStaff(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  businessId: Id<"businesses">,
+  staffId: Id<"staff">,
+): Promise<Array<Doc<"calendar_connections">>> {
+  const staffScopedConnections = await loadConnectedCalendarConnections(ctx, businessId, {
+    provider: "google",
+    staffId,
+  });
+  if (staffScopedConnections.length > 0) {
+    return staffScopedConnections;
+  }
+
+  const legacyConnections = await loadConnectedCalendarConnections(ctx, businessId, {
+    provider: "google",
+  });
+  return legacyConnections.filter((connection) => connection.staffId === undefined);
+}
+
 function isGoogleConnectionReady(
   connection: Doc<"calendar_connections"> | null,
 ): connection is Doc<"calendar_connections"> {
@@ -362,10 +381,11 @@ export const getStaffCalendarConnectionState = internalQuery({
     staffId: v.id("staff"),
   },
   handler: async (ctx, args): Promise<CalendarConnectionState> => {
-    const connections = await loadConnectedCalendarConnections(ctx, args.businessId, {
-      provider: "google",
-      staffId: args.staffId,
-    });
+    const connections = await loadPreferredGoogleConnectionsForStaff(
+      ctx,
+      args.businessId,
+      args.staffId,
+    );
     const selected = selectPreferredCalendarConnection(connections);
     return {
       hasConnectedCalendar: selected !== null,
@@ -544,7 +564,7 @@ export const upsertGoogleCalendarConnection = internalMutation({
     if (existing) {
       const {
         externalAccountEmail: _existingExternalAccountEmail,
-        encryptedRefreshToken: _existingEncryptedRefreshToken,
+        encryptedRefreshToken: existingEncryptedRefreshToken,
         tokenExpiresAt: _existingTokenExpiresAt,
         syncCursor: _existingSyncCursor,
         syncWindowStartsAt: _existingSyncWindowStartsAt,
@@ -565,8 +585,11 @@ export const upsertGoogleCalendarConnection = internalMutation({
         selectedCalendarSummary: args.selectedCalendarSummary,
         status: "connected",
         encryptedAccessToken: args.encryptedAccessToken,
-        ...(args.encryptedRefreshToken !== undefined
-          ? { encryptedRefreshToken: args.encryptedRefreshToken }
+        ...((args.encryptedRefreshToken ?? existingEncryptedRefreshToken) !== undefined
+          ? {
+              encryptedRefreshToken:
+                args.encryptedRefreshToken ?? existingEncryptedRefreshToken,
+            }
           : {}),
         ...(args.tokenExpiresAt !== undefined ? { tokenExpiresAt: args.tokenExpiresAt } : {}),
         ...(args.syncCursor !== undefined ? { syncCursor: args.syncCursor } : {}),
@@ -885,10 +908,11 @@ export const getAppointmentCalendarSyncContext = internalQuery({
     const [service, contact, connections] = await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
-      loadConnectedCalendarConnections(ctx, appointment.businessId, {
-        provider: "google",
-        staffId: appointment.staffId,
-      }),
+      loadPreferredGoogleConnectionsForStaff(
+        ctx,
+        appointment.businessId,
+        appointment.staffId,
+      ),
     ]);
 
     if (!service) {
