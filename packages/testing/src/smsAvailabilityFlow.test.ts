@@ -316,8 +316,9 @@ function getCapturedAgentRequest(): CapturedAgentRequest {
 
 async function executeCapturedTool<T>(
   tool: { execute: (args: unknown, options: unknown) => Promise<unknown> },
+  args: unknown = {},
 ): Promise<T> {
-  return (await tool.execute({}, {} as any)) as T;
+  return (await tool.execute(args, {} as any)) as T;
 }
 
 async function postTwilioForm(
@@ -850,6 +851,292 @@ describe("SMS scheduling flow", () => {
       expect(outboundBody).toBe(
         "The next available Initial Consultation times on Tuesday, Mar 17 are 9:00 AM, 9:15 AM, 9:30 AM. What time would you prefer?",
       );
+    });
+  });
+
+  it("returns structured availability results for the booking tool lookup path", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-structured-tool-availability",
+        name: "SMS Structured Tool Availability",
+        smsNumber: "+14165550922",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550977",
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Thanks for the update.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      replyText?: string;
+      pendingConfirmation?: boolean;
+      resolvedServiceName?: string;
+      requestedDate?: string;
+      requestedTimeLabel?: string;
+      offeredSlots?: Array<{ startsAt: string; isoDate: string; displayTime: string }>;
+    }>(request.tools.findAppointmentAvailability!, {
+      serviceName: "Initial Consultation",
+      requestedDateText: "March 17",
+      requestedTimeText: "1h30",
+    });
+
+    expect(toolResult).toMatchObject({
+      handled: true,
+      replyText: "I have Initial Consultation available for Tuesday, Mar 17 at 1:30 PM. Does that work for you?",
+      pendingConfirmation: true,
+      resolvedServiceName: "Initial Consultation",
+      requestedDate: "2026-03-17",
+      requestedTimeLabel: "1:30 PM",
+    });
+    expect(toolResult.offeredSlots).toEqual([
+      {
+        startsAt: "2026-03-17T17:30:00.000Z",
+        endsAt: "2026-03-17T18:00:00.000Z",
+        isoDate: "2026-03-17",
+        displayTime: "1:30 PM",
+      },
+    ]);
+  });
+
+  it("books an exact offered slot through selectedStartsAt without reparsing the day", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, contactId, conversationId, initialConsultationId } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-structured-tool-booking",
+          name: "SMS Structured Tool Booking",
+          smsNumber: "+14165550923",
+        });
+        const { contactId, conversationId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550976",
+        });
+        await ctx.db.insert("conversation_booking_state", {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: initialConsultationId,
+          requestedDate: "2026-03-17",
+          lastOfferedDate: "2026-03-17",
+          lastOfferedStartsAt: ["2026-03-17T14:00:00.000Z"],
+          updatedAt: new Date().toISOString(),
+        });
+        return { businessId, contactId, conversationId, initialConsultationId };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Thanks for the update.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      replyText?: string;
+      bookedAppointmentId?: Id<"appointments">;
+      requestedDate?: string;
+    }>(request.tools.bookAppointmentSlot!, {
+      selectedStartsAt: "2026-03-17T14:00:00.000Z",
+      confirmSelection: true,
+    });
+
+    expect(toolResult).toMatchObject({
+      handled: true,
+      replyText: "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 10:00 AM.",
+      requestedDate: "2026-03-17",
+    });
+    expect(toolResult.bookedAppointmentId).toBeDefined();
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      expect(appointments[0]?.startsAt).toBe("2026-03-17T14:00:00.000Z");
+    });
+  });
+
+  it("matches bare 1h30 to the previously offered afternoon slot before booking", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-structured-tool-ambiguous-time",
+        name: "SMS Structured Tool Ambiguous Time",
+        smsNumber: "+14165550924",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550975",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        requestedDate: "2026-03-19",
+        preferredHour24: 10,
+        preferredMinute: 0,
+        lastOfferedDate: "2026-03-19",
+        lastOfferedStartsAt: ["2026-03-19T17:30:00.000Z"],
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, initialConsultationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Thanks for the update.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      replyText?: string;
+      pendingConfirmation?: boolean;
+      requestedTimeLabel?: string;
+      offeredSlots?: Array<{ startsAt: string }>;
+    }>(request.tools.bookAppointmentSlot!, {
+      selectedTimeText: "1h30",
+    });
+
+    expect(toolResult).toMatchObject({
+      handled: true,
+      replyText: "I have Initial Consultation available for Thursday, Mar 19 at 1:30 PM. Does that work for you?",
+      pendingConfirmation: true,
+      requestedTimeLabel: "1:30 PM",
+    });
+    expect(toolResult.offeredSlots).toEqual([
+      {
+        startsAt: "2026-03-19T17:30:00.000Z",
+        endsAt: "2026-03-19T18:00:00.000Z",
+        isoDate: "2026-03-19",
+        displayTime: "1:30 PM",
+      },
+    ]);
+
+    await t.run(async (ctx) => {
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState).toMatchObject({
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        pendingStartsAt: "2026-03-19T17:30:00.000Z",
+      });
+    });
+  });
+
+  it("falls back to nearby alternatives when a previously offered slot is no longer available", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId, contactId } = await t.run(async (ctx) => {
+      const { businessId, serviceId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-structured-tool-stale-slot",
+        name: "SMS Structured Tool Stale Slot",
+        smsNumber: "+14165550925",
+      });
+      const { contactId, conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550974",
+      });
+      const staff = await ctx.db
+        .query("staff")
+        .withIndex("by_business_id_and_active", (q) =>
+          q.eq("businessId", businessId).eq("active", true),
+        )
+        .collect();
+      const staffId = staff[0]?._id;
+      expect(staffId).toBeDefined();
+
+      const blockingContactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550001",
+      });
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId: blockingContactId,
+        staffId: staffId!,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000Z",
+        endsAt: "2026-03-17T14:30:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: serviceId,
+        requestedDate: "2026-03-17",
+        lastOfferedDate: "2026-03-17",
+        lastOfferedStartsAt: ["2026-03-17T14:00:00.000Z"],
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, contactId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Thanks for the update.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      replyText?: string;
+      pendingConfirmation?: boolean;
+      offeredSlots?: Array<{ startsAt: string }>;
+    }>(request.tools.bookAppointmentSlot!, {
+      selectedStartsAt: "2026-03-17T14:00:00.000Z",
+    });
+
+    expect(toolResult.handled).toBe(true);
+    expect(toolResult.replyText).toBe(
+      "I do not have General Checkup available on Tuesday, Mar 17 at 10:00 AM. The closest available times are 9:15 AM, 9:30 AM, 10:30 AM. Would any of those work for you?",
+    );
+    expect(toolResult.pendingConfirmation).toBeUndefined();
+    expect(toolResult.offeredSlots?.map((slot) => slot.startsAt)).toEqual([
+      "2026-03-17T13:15:00.000Z",
+      "2026-03-17T13:30:00.000Z",
+      "2026-03-17T14:30:00.000Z",
+    ]);
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(0);
     });
   });
 

@@ -126,7 +126,39 @@ type CurrentAppointmentSummary = {
   timezone: string;
   formattedStart: string;
 };
-type SmsToolResult = { handled: false } | { handled: true; replyText: string };
+type OfferedSlotSummary = {
+  startsAt: string;
+  endsAt: string;
+  displayTime: string;
+  isoDate: string;
+};
+type SmsSchedulingToolArgs = {
+  serviceName?: string;
+  requestedDateText?: string;
+  requestedTimeText?: string;
+  dayPart?: string;
+  relativeToLastOffer?: boolean;
+  selectedStartsAt?: string;
+  selectedTimeText?: string;
+  confirmSelection?: boolean;
+};
+type SmsSchedulingHandledResult = {
+  handled: true;
+  replyText: string;
+  offeredSlots?: Array<OfferedSlotSummary>;
+  resolvedServiceId?: Id<"services">;
+  resolvedServiceName?: string;
+  requestedDate?: string;
+  requestedTimeLabel?: string;
+  pendingConfirmation?: boolean;
+  bookedAppointmentId?: Id<"appointments">;
+};
+type SmsToolResult = { handled: false } | SmsSchedulingHandledResult;
+type ResolvedRequestedTime = {
+  primary: SmsTimePreference | null;
+  candidates: Array<SmsTimePreference>;
+  ambiguous: boolean;
+};
 
 const WEEKDAY_INDEX_BY_NAME: Record<string, number> = {
   monday: 1,
@@ -591,7 +623,22 @@ function toMeridiemTimePreference(
   };
 }
 
-function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePreference | null {
+function dedupeTimeCandidates(candidates: Array<SmsTimePreference>): Array<SmsTimePreference> {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.hour24}:${candidate.minute}:${candidate.approximate ? "1" : "0"}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function resolveRequestedTimeCandidates(
+  text: string,
+  locale: RuntimeLocale,
+): Array<SmsTimePreference> {
   const comparableText = normalizeComparable(text);
   const hSeparatorMeridiemMatch = text.match(
     /\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i,
@@ -599,12 +646,13 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
   if (hSeparatorMeridiemMatch) {
     const [, hourText, minuteText, meridiem] = hSeparatorMeridiemMatch;
     if (!meridiem) {
-      return null;
+      return [];
     }
 
     const rawHour = Number(hourText);
     const minute = minuteText ? Number(minuteText) : 0;
-    return toMeridiemTimePreference(rawHour, minute, meridiem, locale);
+    const candidate = toMeridiemTimePreference(rawHour, minute, meridiem, locale);
+    return candidate ? [candidate] : [];
   }
 
   const hSeparatorMatch = text.match(/\b(?:at\s*)?(\d{1,2})\s*h(?:\s*(\d{2}))?\b/i);
@@ -612,13 +660,34 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
     const [, hourText, minuteText] = hSeparatorMatch;
     const hour24 = Number(hourText);
     const minute = minuteText ? Number(minuteText) : 0;
-    if (hour24 >= 0 && hour24 <= 23 && minute >= 0 && minute <= 59) {
-      return {
-        hour24,
-        minute,
-        approximate: false,
-        label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
-      };
+    if (minute >= 0 && minute <= 59) {
+      if (hour24 >= 0 && hour24 <= 23) {
+        if (hour24 >= 1 && hour24 <= 11) {
+          return dedupeTimeCandidates([
+            {
+              hour24,
+              minute,
+              approximate: false,
+              label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+            },
+            {
+              hour24: hour24 + 12,
+              minute,
+              approximate: false,
+              label: formatRuntimeTimeOfDay((hour24 + 12) * 60 + minute, locale),
+            },
+          ]);
+        }
+
+        return [
+          {
+            hour24,
+            minute,
+            approximate: false,
+            label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+          },
+        ];
+      }
     }
   }
 
@@ -626,11 +695,12 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
   if (meridiemMatch) {
     const [, hourText, minuteText, meridiem] = meridiemMatch;
     if (!meridiem) {
-      return null;
+      return [];
     }
     const rawHour = Number(hourText);
     const minute = minuteText ? Number(minuteText) : 0;
-    return toMeridiemTimePreference(rawHour, minute, meridiem, locale);
+    const candidate = toMeridiemTimePreference(rawHour, minute, meridiem, locale);
+    return candidate ? [candidate] : [];
   }
 
   const twentyFourHourMatch = text.match(/\b(?:at\s*)?([01]?\d|2[0-3]):([0-5]\d)\b/);
@@ -638,48 +708,134 @@ function resolveRequestedTime(text: string, locale: RuntimeLocale): SmsTimePrefe
     const [, hourText, minuteText] = twentyFourHourMatch;
     const hour24 = Number(hourText);
     const minute = Number(minuteText);
-    return {
-      hour24,
-      minute,
-      approximate: false,
-      label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
-    };
+    if (hour24 >= 1 && hour24 <= 11) {
+      return dedupeTimeCandidates([
+        {
+          hour24,
+          minute,
+          approximate: false,
+          label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+        },
+        {
+          hour24: hour24 + 12,
+          minute,
+          approximate: false,
+          label: formatRuntimeTimeOfDay((hour24 + 12) * 60 + minute, locale),
+        },
+      ]);
+    }
+    return [
+      {
+        hour24,
+        minute,
+        approximate: false,
+        label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
+      },
+    ];
   }
 
   if (/\b(morning|matin)\b/i.test(text)) {
-    return {
-      hour24: 10,
-      minute: 0,
-      approximate: true,
-      label: localizeRuntimeText(locale, { en: "morning", fr: "le matin" }),
-    };
+    return [
+      {
+        hour24: 10,
+        minute: 0,
+        approximate: true,
+        label: localizeRuntimeText(locale, { en: "morning", fr: "le matin" }),
+      },
+    ];
   }
   if (/\b(afternoon|apres midi)\b/i.test(comparableText)) {
-    return {
-      hour24: 14,
-      minute: 0,
-      approximate: true,
-      label: localizeRuntimeText(locale, { en: "the afternoon", fr: "l'après-midi" }),
-    };
+    return [
+      {
+        hour24: 14,
+        minute: 0,
+        approximate: true,
+        label: localizeRuntimeText(locale, { en: "the afternoon", fr: "l'après-midi" }),
+      },
+    ];
   }
   if (/\b(evening|soir|soiree)\b/i.test(comparableText)) {
-    return {
-      hour24: 18,
-      minute: 0,
-      approximate: true,
-      label: localizeRuntimeText(locale, { en: "the evening", fr: "la soirée" }),
-    };
+    return [
+      {
+        hour24: 18,
+        minute: 0,
+        approximate: true,
+        label: localizeRuntimeText(locale, { en: "the evening", fr: "la soirée" }),
+      },
+    ];
   }
   if (/\b(noon|midi)\b/i.test(text)) {
+    return [
+      {
+        hour24: 12,
+        minute: 0,
+        approximate: true,
+        label: localizeRuntimeText(locale, { en: "noon", fr: "midi" }),
+      },
+    ];
+  }
+
+  return [];
+}
+
+function timeCandidateFitsBusinessHours(
+  candidate: SmsTimePreference,
+  requestedDate: SmsDatePreference,
+  snapshot: Doc<"business_context_snapshots">,
+): boolean {
+  const dayOfWeek = requestedDate.dayStart.weekday % 7;
+  const candidateMinutes = candidate.hour24 * 60 + candidate.minute;
+  return snapshot.hours.some(
+    (window) =>
+      window.dayOfWeek === dayOfWeek &&
+      candidateMinutes >= window.openMinutes &&
+      candidateMinutes < window.closeMinutes,
+  );
+}
+
+function resolveRequestedTime(
+  text: string,
+  locale: RuntimeLocale,
+  options?: {
+    requestedDate?: SmsDatePreference | null;
+    snapshot?: Doc<"business_context_snapshots">;
+  },
+): ResolvedRequestedTime {
+  const candidates = resolveRequestedTimeCandidates(text, locale);
+  if (candidates.length === 0) {
     return {
-      hour24: 12,
-      minute: 0,
-      approximate: true,
-      label: localizeRuntimeText(locale, { en: "noon", fr: "midi" }),
+      primary: null,
+      candidates: [],
+      ambiguous: false,
     };
   }
 
-  return null;
+  if (candidates.length === 1) {
+    return {
+      primary: candidates[0] ?? null,
+      candidates,
+      ambiguous: false,
+    };
+  }
+
+  if (options?.requestedDate && options.snapshot) {
+    const fittingCandidates = candidates.filter((candidate) =>
+      timeCandidateFitsBusinessHours(candidate, options.requestedDate!, options.snapshot!),
+    );
+    if (fittingCandidates.length === 1) {
+      return {
+        primary: fittingCandidates[0] ?? null,
+        candidates,
+        ambiguous: false,
+      };
+    }
+  }
+
+  return {
+    primary: null,
+    candidates,
+    ambiguous: true,
+  };
 }
 
 function getRequestedDateFromState(
@@ -746,6 +902,87 @@ function findMatchingOfferedSlot(
   }
 
   return null;
+}
+
+function findMatchingOfferedSlotFromCandidates(
+  state: ConversationBookingStateRecord | null,
+  timezone: string,
+  requestedDate: SmsDatePreference,
+  candidates: Array<SmsTimePreference>,
+): string | null {
+  for (const candidate of candidates) {
+    const matchingSlot = findMatchingOfferedSlot(state, timezone, requestedDate, candidate);
+    if (matchingSlot) {
+      return matchingSlot;
+    }
+  }
+
+  return null;
+}
+
+function buildSchedulingTextFromToolArgs(args?: SmsSchedulingToolArgs): string | null {
+  if (!args) {
+    return null;
+  }
+
+  const parts = [
+    args.serviceName,
+    args.requestedDateText,
+    args.requestedTimeText,
+    args.dayPart,
+    args.selectedTimeText,
+  ]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
+function normalizeSmsSchedulingToolArgs(
+  args:
+    | {
+        serviceName?: string | undefined;
+        requestedDateText?: string | undefined;
+        requestedTimeText?: string | undefined;
+        dayPart?: string | undefined;
+        relativeToLastOffer?: boolean | undefined;
+        selectedStartsAt?: string | undefined;
+        selectedTimeText?: string | undefined;
+        confirmSelection?: boolean | undefined;
+      }
+    | undefined,
+): SmsSchedulingToolArgs | undefined {
+  if (!args) {
+    return undefined;
+  }
+
+  const normalized: SmsSchedulingToolArgs = {};
+  if (args.serviceName !== undefined) {
+    normalized.serviceName = args.serviceName;
+  }
+  if (args.requestedDateText !== undefined) {
+    normalized.requestedDateText = args.requestedDateText;
+  }
+  if (args.requestedTimeText !== undefined) {
+    normalized.requestedTimeText = args.requestedTimeText;
+  }
+  if (args.dayPart !== undefined) {
+    normalized.dayPart = args.dayPart;
+  }
+  if (args.relativeToLastOffer !== undefined) {
+    normalized.relativeToLastOffer = args.relativeToLastOffer;
+  }
+  if (args.selectedStartsAt !== undefined) {
+    normalized.selectedStartsAt = args.selectedStartsAt;
+  }
+  if (args.selectedTimeText !== undefined) {
+    normalized.selectedTimeText = args.selectedTimeText;
+  }
+  if (args.confirmSelection !== undefined) {
+    normalized.confirmSelection = args.confirmSelection;
+  }
+
+  return normalized;
 }
 
 async function getRelevantSchedulingText(
@@ -1313,17 +1550,47 @@ async function resolveCurrentAppointmentReply(
   return buildCurrentAppointmentReply(summary, locale);
 }
 
-function handledSmsToolResult(replyText: string): SmsToolResult {
-  return {
-    handled: true,
-    replyText,
-  };
-}
-
 function unhandledSmsToolResult(): SmsToolResult {
   return {
     handled: false,
   };
+}
+
+function handledSmsToolResult(
+  replyText: string,
+  extras?: Omit<SmsSchedulingHandledResult, "handled" | "replyText">,
+): SmsToolResult {
+  return {
+    handled: true,
+    replyText,
+    ...(extras ?? {}),
+  };
+}
+
+function toOfferedSlotSummary(
+  slot: { startsAt: string; endsAt: string; displayTime: string },
+  timezone: string,
+): OfferedSlotSummary {
+  const localStart = DateTime.fromISO(slot.startsAt, { setZone: true }).setZone(timezone);
+  return {
+    startsAt: slot.startsAt,
+    endsAt: slot.endsAt,
+    displayTime: slot.displayTime,
+    isoDate: localStart.isValid
+      ? (localStart.toISODate() ?? localStart.toFormat("yyyy-MM-dd"))
+      : slot.startsAt.slice(0, 10),
+  };
+}
+
+function buildTimeClarificationReply(
+  serviceName: string,
+  requestedDateLabel: string,
+  locale: RuntimeLocale,
+): string {
+  return localizeRuntimeText(locale, {
+    en: `I want to make sure I understood the time for your ${serviceName} on ${requestedDateLabel}. Could you confirm whether you mean morning or afternoon?`,
+    fr: `Je veux m'assurer d'avoir bien compris l'heure pour votre ${serviceName} le ${requestedDateLabel}. Pouvez-vous confirmer si vous voulez dire le matin ou l'après-midi?`,
+  });
 }
 
 async function resolveBusinessHoursToolResult(
@@ -1370,21 +1637,44 @@ async function resolveCurrentAppointmentToolResult(
   return replyText ? handledSmsToolResult(replyText) : unhandledSmsToolResult();
 }
 
+const schedulingLookupToolArgsSchema = z.object({
+  serviceName: z.string().optional(),
+  requestedDateText: z.string().optional(),
+  requestedTimeText: z.string().optional(),
+  dayPart: z.string().optional(),
+});
+
+const alternativeTimesToolArgsSchema = z.object({
+  serviceName: z.string().optional(),
+  requestedDateText: z.string().optional(),
+  relativeToLastOffer: z.boolean().optional(),
+});
+
+const bookAppointmentSlotToolArgsSchema = z.object({
+  serviceName: z.string().optional(),
+  requestedDateText: z.string().optional(),
+  selectedStartsAt: z.string().optional(),
+  selectedTimeText: z.string().optional(),
+  confirmSelection: z.boolean().optional(),
+});
+
 async function resolveSchedulingToolResult(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
   conversationId: Id<"conversations">,
   prompt: string,
   locale: RuntimeLocale,
+  args?: SmsSchedulingToolArgs,
 ): Promise<SmsToolResult> {
-  const replyText = await maybeGenerateSmsSchedulingReply(
+  const result = await maybeGenerateSmsSchedulingResult(
     ctx,
     businessId,
     conversationId,
     prompt,
     locale,
+    args,
   );
-  return replyText ? handledSmsToolResult(replyText) : unhandledSmsToolResult();
+  return result ?? unhandledSmsToolResult();
 }
 
 function createSmsAgentTools(input: {
@@ -1440,43 +1730,46 @@ function createSmsAgentTools(input: {
     }),
     findAppointmentAvailability: createTool({
       description:
-        "Check appointment availability for the user's requested service/date/time and return the grounded scheduling reply. Use this for availability or scheduling questions.",
-      args: z.object({}),
-      handler: async () => {
+        "Check appointment availability for the user's requested service/date/time and return grounded slot options. Pass parsed service/date/time details when available.",
+      args: schedulingLookupToolArgsSchema,
+      handler: async (_toolCtx, args) => {
         return await resolveSchedulingToolResult(
           input.ctx,
           input.businessId,
           input.conversationId,
           input.conversationPrompt,
           input.locale,
+          normalizeSmsSchedulingToolArgs(args),
         );
       },
     }),
     listAlternativeTimes: createTool({
       description:
-        "List additional appointment times for the same service and date when the user asks for other times.",
-      args: z.object({}),
-      handler: async () => {
+        "List additional appointment times for the same service and date. Use relativeToLastOffer when the user asks for other times without changing the service or day.",
+      args: alternativeTimesToolArgsSchema,
+      handler: async (_toolCtx, args) => {
         return await resolveSchedulingToolResult(
           input.ctx,
           input.businessId,
           input.conversationId,
           input.conversationPrompt,
           input.locale,
+          normalizeSmsSchedulingToolArgs(args),
         );
       },
     }),
     bookAppointmentSlot: createTool({
       description:
-        "Book or confirm a slot that was just offered. Use this when the user clearly selects or confirms a time, such as 'I'll take 10h30', 'Yes', or 'That works.'",
-      args: z.object({}),
-      handler: async () => {
+        "Book or confirm a slot that was just offered. Prefer selectedStartsAt when the exact offered slot is known. Use confirmSelection for explicit confirmations.",
+      args: bookAppointmentSlotToolArgsSchema,
+      handler: async (_toolCtx, args) => {
         return await resolveSchedulingToolResult(
           input.ctx,
           input.businessId,
           input.conversationId,
           input.conversationPrompt,
           input.locale,
+          normalizeSmsSchedulingToolArgs(args),
         );
       },
     }),
@@ -1577,7 +1870,7 @@ async function bookConversationAppointment(
     timezone: string;
     locale: RuntimeLocale;
   },
-): Promise<string> {
+): Promise<{ replyText: string; appointmentId: Id<"appointments"> }> {
   const contact: ConversationSmsContact | null = await ctx.runQuery(
     internal.ai.agents.runtime.getConversationSmsContact,
     { conversationId: input.conversationId },
@@ -1620,21 +1913,25 @@ async function bookConversationAppointment(
   await ctx.runMutation(internal.ai.agents.runtime.clearConversationAiState, {
     conversationId: input.conversationId,
   });
-  return buildBookedAppointmentReply(
-    input.service.name,
-    input.startsAt,
-    input.timezone,
-    input.locale,
-  );
+  return {
+    replyText: buildBookedAppointmentReply(
+      input.service.name,
+      input.startsAt,
+      input.timezone,
+      input.locale,
+    ),
+    appointmentId: bookingResult.appointmentId,
+  };
 }
 
-async function maybeGenerateSmsSchedulingReply(
+async function maybeGenerateSmsSchedulingResult(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
   conversationId: Id<"conversations">,
   prompt: string,
   locale: RuntimeLocale,
-): Promise<string | null> {
+  toolArgs?: SmsSchedulingToolArgs,
+): Promise<SmsToolResult | null> {
   const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
     businessId,
   });
@@ -1650,14 +1947,17 @@ async function maybeGenerateSmsSchedulingReply(
     internal.voice.runtime.getActiveServicesForBusiness,
     { businessId },
   );
-  const schedulingText = await getRelevantSchedulingText(
+  const promptSchedulingText = await getRelevantSchedulingText(
     ctx,
     conversationId,
     prompt,
     bookingState,
     services,
   );
-  if (!schedulingText) {
+  const structuredSchedulingText = buildSchedulingTextFromToolArgs(toolArgs);
+  const schedulingText = structuredSchedulingText ?? promptSchedulingText;
+  const selectedStartsAtInput = toolArgs?.selectedStartsAt?.trim();
+  if (!schedulingText && !selectedStartsAtInput) {
     return null;
   }
 
@@ -1665,33 +1965,99 @@ async function maybeGenerateSmsSchedulingReply(
     await ctx.runMutation(internal.ai.agents.runtime.clearConversationBookingState, {
       conversationId,
     });
-    return localizeRuntimeText(locale, {
-      en: "I can help with scheduling, but no bookable services are configured yet.",
-      fr: "Je peux vous aider avec la prise de rendez-vous, mais aucun service réservable n'est configuré pour le moment.",
-    });
+    return handledSmsToolResult(
+      localizeRuntimeText(locale, {
+        en: "I can help with scheduling, but no bookable services are configured yet.",
+        fr: "Je peux vous aider avec la prise de rendez-vous, mais aucun service réservable n'est configuré pour le moment.",
+      }),
+    );
   }
 
+  const selectedStartsAtLocal =
+    selectedStartsAtInput === undefined
+      ? null
+      : DateTime.fromISO(selectedStartsAtInput, { setZone: true }).setZone(snapshot.timezone);
+  const selectedStartsAtDate =
+    selectedStartsAtLocal && selectedStartsAtLocal.isValid
+      ? toSmsDatePreference(selectedStartsAtLocal.startOf("day"), snapshot.timezone, locale)
+      : null;
+  const selectedStartsAtTime =
+    selectedStartsAtLocal && selectedStartsAtLocal.isValid
+      ? {
+          hour24: selectedStartsAtLocal.hour,
+          minute: selectedStartsAtLocal.minute,
+          approximate: false,
+          label: formatRuntimeTimeOfDay(
+            selectedStartsAtLocal.hour * 60 + selectedStartsAtLocal.minute,
+            locale,
+          ),
+        }
+      : null;
   const stateDate = getRequestedDateFromState(bookingState, snapshot.timezone, locale);
-  const explicitDate = resolveRequestedDate(
-    schedulingText,
-    snapshot.timezone,
-    bookingState?.requestedDate ?? bookingState?.lastOfferedDate,
-    locale,
-  );
-  const service = resolveRequestedService(services, schedulingText, bookingState);
+  const explicitDateText = toolArgs?.requestedDateText?.trim() || schedulingText;
+  const explicitDate =
+    selectedStartsAtDate ??
+    (explicitDateText
+      ? resolveRequestedDate(
+          explicitDateText,
+          snapshot.timezone,
+          bookingState?.requestedDate ?? bookingState?.lastOfferedDate,
+          locale,
+        )
+      : null);
+  const serviceLookupText = toolArgs?.serviceName?.trim() || schedulingText || "";
+  const service = resolveRequestedService(services, serviceLookupText, bookingState);
   const bookingMode = getConversationBookingMode(bookingState);
   const requestedDate =
     explicitDate ??
     (bookingMode === "booking_in_progress" &&
-    (shouldReuseStoredDate(prompt, bookingState) || service !== null)
+    ((toolArgs?.relativeToLastOffer === true) ||
+      (toolArgs === undefined && shouldReuseStoredDate(prompt, bookingState)) ||
+      service !== null)
       ? stateDate
       : null);
-  const explicitTime = resolveRequestedTime(schedulingText, locale);
+  const timeTextInput =
+    toolArgs?.selectedTimeText?.trim() ||
+    toolArgs?.requestedTimeText?.trim() ||
+    toolArgs?.dayPart?.trim() ||
+    (!selectedStartsAtInput ? schedulingText : null);
+  const explicitTimeResolution =
+    selectedStartsAtTime !== null
+      ? {
+          primary: selectedStartsAtTime,
+          candidates: [selectedStartsAtTime],
+          ambiguous: false,
+        }
+      : timeTextInput
+        ? resolveRequestedTime(timeTextInput, locale, {
+            requestedDate,
+            snapshot,
+          })
+        : {
+            primary: null,
+            candidates: [],
+            ambiguous: false,
+          };
+  const explicitTime = explicitTimeResolution.primary;
+  const selectedOfferedSlot =
+    selectedStartsAtInput && bookingState?.lastOfferedStartsAt?.includes(selectedStartsAtInput)
+      ? selectedStartsAtInput
+      : requestedDate && explicitTimeResolution.candidates.length > 0
+        ? findMatchingOfferedSlotFromCandidates(
+            bookingState,
+            snapshot.timezone,
+            requestedDate,
+            explicitTimeResolution.candidates,
+          )
+        : null;
   const requestedTime =
     explicitTime ??
-    ((requestedDate !== null && service !== null)
-      ? getRequestedTimeFromState(bookingState, locale)
-      : null);
+    ((selectedStartsAtInput || explicitTimeResolution.candidates.length > 0)
+      ? null
+      : (requestedDate !== null && service !== null)
+        ? getRequestedTimeFromState(bookingState, locale)
+        : null);
+  const requestedTimeLabel = requestedTime?.label ?? selectedStartsAtTime?.label;
 
   if (!service) {
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
@@ -1703,7 +2069,10 @@ async function maybeGenerateSmsSchedulingReply(
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
       lastOfferedStartsAt: [],
     });
-    return buildServiceSelectionReply(services, locale);
+    return handledSmsToolResult(buildServiceSelectionReply(services, locale), {
+      ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
+      ...(requestedTimeLabel !== undefined ? { requestedTimeLabel } : {}),
+    });
   }
 
   const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
@@ -1726,7 +2095,12 @@ async function maybeGenerateSmsSchedulingReply(
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
       lastOfferedStartsAt: [],
     });
-    return buildSetupIssueReply(service.name, setupIssue, locale);
+    return handledSmsToolResult(buildSetupIssueReply(service.name, setupIssue, locale), {
+      resolvedServiceId: service._id,
+      resolvedServiceName: service.name,
+      ...(requestedDate !== null ? { requestedDate: requestedDate.isoDate } : {}),
+      ...(requestedTimeLabel !== undefined ? { requestedTimeLabel } : {}),
+    });
   }
 
   if (!requestedDate) {
@@ -1739,17 +2113,50 @@ async function maybeGenerateSmsSchedulingReply(
       ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
       lastOfferedStartsAt: [],
     });
-    return localizeRuntimeText(locale, {
-      en: `What date would you prefer for your ${service.name}?`,
-      fr: `Quelle date préférez-vous pour votre ${service.name}?`,
+    return handledSmsToolResult(
+      localizeRuntimeText(locale, {
+        en: `What date would you prefer for your ${service.name}?`,
+        fr: `Quelle date préférez-vous pour votre ${service.name}?`,
+      }),
+      {
+        resolvedServiceId: service._id,
+        resolvedServiceName: service.name,
+        ...(requestedTimeLabel !== undefined ? { requestedTimeLabel } : {}),
+      },
+    );
+  }
+
+  if (
+    explicitTimeResolution.ambiguous &&
+    selectedOfferedSlot === null &&
+    !selectedStartsAtInput &&
+    !looksLikeAlternativeTimesRequest(prompt) &&
+    toolArgs?.relativeToLastOffer !== true
+  ) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+      businessId,
+      conversationId,
+      mode: "booking_in_progress",
+      selectedServiceId: service._id,
+      requestedDate: requestedDate.isoDate,
+      lastOfferedStartsAt: [],
     });
+    return handledSmsToolResult(
+      buildTimeClarificationReply(service.name, requestedDate.label, locale),
+      {
+        resolvedServiceId: service._id,
+        resolvedServiceName: service.name,
+        requestedDate: requestedDate.isoDate,
+      },
+    );
   }
 
   const shouldConfirmPendingSlot =
     bookingState?.pendingStartsAt !== undefined &&
-    looksLikeBookingConfirmation(prompt) &&
+    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
     explicitDate === null &&
     explicitTime === null &&
+    !selectedStartsAtInput &&
     !looksLikeAlternativeTimesRequest(prompt);
   if (shouldConfirmPendingSlot) {
     const pendingStartsAt = bookingState?.pendingStartsAt;
@@ -1757,7 +2164,7 @@ async function maybeGenerateSmsSchedulingReply(
       throw new Error("Pending SMS booking state is missing the slot to confirm.");
     }
 
-    return await bookConversationAppointment(ctx, {
+    const bookingResult = await bookConversationAppointment(ctx, {
       businessId,
       conversationId,
       service,
@@ -1765,9 +2172,16 @@ async function maybeGenerateSmsSchedulingReply(
       timezone: snapshot.timezone,
       locale,
     });
+    return handledSmsToolResult(bookingResult.replyText, {
+      resolvedServiceId: service._id,
+      resolvedServiceName: service.name,
+      requestedDate: requestedDate.isoDate,
+      bookedAppointmentId: bookingResult.appointmentId,
+    });
   }
 
-  const wantsAlternativeTimes = looksLikeAlternativeTimesRequest(prompt);
+  const wantsAlternativeTimes =
+    toolArgs?.relativeToLastOffer === true || looksLikeAlternativeTimesRequest(prompt);
   if (!requestedTime || wantsAlternativeTimes || requestedTime.approximate) {
     const slots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
       await ctx.runQuery(internal.appointments.booking.findAvailabilityForBusiness, {
@@ -1807,65 +2221,33 @@ async function maybeGenerateSmsSchedulingReply(
       lastOfferedStartsAt: responseSlots.map((slot) => slot.startsAt),
     });
 
-    return buildAvailabilityReply({
+    return handledSmsToolResult(buildAvailabilityReply({
       locale,
       serviceName: service.name,
       dateLabel: requestedDate.label,
       requestedTime: wantsAlternativeTimes ? null : requestedTime,
       alternativeTimes: wantsAlternativeTimes,
       times: localizedTimes,
+    }), {
+      resolvedServiceId: service._id,
+      resolvedServiceName: service.name,
+      requestedDate: requestedDate.isoDate,
+      ...(requestedTimeLabel !== undefined ? { requestedTimeLabel } : {}),
+      offeredSlots: responseSlots.map((slot) => toOfferedSlotSummary(slot, snapshot.timezone)),
     });
   }
 
-  const requestedStartLocal = requestedDate.dayStart.plus({
-    hours: requestedTime.hour24,
-    minutes: requestedTime.minute,
-  });
-  const startsAt = requestedStartLocal.toUTC().toISO() ?? requestedStartLocal.toISO();
+  const startsAt =
+    selectedStartsAtInput ??
+    (() => {
+      const requestedStartLocal = requestedDate.dayStart.plus({
+        hours: requestedTime.hour24,
+        minutes: requestedTime.minute,
+      });
+      return requestedStartLocal.toUTC().toISO() ?? requestedStartLocal.toISO();
+    })();
   if (!startsAt) {
     throw new Error("Unable to compute the requested appointment time.");
-  }
-
-  const shouldBookRequestedTime =
-    looksLikeBookingConfirmation(prompt) &&
-    findMatchingOfferedSlot(bookingState, snapshot.timezone, requestedDate, requestedTime) !==
-      null;
-  if (shouldBookRequestedTime) {
-    return await bookConversationAppointment(ctx, {
-      businessId,
-      startsAt,
-      service,
-      timezone: snapshot.timezone,
-      conversationId,
-      locale,
-    });
-  }
-
-  const selectedOfferedSlot = findMatchingOfferedSlot(
-    bookingState,
-    snapshot.timezone,
-    requestedDate,
-    requestedTime,
-  );
-  if (selectedOfferedSlot !== null) {
-    await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
-      businessId,
-      conversationId,
-      mode: "booking_in_progress",
-      selectedServiceId: service._id,
-      requestedDate: requestedDate.isoDate,
-      preferredHour24: requestedTime.hour24,
-      preferredMinute: requestedTime.minute,
-      lastOfferedDate: requestedDate.isoDate,
-      lastOfferedStartsAt: [selectedOfferedSlot],
-      pendingStartsAt: selectedOfferedSlot,
-    });
-    return buildPendingBookingReply(
-      service.name,
-      selectedOfferedSlot,
-      snapshot.timezone,
-      locale,
-    );
   }
 
   const exactAvailability: Array<{
@@ -1880,7 +2262,33 @@ async function maybeGenerateSmsSchedulingReply(
     timezone: snapshot.timezone,
   });
 
+  const exactSlotSummary = {
+    startsAt,
+    endsAt: exactAvailability[0]?.endsAt ?? startsAt,
+    displayTime: formatRuntimeTimeFromIso(startsAt, snapshot.timezone, locale),
+  };
+  const shouldBookRequestedTime =
+    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
+    selectedOfferedSlot !== null;
   if (exactAvailability.length > 0) {
+    if (shouldBookRequestedTime) {
+      const bookingResult = await bookConversationAppointment(ctx, {
+        businessId,
+        startsAt,
+        service,
+        timezone: snapshot.timezone,
+        conversationId,
+        locale,
+      });
+      return handledSmsToolResult(bookingResult.replyText, {
+        resolvedServiceId: service._id,
+        resolvedServiceName: service.name,
+        requestedDate: requestedDate.isoDate,
+        requestedTimeLabel: exactSlotSummary.displayTime,
+        bookedAppointmentId: bookingResult.appointmentId,
+      });
+    }
+
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
       businessId,
       conversationId,
@@ -1893,7 +2301,17 @@ async function maybeGenerateSmsSchedulingReply(
       lastOfferedStartsAt: [startsAt],
       pendingStartsAt: startsAt,
     });
-    return buildPendingBookingReply(service.name, startsAt, snapshot.timezone, locale);
+    return handledSmsToolResult(
+      buildPendingBookingReply(service.name, startsAt, snapshot.timezone, locale),
+      {
+        resolvedServiceId: service._id,
+        resolvedServiceName: service.name,
+        requestedDate: requestedDate.isoDate,
+        requestedTimeLabel: exactSlotSummary.displayTime,
+        pendingConfirmation: true,
+        offeredSlots: [toOfferedSlotSummary(exactSlotSummary, snapshot.timezone)],
+      },
+    );
   }
 
   const nearbySlots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
@@ -1922,7 +2340,7 @@ async function maybeGenerateSmsSchedulingReply(
     lastOfferedStartsAt: sortedNearbySlots.map((slot) => slot.startsAt),
   });
 
-  return buildAvailabilityReply({
+  return handledSmsToolResult(buildAvailabilityReply({
     locale,
     serviceName: service.name,
     dateLabel: requestedDate.label,
@@ -1930,7 +2348,30 @@ async function maybeGenerateSmsSchedulingReply(
     times: sortedNearbySlots.map((slot) =>
       formatRuntimeTimeFromIso(slot.startsAt, snapshot.timezone, locale),
     ),
+  }), {
+    resolvedServiceId: service._id,
+    resolvedServiceName: service.name,
+    requestedDate: requestedDate.isoDate,
+    ...(requestedTimeLabel !== undefined ? { requestedTimeLabel } : {}),
+    offeredSlots: sortedNearbySlots.map((slot) => toOfferedSlotSummary(slot, snapshot.timezone)),
   });
+}
+
+async function maybeGenerateSmsSchedulingReply(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  conversationId: Id<"conversations">,
+  prompt: string,
+  locale: RuntimeLocale,
+): Promise<string | null> {
+  const result = await maybeGenerateSmsSchedulingResult(
+    ctx,
+    businessId,
+    conversationId,
+    prompt,
+    locale,
+  );
+  return result?.handled ? result.replyText : null;
 }
 
 export const requireMembershipByUserId = internalQuery({
