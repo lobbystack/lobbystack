@@ -10,7 +10,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useTranslation } from "react-i18next";
 
-import { demoSnapshot } from "@ai-receptionist/shared";
+import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -216,7 +216,41 @@ function WorkspaceShell() {
     api.ai.context.snapshots.getForDashboard,
     businessId ? { businessId } : "skip",
   );
-  const resolvedSnapshot = snapshot ?? demoSnapshot;
+  const resolvedSnapshot: BusinessContextSnapshot =
+    snapshot == null
+      ? demoSnapshot
+      : {
+          ...demoSnapshot,
+          ...snapshot,
+          defaultLocale:
+            snapshot.defaultLocale === "en" || snapshot.defaultLocale === "fr"
+              ? snapshot.defaultLocale
+              : demoSnapshot.defaultLocale,
+          businessType:
+            snapshot.businessType === "clinic" ||
+            snapshot.businessType === "repair_shop" ||
+            snapshot.businessType === "salon" ||
+            snapshot.businessType === "service_company" ||
+            snapshot.businessType === "other"
+              ? snapshot.businessType
+              : demoSnapshot.businessType,
+          transferPolicy: {
+            ...demoSnapshot.transferPolicy,
+            ...(snapshot.transferPolicy ?? {}),
+            mode:
+              snapshot.transferPolicy?.mode === "never" ||
+              snapshot.transferPolicy?.mode === "always" ||
+              snapshot.transferPolicy?.mode === "on_request" ||
+              snapshot.transferPolicy?.mode === "on_urgent" ||
+              snapshot.transferPolicy?.mode === "during_business_hours"
+                ? snapshot.transferPolicy.mode
+                : demoSnapshot.transferPolicy.mode,
+          },
+          contactChannels: {
+            ...demoSnapshot.contactChannels,
+            ...(snapshot.contactChannels ?? {}),
+          },
+        };
 
   if (businesses === undefined) {
     return <LoadingScreen />;
@@ -225,30 +259,51 @@ function WorkspaceShell() {
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
-      businessSlug={activeBusiness?.slug}
+      {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       onSignOut={() => void signOut()}
     >
       <Main className="flex flex-1 flex-col" fixed>
         <Routes>
-          <Route element={<HomePage businessId={businessId} snapshot={resolvedSnapshot} />} path="/" />
-          <Route element={<CallsPage businessId={businessId} />} path="/calls" />
-          <Route element={<MessagesPage businessId={businessId} />} path="/messages" />
-          <Route element={<AutomationsPage businessId={businessId} />} path="/automations" />
           <Route
-            element={<AgentPage businessId={businessId} snapshot={resolvedSnapshot} />}
+            element={<HomePage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
+            path="/"
+          />
+          <Route element={<CallsPage {...(businessId ? { businessId } : {})} />} path="/calls" />
+          <Route
+            element={<MessagesPage {...(businessId ? { businessId } : {})} />}
+            path="/messages"
+          />
+          <Route
+            element={<AutomationsPage {...(businessId ? { businessId } : {})} />}
+            path="/automations"
+          />
+          <Route
+            element={<AgentPage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
             path="/agent"
           />
-          <Route element={<ContactsPage businessId={businessId} />} path="/contacts" />
+          <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
           <Route
-            element={<SettingsLayout businessId={businessId} />}
+            element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
             path="/settings/*"
           >
             <Route
-              element={<SettingsBusinessPage businessId={businessId as Id<"businesses">} snapshot={resolvedSnapshot} />}
+              element={
+                businessId ? (
+                  <SettingsBusinessPage businessId={businessId} snapshot={resolvedSnapshot} />
+                ) : (
+                  <Navigate replace to="/settings" />
+                )
+              }
               index
             />
             <Route
-              element={<IntegrationsPage businessId={businessId as Id<"businesses">} />}
+              element={
+                businessId ? (
+                  <IntegrationsPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/settings" />
+                )
+              }
               path="integrations"
             />
           </Route>

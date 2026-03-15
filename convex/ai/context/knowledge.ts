@@ -121,7 +121,7 @@ async function indexKnowledgeDocumentById(
     title: document.title,
     text: document.textContent,
     key: `document:${String(documentId)}`,
-    contentHash: document.contentHash,
+    ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
     filterValues: [
       { name: "businessId", value: String(document.businessId) },
       { name: "sourceType", value: document.sourceType },

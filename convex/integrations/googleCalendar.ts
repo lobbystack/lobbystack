@@ -417,7 +417,9 @@ async function withGoogleAccessToken(
 
   const refreshed = await refreshGoogleAccessToken({
     connectionId,
-    encryptedRefreshToken: connection.encryptedRefreshToken,
+    ...(connection.encryptedRefreshToken !== undefined
+      ? { encryptedRefreshToken: connection.encryptedRefreshToken }
+      : {}),
   });
   await ctx.runMutation(internal.integrations.calendar.updateCalendarConnectionCredentials, {
     connectionId,
@@ -540,6 +542,10 @@ export const completeOAuthCallback = internalAction({
     if (!selectedCalendar) {
       throw new Error("Google account does not have a writable calendar.");
     }
+    const tokenExpiresAt =
+      tokenPayload.expires_in !== undefined
+        ? getTokenExpiryIso(tokenPayload.expires_in)
+        : undefined;
 
     const connectionId: Id<"calendar_connections"> = await ctx.runMutation(
       internal.integrations.calendar.upsertGoogleCalendarConnection,
@@ -555,9 +561,7 @@ export const completeOAuthCallback = internalAction({
         ...(tokenPayload.refresh_token !== undefined
           ? { encryptedRefreshToken: encryptSecret(tokenPayload.refresh_token) }
           : {}),
-        ...(tokenPayload.expires_in !== undefined
-          ? { tokenExpiresAt: getTokenExpiryIso(tokenPayload.expires_in) }
-          : {}),
+        ...(tokenExpiresAt !== undefined ? { tokenExpiresAt } : {}),
       },
     );
 

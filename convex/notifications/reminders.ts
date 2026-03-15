@@ -1,12 +1,13 @@
-// @ts-nocheck
 import { v } from "convex/values";
 import {
+  type ActionCtx,
   internalAction,
   internalMutation,
   internalQuery,
   mutation,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
 import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
 import {
@@ -14,6 +15,24 @@ import {
   normalizeRuntimeLocale,
 } from "../lib/runtimeLocale";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
+
+type AppointmentNotificationKind = "appointment_reminder" | "booking_confirmation";
+
+type NotificationDeliveryContext = {
+  notificationId: Id<"notifications">;
+  to: string;
+  from: string;
+  body: string;
+};
+
+type DeliverNotificationResult = {
+  delivered: true;
+  providerMessageId: string;
+};
+
+function isAppointmentNotificationKind(kind: string): kind is AppointmentNotificationKind {
+  return kind === "appointment_reminder" || kind === "booking_confirmation";
+}
 
 function buildTwilioSmsStatusCallbackUrl(): string {
   const siteUrl = process.env.CONVEX_SITE_URL;
@@ -37,7 +56,7 @@ export const getNotificationDeliveryContext = internalQuery({
   args: {
     notificationId: v.id("notifications"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<NotificationDeliveryContext | null> => {
     const notification = await ctx.db.get(args.notificationId);
     if (!notification) {
       return null;
@@ -51,7 +70,15 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Notification is missing a related appointment.");
     }
 
-    const appointment = await ctx.db.get(notification.relatedId as any);
+    const appointmentId = await ctx.db.normalizeId(
+      "appointments",
+      notification.relatedId,
+    );
+    if (!appointmentId) {
+      throw new Error("Notification is missing a valid appointment reference.");
+    }
+
+    const appointment = await ctx.db.get(appointmentId);
     if (!appointment) {
       throw new Error("Appointment not found for notification.");
     }
@@ -76,6 +103,9 @@ export const getNotificationDeliveryContext = internalQuery({
 
     if (!business) {
       throw new Error("Business not found for notification.");
+    }
+    if (!isAppointmentNotificationKind(notification.kind)) {
+      throw new Error("Unsupported notification kind.");
     }
 
     const senderPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
@@ -277,8 +307,8 @@ export const deliverNotification = internalAction({
   args: {
     notificationId: v.id("notifications"),
   },
-  handler: async (ctx, args) => {
-    const deliveryContext = await ctx.runQuery(
+  handler: async (ctx, args): Promise<DeliverNotificationResult> => {
+    const deliveryContext: NotificationDeliveryContext | null = await ctx.runQuery(
       internal.notifications.reminders.getNotificationDeliveryContext,
       { notificationId: args.notificationId },
     );
@@ -287,12 +317,15 @@ export const deliverNotification = internalAction({
     }
 
     try {
-      const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
+      const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
+        internal.integrations.twilioSms.sendMessage,
+        {
         to: deliveryContext.to,
         from: deliveryContext.from,
         body: deliveryContext.body,
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
-      });
+        },
+      );
 
       await ctx.runMutation(internal.notifications.reminders.markNotificationSent, {
         notificationId: args.notificationId,
@@ -318,8 +351,8 @@ export const deliverNotification = internalAction({
 
 export const dispatchDueNotifications = internalAction({
   args: {},
-  handler: async (ctx) => {
-    const due = await ctx.runQuery(
+  handler: async (ctx: ActionCtx): Promise<{ count: number }> => {
+    const due: Array<Doc<"notifications">> = await ctx.runQuery(
       internal.notifications.reminders.listDueScheduledNotifications,
       {
         nowIso: new Date().toISOString(),

@@ -74,10 +74,12 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       setPendingLocale(null);
     }
 
+    const storedLocale = readStoredLocale();
+    const browserLocale = i18n.resolvedLanguage ?? i18n.language;
     const normalizedLocale = resolveAuthenticatedLocale({
-      preferredLocale: preferredLocale ?? undefined,
-      storedLocale: readStoredLocale(),
-      browserLocale: i18n.resolvedLanguage ?? i18n.language,
+      ...(preferredLocale ? { preferredLocale } : {}),
+      ...(storedLocale ? { storedLocale } : {}),
+      ...(browserLocale ? { browserLocale } : {}),
     });
     if (normalizedLocale !== locale) {
       void i18n.changeLanguage(normalizedLocale);
