@@ -223,18 +223,18 @@ async function bookAppointmentWithSource(
     throw new Error("Failed to create contact.");
   }
 
+  const selected = availability[0];
   const calendarState: {
     hasConnectedCalendar: boolean;
-    connectionCount: number;
     selectedConnectionId?: Id<"calendar_connections">;
     selectedCalendarId?: string;
   } = await ctx.runQuery(
-    internal.integrations.calendar.getBusinessCalendarConnectionState,
+    internal.integrations.calendar.getStaffCalendarConnectionState,
     {
       businessId: args.businessId,
+      staffId: selected.staffId as Id<"staff">,
     },
   );
-  const selected = availability[0];
   const appointmentId = await ctx.db.insert("appointments", {
     businessId: args.businessId,
     contactId: contact._id,

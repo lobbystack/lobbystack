@@ -6,10 +6,13 @@ export const resolveAuthenticatedUserForBusiness = internalQuery({
   args: {
     businessId: v.id("businesses"),
     authSubject: v.string(),
-    authUserId: v.optional(v.id("users")),
+    authUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const authUser = args.authUserId ? await ctx.db.get(args.authUserId) : null;
+    const authUserId = args.authUserId
+      ? await ctx.db.normalizeId("users", args.authUserId)
+      : null;
+    const authUser = authUserId ? await ctx.db.get(authUserId) : null;
     const legacyUser = await ctx.db
       .query("users")
       .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))

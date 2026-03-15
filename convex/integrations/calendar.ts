@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   action,
   internalAction,
@@ -11,7 +12,7 @@ import {
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { requireMembership } from "../lib/auth";
+import { requireIdentity, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
 
 export const CALENDAR_RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
@@ -51,16 +52,78 @@ type AppointmentSyncContext = {
   serviceName: string;
   contactName?: string;
   contactPhone: string;
-  hasConnectedCalendar: boolean;
+  provider?: string;
+  staffId: Id<"staff">;
   selectedConnectionId?: Id<"calendar_connections">;
   selectedCalendarId?: string;
 };
 
 type CalendarConnectionState = {
   hasConnectedCalendar: boolean;
-  connectionCount: number;
   selectedConnectionId?: Id<"calendar_connections">;
   selectedCalendarId?: string;
+};
+
+type CalendarConnectionListItem = {
+  _id: Id<"calendar_connections">;
+  businessId: Id<"businesses">;
+  provider: string;
+  ownerUserId: Id<"users">;
+  staffId?: Id<"staff">;
+  externalAccountEmail?: string;
+  selectedCalendarId?: string;
+  selectedCalendarSummary?: string;
+  status: string;
+  tokenExpiresAt?: string;
+  syncWindowStartsAt?: string;
+  lastSyncAttemptAt?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+};
+
+type CalendarAccessContext = {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  staffId: Id<"staff">;
+  staffName: string;
+  existingConnectionId?: Id<"calendar_connections">;
+};
+
+type CalendarIntegrationBusinessAccess = {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  role: string;
+};
+
+type CalendarBusyBlockInput = {
+  startsAt: string;
+  endsAt: string;
+  externalEventId: string;
+  sourceCalendarId: string;
+  externalUpdatedAt?: string;
+};
+
+const CALENDAR_INTEGRATION_ADMIN_ROLES = new Set([
+  "business_owner",
+  "business_admin",
+  "owner",
+]);
+
+function requireCalendarIntegrationAdminRole(role: string): void {
+  if (!CALENDAR_INTEGRATION_ADMIN_ROLES.has(role)) {
+    throw new Error("Calendar integrations require admin access.");
+  }
+}
+
+type GoogleCalendarOption = {
+  id: string;
+  summary: string;
+  primary: boolean;
+  selected: boolean;
+};
+
+type GoogleConnectResult = {
+  authorizationUrl: string;
 };
 
 type CalendarReconciliationResult = {
@@ -143,13 +206,26 @@ function buildCalendarSyncIssueBody(input: {
 async function loadConnectedCalendarConnections(
   ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   businessId: Id<"businesses">,
+  input?: {
+    provider?: string;
+    staffId?: Id<"staff">;
+  },
 ): Promise<Array<Doc<"calendar_connections">>> {
-  return await ctx.db
+  const connections = await ctx.db
     .query("calendar_connections")
     .withIndex("by_business_id_and_status", (q) =>
       q.eq("businessId", businessId).eq("status", "connected"),
     )
     .collect();
+  return connections.filter((connection) => {
+    if (input?.provider && connection.provider !== input.provider) {
+      return false;
+    }
+    if (input?.staffId && connection.staffId !== input.staffId) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function selectPreferredCalendarConnection(
@@ -162,18 +238,150 @@ function selectPreferredCalendarConnection(
   );
 }
 
+async function loadPreferredGoogleConnectionsForStaff(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  businessId: Id<"businesses">,
+  staffId: Id<"staff">,
+): Promise<Array<Doc<"calendar_connections">>> {
+  const staffScopedConnections = await loadConnectedCalendarConnections(ctx, businessId, {
+    provider: "google",
+    staffId,
+  });
+  if (staffScopedConnections.length > 0) {
+    return staffScopedConnections;
+  }
+
+  const legacyConnections = await loadConnectedCalendarConnections(ctx, businessId, {
+    provider: "google",
+  });
+  return legacyConnections.filter((connection) => connection.staffId === undefined);
+}
+
+function isGoogleConnectionReady(
+  connection: Doc<"calendar_connections"> | null,
+): connection is Doc<"calendar_connections"> {
+  return (
+    connection !== null &&
+    connection.provider === "google" &&
+    connection.selectedCalendarId !== undefined
+  );
+}
+
+export const verifyCalendarOAuthStateAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<{ businessId: Id<"businesses">; userId: Id<"users"> }> => {
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", args.userId).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership || membership.status !== "active") {
+      throw new Error("Google Calendar connection request is no longer authorized.");
+    }
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    const staff = await ctx.db.get(args.staffId);
+    if (!staff || staff.businessId !== args.businessId) {
+      throw new Error("Google Calendar connection request is no longer authorized.");
+    }
+
+    return {
+      businessId: args.businessId,
+      userId: args.userId,
+    };
+  },
+});
+
 export const listCalendarConnections = query({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
-    return await ctx.db
+  handler: async (ctx, args): Promise<Array<CalendarConnectionListItem>> => {
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    const connections = await ctx.db
       .query("calendar_connections")
       .withIndex("by_business_id_and_provider", (q) =>
         q.eq("businessId", args.businessId),
       )
       .collect();
+
+    return connections.map((connection) => ({
+      _id: connection._id,
+      businessId: connection.businessId,
+      provider: connection.provider,
+      ownerUserId: connection.ownerUserId,
+      ...(connection.staffId !== undefined ? { staffId: connection.staffId } : {}),
+      ...(connection.externalAccountEmail !== undefined
+        ? { externalAccountEmail: connection.externalAccountEmail }
+        : {}),
+      ...(connection.selectedCalendarId !== undefined
+        ? { selectedCalendarId: connection.selectedCalendarId }
+        : {}),
+      ...(connection.selectedCalendarSummary !== undefined
+        ? { selectedCalendarSummary: connection.selectedCalendarSummary }
+        : {}),
+      status: connection.status,
+      ...(connection.tokenExpiresAt !== undefined
+        ? { tokenExpiresAt: connection.tokenExpiresAt }
+        : {}),
+      ...(connection.syncWindowStartsAt !== undefined
+        ? { syncWindowStartsAt: connection.syncWindowStartsAt }
+        : {}),
+      ...(connection.lastSyncAttemptAt !== undefined
+        ? { lastSyncAttemptAt: connection.lastSyncAttemptAt }
+        : {}),
+      ...(connection.lastSyncedAt !== undefined
+        ? { lastSyncedAt: connection.lastSyncedAt }
+        : {}),
+      ...(connection.lastSyncError !== undefined
+        ? { lastSyncError: connection.lastSyncError }
+        : {}),
+    }));
+  },
+});
+
+export const getCalendarIntegrationBusinessAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    authSubject: v.string(),
+    authUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<CalendarIntegrationBusinessAccess> => {
+    const userId: Id<"users"> | null = await ctx.runQuery(
+      internal.users.resolveAuthenticatedUserForBusiness,
+      {
+        businessId: args.businessId,
+        authSubject: args.authSubject,
+        ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
+      },
+    );
+    if (!userId) {
+      throw new Error("Authenticated user profile not found.");
+    }
+
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", userId).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership || membership.status !== "active") {
+      throw new Error("You do not have access to this business.");
+    }
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    return {
+      businessId: args.businessId,
+      userId,
+      role: membership.role,
+    };
   },
 });
 
@@ -182,16 +390,464 @@ export const getBusinessCalendarConnectionState = internalQuery({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args): Promise<CalendarConnectionState> => {
-    const connections = await loadConnectedCalendarConnections(ctx, args.businessId);
+    const connections = await loadConnectedCalendarConnections(ctx, args.businessId, {
+      provider: "google",
+    });
     const selected = selectPreferredCalendarConnection(connections);
     return {
       hasConnectedCalendar: connections.length > 0,
-      connectionCount: connections.length,
       ...(selected?._id !== undefined ? { selectedConnectionId: selected._id } : {}),
       ...(selected?.selectedCalendarId !== undefined
         ? { selectedCalendarId: selected.selectedCalendarId }
         : {}),
     };
+  },
+});
+
+export const getStaffCalendarConnectionState = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<CalendarConnectionState> => {
+    const connections = await loadPreferredGoogleConnectionsForStaff(
+      ctx,
+      args.businessId,
+      args.staffId,
+    );
+    const selected = selectPreferredCalendarConnection(connections);
+    return {
+      hasConnectedCalendar: selected !== null,
+      ...(selected?._id !== undefined ? { selectedConnectionId: selected._id } : {}),
+      ...(selected?.selectedCalendarId !== undefined
+        ? { selectedCalendarId: selected.selectedCalendarId }
+        : {}),
+    };
+  },
+});
+
+export const listConnectedCalendarConnectionsForBusiness = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    return await loadConnectedCalendarConnections(ctx, args.businessId, {
+      provider: "google",
+    });
+  },
+});
+
+export const getCalendarConnectionAccessContext = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+    authSubject: v.string(),
+    authUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<CalendarAccessContext> => {
+    const userId: Id<"users"> | null = await ctx.runQuery(
+      internal.users.resolveAuthenticatedUserForBusiness,
+      {
+        businessId: args.businessId,
+        authSubject: args.authSubject,
+        ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
+      },
+    );
+    if (!userId) {
+      throw new Error("Authenticated user profile not found.");
+    }
+
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", userId).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership || membership.status !== "active") {
+      throw new Error("You do not have access to this business.");
+    }
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    const staff = await ctx.db.get(args.staffId);
+    if (!staff || staff.businessId !== args.businessId) {
+      throw new Error("Staff member not found for this business.");
+    }
+
+    const existingConnection = await ctx.db
+      .query("calendar_connections")
+      .withIndex("by_business_id_and_provider_and_staff_id", (q) =>
+        q.eq("businessId", args.businessId).eq("provider", "google").eq("staffId", args.staffId),
+      )
+      .unique();
+
+    return {
+      businessId: args.businessId,
+      userId,
+      staffId: args.staffId,
+      staffName: staff.name,
+      ...(existingConnection?._id !== undefined
+        ? { existingConnectionId: existingConnection._id }
+        : {}),
+    };
+  },
+});
+
+export const getCalendarConnectionById = internalQuery({
+  args: {
+    connectionId: v.id("calendar_connections"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.connectionId);
+  },
+});
+
+export const getCalendarConnectionRuntimeContext = internalQuery({
+  args: {
+    connectionId: v.id("calendar_connections"),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      return null;
+    }
+
+    const staff =
+      connection.staffId !== undefined ? await ctx.db.get(connection.staffId) : null;
+
+    return {
+      connection,
+      staffTimezone: staff?.timezone ?? null,
+      staffName: staff?.name ?? null,
+    };
+  },
+});
+
+export const createCalendarOAuthState = internalMutation({
+  args: {
+    provider: v.string(),
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    staffId: v.id("staff"),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("calendar_oauth_states")
+      .withIndex("by_nonce", (q) => q.eq("nonce", args.nonce))
+      .unique();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+
+    return await ctx.db.insert("calendar_oauth_states", args);
+  },
+});
+
+export const consumeCalendarOAuthState = internalMutation({
+  args: {
+    nonce: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const state = await ctx.db
+      .query("calendar_oauth_states")
+      .withIndex("by_nonce", (q) => q.eq("nonce", args.nonce))
+      .unique();
+    if (!state) {
+      return null;
+    }
+
+    await ctx.db.delete(state._id);
+
+    if (Date.parse(state.expiresAt) < Date.now()) {
+      throw new Error("Google Calendar connection request expired.");
+    }
+
+    return state;
+  },
+});
+
+export const upsertGoogleCalendarConnection = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    staffId: v.id("staff"),
+    externalAccountId: v.string(),
+    externalAccountEmail: v.optional(v.string()),
+    selectedCalendarId: v.string(),
+    selectedCalendarSummary: v.string(),
+    encryptedAccessToken: v.string(),
+    encryptedRefreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.string()),
+    syncCursor: v.optional(v.string()),
+    syncWindowStartsAt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("calendar_connections")
+      .withIndex("by_business_id_and_provider_and_staff_id", (q) =>
+        q.eq("businessId", args.businessId).eq("provider", "google").eq("staffId", args.staffId),
+      )
+      .unique();
+
+    if (existing) {
+      const {
+        externalAccountEmail: _existingExternalAccountEmail,
+        encryptedRefreshToken: existingEncryptedRefreshToken,
+        tokenExpiresAt: _existingTokenExpiresAt,
+        syncCursor: _existingSyncCursor,
+        syncWindowStartsAt: _existingSyncWindowStartsAt,
+        lastSyncAttemptAt: existingLastSyncAttemptAt,
+        lastSyncedAt: existingLastSyncedAt,
+        lastSyncError: _lastSyncError,
+        ...rest
+      } = existing;
+      await ctx.db.replace(existing._id, {
+        ...rest,
+        ownerUserId: args.userId,
+        externalAccountId: args.externalAccountId,
+        ...(args.externalAccountEmail !== undefined
+          ? { externalAccountEmail: args.externalAccountEmail }
+          : {}),
+        staffId: args.staffId,
+        selectedCalendarId: args.selectedCalendarId,
+        selectedCalendarSummary: args.selectedCalendarSummary,
+        status: "connected",
+        encryptedAccessToken: args.encryptedAccessToken,
+        ...((args.encryptedRefreshToken ?? existingEncryptedRefreshToken) !== undefined
+          ? {
+              encryptedRefreshToken:
+                args.encryptedRefreshToken ?? existingEncryptedRefreshToken,
+            }
+          : {}),
+        ...(args.tokenExpiresAt !== undefined ? { tokenExpiresAt: args.tokenExpiresAt } : {}),
+        ...(args.syncCursor !== undefined ? { syncCursor: args.syncCursor } : {}),
+        ...(args.syncWindowStartsAt !== undefined
+          ? { syncWindowStartsAt: args.syncWindowStartsAt }
+          : {}),
+        ...(existingLastSyncAttemptAt !== undefined
+          ? { lastSyncAttemptAt: existingLastSyncAttemptAt }
+          : {}),
+        ...(existingLastSyncedAt !== undefined ? { lastSyncedAt: existingLastSyncedAt } : {}),
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("calendar_connections", {
+      businessId: args.businessId,
+      provider: "google",
+      ownerUserId: args.userId,
+      staffId: args.staffId,
+      externalAccountId: args.externalAccountId,
+      ...(args.externalAccountEmail !== undefined
+        ? { externalAccountEmail: args.externalAccountEmail }
+        : {}),
+      selectedCalendarId: args.selectedCalendarId,
+      selectedCalendarSummary: args.selectedCalendarSummary,
+      status: "connected",
+      encryptedAccessToken: args.encryptedAccessToken,
+      ...(args.encryptedRefreshToken !== undefined
+        ? { encryptedRefreshToken: args.encryptedRefreshToken }
+        : {}),
+      ...(args.tokenExpiresAt !== undefined ? { tokenExpiresAt: args.tokenExpiresAt } : {}),
+      ...(args.syncCursor !== undefined ? { syncCursor: args.syncCursor } : {}),
+      ...(args.syncWindowStartsAt !== undefined
+        ? { syncWindowStartsAt: args.syncWindowStartsAt }
+        : {}),
+    });
+  },
+});
+
+export const updateCalendarConnectionSelection = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    selectedCalendarId: v.string(),
+    selectedCalendarSummary: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Calendar connection not found.");
+    }
+    const {
+      syncCursor: _syncCursor,
+      syncWindowStartsAt: _syncWindowStartsAt,
+      lastSyncError: _lastSyncError,
+      ...rest
+    } = connection;
+
+    await ctx.db.replace(args.connectionId, {
+      ...rest,
+      selectedCalendarId: args.selectedCalendarId,
+      selectedCalendarSummary: args.selectedCalendarSummary,
+    });
+    return null;
+  },
+});
+
+export const recordCalendarConnectionSyncAttempt = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    attemptedAt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      lastSyncAttemptAt: args.attemptedAt,
+    });
+    return null;
+  },
+});
+
+export const updateCalendarConnectionCredentials = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    encryptedAccessToken: v.string(),
+    encryptedRefreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      encryptedAccessToken: args.encryptedAccessToken,
+      ...(args.encryptedRefreshToken !== undefined
+        ? { encryptedRefreshToken: args.encryptedRefreshToken }
+        : {}),
+      ...(args.tokenExpiresAt !== undefined ? { tokenExpiresAt: args.tokenExpiresAt } : {}),
+    });
+    return null;
+  },
+});
+
+export const recordCalendarConnectionSyncSuccess = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    syncedAt: v.string(),
+    syncCursor: v.optional(v.string()),
+    syncWindowStartsAt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Calendar connection not found.");
+    }
+    const { lastSyncError: _lastSyncError, ...rest } = connection;
+
+    await ctx.db.replace(args.connectionId, {
+      ...rest,
+      lastSyncedAt: args.syncedAt,
+      ...(args.syncCursor !== undefined ? { syncCursor: args.syncCursor } : {}),
+      ...(args.syncWindowStartsAt !== undefined
+        ? { syncWindowStartsAt: args.syncWindowStartsAt }
+        : {}),
+    });
+    return null;
+  },
+});
+
+export const recordCalendarConnectionSyncFailure = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    attemptedAt: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      lastSyncAttemptAt: args.attemptedAt,
+      lastSyncError: args.message,
+    });
+    return null;
+  },
+});
+
+export const applyCalendarBusyBlockChanges = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    fullSync: v.boolean(),
+    syncCursor: v.optional(v.string()),
+    syncWindowStartsAt: v.optional(v.string()),
+    syncedAt: v.string(),
+    busyBlocks: v.array(
+      v.object({
+        startsAt: v.string(),
+        endsAt: v.string(),
+        externalEventId: v.string(),
+        sourceCalendarId: v.string(),
+        externalUpdatedAt: v.optional(v.string()),
+      }),
+    ),
+    removedExternalEventIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Calendar connection not found.");
+    }
+
+    if (args.fullSync) {
+      const existing = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_starts_at", (q) => q.eq("connectionId", args.connectionId))
+        .collect();
+      for (const block of existing) {
+        await ctx.db.delete(block._id);
+      }
+    } else {
+      for (const externalEventId of args.removedExternalEventIds) {
+        const existing = await ctx.db
+          .query("calendar_busy_blocks")
+          .withIndex("by_connection_id_and_external_event_id", (q) =>
+            q.eq("connectionId", args.connectionId).eq("externalEventId", externalEventId),
+          )
+          .collect();
+        for (const block of existing) {
+          await ctx.db.delete(block._id);
+        }
+      }
+    }
+
+    for (const block of args.busyBlocks) {
+      const existing = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_external_event_id", (q) =>
+          q.eq("connectionId", args.connectionId).eq("externalEventId", block.externalEventId),
+        )
+        .unique();
+
+      const payload = {
+        businessId: connection.businessId,
+        ...(connection.staffId !== undefined ? { staffId: connection.staffId } : {}),
+        connectionId: args.connectionId,
+        startsAt: block.startsAt,
+        endsAt: block.endsAt,
+        externalEventId: block.externalEventId,
+        sourceCalendarId: block.sourceCalendarId,
+        ...(block.externalUpdatedAt !== undefined
+          ? { externalUpdatedAt: block.externalUpdatedAt }
+          : {}),
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, payload);
+      } else {
+        await ctx.db.insert("calendar_busy_blocks", payload);
+      }
+    }
+
+    const refreshedConnection = await ctx.db.get(args.connectionId);
+    if (!refreshedConnection) {
+      throw new Error("Calendar connection not found.");
+    }
+    const { lastSyncError: _lastSyncError, ...rest } = refreshedConnection;
+
+    await ctx.db.replace(args.connectionId, {
+      ...rest,
+      lastSyncedAt: args.syncedAt,
+      ...(args.syncCursor !== undefined ? { syncCursor: args.syncCursor } : {}),
+      ...(args.syncWindowStartsAt !== undefined
+        ? { syncWindowStartsAt: args.syncWindowStartsAt }
+        : {}),
+    });
+
+    return null;
   },
 });
 
@@ -206,6 +862,7 @@ export const upsertCalendarConnection = mutation({
   },
   handler: async (ctx, args) => {
     const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const existing = await ctx.db
       .query("calendar_connections")
       .withIndex("by_provider_and_external_account_id", (q) =>
@@ -280,7 +937,11 @@ export const getAppointmentCalendarSyncContext = internalQuery({
     const [service, contact, connections] = await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
-      loadConnectedCalendarConnections(ctx, appointment.businessId),
+      loadPreferredGoogleConnectionsForStaff(
+        ctx,
+        appointment.businessId,
+        appointment.staffId,
+      ),
     ]);
 
     if (!service) {
@@ -297,7 +958,8 @@ export const getAppointmentCalendarSyncContext = internalQuery({
       serviceName: service.name,
       ...(contact.name !== undefined ? { contactName: contact.name } : {}),
       contactPhone: contact.phone,
-      hasConnectedCalendar: connections.length > 0,
+      staffId: appointment.staffId,
+      ...(selected?.provider !== undefined ? { provider: selected.provider } : {}),
       ...(selected?._id !== undefined ? { selectedConnectionId: selected._id } : {}),
       ...(selected?.selectedCalendarId !== undefined
         ? { selectedCalendarId: selected.selectedCalendarId }
@@ -350,32 +1012,54 @@ export const setAppointmentCalendarSyncState = internalMutation({
     calendarReconcileAfter: v.optional(v.string()),
     calendarSyncIssueId: v.optional(v.id("inbox_items")),
     calendarExternalEventId: v.optional(v.string()),
+    clearCalendarLastSyncError: v.optional(v.boolean()),
+    clearCalendarReconcileAfter: v.optional(v.boolean()),
+    clearCalendarSyncIssueId: v.optional(v.boolean()),
+    clearCalendarExternalEventId: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const patch: Partial<Doc<"appointments">> = {
+    const appointment = await ctx.db.get(args.appointmentId);
+    if (!appointment) {
+      throw new Error("Appointment not found.");
+    }
+
+    const next: Doc<"appointments"> = {
+      ...appointment,
       calendarSyncState: args.calendarSyncState,
     };
 
     if (args.calendarLastSyncAttemptAt !== undefined) {
-      patch.calendarLastSyncAttemptAt = args.calendarLastSyncAttemptAt;
+      next.calendarLastSyncAttemptAt = args.calendarLastSyncAttemptAt;
     }
     if (args.calendarLastSyncedAt !== undefined) {
-      patch.calendarLastSyncedAt = args.calendarLastSyncedAt;
+      next.calendarLastSyncedAt = args.calendarLastSyncedAt;
     }
     if (args.calendarLastSyncError !== undefined) {
-      patch.calendarLastSyncError = args.calendarLastSyncError;
+      next.calendarLastSyncError = args.calendarLastSyncError;
     }
     if (args.calendarReconcileAfter !== undefined) {
-      patch.calendarReconcileAfter = args.calendarReconcileAfter;
+      next.calendarReconcileAfter = args.calendarReconcileAfter;
     }
     if (args.calendarSyncIssueId !== undefined) {
-      patch.calendarSyncIssueId = args.calendarSyncIssueId;
+      next.calendarSyncIssueId = args.calendarSyncIssueId;
     }
     if (args.calendarExternalEventId !== undefined) {
-      patch.calendarExternalEventId = args.calendarExternalEventId;
+      next.calendarExternalEventId = args.calendarExternalEventId;
+    }
+    if (args.clearCalendarLastSyncError) {
+      delete next.calendarLastSyncError;
+    }
+    if (args.clearCalendarReconcileAfter) {
+      delete next.calendarReconcileAfter;
+    }
+    if (args.clearCalendarSyncIssueId) {
+      delete next.calendarSyncIssueId;
+    }
+    if (args.clearCalendarExternalEventId) {
+      delete next.calendarExternalEventId;
     }
 
-    await ctx.db.patch(args.appointmentId, patch);
+    await ctx.db.replace(args.appointmentId, next);
     return null;
   },
 });
@@ -513,8 +1197,15 @@ export const syncAppointmentToExternalCalendars = internalAction({
   args: {
     appointmentId: v.id("appointments"),
   },
-  handler: async (ctx, args) => {
-    const context = await ctx.runQuery(
+  handler: async (
+    ctx,
+    args,
+  ): Promise<
+    | { ok: true; status: "not_required" }
+    | { ok: true; status: "synced"; externalEventId: string }
+    | { ok: false; status: "failed"; error: string }
+  > => {
+    const context: AppointmentSyncContext | null = await ctx.runQuery(
       internal.integrations.calendar.getAppointmentCalendarSyncContext,
       {
         appointmentId: args.appointmentId,
@@ -529,23 +1220,34 @@ export const syncAppointmentToExternalCalendars = internalAction({
       context.appointment.calendarSyncState,
     );
 
-    if (context.appointment.status !== "confirmed") {
+    if (
+      context.appointment.status !== "confirmed" &&
+      !context.appointment.calendarExternalEventId
+    ) {
       await ctx.runMutation(
         internal.integrations.calendar.setAppointmentCalendarSyncState,
         {
           appointmentId: args.appointmentId,
           calendarSyncState: "not_required",
+          clearCalendarLastSyncError: true,
+          clearCalendarReconcileAfter: true,
         },
       );
       return { ok: true, status: "not_required" as const };
     }
 
-    if (!context.hasConnectedCalendar) {
+    if (
+      context.provider !== "google" ||
+      !context.selectedConnectionId ||
+      !context.selectedCalendarId
+    ) {
       await ctx.runMutation(
         internal.integrations.calendar.setAppointmentCalendarSyncState,
         {
           appointmentId: args.appointmentId,
           calendarSyncState: "not_required",
+          clearCalendarLastSyncError: true,
+          clearCalendarReconcileAfter: true,
         },
       );
       await ctx.runMutation(
@@ -567,22 +1269,30 @@ export const syncAppointmentToExternalCalendars = internalAction({
     );
 
     try {
-      if (!context.selectedConnectionId || !context.selectedCalendarId) {
-        throw new Error("Connected calendar is missing a selected calendar.");
-      }
-
-      const externalEventId = buildMockExternalEventId(
-        context.selectedConnectionId,
-        context.appointment._id,
+      const result: { ok: true; status: "not_required" | "deleted" }
+        | { ok: true; status: "synced"; externalEventId: string } = await ctx.runAction(
+        internal.integrations.googleCalendar.syncAppointmentEvent,
+        {
+          appointmentId: args.appointmentId,
+        },
       );
+
       await ctx.runMutation(
         internal.integrations.calendar.setAppointmentCalendarSyncState,
         {
           appointmentId: args.appointmentId,
-          calendarSyncState: "synced",
+          calendarSyncState:
+            context.appointment.status === "confirmed" ? "synced" : "not_required",
           calendarLastSyncAttemptAt: nowIso,
           calendarLastSyncedAt: nowIso,
-          calendarExternalEventId: externalEventId,
+          ...(result.status === "synced" && "externalEventId" in result
+            ? { calendarExternalEventId: result.externalEventId }
+            : {}),
+          ...(context.appointment.status !== "confirmed"
+            ? { clearCalendarExternalEventId: true }
+            : {}),
+          clearCalendarLastSyncError: true,
+          clearCalendarReconcileAfter: true,
         },
       );
       await ctx.runMutation(
@@ -600,14 +1310,28 @@ export const syncAppointmentToExternalCalendars = internalAction({
               ? "appointment_calendar_sync_recovered"
               : "appointment_calendar_synced",
           entityId: String(context.appointment._id),
-          payload: JSON.stringify({ externalEventId }),
+          payload: JSON.stringify(
+            result.status === "synced" && "externalEventId" in result
+              ? { externalEventId: result.externalEventId }
+              : { action: result.status },
+          ),
         },
       );
 
+      if (context.appointment.status === "confirmed") {
+        return {
+          ok: true,
+          status: "synced" as const,
+          externalEventId:
+            result.status === "synced" && "externalEventId" in result
+              ? result.externalEventId
+              : context.appointment.calendarExternalEventId ?? "",
+        };
+      }
+
       return {
         ok: true,
-        status: "synced" as const,
-        externalEventId,
+        status: "not_required" as const,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Calendar sync failed.";
@@ -656,17 +1380,39 @@ export const runBusinessCalendarReconciliation = internalAction({
   handler: async (ctx, args): Promise<CalendarReconciliationResult> => {
     const nowIso = new Date().toISOString();
     const nowMs = Date.parse(nowIso);
-    const [calendarState, appointments]: [
-      CalendarConnectionState,
+    const [appointments, connections]: [
       Array<Doc<"appointments">>,
+      Array<Doc<"calendar_connections">>,
     ] = await Promise.all([
-      ctx.runQuery(internal.integrations.calendar.getBusinessCalendarConnectionState, {
-        businessId: args.businessId,
-      }),
       ctx.runQuery(internal.integrations.calendar.listAppointmentsForCalendarReconciliation, {
         businessId: args.businessId,
       }),
+      ctx.runQuery(internal.integrations.calendar.listConnectedCalendarConnectionsForBusiness, {
+        businessId: args.businessId,
+      }),
     ]);
+
+    for (const connection of connections) {
+      if (!isGoogleConnectionReady(connection)) {
+        continue;
+      }
+
+      try {
+        await ctx.runAction(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+          connectionId: connection._id,
+        });
+      } catch {
+        // Connection-level sync errors are recorded on the connection itself.
+      }
+    }
+    const readyConnectionStaffIds = new Set(
+      connections
+        .filter((connection) => isGoogleConnectionReady(connection) && connection.staffId !== undefined)
+        .map((connection) => String(connection.staffId)),
+    );
+    const hasLegacyReadyConnection = connections.some(
+      (connection) => isGoogleConnectionReady(connection) && connection.staffId === undefined,
+    );
 
     let retried = 0;
     let failed = 0;
@@ -680,7 +1426,10 @@ export const runBusinessCalendarReconciliation = internalAction({
       if (
         state === "not_required" &&
         appointment.status === "confirmed" &&
-        calendarState.hasConnectedCalendar
+        (
+          readyConnectionStaffIds.has(String(appointment.staffId)) ||
+          hasLegacyReadyConnection
+        )
       ) {
         await ctx.runMutation(
           internal.integrations.calendar.setAppointmentCalendarSyncState,
@@ -871,7 +1620,8 @@ export const getCalendarReconciliationSummary = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args): Promise<CalendarReconciliationSummary> => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const [appointments, openIssues]: [Array<Doc<"appointments">>, Array<Doc<"inbox_items">>] =
       await Promise.all([
       ctx.runQuery(internal.integrations.calendar.listAppointmentsForCalendarReconciliation, {
@@ -913,7 +1663,8 @@ export const listCalendarReconciliationIssues = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const issues = await ctx.db
       .query("inbox_items")
       .withIndex("by_business_id_and_kind_and_status", (q) =>
@@ -967,7 +1718,8 @@ export const listAppointmentsNeedingCalendarAttention = query({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireCalendarIntegrationAdminRole(membership.role);
     const unhealthyStates: Array<NormalizedCalendarSyncState> = [
       "pending",
       "syncing",
@@ -1018,11 +1770,111 @@ export const listAppointmentsNeedingCalendarAttention = query({
 export const connectGoogle = action({
   args: {
     businessId: v.id("businesses"),
+    staffId: v.id("staff"),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args): Promise<GoogleConnectResult> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    return (await ctx.runAction(
+      internal.integrations.googleCalendar.startGoogleConnection,
+      {
+        ...args,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    )) as GoogleConnectResult;
+  },
+});
+
+export const listGoogleCalendars = action({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<Array<GoogleCalendarOption>> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const accessContext: CalendarAccessContext = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionAccessContext,
+      {
+        businessId: args.businessId,
+        staffId: args.staffId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
+    if (!accessContext.existingConnectionId) {
+      return [];
+    }
+
+    return (await ctx.runAction(
+      internal.integrations.googleCalendar.listAvailableCalendars,
+      {
+        connectionId: accessContext.existingConnectionId,
+      },
+    )) as Array<GoogleCalendarOption>;
+  },
+});
+
+export const selectGoogleCalendar = action({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+    calendarId: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ selectedCalendarId: string; selectedCalendarSummary: string }> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const accessContext: CalendarAccessContext = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionAccessContext,
+      {
+        businessId: args.businessId,
+        staffId: args.staffId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
+    if (!accessContext.existingConnectionId) {
+      throw new Error("Connect Google Calendar before choosing a calendar.");
+    }
+
+    const calendars: Array<GoogleCalendarOption> = await ctx.runAction(
+      internal.integrations.googleCalendar.listAvailableCalendars,
+      {
+        connectionId: accessContext.existingConnectionId,
+      },
+    );
+    const selected = calendars.find(
+      (calendar: GoogleCalendarOption) => calendar.id === args.calendarId,
+    );
+    if (!selected) {
+      throw new Error("Selected Google calendar was not found.");
+    }
+
+    await ctx.runMutation(
+      internal.integrations.calendar.updateCalendarConnectionSelection,
+      {
+        connectionId: accessContext.existingConnectionId,
+        selectedCalendarId: selected.id,
+        selectedCalendarSummary: selected.summary,
+      },
+    );
+    await ctx.runAction(
+      internal.integrations.googleCalendar.syncBusyTimeForConnection,
+      {
+        connectionId: accessContext.existingConnectionId,
+        fullSync: true,
+      },
+    );
+
     return {
-      businessId: args.businessId,
-      authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      selectedCalendarId: selected.id,
+      selectedCalendarSummary: selected.summary,
     };
   },
 });
@@ -1031,7 +1883,21 @@ export const connectMicrosoft = action({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (_ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ businessId: Id<"businesses">; authorizationUrl: string }> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    await ctx.runQuery(
+      internal.integrations.calendar.getCalendarIntegrationBusinessAccess,
+      {
+        businessId: args.businessId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
     return {
       businessId: args.businessId,
       authorizationUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",

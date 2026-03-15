@@ -121,6 +121,13 @@ const takeMessageSchema = z.object({
   callbackWindow: z.string().min(1).optional(),
 });
 
+const googleCalendarCallbackQuerySchema = z.object({
+  code: z.string().min(1).optional(),
+  state: z.string().min(1).optional(),
+  error: z.string().min(1).optional(),
+  error_description: z.string().min(1).optional(),
+});
+
 function badRequest(message: string): Response {
   return new Response(message, { status: 400 });
 }
@@ -242,6 +249,59 @@ function requireServiceToken(request: Request): Response | null {
 }
 
 auth.addHttpRoutes(http);
+
+http.route({
+  path: "/integrations/google/callback",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const parsedQuery = parseSearchParams(new URL(request.url), googleCalendarCallbackQuerySchema);
+    if (!parsedQuery.ok) {
+      return parsedQuery.response;
+    }
+
+    if (parsedQuery.data.error) {
+      const redirect = await ctx.runAction(
+        internal.integrations.googleCalendar.buildCallbackRedirect,
+        {
+          status: "error",
+          message: "Google Calendar access was not granted.",
+        },
+      );
+      return Response.redirect(redirect.redirectUrl, 302);
+    }
+
+    if (!parsedQuery.data.code || !parsedQuery.data.state) {
+      const redirect = await ctx.runAction(
+        internal.integrations.googleCalendar.buildCallbackRedirect,
+        {
+          status: "error",
+          message: "Google Calendar callback was incomplete.",
+        },
+      );
+      return Response.redirect(redirect.redirectUrl, 302);
+    }
+
+    try {
+      const result = await ctx.runAction(
+        internal.integrations.googleCalendar.completeOAuthCallback,
+        {
+          code: parsedQuery.data.code,
+          state: parsedQuery.data.state,
+        },
+      );
+      return Response.redirect(result.redirectUrl, 302);
+    } catch (error) {
+      const redirect = await ctx.runAction(
+        internal.integrations.googleCalendar.buildCallbackRedirect,
+        {
+          status: "error",
+          message: "Google Calendar connection failed. Please try again.",
+        },
+      );
+      return Response.redirect(redirect.redirectUrl, 302);
+    }
+  }),
+});
 
 http.route({
   path: "/twilio/sms/inbound",
