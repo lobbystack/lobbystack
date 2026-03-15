@@ -1410,6 +1410,9 @@ export const runBusinessCalendarReconciliation = internalAction({
         .filter((connection) => isGoogleConnectionReady(connection) && connection.staffId !== undefined)
         .map((connection) => String(connection.staffId)),
     );
+    const hasLegacyReadyConnection = connections.some(
+      (connection) => isGoogleConnectionReady(connection) && connection.staffId === undefined,
+    );
 
     let retried = 0;
     let failed = 0;
@@ -1423,7 +1426,10 @@ export const runBusinessCalendarReconciliation = internalAction({
       if (
         state === "not_required" &&
         appointment.status === "confirmed" &&
-        readyConnectionStaffIds.has(String(appointment.staffId))
+        (
+          readyConnectionStaffIds.has(String(appointment.staffId)) ||
+          hasLegacyReadyConnection
+        )
       ) {
         await ctx.runMutation(
           internal.integrations.calendar.setAppointmentCalendarSyncState,

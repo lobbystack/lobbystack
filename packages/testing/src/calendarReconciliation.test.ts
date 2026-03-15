@@ -945,6 +945,65 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("treats legacy Google connections as eligible for not_required drift detection", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "legacy-google-drift-business",
+        name: "Legacy Google Drift Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      if (!connection) {
+        throw new Error("Expected legacy drift connection fixture to exist.");
+      }
+
+      const { staffId: _staffId, ...legacyConnection } = connection;
+      await ctx.db.replace(connectionId, legacyConnection);
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550333",
+      });
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-18T09:00:00.000-04:00",
+        endsAt: "2026-03-18T09:30:00.000-04:00",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "dashboard",
+        calendarSyncState: "not_required",
+      });
+    });
+
+    const result = await t.action(internal.integrations.calendar.runBusinessCalendarReconciliation, {
+      businessId,
+    });
+
+    expect(result).toMatchObject({
+      drifted: 1,
+      issuesOpened: 1,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .unique();
+
+      expect(appointment?.calendarSyncState).toBe("drifted");
+      expect(appointment?.calendarLastSyncError).toBe(
+        "Connected calendar exists but the appointment was never queued for sync.",
+      );
+    });
+  });
+
   it("falls back to a full busy sync when Google rejects the stored sync token", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, staffId } = await t.run(async (ctx) => {
