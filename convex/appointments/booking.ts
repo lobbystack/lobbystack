@@ -195,7 +195,9 @@ async function bookAppointmentWithSource(
       serviceId: args.serviceId,
       startsAt: args.startsAt,
       timezone: args.timezone,
-      preferredStaffId: args.preferredStaffId,
+      ...(args.preferredStaffId !== undefined
+        ? { preferredStaffId: args.preferredStaffId }
+        : {}),
     },
   );
 
@@ -224,6 +226,9 @@ async function bookAppointmentWithSource(
   }
 
   const selected = availability[0];
+  if (!selected) {
+    throw new Error("No availability for the requested time.");
+  }
   const calendarState: {
     hasConnectedCalendar: boolean;
     selectedConnectionId?: Id<"calendar_connections">;

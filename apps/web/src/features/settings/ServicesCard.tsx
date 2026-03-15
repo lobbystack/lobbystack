@@ -54,7 +54,7 @@ export function ServicesCard(props: ServicesCardProps) {
         businessId: props.businessId,
         name: trimmedName,
         slug: trimmedSlug,
-        description: description.trim() || undefined,
+        ...(description.trim() ? { description: description.trim() } : {}),
         durationMinutes: Number(durationMinutes),
         active: true,
       });

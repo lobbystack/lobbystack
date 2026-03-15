@@ -62,10 +62,10 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
         tone,
         summary,
         bookingPolicy,
-        voiceInstructions: voiceInstructions.trim() || undefined,
-        smsInstructions: smsInstructions.trim() || undefined,
+        ...(voiceInstructions.trim() ? { voiceInstructions: voiceInstructions.trim() } : {}),
+        ...(smsInstructions.trim() ? { smsInstructions: smsInstructions.trim() } : {}),
         transferMode,
-        transferNumber: transferNumber.trim() || undefined,
+        ...(transferNumber.trim() ? { transferNumber: transferNumber.trim() } : {}),
       });
       setStatus(t("profile.saved"));
     } finally {

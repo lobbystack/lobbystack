@@ -108,9 +108,9 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
     try {
       const result = await upsertPhoneNumber({
         businessId: props.businessId,
-        phoneNumberId: selectedPhoneNumber?._id,
+        ...(selectedPhoneNumber?._id ? { phoneNumberId: selectedPhoneNumber._id } : {}),
         e164: e164.replace(/\s+/g, ""),
-        twilioPhoneSid: twilioPhoneSid.trim() || undefined,
+        ...(twilioPhoneSid.trim() ? { twilioPhoneSid: twilioPhoneSid.trim() } : {}),
         voiceEnabled,
         smsEnabled,
         status,

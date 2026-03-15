@@ -408,13 +408,17 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     <Button
                       disabled={isLoadingCalendars || !selectedConnection.staffId}
                       onClick={() => {
+                        const connectionStaffId = selectedConnection.staffId;
+                        if (!connectionStaffId) {
+                          return;
+                        }
                         setSelectedCalendarId(selectedConnection.selectedCalendarId ?? "");
                         setStatusMessage(null);
                         setErrorMessage(null);
                         setIsLoadingCalendars(true);
                         void listGoogleCalendars({
                           businessId,
-                          staffId: selectedConnection.staffId,
+                          staffId: connectionStaffId,
                         })
                           .then((calendars) => {
                             const nextCalendars = calendars as Array<GoogleCalendarOption>;

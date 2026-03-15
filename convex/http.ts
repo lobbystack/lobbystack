@@ -326,8 +326,10 @@ http.route({
       from: parsedPayload.data.From,
       to: parsedPayload.data.To,
       body: parsedPayload.data.Body,
-      messageSid: parsedPayload.data.MessageSid,
-      smsSid: parsedPayload.data.SmsSid,
+      ...(parsedPayload.data.MessageSid !== undefined
+        ? { messageSid: parsedPayload.data.MessageSid }
+        : {}),
+      ...(parsedPayload.data.SmsSid !== undefined ? { smsSid: parsedPayload.data.SmsSid } : {}),
       ...(media.length > 0 ? { media } : {}),
     });
 
