@@ -263,10 +263,39 @@ function isGoogleConnectionReady(
   return (
     connection !== null &&
     connection.provider === "google" &&
-    connection.staffId !== undefined &&
     connection.selectedCalendarId !== undefined
   );
 }
+
+export const verifyCalendarOAuthStateAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<{ businessId: Id<"businesses">; userId: Id<"users"> }> => {
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", args.userId).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership || membership.status !== "active") {
+      throw new Error("Google Calendar connection request is no longer authorized.");
+    }
+    requireCalendarIntegrationAdminRole(membership.role);
+
+    const staff = await ctx.db.get(args.staffId);
+    if (!staff || staff.businessId !== args.businessId) {
+      throw new Error("Google Calendar connection request is no longer authorized.");
+    }
+
+    return {
+      businessId: args.businessId,
+      userId: args.userId,
+    };
+  },
+});
 
 export const listCalendarConnections = query({
   args: {

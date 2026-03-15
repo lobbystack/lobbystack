@@ -263,9 +263,16 @@ async function connectGoogleCalendar(
   },
 ): Promise<Id<"calendar_connections">> {
   const userId = await t.run(async (ctx) => {
-    return await ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       authSubject: `calendar-owner:${String(input.businessId)}:${String(input.staffId)}`,
     });
+    await ctx.db.insert("business_memberships", {
+      businessId: input.businessId,
+      userId,
+      role: "owner",
+      status: "active",
+    });
+    return userId;
   });
   const nonce = `state-${String(input.businessId)}-${String(input.staffId)}`;
 
@@ -890,6 +897,54 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("keeps legacy Google connections in busy-time reconciliation until remapped", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "legacy-google-reconciliation-business",
+        name: "Legacy Google Reconciliation Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      if (!connection) {
+        throw new Error("Expected legacy reconciliation connection fixture to exist.");
+      }
+
+      const { staffId: _staffId, ...legacyConnection } = connection;
+      await ctx.db.replace(connectionId, legacyConnection);
+    });
+
+    setGoogleCalendarEvents("primary-calendar", [
+      {
+        id: "legacy-busy-1",
+        summary: "Legacy Busy",
+        start: "2026-03-17T16:00:00.000-04:00",
+        end: "2026-03-17T16:30:00.000-04:00",
+        updated: "2026-03-10T00:00:00.000Z",
+      },
+    ]);
+
+    await t.action(internal.integrations.calendar.runBusinessCalendarReconciliation, {
+      businessId,
+    });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      expect(connection?.lastSyncedAt).toBeTruthy();
+
+      const blocks = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_starts_at", (q) => q.eq("connectionId", connectionId))
+        .collect();
+
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]?.externalEventId).toBe("legacy-busy-1");
+    });
+  });
+
   it("falls back to a full busy sync when Google rejects the stored sync token", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, staffId } = await t.run(async (ctx) => {
@@ -963,6 +1018,57 @@ describe("calendar reconciliation backend", () => {
         state: "expired-oauth-state",
       }),
     ).rejects.toThrow("expired");
+  });
+
+  it("rejects OAuth callbacks if the initiating operator no longer has admin access", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId, userId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "revoked-oauth-state-business",
+        name: "Revoked OAuth State Business",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: "revoked-oauth-user",
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: seeded.businessId,
+        userId,
+        role: "owner",
+        status: "active",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId, userId };
+    });
+
+    await t.mutation(internal.integrations.calendar.createCalendarOAuthState, {
+      provider: "google",
+      businessId,
+      userId,
+      staffId,
+      nonce: "revoked-oauth-state",
+      expiresAt: "2099-01-01T00:00:00.000Z",
+    });
+
+    await t.run(async (ctx) => {
+      const membership = await ctx.db
+        .query("business_memberships")
+        .withIndex("by_user_id_and_business_id", (q) =>
+          q.eq("userId", userId).eq("businessId", businessId),
+        )
+        .unique();
+      if (!membership) {
+        throw new Error("Expected membership to exist.");
+      }
+      await ctx.db.patch(membership._id, {
+        role: "scheduler",
+      });
+    });
+
+    await expect(
+      t.action(internal.integrations.googleCalendar.completeOAuthCallback, {
+        code: "revoked-code",
+        state: "revoked-oauth-state",
+      }),
+    ).rejects.toThrow("Calendar integrations require admin access.");
   });
 
   it("registers the business reconciliation cron every five minutes", async () => {

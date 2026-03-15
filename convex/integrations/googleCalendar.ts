@@ -520,6 +520,12 @@ export const completeOAuthCallback = internalAction({
       throw new Error("Google Calendar connection request was not found.");
     }
 
+    await ctx.runQuery(internal.integrations.calendar.verifyCalendarOAuthStateAccess, {
+      businessId: oauthState.businessId,
+      userId: oauthState.userId,
+      staffId: oauthState.staffId,
+    });
+
     const tokenPayload = await exchangeAuthorizationCode(args.code);
     const accessToken = tokenPayload.access_token;
     if (!accessToken) {
