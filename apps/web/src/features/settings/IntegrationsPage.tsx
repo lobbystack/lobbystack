@@ -99,12 +99,21 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   useEffect(() => {
     const requestedStaffId = searchParams.get("staffId");
-    if (requestedStaffId) {
-      setSelectedStaffId(requestedStaffId);
-    } else if (!selectedStaffId && staff[0]?._id) {
-      setSelectedStaffId(String(staff[0]._id));
-    }
-  }, [searchParams, selectedStaffId, staff]);
+    setSelectedStaffId((current) => {
+      if (current) {
+        return current;
+      }
+
+      if (
+        requestedStaffId &&
+        staff.some((member) => String(member._id) === requestedStaffId)
+      ) {
+        return requestedStaffId;
+      }
+
+      return staff[0]?._id ? String(staff[0]._id) : "";
+    });
+  }, [searchParams, staff]);
 
   useEffect(() => {
     if (staff.length === 0) {
