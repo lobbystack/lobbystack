@@ -2335,7 +2335,7 @@ async function maybeGenerateSmsSchedulingResult(
 
   const shouldConfirmPendingSlot =
     bookingState?.pendingStartsAt !== undefined &&
-    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
+    looksLikeBookingConfirmation(prompt) &&
     explicitDate === null &&
     explicitTime === null &&
     !selectedStartsAtInput &&
@@ -2449,9 +2449,7 @@ async function maybeGenerateSmsSchedulingResult(
     endsAt: exactAvailability[0]?.endsAt ?? startsAt,
     displayTime: formatRuntimeTimeFromIso(startsAt, snapshot.timezone, locale),
   };
-  const shouldBookRequestedTime =
-    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
-    selectedOfferedSlot !== null;
+  const shouldBookRequestedTime = selectedOfferedSlot !== null;
   if (exactAvailability.length > 0) {
     if (shouldBookRequestedTime) {
       const bookingResult = await bookConversationAppointment(ctx, {
