@@ -1247,6 +1247,34 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("parses month-name dates with ordinal suffixes like March 18th", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-month-name-ordinal-date",
+        name: "SMS Month Name Ordinal Date",
+        smsNumber: "+14165550930",
+      });
+      return { businessId, smsNumber: "+14165550930" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-month-name-ordinal-date-1",
+      From: "+14165550969",
+      To: smsNumber,
+      Body: "Hello do you room for an initial consultation on march 18th?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("Initial Consultation");
+      expect(outboundBody).toContain("Wednesday, Mar 18");
+      expect(outboundBody).not.toBe("What date would you prefer for your Initial Consultation?");
+    });
+  });
+
   it("falls back to nearby alternatives when a previously offered slot is no longer available", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
