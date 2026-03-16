@@ -2231,6 +2231,17 @@ async function maybeGenerateSmsSchedulingResult(
             candidates: [],
             ambiguous: false,
           };
+  const promptTimeResolution =
+    !selectedStartsAtInput && promptSchedulingText
+      ? resolveRequestedTime(promptSchedulingText, locale, {
+          requestedDate,
+          snapshot,
+        })
+      : {
+          primary: null,
+          candidates: [],
+          ambiguous: false,
+        };
   const explicitTime = explicitTimeResolution.primary;
   const selectedOfferedSlot =
     selectedStartsAtInput && bookingState?.lastOfferedStartsAt?.includes(selectedStartsAtInput)
@@ -2243,6 +2254,15 @@ async function maybeGenerateSmsSchedulingResult(
             explicitTimeResolution.candidates,
           )
         : null;
+  const promptSelectedOfferedSlot =
+    requestedDate !== null && promptTimeResolution.candidates.length > 0
+      ? findMatchingOfferedSlotFromCandidates(
+          bookingState,
+          snapshot.timezone,
+          requestedDate,
+          promptTimeResolution.candidates,
+        )
+      : null;
   const requestedTime =
     explicitTime ??
     ((selectedStartsAtInput || explicitTimeResolution.candidates.length > 0)
@@ -2461,8 +2481,13 @@ async function maybeGenerateSmsSchedulingResult(
     endsAt: exactAvailability[0]?.endsAt ?? startsAt,
     displayTime: formatRuntimeTimeFromIso(startsAt, snapshot.timezone, locale),
   };
+  const promptExplicitSlotSelection =
+    selectedOfferedSlot !== null &&
+    promptSelectedOfferedSlot === selectedOfferedSlot &&
+    isTimeOnlyReply(prompt);
   const shouldBookRequestedTime =
-    looksLikeBookingConfirmation(prompt) && selectedOfferedSlot !== null;
+    selectedOfferedSlot !== null &&
+    (looksLikeBookingConfirmation(prompt) || promptExplicitSlotSelection);
   if (exactAvailability.length > 0) {
     if (shouldBookRequestedTime) {
       const bookingResult = await bookConversationAppointment(ctx, {

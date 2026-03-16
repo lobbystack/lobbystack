@@ -855,7 +855,7 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
-        "I have Initial Consultation available for Thursday, Mar 12 at 2:30 PM. Does that work for you?",
+        "Great, I booked your Initial Consultation for Thursday, Mar 12 at 2:30 PM.",
       );
 
       const bookingState = await ctx.db
@@ -863,16 +863,20 @@ describe("SMS scheduling flow", () => {
         .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
         .unique();
       expect(bookingState).toMatchObject({
-        mode: "booking_in_progress",
+        mode: "booked",
         selectedServiceId: initialConsultationId,
-        pendingStartsAt: "2026-03-12T18:30:00.000Z",
+        lastConfirmedStartsAt: "2026-03-12T18:30:00.000Z",
       });
 
       const appointments = await ctx.db
         .query("appointments")
         .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
         .collect();
-      expect(appointments).toHaveLength(0);
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]).toMatchObject({
+        serviceId: initialConsultationId,
+        startsAt: "2026-03-12T18:30:00.000Z",
+      });
     });
   });
 
@@ -1215,17 +1219,17 @@ describe("SMS scheduling flow", () => {
     });
   });
 
-  it("matches bare 1h30 to the previously offered afternoon slot before booking", async () => {
+  it("books a bare time-only reply when it matches a previously offered slot exactly", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
 
-    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+    const { businessId, contactId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
       const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
         slug: "sms-structured-tool-ambiguous-time",
         name: "SMS Structured Tool Ambiguous Time",
         smsNumber: "+14165550924",
       });
-      const { conversationId } = await seedSmsConversation(ctx, {
+      const { contactId, conversationId } = await seedSmsConversation(ctx, {
         businessId,
         contactPhone: "+14165550975",
       });
@@ -1241,51 +1245,44 @@ describe("SMS scheduling flow", () => {
         lastOfferedStartsAt: ["2026-03-19T17:30:00.000Z"],
         updatedAt: new Date().toISOString(),
       });
-      return { businessId, conversationId, initialConsultationId };
+      return { businessId, contactId, conversationId, initialConsultationId };
     });
     await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
 
     await t.action(internal.ai.agents.runtime.generateSmsReply, {
       businessId,
       conversationId,
-      prompt: "Thanks for the update.",
+      prompt: "1h30",
     });
 
     const request = getCapturedAgentRequest();
     const toolResult = await executeCapturedTool<{
       handled: boolean;
       replyText?: string;
-      pendingConfirmation?: boolean;
+      bookedAppointmentId?: Id<"appointments">;
+      authorizedToBook?: boolean;
       requestedTimeLabel?: string;
-      offeredSlots?: Array<{ startsAt: string }>;
     }>(request.tools.bookAppointmentSlot!, {
       selectedTimeText: "1h30",
     });
 
     expect(toolResult).toMatchObject({
       handled: true,
-      replyText: "I have Initial Consultation available for Thursday, Mar 19 at 1:30 PM. Does that work for you?",
-      pendingConfirmation: true,
+      replyText: "Great, I booked your Initial Consultation for Thursday, Mar 19 at 1:30 PM.",
+      authorizedToBook: true,
       requestedTimeLabel: "1:30 PM",
     });
-    expect(toolResult.offeredSlots).toEqual([
-      {
-        startsAt: "2026-03-19T17:30:00.000Z",
-        endsAt: "2026-03-19T18:00:00.000Z",
-        isoDate: "2026-03-19",
-        displayTime: "1:30 PM",
-      },
-    ]);
+    expect(toolResult.bookedAppointmentId).toBeDefined();
 
     await t.run(async (ctx) => {
-      const bookingState = await ctx.db
-        .query("conversation_booking_state")
-        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
-        .unique();
-      expect(bookingState).toMatchObject({
-        mode: "booking_in_progress",
-        selectedServiceId: initialConsultationId,
-        pendingStartsAt: "2026-03-19T17:30:00.000Z",
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]).toMatchObject({
+        serviceId: initialConsultationId,
+        startsAt: "2026-03-19T17:30:00.000Z",
       });
     });
   });
