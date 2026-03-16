@@ -721,6 +721,8 @@ describe("Twilio SMS delivery flow", () => {
 
   it("skips the immediate booking confirmation notification for sms-booked appointments", async () => {
     const t = convexTest(schema, convexModules);
+    const startsAt = new Date(Date.now() + 49 * 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
 
     const { appointmentId } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
@@ -755,8 +757,8 @@ describe("Twilio SMS delivery flow", () => {
         contactId,
         staffId,
         serviceId,
-        startsAt: "2026-03-17T13:30:00.000Z",
-        endsAt: "2026-03-17T14:00:00.000Z",
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
         timezone: "America/Toronto",
         status: "confirmed",
         sourceChannel: "sms",
