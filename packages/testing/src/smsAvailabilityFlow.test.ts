@@ -1725,6 +1725,65 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("books the matched offered slot for ambiguous 10h00 replies in late-hours schedules", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId, contactId, initialConsultationId } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-ambiguous-10h00-offered-slot",
+          name: "SMS Ambiguous 10h00 Offered Slot",
+          smsNumber: "+14165550936",
+        });
+        await ctx.db.insert("business_hours", {
+          businessId,
+          dayOfWeek: 2,
+          openMinutes: 20 * 60,
+          closeMinutes: 23 * 60,
+        });
+        const { conversationId, contactId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550962",
+          contactName: "Taylor Parker",
+        });
+        await ctx.db.insert("conversation_booking_state", {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: initialConsultationId,
+          requestedDate: "2026-03-17",
+          preferredHour24: 10,
+          preferredMinute: 0,
+          lastOfferedDate: "2026-03-17",
+          lastOfferedStartsAt: ["2026-03-17T14:00:00.000Z"],
+          updatedAt: new Date().toISOString(),
+        });
+        return { businessId, conversationId, contactId, initialConsultationId };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "I'll take 10h00",
+    });
+
+    expect(reply).toBe(
+      "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 10:00 AM.",
+    );
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      expect(appointments[0]?.startsAt).toBe("2026-03-17T14:00:00.000Z");
+    });
+  });
+
   it("keeps bare day-of-month follow-ups in March when the date is still upcoming", async () => {
     const t = createConvexHarness();
 
@@ -2175,6 +2234,46 @@ describe("SMS scheduling flow", () => {
     expect(reply).toContain("Initial Consultation");
     expect(reply).toContain("Tuesday, Mar 17 at 10:00 AM");
     expect(reply).not.toContain("I have cancelled your appointment");
+  });
+
+  it("keeps booking-in-progress change requests in scheduling fallback flows", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-scheduling-change-followup",
+        name: "SMS Scheduling Change Followup",
+        smsNumber: "+14165550937",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550961",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        requestedDate: "2026-03-12",
+        preferredHour24: 10,
+        preferredMinute: 0,
+        lastOfferedDate: "2026-03-12",
+        lastOfferedStartsAt: ["2026-03-12T14:00:00.000Z"],
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, initialConsultationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Can we change tomorrow to 3?",
+    });
+
+    expect(reply).toContain("Thursday, Mar 12");
+    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("I do not see a confirmed appointment to change right now.");
   });
 
   it("does not treat generic language changes as appointment-change requests", async () => {

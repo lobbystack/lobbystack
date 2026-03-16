@@ -1750,23 +1750,22 @@ async function resolveAppointmentChangeStatus(
     internal.ai.agents.runtime.getCurrentAppointmentSummary,
     { conversationId },
   );
-  return summary
-    ? {
-        hasConfirmedAppointment: true,
-        changeSupported: false,
-        appointment: {
-          ...summary,
-          formattedStart: formatRuntimeAppointmentDateTime(
-            summary.startsAt,
-            summary.timezone,
-            locale,
-          ),
-        },
-      }
-    : {
-        hasConfirmedAppointment: false,
-        changeSupported: false,
-      };
+  if (!summary) {
+    return null;
+  }
+
+  return {
+    hasConfirmedAppointment: true,
+    changeSupported: false,
+    appointment: {
+      ...summary,
+      formattedStart: formatRuntimeAppointmentDateTime(
+        summary.startsAt,
+        summary.timezone,
+        locale,
+      ),
+    },
+  };
 }
 
 function buildAppointmentChangeStatusReply(
@@ -2398,14 +2397,32 @@ async function maybeGenerateSmsSchedulingResult(
             explicitTimeResolution.candidates,
           )
         : null;
+  const selectedOfferedSlotLocal =
+    selectedOfferedSlot === null
+      ? null
+      : DateTime.fromISO(selectedOfferedSlot, { setZone: true }).setZone(snapshot.timezone);
+  const selectedOfferedSlotTime =
+    selectedOfferedSlotLocal && selectedOfferedSlotLocal.isValid
+      ? {
+          hour24: selectedOfferedSlotLocal.hour,
+          minute: selectedOfferedSlotLocal.minute,
+          approximate: false,
+          label: formatRuntimeTimeOfDay(
+            selectedOfferedSlotLocal.hour * 60 + selectedOfferedSlotLocal.minute,
+            locale,
+          ),
+        }
+      : null;
   const requestedTime =
     explicitTime ??
+    (selectedStartsAtTime ?? selectedOfferedSlotTime) ??
     ((selectedStartsAtInput || explicitTimeResolution.candidates.length > 0)
       ? null
       : (requestedDate !== null && service !== null)
         ? getRequestedTimeFromState(bookingState, locale)
         : null);
-  const requestedTimeLabel = requestedTime?.label ?? selectedStartsAtTime?.label;
+  const requestedTimeLabel =
+    requestedTime?.label ?? selectedStartsAtTime?.label ?? selectedOfferedSlotTime?.label;
   const missingContactName = !hasKnownContactName(contact);
   const providedContactName = missingContactName ? extractContactNameFromReply(prompt) : null;
   if (providedContactName) {
@@ -2559,7 +2576,7 @@ async function maybeGenerateSmsSchedulingResult(
 
   const wantsAlternativeTimes =
     toolArgs?.relativeToLastOffer === true || looksLikeAlternativeTimesRequest(prompt);
-  if (!requestedTime || wantsAlternativeTimes || requestedTime.approximate) {
+  if ((requestedTime === null && selectedOfferedSlot === null) || wantsAlternativeTimes || requestedTime?.approximate) {
     const slots: Array<{ startsAt: string; endsAt: string; displayTime: string }> =
       await ctx.runQuery(internal.appointments.booking.findAvailabilityForBusiness, {
         businessId,
@@ -2614,12 +2631,18 @@ async function maybeGenerateSmsSchedulingResult(
     });
   }
 
+  const exactRequestedTime = requestedTime ?? selectedStartsAtTime ?? selectedOfferedSlotTime;
+  if (!selectedStartsAtInput && !selectedOfferedSlot && exactRequestedTime === null) {
+    throw new Error("Unable to resolve the requested appointment time.");
+  }
+
   const startsAt =
     selectedStartsAtInput ??
+    selectedOfferedSlot ??
     (() => {
       const requestedStartLocal = requestedDate.dayStart.plus({
-        hours: requestedTime.hour24,
-        minutes: requestedTime.minute,
+        hours: exactRequestedTime!.hour24,
+        minutes: exactRequestedTime!.minute,
       });
       return requestedStartLocal.toUTC().toISO() ?? requestedStartLocal.toISO();
     })();
@@ -2655,8 +2678,8 @@ async function maybeGenerateSmsSchedulingResult(
           mode: "booking_in_progress",
           selectedServiceId: service._id,
           requestedDate: requestedDate.isoDate,
-          preferredHour24: requestedTime.hour24,
-          preferredMinute: requestedTime.minute,
+          ...(exactRequestedTime !== null ? { preferredHour24: exactRequestedTime.hour24 } : {}),
+          ...(exactRequestedTime !== null ? { preferredMinute: exactRequestedTime.minute } : {}),
           lastOfferedDate: requestedDate.isoDate,
           lastOfferedStartsAt: [],
           pendingStartsAt: startsAt,
@@ -2694,8 +2717,8 @@ async function maybeGenerateSmsSchedulingResult(
       mode: "booking_in_progress",
       selectedServiceId: service._id,
       requestedDate: requestedDate.isoDate,
-      preferredHour24: requestedTime.hour24,
-      preferredMinute: requestedTime.minute,
+      ...(exactRequestedTime !== null ? { preferredHour24: exactRequestedTime.hour24 } : {}),
+      ...(exactRequestedTime !== null ? { preferredMinute: exactRequestedTime.minute } : {}),
       lastOfferedDate: requestedDate.isoDate,
       lastOfferedStartsAt: [startsAt],
       pendingStartsAt: startsAt,
@@ -2719,8 +2742,8 @@ async function maybeGenerateSmsSchedulingResult(
       serviceId: service._id,
       date: requestedDate.isoDate,
       timezone: snapshot.timezone,
-      preferredHour24: requestedTime.hour24,
-      preferredMinute: requestedTime.minute,
+      ...(exactRequestedTime !== null ? { preferredHour24: exactRequestedTime.hour24 } : {}),
+      ...(exactRequestedTime !== null ? { preferredMinute: exactRequestedTime.minute } : {}),
       limit: 3,
     });
   const sortedNearbySlots = [...nearbySlots].sort((left, right) =>
@@ -2733,8 +2756,8 @@ async function maybeGenerateSmsSchedulingResult(
     mode: "booking_in_progress",
     selectedServiceId: service._id,
     requestedDate: requestedDate.isoDate,
-    preferredHour24: requestedTime.hour24,
-    preferredMinute: requestedTime.minute,
+    ...(exactRequestedTime !== null ? { preferredHour24: exactRequestedTime.hour24 } : {}),
+    ...(exactRequestedTime !== null ? { preferredMinute: exactRequestedTime.minute } : {}),
     lastOfferedDate: requestedDate.isoDate,
     lastOfferedStartsAt: sortedNearbySlots.map((slot) => slot.startsAt),
   });
