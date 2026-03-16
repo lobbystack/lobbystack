@@ -1051,6 +1051,79 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("keeps bare day-of-month follow-ups in March when the date is still upcoming", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId, serviceId } = await t.run(async (ctx) => {
+      const { businessId, serviceId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-structured-tool-same-month-follow-up",
+        name: "SMS Structured Tool Same Month Follow Up",
+        smsNumber: "+14165550927",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550972",
+      });
+      const staff = await ctx.db
+        .query("staff")
+        .withIndex("by_business_id_and_active", (q) =>
+          q.eq("businessId", businessId).eq("active", true),
+        )
+        .collect();
+      const staffId = staff[0]?._id;
+      expect(staffId).toBeDefined();
+
+      const blockingContactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550002",
+      });
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId: blockingContactId,
+        staffId: staffId!,
+        serviceId,
+        startsAt: "2026-03-19T13:30:00.000Z",
+        endsAt: "2026-03-19T14:00:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: serviceId,
+        requestedDate: "2026-03-20",
+        lastOfferedDate: "2026-03-20",
+        lastOfferedStartsAt: ["2026-03-20T13:00:00.000Z"],
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, serviceId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "What about on the 19th at 9:30?",
+    });
+
+    expect(reply).toContain("Thursday, Mar 19");
+    expect(reply).not.toContain("Apr 19");
+
+    await t.run(async (ctx) => {
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState?.requestedDate).toBe("2026-03-19");
+      expect(bookingState?.selectedServiceId).toBe(serviceId);
+      expect(bookingState?.lastOfferedStartsAt?.every((startsAt) => startsAt.startsWith("2026-03-19"))).toBe(true);
+    });
+  });
+
   it("falls back to nearby alternatives when a previously offered slot is no longer available", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";

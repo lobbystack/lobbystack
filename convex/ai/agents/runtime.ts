@@ -465,6 +465,7 @@ function resolveRequestedDate(
 ): SmsDatePreference | null {
   const comparableText = normalizeComparable(text);
   const localNow = DateTime.now().setZone(timezone);
+  const today = localNow.startOf("day");
   const referenceDay =
     referenceIsoDate === undefined
       ? null
@@ -521,17 +522,20 @@ function resolveRequestedDate(
   if (bareDayMatch?.[1]) {
     const day = Number(bareDayMatch[1]);
     if (day >= 1 && day <= 31) {
+      const monthContextDay =
+        referenceDay && referenceDay.isValid ? referenceDay : today;
       let candidate = DateTime.fromObject(
-        { year: baseDay.year, month: baseDay.month, day },
+        { year: monthContextDay.year, month: monthContextDay.month, day },
         { zone: timezone },
       ).startOf("day");
       if (!candidate.isValid) {
+        const nextMonth = monthContextDay.plus({ months: 1 });
         candidate = DateTime.fromObject(
-          { year: baseDay.plus({ months: 1 }).year, month: baseDay.plus({ months: 1 }).month, day },
+          { year: nextMonth.year, month: nextMonth.month, day },
           { zone: timezone },
         ).startOf("day");
-      } else if (candidate < baseDay) {
-        const nextMonth = baseDay.plus({ months: 1 });
+      } else if (candidate < today) {
+        const nextMonth = monthContextDay.plus({ months: 1 });
         candidate = DateTime.fromObject(
           { year: nextMonth.year, month: nextMonth.month, day },
           { zone: timezone },
