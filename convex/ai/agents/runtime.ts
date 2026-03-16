@@ -403,10 +403,13 @@ function looksLikeCurrentAppointmentQuestion(text: string): boolean {
 function looksLikeNextAppointmentBookingRequest(text: string): boolean {
   const normalized = normalizeComparable(text);
   return (
-    /\b(book|schedule|reserve|reserver)\b/i.test(normalized) &&
     /\b(next appointment|upcoming appointment|mon prochain rendez vous|prochain rendez vous|rendez vous a venir)\b/i.test(
       normalized,
-    )
+    ) &&
+    (/\b(book|schedule|reserve|reserver|make|plan|arrange|prendre|fixer)\b/i.test(
+      normalized,
+    ) ||
+      containsDateOrTimeReference(text))
   );
 }
 
@@ -1369,6 +1372,19 @@ function extractContactNameFromReply(text: string): string | null {
   const trimmed = text.trim().replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, "");
   if (!trimmed) {
     return null;
+  }
+
+  const confirmationWithNameMatch = trimmed.match(
+    /^(?:yes|yeah|yep|sure|good|perfect|ok(?:ay)?|oui|parfait|d accord|d'accord)\s*[-,:]?\s+(.+)$/iu,
+  );
+  if (confirmationWithNameMatch?.[1]) {
+    const confirmedCandidate = confirmationWithNameMatch[1].trim().replace(/[,.!?]+$/u, "");
+    if (
+      confirmedCandidate.split(/\s+/u).length >= 2 &&
+      isValidContactNameCandidate(confirmedCandidate)
+    ) {
+      return confirmedCandidate;
+    }
   }
 
   const explicitNameMatch = trimmed.match(

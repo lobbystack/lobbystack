@@ -1180,6 +1180,59 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("accepts confirmation replies that also include the contact name", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-confirmation-plus-name",
+        name: "SMS Confirmation Plus Name",
+        smsNumber: "+14165550944",
+      });
+      return { businessId, initialConsultationId, smsNumber: "+14165550944" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-confirmation-plus-name-1",
+      From: "+14165550954",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-confirmation-plus-name-2",
+      From: "+14165550954",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-confirmation-plus-name-3",
+      From: "+14165550954",
+      To: smsNumber,
+      Body: "Yes, Jordan Lee",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      const contact = appointments[0]?.contactId
+        ? await ctx.db.get(appointments[0].contactId)
+        : null;
+      expect(contact?.name).toBe("Jordan Lee");
+    });
+  });
+
   it("treats bare h-format replies with pm as afternoon slot selections that still require confirmation", async () => {
     const t = createConvexHarness();
 
@@ -2557,6 +2610,34 @@ describe("SMS scheduling flow", () => {
       businessId,
       conversationId,
       prompt: "Can I book my next appointment for April 2 for an Initial Consultation?",
+    });
+
+    expect(reply).toContain("Thursday, Apr 2");
+    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("I don't see a confirmed appointment yet.");
+  });
+
+  it("keeps make-my-next-appointment requests in scheduling instead of lookup flow", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-next-appointment-make-request",
+        name: "SMS Next Appointment Make Request",
+        smsNumber: "+14165550945",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550953",
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Can I make my next appointment for April 2 for an Initial Consultation?",
     });
 
     expect(reply).toContain("Thursday, Apr 2");
