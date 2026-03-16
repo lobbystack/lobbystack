@@ -397,6 +397,16 @@ function looksLikeCurrentAppointmentQuestion(text: string): boolean {
   );
 }
 
+function looksLikeNextAppointmentQuestion(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  return (
+    /\b(next appointment|upcoming appointment|when is my next appointment|when s my next appointment|whens my next appointment|what time is my next appointment|what day is my next appointment)\b/i.test(
+      normalized,
+    ) ||
+    /\b(mon prochain rendez vous|prochain rendez vous|rendez vous a venir)\b/i.test(normalized)
+  );
+}
+
 function looksLikeAppointmentChangeRequest(text: string): boolean {
   const normalized = normalizeComparable(text);
   if (
@@ -804,22 +814,6 @@ function resolveRequestedTimeCandidates(
     const [, hourText, minuteText] = twentyFourHourMatch;
     const hour24 = Number(hourText);
     const minute = Number(minuteText);
-    if (hour24 >= 1 && hour24 <= 11) {
-      return dedupeTimeCandidates([
-        {
-          hour24,
-          minute,
-          approximate: false,
-          label: formatRuntimeTimeOfDay(hour24 * 60 + minute, locale),
-        },
-        {
-          hour24: hour24 + 12,
-          minute,
-          approximate: false,
-          label: formatRuntimeTimeOfDay((hour24 + 12) * 60 + minute, locale),
-        },
-      ]);
-    }
     return [
       {
         hour24,
@@ -1323,6 +1317,13 @@ function isAwaitingPendingBookingNameCollection(
   );
 }
 
+function looksLikeGenericNonNameReply(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  return /^(?:thanks|thank you|thankyou|thx|many thanks|thanks a lot|see you|see ya|talk soon|merci|merci beaucoup|a bientot|a plus|a la prochaine)$/u.test(
+    normalized,
+  );
+}
+
 function extractContactNameFromReply(text: string): string | null {
   const trimmed = text.trim().replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, "");
   if (!trimmed) {
@@ -1352,7 +1353,8 @@ function extractContactNameFromReply(text: string): string | null {
     looksLikeSchedulingRequest(trimmed) ||
     looksLikeSchedulingFollowUp(trimmed) ||
     looksLikeAlternativeTimesRequest(trimmed) ||
-    looksLikeBookingConfirmation(trimmed)
+    looksLikeBookingConfirmation(trimmed) ||
+    looksLikeGenericNonNameReply(trimmed)
   ) {
     return null;
   }
@@ -1686,7 +1688,9 @@ async function resolveCurrentAppointmentLookup(
   }
 
   const summary: CurrentAppointmentSummary | null = await ctx.runQuery(
-    internal.ai.agents.runtime.getCurrentAppointmentSummary,
+    looksLikeNextAppointmentQuestion(prompt)
+      ? internal.ai.agents.runtime.getNextAppointmentSummary
+      : internal.ai.agents.runtime.getCurrentAppointmentSummary,
     { conversationId },
   );
   return summary
@@ -2077,7 +2081,7 @@ async function maybeHandlePendingBookingNameCollection(
     return bookingResult.replyText;
   }
 
-  if (looksLikeBookingConfirmation(prompt)) {
+  if (looksLikeBookingConfirmation(prompt) || looksLikeGenericNonNameReply(prompt)) {
     return buildContactNameRequestReply(selectedService?.name, locale);
   }
 
@@ -3082,6 +3086,80 @@ export const getCurrentAppointmentSummary = internalQuery({
     }
 
     return null;
+  },
+});
+
+export const getNextAppointmentSummary = internalQuery({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<CurrentAppointmentSummary | null> => {
+    const conversation = await ctx.db.get(args.conversationId);
+    const bookingState = await ctx.db
+      .query("conversation_booking_state")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .unique();
+    const business = conversation
+      ? await ctx.db.get(conversation.businessId)
+      : null;
+    const timezone = business?.timezone ?? "UTC";
+    const nowIso = new Date().toISOString();
+
+    let stateSummary: CurrentAppointmentSummary | null = null;
+    if (
+      bookingState?.lastConfirmedServiceId &&
+      bookingState.lastConfirmedStartsAt &&
+      bookingState.lastConfirmedStartsAt >= nowIso
+    ) {
+      const service = await ctx.db.get(bookingState.lastConfirmedServiceId);
+      stateSummary = {
+        ...(bookingState.lastConfirmedAppointmentId !== undefined
+          ? { appointmentId: bookingState.lastConfirmedAppointmentId }
+          : {}),
+        serviceId: bookingState.lastConfirmedServiceId,
+        serviceName: service?.name ?? "appointment",
+        startsAt: bookingState.lastConfirmedStartsAt,
+        timezone,
+        formattedStart: bookingState.lastConfirmedStartsAt,
+      };
+    }
+
+    if (!conversation?.contactId) {
+      return stateSummary;
+    }
+
+    const contactId = conversation.contactId;
+    const appointments = await ctx.db
+      .query("appointments")
+      .withIndex("by_contact_id_and_starts_at", (q) =>
+        q.eq("contactId", contactId).gte("startsAt", nowIso),
+      )
+      .take(10);
+
+    for (const appointment of appointments) {
+      if (appointment.businessId !== conversation.businessId || appointment.status !== "confirmed") {
+        continue;
+      }
+
+      if (stateSummary && stateSummary.startsAt <= appointment.startsAt) {
+        return stateSummary;
+      }
+
+      const service = await ctx.db.get(appointment.serviceId);
+      return {
+        appointmentId: appointment._id,
+        serviceId: appointment.serviceId,
+        serviceName: service?.name ?? "appointment",
+        startsAt: appointment.startsAt,
+        timezone: appointment.timezone,
+        formattedStart: appointment.startsAt,
+      };
+    }
+
+    return stateSummary;
   },
 });
 
