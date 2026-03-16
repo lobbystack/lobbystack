@@ -116,6 +116,20 @@ Reason:
 
 These remain good follow-up validation checks after the next dev deployment refresh or from a separate physical test device.
 
+## Next Live Validation Script
+
+Use the same dev Twilio number and a physical test device for the next carrier-backed run.
+
+Suggested sequence:
+
+1. Reuse or create a contact with a confirmed SMS-booked appointment.
+2. Send `When is my appointment?`
+3. Capture the inbound and outbound message bodies, provider SIDs, and delivery status.
+4. Send `Can you cancel my appointment?` or `Can you move my appointment?`
+5. Capture the inbound and outbound message bodies, provider SIDs, and delivery status.
+6. Verify the reply does not claim the appointment was changed and still references the grounded appointment context.
+7. Append the transcript and persistence evidence to this document.
+
 ## Follow-Up Finding
 
 During inspection, the contact attached to the validated SMS thread had a stale bad name value:
