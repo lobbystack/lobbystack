@@ -61,6 +61,7 @@ function buildGroundedSystemPrompt(input: {
     "Only use hours, appointment, and booking tools based on the actual customer SMS and the stored conversation state. Do not invent or rewrite the customer message when deciding to use a tool.",
     "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
     "Never book an offered slot unless the current customer SMS clearly confirms that option.",
+    "Before a first SMS booking is finalized, make sure you have the customer's name for the appointment.",
     "If a tool returns replyText, use that reply directly or with only very light editing.",
     "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
     "If the appointment-change tool returns structured facts without replyText, explain naturally whether there is a confirmed appointment and that SMS cancellations or reschedules are not supported here yet.",
@@ -1293,6 +1294,64 @@ function buildAvailabilityReply(input: {
   });
 }
 
+function buildContactNameRequestReply(
+  serviceName: string | undefined,
+  locale: RuntimeLocale,
+): string {
+  return localizeRuntimeText(locale, {
+    en: `Before I confirm${serviceName ? ` your ${serviceName}` : " this appointment"}, what name should I put on it?`,
+    fr: `Avant de confirmer${serviceName ? ` votre ${serviceName}` : " ce rendez-vous"}, quel nom dois-je inscrire?`,
+  });
+}
+
+function hasKnownContactName(contact: ConversationSmsContact | null): boolean {
+  return Boolean(contact?.contactName?.trim());
+}
+
+function extractContactNameFromReply(text: string): string | null {
+  const trimmed = text.trim().replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, "");
+  if (!trimmed) {
+    return null;
+  }
+
+  const explicitNameMatch = trimmed.match(
+    /(?:^|[.!?]\s*)(?:my name is|i am|i'm|this is|it is|it's|je m'appelle|je m appelle|je suis|c'est|c est)\s+(.+)$/iu,
+  );
+  if (explicitNameMatch?.[1]) {
+    const explicitCandidate = explicitNameMatch[1].trim().replace(/[,.!?]+$/u, "");
+    return /^[\p{L}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}][\p{L}\p{M}'’.-]*){0,3}$/u.test(
+      explicitCandidate,
+    )
+      ? explicitCandidate
+      : null;
+  }
+
+  if (/\d/.test(trimmed)) {
+    return null;
+  }
+
+  if (
+    looksLikeBusinessHoursQuestion(trimmed) ||
+    looksLikeCurrentAppointmentQuestion(trimmed) ||
+    looksLikeAppointmentChangeRequest(trimmed) ||
+    looksLikeSchedulingRequest(trimmed) ||
+    looksLikeSchedulingFollowUp(trimmed) ||
+    looksLikeAlternativeTimesRequest(trimmed) ||
+    looksLikeBookingConfirmation(trimmed)
+  ) {
+    return null;
+  }
+
+  const candidate = trimmed.replace(/[,.!?]+$/u, "");
+  if (
+    !/^[\p{L}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}][\p{L}\p{M}'’.-]*){0,3}$/u.test(candidate)
+  ) {
+    return null;
+  }
+
+  return candidate;
+}
+
 function buildPendingBookingReply(
   serviceName: string,
   startsAt: string,
@@ -1954,6 +2013,55 @@ function createSmsAgentTools(input: {
   };
 }
 
+async function maybeHandlePendingBookingNameCollection(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+  conversationId: Id<"conversations">,
+  prompt: string,
+  snapshot: Doc<"business_context_snapshots">,
+  locale: RuntimeLocale,
+): Promise<string | null> {
+  const [bookingState, contact, services] = await Promise.all([
+    ctx.runQuery(internal.ai.agents.runtime.getConversationBookingState, {
+      conversationId,
+    }),
+    ctx.runQuery(internal.ai.agents.runtime.getConversationSmsContact, {
+      conversationId,
+    }),
+    ctx.runQuery(internal.voice.runtime.getActiveServicesForBusiness, {
+      businessId,
+    }),
+  ]);
+
+  if (!bookingState?.pendingStartsAt || hasKnownContactName(contact)) {
+    return null;
+  }
+
+  const selectedService = resolveServiceFromState(services, bookingState);
+  const providedContactName = extractContactNameFromReply(prompt);
+  if (providedContactName && selectedService) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
+      conversationId,
+      name: providedContactName,
+    });
+    const bookingResult = await bookConversationAppointment(ctx, {
+      businessId,
+      conversationId,
+      service: selectedService,
+      startsAt: bookingState.pendingStartsAt,
+      timezone: snapshot.timezone,
+      locale,
+    });
+    return bookingResult.replyText;
+  }
+
+  if (looksLikeBookingConfirmation(prompt)) {
+    return buildContactNameRequestReply(selectedService?.name, locale);
+  }
+
+  return null;
+}
+
 async function maybeGenerateDeterministicSmsReply(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -1989,6 +2097,18 @@ async function maybeGenerateDeterministicSmsReply(
     : null;
   if (businessHoursReply) {
     return businessHoursReply;
+  }
+
+  const pendingNameReply = await maybeHandlePendingBookingNameCollection(
+    ctx,
+    businessId,
+    conversationId,
+    prompt,
+    snapshot,
+    locale,
+  );
+  if (pendingNameReply) {
+    return pendingNameReply;
   }
 
   if (!options?.includeAppointmentFallbacks) {
@@ -2141,6 +2261,10 @@ async function maybeGenerateSmsSchedulingResult(
     internal.ai.agents.runtime.getConversationBookingState,
     { conversationId },
   );
+  const contact: ConversationSmsContact | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationSmsContact,
+    { conversationId },
+  );
   const services: Array<Doc<"services">> = await ctx.runQuery(
     internal.voice.runtime.getActiveServicesForBusiness,
     { businessId },
@@ -2256,6 +2380,8 @@ async function maybeGenerateSmsSchedulingResult(
         ? getRequestedTimeFromState(bookingState, locale)
         : null);
   const requestedTimeLabel = requestedTime?.label ?? selectedStartsAtTime?.label;
+  const missingContactName = !hasKnownContactName(contact);
+  const providedContactName = missingContactName ? extractContactNameFromReply(prompt) : null;
 
   if (!service) {
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
@@ -2360,6 +2486,21 @@ async function maybeGenerateSmsSchedulingResult(
     const pendingStartsAt = bookingState?.pendingStartsAt;
     if (!pendingStartsAt) {
       throw new Error("Pending SMS booking state is missing the slot to confirm.");
+    }
+
+    if (missingContactName && !providedContactName) {
+      return handledSmsToolResult(buildContactNameRequestReply(service.name, locale), {
+        resolvedServiceId: service._id,
+        resolvedServiceName: service.name,
+        requestedDate: requestedDate.isoDate,
+        pendingConfirmation: true,
+      });
+    }
+    if (providedContactName) {
+      await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
+        conversationId,
+        name: providedContactName,
+      });
     }
 
     const bookingResult = await bookConversationAppointment(ctx, {
@@ -2469,6 +2610,35 @@ async function maybeGenerateSmsSchedulingResult(
     selectedOfferedSlot !== null && looksLikeBookingConfirmation(prompt);
   if (exactAvailability.length > 0) {
     if (shouldBookRequestedTime) {
+      if (missingContactName && !providedContactName) {
+        await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: service._id,
+          requestedDate: requestedDate.isoDate,
+          preferredHour24: requestedTime.hour24,
+          preferredMinute: requestedTime.minute,
+          lastOfferedDate: requestedDate.isoDate,
+          lastOfferedStartsAt: [startsAt],
+          pendingStartsAt: startsAt,
+        });
+        return handledSmsToolResult(buildContactNameRequestReply(service.name, locale), {
+          resolvedServiceId: service._id,
+          resolvedServiceName: service.name,
+          requestedDate: requestedDate.isoDate,
+          requestedTimeLabel: exactSlotSummary.displayTime,
+          pendingConfirmation: true,
+          offeredSlots: [toOfferedSlotSummary(exactSlotSummary, snapshot.timezone)],
+        });
+      }
+      if (providedContactName) {
+        await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
+          conversationId,
+          name: providedContactName,
+        });
+      }
+
       const bookingResult = await bookConversationAppointment(ctx, {
         businessId,
         startsAt,
@@ -2803,6 +2973,24 @@ export const getConversationSmsContact = internalQuery({
       contactPhone: contact.phone,
       ...(contact.name !== undefined ? { contactName: contact.name } : {}),
     };
+  },
+});
+
+export const saveConversationContactName = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation?.contactId) {
+      throw new Error("Conversation contact not found.");
+    }
+
+    await ctx.db.patch(conversation.contactId, {
+      name: args.name.trim(),
+    });
+    return null;
   },
 });
 

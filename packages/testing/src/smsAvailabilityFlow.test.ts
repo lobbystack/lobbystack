@@ -643,7 +643,7 @@ describe("SMS scheduling flow", () => {
     });
   });
 
-  it("asks for confirmation before booking an exact available time", async () => {
+  it("asks for the customer's name before finalizing an unnamed booking", async () => {
     const t = createConvexHarness();
 
     const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
@@ -695,6 +695,26 @@ describe("SMS scheduling flow", () => {
     await t.run(async (ctx) => {
       const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
       expect(outboundBody).toBe(
+        "Before I confirm your Initial Consultation, what name should I put on it?",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-slot-confirmation-3",
+      From: "+14165550995",
+      To: smsNumber,
+      Body: "Jordan Lee",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
         "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
       );
 
@@ -705,6 +725,10 @@ describe("SMS scheduling flow", () => {
       expect(appointments).toHaveLength(1);
       expect(appointments[0]?.serviceId).toBe(initialConsultationId);
       expect(appointments[0]?.sourceChannel).toBe("sms");
+      const contact = appointments[0]?.contactId
+        ? await ctx.db.get(appointments[0].contactId)
+        : null;
+      expect(contact?.name).toBe("Jordan Lee");
 
       const conversation = await ctx.db
         .query("conversations")
@@ -769,7 +793,7 @@ describe("SMS scheduling flow", () => {
       MessageSid: "SM-multi-turn-confirmation-4",
       From: "+14165550994",
       To: smsNumber,
-      Body: "I'll take at 10h00",
+      Body: "I'll take at 10h00. My name is Taylor Parker",
     });
 
     await t.run(async (ctx) => {
@@ -890,6 +914,7 @@ describe("SMS scheduling flow", () => {
         const { conversationId } = await seedSmsConversation(ctx, {
           businessId,
           contactPhone: "+14165550979",
+          contactName: "Avery Stone",
         });
         await ctx.db.insert("conversation_booking_state", {
           businessId,
@@ -1163,6 +1188,7 @@ describe("SMS scheduling flow", () => {
         const { contactId, conversationId } = await seedSmsConversation(ctx, {
           businessId,
           contactPhone: "+14165550976",
+          contactName: "Casey Nguyen",
         });
         await ctx.db.insert("conversation_booking_state", {
           businessId,
@@ -1684,7 +1710,7 @@ describe("SMS scheduling flow", () => {
       MessageSid: "SM-new-booking-after-confirmed-4",
       From: "+14165550991",
       To: smsNumber,
-      Body: "I'll take at 10h00",
+      Body: "I'll take at 10h00. My name is Morgan Ellis",
     });
 
     await postTwilioForm(t, "/twilio/sms/inbound", {
@@ -1736,7 +1762,7 @@ describe("SMS scheduling flow", () => {
       MessageSid: "SM-same-service-followup-4",
       From: "+14165550988",
       To: smsNumber,
-      Body: "I'll take at 10h00",
+      Body: "I'll take at 10h00. My name is Riley Brooks",
     });
     await postTwilioForm(t, "/twilio/sms/inbound", {
       MessageSid: "SM-same-service-followup-5",
@@ -2626,6 +2652,7 @@ describe("SMS scheduling flow", () => {
       const { contactId, conversationId } = await seedSmsConversation(ctx, {
         businessId,
         contactPhone: "+14165550989",
+        contactName: "Jordan Customer",
       });
       await ctx.db.insert("conversation_booking_state", {
         businessId,
