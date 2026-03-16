@@ -1363,6 +1363,7 @@ function isValidContactNameCandidate(text: string): boolean {
     looksLikeAlternativeTimesRequest(candidate) ||
     looksLikeBookingConfirmation(candidate) ||
     looksLikeGenericNonNameReply(candidate) ||
+    detectExplicitRuntimeLocaleRequest(candidate) !== null ||
     containsDateOrTimeReference(candidate)
   ) {
     return false;
@@ -2130,6 +2131,10 @@ async function maybeHandlePendingBookingNameCollection(
   }
 
   if (looksLikeBookingConfirmation(prompt) || looksLikeGenericNonNameReply(prompt)) {
+    return buildContactNameRequestReply(selectedService?.name, locale);
+  }
+
+  if (detectExplicitRuntimeLocaleRequest(prompt) !== null) {
     return buildContactNameRequestReply(selectedService?.name, locale);
   }
 
