@@ -64,6 +64,7 @@ function buildGroundedSystemPrompt(input: {
     "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
     "If the appointment-change tool returns structured facts without replyText, explain naturally whether there is a confirmed appointment and that SMS cancellations or reschedules are not supported here yet.",
     "If the customer asks when their appointment is, lead with the appointment date and time. Do not start with 'Yes, you are booked' unless they asked whether they are booked.",
+    "Tool arguments are candidate interpretations only. A booking is valid only when the current customer SMS clearly confirms it and the booking tool returns a booked result.",
     "Do not reopen scheduling after a booking is already confirmed unless the user explicitly asks to book, reschedule, cancel, or make another appointment.",
     "If you list multiple times on the same day, list only the times and do not repeat the weekday before every slot.",
     "If a booking tool already confirmed or booked a slot, do not ask for another confirmation.",
@@ -165,6 +166,8 @@ type SmsSchedulingHandledResult = {
   requestedDate?: string;
   requestedTimeLabel?: string;
   pendingConfirmation?: boolean;
+  confirmationRequired?: boolean;
+  authorizedToBook?: boolean;
   bookedAppointmentId?: Id<"appointments">;
 };
 type SmsCurrentAppointmentHandledResult = {
@@ -395,9 +398,25 @@ function looksLikeCurrentAppointmentQuestion(text: string): boolean {
   );
 }
 
-function looksLikeAppointmentChangeRequest(text: string): boolean {
-  return /\b(cancel(?:led|ling)?|resched(?:ule|uled|uling)?|move|change|annul(?:er|e|ee|é)?|report(?:er|e|ee|é)?|deplac(?:er|e|ee|é)|modifi(?:er|e|ee|é))\b/i.test(
+function hasAppointmentContext(text: string): boolean {
+  return /\b(appointment|appointments|book|booked|booking|consultation|consultations|rendez vous|reservation|reservations|reserve|réserve|bookings)\b/i.test(
     normalizeComparable(text),
+  );
+}
+
+function looksLikeAppointmentChangeRequest(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  if (
+    /\b(cancel(?:led|ling)?|resched(?:ule|uled|uling)?|annul(?:er|e|ee|é)?|report(?:er|e|ee|é)?)\b/i.test(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+
+  return (
+    hasAppointmentContext(normalized) &&
+    /\b(move|change|deplac(?:er|e|ee|é)|modifi(?:er|e|ee|é))\b/i.test(normalized)
   );
 }
 
@@ -1494,15 +1513,7 @@ function buildBookingStateSummary(input: {
   }
 
   if (mode === "booked" && input.state?.lastConfirmedStartsAt && input.state.lastConfirmedServiceId) {
-    const service = input.services.find(
-      (candidate) => candidate._id === input.state?.lastConfirmedServiceId,
-    );
-    const formattedStart = formatRuntimeAppointmentDateTime(
-      input.state.lastConfirmedStartsAt,
-      input.timezone,
-      "en",
-    );
-    return `A booking is already confirmed${service ? ` for ${service.name}` : ""} on ${formattedStart}. Answer unrelated questions directly unless the user asks to change that appointment.`;
+    return "A booking is already confirmed. Use appointment tools if the customer asks about it.";
   }
 
   const selectedService = input.services.find(
@@ -2335,7 +2346,7 @@ async function maybeGenerateSmsSchedulingResult(
 
   const shouldConfirmPendingSlot =
     bookingState?.pendingStartsAt !== undefined &&
-    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
+    looksLikeBookingConfirmation(prompt) &&
     explicitDate === null &&
     explicitTime === null &&
     !selectedStartsAtInput &&
@@ -2358,6 +2369,7 @@ async function maybeGenerateSmsSchedulingResult(
       resolvedServiceId: service._id,
       resolvedServiceName: service.name,
       requestedDate: requestedDate.isoDate,
+      authorizedToBook: true,
       bookedAppointmentId: bookingResult.appointmentId,
     });
   }
@@ -2450,8 +2462,7 @@ async function maybeGenerateSmsSchedulingResult(
     displayTime: formatRuntimeTimeFromIso(startsAt, snapshot.timezone, locale),
   };
   const shouldBookRequestedTime =
-    (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
-    selectedOfferedSlot !== null;
+    looksLikeBookingConfirmation(prompt) && selectedOfferedSlot !== null;
   if (exactAvailability.length > 0) {
     if (shouldBookRequestedTime) {
       const bookingResult = await bookConversationAppointment(ctx, {
@@ -2467,6 +2478,7 @@ async function maybeGenerateSmsSchedulingResult(
         resolvedServiceName: service.name,
         requestedDate: requestedDate.isoDate,
         requestedTimeLabel: exactSlotSummary.displayTime,
+        authorizedToBook: true,
         bookedAppointmentId: bookingResult.appointmentId,
       });
     }
@@ -2491,6 +2503,8 @@ async function maybeGenerateSmsSchedulingResult(
         requestedDate: requestedDate.isoDate,
         requestedTimeLabel: exactSlotSummary.displayTime,
         pendingConfirmation: true,
+        confirmationRequired: true,
+        authorizedToBook: false,
         offeredSlots: [toOfferedSlotSummary(exactSlotSummary, snapshot.timezone)],
       },
     );
