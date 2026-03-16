@@ -610,6 +610,12 @@ function resolveRequestedDate(
     if (day >= 1 && day <= 31) {
       const monthContextDay =
         referenceDay && referenceDay.isValid ? referenceDay : today;
+      const bareDayFloor =
+        referenceDay &&
+        referenceDay.isValid &&
+        (referenceDay.year !== today.year || referenceDay.month !== today.month)
+          ? referenceDay
+          : today;
       let candidate = DateTime.fromObject(
         { year: monthContextDay.year, month: monthContextDay.month, day },
         { zone: timezone },
@@ -620,7 +626,7 @@ function resolveRequestedDate(
           { year: nextMonth.year, month: nextMonth.month, day },
           { zone: timezone },
         ).startOf("day");
-      } else if (candidate < today) {
+      } else if (candidate < bareDayFloor) {
         const nextMonth = monthContextDay.plus({ months: 1 });
         candidate = DateTime.fromObject(
           { year: nextMonth.year, month: nextMonth.month, day },
@@ -1306,6 +1312,15 @@ function buildContactNameRequestReply(
 
 function hasKnownContactName(contact: ConversationSmsContact | null): boolean {
   return Boolean(contact?.contactName?.trim());
+}
+
+function isAwaitingPendingBookingNameCollection(
+  state: ConversationBookingStateRecord | null,
+): boolean {
+  return Boolean(
+    state?.pendingStartsAt &&
+      ((state.lastOfferedStartsAt?.length ?? 0) === 0),
+  );
 }
 
 function extractContactNameFromReply(text: string): string | null {
@@ -2033,7 +2048,14 @@ async function maybeHandlePendingBookingNameCollection(
     }),
   ]);
 
-  if (!bookingState?.pendingStartsAt || hasKnownContactName(contact)) {
+  if (
+    !isAwaitingPendingBookingNameCollection(bookingState) ||
+    hasKnownContactName(contact)
+  ) {
+    return null;
+  }
+  const pendingStartsAt = bookingState?.pendingStartsAt;
+  if (!pendingStartsAt) {
     return null;
   }
 
@@ -2048,7 +2070,7 @@ async function maybeHandlePendingBookingNameCollection(
       businessId,
       conversationId,
       service: selectedService,
-      startsAt: bookingState.pendingStartsAt,
+      startsAt: pendingStartsAt,
       timezone: snapshot.timezone,
       locale,
     });
@@ -2382,6 +2404,12 @@ async function maybeGenerateSmsSchedulingResult(
   const requestedTimeLabel = requestedTime?.label ?? selectedStartsAtTime?.label;
   const missingContactName = !hasKnownContactName(contact);
   const providedContactName = missingContactName ? extractContactNameFromReply(prompt) : null;
+  if (providedContactName) {
+    await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
+      conversationId,
+      name: providedContactName,
+    });
+  }
 
   if (!service) {
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
@@ -2489,17 +2517,23 @@ async function maybeGenerateSmsSchedulingResult(
     }
 
     if (missingContactName && !providedContactName) {
+      await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: service._id,
+        requestedDate: requestedDate.isoDate,
+        ...(requestedTime !== null ? { preferredHour24: requestedTime.hour24 } : {}),
+        ...(requestedTime !== null ? { preferredMinute: requestedTime.minute } : {}),
+        lastOfferedDate: requestedDate.isoDate,
+        lastOfferedStartsAt: [],
+        pendingStartsAt,
+      });
       return handledSmsToolResult(buildContactNameRequestReply(service.name, locale), {
         resolvedServiceId: service._id,
         resolvedServiceName: service.name,
         requestedDate: requestedDate.isoDate,
         pendingConfirmation: true,
-      });
-    }
-    if (providedContactName) {
-      await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
-        conversationId,
-        name: providedContactName,
       });
     }
 
@@ -2620,7 +2654,7 @@ async function maybeGenerateSmsSchedulingResult(
           preferredHour24: requestedTime.hour24,
           preferredMinute: requestedTime.minute,
           lastOfferedDate: requestedDate.isoDate,
-          lastOfferedStartsAt: [startsAt],
+          lastOfferedStartsAt: [],
           pendingStartsAt: startsAt,
         });
         return handledSmsToolResult(buildContactNameRequestReply(service.name, locale), {
@@ -2630,12 +2664,6 @@ async function maybeGenerateSmsSchedulingResult(
           requestedTimeLabel: exactSlotSummary.displayTime,
           pendingConfirmation: true,
           offeredSlots: [toOfferedSlotSummary(exactSlotSummary, snapshot.timezone)],
-        });
-      }
-      if (providedContactName) {
-        await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
-          conversationId,
-          name: providedContactName,
         });
       }
 

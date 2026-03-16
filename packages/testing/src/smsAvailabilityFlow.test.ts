@@ -703,6 +703,18 @@ describe("SMS scheduling flow", () => {
         .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
         .collect();
       expect(appointments).toHaveLength(0);
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const bookingState = conversation
+        ? await ctx.db
+            .query("conversation_booking_state")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .unique()
+        : null;
+      expect(bookingState?.lastOfferedStartsAt).toEqual([]);
     });
 
     await postTwilioForm(t, "/twilio/sms/inbound", {
@@ -830,6 +842,126 @@ describe("SMS scheduling flow", () => {
       expect(appointments[0]?.serviceId).toBe(initialConsultationId);
       expect(appointments[0]?.sourceChannel).toBe("sms");
       expect(appointments[0]?.startsAt).toBe("2026-03-17T14:00:00.000Z");
+    });
+  });
+
+  it("does not book an offered slot when the customer only replies with their name", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-name-without-confirmation",
+        name: "SMS Name Without Confirmation",
+        smsNumber: "+14165550924",
+      });
+      return { businessId, smsNumber: "+14165550924" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-name-without-confirmation-1",
+      From: "+14165550974",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-name-without-confirmation-2",
+      From: "+14165550974",
+      To: smsNumber,
+      Body: "Jordan Lee",
+    });
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const bookingState = conversation
+        ? await ctx.db
+            .query("conversation_booking_state")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .unique()
+        : null;
+      expect(bookingState).toMatchObject({
+        mode: "booking_in_progress",
+        pendingStartsAt: "2026-03-17T18:00:00.000Z",
+        lastOfferedStartsAt: ["2026-03-17T18:00:00.000Z"],
+      });
+      expect(bookingState?.lastConfirmedStartsAt).toBeUndefined();
+    });
+  });
+
+  it("keeps a provided contact name before asking for slot confirmation", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-name-before-confirmation",
+        name: "SMS Name Before Confirmation",
+        smsNumber: "+14165550925",
+      });
+      return { businessId, initialConsultationId, smsNumber: "+14165550925" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-name-before-confirmation-1",
+      From: "+14165550973",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm? My name is Jordan Lee.",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "I have Initial Consultation available for Tuesday, Mar 17 at 2:00 PM. Does that work for you?",
+      );
+
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550973"),
+        )
+        .unique();
+      expect(contact?.name).toBe("Jordan Lee");
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-name-before-confirmation-2",
+      From: "+14165550973",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      const contact = appointments[0]?.contactId
+        ? await ctx.db.get(appointments[0].contactId)
+        : null;
+      expect(contact?.name).toBe("Jordan Lee");
     });
   });
 
@@ -1915,6 +2047,54 @@ describe("SMS scheduling flow", () => {
         .unique();
       expect(conversation?.locale).toBe("fr");
       expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
+  it("resolves bare-day follow-ups relative to the referenced month instead of today", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId, serviceId } = await t.run(async (ctx) => {
+      const { businessId, serviceId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-bare-day-reference-month",
+        name: "SMS Bare Day Reference Month",
+        smsNumber: "+14165550926",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550972",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: serviceId,
+        requestedDate: "2026-04-28",
+        lastOfferedDate: "2026-04-28",
+        lastOfferedStartsAt: ["2026-04-28T13:00:00.000Z"],
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, serviceId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "What about the 27th at 9am?",
+    });
+
+    expect(reply).toContain("Wednesday, May 27");
+    expect(reply).not.toContain("Monday, Apr 27");
+
+    await t.run(async (ctx) => {
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState).toMatchObject({
+        selectedServiceId: serviceId,
+        requestedDate: "2026-05-27",
+      });
     });
   });
 
