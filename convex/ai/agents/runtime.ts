@@ -1319,7 +1319,7 @@ function isAwaitingPendingBookingNameCollection(
 
 function looksLikeGenericNonNameReply(text: string): boolean {
   const normalized = normalizeComparable(text);
-  return /^(?:thanks|thank you|thankyou|thx|many thanks|thanks a lot|see you|see ya|talk soon|merci|merci beaucoup|a bientot|a plus|a la prochaine)$/u.test(
+  return /^(?:hi|hello|hey|bonjour|salut|allo|bonsoir|good morning|good afternoon|good evening|thanks|thank you|thankyou|thx|many thanks|thanks a lot|see you|see ya|talk soon|merci|merci beaucoup|a bientot|a plus|a la prochaine)$/u.test(
     normalized,
   );
 }
@@ -1331,7 +1331,7 @@ function extractContactNameFromReply(text: string): string | null {
   }
 
   const explicitNameMatch = trimmed.match(
-    /(?:^|[.!?]\s*)(?:my name is|i am|i'm|this is|it is|it's|je m'appelle|je m appelle|je suis|c'est|c est)\s+(.+)$/iu,
+    /(?:^|[.!?]\s*)(?:(?:hi|hello|hey|bonjour|salut|allo)\s*[,!.-]*\s*)?(?:my name is|i am|i'm|this is|it is|it's|je m'appelle|je m appelle|je suis|c'est|c est)\s+(.+)$/iu,
   );
   if (explicitNameMatch?.[1]) {
     const explicitCandidate = explicitNameMatch[1].trim().replace(/[,.!?]+$/u, "");
@@ -3132,14 +3132,13 @@ export const getNextAppointmentSummary = internalQuery({
     }
 
     const contactId = conversation.contactId;
-    const appointments = await ctx.db
+    const appointments = ctx.db
       .query("appointments")
       .withIndex("by_contact_id_and_starts_at", (q) =>
         q.eq("contactId", contactId).gte("startsAt", nowIso),
-      )
-      .take(10);
+      );
 
-    for (const appointment of appointments) {
+    for await (const appointment of appointments) {
       if (appointment.businessId !== conversation.businessId || appointment.status !== "confirmed") {
         continue;
       }

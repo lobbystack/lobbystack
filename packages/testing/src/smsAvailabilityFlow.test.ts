@@ -1021,6 +1021,115 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("does not treat greeting-only replies as contact names while awaiting a name", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-greeting-only-name",
+        name: "SMS Greeting Only Name",
+        smsNumber: "+14165550933",
+      });
+      return { businessId, smsNumber: "+14165550933" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-only-name-1",
+      From: "+14165550965",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-only-name-2",
+      From: "+14165550965",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-only-name-3",
+      From: "+14165550965",
+      To: smsNumber,
+      Body: "Bonjour",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Before I confirm your Initial Consultation, what name should I put on it?",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550965"),
+        )
+        .unique();
+      expect(contact?.name).toBeUndefined();
+    });
+  });
+
+  it("accepts greeting-prefixed self introductions during name capture", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, initialConsultationId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-greeting-prefixed-name",
+        name: "SMS Greeting Prefixed Name",
+        smsNumber: "+14165550934",
+      });
+      return { businessId, initialConsultationId, smsNumber: "+14165550934" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-prefixed-name-1",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-prefixed-name-2",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-greeting-prefixed-name-3",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Hi, I'm Jordan Lee",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Great, I booked your Initial Consultation for Tuesday, Mar 17 at 2:00 PM.",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0]?.serviceId).toBe(initialConsultationId);
+      const contact = appointments[0]?.contactId
+        ? await ctx.db.get(appointments[0].contactId)
+        : null;
+      expect(contact?.name).toBe("Jordan Lee");
+    });
+  });
+
   it("treats bare h-format replies with pm as afternoon slot selections that still require confirmation", async () => {
     const t = createConvexHarness();
 
@@ -2706,6 +2815,81 @@ describe("SMS scheduling flow", () => {
         "2026-03-21T13:30:00.000Z",
         "2026-04-02T15:00:00.000Z",
       ]);
+    });
+  });
+
+  it("keeps scanning future appointments after skipping irrelevant upcoming rows", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseCurrentAppointmentTool();
+
+    const { businessId, conversationId, contactId, initialConsultationId } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-next-appointment-scan-past-irrelevant",
+          name: "SMS Next Appointment Scan Past Irrelevant",
+          smsNumber: "+14165550935",
+        });
+        const staff = await ctx.db
+          .query("staff")
+          .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+          .unique();
+        expect(staff?._id).toBeDefined();
+        const { conversationId, contactId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550963",
+        });
+
+        for (let offset = 0; offset < 10; offset += 1) {
+          await ctx.db.insert("appointments", {
+            businessId,
+            contactId,
+            serviceId: initialConsultationId,
+            staffId: staff!._id,
+            startsAt: `2026-03-${String(18 + offset).padStart(2, "0")}T13:30:00.000Z`,
+            endsAt: `2026-03-${String(18 + offset).padStart(2, "0")}T14:00:00.000Z`,
+            timezone: "America/Toronto",
+            status: "cancelled",
+            sourceChannel: "sms",
+            calendarSyncState: "not_required",
+          });
+        }
+
+        await ctx.db.insert("appointments", {
+          businessId,
+          contactId,
+          serviceId: initialConsultationId,
+          staffId: staff!._id,
+          startsAt: "2026-03-30T13:30:00.000Z",
+          endsAt: "2026-03-30T14:00:00.000Z",
+          timezone: "America/Toronto",
+          status: "confirmed",
+          sourceChannel: "sms",
+          calendarSyncState: "not_required",
+        });
+
+        return { businessId, conversationId, contactId, initialConsultationId };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "When is my next appointment?",
+    });
+
+    expect(reply).toBe(
+      "Your next appointment is Monday, Mar 30 at 9:30 AM for Initial Consultation.",
+    );
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(11);
+      expect(appointments.at(-1)?.startsAt).toBe("2026-03-30T13:30:00.000Z");
     });
   });
 
