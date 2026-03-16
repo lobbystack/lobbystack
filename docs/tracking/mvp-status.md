@@ -8,7 +8,7 @@
 | `M1 Tenant Core` | in progress | implemented | Auth, business bootstrap, memberships, dashboard shell, services, hours, transfer settings exist. Still needs fuller admin coverage and tighter authorization review. |
 | `M2 Business Context MCP` | in progress | implemented | Snapshot generation, FAQ/doc knowledge layer, preview flow, and dashboard customization exist. Needs richer ingestion and provider validation. |
 | `M3 Booking + Calendars` | in progress | scaffolded | Availability engine and booking mutations exist. Calendar integrations are mostly placeholder/mock behavior and need real provider sync. |
-| `M4 SMS` | in progress | provider-validated | Twilio inbound SMS routing, outbound delivery, status callback reconciliation, and one live SMS booking path have been validated on the dev deployment. Recent dev-message inspection still shows no fresh carrier validation yet for post-booking lookup or unsupported change branches, and operator tooling remains incomplete. |
+| `M4 SMS` | in progress | provider-validated | Twilio inbound SMS routing, outbound delivery, status callback reconciliation, a live SMS booking path, current-appointment lookup, and unsupported cancel/reschedule replies have been validated on the dev deployment. Operator tooling and broader polish still remain. |
 | `M5 Voice` | in progress | implemented | Twilio voice ingress, Media Streams endpoint, OpenAI Realtime bridge, transcript persistence, and recording upload/download path exist. Needs real live-call validation. |
 | `M6 Hardening` | backlog | scaffolded | CI and some docs/tests exist. Self-host packaging, release discipline, provider validation, and pilot hardening are incomplete. |
 
@@ -31,7 +31,6 @@ What is not yet proven:
 - real booking success over live voice
 - real human transfer execution
 - real Google Calendar and Microsoft Graph synchronization
-- broader live SMS validation for appointment lookup/change branches after a fresh live carrier run
 - full pilot-grade reliability
 
 ## Next Validation Priorities
@@ -40,4 +39,4 @@ What is not yet proven:
 2. Validate the voice tool bridge for availability and booking with real Convex data.
 3. Validate live transfer behavior through Twilio call updates.
 4. Replace mock calendar sync with real provider CRUD and reconciliation.
-5. Run fresh live SMS validation for appointment lookup and change-handling branches from a physical test device and capture the transcript in `docs/validation/twilio-sms-booking-e2e.md`.
+5. Add operator tooling for inspecting and managing SMS conversations and booking outcomes.

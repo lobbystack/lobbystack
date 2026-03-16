@@ -4,7 +4,7 @@
 
 This document captures the real Twilio-backed SMS booking validation for `OPE-17`.
 
-Validation status: passed for the live happy path on the dev deployment, with follow-up validation still needed for post-booking lookup and unsupported appointment-change SMS branches.
+Validation status: passed for the live happy path, current-appointment lookup, and unsupported appointment-change replies on the dev deployment.
 
 Validated date: `2026-03-16`
 
@@ -98,37 +98,38 @@ The following were validated against the live dev deployment:
 - follow-up slot selection over SMS
 - booking confirmation over SMS
 - appointment creation with `sourceChannel: "sms"`
+- post-booking current-appointment lookup over SMS
+- grounded unsupported cancel/reschedule reply over SMS
 - outbound Twilio delivery
 - Twilio status callback reconciliation back into persisted message state
 
-## Observed Gaps
+## Follow-Up Transcript
 
-The following were not freshly validated through a new live carrier turn during this run:
+Additional live carrier turns observed on `2026-03-16` for the same conversation:
 
-- post-booking appointment lookup replies
-- unsupported cancel/reschedule replies
+1. Customer: `When is my appoitment?`
+2. Assistant: `I'm sorry, could you rephrase that?`
+3. Customer: `When is my appointment?`
+4. Assistant: `Your Initial Consultation is on Tuesday, March 24 at 1:30 PM.`
+5. Customer: `Can you cancel my appointment?`
+6. Assistant: `You have an Initial Consultation confirmed for Tuesday, March 24 at 1:30 PM. Unfortunately, we cannot cancel or reschedule appointments via SMS. Please contact the office directly if you need to make changes to your booking.`
 
-Reason:
+Observed persisted outbound messages:
 
-- the validated live conversation `md70v6x77jqd3zwx7va249d2c9830x0m` still only contains the happy-path booking turns captured above
-- a follow-up scan of recent dev deployment SMS messages on `2026-03-16` did not surface any real carrier turns exercising appointment lookup or unsupported change handling
-- the Twilio account only exposed one active number here, so a second controlled inbound source was not available from the repo environment alone
+- typo fallback reply `SM7a0aecbe18e9256168aa4c78d70ea4a1`
+  - local message status: `delivered`
+  - provider status: `delivered`
+- current-appointment reply `SM54f844ff380fbfea1550c16cde574982`
+  - local message status: `delivered`
+  - provider status: `delivered`
+- unsupported cancellation reply `SM1ce4db188ff10bfc08eb884372fb3cf8`
+  - local message status: `delivered`
+  - provider status: `delivered`
 
-These remain good follow-up validation checks after the next dev deployment refresh or from a separate physical test device.
+Note:
 
-## Next Live Validation Script
-
-Use the same dev Twilio number and a physical test device for the next carrier-backed run.
-
-Suggested sequence:
-
-1. Reuse or create a contact with a confirmed SMS-booked appointment.
-2. Send `When is my appointment?`
-3. Capture the inbound and outbound message bodies, provider SIDs, and delivery status.
-4. Send `Can you cancel my appointment?` or `Can you move my appointment?`
-5. Capture the inbound and outbound message bodies, provider SIDs, and delivery status.
-6. Verify the reply does not claim the appointment was changed and still references the grounded appointment context.
-7. Append the transcript and persistence evidence to this document.
+- the first lookup attempt contained the typo `appoitment` and fell back to a generic rephrase prompt
+- the correctly spelled retry succeeded immediately and returned the grounded appointment details
 
 ## Follow-Up Finding
 
