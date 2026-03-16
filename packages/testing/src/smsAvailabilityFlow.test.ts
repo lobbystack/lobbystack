@@ -1077,6 +1077,70 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("does not save explicit language requests as contact names while awaiting a name", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-language-request-not-name",
+        name: "SMS Language Request Not Name",
+        smsNumber: "+14165550934",
+      });
+      return { businessId, smsNumber: "+14165550934" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-language-request-not-name-1",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Do you have an initial consultation on March 17 at 2pm?",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-language-request-not-name-2",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Good",
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-language-request-not-name-3",
+      From: "+14165550964",
+      To: smsNumber,
+      Body: "Parlez-vous français?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toBe(
+        "Avant de confirmer votre Initial Consultation, quel nom dois-je inscrire?",
+      );
+
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", businessId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550964"),
+        )
+        .unique();
+      expect(contact?.name).toBeUndefined();
+      expect(contact?.preferredLocale).toBe("fr");
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("explicit_customer");
+    });
+  });
+
   it("does not save scheduling availability replies as contact names", async () => {
     const t = createConvexHarness();
 
