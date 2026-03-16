@@ -62,6 +62,7 @@ function buildGroundedSystemPrompt(input: {
     "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
     "If a tool returns replyText, use that reply directly or with only very light editing.",
     "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
+    "If the appointment-change tool returns structured facts without replyText, explain naturally whether there is a confirmed appointment and that SMS cancellations or reschedules are not supported here yet.",
     "If the customer asks when their appointment is, lead with the appointment date and time. Do not start with 'Yes, you are booked' unless they asked whether they are booked.",
     "Do not reopen scheduling after a booking is already confirmed unless the user explicitly asks to book, reschedule, cancel, or make another appointment.",
     "If you list multiple times on the same day, list only the times and do not repeat the weekday before every slot.",
@@ -134,6 +135,11 @@ type CurrentAppointmentLookupResult = {
   hasConfirmedAppointment: boolean;
   appointment?: CurrentAppointmentSummary;
 };
+type AppointmentChangeStatusResult = {
+  hasConfirmedAppointment: boolean;
+  changeSupported: false;
+  appointment?: CurrentAppointmentSummary;
+};
 type OfferedSlotSummary = {
   startsAt: string;
   endsAt: string;
@@ -165,10 +171,15 @@ type SmsCurrentAppointmentHandledResult = {
   handled: true;
   currentAppointmentLookup: CurrentAppointmentLookupResult;
 };
+type SmsAppointmentChangeHandledResult = {
+  handled: true;
+  appointmentChangeStatus: AppointmentChangeStatusResult;
+};
 type SmsToolResult =
   | { handled: false }
   | SmsSchedulingHandledResult
-  | SmsCurrentAppointmentHandledResult;
+  | SmsCurrentAppointmentHandledResult
+  | SmsAppointmentChangeHandledResult;
 type ResolvedRequestedTime = {
   primary: SmsTimePreference | null;
   candidates: Array<SmsTimePreference>;
@@ -466,6 +477,32 @@ function looksLikeBusinessHoursFollowUp(text: string): boolean {
     /\bthe\s+\d{1,2}(?:st|nd|rd|th)?\b/i.test(text) ||
     /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
     /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
+    looksLikeRelativeDayReference(text)
+  );
+}
+
+function looksLikeAppointmentIntent(
+  text: string,
+  state: ConversationBookingStateRecord | null,
+): boolean {
+  if (
+    looksLikeCurrentAppointmentQuestion(text) ||
+    looksLikeAppointmentChangeRequest(text) ||
+    looksLikeSchedulingRequest(text)
+  ) {
+    return true;
+  }
+
+  if (!state) {
+    return false;
+  }
+
+  return (
+    looksLikeSchedulingFollowUp(text) ||
+    looksLikeAlternativeTimesRequest(text) ||
+    looksLikeBookingConfirmation(text) ||
+    isTimeOnlyReply(text) ||
+    looksLikeDaypartFollowUp(text) ||
     looksLikeRelativeDayReference(text)
   );
 }
@@ -1581,12 +1618,36 @@ async function resolveCurrentAppointmentLookup(
       };
 }
 
-async function resolveAppointmentChangeReply(
+function buildCurrentAppointmentLookupReply(
+  lookup: CurrentAppointmentLookupResult,
+  locale: RuntimeLocale,
+): string {
+  if (!lookup.hasConfirmedAppointment || !lookup.appointment) {
+    return localizeRuntimeText(locale, {
+      en: "I don't see a confirmed appointment yet.",
+      fr: "Je ne vois pas encore de rendez-vous confirmé.",
+    });
+  }
+
+  if (lookup.questionType === "timing") {
+    return localizeRuntimeText(locale, {
+      en: `Your next appointment is ${lookup.appointment.formattedStart} for ${lookup.appointment.serviceName}.`,
+      fr: `Votre prochain rendez-vous est ${lookup.appointment.formattedStart} pour ${lookup.appointment.serviceName}.`,
+    });
+  }
+
+  return localizeRuntimeText(locale, {
+    en: `You're booked for ${lookup.appointment.serviceName} on ${lookup.appointment.formattedStart}.`,
+    fr: `Vous avez un rendez-vous pour ${lookup.appointment.serviceName} ${lookup.appointment.formattedStart}.`,
+  });
+}
+
+async function resolveAppointmentChangeStatus(
   ctx: ActionCtx,
   conversationId: Id<"conversations">,
   prompt: string,
   locale: RuntimeLocale,
-): Promise<string | null> {
+): Promise<AppointmentChangeStatusResult | null> {
   if (!looksLikeAppointmentChangeRequest(prompt)) {
     return null;
   }
@@ -1595,14 +1656,37 @@ async function resolveAppointmentChangeReply(
     internal.ai.agents.runtime.getCurrentAppointmentSummary,
     { conversationId },
   );
-  if (!summary) {
+  return summary
+    ? {
+        hasConfirmedAppointment: true,
+        changeSupported: false,
+        appointment: {
+          ...summary,
+          formattedStart: formatRuntimeAppointmentDateTime(
+            summary.startsAt,
+            summary.timezone,
+            locale,
+          ),
+        },
+      }
+    : {
+        hasConfirmedAppointment: false,
+        changeSupported: false,
+      };
+}
+
+function buildAppointmentChangeStatusReply(
+  status: AppointmentChangeStatusResult,
+  locale: RuntimeLocale,
+): string {
+  if (!status.hasConfirmedAppointment || !status.appointment) {
     return localizeRuntimeText(locale, {
       en: "I do not see a confirmed appointment to change right now.",
       fr: "Je ne vois pas de rendez-vous confirmé à modifier pour le moment.",
     });
   }
 
-  return buildAppointmentChangeUnavailableReply(summary, locale);
+  return buildAppointmentChangeUnavailableReply(status.appointment, locale);
 }
 
 function unhandledSmsToolResult(): SmsToolResult {
@@ -1692,6 +1776,16 @@ async function resolveCurrentAppointmentToolResult(
   return lookup ? { handled: true, currentAppointmentLookup: lookup } : unhandledSmsToolResult();
 }
 
+async function resolveAppointmentChangeStatusToolResult(
+  ctx: ActionCtx,
+  conversationId: Id<"conversations">,
+  prompt: string,
+  locale: RuntimeLocale,
+): Promise<SmsToolResult> {
+  const status = await resolveAppointmentChangeStatus(ctx, conversationId, prompt, locale);
+  return status ? { handled: true, appointmentChangeStatus: status } : unhandledSmsToolResult();
+}
+
 const schedulingLookupToolArgsSchema = z.object({
   serviceName: z.string().optional(),
   requestedDateText: z.string().optional(),
@@ -1769,6 +1863,19 @@ function createSmsAgentTools(input: {
         );
       },
     }),
+    getAppointmentChangeStatus: createTool({
+      description:
+        "Return structured facts about the currently confirmed appointment when the user asks to cancel, move, change, or reschedule it. Use this instead of guessing. SMS changes are not supported here yet.",
+      args: z.object({}),
+      handler: async () => {
+        return await resolveAppointmentChangeStatusToolResult(
+          input.ctx,
+          input.conversationId,
+          input.conversationPrompt,
+          input.locale,
+        );
+      },
+    }),
     listBookableServices: createTool({
       description:
         "List the active bookable services when the user wants to book but has not specified which service.",
@@ -1838,17 +1945,10 @@ async function maybeGenerateDeterministicSmsReply(
   prompt: string,
   snapshot: Doc<"business_context_snapshots">,
   locale: RuntimeLocale,
+  options?: {
+    includeAppointmentFallbacks?: boolean;
+  },
 ): Promise<string | null> {
-  const appointmentChangeReply = await resolveAppointmentChangeReply(
-    ctx,
-    conversationId,
-    prompt,
-    locale,
-  );
-  if (appointmentChangeReply) {
-    return appointmentChangeReply;
-  }
-
   const [bookingState, currentAppointment] = await Promise.all([
     ctx.runQuery(internal.ai.agents.runtime.getConversationBookingState, {
       conversationId,
@@ -1873,6 +1973,30 @@ async function maybeGenerateDeterministicSmsReply(
     : null;
   if (businessHoursReply) {
     return businessHoursReply;
+  }
+
+  if (!options?.includeAppointmentFallbacks) {
+    return null;
+  }
+
+  const currentAppointmentLookup = await resolveCurrentAppointmentLookup(
+    ctx,
+    conversationId,
+    prompt,
+    locale,
+  );
+  if (currentAppointmentLookup) {
+    return buildCurrentAppointmentLookupReply(currentAppointmentLookup, locale);
+  }
+
+  const appointmentChangeStatus = await resolveAppointmentChangeStatus(
+    ctx,
+    conversationId,
+    prompt,
+    locale,
+  );
+  if (appointmentChangeStatus) {
+    return buildAppointmentChangeStatusReply(appointmentChangeStatus, locale);
   }
 
   const schedulingReply = await maybeGenerateSmsSchedulingReply(
@@ -1904,6 +2028,9 @@ async function generateDeterministicSmsReplyWithoutAgent(
     prompt,
     snapshot,
     locale,
+    {
+      includeAppointmentFallbacks: true,
+    },
   );
   if (deterministicReply) {
     return deterministicReply;
@@ -2862,6 +2989,12 @@ async function generateGroundedReply(
     });
   }
 
+  const bookingState: ConversationBookingStateRecord | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationBookingState,
+    { conversationId },
+  );
+  const isAppointmentIntent = looksLikeAppointmentIntent(prompt, bookingState);
+
   const deterministicReply = await maybeGenerateDeterministicSmsReply(
     ctx,
     businessId,
@@ -2888,10 +3021,6 @@ async function generateGroundedReply(
   const services: Array<Doc<"services">> = await ctx.runQuery(
     internal.voice.runtime.getActiveServicesForBusiness,
     { businessId },
-  );
-  const bookingState: ConversationBookingStateRecord | null = await ctx.runQuery(
-    internal.ai.agents.runtime.getConversationBookingState,
-    { conversationId },
   );
   const knowledge = await ctx.runAction(
     internal.ai.context.knowledge.searchKnowledgeInternal,
@@ -2929,11 +3058,11 @@ async function generateGroundedReply(
           timezone: snapshot.timezone,
         }),
       }),
-      prompt: buildGroundedUserPrompt({
+      prompt: `${isAppointmentIntent ? "This SMS is appointment-related. Use appointment tools first before answering.\n\n" : ""}${buildGroundedUserPrompt({
         customerMessage: prompt,
         knowledgeDigest: snapshot.knowledgeDigest,
         knowledge,
-      }),
+      })}`,
       tools,
       stopWhen: stepCountIs(4),
     } as any,

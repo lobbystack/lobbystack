@@ -385,6 +385,61 @@ function mockAgentToUseCurrentAppointmentTool(locale: "en" | "fr" = "en"): void 
   });
 }
 
+function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
+  generateTextMock.mockImplementation(async (ctx, _thread, input) => {
+    const tools = (input as { tools?: Record<string, { ctx?: unknown; execute?: (args: unknown, options: unknown) => Promise<unknown> }> }).tools;
+    if (tools) {
+      for (const tool of Object.values(tools)) {
+        if (tool) {
+          tool.ctx = ctx;
+        }
+      }
+    }
+
+    const appointmentChangeTool = tools?.getAppointmentChangeStatus;
+    if (!appointmentChangeTool?.execute) {
+      return { text: "Agent stub reply" };
+    }
+
+    const toolResult = (await appointmentChangeTool.execute({}, {} as any)) as
+      | {
+          handled: false;
+        }
+      | {
+          handled: true;
+          appointmentChangeStatus: {
+            hasConfirmedAppointment: boolean;
+            changeSupported: false;
+            appointment?: {
+              formattedStart: string;
+              serviceName: string;
+            };
+          };
+        };
+
+    if (!toolResult.handled) {
+      return { text: "Agent stub reply" };
+    }
+
+    const status = toolResult.appointmentChangeStatus;
+    if (!status.hasConfirmedAppointment || !status.appointment) {
+      return {
+        text:
+          locale === "fr"
+            ? "Je ne vois pas de rendez-vous confirmé à modifier pour le moment."
+            : "I do not see a confirmed appointment to change right now.",
+      };
+    }
+
+    return {
+      text:
+        locale === "fr"
+          ? `Je peux vous aider par SMS pour les questions de rendez-vous, mais je ne peux pas encore annuler ou déplacer un rendez-vous ici. Veuillez nous contacter au sujet de votre ${status.appointment.serviceName} ${status.appointment.formattedStart}.`
+          : `I can help with appointment questions by SMS, but I can't cancel or reschedule appointments here yet. Please contact us about your ${status.appointment.serviceName} on ${status.appointment.formattedStart}.`,
+    };
+  });
+}
+
 async function postTwilioForm(
   t: TestConvex<typeof schema>,
   path: string,
@@ -1034,6 +1089,65 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("returns structured appointment-change facts for unsupported cancel requests", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-structured-appointment-change-status",
+        name: "SMS Structured Appointment Change Status",
+        smsNumber: "+14165550931",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550968",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-21T13:30:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, initialConsultationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "I need to cancel my appointment.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      appointmentChangeStatus?: {
+        hasConfirmedAppointment: boolean;
+        changeSupported: false;
+        appointment?: {
+          serviceId: Id<"services">;
+          serviceName: string;
+          formattedStart: string;
+        };
+      };
+    }>(request.tools.getAppointmentChangeStatus!);
+
+    expect(toolResult.handled).toBe(true);
+    expect(toolResult.appointmentChangeStatus).toMatchObject({
+      hasConfirmedAppointment: true,
+      changeSupported: false,
+      appointment: {
+        serviceId: initialConsultationId,
+        serviceName: "Initial Consultation",
+        formattedStart: "Saturday, Mar 21 at 9:30 AM",
+      },
+    });
+  });
+
   it("books an exact offered slot through selectedStartsAt without reparsing the day", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
@@ -1176,7 +1290,6 @@ describe("SMS scheduling flow", () => {
 
   it("keeps bare day-of-month follow-ups in March when the date is still upcoming", async () => {
     const t = createConvexHarness();
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
 
     const { businessId, conversationId, serviceId } = await t.run(async (ctx) => {
       const { businessId, serviceId } = await seedSchedulableBusiness(ctx, {
@@ -1419,7 +1532,6 @@ describe("SMS scheduling flow", () => {
 
   it("uses the booked appointment day when the customer asks about closing time on that day", async () => {
     const t = createConvexHarness();
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedMultiServiceBusiness(ctx, {
@@ -1523,8 +1635,6 @@ describe("SMS scheduling flow", () => {
 
   it("keeps the previously booked service when the customer says the same one", async () => {
     const t = createConvexHarness();
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
-    generateTextMock.mockResolvedValue({ text: "" });
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedMultiServiceBusiness(ctx, {
@@ -1593,56 +1703,41 @@ describe("SMS scheduling flow", () => {
   it("does not claim an appointment was cancelled when SMS cancellation is unsupported", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseAppointmentChangeTool();
 
-    const { businessId, smsNumber } = await t.run(async (ctx) => {
-      const { businessId } = await seedMultiServiceBusiness(ctx, {
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
         slug: "sms-cancel-unsupported",
         name: "SMS Cancel Unsupported",
         smsNumber: "+14165550912",
       });
-      return { businessId, smsNumber: "+14165550912" };
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550987",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
     });
     await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
 
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-cancel-unsupported-1",
-      From: "+14165550987",
-      To: smsNumber,
-      Body: "Hello, do you have room for an initial consultation next monday?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-cancel-unsupported-2",
-      From: "+14165550987",
-      To: smsNumber,
-      Body: "What about on the 17?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-cancel-unsupported-3",
-      From: "+14165550987",
-      To: smsNumber,
-      Body: "Any other times?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-cancel-unsupported-4",
-      From: "+14165550987",
-      To: smsNumber,
-      Body: "I'll take at 10h00",
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Something came up, I need to cancel",
     });
 
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-cancel-unsupported-5",
-      From: "+14165550987",
-      To: smsNumber,
-      Body: "Something came up, I need to cancel",
-    });
-
-    await t.run(async (ctx) => {
-      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
-      expect(outboundBody).toContain("I can't cancel or reschedule appointments here yet");
-      expect(outboundBody).toContain("Initial Consultation");
-      expect(outboundBody).toContain("Tuesday, Mar 17 at 10:00 AM");
-      expect(outboundBody).not.toContain("I have cancelled your appointment");
-    });
+    expect(reply).toContain("I can't cancel or reschedule appointments here yet");
+    expect(reply).toContain("Initial Consultation");
+    expect(reply).toContain("Tuesday, Mar 17 at 10:00 AM");
+    expect(reply).not.toContain("I have cancelled your appointment");
   });
 
   it("replies in French for a French-default business and remembers the locale", async () => {
@@ -1886,6 +1981,8 @@ describe("SMS scheduling flow", () => {
 
   it("keeps unsupported cancellation replies localized in French", async () => {
     const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseAppointmentChangeTool("fr");
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
       const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
@@ -1928,6 +2025,8 @@ describe("SMS scheduling flow", () => {
 
   it("treats accented French reschedule requests as unsupported appointment changes", async () => {
     const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseAppointmentChangeTool("fr");
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
       const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
@@ -2042,81 +2141,28 @@ describe("SMS scheduling flow", () => {
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
     mockAgentToUseCurrentAppointmentTool();
 
-    const { businessId, smsNumber } = await t.run(async (ctx) => {
-      const { businessId } = await seedMultiServiceBusiness(ctx, {
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
         slug: "sms-current-appointment",
         name: "SMS Current Appointment",
         smsNumber: "+14165550907",
       });
-      return { businessId, smsNumber: "+14165550907" };
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550992",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
     });
     await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
-
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-current-appointment-1",
-      From: "+14165550992",
-      To: smsNumber,
-      Body: "Hello, do you have room for an initial consultation next monday?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-current-appointment-2",
-      From: "+14165550992",
-      To: smsNumber,
-      Body: "What about on the 17?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-current-appointment-3",
-      From: "+14165550992",
-      To: smsNumber,
-      Body: "Any other times?",
-    });
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-current-appointment-4",
-      From: "+14165550992",
-      To: smsNumber,
-      Body: "I'll take at 10h00",
-    });
-
-    await t.run(async (ctx) => {
-      const conversation = await ctx.db
-        .query("conversations")
-        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
-        .unique();
-      const bookingState = conversation
-        ? await ctx.db
-            .query("conversation_booking_state")
-            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .unique()
-        : null;
-      expect(bookingState).toMatchObject({
-        mode: "booked",
-        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
-      });
-    });
-
-    const conversationId = await t.run(async (ctx) => {
-      const conversation = await ctx.db
-        .query("conversations")
-        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
-        .unique();
-      expect(conversation?._id).toBeDefined();
-
-      const aiState = conversation
-        ? await ctx.db
-            .query("conversation_ai_state")
-            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .unique()
-        : null;
-      if (!aiState && conversation) {
-        await ctx.db.insert("conversation_ai_state", {
-          businessId,
-          conversationId: conversation._id,
-          threadId: `thread-${String(conversation._id)}`,
-        });
-      }
-
-      return conversation!._id;
-    });
 
     const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
       businessId,
@@ -2166,6 +2212,44 @@ describe("SMS scheduling flow", () => {
       "Your next appointment is Saturday, Mar 21 at 9:30 AM for Initial Consultation.",
     );
     expect(reply).not.toContain("What date would you prefer");
+  });
+
+  it("falls back deterministically for current appointment lookups when the AI model is unavailable", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-next-appointment-no-model-fallback",
+        name: "SMS Next Appointment No Model Fallback",
+        smsNumber: "+14165550932",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550967",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-21T13:30:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Hello, can you remind me when is my next appointment?",
+    });
+
+    expect(reply).toBe(
+      "Your next appointment is Saturday, Mar 21 at 9:30 AM for Initial Consultation.",
+    );
+    expect(generateTextMock).not.toHaveBeenCalled();
   });
 
   it("passes trusted system instructions and untrusted knowledge context to the live SMS agent", async () => {
