@@ -1077,6 +1077,56 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("does not save scheduling availability replies as contact names", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-scheduling-reply-not-name",
+        name: "SMS Scheduling Reply Not Name",
+        smsNumber: "+14165550942",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550956",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "I'm available tomorrow.",
+    });
+
+    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("what name should I put on it");
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550956"),
+        )
+        .unique();
+      expect(contact?.name).toBeUndefined();
+
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState?.requestedDate).toBe("2026-03-12");
+    });
+  });
+
   it("accepts greeting-prefixed self introductions during name capture", async () => {
     const t = createConvexHarness();
 
@@ -1700,6 +1750,72 @@ describe("SMS scheduling flow", () => {
         pendingStartsAt: "2026-03-17T14:00:00.000Z",
       });
       expect(bookingState?.lastConfirmedStartsAt).toBeUndefined();
+    });
+  });
+
+  it("ignores an unoffered selectedStartsAt tool argument", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, contactId, conversationId, initialConsultationId } = await t.run(
+      async (ctx) => {
+        const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+          slug: "sms-structured-tool-booking-ignore-unoffered-slot",
+          name: "SMS Structured Tool Booking Ignore Unoffered Slot",
+          smsNumber: "+14165550943",
+        });
+        const { contactId, conversationId } = await seedSmsConversation(ctx, {
+          businessId,
+          contactPhone: "+14165550955",
+          contactName: "Casey Nguyen",
+        });
+        await ctx.db.insert("conversation_booking_state", {
+          businessId,
+          conversationId,
+          mode: "booking_in_progress",
+          selectedServiceId: initialConsultationId,
+          requestedDate: "2026-03-17",
+          lastOfferedDate: "2026-03-17",
+          lastOfferedStartsAt: ["2026-03-17T14:00:00.000Z"],
+          updatedAt: new Date().toISOString(),
+        });
+        return { businessId, contactId, conversationId, initialConsultationId };
+      },
+    );
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Thanks for the update.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+    }>(request.tools.bookAppointmentSlot!, {
+      selectedStartsAt: "2026-03-17T15:00:00.000Z",
+    });
+
+    expect(toolResult).toEqual({ handled: false });
+
+    await t.run(async (ctx) => {
+      const appointments = await ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contactId))
+        .collect();
+      expect(appointments).toHaveLength(0);
+
+      const bookingState = await ctx.db
+        .query("conversation_booking_state")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .unique();
+      expect(bookingState).toMatchObject({
+        mode: "booking_in_progress",
+        selectedServiceId: initialConsultationId,
+        lastOfferedStartsAt: ["2026-03-17T14:00:00.000Z"],
+      });
+      expect(bookingState?.pendingStartsAt).toBeUndefined();
     });
   });
 

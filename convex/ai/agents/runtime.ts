@@ -420,6 +420,20 @@ function looksLikeNextAppointmentQuestion(text: string): boolean {
   );
 }
 
+function containsDateOrTimeReference(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  return (
+    /\b(today|tomorrow|day after tomorrow|next week|this week|monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|afternoon|evening|noon|aujourd hui|demain|apres demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|matin|apres midi|soir|soiree|midi)\b/i.test(
+      normalized,
+    ) ||
+    /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i.test(text) ||
+    /\b\d{1,2}h(?:\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?))?\b/i.test(text) ||
+    /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
+    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
+    looksLikeRelativeDayReference(text)
+  );
+}
+
 function looksLikeAppointmentChangeRequest(text: string): boolean {
   const normalized = normalizeComparable(text);
   if (
@@ -433,19 +447,10 @@ function looksLikeAppointmentChangeRequest(text: string): boolean {
   const hasAppointmentKeyword = /\b(appointment|appointments|booking|booked|reservation|reservations|slot|slots|rendez vous|rdv)\b/i.test(
     normalized,
   );
-  const hasDateOrTimeReference =
-    /\b(today|tomorrow|day after tomorrow|next week|this week|monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|afternoon|evening|noon|aujourd hui|demain|apres demain|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|matin|apres midi|soir|soiree|midi)\b/i.test(
-      normalized,
-    ) ||
-    /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b/i.test(text) ||
-    /\b\d{1,2}h(?:\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?))?\b/i.test(text) ||
-    /\b\d{4}-\d{1,2}-\d{1,2}\b/.test(text) ||
-    /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/.test(text) ||
-    looksLikeRelativeDayReference(text);
 
   return (
     /\b(move|change|deplac(?:er|e|ee|é)|modifi(?:er|e|ee|é))\b/i.test(normalized) &&
-    (hasAppointmentKeyword || hasDateOrTimeReference)
+    (hasAppointmentKeyword || containsDateOrTimeReference(text))
   );
 }
 
@@ -1337,6 +1342,29 @@ function looksLikeGenericNonNameReply(text: string): boolean {
   );
 }
 
+function isValidContactNameCandidate(text: string): boolean {
+  const candidate = text.trim().replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, "");
+  if (!candidate || /\d/.test(candidate)) {
+    return false;
+  }
+
+  if (
+    looksLikeBusinessHoursQuestion(candidate) ||
+    looksLikeCurrentAppointmentQuestion(candidate) ||
+    looksLikeAppointmentChangeRequest(candidate) ||
+    looksLikeSchedulingRequest(candidate) ||
+    looksLikeSchedulingFollowUp(candidate) ||
+    looksLikeAlternativeTimesRequest(candidate) ||
+    looksLikeBookingConfirmation(candidate) ||
+    looksLikeGenericNonNameReply(candidate) ||
+    containsDateOrTimeReference(candidate)
+  ) {
+    return false;
+  }
+
+  return /^[\p{L}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}][\p{L}\p{M}'’.-]*){0,3}$/u.test(candidate);
+}
+
 function extractContactNameFromReply(text: string): string | null {
   const trimmed = text.trim().replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, "");
   if (!trimmed) {
@@ -1348,38 +1376,11 @@ function extractContactNameFromReply(text: string): string | null {
   );
   if (explicitNameMatch?.[1]) {
     const explicitCandidate = explicitNameMatch[1].trim().replace(/[,.!?]+$/u, "");
-    return /^[\p{L}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}][\p{L}\p{M}'’.-]*){0,3}$/u.test(
-      explicitCandidate,
-    )
-      ? explicitCandidate
-      : null;
-  }
-
-  if (/\d/.test(trimmed)) {
-    return null;
-  }
-
-  if (
-    looksLikeBusinessHoursQuestion(trimmed) ||
-    looksLikeCurrentAppointmentQuestion(trimmed) ||
-    looksLikeAppointmentChangeRequest(trimmed) ||
-    looksLikeSchedulingRequest(trimmed) ||
-    looksLikeSchedulingFollowUp(trimmed) ||
-    looksLikeAlternativeTimesRequest(trimmed) ||
-    looksLikeBookingConfirmation(trimmed) ||
-    looksLikeGenericNonNameReply(trimmed)
-  ) {
-    return null;
+    return isValidContactNameCandidate(explicitCandidate) ? explicitCandidate : null;
   }
 
   const candidate = trimmed.replace(/[,.!?]+$/u, "");
-  if (
-    !/^[\p{L}][\p{L}\p{M}'’.-]*(?:\s+[\p{L}][\p{L}\p{M}'’.-]*){0,3}$/u.test(candidate)
-  ) {
-    return null;
-  }
-
-  return candidate;
+  return isValidContactNameCandidate(candidate) ? candidate : null;
 }
 
 function buildPendingBookingReply(
@@ -2328,7 +2329,11 @@ async function maybeGenerateSmsSchedulingResult(
   const structuredSchedulingText = buildSchedulingTextFromToolArgs(toolArgs);
   const schedulingText = structuredSchedulingText ?? promptSchedulingText;
   const selectedStartsAtInput = toolArgs?.selectedStartsAt?.trim();
-  if (!schedulingText && !selectedStartsAtInput) {
+  const selectedOfferedSlotFromInput =
+    selectedStartsAtInput && bookingState?.lastOfferedStartsAt?.includes(selectedStartsAtInput)
+      ? selectedStartsAtInput
+      : null;
+  if (!schedulingText && !selectedOfferedSlotFromInput) {
     return null;
   }
 
@@ -2345,9 +2350,9 @@ async function maybeGenerateSmsSchedulingResult(
   }
 
   const selectedStartsAtLocal =
-    selectedStartsAtInput === undefined
+    selectedOfferedSlotFromInput === null
       ? null
-      : DateTime.fromISO(selectedStartsAtInput, { setZone: true }).setZone(snapshot.timezone);
+      : DateTime.fromISO(selectedOfferedSlotFromInput, { setZone: true }).setZone(snapshot.timezone);
   const selectedStartsAtDate =
     selectedStartsAtLocal && selectedStartsAtLocal.isValid
       ? toSmsDatePreference(selectedStartsAtLocal.startOf("day"), snapshot.timezone, locale)
@@ -2391,7 +2396,7 @@ async function maybeGenerateSmsSchedulingResult(
     toolArgs?.selectedTimeText?.trim() ||
     toolArgs?.requestedTimeText?.trim() ||
     toolArgs?.dayPart?.trim() ||
-    (!selectedStartsAtInput ? schedulingText : null);
+    (!selectedOfferedSlotFromInput ? schedulingText : null);
   const explicitTimeResolution =
     selectedStartsAtTime !== null
       ? {
@@ -2411,16 +2416,15 @@ async function maybeGenerateSmsSchedulingResult(
           };
   const explicitTime = explicitTimeResolution.primary;
   const selectedOfferedSlot =
-    selectedStartsAtInput && bookingState?.lastOfferedStartsAt?.includes(selectedStartsAtInput)
-      ? selectedStartsAtInput
-      : requestedDate && explicitTimeResolution.candidates.length > 0
-        ? findMatchingOfferedSlotFromCandidates(
-            bookingState,
-            snapshot.timezone,
-            requestedDate,
-            explicitTimeResolution.candidates,
-          )
-        : null;
+    selectedOfferedSlotFromInput ??
+    (requestedDate && explicitTimeResolution.candidates.length > 0
+      ? findMatchingOfferedSlotFromCandidates(
+          bookingState,
+          snapshot.timezone,
+          requestedDate,
+          explicitTimeResolution.candidates,
+        )
+      : null);
   const selectedOfferedSlotLocal =
     selectedOfferedSlot === null
       ? null
@@ -2440,7 +2444,7 @@ async function maybeGenerateSmsSchedulingResult(
   const requestedTime =
     explicitTime ??
     (selectedStartsAtTime ?? selectedOfferedSlotTime) ??
-    ((selectedStartsAtInput || explicitTimeResolution.candidates.length > 0)
+    ((selectedOfferedSlotFromInput || explicitTimeResolution.candidates.length > 0)
       ? null
       : (requestedDate !== null && service !== null)
         ? getRequestedTimeFromState(bookingState, locale)
@@ -2526,7 +2530,7 @@ async function maybeGenerateSmsSchedulingResult(
   if (
     explicitTimeResolution.ambiguous &&
     selectedOfferedSlot === null &&
-    !selectedStartsAtInput &&
+    !selectedOfferedSlotFromInput &&
     !looksLikeAlternativeTimesRequest(prompt) &&
     toolArgs?.relativeToLastOffer !== true
   ) {
@@ -2553,7 +2557,7 @@ async function maybeGenerateSmsSchedulingResult(
     looksLikeBookingConfirmation(prompt) &&
     explicitDate === null &&
     explicitTime === null &&
-    !selectedStartsAtInput &&
+    !selectedOfferedSlotFromInput &&
     !looksLikeAlternativeTimesRequest(prompt);
   if (shouldConfirmPendingSlot) {
     const pendingStartsAt = bookingState?.pendingStartsAt;
@@ -2656,12 +2660,11 @@ async function maybeGenerateSmsSchedulingResult(
   }
 
   const exactRequestedTime = requestedTime ?? selectedStartsAtTime ?? selectedOfferedSlotTime;
-  if (!selectedStartsAtInput && !selectedOfferedSlot && exactRequestedTime === null) {
+  if (!selectedOfferedSlotFromInput && !selectedOfferedSlot && exactRequestedTime === null) {
     throw new Error("Unable to resolve the requested appointment time.");
   }
 
   const startsAt =
-    selectedStartsAtInput ??
     selectedOfferedSlot ??
     (() => {
       const requestedStartLocal = requestedDate.dayStart.plus({
