@@ -4,7 +4,7 @@
 
 This document captures the real Twilio-backed SMS booking validation for `OPE-17`.
 
-Validation status: passed for the live happy path on the dev deployment, with one follow-up data-quality issue noted below.
+Validation status: passed for the live happy path on the dev deployment, with follow-up validation still needed for post-booking lookup and unsupported appointment-change SMS branches.
 
 Validated date: `2026-03-16`
 
@@ -110,8 +110,8 @@ The following were not freshly validated through a new live carrier turn during 
 
 Reason:
 
-- this machine could inspect the dev deployment and Twilio account read-only
-- this machine could not non-interactively refresh the dev Convex deployment to the latest local branch state
+- the validated live conversation `md70v6x77jqd3zwx7va249d2c9830x0m` still only contains the happy-path booking turns captured above
+- a follow-up scan of recent dev deployment SMS messages on `2026-03-16` did not surface any real carrier turns exercising appointment lookup or unsupported change handling
 - the Twilio account only exposed one active number here, so a second controlled inbound source was not available from the repo environment alone
 
 These remain good follow-up validation checks after the next dev deployment refresh or from a separate physical test device.
@@ -124,3 +124,8 @@ During inspection, the contact attached to the validated SMS thread had a stale 
 - stored name: `Parlez-vous français`
 
 That value does not match the validated thread transcript and should be treated as historical data corruption or prior name-capture fallout, not as evidence that the current merged runtime still reproduces the bug.
+
+Status update:
+
+- `OPE-52` shipped a runtime fix on `main` and on this branch to stop explicit language-switch prompts from being persisted as SMS contact names
+- the remaining cleanup for this specific dev record is operational only and can be handled directly in the Convex dashboard
