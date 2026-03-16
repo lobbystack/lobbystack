@@ -61,6 +61,8 @@ function buildGroundedSystemPrompt(input: {
     "Only use hours, appointment, and booking tools based on the actual customer SMS and the stored conversation state. Do not invent or rewrite the customer message when deciding to use a tool.",
     "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
     "If a tool returns replyText, use that reply directly or with only very light editing.",
+    "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
+    "If the customer asks when their appointment is, lead with the appointment date and time. Do not start with 'Yes, you are booked' unless they asked whether they are booked.",
     "Do not reopen scheduling after a booking is already confirmed unless the user explicitly asks to book, reschedule, cancel, or make another appointment.",
     "If you list multiple times on the same day, list only the times and do not repeat the weekday before every slot.",
     "If a booking tool already confirmed or booked a slot, do not ask for another confirmation.",
@@ -126,6 +128,12 @@ type CurrentAppointmentSummary = {
   timezone: string;
   formattedStart: string;
 };
+type CurrentAppointmentQuestionType = "timing" | "confirmation";
+type CurrentAppointmentLookupResult = {
+  questionType: CurrentAppointmentQuestionType;
+  hasConfirmedAppointment: boolean;
+  appointment?: CurrentAppointmentSummary;
+};
 type OfferedSlotSummary = {
   startsAt: string;
   endsAt: string;
@@ -153,7 +161,14 @@ type SmsSchedulingHandledResult = {
   pendingConfirmation?: boolean;
   bookedAppointmentId?: Id<"appointments">;
 };
-type SmsToolResult = { handled: false } | SmsSchedulingHandledResult;
+type SmsCurrentAppointmentHandledResult = {
+  handled: true;
+  currentAppointmentLookup: CurrentAppointmentLookupResult;
+};
+type SmsToolResult =
+  | { handled: false }
+  | SmsSchedulingHandledResult
+  | SmsCurrentAppointmentHandledResult;
 type ResolvedRequestedTime = {
   primary: SmsTimePreference | null;
   candidates: Array<SmsTimePreference>;
@@ -355,8 +370,17 @@ function looksLikeBusinessHoursQuestion(text: string): boolean {
 }
 
 function looksLikeCurrentAppointmentQuestion(text: string): boolean {
-  return /\b(didn['’]?t i just book|did i just book|already book(?:ed)?|my appointment|existing appointment|current appointment|mon rendez|j ai deja reserve|j'ai deja reserve|j ai deja réservé|j'ai déjà réservé|mon rendez-vous|rendez vous actuel|rendez-vous actuel)\b/i.test(
-    text,
+  const normalized = normalizeComparable(text);
+  return (
+    /\b(didn t i just book|didnt i just book|did i just book|already booked|already book|my appointment|existing appointment|current appointment|next appointment|upcoming appointment|when is my appointment|when is my next appointment|when s my appointment|when s my next appointment|whens my appointment|whens my next appointment|what time is my appointment|what time is my next appointment|what day is my appointment|what day is my next appointment)\b/i.test(
+      normalized,
+    ) ||
+    (normalized.includes("remind me") && normalized.includes("appointment")) ||
+    (normalized.includes("next appointment") && normalized.includes("when")) ||
+    /\b(mon rendez vous|mon prochain rendez vous|rendez vous actuel|rendez vous a venir|quand est mon rendez vous|a quelle heure est mon rendez vous|rappelle moi.*rendez vous)\b/i.test(
+      normalized,
+    ) ||
+    normalized.includes("j ai deja reserve")
   );
 }
 
@@ -1311,21 +1335,6 @@ function buildBusinessHoursReply(input: {
   });
 }
 
-function buildCurrentAppointmentReply(
-  summary: CurrentAppointmentSummary,
-  locale: RuntimeLocale,
-): string {
-  const formattedStart = formatRuntimeAppointmentDateTime(
-    summary.startsAt,
-    summary.timezone,
-    locale,
-  );
-  return localizeRuntimeText(locale, {
-    en: `Yes, you are booked for ${summary.serviceName} on ${formattedStart}.`,
-    fr: `Oui, vous avez un rendez-vous pour ${summary.serviceName} ${formattedStart}.`,
-  });
-}
-
 function buildAppointmentChangeUnavailableReply(
   summary: CurrentAppointmentSummary,
   locale: RuntimeLocale,
@@ -1339,6 +1348,27 @@ function buildAppointmentChangeUnavailableReply(
     en: `I can help with appointment questions by SMS, but I can't cancel or reschedule appointments here yet. Please contact us about your ${summary.serviceName} on ${formattedStart}.`,
     fr: `Je peux vous aider par SMS pour les questions de rendez-vous, mais je ne peux pas encore annuler ou déplacer un rendez-vous ici. Veuillez nous contacter au sujet de votre ${summary.serviceName} ${formattedStart}.`,
   });
+}
+
+function classifyCurrentAppointmentQuestion(
+  prompt: string,
+): CurrentAppointmentQuestionType {
+  const normalized = normalizeComparable(prompt);
+  if (
+    normalized.includes("when") ||
+    normalized.includes("what time") ||
+    normalized.includes("what day") ||
+    normalized.includes("next appointment") ||
+    normalized.includes("upcoming appointment") ||
+    normalized.includes("remind me") ||
+    normalized.includes("quand") ||
+    normalized.includes("a quelle heure") ||
+    normalized.includes("rappelle moi")
+  ) {
+    return "timing";
+  }
+
+  return "confirmation";
 }
 
 function subtractClosureFromHoursWindows(
@@ -1518,16 +1548,46 @@ function resolveBusinessHoursReply(
   });
 }
 
-async function resolveCurrentAppointmentReply(
+async function resolveCurrentAppointmentLookup(
+  ctx: ActionCtx,
+  conversationId: Id<"conversations">,
+  prompt: string,
+  locale: RuntimeLocale,
+): Promise<CurrentAppointmentLookupResult | null> {
+  if (!looksLikeCurrentAppointmentQuestion(prompt)) {
+    return null;
+  }
+
+  const summary: CurrentAppointmentSummary | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getCurrentAppointmentSummary,
+    { conversationId },
+  );
+  return summary
+    ? {
+        questionType: classifyCurrentAppointmentQuestion(prompt),
+        hasConfirmedAppointment: true,
+        appointment: {
+          ...summary,
+          formattedStart: formatRuntimeAppointmentDateTime(
+            summary.startsAt,
+            summary.timezone,
+            locale,
+          ),
+        },
+      }
+    : {
+        questionType: classifyCurrentAppointmentQuestion(prompt),
+        hasConfirmedAppointment: false,
+      };
+}
+
+async function resolveAppointmentChangeReply(
   ctx: ActionCtx,
   conversationId: Id<"conversations">,
   prompt: string,
   locale: RuntimeLocale,
 ): Promise<string | null> {
-  if (
-    !looksLikeCurrentAppointmentQuestion(prompt) &&
-    !looksLikeAppointmentChangeRequest(prompt)
-  ) {
+  if (!looksLikeAppointmentChangeRequest(prompt)) {
     return null;
   }
 
@@ -1536,22 +1596,13 @@ async function resolveCurrentAppointmentReply(
     { conversationId },
   );
   if (!summary) {
-    return looksLikeAppointmentChangeRequest(prompt)
-      ? localizeRuntimeText(locale, {
-          en: "I do not see a confirmed appointment to change right now.",
-          fr: "Je ne vois pas de rendez-vous confirmé à modifier pour le moment.",
-        })
-      : localizeRuntimeText(locale, {
-          en: "I do not see a confirmed appointment yet.",
-          fr: "Je ne vois pas encore de rendez-vous confirmé.",
-        });
+    return localizeRuntimeText(locale, {
+      en: "I do not see a confirmed appointment to change right now.",
+      fr: "Je ne vois pas de rendez-vous confirmé à modifier pour le moment.",
+    });
   }
 
-  if (looksLikeAppointmentChangeRequest(prompt)) {
-    return buildAppointmentChangeUnavailableReply(summary, locale);
-  }
-
-  return buildCurrentAppointmentReply(summary, locale);
+  return buildAppointmentChangeUnavailableReply(summary, locale);
 }
 
 function unhandledSmsToolResult(): SmsToolResult {
@@ -1637,8 +1688,8 @@ async function resolveCurrentAppointmentToolResult(
   prompt: string,
   locale: RuntimeLocale,
 ): Promise<SmsToolResult> {
-  const replyText = await resolveCurrentAppointmentReply(ctx, conversationId, prompt, locale);
-  return replyText ? handledSmsToolResult(replyText) : unhandledSmsToolResult();
+  const lookup = await resolveCurrentAppointmentLookup(ctx, conversationId, prompt, locale);
+  return lookup ? { handled: true, currentAppointmentLookup: lookup } : unhandledSmsToolResult();
 }
 
 const schedulingLookupToolArgsSchema = z.object({
@@ -1707,7 +1758,7 @@ function createSmsAgentTools(input: {
     }),
     getCurrentAppointment: createTool({
       description:
-        "Look up the currently confirmed appointment for this SMS conversation. Use this when the user asks whether they already booked or asks about their current appointment.",
+        "Look up the currently confirmed appointment for this SMS conversation and return structured appointment facts. Use this when the user asks whether they already booked, when their appointment is, or asks about their current or next appointment.",
       args: z.object({}),
       handler: async () => {
         return await resolveCurrentAppointmentToolResult(
@@ -1788,14 +1839,14 @@ async function maybeGenerateDeterministicSmsReply(
   snapshot: Doc<"business_context_snapshots">,
   locale: RuntimeLocale,
 ): Promise<string | null> {
-  const currentAppointmentReply = await resolveCurrentAppointmentReply(
+  const appointmentChangeReply = await resolveAppointmentChangeReply(
     ctx,
     conversationId,
     prompt,
     locale,
   );
-  if (currentAppointmentReply) {
-    return currentAppointmentReply;
+  if (appointmentChangeReply) {
+    return appointmentChangeReply;
   }
 
   const [bookingState, currentAppointment] = await Promise.all([
@@ -2375,7 +2426,7 @@ async function maybeGenerateSmsSchedulingReply(
     prompt,
     locale,
   );
-  return result?.handled ? result.replyText : null;
+  return result?.handled && "replyText" in result ? result.replyText : null;
 }
 
 export const requireMembershipByUserId = internalQuery({

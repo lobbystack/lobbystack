@@ -321,6 +321,70 @@ async function executeCapturedTool<T>(
   return (await tool.execute(args, {} as any)) as T;
 }
 
+function mockAgentToUseCurrentAppointmentTool(locale: "en" | "fr" = "en"): void {
+  generateTextMock.mockImplementation(async (ctx, _thread, input) => {
+    const tools = (input as { tools?: Record<string, { ctx?: unknown; execute?: (args: unknown, options: unknown) => Promise<unknown> }> }).tools;
+    if (tools) {
+      for (const tool of Object.values(tools)) {
+        if (tool) {
+          tool.ctx = ctx;
+        }
+      }
+    }
+
+    const currentAppointmentTool = tools?.getCurrentAppointment;
+    if (!currentAppointmentTool?.execute) {
+      return { text: "Agent stub reply" };
+    }
+
+    const toolResult = (await currentAppointmentTool.execute({}, {} as any)) as
+      | {
+          handled: false;
+        }
+      | {
+          handled: true;
+          currentAppointmentLookup: {
+            questionType: "timing" | "confirmation";
+            hasConfirmedAppointment: boolean;
+            appointment?: {
+              formattedStart: string;
+              serviceName: string;
+            };
+          };
+        };
+
+    if (!toolResult.handled) {
+      return { text: "Agent stub reply" };
+    }
+
+    const lookup = toolResult.currentAppointmentLookup;
+    if (!lookup.hasConfirmedAppointment || !lookup.appointment) {
+      return {
+        text:
+          locale === "fr"
+            ? "Je ne vois pas encore de rendez-vous confirme."
+            : "I don't see a confirmed appointment yet.",
+      };
+    }
+
+    if (lookup.questionType === "timing") {
+      return {
+        text:
+          locale === "fr"
+            ? `Votre prochain rendez-vous est ${lookup.appointment.formattedStart} pour ${lookup.appointment.serviceName}.`
+            : `Your next appointment is ${lookup.appointment.formattedStart} for ${lookup.appointment.serviceName}.`,
+      };
+    }
+
+    return {
+      text:
+        locale === "fr"
+          ? `Vous avez un rendez-vous pour ${lookup.appointment.serviceName} ${lookup.appointment.formattedStart}.`
+          : `You're booked for ${lookup.appointment.serviceName} on ${lookup.appointment.formattedStart}.`,
+    };
+  });
+}
+
 async function postTwilioForm(
   t: TestConvex<typeof schema>,
   path: string,
@@ -909,6 +973,65 @@ describe("SMS scheduling flow", () => {
         displayTime: "1:30 PM",
       },
     ]);
+  });
+
+  it("returns structured current appointment facts for next-appointment questions", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-structured-current-appointment",
+        name: "SMS Structured Current Appointment",
+        smsNumber: "+14165550929",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550970",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-21T13:30:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId, initialConsultationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Hello, can you remind me when is my next appointment?",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      currentAppointmentLookup?: {
+        questionType: "timing" | "confirmation";
+        hasConfirmedAppointment: boolean;
+        appointment?: {
+          serviceId: Id<"services">;
+          serviceName: string;
+          formattedStart: string;
+        };
+      };
+    }>(request.tools.getCurrentAppointment!);
+
+    expect(toolResult.handled).toBe(true);
+    expect(toolResult.currentAppointmentLookup).toMatchObject({
+      questionType: "timing",
+      hasConfirmedAppointment: true,
+      appointment: {
+        serviceId: initialConsultationId,
+        serviceName: "Initial Consultation",
+        formattedStart: "Saturday, Mar 21 at 9:30 AM",
+      },
+    });
   });
 
   it("books an exact offered slot through selectedStartsAt without reparsing the day", async () => {
@@ -1691,6 +1814,8 @@ describe("SMS scheduling flow", () => {
 
   it("answers current appointment questions in French when the conversation is French", async () => {
     const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseCurrentAppointmentTool("fr");
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
       const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
@@ -1726,7 +1851,8 @@ describe("SMS scheduling flow", () => {
       prompt: "À quelle heure est mon rendez-vous?",
     });
 
-    expect(reply).toContain("Oui, vous avez un rendez-vous pour Initial Consultation");
+    expect(reply).toContain("Votre prochain rendez-vous est");
+    expect(reply).toContain("Initial Consultation");
     expect(reply).toContain("17 mars");
   });
 
@@ -1885,6 +2011,8 @@ describe("SMS scheduling flow", () => {
 
   it("acknowledges the confirmed appointment instead of reopening booking", async () => {
     const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseCurrentAppointmentTool();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const { businessId } = await seedMultiServiceBusiness(ctx, {
@@ -1938,20 +2066,78 @@ describe("SMS scheduling flow", () => {
       });
     });
 
-    await postTwilioForm(t, "/twilio/sms/inbound", {
-      MessageSid: "SM-current-appointment-5",
-      From: "+14165550992",
-      To: smsNumber,
-      Body: "Didn't I just book for March 17 at 10:00 am?",
+    const conversationId = await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?._id).toBeDefined();
+
+      const aiState = conversation
+        ? await ctx.db
+            .query("conversation_ai_state")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .unique()
+        : null;
+      if (!aiState && conversation) {
+        await ctx.db.insert("conversation_ai_state", {
+          businessId,
+          conversationId: conversation._id,
+          threadId: `thread-${String(conversation._id)}`,
+        });
+      }
+
+      return conversation!._id;
     });
 
-    await t.run(async (ctx) => {
-      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
-      expect(outboundBody).toBe(
-        "Yes, you are booked for Initial Consultation on Tuesday, Mar 17 at 10:00 AM.",
-      );
-      expect(outboundBody).not.toContain("Which service");
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Didn't I just book for March 17 at 10:00 am?",
     });
+
+    expect(reply).toBe("You're booked for Initial Consultation on Tuesday, Mar 17 at 10:00 AM.");
+    expect(reply).not.toContain("Which service");
+  });
+
+  it("answers next appointment questions directly instead of reopening booking", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+    mockAgentToUseCurrentAppointmentTool();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-next-appointment-direct-answer",
+        name: "SMS Next Appointment Direct Answer",
+        smsNumber: "+14165550928",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550971",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-21T13:30:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Hello, can you remind me when is my next appointment?",
+    });
+
+    expect(reply).toBe(
+      "Your next appointment is Saturday, Mar 21 at 9:30 AM for Initial Consultation.",
+    );
+    expect(reply).not.toContain("What date would you prefer");
   });
 
   it("passes trusted system instructions and untrusted knowledge context to the live SMS agent", async () => {
