@@ -383,6 +383,9 @@ function looksLikeBusinessHoursQuestion(text: string): boolean {
 }
 
 function looksLikeCurrentAppointmentQuestion(text: string): boolean {
+  if (looksLikeAppointmentChangeRequest(text) || looksLikeNextAppointmentBookingRequest(text)) {
+    return false;
+  }
   const normalized = normalizeComparable(text);
   return (
     /\b(didn t i just book|didnt i just book|did i just book|already booked|already book|my appointment|existing appointment|current appointment|next appointment|upcoming appointment|when is my appointment|when is my next appointment|when s my appointment|when s my next appointment|whens my appointment|whens my next appointment|what time is my appointment|what time is my next appointment|what day is my appointment|what day is my next appointment)\b/i.test(
@@ -394,6 +397,16 @@ function looksLikeCurrentAppointmentQuestion(text: string): boolean {
       normalized,
     ) ||
     normalized.includes("j ai deja reserve")
+  );
+}
+
+function looksLikeNextAppointmentBookingRequest(text: string): boolean {
+  const normalized = normalizeComparable(text);
+  return (
+    /\b(book|schedule|reserve|reserver)\b/i.test(normalized) &&
+    /\b(next appointment|upcoming appointment|mon prochain rendez vous|prochain rendez vous|rendez vous a venir)\b/i.test(
+      normalized,
+    )
   );
 }
 
@@ -1746,12 +1759,23 @@ async function resolveAppointmentChangeStatus(
     return null;
   }
 
+  const bookingState: ConversationBookingStateRecord | null = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationBookingState,
+    { conversationId },
+  );
+  if (getConversationBookingMode(bookingState) === "booking_in_progress") {
+    return null;
+  }
+
   const summary: CurrentAppointmentSummary | null = await ctx.runQuery(
     internal.ai.agents.runtime.getCurrentAppointmentSummary,
     { conversationId },
   );
   if (!summary) {
-    return null;
+    return {
+      hasConfirmedAppointment: false,
+      changeSupported: false,
+    };
   }
 
   return {
@@ -2140,16 +2164,6 @@ async function maybeGenerateDeterministicSmsReply(
     return null;
   }
 
-  const currentAppointmentLookup = await resolveCurrentAppointmentLookup(
-    ctx,
-    conversationId,
-    prompt,
-    locale,
-  );
-  if (currentAppointmentLookup) {
-    return buildCurrentAppointmentLookupReply(currentAppointmentLookup, locale);
-  }
-
   const appointmentChangeStatus = await resolveAppointmentChangeStatus(
     ctx,
     conversationId,
@@ -2158,6 +2172,16 @@ async function maybeGenerateDeterministicSmsReply(
   );
   if (appointmentChangeStatus) {
     return buildAppointmentChangeStatusReply(appointmentChangeStatus, locale);
+  }
+
+  const currentAppointmentLookup = await resolveCurrentAppointmentLookup(
+    ctx,
+    conversationId,
+    prompt,
+    locale,
+  );
+  if (currentAppointmentLookup) {
+    return buildCurrentAppointmentLookupReply(currentAppointmentLookup, locale);
   }
 
   const schedulingReply = await maybeGenerateSmsSchedulingReply(

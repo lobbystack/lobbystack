@@ -1517,6 +1517,48 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("returns a negative structured appointment-change status when no booking exists", async () => {
+    const t = createConvexHarness();
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-structured-appointment-change-no-booking",
+        name: "SMS Structured Appointment Change No Booking",
+        smsNumber: "+14165550938",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550960",
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Please cancel my appointment.",
+    });
+
+    const request = getCapturedAgentRequest();
+    const toolResult = await executeCapturedTool<{
+      handled: boolean;
+      appointmentChangeStatus?: {
+        hasConfirmedAppointment: boolean;
+        changeSupported: false;
+      };
+    }>(request.tools.getAppointmentChangeStatus!);
+
+    expect(toolResult).toMatchObject({
+      handled: true,
+      appointmentChangeStatus: {
+        hasConfirmedAppointment: false,
+        changeSupported: false,
+      },
+    });
+  });
+
   it("books an exact offered slot through selectedStartsAt after a confirming SMS", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
@@ -2236,6 +2278,68 @@ describe("SMS scheduling flow", () => {
     expect(reply).not.toContain("I have cancelled your appointment");
   });
 
+  it("routes explicit cancel requests to unsupported-change replies before appointment lookups", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-cancel-before-lookup",
+        name: "SMS Cancel Before Lookup",
+        smsNumber: "+14165550939",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550959",
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        selectedServiceId: initialConsultationId,
+        lastConfirmedServiceId: initialConsultationId,
+        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
+        updatedAt: new Date().toISOString(),
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Please cancel my appointment.",
+    });
+
+    expect(reply).toContain("I can't cancel or reschedule appointments here yet");
+    expect(reply).not.toContain("You're booked for");
+  });
+
+  it("returns a grounded no-booking change reply when no confirmed appointment exists", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-cancel-no-booking",
+        name: "SMS Cancel No Booking",
+        smsNumber: "+14165550940",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550958",
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Please cancel my appointment.",
+    });
+
+    expect(reply).toBe("I do not see a confirmed appointment to change right now.");
+  });
+
   it("keeps booking-in-progress change requests in scheduling fallback flows", async () => {
     const t = createConvexHarness();
 
@@ -2314,6 +2418,34 @@ describe("SMS scheduling flow", () => {
 
     const request = getCapturedAgentRequest();
     expect(request.prompt).not.toContain("This SMS is appointment-related.");
+  });
+
+  it("keeps next-appointment booking requests in scheduling instead of lookup flow", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedMultiServiceBusiness(ctx, {
+        slug: "sms-next-appointment-booking-request",
+        name: "SMS Next Appointment Booking Request",
+        smsNumber: "+14165550941",
+      });
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550957",
+      });
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Can I book my next appointment for April 2 for an Initial Consultation?",
+    });
+
+    expect(reply).toContain("Thursday, Apr 2");
+    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("I don't see a confirmed appointment yet.");
   });
 
   it("replies in French for a French-default business and remembers the locale", async () => {
