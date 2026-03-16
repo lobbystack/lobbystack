@@ -437,23 +437,26 @@ function containsDateOrTimeReference(text: string): boolean {
   );
 }
 
+function looksLikeExplicitCancelOrRescheduleRequest(text: string): boolean {
+  return /\b(cancel(?:led|ling)?|resched(?:ule|uled|uling)?|annul(?:er|e|ee|é)?|report(?:er|e|ee|é)?)\b/i.test(
+    normalizeComparable(text),
+  );
+}
+
 function looksLikeAppointmentChangeRequest(text: string): boolean {
   const normalized = normalizeComparable(text);
-  if (
-    /\b(cancel(?:led|ling)?|resched(?:ule|uled|uling)?|annul(?:er|e|ee|é)?|report(?:er|e|ee|é)?)\b/i.test(
-      normalized,
-    )
-  ) {
+  if (looksLikeExplicitCancelOrRescheduleRequest(text)) {
     return true;
   }
 
   const hasAppointmentKeyword = /\b(appointment|appointments|booking|booked|reservation|reservations|slot|slots|rendez vous|rdv)\b/i.test(
     normalized,
   );
+  const hasPronounReference = /\b(it|that|this|ca|ça|cela)\b/i.test(normalized);
 
   return (
     /\b(move|change|deplac(?:er|e|ee|é)|modifi(?:er|e|ee|é))\b/i.test(normalized) &&
-    (hasAppointmentKeyword || containsDateOrTimeReference(text))
+    (hasAppointmentKeyword || hasPronounReference || containsDateOrTimeReference(text))
   );
 }
 
@@ -1781,7 +1784,12 @@ async function resolveAppointmentChangeStatus(
     { conversationId },
   );
   if (getConversationBookingMode(bookingState) === "booking_in_progress") {
-    return null;
+    return looksLikeExplicitCancelOrRescheduleRequest(prompt)
+      ? {
+          hasConfirmedAppointment: false,
+          changeSupported: false,
+        }
+      : null;
   }
 
   const summary: CurrentAppointmentSummary | null = await ctx.runQuery(
