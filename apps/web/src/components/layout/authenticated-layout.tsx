@@ -53,7 +53,7 @@ export function AuthenticatedLayout({
           "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]",
         )}
       >
-        <SiteHeader className="md:hidden" onSignOut={onSignOut} />
+        <SiteHeader fixed onSignOut={onSignOut} />
         {children}
       </SidebarInset>
     </SidebarProvider>
