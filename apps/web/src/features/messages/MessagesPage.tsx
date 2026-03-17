@@ -266,7 +266,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         className={cn(
                           "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
                           message.direction === "outbound"
-                            ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground/75"
+                            ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground"
                             : "self-start rounded-[16px_16px_16px_0] bg-muted",
                         )}
                         key={String(message.id)}
@@ -276,7 +276,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           className={cn(
                             "mt-1 block text-xs font-light text-foreground/75 italic",
                             message.direction === "outbound" &&
-                              "text-end text-primary-foreground/85",
+                              "text-end text-primary-foreground/80",
                           )}
                         >
                           {formatDateTime(message.createdAt, i18n.language, {
