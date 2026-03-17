@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { ArrowLeft, Phone, Play, Search as SearchIcon } from "lucide-react";
+import { ArrowLeft, Phone, Search as SearchIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
+import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -97,15 +98,15 @@ export function CallsPage({ businessId }: CallsPageProps) {
     });
   }, [rows, searchValue]);
 
+  const selectedCall = filteredRows.find((call) => call._id === selectedCallId) ??
+    rows.find((call) => call._id === selectedCallId);
+
   useEffect(() => {
     if (!selectedCallId && filteredRows[0]?._id) {
       setSelectedCallId(filteredRows[0]._id);
       setMobileSelectedCallId(filteredRows[0]._id);
     }
   }, [filteredRows, selectedCallId]);
-
-  const selectedCall = filteredRows.find((call) => call._id === selectedCallId) ??
-    rows.find((call) => call._id === selectedCallId);
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -192,7 +193,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
       >
         {selectedCall ? (
           <>
-            <div className="mb-4 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
+            <div className="mb-4 flex flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
               <div className="flex gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
@@ -224,19 +225,14 @@ export function CallsPage({ businessId }: CallsPageProps) {
                   </div>
                 </div>
               </div>
-              <div className="-me-1 flex items-center gap-1 lg:gap-2">
+              <div className="w-full xl:max-w-xl">
                 {selectedCall.recordingUrl ? (
-                  <Button
-                    className="size-8 rounded-full sm:inline-flex lg:size-10"
-                    render={
-                      <a href={selectedCall.recordingUrl} rel="noreferrer" target="_blank" />
-                    }
-                    size="icon"
-                    title={t("actions.listen")}
-                    variant="ghost"
-                  >
-                    <Play className="stroke-muted-foreground" size={22} />
-                  </Button>
+                  <CallRecordingPlayer
+                    downloadLabel={t("actions.download")}
+                    pauseLabel={t("actions.pause")}
+                    playLabel={t("actions.play")}
+                    src={selectedCall.recordingUrl}
+                  />
                 ) : null}
               </div>
             </div>

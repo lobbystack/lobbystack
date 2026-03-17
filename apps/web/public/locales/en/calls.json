@@ -26,6 +26,9 @@
     "viewTranscript": "View transcript",
     "pendingTranscript": "Open transcript",
     "listen": "Listen",
+    "download": "Download audio",
+    "play": "Play",
+    "pause": "Pause",
     "audioPending": "Recording pending"
   },
   "pagination": {

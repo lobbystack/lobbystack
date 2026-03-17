@@ -26,6 +26,9 @@
     "viewTranscript": "Voir la transcription",
     "pendingTranscript": "Ouvrir la transcription",
     "listen": "Écouter",
+    "download": "Télécharger l'audio",
+    "play": "Lecture",
+    "pause": "Pause",
     "audioPending": "Enregistrement en attente"
   },
   "pagination": {
