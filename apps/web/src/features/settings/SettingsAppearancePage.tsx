@@ -29,15 +29,15 @@ function ThemePreviewCard({
 }: ThemeCardProps) {
   const shellClassName =
     mode === "light"
-      ? "bg-[#f3f2ee]"
+      ? "bg-[#f5f5f5]"
       : "bg-[#18181b]";
   const panelClassName =
     mode === "light"
-      ? "bg-white border-border/50"
+      ? "border-[#e5e5e5] bg-white"
       : "border-white/10 bg-[#27272a]";
   const lineClassName =
     mode === "light"
-      ? "bg-slate-300"
+      ? "bg-[#d4d4d4]"
       : "bg-[#71717a]";
 
   return (
