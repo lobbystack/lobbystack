@@ -498,6 +498,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style",
         durationMinutes: 45,
         active: true,
@@ -589,6 +593,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style-fr-contact",
         durationMinutes: 45,
         active: true,
@@ -623,7 +631,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550156",
       from: "+14165550115",
-      body: expect.stringContaining("Rappel : votre rendez-vous pour Cut and Style est prévu"),
+      body: expect.stringContaining("Rappel : votre rendez-vous pour Coupe et coiffage est prévu"),
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -670,6 +678,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style-fr-business",
         durationMinutes: 45,
         active: true,
@@ -704,7 +716,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550157",
       from: "+14165550116",
-      body: expect.stringContaining("Votre rendez-vous pour Cut and Style est confirmé pour"),
+      body: expect.stringContaining("Votre rendez-vous pour Coupe et coiffage est confirmé pour"),
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -748,6 +760,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,
@@ -835,6 +851,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,
@@ -929,6 +949,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,

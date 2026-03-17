@@ -12,6 +12,12 @@ describe("runtime locale detection", () => {
     expect(classifyRuntimeLocale("Bonjour, avez-vous un rendez-vous demain à 16h?")).toBe("fr");
   });
 
+  it("classifies French booking requests without requiring a high confidence threshold", () => {
+    expect(
+      classifyRuntimeLocale("Bonjour, avez-vous de la place pour une consultation initiale le 21?"),
+    ).toBe("fr");
+  });
+
   it("classifies clearly English text as English", () => {
     expect(classifyRuntimeLocale("What time do you close on Friday?")).toBe("en");
   });

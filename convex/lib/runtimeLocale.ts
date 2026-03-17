@@ -46,6 +46,7 @@ const ENGLISH_MARKERS = [
 ];
 
 const FRENCH_MARKERS = [
+  "avez vous",
   "quelle heure",
   "est ce que vous",
   "est-ce que vous",
@@ -60,6 +61,8 @@ const FRENCH_MARKERS = [
   "réponds en français",
   "prendre rendez vous",
   "prendre rendez-vous",
+  "de la place",
+  "consultation initiale",
   "heures d ouverture",
   "heures d'ouverture",
   "annuler mon rendez vous",
@@ -85,8 +88,11 @@ const ENGLISH_TOKENS = new Set([
 ]);
 
 const FRENCH_TOKENS = new Set([
+  "avez",
   "rendez",
   "vous",
+  "place",
+  "initiale",
   "horaire",
   "horaires",
   "ouvert",
@@ -224,11 +230,11 @@ export function classifyRuntimeLocale(text: string): RuntimeLocaleDetection {
   const englishScore = scoreLanguage(tokens, ENGLISH_MARKERS, ENGLISH_TOKENS);
   const frenchScore = scoreLanguage(tokens, FRENCH_MARKERS, FRENCH_TOKENS);
 
-  if (frenchScore >= 3 && frenchScore > englishScore) {
+  if (frenchScore > englishScore && frenchScore > 0) {
     return "fr";
   }
 
-  if (englishScore >= 3 && englishScore > frenchScore) {
+  if (englishScore > frenchScore && englishScore > 0) {
     return "en";
   }
 

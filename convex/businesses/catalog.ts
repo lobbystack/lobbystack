@@ -1,10 +1,17 @@
 import { v } from "convex/values";
-import { internalQuery, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
+import { action, internalMutation, internalQuery, mutation, query, type ActionCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import {
   listStaffServiceAssignmentsForBusiness,
   replaceBusinessStaffServiceAssignments,
 } from "../lib/indexedQueries";
+import { generateMissingLocalizedServiceNames } from "../lib/serviceNameGeneration";
+import {
+  localizedServiceNamesValidator,
+  normalizeLocalizedServiceNames,
+} from "../lib/serviceNames";
 import { scheduleSnapshotRefresh } from "./admin";
 
 export const resolveBusinessByPhoneNumber = internalQuery({
@@ -90,41 +97,124 @@ export const getBusinessConfiguration = query({
   },
 });
 
-export const upsertService = mutation({
+export const assertCatalogWriteAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    authSubject: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
+      .unique();
+    if (!user) {
+      throw new Error("User profile not initialized.");
+    }
+
+    const membership = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_user_id_and_business_id", (q) =>
+        q.eq("userId", user._id).eq("businessId", args.businessId),
+      )
+      .unique();
+    if (!membership) {
+      throw new Error("Membership required.");
+    }
+
+    return { userId: user._id };
+  },
+});
+
+export const upsertServiceInternal = internalMutation({
   args: {
     businessId: v.id("businesses"),
     serviceId: v.optional(v.id("services")),
     name: v.string(),
+    localizedNames: v.optional(localizedServiceNamesValidator),
     slug: v.string(),
     description: v.optional(v.string()),
     durationMinutes: v.number(),
     active: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const localizedNames = normalizeLocalizedServiceNames(args.localizedNames);
 
     if (args.serviceId) {
       await ctx.db.patch(args.serviceId, {
         name: args.name,
+        ...(localizedNames !== undefined ? { localizedNames } : {}),
         slug: args.slug,
         ...(args.description !== undefined ? { description: args.description } : {}),
         durationMinutes: args.durationMinutes,
         active: args.active,
       });
       await scheduleSnapshotRefresh(ctx, args.businessId);
-      return { serviceId: args.serviceId };
+      return {
+        serviceId: args.serviceId,
+        ...(localizedNames !== undefined ? { localizedNames } : {}),
+      };
     }
 
     const serviceId = await ctx.db.insert("services", {
       businessId: args.businessId,
       name: args.name,
+      ...(localizedNames !== undefined ? { localizedNames } : {}),
       slug: args.slug,
       ...(args.description !== undefined ? { description: args.description } : {}),
       durationMinutes: args.durationMinutes,
       active: args.active,
     });
     await scheduleSnapshotRefresh(ctx, args.businessId);
-    return { serviceId };
+    return {
+      serviceId,
+      ...(localizedNames !== undefined ? { localizedNames } : {}),
+    };
+  },
+});
+
+export const upsertService = action({
+  args: {
+    businessId: v.id("businesses"),
+    serviceId: v.optional(v.id("services")),
+    name: v.string(),
+    localizedNames: v.optional(localizedServiceNamesValidator),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    durationMinutes: v.number(),
+    active: v.boolean(),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args,
+  ): Promise<{ serviceId: Id<"services">; localizedNames?: { en?: string; fr?: string } }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required.");
+    }
+
+    await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+    });
+
+    const normalizedLocalizedNames = normalizeLocalizedServiceNames(args.localizedNames);
+    const localizedNames = await generateMissingLocalizedServiceNames({
+      name: args.name,
+      ...(normalizedLocalizedNames !== undefined
+        ? { localizedNames: normalizedLocalizedNames }
+        : {}),
+    });
+
+    return await ctx.runMutation(internal.businesses.catalog.upsertServiceInternal, {
+      businessId: args.businessId,
+      ...(args.serviceId !== undefined ? { serviceId: args.serviceId } : {}),
+      name: args.name,
+      localizedNames,
+      slug: args.slug,
+      ...(args.description !== undefined ? { description: args.description } : {}),
+      durationMinutes: args.durationMinutes,
+      active: args.active,
+    });
   },
 });
 

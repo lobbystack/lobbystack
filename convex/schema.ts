@@ -5,10 +5,12 @@ import {
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
 } from "./lib/runtimeLocale";
+import { localizedServiceNamesValidator } from "./lib/serviceNames";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
   name: v.string(),
+  localizedNames: v.optional(localizedServiceNamesValidator),
   durationMinutes: v.number(),
   description: v.optional(v.string()),
 });
@@ -92,6 +94,7 @@ export default defineSchema({
   services: defineTable({
     businessId: v.id("businesses"),
     name: v.string(),
+    localizedNames: v.optional(localizedServiceNamesValidator),
     slug: v.string(),
     description: v.optional(v.string()),
     durationMinutes: v.number(),

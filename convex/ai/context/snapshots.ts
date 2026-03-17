@@ -230,6 +230,7 @@ export const refreshSnapshot = internalMutation({
         .map((row) => ({
           id: String(row._id),
           name: row.name,
+          ...(row.localizedNames !== undefined ? { localizedNames: row.localizedNames } : {}),
           durationMinutes: row.durationMinutes,
           ...(row.description !== undefined ? { description: row.description } : {}),
         })),
