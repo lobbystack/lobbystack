@@ -9,7 +9,7 @@ type User = {
 type Team = {
   name: string;
   logo: React.ElementType;
-  plan: string;
+  plan?: string;
 };
 
 type BaseNavItem = {

@@ -6,6 +6,7 @@
     "automations": "Automations",
     "agent": "Agent",
     "contacts": "Contacts",
+    "analytics": "Analytics",
     "settings": "Settings"
   },
   "search": {
@@ -14,7 +15,7 @@
   "sidebar": {
     "businessSlugFallback": "Operator console",
     "general": "General",
-    "other": "Other",
+    "other": "Manage",
     "workspace": "Workspace",
     "openSettings": "Open settings",
     "signedIn": "Signed in",

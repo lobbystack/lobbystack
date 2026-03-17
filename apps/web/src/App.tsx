@@ -21,6 +21,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
+import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { AgentPage } from "@/features/agent/AgentPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
@@ -276,6 +277,10 @@ function WorkspaceShell() {
           <Route
             element={<AutomationsPage {...(businessId ? { businessId } : {})} />}
             path="/automations"
+          />
+          <Route
+            element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
+            path="/analytics"
           />
           <Route
             element={<AgentPage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}

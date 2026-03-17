@@ -16,7 +16,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Analytics } from "@/features/home/components/analytics";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -196,7 +195,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
           <div className="min-w-0 flex-1 overflow-x-auto">
             <TabsList>
               <TabsTrigger value="overview">{t("home.tabs.overview")}</TabsTrigger>
-              <TabsTrigger value="analytics">{t("home.tabs.analytics")}</TabsTrigger>
               <TabsTrigger disabled value="reports">
                 {t("home.tabs.reports")}
               </TabsTrigger>
@@ -325,9 +323,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        <TabsContent className="space-y-4" value="analytics">
-          <Analytics businessId={businessId} />
         </TabsContent>
       </Tabs>
     </>

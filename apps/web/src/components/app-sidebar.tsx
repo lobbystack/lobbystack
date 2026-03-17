@@ -2,7 +2,7 @@ import * as React from "react";
 import {
   Bot,
   Building2,
-  Command,
+  ChartColumnIncreasing,
   ContactRound,
   House,
   Link2,
@@ -33,22 +33,21 @@ type AppSidebarProps = {
 
 export function AppSidebar({
   businessName,
-  businessSlug,
   onSignOut,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation(["common", "nav", "settings"]);
+  const operatorEmail = "operator@local";
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
-        name: "AI Receptionist",
-        email: "operator@local",
+        name: businessName,
+        email: operatorEmail,
       },
       teams: [
         {
-          name: businessName,
-          logo: Command,
-          plan: businessSlug ?? t("nav:sidebar.businessSlugFallback"),
+          name: t("common:appName"),
+          logo: Bot,
         },
       ],
       navGroups: [
@@ -58,14 +57,15 @@ export function AppSidebar({
             { title: t("nav:items.home"), url: "/", icon: House },
             { title: t("nav:items.calls"), url: "/calls", icon: Phone },
             { title: t("nav:items.messages"), url: "/messages", icon: MessageSquareMore },
-            { title: t("nav:items.automations"), url: "/automations", icon: Workflow },
-            { title: t("nav:items.agent"), url: "/agent", icon: Bot },
             { title: t("nav:items.contacts"), url: "/contacts", icon: ContactRound },
           ],
         },
         {
           title: t("nav:sidebar.other"),
           items: [
+            { title: t("nav:items.analytics"), url: "/analytics", icon: ChartColumnIncreasing },
+            { title: t("nav:items.automations"), url: "/automations", icon: Workflow },
+            { title: t("nav:items.agent"), url: "/agent", icon: Bot },
             {
               title: t("nav:items.settings"),
               icon: Settings,
@@ -86,7 +86,7 @@ export function AppSidebar({
         },
       ],
     }),
-    [businessName, businessSlug, t],
+    [businessName, operatorEmail, t],
   );
 
   return (
