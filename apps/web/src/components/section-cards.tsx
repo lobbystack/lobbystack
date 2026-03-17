@@ -85,7 +85,7 @@ export function SectionCards({
             </CardHeader>
             <CardFooter className="flex-col items-start gap-2 text-sm text-muted-foreground">
               <div>{item.footer}</div>
-              <div className="text-xs font-medium tracking-[0.24em] uppercase">
+              <div className="text-xs font-medium">
                 {t("dashboard:cards.snapshot", { version: snapshotVersion })}
               </div>
             </CardFooter>

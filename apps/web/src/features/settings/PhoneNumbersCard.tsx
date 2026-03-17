@@ -147,7 +147,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
       <CardContent className="space-y-6">
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <span className="text-xs font-medium text-muted-foreground">
               {t("settings:phoneRouting.managedNumber")}
             </span>
             <Select
@@ -169,7 +169,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
           </label>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.e164Number")}
               </span>
               <div className="relative">
@@ -183,7 +183,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
               </div>
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.twilioPhoneSid")}
               </span>
               <Input
@@ -195,7 +195,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.status")}
               </span>
               <Select onValueChange={(value) => setStatus(value ?? "active")} value={status}>
@@ -238,7 +238,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
         </form>
 
         <div className="space-y-3">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+          <p className="text-xs font-medium text-muted-foreground">
             {t("settings:phoneRouting.currentMappings")}
           </p>
           {phoneNumbers.length > 0 ? (

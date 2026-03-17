@@ -113,7 +113,7 @@ export function ServicesCard(props: ServicesCardProps) {
         <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.serviceName")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.serviceName")}</span>
               <Input
                 placeholder={t("services.placeholders.serviceName")}
                 value={name}
@@ -121,7 +121,7 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.slug")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.slug")}</span>
               <Input
                 value={slug}
                 onChange={(event) => setSlug(event.target.value)}
@@ -130,7 +130,7 @@ export function ServicesCard(props: ServicesCardProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.englishLabel")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.englishLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.englishLabel")}
                 value={englishLabel}
@@ -138,7 +138,7 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.frenchLabel")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.frenchLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.frenchLabel")}
                 value={frenchLabel}
@@ -148,7 +148,7 @@ export function ServicesCard(props: ServicesCardProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.durationMinutes")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.durationMinutes")}</span>
               <Input
                 min="5"
                 step="5"
@@ -158,7 +158,7 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("services.descriptionLabel")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("services.descriptionLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.description")}
                 value={description}

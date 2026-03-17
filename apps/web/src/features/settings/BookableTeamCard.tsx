@@ -193,7 +193,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
       <CardContent className="space-y-6">
         <form className="space-y-5" onSubmit={(event) => void handleStaffSubmit(event)}>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <span className="text-xs font-medium text-muted-foreground">
               {t("settings:team.member")}
             </span>
             <Select
@@ -216,7 +216,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.name")}
               </span>
               <Input
@@ -226,7 +226,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.timezone")}
               </span>
               <Input
@@ -239,7 +239,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.transferNumber")}
               </span>
               <Input
@@ -273,7 +273,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <p className="text-xs font-medium text-muted-foreground">
               {t("settings:team.serviceAssignments")}
             </p>
             <p className="text-sm text-muted-foreground">

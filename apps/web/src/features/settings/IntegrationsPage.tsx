@@ -262,7 +262,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           <CardContent className="space-y-5">
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
               <label className="space-y-2">
-                <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                <span className="text-xs font-medium text-muted-foreground">
                   {t("integrations.google.staffLabel")}
                 </span>
                 <Select
@@ -324,7 +324,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.connectedAccount")}
                     </p>
                     <p className="text-sm text-foreground">
@@ -333,7 +333,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.selectedCalendar")}
                     </p>
                     <p className="text-sm text-foreground">
@@ -343,7 +343,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.lastSync")}
                     </p>
                     <p className="text-sm text-foreground">
@@ -352,7 +352,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.lastSyncState")}
                     </p>
                     <p className="text-sm text-foreground">
@@ -364,7 +364,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                 <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
                   <label className="space-y-2">
-                    <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <span className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.calendarLabel")}
                     </span>
                     <Select
@@ -454,7 +454,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
             <div className="space-y-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t("integrations.google.mappedConnections")}
                 </p>
                 <p className="text-sm text-muted-foreground">

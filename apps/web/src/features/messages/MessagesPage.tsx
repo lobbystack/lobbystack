@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import {
   ArrowLeft,
+  ChevronRight,
   Edit,
   MessagesSquare,
   MoreVertical,
@@ -122,6 +123,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [mobileSelectedConversationId, setMobileSelectedConversationId] = useState<
     Id<"conversations"> | undefined
   >();
+  const [isOutcomeOpen, setIsOutcomeOpen] = useState(true);
   const [searchValue, setSearchValue] = useState("");
 
   const thread = useQuery(
@@ -153,6 +155,12 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       setMobileSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
     }
   }, [filteredConversations, selectedConversationId]);
+
+  useEffect(() => {
+    if (selectedConversationId) {
+      setIsOutcomeOpen(true);
+    }
+  }, [selectedConversationId]);
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -298,13 +306,29 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               <div className="flex min-h-0 flex-1">
                 <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
-                    <div className="self-stretch border-t border-border/60 pt-4">
-                      <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                        {t("outcome.label")}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {formatMessageOutcomeSummary(thread.outcome, i18n.language, t)}
-                      </p>
+                    <div className="self-stretch pt-2">
+                      <button
+                        className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
+                        onClick={() => setIsOutcomeOpen((current) => !current)}
+                        type="button"
+                      >
+                        <span className="h-px w-64 bg-border/60 md:w-96" />
+                        <span className="inline-flex items-center justify-center gap-1.5 text-sm font-medium">
+                          {t("outcome.label")}
+                          <ChevronRight
+                            className={cn(
+                              "size-3.5 transition-transform duration-200",
+                              isOutcomeOpen && "rotate-90",
+                            )}
+                          />
+                        </span>
+                        <span className="h-px w-64 bg-border/60 md:w-96" />
+                      </button>
+                      {isOutcomeOpen ? (
+                        <p className="mt-3 text-center text-sm leading-6 text-muted-foreground">
+                          {formatMessageOutcomeSummary(thread.outcome, i18n.language, t)}
+                        </p>
+                      ) : null}
                     </div>
                     {[...thread.messages].reverse().map((message) => (
                       <div

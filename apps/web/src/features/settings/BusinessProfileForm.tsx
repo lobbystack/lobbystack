@@ -90,14 +90,14 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.greeting")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("profile.greeting")}</span>
               <Input
                 value={greeting}
                 onChange={(event) => setGreeting(event.target.value)}
               />
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.tone")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("profile.tone")}</span>
               <Input
                 value={tone}
                 onChange={(event) => setTone(event.target.value)}
@@ -105,7 +105,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             </label>
           </div>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.defaultCustomerLanguage")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.defaultCustomerLanguage")}</span>
             <Select value={defaultLocale} onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}>
               <SelectTrigger>
                 <SelectValue placeholder={t("profile.selectDefaultLanguage")} />
@@ -117,7 +117,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             </Select>
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.businessSummary")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.businessSummary")}</span>
             <Textarea
               rows={3}
               value={summary}
@@ -125,7 +125,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             />
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.bookingPolicy")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.bookingPolicy")}</span>
             <Textarea
               rows={3}
               value={bookingPolicy}
@@ -134,7 +134,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
           </label>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.transferMode")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("profile.transferMode")}</span>
               <Select value={transferMode} onValueChange={(value) => setTransferMode(value ?? "on_request")}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("profile.selectTransferMode")} />
@@ -149,7 +149,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               </Select>
             </label>
             <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.transferNumber")}</span>
+              <span className="text-xs font-medium text-muted-foreground">{t("profile.transferNumber")}</span>
               <div className="relative">
                 <Phone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -162,7 +162,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             </label>
           </div>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.voiceInstructions")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.voiceInstructions")}</span>
             <Textarea
               rows={4}
               value={voiceInstructions}
@@ -170,7 +170,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
             />
           </label>
           <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">{t("profile.smsInstructions")}</span>
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.smsInstructions")}</span>
             <Textarea
               rows={4}
               value={smsInstructions}

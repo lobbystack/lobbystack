@@ -70,7 +70,7 @@ export function BusinessSetupCard() {
         <form className="flex flex-col gap-5" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("setup.businessName")}
               </span>
               <Input
@@ -80,7 +80,7 @@ export function BusinessSetupCard() {
               />
             </label>
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("setup.slug")}
               </span>
               <Input
@@ -92,13 +92,13 @@ export function BusinessSetupCard() {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("setup.timezone")}
               </span>
               <Input onChange={(event) => setTimezone(event.target.value)} value={timezone} />
             </label>
             <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("setup.businessType")}
               </span>
               <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
