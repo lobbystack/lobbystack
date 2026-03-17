@@ -167,10 +167,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 gap-6">
-      <div className="flex min-h-0 w-full flex-col gap-4 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-4 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between py-3">
+    <section className="flex h-full gap-6">
+      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <MessagesSquare className="size-5" />
@@ -197,7 +197,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           </label>
         </div>
 
-        <div className="-mx-3 no-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {filteredConversations.map((conversation: ConversationSummary) => {
             const isActive = conversation.id === selectedConversationId;
             const lastPreview =
@@ -253,13 +253,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden min-h-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
         {thread ? (
           <>
-            <div className="mb-4 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
+            <div className="mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
               <div className="flex gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
@@ -309,10 +309,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col rounded-md px-4 pb-4">
-              <div className="flex min-h-0 flex-1">
-                <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
-                  <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
+            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+              <div className="flex size-full flex-1">
+                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
+                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
                     <div className="self-stretch pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"

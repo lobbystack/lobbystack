@@ -217,10 +217,10 @@ export function CallsPage({ businessId }: CallsPageProps) {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 gap-6">
-      <div className="flex min-h-0 w-full flex-col gap-4 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-4 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center gap-2 py-3">
+    <section className="flex h-full gap-6">
+      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <div className="flex items-center gap-2 py-2">
             <h1 className="text-2xl font-bold">{t("page.title")}</h1>
             <Phone className="size-5" />
           </div>
@@ -242,7 +242,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </label>
         </div>
 
-        <div className="-mx-3 no-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {filteredRows.map((call) => {
             const isActive = call._id === selectedCallId;
             const preview =
@@ -298,7 +298,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden min-h-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedCallId && "start-0 flex",
         )}
       >
@@ -355,10 +355,10 @@ export function CallsPage({ businessId }: CallsPageProps) {
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col rounded-md px-4 pb-4">
-              <div className="flex min-h-0 flex-1">
-                <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
-                  <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
+            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+              <div className="flex size-full flex-1">
+                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
+                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
                     <div className="self-stretch pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
