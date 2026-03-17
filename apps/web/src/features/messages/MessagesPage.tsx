@@ -167,8 +167,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   return (
-    <section className="flex h-full gap-6">
-      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
+    <section className="flex min-w-0 h-full gap-6">
+      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
@@ -253,14 +253,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden min-w-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
         {thread ? (
           <>
-            <div className="mb-1 flex flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
-              <div className="flex gap-3">
+            <div className="mb-1 flex min-w-0 flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
+              <div className="flex min-w-0 gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
                   onClick={() => setMobileSelectedConversationId(undefined)}
@@ -269,7 +269,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 >
                   <ArrowLeft className="rtl:rotate-180" />
                 </Button>
-                <div className="flex items-center gap-2 lg:gap-4">
+                <div className="flex min-w-0 items-center gap-2 lg:gap-4">
                   <Avatar className="size-9 lg:size-11">
                     <AvatarFallback>
                       {initials(
@@ -278,7 +278,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       )}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="min-w-0">
                     <span className="col-start-2 row-span-2 text-sm font-semibold lg:text-base">
                       {thread.contact?.name ??
                         thread.contact?.phone ??
@@ -310,9 +310,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               </div>
             </div>
             <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
-              <div className="flex size-full flex-1">
-                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
-                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+              <div className="flex min-w-0 size-full flex-1">
+                <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
+                  <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
                     <div className="self-stretch pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"

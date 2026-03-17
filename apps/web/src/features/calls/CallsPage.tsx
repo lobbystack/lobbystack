@@ -217,8 +217,8 @@ export function CallsPage({ businessId }: CallsPageProps) {
   }
 
   return (
-    <section className="flex h-full gap-6">
-      <div className="flex w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
+    <section className="flex min-w-0 h-full gap-6">
+      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
           <div className="flex items-center gap-2 py-2">
             <h1 className="text-2xl font-bold">{t("page.title")}</h1>
@@ -298,14 +298,14 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden min-w-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedCallId && "start-0 flex",
         )}
       >
         {selectedCall ? (
           <>
-            <div className="mb-4 flex flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
-              <div className="flex gap-3">
+            <div className="mb-4 flex min-w-0 flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
+              <div className="flex min-w-0 gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
                   onClick={() => setMobileSelectedCallId(undefined)}
@@ -314,13 +314,13 @@ export function CallsPage({ businessId }: CallsPageProps) {
                 >
                   <ArrowLeft className="rtl:rotate-180" />
                 </Button>
-                <div className="flex items-center gap-2 lg:gap-4">
+                <div className="flex min-w-0 items-center gap-2 lg:gap-4">
                   <Avatar className="size-9 lg:size-11">
                     <AvatarFallback>
                       {initials(selectedCall.contactName, selectedCall.contactPhone ?? t("page.unknownShort"))}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
+                  <div className="min-w-0">
                     <span className="block text-sm font-semibold lg:text-base">
                       {selectedCall.contactName ??
                         selectedCall.contactPhone ??
@@ -336,7 +336,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                   </div>
                 </div>
               </div>
-              <div className="w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
+              <div className="min-w-0 w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
                 {selectedCall.recordingUrl ? (
                   <CallRecordingPlayer
                     downloadLabel={t("actions.download")}
@@ -356,9 +356,9 @@ export function CallsPage({ businessId }: CallsPageProps) {
             </div>
 
             <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
-              <div className="flex size-full flex-1">
-                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
-                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+              <div className="flex min-w-0 size-full flex-1">
+                <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
+                  <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
                     <div className="self-stretch pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
