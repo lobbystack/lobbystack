@@ -4,8 +4,8 @@
     "description": "Configurez la réceptionniste, les heures, les services et la politique de transfert."
   },
   "layout": {
-    "title": "Réglages",
-    "description": "Configurez les opérations métier et les intégrations avec la mise en page shadcn-admin."
+    "businessDescription": "Configurez la réceptionniste, les heures, les services et la politique de transfert.",
+    "integrationsDescription": "Connectez les calendriers et gardez les réservations ainsi que la vue opérateur synchronisées."
   },
   "sections": {
     "business": "Configuration",
@@ -14,12 +14,12 @@
   },
   "appearance": {
     "title": "Apparence",
-    "description": "Personnalisez l'apparence du tableau de bord et la façon dont l'heure est affichée pour les opérateurs.",
+    "description": "Personnalisez l'apparence du tableau de bord.",
     "save": "Mettre à jour les préférences",
     "saved": "Préférences d'apparence mises à jour.",
     "timeFormat": {
       "label": "Format de l'heure",
-      "description": "Choisissez si les horodatages opérateur utilisent le format 24 h ou AM/PM.",
+      "description": "Choisissez entre le format 24 h et le format AM/PM pour le tableau de bord.",
       "twentyFourHour": "Format 24 h",
       "ampm": "Format AM/PM"
     },

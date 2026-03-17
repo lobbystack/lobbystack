@@ -4,8 +4,8 @@
     "description": "Configure the receptionist, hours, services, and transfer policy."
   },
   "layout": {
-    "title": "Settings",
-    "description": "Configure business operations and integrations with the shadcn-admin settings layout."
+    "businessDescription": "Configure the receptionist, hours, services, and transfer policy.",
+    "integrationsDescription": "Connect calendars and keep bookings and operator views aligned."
   },
   "sections": {
     "business": "Business Setup",
@@ -14,12 +14,12 @@
   },
   "appearance": {
     "title": "Appearance",
-    "description": "Customize how the dashboard looks and how time is displayed for operators.",
+    "description": "Customize the appearance of the dashboard.",
     "save": "Update preferences",
     "saved": "Appearance preferences updated.",
     "timeFormat": {
       "label": "Time format",
-      "description": "Choose whether operator-facing timestamps use 24-hour time or AM/PM.",
+      "description": "Choose between 24-hour time or AM/PM for the dashboard.",
       "twentyFourHour": "24-hour format",
       "ampm": "AM/PM format"
     },
