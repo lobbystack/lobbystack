@@ -18,7 +18,7 @@ import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { formatDateTime } from "@/lib/locale";
+import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type MessagesPageProps = {
@@ -225,12 +225,19 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <span className="col-start-2 row-span-2 font-semibold">
-                        {conversation.contactName ??
-                          conversation.contactPhone ??
-                          t("page.unknownCaller")}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 flex-1 truncate font-semibold">
+                          {conversation.contactName ??
+                            conversation.contactPhone ??
+                            t("page.unknownCaller")}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                          {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                            yesterday: t("page.yesterday"),
+                          })}
+                        </span>
+                      </div>
                       <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
                         {lastPreview}
                       </span>

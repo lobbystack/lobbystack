@@ -11,7 +11,7 @@ import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { formatDateTime } from "@/lib/locale";
+import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type CallsPageProps = {
@@ -270,12 +270,19 @@ export function CallsPage({ businessId }: CallsPageProps) {
                         {initials(call.contactName, call.contactPhone ?? t("page.unknownShort"))}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
-                      <span className="block font-semibold">
-                        {call.contactName ??
-                          call.contactPhone ??
-                          t("table.unknownCaller")}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="block min-w-0 flex-1 truncate font-semibold">
+                          {call.contactName ??
+                            call.contactPhone ??
+                            t("table.unknownCaller")}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                          {formatInboxTimestamp(call.startedAt, i18n.language, {
+                            yesterday: t("page.yesterday"),
+                          })}
+                        </span>
+                      </div>
                       <span className="line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
                         {preview}
                       </span>

@@ -87,3 +87,36 @@ export function getWeekdayLabels(locale: string): Array<string> {
     return formatter.format(date);
   });
 }
+
+function startOfLocalDay(value: Date): number {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
+
+export function formatInboxTimestamp(
+  value: string | number | Date,
+  locale: string,
+  labels: {
+    yesterday: string;
+  },
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const now = new Date();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const dayDiff = Math.round((startOfLocalDay(now) - startOfLocalDay(date)) / oneDayMs);
+
+  if (dayDiff <= 0) {
+    return new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(date);
+  }
+
+  if (dayDiff === 1) {
+    return labels.yesterday;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+  }).format(date);
+}

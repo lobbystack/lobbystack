@@ -4,6 +4,7 @@
     "description": "Review recent calls, browse transcripts, and listen to recorded audio.",
     "emptyPreview": "No transcript yet.",
     "selectCall": "Select a call to review the transcript.",
+    "yesterday": "Yesterday",
     "unknownShort": "UK"
   },
   "filters": {

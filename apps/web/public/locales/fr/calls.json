@@ -4,6 +4,7 @@
     "description": "Consultez les appels récents, les transcriptions et l'audio enregistré.",
     "emptyPreview": "Pas encore de transcription.",
     "selectCall": "Sélectionnez un appel pour afficher la transcription.",
+    "yesterday": "Hier",
     "unknownShort": "IN"
   },
   "filters": {
