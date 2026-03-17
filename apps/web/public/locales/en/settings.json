@@ -9,7 +9,28 @@
   },
   "sections": {
     "business": "Business Setup",
+    "appearance": "Appearance",
     "integrations": "Integrations"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "description": "Customize how the dashboard looks and how time is displayed for operators.",
+    "save": "Update preferences",
+    "saved": "Appearance preferences updated.",
+    "timeFormat": {
+      "label": "Time format",
+      "description": "Choose whether operator-facing timestamps use 24-hour time or AM/PM.",
+      "twentyFourHour": "24-hour format",
+      "ampm": "AM/PM format"
+    },
+    "theme": {
+      "label": "Theme",
+      "description": "Select the visual theme for the dashboard.",
+      "light": "Light",
+      "lightDescription": "Bright surfaces with soft contrast for daytime work.",
+      "dark": "Dark",
+      "darkDescription": "Dimmed surfaces that keep late sessions easier on the eyes."
+    }
   },
   "integrations": {
     "providers": {

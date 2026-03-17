@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
@@ -54,6 +55,7 @@ export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
           <Button
             aria-label="Open theme settings"
             className="rounded-full"
+            render={<Link to="/settings/appearance" />}
             size="icon"
             variant="ghost"
           >

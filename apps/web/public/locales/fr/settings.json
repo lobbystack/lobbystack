@@ -9,7 +9,28 @@
   },
   "sections": {
     "business": "Configuration",
+    "appearance": "Apparence",
     "integrations": "Intégrations"
+  },
+  "appearance": {
+    "title": "Apparence",
+    "description": "Personnalisez l'apparence du tableau de bord et la façon dont l'heure est affichée pour les opérateurs.",
+    "save": "Mettre à jour les préférences",
+    "saved": "Préférences d'apparence mises à jour.",
+    "timeFormat": {
+      "label": "Format de l'heure",
+      "description": "Choisissez si les horodatages opérateur utilisent le format 24 h ou AM/PM.",
+      "twentyFourHour": "Format 24 h",
+      "ampm": "Format AM/PM"
+    },
+    "theme": {
+      "label": "Thème",
+      "description": "Choisissez le thème visuel du tableau de bord.",
+      "light": "Clair",
+      "lightDescription": "Des surfaces lumineuses au contraste doux pour le travail de jour.",
+      "dark": "Sombre",
+      "darkDescription": "Des surfaces tamisées plus confortables pour les sessions tardives."
+    }
   },
   "integrations": {
     "providers": {

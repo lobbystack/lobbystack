@@ -28,6 +28,7 @@ import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
 import { MessagesPage } from "@/features/messages/MessagesPage";
 import { SettingsLayout } from "@/features/settings/SettingsLayout";
+import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 
@@ -300,6 +301,16 @@ function WorkspaceShell() {
                 )
               }
               index
+            />
+            <Route
+              element={
+                businessId ? (
+                  <SettingsAppearancePage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/settings" />
+                )
+              }
+              path="appearance"
             />
             <Route
               element={

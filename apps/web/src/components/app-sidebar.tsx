@@ -9,6 +9,7 @@ import {
   MessageSquareMore,
   Phone,
   Settings,
+  Sun,
   Workflow,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -74,6 +75,11 @@ export function AppSidebar({
                   title: t("settings:sections.business"),
                   url: "/settings",
                   icon: Building2,
+                },
+                {
+                  title: t("settings:sections.appearance"),
+                  url: "/settings/appearance",
+                  icon: Sun,
                 },
                 {
                   title: t("settings:sections.integrations"),
