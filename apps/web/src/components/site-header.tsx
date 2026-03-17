@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
-import { Settings2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { buttonVariants } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean;
-  onSignOut: () => void;
   className?: string;
   links?: Array<{
     title: string;
@@ -25,11 +16,9 @@ type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
 export function SiteHeader({
   className,
   fixed,
-  onSignOut,
   links = [],
   ...props
 }: SiteHeaderProps) {
-  const { t } = useTranslation("nav");
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -44,7 +33,7 @@ export function SiteHeader({
   return (
     <header
       className={cn(
-        "z-50 h-16",
+        "z-50 h-16 md:hidden",
         fixed && "header-fixed peer/header sticky top-0 w-[inherit]",
         offset > 10 && fixed ? "shadow" : "shadow-none",
         className,
@@ -60,21 +49,6 @@ export function SiteHeader({
         )}
       >
         <SidebarTrigger className="max-md:scale-125 md:hidden" variant="outline" />
-        <Separator className="h-6 md:hidden" orientation="vertical" />
-        <Search className="max-w-md" placeholder={t("search.placeholder")} />
-        <div className="ms-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <Link
-            aria-label="Open theme settings"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon", className: "rounded-full" }),
-            )}
-            to="/settings/appearance"
-          >
-            <Settings2 className="size-4" />
-          </Link>
-          <ProfileDropdown onSignOut={onSignOut} />
-        </div>
       </div>
     </header>
   );

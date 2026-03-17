@@ -5,6 +5,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -211,6 +212,7 @@ function PublicOnly(props: { children: ReactNode }) {
 
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
+  const location = useLocation();
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
@@ -258,13 +260,16 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
+  const usesFixedMain =
+    location.pathname === "/messages" || location.pathname === "/calls";
+
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
       {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       onSignOut={() => void signOut()}
     >
-      <Main className="flex flex-1 flex-col" fixed>
+      <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         <Routes>
           <Route
             element={<HomePage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}

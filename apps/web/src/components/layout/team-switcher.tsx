@@ -2,6 +2,7 @@ import * as React from "react";
 import { Plus } from "lucide-react";
 import {
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { Team } from "@/components/layout/sidebar-types";
@@ -23,7 +24,10 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent/40 px-3 py-3 text-sidebar-foreground">
+        <SidebarMenuButton
+          size="lg"
+          className="rounded-xl bg-sidebar-accent/40 text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+        >
           <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <activeBusiness.logo className="size-4" />
           </div>
@@ -33,7 +37,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
               <span className="truncate text-xs">{activeBusiness.plan}</span>
             ) : null}
           </div>
-        </div>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   );
