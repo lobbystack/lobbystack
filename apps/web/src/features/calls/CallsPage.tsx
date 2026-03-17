@@ -225,7 +225,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                   </div>
                 </div>
               </div>
-              <div className="w-full xl:max-w-xl">
+              <div className="w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
                 {selectedCall.recordingUrl ? (
                   <CallRecordingPlayer
                     downloadLabel={t("actions.download")}

@@ -42,6 +42,7 @@ export function CallRecordingPlayer({
   const [duration, setDuration] = useState(0);
   const [bufferedTime, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const audio = new Audio(src);
@@ -119,6 +120,41 @@ export function CallRecordingPlayer({
     audio.pause();
   }
 
+  async function downloadAudio() {
+    if (isDownloading) {
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      const response = await fetch(src);
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const extension = blob.type.includes("mpeg")
+        ? "mp3"
+        : blob.type.includes("wav")
+          ? "wav"
+          : blob.type.includes("ogg")
+            ? "ogg"
+            : "audio";
+
+      link.href = objectUrl;
+      link.download = `call-recording.${extension}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   const progress = useMemo(() => {
     if (duration <= 0) {
       return 0;
@@ -136,18 +172,18 @@ export function CallRecordingPlayer({
   return (
     <div
       className={cn(
-        "w-full rounded-xl border border-border/80 bg-background/95 p-2 shadow-xs",
+        "w-full px-2 py-2",
         className,
       )}
     >
       <div className="flex min-w-0 items-center gap-2">
         <Button
           aria-label={isPlaying ? pauseLabel : playLabel}
-          className="size-10 rounded-lg"
+          className="size-8 rounded-md"
           onClick={() => void togglePlayback()}
-          size="icon"
+          size="icon-sm"
           title={isPlaying ? pauseLabel : playLabel}
-          variant="secondary"
+          variant="ghost"
         >
           {isPlaying ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
         </Button>
@@ -175,17 +211,18 @@ export function CallRecordingPlayer({
           value={[progress]}
         />
 
-        <time className="min-w-12 px-1 text-right font-mono text-sm tabular-nums text-muted-foreground">
+        <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">
           {formatDuration(duration > 0 ? duration - currentTime : 0)}
         </time>
 
         <Button
           aria-label={downloadLabel}
-          className="size-10 rounded-lg"
-          render={<a download href={src} rel="noreferrer" target="_blank" />}
-          size="icon"
+          className="size-8 rounded-md"
+          disabled={isDownloading}
+          onClick={() => void downloadAudio()}
+          size="icon-sm"
           title={downloadLabel}
-          variant="outline"
+          variant="ghost"
         >
           <Download />
         </Button>
