@@ -115,8 +115,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   return (
-    <section className="flex h-[calc(100svh-9rem)] gap-6">
-      <div className="flex w-full flex-col gap-4 sm:w-56 lg:w-72 2xl:w-80">
+    <section className="flex min-h-0 flex-1 gap-6">
+      <div className="flex min-h-0 w-full flex-col gap-4 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-4 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
           <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           </label>
         </div>
 
-        <div className="-mx-3 no-scrollbar flex-1 overflow-y-auto p-3">
+        <div className="-mx-3 no-scrollbar min-h-0 flex-1 overflow-y-auto p-3">
           {filteredConversations.map((conversation: ConversationSummary) => {
             const isActive = conversation.id === selectedConversationId;
             const lastPreview =
@@ -194,7 +194,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden min-h-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
@@ -257,10 +257,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </Button>
               </div>
             </div>
-            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
-              <div className="flex size-full flex-1">
-                <div className="relative -me-4 flex flex-1 flex-col overflow-y-hidden">
-                  <div className="flex h-40 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-md px-4 pb-4">
+              <div className="flex min-h-0 flex-1">
+                <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
+                  <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
                     {[...thread.messages].reverse().map((message) => (
                       <div
                         className={cn(
