@@ -801,6 +801,7 @@ export const listRecentCalls = query({
           ctx.db
             .query("transcripts")
             .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+            .order("desc")
             .take(1),
         ]);
         const contact = conversation?.contactId
@@ -813,6 +814,7 @@ export const listRecentCalls = query({
             ? await ctx.storage.getUrl(call.recordingStorageId)
             : null,
           transcriptReady: transcriptPreview.length > 0,
+          transcriptPreview: transcriptPreview[0]?.text ?? null,
           contactName: contact?.name ?? null,
           contactPhone: contact?.phone ?? null,
         };

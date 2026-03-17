@@ -7,7 +7,6 @@ import {
   MoreVertical,
   Phone,
   Search as SearchIcon,
-  Video,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -228,13 +227,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <div className="-me-1 flex items-center gap-1 lg:gap-2">
-                <Button
-                  className="hidden size-8 rounded-full sm:inline-flex lg:size-10"
-                  size="icon"
-                  variant="ghost"
-                >
-                  <Video className="stroke-muted-foreground" size={22} />
-                </Button>
                 <Button
                   className="hidden size-8 rounded-full sm:inline-flex lg:size-10"
                   size="icon"

@@ -1,7 +1,10 @@
 {
   "page": {
     "title": "Calls",
-    "description": "Review the task-style call table, then open transcripts or listen to recorded audio."
+    "description": "Review recent calls, browse transcripts, and listen to recorded audio.",
+    "emptyPreview": "No transcript yet.",
+    "selectCall": "Select a call to review the transcript.",
+    "unknownShort": "UK"
   },
   "filters": {
     "searchPlaceholder": "Search calls...",

@@ -1,7 +1,10 @@
 {
   "page": {
     "title": "Appels",
-    "description": "Consultez le tableau des appels, puis ouvrez les transcriptions ou écoutez l'audio."
+    "description": "Consultez les appels récents, les transcriptions et l'audio enregistré.",
+    "emptyPreview": "Pas encore de transcription.",
+    "selectCall": "Sélectionnez un appel pour afficher la transcription.",
+    "unknownShort": "IN"
   },
   "filters": {
     "searchPlaceholder": "Rechercher des appels...",
