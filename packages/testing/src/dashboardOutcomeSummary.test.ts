@@ -1,0 +1,215 @@
+import { convexTest } from "convex-test";
+import { describe, expect, it } from "vitest";
+
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
+import schema from "../../../convex/schema";
+
+declare global {
+  interface ImportMeta {
+    glob(pattern: string): Record<string, () => Promise<unknown>>;
+  }
+}
+
+const convexModules = import.meta.glob("../../../convex/**/*.ts");
+
+async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: string) {
+  const { businessId } = await t.run(async (ctx) => {
+    const businessId = await ctx.db.insert("businesses", {
+      slug: `dashboard-outcome-${subject}`,
+      name: "Dashboard Outcome Business",
+      timezone: "America/Toronto",
+      businessType: "clinic",
+      defaultLocale: "en",
+      deploymentMode: "manual",
+      status: "active",
+    });
+    const userId = await ctx.db.insert("users", {
+      authSubject: subject,
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId,
+      role: "business_owner",
+      status: "active",
+    });
+
+    return { businessId };
+  });
+
+  return { businessId, authed: t.withIdentity({ subject }) };
+}
+
+async function insertContactConversation(ctx: Parameters<Parameters<ReturnType<typeof convexTest>["run"]>[0]>[0], businessId: Id<"businesses">) {
+  const contactId = await ctx.db.insert("contacts", {
+    businessId,
+    phone: "+14165550199",
+    name: "Taylor Customer",
+  });
+  const conversationId = await ctx.db.insert("conversations", {
+    businessId,
+    contactId,
+    channel: "sms",
+    status: "open",
+    summary: `Business ${String(businessId)} conversation`,
+  });
+  return { contactId, conversationId };
+}
+
+describe("Dashboard outcome summaries", () => {
+  it("returns a booked outcome for SMS threads with a confirmed booking", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-booked");
+
+    const { conversationId, serviceId, startsAt } = await t.run(async (ctx) => {
+      const { conversationId } = await insertContactConversation(ctx, businessId);
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      const startsAt = "2026-03-21T17:45:00.000Z";
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        lastConfirmedServiceId: serviceId,
+        lastConfirmedStartsAt: startsAt,
+        updatedAt: new Date().toISOString(),
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "Bonjour, avez-vous de la place?",
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return { conversationId, serviceId, startsAt };
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    expect(thread.outcome).toEqual({
+      kind: "booked",
+      serviceName: "Initial Consultation",
+      startsAt,
+    });
+  });
+
+  it("returns an in-progress outcome for SMS threads with an active booking flow", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-in-progress");
+
+    const { conversationId, startsAt } = await t.run(async (ctx) => {
+      const { conversationId } = await insertContactConversation(ctx, businessId);
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Support Consultation",
+        slug: "support-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      const startsAt = "2026-03-22T18:30:00.000Z";
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booking_in_progress",
+        selectedServiceId: serviceId,
+        pendingStartsAt: startsAt,
+        updatedAt: new Date().toISOString(),
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "I have Support Consultation available at 2:30 PM. Does that work for you?",
+        status: "queued",
+        aiGenerated: true,
+      });
+
+      return { conversationId, startsAt };
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    expect(thread.outcome).toEqual({
+      kind: "booking_in_progress",
+      serviceName: "Support Consultation",
+      startsAt,
+    });
+  });
+
+  it("returns a message-taking outcome for calls linked to a captured voice message", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-message-taking");
+
+    await t.run(async (ctx) => {
+      const { conversationId } = await insertContactConversation(ctx, businessId);
+      await ctx.db.patch(conversationId, {
+        currentIntent: "message_taking",
+        summary: "Callback: +14165550199\n\nPlease call me back tomorrow morning.",
+      });
+      const callId = await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-message-taking",
+        status: "completed",
+        startedAt: "2026-03-18T14:00:00.000Z",
+      });
+      await ctx.db.insert("transcripts", {
+        businessId,
+        callId,
+        sequence: 1,
+        speaker: "caller",
+        text: "Please call me back tomorrow morning.",
+        final: true,
+      });
+    });
+
+    const calls = await authed.query(api.voice.runtime.listRecentCalls, {
+      businessId,
+      limit: 10,
+    });
+
+    expect(calls[0]?.outcome).toEqual({
+      kind: "message_taking",
+    });
+  });
+
+  it("falls back to call disposition when no conversation outcome is available", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-disposition");
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-transfer-busy",
+        status: "completed",
+        disposition: "transfer_busy",
+        startedAt: "2026-03-18T15:00:00.000Z",
+      });
+    });
+
+    const calls = await authed.query(api.voice.runtime.listRecentCalls, {
+      businessId,
+      limit: 10,
+    });
+
+    expect(calls[0]?.outcome).toEqual({
+      kind: "disposition",
+      disposition: "transfer_busy",
+    });
+  });
+});

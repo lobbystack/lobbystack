@@ -9,5 +9,15 @@
     "noChannel": "No contact channel saved.",
     "composerPlaceholder": "Type your message...",
     "send": "Send"
+  },
+  "outcome": {
+    "label": "Outcome",
+    "booked": "Customer booked {{serviceName}} for {{startsAt}}.",
+    "scheduling": "Customer started scheduling, but no appointment was confirmed yet.",
+    "schedulingWithService": "Customer is scheduling {{serviceName}}, but no appointment was confirmed yet.",
+    "schedulingWithServiceAndTime": "Customer is scheduling {{serviceName}} for {{startsAt}}, but the booking is still in progress.",
+    "none": "Customer asked questions, but no final booking outcome was captured yet.",
+    "genericService": "an appointment",
+    "unspecifiedTime": "an unspecified time"
   }
 }

@@ -9,5 +9,15 @@
     "noChannel": "Aucun canal de contact enregistré.",
     "composerPlaceholder": "Tapez votre message...",
     "send": "Envoyer"
+  },
+  "outcome": {
+    "label": "Résultat",
+    "booked": "Le client a réservé {{serviceName}} pour le {{startsAt}}.",
+    "scheduling": "Le client a commencé la prise de rendez-vous, mais aucun rendez-vous n'a encore été confirmé.",
+    "schedulingWithService": "Le client est en train de planifier {{serviceName}}, mais aucun rendez-vous n'a encore été confirmé.",
+    "schedulingWithServiceAndTime": "Le client est en train de planifier {{serviceName}} pour le {{startsAt}}, mais la réservation est encore en cours.",
+    "none": "Le client a posé des questions, mais aucun résultat final n'a encore été capturé.",
+    "genericService": "un rendez-vous",
+    "unspecifiedTime": "une heure non précisée"
   }
 }

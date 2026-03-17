@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import { buildConversationOutcome } from "./outcomes";
 import { requireMembership } from "../lib/auth";
 
 async function getContact(
@@ -84,6 +85,9 @@ export const getConversationThread = query({
         .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
         .collect(),
     ]);
+    const outcome = await buildConversationOutcome(ctx, {
+      conversation,
+    });
 
     return {
       conversation: {
@@ -109,6 +113,7 @@ export const getConversationThread = query({
         channel: message.channel,
         createdAt: message._creationTime,
       })),
+      outcome,
     };
   },
 });

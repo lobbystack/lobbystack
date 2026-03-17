@@ -16,6 +16,7 @@ import {
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
@@ -871,6 +872,10 @@ export const listRecentCalls = query({
         const contact = conversation?.contactId
           ? await ctx.db.get(conversation.contactId)
           : null;
+        const outcome = await buildConversationOutcome(ctx, {
+          conversation,
+          fallbackDisposition: call.disposition ?? null,
+        });
 
         return {
           ...call,
@@ -881,6 +886,7 @@ export const listRecentCalls = query({
           transcriptPreview: transcriptPreview[0]?.text ?? null,
           contactName: contact?.name ?? null,
           contactPhone: contact?.phone ?? null,
+          outcome,
         };
       }),
     );

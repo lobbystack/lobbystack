@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import type { TFunction } from "i18next";
 import { ArrowLeft, Phone, Search as SearchIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +24,13 @@ type CallRow = Doc<"calls"> & {
   transcriptPreview: string | null;
   contactName: string | null;
   contactPhone: string | null;
+  outcome: {
+    kind: "booked" | "booking_in_progress" | "message_taking" | "summary" | "disposition" | "none";
+    serviceName?: string | null;
+    startsAt?: string | null;
+    summary?: string | null;
+    disposition?: string | null;
+  };
 };
 
 type TranscriptSegment = Doc<"transcripts">;
@@ -65,6 +73,95 @@ function isAgentSpeaker(value: string): boolean {
   return ["assistant", "agent", "receptionist", "system", "ai"].some((token) =>
     normalized.includes(token),
   );
+}
+
+function formatCallDispositionSummary(
+  disposition: string,
+  t: TFunction<"calls">,
+): string {
+  const normalized = disposition.trim().toLowerCase();
+
+  if (normalized.includes("transfer_completed")) {
+    return t("outcome.transferCompleted");
+  }
+  if (normalized.includes("transfer_busy")) {
+    return t("outcome.transferBusy");
+  }
+  if (normalized.includes("transfer_")) {
+    return t("outcome.transferFailed");
+  }
+  if (normalized.includes("voicemail")) {
+    return t("outcome.voicemail");
+  }
+  if (normalized.includes("busy")) {
+    return t("outcome.busy");
+  }
+  if (normalized.includes("no_answer") || normalized.includes("missed")) {
+    return t("outcome.noAnswer");
+  }
+  if (normalized.includes("stream_start_failed") || normalized.includes("openai_handshake_failed")) {
+    return t("outcome.technicalIssue");
+  }
+  if (normalized.includes("failed")) {
+    return t("outcome.technicalIssue");
+  }
+  if (normalized.includes("canceled") || normalized.includes("cancelled")) {
+    return t("outcome.canceled");
+  }
+  if (normalized.includes("completed")) {
+    return t("outcome.completed");
+  }
+
+  return t("outcome.none");
+}
+
+function formatCallOutcomeSummary(
+  outcome: CallRow["outcome"] | undefined,
+  locale: string,
+  t: TFunction<"calls">,
+): string {
+  if (!outcome) {
+    return t("outcome.none");
+  }
+
+  switch (outcome.kind) {
+    case "booked":
+      return t("outcome.booked", {
+        serviceName: outcome.serviceName ?? t("outcome.genericService"),
+        startsAt: outcome.startsAt
+          ? formatDateTime(outcome.startsAt, locale, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : t("outcome.unspecifiedTime"),
+      });
+    case "booking_in_progress":
+      if (outcome.serviceName && outcome.startsAt) {
+        return t("outcome.schedulingWithServiceAndTime", {
+          serviceName: outcome.serviceName,
+          startsAt: formatDateTime(outcome.startsAt, locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        });
+      }
+      if (outcome.serviceName) {
+        return t("outcome.schedulingWithService", {
+          serviceName: outcome.serviceName,
+        });
+      }
+      return t("outcome.scheduling");
+    case "message_taking":
+      return t("outcome.messageTaken");
+    case "summary":
+      return outcome.summary ?? t("outcome.none");
+    case "disposition":
+      return outcome.disposition
+        ? formatCallDispositionSummary(outcome.disposition, t)
+        : t("outcome.none");
+    default:
+      return t("outcome.none");
+  }
 }
 
 export function CallsPage({ businessId }: CallsPageProps) {
@@ -248,6 +345,14 @@ export function CallsPage({ businessId }: CallsPageProps) {
               <div className="flex min-h-0 flex-1">
                 <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
+                    <div className="self-stretch border-t border-border/60 pt-4">
+                      <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                        {t("outcome.label")}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {formatCallOutcomeSummary(selectedCall.outcome, i18n.language, t)}
+                      </p>
+                    </div>
                     {[...(transcript ?? [])].reverse().map((segment) => {
                       const outbound = isAgentSpeaker(segment.speaker);
 

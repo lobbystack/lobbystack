@@ -8,6 +8,7 @@ import {
   Phone,
   Search as SearchIcon,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -47,6 +48,13 @@ type ConversationThread = {
     body: string;
     createdAt: number;
   }>;
+  outcome: {
+    kind: "booked" | "booking_in_progress" | "message_taking" | "summary" | "disposition" | "none";
+    serviceName?: string | null;
+    startsAt?: string | null;
+    summary?: string | null;
+    disposition?: string | null;
+  };
 };
 
 function initials(value: string | null, fallback: string): string {
@@ -59,6 +67,49 @@ function initials(value: string | null, fallback: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function formatMessageOutcomeSummary(
+  outcome: ConversationThread["outcome"] | undefined,
+  locale: string,
+  t: TFunction<"messages">,
+): string {
+  if (!outcome) {
+    return t("outcome.none");
+  }
+
+  switch (outcome.kind) {
+    case "booked":
+      return t("outcome.booked", {
+        serviceName: outcome.serviceName ?? t("outcome.genericService"),
+        startsAt: outcome.startsAt
+          ? formatDateTime(outcome.startsAt, locale, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : t("outcome.unspecifiedTime"),
+      });
+    case "booking_in_progress":
+      if (outcome.serviceName && outcome.startsAt) {
+        return t("outcome.schedulingWithServiceAndTime", {
+          serviceName: outcome.serviceName,
+          startsAt: formatDateTime(outcome.startsAt, locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        });
+      }
+      if (outcome.serviceName) {
+        return t("outcome.schedulingWithService", {
+          serviceName: outcome.serviceName,
+        });
+      }
+      return t("outcome.scheduling");
+    case "summary":
+      return outcome.summary ?? t("outcome.none");
+    default:
+      return t("outcome.none");
+  }
 }
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
@@ -247,6 +298,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               <div className="flex min-h-0 flex-1">
                 <div className="relative -me-4 flex min-h-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex min-h-0 w-full flex-1 flex-col-reverse justify-start gap-4 overflow-y-auto py-4 pe-4">
+                    <div className="self-stretch border-t border-border/60 pt-4">
+                      <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                        {t("outcome.label")}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {formatMessageOutcomeSummary(thread.outcome, i18n.language, t)}
+                      </p>
+                    </div>
                     {[...thread.messages].reverse().map((message) => (
                       <div
                         className={cn(

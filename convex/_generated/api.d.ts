@@ -21,6 +21,7 @@ import type * as conversations_webhooks from "../conversations/webhooks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard_contacts from "../dashboard/contacts.js";
 import type * as dashboard_messages from "../dashboard/messages.js";
+import type * as dashboard_outcomes from "../dashboard/outcomes.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "dashboard/contacts": typeof dashboard_contacts;
   "dashboard/messages": typeof dashboard_messages;
+  "dashboard/outcomes": typeof dashboard_outcomes;
   "dashboard/overview": typeof dashboard_overview;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
