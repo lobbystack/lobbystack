@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 type CallRecordingPlayerProps = {
   className?: string;
   downloadLabel: string;
+  initialDurationSeconds?: number;
   pauseLabel: string;
   playLabel: string;
   src: string;
@@ -30,21 +31,35 @@ function formatDuration(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
+function normalizeDurationSeconds(seconds: number): number {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 0;
+  }
+
+  return Math.ceil(seconds);
+}
+
 export function CallRecordingPlayer({
   className,
   downloadLabel,
+  initialDurationSeconds = 0,
   pauseLabel,
   playLabel,
   src,
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [bufferedTime, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    setCurrentTime(0);
+    setBufferedTime(0);
+    setDuration(normalizeDurationSeconds(initialDurationSeconds));
+    setIsPlaying(false);
+
     const audio = new Audio(src);
     audio.preload = "metadata";
     audioRef.current = audio;
@@ -61,7 +76,9 @@ export function CallRecordingPlayer({
     }
 
     function updateDuration() {
-      setDuration(audio.duration || 0);
+      setDuration((currentDuration) =>
+        Math.max(currentDuration, normalizeDurationSeconds(audio.duration || 0))
+      );
     }
 
     function updateCurrentTime() {
@@ -100,7 +117,7 @@ export function CallRecordingPlayer({
       audio.removeEventListener("ended", handleEnded);
       audioRef.current = null;
     };
-  }, [src]);
+  }, [initialDurationSeconds, src]);
 
   async function togglePlayback() {
     const audio = audioRef.current;
@@ -169,6 +186,14 @@ export function CallRecordingPlayer({
     return (bufferedTime / duration) * 100;
   }, [bufferedTime, duration]);
 
+  const displayedRemainingSeconds = useMemo(() => {
+    if (duration <= 0) {
+      return 0;
+    }
+
+    return Math.max(0, Math.ceil(duration - currentTime));
+  }, [currentTime, duration]);
+
   return (
     <div
       className={cn(
@@ -212,7 +237,7 @@ export function CallRecordingPlayer({
         />
 
         <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">
-          {formatDuration(duration > 0 ? duration - currentTime : 0)}
+          {formatDuration(displayedRemainingSeconds)}
         </time>
 
         <Button

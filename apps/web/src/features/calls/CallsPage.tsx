@@ -229,6 +229,13 @@ export function CallsPage({ businessId }: CallsPageProps) {
                 {selectedCall.recordingUrl ? (
                   <CallRecordingPlayer
                     downloadLabel={t("actions.download")}
+                    initialDurationSeconds={Math.max(
+                      selectedCall.providerCallDurationSeconds ?? 0,
+                      selectedCall.recordingDurationMs
+                        ? Math.ceil(selectedCall.recordingDurationMs / 1000)
+                        : 0,
+                    )}
+                    key={String(selectedCall._id)}
                     pauseLabel={t("actions.pause")}
                     playLabel={t("actions.play")}
                     src={selectedCall.recordingUrl}
