@@ -6,13 +6,14 @@ import { Link } from "react-router-dom";
 import { ProfileDropdown } from "@/components/profile-dropdown";
 import { Search } from "@/components/search";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = {
   onSignOut: () => void;
+  className?: string;
   links?: Array<{
     title: string;
     href: string;
@@ -20,7 +21,7 @@ type SiteHeaderProps = {
   }>;
 };
 
-export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
+export function SiteHeader({ onSignOut, className, links = [] }: SiteHeaderProps) {
   const { t } = useTranslation("nav");
   const [offset, setOffset] = useState(0);
 
@@ -38,6 +39,7 @@ export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
       className={cn(
         "z-50 h-16 header-fixed peer/header sticky top-0 w-[inherit]",
         offset > 10 ? "shadow" : "shadow-none",
+        className,
       )}
     >
       <div
@@ -52,15 +54,13 @@ export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
         <Search className="max-w-md" placeholder={t("search.placeholder")} />
         <div className="ms-auto flex items-center space-x-4">
           <ThemeSwitch />
-          <Button
+          <Link
             aria-label="Open theme settings"
-            className="rounded-full"
-            render={<Link to="/settings/appearance" />}
-            size="icon"
-            variant="ghost"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon", className: "rounded-full" }))}
+            to="/settings/appearance"
           >
             <Settings2 className="size-4" />
-          </Button>
+          </Link>
           <ProfileDropdown onSignOut={onSignOut} />
         </div>
       </div>
