@@ -13,12 +13,14 @@ declare global {
 
 const {
   generateTextMock,
+  generateMissingLocalizedServiceNamesMock,
   searchKnowledgeInternalMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
   workflowStartMock,
 } = vi.hoisted(() => ({
   generateTextMock: vi.fn(),
+  generateMissingLocalizedServiceNamesMock: vi.fn(),
   searchKnowledgeInternalMock: vi.fn(),
   sendTwilioMessageMock: vi.fn(),
   validateTwilioRequestMock: vi.fn(),
@@ -81,6 +83,10 @@ vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
     }),
   };
 });
+
+vi.mock("../../../convex/lib/serviceNameGeneration.ts", () => ({
+  generateMissingLocalizedServiceNames: generateMissingLocalizedServiceNamesMock,
+}));
 
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
@@ -483,6 +489,10 @@ beforeEach(() => {
   });
   searchKnowledgeInternalMock.mockResolvedValue([]);
   workflowStartMock.mockResolvedValue(null);
+  generateMissingLocalizedServiceNamesMock.mockImplementation(async (input: { name: string }) => ({
+    en: input.name,
+    fr: input.name,
+  }));
 });
 
 afterEach(() => {
@@ -2825,6 +2835,83 @@ describe("SMS scheduling flow", () => {
         .unique();
       expect(conversation?.locale).toBe("fr");
       expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
+  it("uses and persists a generated French service label in customer-facing SMS replies", async () => {
+    const t = createConvexHarness();
+    generateMissingLocalizedServiceNamesMock.mockResolvedValue({
+      en: "Initial Consultation",
+      fr: "Consultation initiale",
+    });
+
+    const { businessId, smsNumber, serviceId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "sms-generated-french-service-label",
+        name: "SMS Generated French Service Label",
+        defaultLocale: "fr",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550912",
+      });
+      await ctx.db.insert("receptionist_profiles", {
+        businessId,
+        greeting: "Bonjour.",
+        tone: "warm and direct",
+        summary: "French SMS scheduling.",
+        bookingPolicy: "Only confirm a booking after availability is checked.",
+        transferMode: "on_request",
+      });
+      for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {
+        await ctx.db.insert("business_hours", {
+          businessId,
+          dayOfWeek,
+          openMinutes: 9 * 60,
+          closeMinutes: 17 * 60,
+        });
+      }
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Practitioner",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+      await ctx.db.insert("staff_service_assignments", {
+        businessId,
+        staffId,
+        serviceId,
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550912",
+        serviceId,
+      };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-generated-french-service-label-1",
+      From: "+14165550987",
+      To: smsNumber,
+      Body: "Avez-vous une consultation initiale demain à 16h?",
+    });
+
+    await t.run(async (ctx) => {
+      const outboundBody = await fetchLatestOutboundBody(ctx, businessId);
+      expect(outboundBody).toContain("Consultation initiale");
+      expect(outboundBody).not.toContain("Initial Consultation");
+
+      const service = await ctx.db.get(serviceId);
+      expect(service?.localizedNames?.fr).toBe("Consultation initiale");
+      expect(service?.localizedNames?.en).toBe("Initial Consultation");
     });
   });
 

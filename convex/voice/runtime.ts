@@ -17,6 +17,8 @@ import {
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { getServiceNameCandidates } from "../lib/serviceNames";
+import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type ServicesForBusinessArgs = BusinessIdArgs;
@@ -162,14 +164,20 @@ function tokenizeComparable(value: string): Array<string> {
 
 function scoreServiceMatch(service: Doc<"services">, serviceName: string): number {
   const comparable = normalizeComparable(serviceName);
-  const nameComparable = normalizeComparable(service.name);
   const slugComparable = normalizeComparable(service.slug);
+  const nameCandidates = getServiceNameCandidates(service).map((candidate) =>
+    normalizeComparable(candidate),
+  );
 
-  if (nameComparable === comparable || slugComparable === comparable) {
+  if (nameCandidates.includes(comparable) || slugComparable === comparable) {
     return 100;
   }
 
-  if (nameComparable.includes(comparable) || comparable.includes(nameComparable)) {
+  if (
+    nameCandidates.some(
+      (candidate) => candidate.includes(comparable) || comparable.includes(candidate),
+    )
+  ) {
     return 80;
   }
 
@@ -179,7 +187,7 @@ function scoreServiceMatch(service: Doc<"services">, serviceName: string): numbe
 
   const queryTokens = tokenizeComparable(serviceName);
   const serviceTokens = new Set([
-    ...tokenizeComparable(service.name),
+    ...nameCandidates.flatMap((candidate) => tokenizeComparable(candidate)),
     ...tokenizeComparable(service.slug),
   ]);
   const overlap = queryTokens.filter((token) => serviceTokens.has(token)).length;
@@ -210,6 +218,34 @@ async function resolveServiceDocument(
   return ranked[0]?.service ?? null;
 }
 
+async function getVoiceCustomerLocale(
+  ctx: Pick<ActionCtx, "runQuery">,
+  businessId: Id<"businesses">,
+): Promise<RuntimeLocale> {
+  const business = await ctx.runQuery(internal.voice.runtime.getBusinessDefaultLocale, {
+    businessId,
+  });
+  return business;
+}
+
+async function resolveVoiceCustomerFacingServiceName(
+  ctx: ActionCtx,
+  input: {
+    serviceId: Id<"services">;
+    fallbackName: string;
+    locale: RuntimeLocale;
+  },
+): Promise<string> {
+  try {
+    return await ctx.runAction(internal.services.localizedNames.ensureLocalizedServiceName, {
+      serviceId: input.serviceId,
+      locale: input.locale,
+    });
+  } catch {
+    return input.fallbackName;
+  }
+}
+
 export const getActiveServicesForBusiness = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -222,6 +258,16 @@ export const getActiveServicesForBusiness = internalQuery({
       .query("services")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
       .collect();
+  },
+});
+
+export const getBusinessDefaultLocale = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<RuntimeLocale> => {
+    const business = await ctx.db.get(args.businessId);
+    return normalizeRuntimeLocale(business?.defaultLocale) ?? "en";
   },
 });
 
@@ -611,6 +657,12 @@ export const checkAvailabilityForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
@@ -622,7 +674,7 @@ export const checkAvailabilityForVoice = internalAction({
     if (setup.assignmentCount === 0) {
       return {
         serviceId: service._id,
-        serviceName: service.name,
+        serviceName: localizedServiceName,
         availability: [],
         setupIssue:
           setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned",
@@ -646,7 +698,7 @@ export const checkAvailabilityForVoice = internalAction({
 
     return {
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
       availability,
       setupIssue: null,
     };
@@ -673,6 +725,12 @@ export const findAvailabilityForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
@@ -686,15 +744,15 @@ export const findAvailabilityForVoice = internalAction({
         setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned";
       return {
         serviceId: service._id,
-        serviceName: service.name,
+        serviceName: localizedServiceName,
         timezone: args.timezone,
         date: args.date,
         slots: [],
         setupIssue,
         summary:
           setupIssue === "no_active_staff"
-            ? `${service.name} cannot be booked yet because no active team members are configured for booking.`
-            : `${service.name} cannot be booked yet because no active team member is assigned to that service.`,
+            ? `${localizedServiceName} cannot be booked yet because no active team members are configured for booking.`
+            : `${localizedServiceName} cannot be booked yet because no active team member is assigned to that service.`,
       };
     }
 
@@ -721,15 +779,15 @@ export const findAvailabilityForVoice = internalAction({
 
     return {
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
       timezone: args.timezone,
       date: args.date,
       slots,
       setupIssue: null,
       summary:
         slots.length === 0
-          ? `No availability found for ${service.name} on ${args.date}.`
-          : `Available ${service.name} slots on ${args.date}: ${slots
+          ? `No availability found for ${localizedServiceName} on ${args.date}.`
+          : `Available ${localizedServiceName} slots on ${args.date}: ${slots
               .map((slot) => slot.displayTime)
               .join(", ")}.`,
     };
@@ -755,6 +813,12 @@ export const bookAppointmentForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const result = await ctx.runMutation(
       internal.appointments.booking.bookAppointmentForBusiness,
@@ -775,7 +839,7 @@ export const bookAppointmentForVoice = internalAction({
     return {
       ...result,
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
     };
   },
 });

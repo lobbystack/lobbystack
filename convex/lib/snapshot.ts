@@ -22,6 +22,7 @@ type ClosureWindow = {
 type ServiceSummary = {
   id: string;
   name: string;
+  localizedNames?: Partial<Record<RuntimeLocale, string>>;
   durationMinutes: number;
   description?: string;
 };
