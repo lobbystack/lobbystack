@@ -1,31 +1,35 @@
 {
   "header": {
     "title": "Réglages",
-    "description": "Configurez la réceptionniste, les heures, les services et la politique de transfert."
+    "description": "Gérez les détails de votre compte et vos identifiants de connexion."
   },
   "layout": {
-    "businessDescription": "Configurez la réceptionniste, les heures, les services et la politique de transfert.",
-    "integrationsDescription": "Connectez les calendriers et gardez les réservations ainsi que la vue opérateur synchronisées."
+    "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
+    "integrationsDescription": "Connectez vos outils et applications préférés."
   },
   "sections": {
-    "business": "Configuration",
-    "appearance": "Apparence",
+    "business": "Compte",
+    "appearance": "Préférences",
     "integrations": "Intégrations"
   },
   "appearance": {
-    "title": "Apparence",
-    "description": "Personnalisez l'apparence du tableau de bord.",
+    "title": "Préférences",
+    "description": "Définissez la langue du tableau de bord, le format de l'heure et le thème.",
     "save": "Mettre à jour les préférences",
     "saved": "Préférences d'apparence mises à jour.",
+    "language": {
+      "label": "Langue du tableau de bord",
+      "description": "Choisissez la langue utilisée dans le tableau de bord. Cela n'affecte pas l'IA."
+    },
     "timeFormat": {
       "label": "Format de l'heure",
-      "description": "Choisissez entre le format 24 h et le format AM/PM pour le tableau de bord.",
+      "description": "Choisissez entre le format 24 h et le format AM/PM.",
       "twentyFourHour": "Format 24 h",
       "ampm": "Format AM/PM"
     },
     "theme": {
       "label": "Thème",
-      "description": "Choisissez le thème visuel du tableau de bord.",
+      "description": "Choisissez votre thème visuel préféré.",
       "light": "Clair",
       "lightDescription": "Des surfaces lumineuses au contraste doux pour le travail de jour.",
       "dark": "Sombre",
@@ -33,11 +37,22 @@
     }
   },
   "integrations": {
+    "actions": {
+      "connect": "Connecter",
+      "connected": "Connecté",
+      "settings": "Ouvrir les réglages de l'intégration"
+    },
     "providers": {
-      "google": "Connectez Google Calendar pour garder les réservations et la vue opérateur synchronisées.",
-      "microsoft": "Connectez Microsoft Calendar pour les équipes Outlook et Exchange."
+      "google": "Synchronisez les réservations avec Google Calendar.",
+      "microsoft": "Connectez les calendriers Outlook et Exchange."
     },
     "google": {
+      "sheetTitle": "Google Calendar",
+      "sheetDescription": "Connectez les calendriers de l'équipe et choisissez celui qui reçoit les réservations.",
+      "connectionSectionTitle": "Connexion",
+      "connectionSectionDescription": "Choisissez un membre réservable et connectez ou reconnectez Google Calendar.",
+      "calendarSectionTitle": "Réglages du calendrier",
+      "calendarSectionDescription": "Choisissez le calendrier à synchroniser et consultez l'état de synchronisation.",
       "staffLabel": "Membre de l'équipe",
       "selectStaff": "Choisir un membre",
       "chooseStaffFirst": "Choisissez le membre de l'équipe dont vous voulez connecter le Google Calendar.",
@@ -76,10 +91,12 @@
     },
     "cards": {
       "google": {
-        "title": "Google Calendar"
+        "title": "Google Calendar",
+        "description": "Synchronisez les réservations avec un Google Calendar."
       },
       "microsoft": {
-        "title": "Microsoft Calendar"
+        "title": "Microsoft Calendar",
+        "description": "Connectez les calendriers Outlook et Exchange."
       }
     },
     "status": {

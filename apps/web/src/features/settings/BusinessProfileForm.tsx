@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
-import { Bot, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -75,28 +75,23 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <Bot className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <CardTitle>{t("profile.title")}</CardTitle>
-            <CardDescription>{t("profile.description")}</CardDescription>
-          </div>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="space-y-2">
+          <CardTitle>{t("profile.title")}</CardTitle>
+          <CardDescription>{t("profile.description")}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("profile.greeting")}</span>
               <Input
                 value={greeting}
                 onChange={(event) => setGreeting(event.target.value)}
               />
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("profile.tone")}</span>
               <Input
                 value={tone}
@@ -104,7 +99,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               />
             </label>
           </div>
-          <label className="space-y-2">
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.defaultCustomerLanguage")}</span>
             <Select value={defaultLocale} onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}>
               <SelectTrigger>
@@ -116,7 +111,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               </SelectContent>
             </Select>
           </label>
-          <label className="space-y-2">
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.businessSummary")}</span>
             <Textarea
               rows={3}
@@ -124,7 +119,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               onChange={(event) => setSummary(event.target.value)}
             />
           </label>
-          <label className="space-y-2">
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.bookingPolicy")}</span>
             <Textarea
               rows={3}
@@ -132,8 +127,8 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               onChange={(event) => setBookingPolicy(event.target.value)}
             />
           </label>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("profile.transferMode")}</span>
               <Select value={transferMode} onValueChange={(value) => setTransferMode(value ?? "on_request")}>
                 <SelectTrigger>
@@ -148,7 +143,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
                 </SelectContent>
               </Select>
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("profile.transferNumber")}</span>
               <div className="relative">
                 <Phone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -161,7 +156,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               </div>
             </label>
           </div>
-          <label className="space-y-2">
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.voiceInstructions")}</span>
             <Textarea
               rows={4}
@@ -169,7 +164,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               onChange={(event) => setVoiceInstructions(event.target.value)}
             />
           </label>
-          <label className="space-y-2">
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.smsInstructions")}</span>
             <Textarea
               rows={4}
@@ -177,7 +172,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               onChange={(event) => setSmsInstructions(event.target.value)}
             />
           </label>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-6">
             <Button disabled={isSaving} type="submit">
               {isSaving ? t("profile.saving") : t("profile.save")}
             </Button>

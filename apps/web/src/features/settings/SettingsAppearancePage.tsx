@@ -5,8 +5,9 @@ import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useAppearancePreference } from "@/components/appearance-provider";
+import { useLocalePreference } from "@/components/locale-provider";
 import { cn } from "@/lib/utils";
-import type { TimeFormatPreference } from "@/lib/locale";
+import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
 
 type ThemeChoice = "light" | "dark";
 
@@ -85,8 +86,9 @@ function ThemePreviewCard({
 export function SettingsAppearancePage({
   businessId: _businessId,
 }: SettingsAppearancePageProps) {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "common"]);
   const { resolvedTheme, setTheme, theme } = useTheme();
+  const { locale, setLocale } = useLocalePreference();
   const { timeFormatPreference, setTimeFormatPreference } =
     useAppearancePreference();
   const selectedTheme: ThemeChoice =
@@ -114,6 +116,35 @@ export function SettingsAppearancePage({
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="max-w-3xl space-y-8">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">
+              {t("appearance.language.label")}
+            </label>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t("appearance.language.description")}
+            </p>
+          </div>
+          <div className="relative w-full max-w-xs">
+            <select
+              aria-label={t("common:language.ariaLabel")}
+              className="h-9 w-full appearance-none rounded-md border border-input bg-transparent px-3 pe-10 text-sm shadow-xs outline-none transition-colors focus:border-ring focus:ring-0 focus-visible:border-ring focus-visible:ring-0"
+              onChange={(event) =>
+                void setLocale(event.target.value as SupportedLocale)
+              }
+              value={locale}
+            >
+              <option value="en">
+                {t("common:language.english")}
+              </option>
+              <option value="fr">
+                {t("common:language.french")}
+              </option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+        </div>
+
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-sm font-medium">
@@ -162,7 +193,7 @@ export function SettingsAppearancePage({
               />
             ))}
           </div>
-            </div>
+        </div>
       </div>
     </div>
   );

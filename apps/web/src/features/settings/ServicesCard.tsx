@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
-import { CalendarPlus, PencilLine } from "lucide-react";
+import { PencilLine } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -98,21 +98,16 @@ export function ServicesCard(props: ServicesCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <CalendarPlus className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <CardTitle>{t("services.title")}</CardTitle>
-            <CardDescription>{t("services.description")}</CardDescription>
-          </div>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="space-y-2">
+          <CardTitle>{t("services.title")}</CardTitle>
+          <CardDescription>{t("services.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+      <CardContent className="space-y-8">
+        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.serviceName")}</span>
               <Input
                 placeholder={t("services.placeholders.serviceName")}
@@ -120,7 +115,7 @@ export function ServicesCard(props: ServicesCardProps) {
                 onChange={(event) => setName(event.target.value)}
               />
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.slug")}</span>
               <Input
                 value={slug}
@@ -128,8 +123,8 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.englishLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.englishLabel")}
@@ -137,7 +132,7 @@ export function ServicesCard(props: ServicesCardProps) {
                 onChange={(event) => setEnglishLabel(event.target.value)}
               />
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.frenchLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.frenchLabel")}
@@ -146,8 +141,8 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.durationMinutes")}</span>
               <Input
                 min="5"
@@ -157,7 +152,7 @@ export function ServicesCard(props: ServicesCardProps) {
                 onChange={(event) => setDurationMinutes(event.target.value)}
               />
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">{t("services.descriptionLabel")}</span>
               <Input
                 placeholder={t("services.placeholders.description")}
@@ -166,7 +161,7 @@ export function ServicesCard(props: ServicesCardProps) {
               />
             </label>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-6">
             <Button
               disabled={isSaving || name.trim().length === 0 || slug.trim().length === 0}
               type="submit"
@@ -185,7 +180,7 @@ export function ServicesCard(props: ServicesCardProps) {
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
         </form>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {services.map((service) => (
             <div className="rounded-2xl border border-border/70 bg-background/80 p-4" key={service._id}>
               <div className="flex items-start justify-between gap-3">

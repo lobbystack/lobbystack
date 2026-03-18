@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
-import { Users } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -179,20 +178,15 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <Users className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <CardTitle>{t("settings:team.title")}</CardTitle>
-            <CardDescription>{t("settings:team.description")}</CardDescription>
-          </div>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="space-y-2">
+          <CardTitle>{t("settings:team.title")}</CardTitle>
+          <CardDescription>{t("settings:team.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-5" onSubmit={(event) => void handleStaffSubmit(event)}>
-          <label className="space-y-2">
+      <CardContent className="space-y-8">
+        <form className="space-y-8" onSubmit={(event) => void handleStaffSubmit(event)}>
+          <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">
               {t("settings:team.member")}
             </span>
@@ -214,8 +208,8 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
             </Select>
           </label>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.name")}
               </span>
@@ -225,7 +219,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                 value={name}
               />
             </label>
-            <label className="space-y-2">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.timezone")}
               </span>
@@ -237,8 +231,8 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
             </label>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <label className="space-y-2">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <label className="space-y-3">
               <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:team.transferNumber")}
               </span>
@@ -257,7 +251,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-6">
             <Button disabled={isSavingStaff || name.trim().length === 0} type="submit">
               {isSavingStaff
                 ? t("settings:team.saving")
@@ -271,7 +265,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
           </div>
         </form>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">
               {t("settings:team.serviceAssignments")}

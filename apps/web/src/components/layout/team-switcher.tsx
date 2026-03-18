@@ -28,7 +28,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
           size="lg"
           className="rounded-xl bg-sidebar-accent/40 text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground dark:bg-white dark:text-black">
             <activeBusiness.logo className="size-4" />
           </div>
           <div className="grid flex-1 text-start text-sm leading-tight">

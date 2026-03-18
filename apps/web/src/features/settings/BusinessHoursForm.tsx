@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
-import { Clock4 } from "lucide-react";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -117,23 +116,18 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <Clock4 className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <CardTitle>{t("hours.title")}</CardTitle>
-            <CardDescription>{t("hours.description")}</CardDescription>
-          </div>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="space-y-2">
+          <CardTitle>{t("hours.title")}</CardTitle>
+          <CardDescription>{t("hours.description")}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="space-y-3">
+        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="space-y-4">
             {rows.map((row, index) => (
               <div
-                className="grid gap-3 rounded-2xl border border-border/70 bg-background/70 p-4 md:grid-cols-[160px_1fr_1fr]"
+                className="grid gap-4 rounded-2xl border border-border/70 bg-background/70 p-4 md:grid-cols-[160px_1fr_1fr]"
                 key={dayLabels[index]}
               >
                 <div className="flex items-center text-sm font-medium text-foreground">
@@ -152,7 +146,7 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-6">
             <Button disabled={isSaving} type="submit">
               {isSaving ? t("hours.saving") : t("hours.save")}
             </Button>
