@@ -298,19 +298,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-semibold lg:text-base">
-                        {thread.contact?.name ??
-                          thread.contact?.phone ??
-                          t("page.unknownCaller")}
-                      </span>
-                      <Badge
-                        className={channelPillClassName}
-                        variant="outline"
-                      >
-                        {formatConversationChannelLabel(thread.conversation.channel, t)}
-                      </Badge>
-                    </div>
+                    <span className="block truncate text-sm font-semibold lg:text-base">
+                      {thread.contact?.name ??
+                        thread.contact?.phone ??
+                        t("page.unknownCaller")}
+                    </span>
                     <span className="col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
                       {thread.contact?.phone ??
                         thread.contact?.email ??
