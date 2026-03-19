@@ -120,16 +120,25 @@ function formatMessageOutcomeSummary(
 
 function ConversationChannelIcon({ channel }: { channel: string }) {
   if (channel === "sms") {
-    return <MessageCircle className="size-3.5" aria-hidden="true" strokeWidth={2.25} />;
+    return <MessageCircle className="size-3" aria-hidden="true" />;
   }
 
-  return <Globe className="size-3.5" aria-hidden="true" strokeWidth={2.25} />;
+  return <Globe className="size-3" aria-hidden="true" />;
 }
 
-function ConversationChannelAvatarBadge({ channel }: { channel: string }) {
+function ConversationChannelAvatarBadge({
+  channel,
+  cutoutClassName,
+}: {
+  channel: string;
+  cutoutClassName: string;
+}) {
   return (
-    <span className="absolute -right-0.5 -bottom-1 text-muted-foreground/80">
-      <ConversationChannelIcon channel={channel} />
+    <span className="absolute right-0 -bottom-0.5 flex size-4 items-center justify-center text-muted-foreground/80 lg:size-[18px]">
+      <span className={cn("absolute inset-0 rounded-full", cutoutClassName)} />
+      <span className="relative">
+        <ConversationChannelIcon channel={channel} />
+      </span>
     </span>
   );
 }
@@ -242,7 +251,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           conversation.contactPhone ?? t("page.unknownShort"),
                         )}
                       </AvatarFallback>
-                      <ConversationChannelAvatarBadge channel={conversation.channel} />
+                      <ConversationChannelAvatarBadge
+                        channel={conversation.channel}
+                        cutoutClassName={cn(
+                          isActive ? "bg-muted" : "bg-background",
+                          "group-hover:bg-accent",
+                        )}
+                      />
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
@@ -298,7 +313,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         thread.contact?.phone ?? t("page.unknownShort"),
                       )}
                     </AvatarFallback>
-                    <ConversationChannelAvatarBadge channel={thread.conversation.channel} />
+                    <ConversationChannelAvatarBadge
+                      channel={thread.conversation.channel}
+                      cutoutClassName="bg-card"
+                    />
                   </Avatar>
                   <div className="min-w-0">
                     <span className="block truncate text-sm font-semibold lg:text-base">
