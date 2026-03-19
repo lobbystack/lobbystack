@@ -18,7 +18,6 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
@@ -123,9 +122,6 @@ function formatConversationChannelLabel(
 ): string {
   return channel === "sms" ? t("page.channelSms") : t("page.channelWeb");
 }
-
-const channelPillClassName =
-  "shrink-0 rounded-full px-2 text-[11px] leading-none shadow-none";
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
@@ -238,24 +234,22 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <div className="min-w-0 flex-1">
                           <span className="min-w-0 truncate font-semibold">
                             {conversation.contactName ??
                               conversation.contactPhone ??
                               t("page.unknownCaller")}
                           </span>
-                          <Badge
-                            className={channelPillClassName}
-                            variant="outline"
-                          >
-                            {formatConversationChannelLabel(conversation.channel, t)}
-                          </Badge>
                         </div>
-                        <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
-                          {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
-                            yesterday: t("page.yesterday"),
-                          })}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                          <span>{formatConversationChannelLabel(conversation.channel, t)}</span>
+                          <span aria-hidden="true">&bull;</span>
+                          <span>
+                            {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                              yesterday: t("page.yesterday"),
+                            })}
+                          </span>
+                        </div>
                       </div>
                       <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
                         {lastPreview}
