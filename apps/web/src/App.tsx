@@ -300,7 +300,7 @@ function WorkspaceShell() {
             <Route
               element={
                 businessId ? (
-                  <SettingsBusinessPage />
+                  <SettingsBusinessPage businessId={businessId} />
                 ) : (
                   <Navigate replace to="/settings" />
                 )

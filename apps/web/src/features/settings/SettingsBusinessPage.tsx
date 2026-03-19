@@ -1,15 +1,56 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
 
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
-export function SettingsBusinessPage() {
-  const [businessName, setBusinessName] = useState("Maple Family Clinic");
+type SettingsBusinessPageProps = {
+  businessId: Id<"businesses">;
+};
+
+export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
+  const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
+    businessId: props.businessId,
+  });
+  const updateBusinessName = useMutation(api.businesses.catalog.updateBusinessName);
+  const changePassword = useAction(api.businesses.catalog.changePassword);
+  const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [currentEmailPassword, setCurrentEmailPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  useEffect(() => {
+    const nextName = configuration?.business?.name;
+    if (nextName !== undefined) {
+      setBusinessName(nextName);
+    }
+  }, [configuration?.business?.name]);
+
+  async function handleBusinessNameSave(): Promise<void> {
+    await updateBusinessName({
+      businessId: props.businessId,
+      name: businessName,
+    });
+  }
+
+  async function handlePasswordSave(): Promise<void> {
+    if (newPassword !== confirmNewPassword) {
+      throw new Error("New passwords do not match.");
+    }
+
+    await changePassword({
+      currentPassword,
+      newPassword,
+    });
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -31,7 +72,9 @@ export function SettingsBusinessPage() {
               onChange={(event) => setBusinessName(event.target.value)}
             />
             <div className="pt-4">
-              <Button type="button">Save</Button>
+              <Button type="button" onClick={() => void handleBusinessNameSave()}>
+                Save
+              </Button>
             </div>
           </div>
 
@@ -88,8 +131,17 @@ export function SettingsBusinessPage() {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
               />
+              <Input
+                id="profile-confirm-new-password"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmNewPassword}
+                onChange={(event) => setConfirmNewPassword(event.target.value)}
+              />
               <div className="pt-4">
-                <Button type="button">Save</Button>
+                <Button type="button" onClick={() => void handlePasswordSave()}>
+                  Save
+                </Button>
               </div>
             </div>
           </div>

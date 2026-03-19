@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Bot,
-  Building2,
   ChartColumnIncreasing,
   ContactRound,
   House,
@@ -9,7 +8,8 @@ import {
   MessageSquareMore,
   Phone,
   Settings,
-  Sun,
+  SlidersHorizontal,
+  UserRound,
   Workflow,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -74,12 +74,12 @@ export function AppSidebar({
                 {
                   title: t("settings:sections.business"),
                   url: "/settings",
-                  icon: Building2,
+                  icon: UserRound,
                 },
                 {
                   title: t("settings:sections.appearance"),
                   url: "/settings/appearance",
-                  icon: Sun,
+                  icon: SlidersHorizontal,
                 },
                 {
                   title: t("settings:sections.integrations"),

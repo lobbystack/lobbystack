@@ -1,4 +1,10 @@
 import { v } from "convex/values";
+import {
+  getAuthSessionId,
+  invalidateSessions,
+  modifyAccountCredentials,
+  retrieveAccount,
+} from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import { action, internalMutation, internalQuery, mutation, query, type ActionCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
@@ -7,6 +13,7 @@ import {
   listStaffServiceAssignmentsForBusiness,
   replaceBusinessStaffServiceAssignments,
 } from "../lib/indexedQueries";
+import { validatePasswordRequirements } from "../lib/passwordPolicy";
 import { generateMissingLocalizedServiceNames } from "../lib/serviceNameGeneration";
 import {
   localizedServiceNamesValidator,
@@ -94,6 +101,96 @@ export const getBusinessConfiguration = query({
       closures,
       phoneNumbers,
     };
+  },
+});
+
+export const updateBusinessName = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    name: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.businessId);
+
+    const name = args.name.trim();
+    if (!name) {
+      throw new Error("Business name is required.");
+    }
+
+    await ctx.db.patch(args.businessId, { name });
+    await scheduleSnapshotRefresh(ctx, args.businessId);
+    return { name };
+  },
+});
+
+export const getCurrentUserForPasswordChange = internalQuery({
+  args: {
+    authSubject: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User profile not initialized.");
+    }
+
+    return {
+      userId: user._id,
+      email: user.email ?? null,
+    };
+  },
+});
+
+export const changePassword = action({
+  args: {
+    currentPassword: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required.");
+    }
+
+    validatePasswordRequirements(args.newPassword);
+
+    const user = await ctx.runQuery(
+      internal.businesses.catalog.getCurrentUserForPasswordChange,
+      { authSubject: identity.subject },
+    );
+
+    if (!user.email) {
+      throw new Error("No email is configured for this account.");
+    }
+
+    const authCtx = ctx as unknown as Parameters<typeof retrieveAccount>[0];
+
+    await retrieveAccount(authCtx, {
+      provider: "password",
+      account: {
+        id: user.email,
+        secret: args.currentPassword,
+      },
+    });
+
+    await modifyAccountCredentials(authCtx, {
+      provider: "password",
+      account: {
+        id: user.email,
+        secret: args.newPassword,
+      },
+    });
+
+    const sessionId = await getAuthSessionId(authCtx);
+    await invalidateSessions(authCtx, {
+      userId: user.userId,
+      ...(sessionId ? { except: [sessionId] } : {}),
+    });
+
+    return null;
   },
 });
 
