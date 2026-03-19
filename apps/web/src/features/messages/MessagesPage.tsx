@@ -128,7 +128,7 @@ function ConversationChannelIcon({ channel }: { channel: string }) {
 
 function ConversationChannelAvatarBadge({ channel }: { channel: string }) {
   return (
-    <span className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-full border border-background bg-background text-muted-foreground shadow-xs lg:size-5">
+    <span className="absolute right-0 bottom-0 text-muted-foreground/80">
       <ConversationChannelIcon channel={channel} />
     </span>
   );
