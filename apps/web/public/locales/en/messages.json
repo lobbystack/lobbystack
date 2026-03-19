@@ -12,7 +12,7 @@
     "send": "Send"
   },
   "outcome": {
-    "label": "Outcome",
+    "label": "Summary",
     "booked": "Customer booked {{serviceName}} for {{startsAt}}.",
     "scheduling": "Customer started scheduling, but no appointment was confirmed yet.",
     "schedulingWithService": "Customer is scheduling {{serviceName}}, but no appointment was confirmed yet.",

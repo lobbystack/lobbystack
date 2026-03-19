@@ -64,7 +64,7 @@
     "noSegments": "No transcript segments are available for this call yet."
   },
   "outcome": {
-    "label": "Outcome",
+    "label": "Summary",
     "booked": "Caller booked {{serviceName}} for {{startsAt}}.",
     "scheduling": "Caller started scheduling, but no appointment was confirmed.",
     "schedulingWithService": "Caller discussed scheduling {{serviceName}}, but no appointment was confirmed.",

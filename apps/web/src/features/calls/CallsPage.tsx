@@ -167,6 +167,10 @@ function formatCallOutcomeSummary(
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const calls = useQuery(api.voice.runtime.listRecentCalls, businessId ? { businessId, limit: 50 } : "skip");
+  const summary = useQuery(
+    api.dashboard.overview.getHomeSummary,
+    businessId ? { businessId } : "skip",
+  );
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [mobileSelectedCallId, setMobileSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [isOutcomeOpen, setIsOutcomeOpen] = useState(true);
@@ -220,9 +224,20 @@ export function CallsPage({ businessId }: CallsPageProps) {
     <section className="flex min-w-0 h-full gap-6">
       <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center gap-2 py-2">
-            <h1 className="text-2xl font-bold">{t("page.title")}</h1>
-            <Phone className="size-5" />
+          <div className="flex items-center justify-between gap-4 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="text-2xl font-bold">{t("page.title")}</h1>
+              <Phone className="size-5" />
+            </div>
+            <div className="inline-flex shrink-0 items-center gap-2">
+              <span className="text-base font-semibold leading-none">
+                {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
+              </span>
+              <span className="relative flex size-2.5 shrink-0">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+              </span>
+            </div>
           </div>
           <label
             className={cn(

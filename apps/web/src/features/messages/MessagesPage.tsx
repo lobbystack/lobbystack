@@ -3,9 +3,13 @@ import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   ChevronRight,
+  ImagePlus,
   MessagesSquare,
   MoreVertical,
+  Paperclip,
+  Plus,
   Search as SearchIcon,
+  Send,
 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -353,6 +357,55 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   </div>
                 </div>
               </div>
+              <form className="flex w-full flex-none gap-2">
+                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden lg:gap-4">
+                  <div className="space-x-1">
+                    <Button
+                      className="h-8 rounded-md"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Plus className="stroke-muted-foreground" size={20} />
+                    </Button>
+                    <Button
+                      className="hidden h-8 rounded-md lg:inline-flex"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <ImagePlus className="stroke-muted-foreground" size={20} />
+                    </Button>
+                    <Button
+                      className="hidden h-8 rounded-md lg:inline-flex"
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Paperclip className="stroke-muted-foreground" size={20} />
+                    </Button>
+                  </div>
+                  <label className="flex-1">
+                    <span className="sr-only">Chat Text Box</span>
+                    <input
+                      className="h-8 w-full bg-inherit focus-visible:outline-hidden"
+                      placeholder={t("page.composerPlaceholder")}
+                      type="text"
+                    />
+                  </label>
+                  <Button
+                    className="hidden sm:inline-flex"
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Send size={20} />
+                  </Button>
+                </div>
+                <Button className="h-full sm:hidden" type="button">
+                  <Send size={18} /> {t("page.send")}
+                </Button>
+              </form>
             </div>
           </>
         ) : (

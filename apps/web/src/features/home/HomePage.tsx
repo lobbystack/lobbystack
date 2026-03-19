@@ -203,15 +203,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </TabsTrigger>
             </TabsList>
           </div>
-          <div className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 shadow-sm">
-            <span className="relative flex size-2.5 shrink-0">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-base font-semibold leading-none">
-              {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
-            </span>
-          </div>
         </div>
         <TabsContent className="space-y-6" value="overview">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
