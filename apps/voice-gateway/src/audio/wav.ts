@@ -55,8 +55,9 @@ export function buildStereoCallRecording(input: {
   );
   const channelCount = 2;
   const data = Buffer.alloc(totalSamples * channelCount * 2);
+  const mixedSamples = new Int32Array(totalSamples);
 
-  const writeChannel = (chunks: Array<TimedAudioChunk>, channelIndex: number): void => {
+  const mixChunks = (chunks: Array<TimedAudioChunk>): void => {
     for (const chunk of chunks) {
       const samples = decodeMuLawPayload(chunk.payload);
       const startSample = Math.max(0, Math.floor((chunk.offsetMs * sampleRate) / 1000));
@@ -66,14 +67,22 @@ export function buildStereoCallRecording(input: {
         if (frameIndex >= totalSamples) {
           break;
         }
-        const byteOffset = frameIndex * channelCount * 2 + channelIndex * 2;
-        data.writeInt16LE(samples[sampleIndex] ?? 0, byteOffset);
+        mixedSamples[frameIndex] =
+          (mixedSamples[frameIndex] ?? 0) + (samples[sampleIndex] ?? 0);
       }
     }
   };
 
-  writeChannel(input.inboundChunks, 0);
-  writeChannel(input.outboundChunks, 1);
+  mixChunks(input.inboundChunks);
+  mixChunks(input.outboundChunks);
+
+  for (let frameIndex = 0; frameIndex < totalSamples; frameIndex += 1) {
+    const mixedSample = Math.max(-32768, Math.min(32767, mixedSamples[frameIndex] ?? 0));
+    const leftOffset = frameIndex * channelCount * 2;
+    const rightOffset = leftOffset + 2;
+    data.writeInt16LE(mixedSample, leftOffset);
+    data.writeInt16LE(mixedSample, rightOffset);
+  }
 
   return Buffer.concat([
     writeWavHeader({
