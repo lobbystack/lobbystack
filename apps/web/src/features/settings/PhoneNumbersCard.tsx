@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 
@@ -45,7 +45,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
-  const upsertPhoneNumber = useMutation(api.businesses.catalog.upsertPhoneNumber);
+  const savePhoneNumber = useAction(api.businesses.catalog.savePhoneNumber);
   const phoneNumbers = useMemo(
     () => (configuration?.phoneNumbers ?? []) as Array<Doc<"phone_numbers">>,
     [configuration],
@@ -106,7 +106,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
     setErrorMessage(null);
 
     try {
-      const result = await upsertPhoneNumber({
+      const result = await savePhoneNumber({
         businessId: props.businessId,
         ...(selectedPhoneNumber?._id ? { phoneNumberId: selectedPhoneNumber._id } : {}),
         e164: e164.replace(/\s+/g, ""),

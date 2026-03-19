@@ -250,6 +250,141 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("stores STOP messages, marks the contact opted out, and suppresses replies", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-opt-out",
+        name: "Twilio Opt Out",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550126",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550126",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-stop-1",
+      From: "+14165550190",
+      To: smsNumber,
+      Body: "STOP",
+      OptOutType: "STOP",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-still-opted-out-1",
+      From: "+14165550190",
+      To: smsNumber,
+      Body: "Can you help me?",
+    });
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550190"),
+        )
+        .unique();
+      expect(contact).toMatchObject({
+        smsConsentStatus: "opted_out",
+        smsConsentSource: "twilio_opt_out:STOP",
+      });
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) =>
+          q.eq("businessId", contact!.businessId),
+        )
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      expect(messages).toHaveLength(2);
+      expect(messages.every((message) => message.direction === "inbound")).toBe(true);
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-stop-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "conversations",
+        status: "processed_no_reply",
+      });
+    });
+  });
+
+  it("clears opt-out on START and resumes reply generation", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-start-reply",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-start-opt-in",
+        name: "Twilio Start Opt In",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550127",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550127",
+      };
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-stop-2",
+      From: "+14165550191",
+      To: smsNumber,
+      Body: "STOP",
+      OptOutType: "STOP",
+    });
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-start-1",
+      From: "+14165550191",
+      To: smsNumber,
+      Body: "START",
+      OptOutType: "START",
+    });
+
+    expect(generateSmsReplyMock).toHaveBeenCalledTimes(1);
+    expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550191",
+      from: smsNumber,
+      body: "Auto-reply: START",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550191"),
+        )
+        .unique();
+      expect(contact).toMatchObject({
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "twilio_opt_out:START",
+      });
+    });
+  });
+
   it("stores inbound MMS attachments without breaking reply delivery", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
@@ -461,6 +596,61 @@ describe("Twilio SMS delivery flow", () => {
         providerRawDlrDoneDate: "2603111600",
       });
     });
+  });
+
+  it("supports backend debug lookups by provider SID and counterparty phone", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-debug-1",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-debug-lookups",
+        name: "Twilio Debug Lookups",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550128",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550128",
+      };
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-debug-1",
+      From: "+14165550192",
+      To: smsNumber,
+      Body: "Debug this thread",
+    });
+
+    const providerMessage = await t.query(
+      internal.integrations.twilioSmsDebug.getMessageByProviderMessageSid,
+      {
+        businessId,
+        providerMessageSid: "SM-debug-1",
+      },
+    );
+    expect(providerMessage).toMatchObject({
+      providerMessageSid: "SM-debug-1",
+      direction: "outbound",
+    });
+
+    const counterpartyMessages = await t.query(
+      internal.integrations.twilioSmsDebug.getMessagesByCounterpartyPhone,
+      {
+        businessId,
+        phone: "+14165550192",
+      },
+    );
+    expect(counterpartyMessages).toHaveLength(2);
+    expect(counterpartyMessages.map((message) => message.direction)).toEqual([
+      "inbound",
+      "outbound",
+    ]);
   });
 
   it("sends appointment notifications through Twilio and reconciles delivery", async () => {

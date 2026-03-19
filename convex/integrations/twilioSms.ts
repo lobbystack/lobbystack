@@ -62,3 +62,22 @@ export const sendMessage = internalAction({
     };
   },
 });
+
+export const registerIncomingWebhook = internalAction({
+  args: {
+    phoneNumberSid: v.string(),
+    webhookUrl: v.string(),
+  },
+  handler: async (_ctx, args) => {
+    const client = getTwilioClient();
+    const phoneNumber = await client.incomingPhoneNumbers(args.phoneNumberSid).update({
+      smsUrl: args.webhookUrl,
+      smsMethod: "POST",
+    });
+
+    return {
+      phoneNumberSid: phoneNumber.sid,
+      smsWebhookTargetUrl: phoneNumber.smsUrl ?? args.webhookUrl,
+    };
+  },
+});

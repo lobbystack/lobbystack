@@ -331,6 +331,9 @@ http.route({
         ? { messageSid: parsedPayload.data.MessageSid }
         : {}),
       ...(parsedPayload.data.SmsSid !== undefined ? { smsSid: parsedPayload.data.SmsSid } : {}),
+      ...(parsedPayload.data.OptOutType !== undefined
+        ? { optOutType: parsedPayload.data.OptOutType }
+        : {}),
       ...(media.length > 0 ? { media } : {}),
     });
 

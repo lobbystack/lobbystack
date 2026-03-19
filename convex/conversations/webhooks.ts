@@ -12,6 +12,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
+import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
@@ -19,15 +20,6 @@ function asConversationId(value: string): Id<"conversations"> {
 
 function asMessageId(value: string): Id<"messages"> {
   return value as Id<"messages">;
-}
-
-function buildTwilioSmsStatusCallbackUrl(): string {
-  const siteUrl = process.env.CONVEX_SITE_URL;
-  if (!siteUrl) {
-    throw new Error("CONVEX_SITE_URL is required to receive Twilio SMS callbacks.");
-  }
-
-  return new URL("/twilio/sms/status", siteUrl).toString();
 }
 
 type MessageMediaAttachment = {
@@ -109,13 +101,77 @@ type HandleTwilioSmsInboundArgs = {
   body: string;
   messageSid?: string;
   smsSid?: string;
+  optOutType?: string;
   media?: Array<MessageMediaAttachment>;
 };
 type HandleTwilioSmsInboundResult = {
   businessId: Id<"businesses">;
   conversationId: Id<"conversations">;
-  reply: string;
+  reply: string | null;
 };
+type SmsConsentUpdate = {
+  status: "opted_out" | "subscribed";
+  source: string;
+};
+type IngestInboundSmsArgs = {
+  businessId: Id<"businesses">;
+  from: string;
+  channel: string;
+  body: string;
+  providerMessageSid?: string;
+  optOutType?: string;
+  idempotencyKeyId?: Id<"idempotency_keys">;
+  media?: Array<MessageMediaAttachment>;
+};
+type IngestInboundSmsResult = {
+  conversationId: Id<"conversations">;
+  contactId: Id<"contacts">;
+  replySuppressed: boolean;
+};
+
+const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
+const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
+
+function normalizeSmsKeyword(value: string): string {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function classifySmsConsentUpdate(input: {
+  body: string;
+  optOutType?: string;
+}): SmsConsentUpdate | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  if (normalizedOptOutType) {
+    if (SMS_STOP_KEYWORDS.has(normalizedOptOutType)) {
+      return {
+        status: "opted_out",
+        source: `twilio_opt_out:${normalizedOptOutType}`,
+      };
+    }
+    if (SMS_START_KEYWORDS.has(normalizedOptOutType)) {
+      return {
+        status: "subscribed",
+        source: `twilio_opt_out:${normalizedOptOutType}`,
+      };
+    }
+  }
+
+  const normalizedBody = normalizeSmsKeyword(input.body);
+  if (SMS_STOP_KEYWORDS.has(normalizedBody)) {
+    return {
+      status: "opted_out",
+      source: `keyword:${normalizedBody}`,
+    };
+  }
+  if (SMS_START_KEYWORDS.has(normalizedBody)) {
+    return {
+      status: "subscribed",
+      source: `keyword:${normalizedBody}`,
+    };
+  }
+
+  return null;
+}
 
 export const getLatestOutboundReply = internalQuery({
   args: {
@@ -214,6 +270,106 @@ export const getConversationForContact = internalQuery({
     args: ConversationForContactArgs,
   ): Promise<Doc<"conversations"> | null> => {
     return await getOpenConversationForContact(ctx, args);
+  },
+});
+
+export const ingestInboundSms = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    from: v.string(),
+    channel: v.string(),
+    body: v.string(),
+    providerMessageSid: v.optional(v.string()),
+    optOutType: v.optional(v.string()),
+    idempotencyKeyId: v.optional(v.id("idempotency_keys")),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          contentType: v.optional(v.string()),
+        }),
+      ),
+    ),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: IngestInboundSmsArgs,
+  ): Promise<IngestInboundSmsResult> => {
+    const existingContact = await ctx.db
+      .query("contacts")
+      .withIndex("by_business_id_and_phone", (q) =>
+        q.eq("businessId", args.businessId).eq("phone", args.from),
+      )
+      .unique();
+
+    const consentUpdate = classifySmsConsentUpdate({
+      body: args.body,
+      ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+    });
+    const consentUpdatedAt = consentUpdate ? new Date().toISOString() : undefined;
+
+    const contactId =
+      existingContact?._id ??
+      (await ctx.db.insert("contacts", {
+        businessId: args.businessId,
+        phone: args.from,
+        ...(consentUpdate ? { smsConsentStatus: consentUpdate.status } : {}),
+        ...(consentUpdatedAt ? { smsConsentUpdatedAt: consentUpdatedAt } : {}),
+        ...(consentUpdate ? { smsConsentSource: consentUpdate.source } : {}),
+      }));
+
+    if (existingContact && consentUpdate) {
+      await ctx.db.patch(existingContact._id, {
+        smsConsentStatus: consentUpdate.status,
+        ...(consentUpdatedAt ? { smsConsentUpdatedAt: consentUpdatedAt } : {}),
+        smsConsentSource: consentUpdate.source,
+      });
+    }
+
+    const conversation = await ctx.runQuery(internal.conversations.webhooks.getConversationForContact, {
+      businessId: args.businessId,
+      contactId,
+      channel: args.channel,
+    });
+
+    const conversationId =
+      conversation?._id ??
+      (await ctx.db.insert("conversations", {
+        businessId: args.businessId,
+        contactId,
+        channel: args.channel,
+        status: "open",
+      }));
+
+    await ctx.db.insert("messages", {
+      businessId: args.businessId,
+      conversationId,
+      direction: "inbound",
+      channel: args.channel,
+      ...(args.providerMessageSid !== undefined
+        ? { providerMessageSid: args.providerMessageSid }
+        : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
+      body: args.body,
+      status: "received",
+      aiGenerated: false,
+    });
+
+    if (args.idempotencyKeyId) {
+      await ctx.db.patch(args.idempotencyKeyId, {
+        resourceTable: "conversations",
+        resourceId: String(conversationId),
+        status: "inbound_recorded",
+      });
+    }
+
+    const nextConsentStatus = consentUpdate?.status ?? existingContact?.smsConsentStatus;
+
+    return {
+      conversationId,
+      contactId,
+      replySuppressed: nextConsentStatus === "opted_out",
+    };
   },
 });
 
@@ -516,6 +672,7 @@ export const handleTwilioSmsInbound = internalAction({
     body: v.string(),
     messageSid: v.optional(v.string()),
     smsSid: v.optional(v.string()),
+    optOutType: v.optional(v.string()),
     media: v.optional(
       v.array(
         v.object({
@@ -592,25 +749,32 @@ export const handleTwilioSmsInbound = internalAction({
       }
     }
 
-    const contactId: Id<"contacts"> = await ctx.runMutation(
-      internal.conversations.webhooks.getOrCreateContact,
+    const { conversationId, replySuppressed }: IngestInboundSmsResult = await ctx.runMutation(
+      internal.conversations.webhooks.ingestInboundSms,
       {
         businessId: phoneNumber.businessId,
-        phone: args.from,
-      },
-    );
-
-    const { conversationId }: { conversationId: Id<"conversations"> } = await ctx.runMutation(
-      internal.conversations.webhooks.storeInboundMessage,
-      {
-        businessId: phoneNumber.businessId,
-        contactId,
+        from: args.from,
         channel: "sms",
         body: args.body,
         ...(providerInboundSid !== undefined ? { providerMessageSid: providerInboundSid } : {}),
+        ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+        ...(idempotencyKeyId !== null ? { idempotencyKeyId } : {}),
         ...(args.media !== undefined ? { media: args.media } : {}),
       },
     );
+
+    if (replySuppressed) {
+      if (idempotencyKeyId) {
+        await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+          idempotencyKeyId,
+          resourceTable: "conversations",
+          resourceId: String(conversationId),
+          status: "processed_no_reply",
+        });
+      }
+
+      return { businessId: phoneNumber.businessId, conversationId, reply: null };
+    }
 
     const rawReply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,

@@ -6,8 +6,16 @@ import {
   retrieveAccount,
 } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
-import { action, internalMutation, internalQuery, mutation, query, type ActionCtx } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type ActionCtx,
+} from "../_generated/server";
+import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import {
   listStaffServiceAssignmentsForBusiness,
@@ -19,7 +27,75 @@ import {
   localizedServiceNamesValidator,
   normalizeLocalizedServiceNames,
 } from "../lib/serviceNames";
+import { buildTwilioSmsInboundWebhookUrl } from "../lib/twilioUrls";
 import { scheduleSnapshotRefresh } from "./admin";
+
+const phoneNumberSaveArgs = {
+  businessId: v.id("businesses"),
+  phoneNumberId: v.optional(v.id("phone_numbers")),
+  e164: v.string(),
+  twilioPhoneSid: v.optional(v.string()),
+  voiceEnabled: v.boolean(),
+  smsEnabled: v.boolean(),
+  status: v.string(),
+} as const;
+
+type PhoneNumberSaveArgs = {
+  businessId: Id<"businesses">;
+  phoneNumberId?: Id<"phone_numbers">;
+  e164: string;
+  twilioPhoneSid?: string;
+  voiceEnabled: boolean;
+  smsEnabled: boolean;
+  status: string;
+};
+
+type PhoneNumberSaveResult = {
+  phoneNumberId: Id<"phone_numbers">;
+  smsWebhookStatus: string;
+  smsWebhookLastError?: string;
+};
+
+type PhoneNumberUpsertInternalResult = PhoneNumberSaveResult & {
+  shouldSyncSmsWebhook: boolean;
+};
+
+type PhoneNumberWebhookSyncInput = {
+  twilioPhoneSid: string | undefined;
+  smsEnabled: boolean;
+  status: string;
+};
+
+function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
+  return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
+}
+
+function buildPhoneNumberWithWebhookState(
+  current: Omit<Doc<"phone_numbers">, "_id" | "_creationTime">,
+  webhookState: {
+    smsWebhookStatus: string;
+    smsWebhookTargetUrl?: string;
+    smsWebhookLastSyncedAt?: string;
+    smsWebhookLastError?: string;
+  },
+): Omit<Doc<"phone_numbers">, "_id" | "_creationTime"> {
+  const next: Omit<Doc<"phone_numbers">, "_id" | "_creationTime"> = {
+    ...current,
+    ...(webhookState.smsWebhookStatus ? { smsWebhookStatus: webhookState.smsWebhookStatus } : {}),
+  };
+
+  if (webhookState.smsWebhookTargetUrl !== undefined) {
+    next.smsWebhookTargetUrl = webhookState.smsWebhookTargetUrl;
+  }
+  if (webhookState.smsWebhookLastSyncedAt !== undefined) {
+    next.smsWebhookLastSyncedAt = webhookState.smsWebhookLastSyncedAt;
+  }
+  if (webhookState.smsWebhookLastError !== undefined) {
+    next.smsWebhookLastError = webhookState.smsWebhookLastError;
+  }
+
+  return next;
+}
 
 export const resolveBusinessByPhoneNumber = internalQuery({
   args: {
@@ -450,18 +526,18 @@ export const replaceStaffServiceAssignments = mutation({
   },
 });
 
-export const upsertPhoneNumber = mutation({
+export const getPhoneNumberById = internalQuery({
   args: {
-    businessId: v.id("businesses"),
-    phoneNumberId: v.optional(v.id("phone_numbers")),
-    e164: v.string(),
-    twilioPhoneSid: v.optional(v.string()),
-    voiceEnabled: v.boolean(),
-    smsEnabled: v.boolean(),
-    status: v.string(),
+    phoneNumberId: v.id("phone_numbers"),
   },
+  handler: async (ctx, args): Promise<Doc<"phone_numbers"> | null> => {
+    return await ctx.db.get(args.phoneNumberId);
+  },
+});
+
+export const upsertPhoneNumberInternal = internalMutation({
+  args: phoneNumberSaveArgs,
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
     const conflictingPhoneNumber = await ctx.db
       .query("phone_numbers")
       .withIndex("by_e164", (q) => q.eq("e164", args.e164))
@@ -480,7 +556,41 @@ export const upsertPhoneNumber = mutation({
         throw new Error("Phone number not found for this business.");
       }
 
-      await ctx.db.patch(args.phoneNumberId, {
+      const nextTwilioPhoneSid = args.twilioPhoneSid ?? existingPhoneNumber.twilioPhoneSid;
+      const nextRecord = buildPhoneNumberWithWebhookState(
+        {
+          businessId: existingPhoneNumber.businessId,
+          e164: args.e164,
+          ...(nextTwilioPhoneSid !== undefined ? { twilioPhoneSid: nextTwilioPhoneSid } : {}),
+          voiceEnabled: args.voiceEnabled,
+          smsEnabled: args.smsEnabled,
+          status: args.status,
+        },
+        shouldSyncSmsWebhook({
+          twilioPhoneSid: nextTwilioPhoneSid,
+          smsEnabled: args.smsEnabled,
+          status: args.status,
+        })
+          ? { smsWebhookStatus: "pending" }
+          : { smsWebhookStatus: "not_configured" },
+      );
+
+      await ctx.db.replace(args.phoneNumberId, nextRecord);
+      await scheduleSnapshotRefresh(ctx, args.businessId);
+      return {
+        phoneNumberId: args.phoneNumberId,
+        smsWebhookStatus: nextRecord.smsWebhookStatus ?? "not_configured",
+        shouldSyncSmsWebhook: shouldSyncSmsWebhook({
+          twilioPhoneSid: nextTwilioPhoneSid,
+          smsEnabled: args.smsEnabled,
+          status: args.status,
+        }),
+      } satisfies PhoneNumberUpsertInternalResult;
+    }
+
+    const nextRecord = buildPhoneNumberWithWebhookState(
+      {
+        businessId: args.businessId,
         e164: args.e164,
         ...(args.twilioPhoneSid !== undefined
           ? { twilioPhoneSid: args.twilioPhoneSid }
@@ -488,22 +598,153 @@ export const upsertPhoneNumber = mutation({
         voiceEnabled: args.voiceEnabled,
         smsEnabled: args.smsEnabled,
         status: args.status,
-      });
-      await scheduleSnapshotRefresh(ctx, args.businessId);
-      return { phoneNumberId: args.phoneNumberId };
+      },
+      shouldSyncSmsWebhook({
+        twilioPhoneSid: args.twilioPhoneSid,
+        smsEnabled: args.smsEnabled,
+        status: args.status,
+      })
+        ? { smsWebhookStatus: "pending" }
+        : { smsWebhookStatus: "not_configured" },
+    );
+
+    const phoneNumberId = await ctx.db.insert("phone_numbers", nextRecord);
+    await scheduleSnapshotRefresh(ctx, args.businessId);
+    return {
+      phoneNumberId,
+      smsWebhookStatus: nextRecord.smsWebhookStatus ?? "not_configured",
+      shouldSyncSmsWebhook: shouldSyncSmsWebhook({
+        twilioPhoneSid: args.twilioPhoneSid,
+        smsEnabled: args.smsEnabled,
+        status: args.status,
+      }),
+    } satisfies PhoneNumberUpsertInternalResult;
+  },
+});
+
+export const recordPhoneNumberSmsWebhookSync = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+    smsWebhookStatus: v.string(),
+    smsWebhookTargetUrl: v.optional(v.string()),
+    smsWebhookLastSyncedAt: v.optional(v.string()),
+    smsWebhookLastError: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<PhoneNumberSaveResult> => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber) {
+      throw new Error("Phone number not found.");
     }
 
-    const phoneNumberId = await ctx.db.insert("phone_numbers", {
-      businessId: args.businessId,
-      e164: args.e164,
-      ...(args.twilioPhoneSid !== undefined
-        ? { twilioPhoneSid: args.twilioPhoneSid }
+    const nextPhoneNumber = buildPhoneNumberWithWebhookState(
+      {
+        businessId: phoneNumber.businessId,
+        e164: phoneNumber.e164,
+        ...(phoneNumber.twilioPhoneSid !== undefined
+          ? { twilioPhoneSid: phoneNumber.twilioPhoneSid }
+          : {}),
+        voiceEnabled: phoneNumber.voiceEnabled,
+        smsEnabled: phoneNumber.smsEnabled,
+        status: phoneNumber.status,
+      },
+      {
+        smsWebhookStatus: args.smsWebhookStatus,
+        ...(args.smsWebhookTargetUrl !== undefined
+          ? { smsWebhookTargetUrl: args.smsWebhookTargetUrl }
+          : {}),
+        ...(args.smsWebhookLastSyncedAt !== undefined
+          ? { smsWebhookLastSyncedAt: args.smsWebhookLastSyncedAt }
+          : {}),
+        ...(args.smsWebhookLastError !== undefined
+          ? { smsWebhookLastError: args.smsWebhookLastError }
+          : {}),
+      },
+    );
+
+    await ctx.db.replace(args.phoneNumberId, nextPhoneNumber);
+
+    return {
+      phoneNumberId: args.phoneNumberId,
+      smsWebhookStatus: nextPhoneNumber.smsWebhookStatus ?? "not_configured",
+      ...(nextPhoneNumber.smsWebhookLastError !== undefined
+        ? { smsWebhookLastError: nextPhoneNumber.smsWebhookLastError }
         : {}),
-      voiceEnabled: args.voiceEnabled,
-      smsEnabled: args.smsEnabled,
-      status: args.status,
+    };
+  },
+});
+
+export const syncPhoneNumberSmsWebhook = internalAction({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+  },
+  handler: async (ctx, args): Promise<PhoneNumberSaveResult> => {
+    const phoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+      phoneNumberId: args.phoneNumberId,
     });
-    await scheduleSnapshotRefresh(ctx, args.businessId);
-    return { phoneNumberId };
+    if (!phoneNumber) {
+      throw new Error("Phone number not found.");
+    }
+
+    if (!shouldSyncSmsWebhook({
+      twilioPhoneSid: phoneNumber.twilioPhoneSid,
+      smsEnabled: phoneNumber.smsEnabled,
+      status: phoneNumber.status,
+    })) {
+      return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberSmsWebhookSync, {
+        phoneNumberId: args.phoneNumberId,
+        smsWebhookStatus: "not_configured",
+      });
+    }
+
+    const webhookUrl = buildTwilioSmsInboundWebhookUrl();
+
+    try {
+      const result = await ctx.runAction(internal.integrations.twilioSms.registerIncomingWebhook, {
+        phoneNumberSid: phoneNumber.twilioPhoneSid!,
+        webhookUrl,
+      });
+
+      return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberSmsWebhookSync, {
+        phoneNumberId: args.phoneNumberId,
+        smsWebhookStatus: "synced",
+        smsWebhookTargetUrl: result.smsWebhookTargetUrl,
+        smsWebhookLastSyncedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberSmsWebhookSync, {
+        phoneNumberId: args.phoneNumberId,
+        smsWebhookStatus: "failed",
+        smsWebhookTargetUrl: webhookUrl,
+        smsWebhookLastSyncedAt: new Date().toISOString(),
+        smsWebhookLastError: error instanceof Error ? error.message : "Twilio webhook sync failed.",
+      });
+    }
+  },
+});
+
+export const savePhoneNumber = action({
+  args: phoneNumberSaveArgs,
+  handler: async (ctx: ActionCtx, args): Promise<PhoneNumberSaveResult> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required.");
+    }
+
+    await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+    });
+
+    const result = await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, args);
+    if (!result.shouldSyncSmsWebhook) {
+      return {
+        phoneNumberId: result.phoneNumberId,
+        smsWebhookStatus: result.smsWebhookStatus,
+      };
+    }
+
+    return await ctx.runAction(internal.businesses.catalog.syncPhoneNumberSmsWebhook, {
+      phoneNumberId: result.phoneNumberId,
+    });
   },
 });

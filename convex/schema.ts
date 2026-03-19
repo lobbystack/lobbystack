@@ -133,6 +133,10 @@ export default defineSchema({
     voiceEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     status: v.string(),
+    smsWebhookStatus: v.optional(v.string()),
+    smsWebhookTargetUrl: v.optional(v.string()),
+    smsWebhookLastSyncedAt: v.optional(v.string()),
+    smsWebhookLastError: v.optional(v.string()),
   })
     .index("by_e164", ["e164"])
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
@@ -219,6 +223,9 @@ export default defineSchema({
     email: v.optional(v.string()),
     timezone: v.optional(v.string()),
     preferredLocale: v.optional(runtimeLocaleValidator),
+    smsConsentStatus: v.optional(v.string()),
+    smsConsentUpdatedAt: v.optional(v.string()),
+    smsConsentSource: v.optional(v.string()),
   })
     .index("by_business_id_and_phone", ["businessId", "phone"])
     .index("by_business_id_and_email", ["businessId", "email"]),
