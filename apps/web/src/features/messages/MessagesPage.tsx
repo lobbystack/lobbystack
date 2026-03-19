@@ -124,6 +124,9 @@ function formatConversationChannelLabel(
   return channel === "sms" ? t("page.channelSms") : t("page.channelWeb");
 }
 
+const channelPillClassName =
+  "shrink-0 rounded-full px-2 text-[11px] leading-none shadow-none";
+
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
   const conversations = useQuery(
@@ -242,7 +245,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                               t("page.unknownCaller")}
                           </span>
                           <Badge
-                            className="shrink-0 rounded-full border-border/80 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                            className={channelPillClassName}
                             variant="outline"
                           >
                             {formatConversationChannelLabel(conversation.channel, t)}
@@ -302,7 +305,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           t("page.unknownCaller")}
                       </span>
                       <Badge
-                        className="shrink-0 rounded-full border-border/80 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                        className={channelPillClassName}
                         variant="outline"
                       >
                         {formatConversationChannelLabel(thread.conversation.channel, t)}
