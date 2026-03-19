@@ -106,6 +106,7 @@ const bookAppointmentSchema = z.object({
   startsAt: z.string().min(1),
   timezone: z.string().min(1),
   preferredStaffId: z.string().min(1).optional(),
+  conversationId: z.string().min(1).optional(),
   contactName: z.string().min(1).optional(),
   contactPhone: z.string().min(1),
 });
@@ -686,6 +687,9 @@ http.route({
       timezone: body.data.timezone,
       ...(body.data.preferredStaffId !== undefined
         ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
+        : {}),
+      ...(body.data.conversationId !== undefined
+        ? { conversationId: asId("conversations", body.data.conversationId) }
         : {}),
       ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
       contactPhone: body.data.contactPhone,

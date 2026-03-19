@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
+import { internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import schema from "../../../convex/schema";
 
@@ -10,6 +11,24 @@ declare global {
     glob(pattern: string): Record<string, () => Promise<unknown>>;
   }
 }
+
+const { workflowStartMock } = vi.hoisted(() => ({
+  workflowStartMock: vi.fn(),
+}));
+
+vi.mock("../../../convex/lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
+    "../../../convex/lib/components",
+  );
+
+  return {
+    ...actual,
+    workflowManager: {
+      define: actual.workflowManager.define.bind(actual.workflowManager),
+      start: workflowStartMock,
+    },
+  };
+});
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 
@@ -56,7 +75,50 @@ async function insertContactConversation(ctx: Parameters<Parameters<ReturnType<t
   return { contactId, conversationId };
 }
 
+async function seedVoiceBookableService(
+  ctx: Parameters<Parameters<ReturnType<typeof convexTest>["run"]>[0]>[0],
+  businessId: Id<"businesses">,
+) {
+  for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {
+    await ctx.db.insert("business_hours", {
+      businessId,
+      dayOfWeek,
+      openMinutes: 9 * 60,
+      closeMinutes: 17 * 60,
+    });
+  }
+
+  const staffId = await ctx.db.insert("staff", {
+    businessId,
+    name: "Reception Staff",
+    timezone: "America/Toronto",
+    active: true,
+  });
+  const serviceId = await ctx.db.insert("services", {
+    businessId,
+    name: "Initial Consultation",
+    slug: "initial-consultation",
+    durationMinutes: 30,
+    active: true,
+    localizedNames: {
+      en: "Initial Consultation",
+      fr: "Consultation initiale",
+    },
+  });
+  await ctx.db.insert("staff_service_assignments", {
+    businessId,
+    staffId,
+    serviceId,
+  });
+
+  return { serviceId };
+}
+
 describe("Dashboard outcome summaries", () => {
+  beforeEach(() => {
+    workflowStartMock.mockResolvedValue(null);
+  });
+
   it("returns a booked outcome for SMS threads with a confirmed booking", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-booked");
@@ -185,6 +247,49 @@ describe("Dashboard outcome summaries", () => {
 
     expect(calls[0]?.outcome).toEqual({
       kind: "message_taking",
+    });
+  });
+
+  it("returns a booked outcome for calls after a voice appointment is confirmed", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-outcome-voice-booked");
+
+    const { conversationId, startsAt } = await t.run(async (ctx) => {
+      const { conversationId } = await insertContactConversation(ctx, businessId);
+      await seedVoiceBookableService(ctx, businessId);
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-voice-booked",
+        status: "completed",
+        startedAt: "2026-03-19T14:00:00.000Z",
+      });
+
+      return {
+        conversationId,
+        startsAt: "2026-03-19T15:00:00.000-04:00",
+      };
+    });
+
+    await t.action(internal.voice.runtime.bookAppointmentForVoice, {
+      businessId,
+      conversationId,
+      serviceName: "Initial Consultation",
+      startsAt,
+      timezone: "America/Toronto",
+      contactName: "Taylor Customer",
+      contactPhone: "+14165550199",
+    });
+
+    const calls = await authed.query(api.voice.runtime.listRecentCalls, {
+      businessId,
+      limit: 10,
+    });
+
+    expect(calls[0]?.outcome).toEqual({
+      kind: "booked",
+      serviceName: "Initial Consultation",
+      startsAt,
     });
   });
 

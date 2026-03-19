@@ -134,6 +134,7 @@ type BookAppointmentForVoiceArgs = {
   startsAt: string;
   timezone: string;
   preferredStaffId?: Id<"staff">;
+  conversationId?: Id<"conversations">;
   contactName?: string;
   contactPhone: string;
 };
@@ -803,6 +804,7 @@ export const bookAppointmentForVoice = internalAction({
     startsAt: v.string(),
     timezone: v.string(),
     preferredStaffId: v.optional(v.id("staff")),
+    conversationId: v.optional(v.id("conversations")),
     contactName: v.optional(v.string()),
     contactPhone: v.string(),
   },
@@ -836,6 +838,20 @@ export const bookAppointmentForVoice = internalAction({
         sourceChannel: "voice",
       },
     );
+
+    if (args.conversationId) {
+      await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        mode: "booked",
+        selectedServiceId: service._id,
+        lastConfirmedAppointmentId: result.appointmentId,
+        lastConfirmedServiceId: service._id,
+        lastConfirmedStartsAt: args.startsAt,
+        lastOfferedStartsAt: [],
+        pendingConfirmationAppointmentId: result.appointmentId,
+      });
+    }
 
     return {
       ...result,

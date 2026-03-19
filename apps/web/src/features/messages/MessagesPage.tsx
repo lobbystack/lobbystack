@@ -3,10 +3,8 @@ import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   ChevronRight,
-  Edit,
   MessagesSquare,
   MoreVertical,
-  Phone,
   Search as SearchIcon,
 } from "lucide-react";
 import type { TFunction } from "i18next";
@@ -175,9 +173,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <MessagesSquare className="size-5" />
             </div>
-            <Button className="rounded-lg" size="icon" variant="ghost">
-              <Edit className="stroke-muted-foreground" size={24} />
-            </Button>
           </div>
           <label
             className={cn(
@@ -293,13 +288,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <div className="-me-1 flex items-center gap-1 lg:gap-2">
-                <Button
-                  className="hidden size-8 rounded-full sm:inline-flex lg:size-10"
-                  size="icon"
-                  variant="ghost"
-                >
-                  <Phone className="stroke-muted-foreground" size={22} />
-                </Button>
                 <Button
                   className="h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6"
                   size="icon"
