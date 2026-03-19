@@ -120,15 +120,15 @@ function formatMessageOutcomeSummary(
 
 function ConversationChannelIcon({ channel }: { channel: string }) {
   if (channel === "sms") {
-    return <MessageCircle className="size-3.5 fill-current stroke-current" aria-hidden="true" />;
+    return <MessageCircle className="size-3.5" aria-hidden="true" strokeWidth={2.25} />;
   }
 
-  return <Globe className="size-3.5 fill-current stroke-current" aria-hidden="true" />;
+  return <Globe className="size-3.5" aria-hidden="true" strokeWidth={2.25} />;
 }
 
 function ConversationChannelAvatarBadge({ channel }: { channel: string }) {
   return (
-    <span className="absolute right-0 -bottom-0.5 text-muted-foreground/80">
+    <span className="absolute -right-0.5 -bottom-1 text-muted-foreground/80">
       <ConversationChannelIcon channel={channel} />
     </span>
   );
