@@ -11,7 +11,7 @@ import {
   Plus,
   Search as SearchIcon,
   Send,
-  Smartphone,
+  MessageCircle,
 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -120,7 +120,7 @@ function formatMessageOutcomeSummary(
 
 function ConversationChannelIcon({ channel }: { channel: string }) {
   if (channel === "sms") {
-    return <Smartphone className="size-3" aria-hidden="true" />;
+    return <MessageCircle className="size-3" aria-hidden="true" />;
   }
 
   return <Globe className="size-3" aria-hidden="true" />;
