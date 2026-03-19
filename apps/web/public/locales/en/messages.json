@@ -6,6 +6,8 @@
     "unknownShort": "UK",
     "yesterday": "Yesterday",
     "emptyPreview": "No messages yet.",
+    "channelSms": "SMS",
+    "channelWeb": "Web",
     "selectConversation": "Select a conversation to review the thread.",
     "noChannel": "No contact channel saved.",
     "composerPlaceholder": "Type your message...",

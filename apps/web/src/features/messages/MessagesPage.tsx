@@ -18,6 +18,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
@@ -29,6 +30,7 @@ type MessagesPageProps = {
 
 type ConversationSummary = {
   id: Id<"conversations">;
+  channel: string;
   contactName: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
@@ -113,6 +115,13 @@ function formatMessageOutcomeSummary(
     default:
       return t("outcome.none");
   }
+}
+
+function formatConversationChannelLabel(
+  channel: string,
+  t: TFunction<"messages">,
+): string {
+  return channel === "sms" ? t("page.channelSms") : t("page.channelWeb");
 }
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
@@ -226,11 +235,19 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 flex-1 truncate font-semibold">
-                          {conversation.contactName ??
-                            conversation.contactPhone ??
-                            t("page.unknownCaller")}
-                        </span>
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="min-w-0 truncate font-semibold">
+                            {conversation.contactName ??
+                              conversation.contactPhone ??
+                              t("page.unknownCaller")}
+                          </span>
+                          <Badge
+                            className="shrink-0 rounded-full border-border/80 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                            variant="outline"
+                          >
+                            {formatConversationChannelLabel(conversation.channel, t)}
+                          </Badge>
+                        </div>
                         <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
                           {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
                             yesterday: t("page.yesterday"),
@@ -278,11 +295,19 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <span className="col-start-2 row-span-2 text-sm font-semibold lg:text-base">
-                      {thread.contact?.name ??
-                        thread.contact?.phone ??
-                        t("page.unknownCaller")}
-                    </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-semibold lg:text-base">
+                        {thread.contact?.name ??
+                          thread.contact?.phone ??
+                          t("page.unknownCaller")}
+                      </span>
+                      <Badge
+                        className="shrink-0 rounded-full border-border/80 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+                        variant="outline"
+                      >
+                        {formatConversationChannelLabel(thread.conversation.channel, t)}
+                      </Badge>
+                    </div>
                     <span className="col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
                       {thread.contact?.phone ??
                         thread.contact?.email ??
