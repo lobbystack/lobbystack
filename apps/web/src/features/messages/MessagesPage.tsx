@@ -238,13 +238,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <span className="min-w-0 truncate font-semibold">
+                          <span className="block truncate font-semibold">
                             {conversation.contactName ??
                               conversation.contactPhone ??
                               t("page.unknownCaller")}
                           </span>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                        <div className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs text-muted-foreground group-hover:text-accent-foreground/90">
                           <ConversationChannelIcon channel={conversation.channel} />
                           <span aria-hidden="true">&bull;</span>
                           <span>
