@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import {
   ArrowLeft,
   ChevronRight,
+  Globe,
   ImagePlus,
   MessagesSquare,
   MoreVertical,
@@ -10,6 +11,7 @@ import {
   Plus,
   Search as SearchIcon,
   Send,
+  Smartphone,
 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
@@ -116,11 +118,20 @@ function formatMessageOutcomeSummary(
   }
 }
 
-function formatConversationChannelLabel(
-  channel: string,
-  t: TFunction<"messages">,
-): string {
-  return channel === "sms" ? t("page.channelSms") : t("page.channelWeb");
+function ConversationChannelIcon({ channel }: { channel: string }) {
+  if (channel === "sms") {
+    return <Smartphone className="size-3" aria-hidden="true" />;
+  }
+
+  return <Globe className="size-3" aria-hidden="true" />;
+}
+
+function ConversationChannelAvatarBadge({ channel }: { channel: string }) {
+  return (
+    <span className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-full border border-background bg-background text-muted-foreground shadow-xs lg:size-5">
+      <ConversationChannelIcon channel={channel} />
+    </span>
+  );
 }
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
@@ -224,13 +235,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   type="button"
                 >
                   <div className="flex gap-2">
-                    <Avatar>
+                    <Avatar className="relative overflow-visible">
                       <AvatarFallback>
                         {initials(
                           conversation.contactName,
                           conversation.contactPhone ?? t("page.unknownShort"),
                         )}
                       </AvatarFallback>
+                      <ConversationChannelAvatarBadge channel={conversation.channel} />
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
@@ -241,15 +253,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                               t("page.unknownCaller")}
                           </span>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
-                          <span>{formatConversationChannelLabel(conversation.channel, t)}</span>
-                          <span aria-hidden="true">&bull;</span>
-                          <span>
-                            {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
-                              yesterday: t("page.yesterday"),
-                            })}
-                          </span>
-                        </div>
+                        <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                          {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                            yesterday: t("page.yesterday"),
+                          })}
+                        </span>
                       </div>
                       <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
                         {lastPreview}
@@ -283,13 +291,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <ArrowLeft className="rtl:rotate-180" />
                 </Button>
                 <div className="flex min-w-0 items-center gap-2 lg:gap-4">
-                  <Avatar className="size-9 lg:size-11">
+                  <Avatar className="relative size-9 overflow-visible lg:size-11">
                     <AvatarFallback>
                       {initials(
                         thread.contact?.name ?? null,
                         thread.contact?.phone ?? t("page.unknownShort"),
                       )}
                     </AvatarFallback>
+                    <ConversationChannelAvatarBadge channel={thread.conversation.channel} />
                   </Avatar>
                   <div className="min-w-0">
                     <span className="block truncate text-sm font-semibold lg:text-base">
