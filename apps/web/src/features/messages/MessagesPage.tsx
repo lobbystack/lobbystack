@@ -126,23 +126,6 @@ function ConversationChannelIcon({ channel }: { channel: string }) {
   return <Globe className="size-3" aria-hidden="true" />;
 }
 
-function ConversationChannelAvatarBadge({
-  channel,
-  cutoutClassName,
-}: {
-  channel: string;
-  cutoutClassName: string;
-}) {
-  return (
-    <span className="absolute right-0 -bottom-0.5 flex size-4 items-center justify-center text-muted-foreground/80 lg:size-[18px]">
-      <span className={cn("absolute inset-0 rounded-full", cutoutClassName)} />
-      <span className="relative">
-        <ConversationChannelIcon channel={channel} />
-      </span>
-    </span>
-  );
-}
-
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
   const conversations = useQuery(
@@ -244,20 +227,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   type="button"
                 >
                   <div className="flex gap-2">
-                    <Avatar className="relative overflow-visible">
+                    <Avatar>
                       <AvatarFallback>
                         {initials(
                           conversation.contactName,
                           conversation.contactPhone ?? t("page.unknownShort"),
                         )}
                       </AvatarFallback>
-                      <ConversationChannelAvatarBadge
-                        channel={conversation.channel}
-                        cutoutClassName={cn(
-                          isActive ? "bg-muted" : "bg-background",
-                          "group-hover:bg-accent",
-                        )}
-                      />
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
@@ -268,11 +244,15 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                               t("page.unknownCaller")}
                           </span>
                         </div>
-                        <span className="shrink-0 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
-                          {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
-                            yesterday: t("page.yesterday"),
-                          })}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground group-hover:text-accent-foreground/90">
+                          <ConversationChannelIcon channel={conversation.channel} />
+                          <span aria-hidden="true">&bull;</span>
+                          <span>
+                            {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                              yesterday: t("page.yesterday"),
+                            })}
+                          </span>
+                        </div>
                       </div>
                       <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
                         {lastPreview}
@@ -306,17 +286,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <ArrowLeft className="rtl:rotate-180" />
                 </Button>
                 <div className="flex min-w-0 items-center gap-2 lg:gap-4">
-                  <Avatar className="relative size-9 overflow-visible lg:size-11">
+                  <Avatar className="size-9 lg:size-11">
                     <AvatarFallback>
                       {initials(
                         thread.contact?.name ?? null,
                         thread.contact?.phone ?? t("page.unknownShort"),
                       )}
                     </AvatarFallback>
-                    <ConversationChannelAvatarBadge
-                      channel={thread.conversation.channel}
-                      cutoutClassName="bg-card"
-                    />
                   </Avatar>
                   <div className="min-w-0">
                     <span className="block truncate text-sm font-semibold lg:text-base">
