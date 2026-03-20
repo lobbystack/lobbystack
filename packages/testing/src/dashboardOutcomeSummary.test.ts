@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
 import { internal } from "../../../convex/_generated/api";
@@ -32,6 +32,7 @@ vi.mock("../../../convex/lib/components", async () => {
 });
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 
 async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: string) {
   const { businessId } = await t.run(async (ctx) => {
@@ -140,6 +141,11 @@ function getSessionSummaryItems(thread: {
 describe("Dashboard outcome summaries", () => {
   beforeEach(() => {
     workflowStartMock.mockResolvedValue(null);
+    process.env.CONVEX_SITE_URL = "https://example.convex.site";
+  });
+
+  afterAll(() => {
+    process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
   });
 
   it("returns a booked outcome for SMS threads with a confirmed booking", async () => {
@@ -345,6 +351,37 @@ describe("Dashboard outcome summaries", () => {
       kind: "disposition",
       disposition: "transfer_busy",
     });
+  });
+
+  it("returns stable tokenized recording URLs for recorded calls", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-call-recording-url");
+
+    await t.run(async (ctx) => {
+      const callId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-recording-url",
+        status: "completed",
+        startedAt: "2026-03-20T01:00:00.000Z",
+      });
+      const recordingStorageId = await ctx.storage.store(
+        new Blob(["call recording"], { type: "audio/mpeg" }),
+      );
+
+      await ctx.runMutation(internal.voice.runtime.attachCallRecording, {
+        callId,
+        recordingStorageId,
+        recordingContentType: "audio/mpeg",
+        recordingByteLength: 14,
+      });
+    });
+
+    const calls = await authed.query(api.voice.runtime.listRecentCalls, {
+      businessId,
+      limit: 10,
+    });
+
+    expect(calls[0]?.recordingUrl).toContain("/calls/recordings/download?token=");
   });
 
   it("keeps SMS messages inside one active session until inactivity finalization", async () => {

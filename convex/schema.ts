@@ -380,6 +380,19 @@ export default defineSchema({
     .index("by_expires_at", ["expiresAt"])
     .index("by_message_id", ["messageId"]),
 
+  call_recording_download_tokens: defineTable({
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  })
+    .index("by_nonce", ["nonce"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_call_id", ["callId"]),
+
   calls: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.optional(v.id("conversations")),

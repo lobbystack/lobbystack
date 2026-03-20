@@ -18,6 +18,8 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
+import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
@@ -149,6 +151,11 @@ type BookAppointmentForVoiceResult = {
   serviceId: Id<"services">;
   serviceName: string;
 };
+
+function createCallRecordingNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 type ListRecentCallsArgs = {
   businessId: Id<"businesses">;
   limit?: number;
@@ -541,6 +548,19 @@ export const attachCallRecording = internalMutation({
     recordingDurationMs: v.optional(v.number()),
   },
   handler: async (ctx: MutationCtx, args: AttachCallRecordingArgs) => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
+    const existingTokens = await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_call_id", (q) => q.eq("callId", args.callId))
+      .collect();
+    for (const token of existingTokens) {
+      await ctx.db.delete(token._id);
+    }
+
     await ctx.db.patch(args.callId, {
       recordingStorageId: args.recordingStorageId,
       recordingContentType: args.recordingContentType,
@@ -549,7 +569,30 @@ export const attachCallRecording = internalMutation({
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
     });
+
+    await ctx.db.insert("call_recording_download_tokens", {
+      businessId: call.businessId,
+      callId: args.callId,
+      storageId: args.recordingStorageId,
+      fileName: `call-recording-${String(args.callId)}.wav`,
+      contentType: args.recordingContentType,
+      nonce: createCallRecordingNonce(),
+      expiresAt: new Date(Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS).toISOString(),
+    });
+
     return null;
+  },
+});
+
+export const getCallRecordingDownloadToken = internalQuery({
+  args: {
+    token: v.string(),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    return await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
+      .unique();
   },
 });
 
@@ -929,11 +972,21 @@ export const listRecentCalls = query({
           conversation,
           fallbackDisposition: call.disposition ?? null,
         });
+        const recordingToken = (
+          await ctx.db
+            .query("call_recording_download_tokens")
+            .withIndex("by_call_id", (q) => q.eq("callId", call._id))
+            .take(1)
+        )[0] ?? null;
+        const hasActiveRecordingToken =
+          recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
 
         return {
           ...call,
           recordingUrl: call.recordingStorageId
-            ? await ctx.storage.getUrl(call.recordingStorageId)
+            ? hasActiveRecordingToken
+              ? buildCallRecordingDownloadUrl(recordingToken.nonce)
+              : await ctx.storage.getUrl(call.recordingStorageId)
             : null,
           transcriptReady: transcriptPreview.length > 0,
           transcriptPreview: transcriptPreview[0]?.text ?? null,

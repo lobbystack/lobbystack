@@ -12,3 +12,9 @@ export function buildMessageAttachmentDownloadUrl(nonce: string): string {
   url.searchParams.set("token", nonce);
   return url.toString();
 }
+
+export function buildCallRecordingDownloadUrl(nonce: string): string {
+  const url = new URL("/calls/recordings/download", requireConvexSiteUrl());
+  url.searchParams.set("token", nonce);
+  return url.toString();
+}

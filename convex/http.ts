@@ -133,6 +133,10 @@ const messageAttachmentDownloadQuerySchema = z.object({
   token: z.string().min(1),
 });
 
+const callRecordingDownloadQuerySchema = z.object({
+  token: z.string().min(1),
+});
+
 function badRequest(message: string): Response {
   return new Response(message, { status: 400 });
 }
@@ -267,6 +271,57 @@ type MessageAttachmentDownloadCtx = {
   };
 };
 
+type CallRecordingDownloadCtx = {
+  runQuery: (
+    query: typeof internal.voice.runtime.getCallRecordingDownloadToken,
+    args: { token: string },
+  ) => Promise<Doc<"call_recording_download_tokens"> | null>;
+  storage: {
+    get: (
+      storageId: Id<"_storage">,
+    ) => Promise<Blob | null>;
+  };
+};
+
+function parseRangeHeader(rangeHeader: string | null, size: number) {
+  if (!rangeHeader) {
+    return null;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) {
+    return { error: "invalid" as const };
+  }
+
+  const [, rawStart, rawEnd] = match;
+  if (!rawStart && !rawEnd) {
+    return { error: "invalid" as const };
+  }
+
+  if (!rawStart) {
+    const suffixLength = Number(rawEnd);
+    if (!Number.isInteger(suffixLength) || suffixLength <= 0) {
+      return { error: "invalid" as const };
+    }
+    const start = Math.max(0, size - suffixLength);
+    return { start, end: size - 1 };
+  }
+
+  const start = Number(rawStart);
+  const end = rawEnd ? Number(rawEnd) : size - 1;
+  if (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 0 ||
+    end < start ||
+    start >= size
+  ) {
+    return { error: "invalid" as const };
+  }
+
+  return { start, end: Math.min(end, size - 1) };
+}
+
 async function handleMessageAttachmentDownload(
   ctx: MessageAttachmentDownloadCtx,
   request: Request,
@@ -313,11 +368,72 @@ async function handleMessageAttachmentDownload(
   return new Response(blob, { status: 200, headers });
 }
 
+async function handleCallRecordingDownload(
+  ctx: CallRecordingDownloadCtx,
+  request: Request,
+): Promise<Response> {
+  const parsedQuery = parseSearchParams(new URL(request.url), callRecordingDownloadQuerySchema);
+  if (!parsedQuery.ok) {
+    return parsedQuery.response;
+  }
+
+  const token = await ctx.runQuery(internal.voice.runtime.getCallRecordingDownloadToken, {
+    token: parsedQuery.data.token,
+  });
+  if (!token) {
+    return new Response("Recording not found", { status: 404 });
+  }
+
+  if (Date.parse(token.expiresAt) < Date.now()) {
+    return new Response("Recording link expired", { status: 410 });
+  }
+
+  const blob = await ctx.storage.get(token.storageId);
+  if (!blob) {
+    return new Response("Recording not found", { status: 404 });
+  }
+
+  const remainingLifetimeMs = Date.parse(token.expiresAt) - Date.now();
+  const maxAgeSeconds = Math.max(0, Math.floor(remainingLifetimeMs / 1000));
+  const baseHeaders = new Headers();
+  baseHeaders.set("Content-Type", token.contentType);
+  baseHeaders.set("Accept-Ranges", "bytes");
+  baseHeaders.set("Content-Disposition", `inline; filename="${token.fileName}"`);
+  baseHeaders.set(
+    "Cache-Control",
+    maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}, immutable` : "no-store",
+  );
+
+  const range = parseRangeHeader(request.headers.get("range"), blob.size);
+  if (range?.error) {
+    baseHeaders.set("Content-Range", `bytes */${blob.size}`);
+    return new Response("Invalid range", { status: 416, headers: baseHeaders });
+  }
+
+  if (range) {
+    const chunk = blob.slice(range.start, range.end + 1, token.contentType);
+    baseHeaders.set("Content-Length", String(range.end - range.start + 1));
+    baseHeaders.set("Content-Range", `bytes ${range.start}-${range.end}/${blob.size}`);
+    return new Response(chunk, { status: 206, headers: baseHeaders });
+  }
+
+  baseHeaders.set("Content-Length", String(blob.size));
+  return new Response(blob, { status: 200, headers: baseHeaders });
+}
+
 http.route({
   path: "/messages/attachments/download",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     return await handleMessageAttachmentDownload(ctx, request);
+  }),
+});
+
+http.route({
+  path: "/calls/recordings/download",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    return await handleCallRecordingDownload(ctx, request);
   }),
 });
 
