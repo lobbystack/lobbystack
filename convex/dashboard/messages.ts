@@ -1037,16 +1037,16 @@ export const sendSmsReply = action({
         : {}),
     });
 
+    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+      messageId,
+    });
+
     if (args.attachmentIds && args.attachmentIds.length > 0) {
       await ctx.runMutation(internal.dashboard.messages.markStagedAttachmentsConsumed, {
         attachmentIds: args.attachmentIds,
         messageId,
       });
     }
-
-    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
-      messageId,
-    });
 
     await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
       businessId: args.businessId,

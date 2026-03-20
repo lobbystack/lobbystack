@@ -188,28 +188,14 @@ export function CallRecordingPlayer({
     setIsDownloading(true);
 
     try {
-      const response = await fetch(src);
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const extension = blob.type.includes("mpeg")
-        ? "mp3"
-        : blob.type.includes("wav")
-          ? "wav"
-          : blob.type.includes("ogg")
-            ? "ogg"
-            : "audio";
-
-      link.href = objectUrl;
-      link.download = `call-recording.${extension}`;
+      link.href = src;
+      link.download = "";
+      link.rel = "noopener noreferrer";
+      link.target = "_blank";
       document.body.append(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(objectUrl);
     } finally {
       setIsDownloading(false);
     }

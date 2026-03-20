@@ -339,6 +339,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const allAttachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedConversationIdRef = useRef<Id<"conversations"> | undefined>(undefined);
   const stagedAttachmentsRef = useRef<Array<StagedAttachment>>([]);
 
   const [selectedConversationId, setSelectedConversationId] = useState<Id<"conversations"> | undefined>();
@@ -415,6 +416,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     selectedConversationId,
     thread,
   ]);
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
 
   useEffect(() => {
     stagedAttachmentsRef.current = stagedAttachments;
@@ -512,12 +517,17 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     }
 
     setIsUploading(true);
+    const conversationId = selectedConversationId;
     const nextAttachments: Array<StagedAttachment> = [];
     try {
       for (const file of selectedFiles) {
+        if (selectedConversationIdRef.current !== conversationId) {
+          break;
+        }
+
         const uploadUrl = await generateAttachmentUploadUrl({
           businessId,
-          conversationId: selectedConversationId,
+          conversationId,
         });
         const uploadResponse = await fetch(uploadUrl, {
           method: "POST",
@@ -534,7 +544,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         const result = (await uploadResponse.json()) as { storageId: Id<"_storage"> };
         const finalized = await finalizeStagedAttachment({
           businessId,
-          conversationId: selectedConversationId,
+          conversationId,
           storageId: result.storageId,
           fileName: file.name,
         });
@@ -550,6 +560,20 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         });
       }
 
+      if (selectedConversationIdRef.current !== conversationId) {
+        revokePreviewUrls(nextAttachments);
+        await Promise.allSettled(
+          nextAttachments.map((attachment) =>
+            removeStagedAttachment({
+              businessId,
+              conversationId,
+              attachmentId: attachment.id,
+            }),
+          ),
+        );
+        return;
+      }
+
       setStagedAttachments((current) => [...current, ...nextAttachments]);
     } catch (error) {
       if (nextAttachments.length > 0) {
@@ -558,7 +582,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           nextAttachments.map((attachment) =>
             removeStagedAttachment({
               businessId,
-              conversationId: selectedConversationId,
+              conversationId,
               attachmentId: attachment.id,
             }),
           ),

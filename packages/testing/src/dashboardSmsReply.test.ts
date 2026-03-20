@@ -236,6 +236,51 @@ describe("Dashboard SMS replies", () => {
     });
   });
 
+  it("keeps staged attachments reusable when the operator SMS send fails", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-send-failure-attachments",
+    });
+
+    const attachmentId = await t.run(async (ctx) => {
+      return await storeAttachment(ctx, {
+        content: "pdf-file",
+        contentType: "application/pdf",
+        fileName: "details.pdf",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio unavailable"));
+
+    await expect(
+      authed.action(api.dashboard.messages.sendSmsReply, {
+        businessId,
+        conversationId,
+        body: "Please review the attachment",
+        attachmentIds: [attachmentId],
+      }),
+    ).rejects.toThrow("Twilio unavailable");
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db.get("conversations", conversationId);
+      const outbound = (
+        await ctx.db
+          .query("messages")
+          .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+          .collect()
+      ).find((message) => message.direction === "outbound");
+      const stagedAttachment = await ctx.db.get("message_attachment_uploads", attachmentId);
+
+      expect(conversation?.automationState ?? "ai_active").toBe("ai_active");
+      expect(outbound?.status).toBe("failed");
+      expect(stagedAttachment?.status).toBe("staged");
+      expect(stagedAttachment?.sentMessageId).toBeUndefined();
+    });
+  });
+
   it("manually pauses and resumes conversation automation", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId, conversationId } = await seedSmsConversation(t, {
