@@ -66,6 +66,27 @@ async function getContact(
   return await ctx.db.get(contactId);
 }
 
+function getLatestMessagePreviewKind(
+  message: Doc<"messages"> | null,
+): "text" | "attachment_image" | "attachment_file" {
+  if (!message) {
+    return "text";
+  }
+
+  if (message.body.trim().length > 0) {
+    return "text";
+  }
+
+  const firstAttachment = message.media?.[0];
+  if (!firstAttachment) {
+    return "text";
+  }
+
+  return isImageAttachment(firstAttachment.contentType ?? "application/octet-stream")
+    ? "attachment_image"
+    : "attachment_file";
+}
+
 function assertSmsConversation(
   conversation: Doc<"conversations"> | null,
   businessId: Id<"businesses">,
@@ -558,6 +579,7 @@ export const listConversationSummaries = query({
           contactEmail: contact?.email ?? null,
           messageCount: messages.length,
           lastMessageBody: latestMessage?.body ?? null,
+          lastMessagePreviewKind: getLatestMessagePreviewKind(latestMessage),
           lastMessageDirection: latestMessage?.direction ?? null,
           lastMessageAt: latestMessage?._creationTime ?? conversation._creationTime,
         };

@@ -6,6 +6,8 @@
     "unknownShort": "IN",
     "yesterday": "Hier",
     "emptyPreview": "Pas encore de messages.",
+    "attachmentPreviewPhoto": "Pièce jointe : photo",
+    "attachmentPreviewDocument": "Pièce jointe : document",
     "selectConversation": "Sélectionnez une conversation pour afficher le fil.",
     "noChannel": "Aucun canal de contact enregistré.",
     "composerPlaceholder": "Tapez votre message...",

@@ -14,11 +14,9 @@ import {
   Download,
   FileText,
   Globe,
-  ImagePlus,
   MessageCircle,
   MessagesSquare,
   MoreVertical,
-  Paperclip,
   Plus,
   Search as SearchIcon,
   Send,
@@ -47,6 +45,7 @@ type ConversationSummary = {
   contactPhone: string | null;
   contactEmail: string | null;
   lastMessageBody: string | null;
+  lastMessagePreviewKind: "text" | "attachment_image" | "attachment_file";
   lastMessageAt: number;
 };
 
@@ -224,6 +223,21 @@ function formatBytes(byteLength: number | null): string | null {
   }
 
   return `${(byteLength / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getConversationPreviewText(
+  conversation: ConversationSummary,
+  t: TFunction<"messages">,
+): string {
+  if (conversation.lastMessagePreviewKind === "attachment_image") {
+    return t("page.attachmentPreviewPhoto");
+  }
+
+  if (conversation.lastMessagePreviewKind === "attachment_file") {
+    return t("page.attachmentPreviewDocument");
+  }
+
+  return conversation.lastMessageBody ?? t("page.emptyPreview");
 }
 
 function revokePreviewUrls(attachments: Array<{ previewUrl: string | null }>) {
@@ -597,7 +611,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {filteredConversations.map((conversation: ConversationSummary) => {
             const isActive = conversation.id === selectedConversationId;
-            const lastPreview = conversation.lastMessageBody ?? t("page.emptyPreview");
+            const lastPreview = getConversationPreviewText(conversation, t);
 
             return (
               <Fragment key={String(conversation.id)}>
@@ -746,19 +760,21 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         </div>
                       ) : (
                         <div className="self-stretch pt-2" key={String(item.id)}>
-                          <div className="mx-auto w-full max-w-3xl rounded-md border border-border/70 bg-card px-4 py-3 text-sm shadow-xs">
-                            <div className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
-                              <span>{t("outcome.label")}</span>
-                              <span>
-                                {formatInboxTimestamp(item.closedAt, i18n.language, {
-                                  yesterday: t("page.yesterday"),
-                                })}
-                              </span>
-                            </div>
-                            <p className="mt-2 whitespace-pre-line leading-6 text-muted-foreground">
-                              {formatSessionSummaryText(item.summary, i18n.language, t)}
-                            </p>
+                          <div className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground">
+                            <span className="h-px w-64 bg-border/60 md:w-96" />
+                            <span className="inline-flex items-center justify-center text-sm font-medium">
+                              {t("outcome.label")}
+                            </span>
+                            <span className="h-px w-64 bg-border/60 md:w-96" />
                           </div>
+                          <p className="mt-3 text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                            {formatSessionSummaryText(item.summary, i18n.language, t)}
+                          </p>
+                          <p className="mt-1 text-center text-xs text-muted-foreground/80">
+                            {formatInboxTimestamp(item.closedAt, i18n.language, {
+                              yesterday: t("page.yesterday"),
+                            })}
+                          </p>
                         </div>
                       ),
                     )}
@@ -802,8 +818,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     ))}
                   </div>
                 ) : null}
-                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring lg:gap-4">
-                  <div className="space-x-1">
+                <div className="flex flex-1 items-center gap-2 rounded-md border border-input bg-card px-2 py-1 focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring">
+                  <div className="flex items-center">
                     <Button
                       className="h-8 rounded-md"
                       disabled={!isSmsConversation || isSending || isUploading}
@@ -813,26 +829,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       variant="ghost"
                     >
                       <Plus className="stroke-muted-foreground" size={20} />
-                    </Button>
-                    <Button
-                      className="hidden h-8 rounded-md lg:inline-flex"
-                      disabled={!isSmsConversation || isSending || isUploading}
-                      onClick={() => imageInputRef.current?.click()}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ImagePlus className="stroke-muted-foreground" size={20} />
-                    </Button>
-                    <Button
-                      className="hidden h-8 rounded-md lg:inline-flex"
-                      disabled={!isSmsConversation || isSending || isUploading}
-                      onClick={() => documentInputRef.current?.click()}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Paperclip className="stroke-muted-foreground" size={20} />
                     </Button>
                   </div>
                   <label className="flex-1">
