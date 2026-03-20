@@ -29,6 +29,31 @@ import {
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 
 type MessageMediaRecord = NonNullable<Doc<"messages">["media"]>[number];
+type ConversationOutcome =
+  | {
+      kind: "booked";
+      serviceName: string | null;
+      startsAt: string;
+    }
+  | {
+      kind: "booking_in_progress";
+      serviceName: string | null;
+      startsAt: string | null;
+    }
+  | {
+      kind: "message_taking";
+    }
+  | {
+      kind: "summary";
+      summary: string;
+    }
+  | {
+      kind: "disposition";
+      disposition: string;
+    }
+  | {
+      kind: "none";
+    };
 
 async function getContact(
   ctx: QueryCtx,
@@ -574,6 +599,89 @@ async function hydrateMessageAttachments(
   );
 }
 
+function buildLegacySessionSummaryItem(input: {
+  outcome: ConversationOutcome;
+  createdAt: number;
+  legacySummary: string | null;
+}) {
+  switch (input.outcome.kind) {
+    case "booked":
+      return {
+        kind: "session_summary" as const,
+        id: `legacy:${input.createdAt}:booked`,
+        sessionId: null,
+        createdAt: input.createdAt,
+        startedAt: input.createdAt,
+        closedAt: input.createdAt,
+        summaryKind: input.outcome.kind,
+        summary: {
+          kind: input.outcome.kind,
+          serviceName: input.outcome.serviceName,
+          startsAt: input.outcome.startsAt,
+        },
+      };
+    case "booking_in_progress":
+      return {
+        kind: "session_summary" as const,
+        id: `legacy:${input.createdAt}:booking_in_progress`,
+        sessionId: null,
+        createdAt: input.createdAt,
+        startedAt: input.createdAt,
+        closedAt: input.createdAt,
+        summaryKind: input.outcome.kind,
+        summary: {
+          kind: input.outcome.kind,
+          serviceName: input.outcome.serviceName,
+          startsAt: input.outcome.startsAt,
+        },
+      };
+    case "message_taking":
+      return {
+        kind: "session_summary" as const,
+        id: `legacy:${input.createdAt}:message_taking`,
+        sessionId: null,
+        createdAt: input.createdAt,
+        startedAt: input.createdAt,
+        closedAt: input.createdAt,
+        summaryKind: input.outcome.kind,
+        summary: {
+          kind: input.outcome.kind,
+          summary: input.legacySummary,
+        },
+      };
+    case "summary":
+      return {
+        kind: "session_summary" as const,
+        id: `legacy:${input.createdAt}:summary`,
+        sessionId: null,
+        createdAt: input.createdAt,
+        startedAt: input.createdAt,
+        closedAt: input.createdAt,
+        summaryKind: input.outcome.kind,
+        summary: {
+          kind: input.outcome.kind,
+          summary: input.outcome.summary,
+        },
+      };
+    case "disposition":
+      return {
+        kind: "session_summary" as const,
+        id: `legacy:${input.createdAt}:disposition`,
+        sessionId: null,
+        createdAt: input.createdAt,
+        startedAt: input.createdAt,
+        closedAt: input.createdAt,
+        summaryKind: input.outcome.kind,
+        summary: {
+          kind: input.outcome.kind,
+          disposition: input.outcome.disposition,
+        },
+      };
+    default:
+      return null;
+  }
+}
+
 export const getConversationThread = query({
   args: {
     businessId: v.id("businesses"),
@@ -587,16 +695,74 @@ export const getConversationThread = query({
       throw new Error("Conversation not found.");
     }
 
-    const [contact, messages] = await Promise.all([
+    const [contact, messages, sessions] = await Promise.all([
       getContact(ctx, conversation.contactId),
       ctx.db
         .query("messages")
         .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
         .collect(),
+      ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_started_at", (q) =>
+          q.eq("conversationId", args.conversationId),
+        )
+        .collect(),
     ]);
-    const outcome = await buildConversationOutcome(ctx, {
-      conversation,
-    });
+
+    const hydratedMessages = await Promise.all(
+      messages.map(async (message) => ({
+        kind: "message" as const,
+        id: message._id,
+        conversationSessionId: message.conversationSessionId ?? null,
+        direction: message.direction,
+        body: message.body,
+        status: message.status,
+        channel: message.channel,
+        createdAt: message._creationTime,
+        attachments: await hydrateMessageAttachments(ctx, message),
+      })),
+    );
+
+    const summaryTimelineItems = sessions
+      .filter((session) => session.summaryGeneratedAt && session.summary)
+      .map((session) => ({
+        kind: "session_summary" as const,
+        id: session._id,
+        sessionId: session._id,
+        createdAt: session.closedAt ?? session.lastMessageAt,
+        startedAt: session.startedAt,
+        closedAt: session.closedAt ?? session.lastMessageAt,
+        summaryKind: session.summaryKind ?? session.summary!.kind,
+        summary: session.summary!,
+      }));
+
+    const legacyOutcome =
+      sessions.length === 0
+        ? ((await buildConversationOutcome(ctx, {
+            conversation,
+          })) as ConversationOutcome)
+        : null;
+    const legacySummaryItem =
+      sessions.length === 0 && legacyOutcome
+        ? buildLegacySessionSummaryItem({
+            outcome: legacyOutcome,
+            createdAt: hydratedMessages[hydratedMessages.length - 1]?.createdAt ?? conversation._creationTime,
+            legacySummary: conversation.summary ?? null,
+          })
+        : null;
+
+    const timeline = [...hydratedMessages, ...summaryTimelineItems, ...(legacySummaryItem ? [legacySummaryItem] : [])]
+      .sort((left, right) => {
+        if (left.createdAt !== right.createdAt) {
+          return left.createdAt - right.createdAt;
+        }
+
+        if (left.kind === right.kind) {
+          return 0;
+        }
+
+        return left.kind === "message" ? -1 : 1;
+      });
 
     return {
       conversation: {
@@ -614,18 +780,8 @@ export const getConversationThread = query({
             email: contact.email ?? null,
           }
         : null,
-      messages: await Promise.all(
-        messages.map(async (message) => ({
-          id: message._id,
-          direction: message.direction,
-          body: message.body,
-          status: message.status,
-          channel: message.channel,
-          createdAt: message._creationTime,
-          attachments: await hydrateMessageAttachments(ctx, message),
-        })),
-      ),
-      outcome,
+      messages: hydratedMessages,
+      timeline,
     };
   },
 });

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../../convex/_generated/api";
 import { internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { SMS_SESSION_INACTIVITY_MS } from "../../../convex/conversations/sessions";
 import schema from "../../../convex/schema";
 
 declare global {
@@ -114,6 +115,28 @@ async function seedVoiceBookableService(
   return { serviceId };
 }
 
+function getSessionSummaryItems(thread: {
+  timeline: Array<
+    | { kind: "message" }
+    | {
+        kind: "session_summary";
+        summaryKind: string;
+        summary: {
+          kind: string;
+          serviceName?: string | null;
+          startsAt?: string | null;
+          summary?: string | null;
+          disposition?: string | null;
+        };
+      }
+  >;
+}) {
+  return thread.timeline.filter(
+    (item): item is (typeof thread.timeline)[number] & { kind: "session_summary" } =>
+      item.kind === "session_summary",
+  );
+}
+
 describe("Dashboard outcome summaries", () => {
   beforeEach(() => {
     workflowStartMock.mockResolvedValue(null);
@@ -159,10 +182,13 @@ describe("Dashboard outcome summaries", () => {
       conversationId,
     });
 
-    expect(thread.outcome).toEqual({
-      kind: "booked",
-      serviceName: "Initial Consultation",
-      startsAt,
+    expect(getSessionSummaryItems(thread)[0]).toMatchObject({
+      summaryKind: "booked",
+      summary: {
+        kind: "booked",
+        serviceName: "Initial Consultation",
+        startsAt,
+      },
     });
   });
 
@@ -206,10 +232,13 @@ describe("Dashboard outcome summaries", () => {
       conversationId,
     });
 
-    expect(thread.outcome).toEqual({
-      kind: "booking_in_progress",
-      serviceName: "Support Consultation",
-      startsAt,
+    expect(getSessionSummaryItems(thread)[0]).toMatchObject({
+      summaryKind: "booking_in_progress",
+      summary: {
+        kind: "booking_in_progress",
+        serviceName: "Support Consultation",
+        startsAt,
+      },
     });
   });
 
@@ -315,6 +344,217 @@ describe("Dashboard outcome summaries", () => {
     expect(calls[0]?.outcome).toEqual({
       kind: "disposition",
       disposition: "transfer_busy",
+    });
+  });
+
+  it("keeps SMS messages inside one active session until inactivity finalization", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedBusinessMember(t, "dashboard-session-single");
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "Can I book an appointment?",
+    });
+    await t.mutation(internal.conversations.webhooks.storeOutboundMessage, {
+      businessId,
+      conversationId,
+      channel: "sms",
+      body: "Yes, what day works for you?",
+    });
+
+    const { sessions, messages } = await t.run(async (ctx) => {
+      const sessions = await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_started_at", (q) => q.eq("conversationId", conversationId))
+        .collect();
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .collect();
+      return { sessions, messages };
+    });
+
+    expect(sessions).toHaveLength(1);
+    expect(new Set(messages.map((message) => String(message.conversationSessionId)))).toEqual(
+      new Set([String(sessions[0]!._id)]),
+    );
+    expect(sessions[0]?.summaryGeneratedAt).toBeUndefined();
+  });
+
+  it("starts a new SMS session after the inactivity gap", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedBusinessMember(t, "dashboard-session-gap");
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "Hello",
+    });
+
+    await t.run(async (ctx) => {
+      const session = await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_status", (q) =>
+          q.eq("conversationId", conversationId).eq("status", "active"),
+        )
+        .unique();
+      if (!session) {
+        throw new Error("Expected active session.");
+      }
+      await ctx.db.patch(session._id, {
+        lastMessageAt: session.lastMessageAt - SMS_SESSION_INACTIVITY_MS - 1,
+      });
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeOutboundMessage, {
+      businessId,
+      conversationId,
+      channel: "sms",
+      body: "How can I help?",
+    });
+
+    const sessions = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_started_at", (q) => q.eq("conversationId", conversationId))
+        .collect();
+    });
+
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0]?.status).toBe("closed");
+    expect(sessions[1]?.status).toBe("active");
+  });
+
+  it("renders multiple persisted session summaries inline in thread order", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-inline");
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "I need help with my booking.",
+    });
+
+    const firstSession = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_status", (q) =>
+          q.eq("conversationId", conversationId).eq("status", "active"),
+        )
+        .unique();
+    });
+    if (!firstSession) {
+      throw new Error("Expected first session.");
+    }
+
+    await t.mutation(internal.conversations.sessions.finalizeSmsSessionAfterInactivity, {
+      sessionId: firstSession._id,
+      expectedLastMessageAt: firstSession.lastMessageAt,
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeOutboundMessage, {
+      businessId,
+      conversationId,
+      channel: "sms",
+      body: "What day works best for you?",
+    });
+
+    const secondSession = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_status", (q) =>
+          q.eq("conversationId", conversationId).eq("status", "active"),
+        )
+        .unique();
+    });
+    if (!secondSession) {
+      throw new Error("Expected second session.");
+    }
+
+    await t.mutation(internal.conversations.sessions.finalizeSmsSessionAfterInactivity, {
+      sessionId: secondSession._id,
+      expectedLastMessageAt: secondSession.lastMessageAt,
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    const summaryItems = getSessionSummaryItems(thread);
+    expect(summaryItems).toHaveLength(2);
+    expect(thread.timeline.filter((item) => item.kind === "session_summary")).toHaveLength(2);
+    expect(thread.timeline.at(-1)?.kind).toBe("session_summary");
+  });
+
+  it("finalizes voice sessions per call instead of waiting for inactivity", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-voice");
+
+    const { conversationId, callId } = await t.run(async (ctx) => {
+      const { conversationId } = await insertContactConversation(ctx, businessId);
+      const callId = await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-session-voice",
+        status: "in_progress",
+        startedAt: "2026-03-20T14:00:00.000Z",
+      });
+      await ctx.db.insert("conversation_sessions", {
+        businessId,
+        conversationId,
+        channel: "voice",
+        callId,
+        status: "active",
+        startedAt: Date.parse("2026-03-20T14:00:00.000Z"),
+        lastMessageAt: Date.parse("2026-03-20T14:00:00.000Z"),
+      });
+      return { conversationId, callId };
+    });
+
+    await t.mutation(internal.voice.runtime.takeMessageForVoice, {
+      businessId,
+      callId,
+      conversationId,
+      callbackPhone: "+14165550199",
+      message: "Please call me back tomorrow morning.",
+    });
+    await t.mutation(internal.voice.runtime.completeCall, {
+      callId,
+      status: "completed",
+      endedAt: "2026-03-20T14:10:00.000Z",
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    expect(getSessionSummaryItems(thread)[0]).toMatchObject({
+      summaryKind: "message_taking",
+      summary: {
+        kind: "message_taking",
+        summary: expect.stringContaining("Callback: +14165550199"),
+      },
     });
   });
 });

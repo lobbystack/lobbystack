@@ -17,6 +17,7 @@ import type * as appointments_booking from "../appointments/booking.js";
 import type * as auth from "../auth.js";
 import type * as businesses_admin from "../businesses/admin.js";
 import type * as businesses_catalog from "../businesses/catalog.js";
+import type * as conversations_sessions from "../conversations/sessions.js";
 import type * as conversations_webhooks from "../conversations/webhooks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard_contacts from "../dashboard/contacts.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   "businesses/admin": typeof businesses_admin;
   "businesses/catalog": typeof businesses_catalog;
+  "conversations/sessions": typeof conversations_sessions;
   "conversations/webhooks": typeof conversations_webhooks;
   crons: typeof crons;
   "dashboard/contacts": typeof dashboard_contacts;

@@ -11,7 +11,6 @@ import {
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
-  ChevronRight,
   Download,
   FileText,
   Globe,
@@ -63,6 +62,14 @@ type ThreadAttachment = {
   source: "storage" | "external";
 };
 
+type ThreadSessionSummary = {
+  kind: "booked" | "booking_in_progress" | "message_taking" | "summary" | "disposition";
+  serviceName?: string | null;
+  startsAt?: string | null;
+  summary?: string | null;
+  disposition?: string | null;
+};
+
 type ConversationThread = {
   conversation: {
     channel: string;
@@ -73,19 +80,35 @@ type ConversationThread = {
     email: string | null;
   } | null;
   messages: Array<{
+    kind: "message";
     id: string;
+    conversationSessionId: string | null;
     direction: string;
     body: string;
     createdAt: number;
     attachments: Array<ThreadAttachment>;
   }>;
-  outcome: {
-    kind: "booked" | "booking_in_progress" | "message_taking" | "summary" | "disposition" | "none";
-    serviceName?: string | null;
-    startsAt?: string | null;
-    summary?: string | null;
-    disposition?: string | null;
-  };
+  timeline: Array<
+    | {
+        kind: "message";
+        id: string;
+        conversationSessionId: string | null;
+        direction: string;
+        body: string;
+        createdAt: number;
+        attachments: Array<ThreadAttachment>;
+      }
+    | {
+        kind: "session_summary";
+        id: string;
+        sessionId: string | null;
+        createdAt: number;
+        startedAt: number;
+        closedAt: number;
+        summaryKind: "booked" | "booking_in_progress" | "message_taking" | "summary" | "disposition";
+        summary: ThreadSessionSummary;
+      }
+  >;
 };
 
 type StagedAttachment = {
@@ -122,8 +145,16 @@ function initials(value: string | null, fallback: string): string {
     .join("");
 }
 
-function formatMessageOutcomeSummary(
-  outcome: ConversationThread["outcome"] | undefined,
+function humanizeDisposition(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((segment) => segment[0]?.toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function formatSessionSummaryText(
+  outcome: ThreadSessionSummary | undefined,
   locale: string,
   t: TFunction<"messages">,
 ): string {
@@ -158,8 +189,14 @@ function formatMessageOutcomeSummary(
         });
       }
       return t("outcome.scheduling");
+    case "message_taking":
+      return outcome.summary ?? t("outcome.messageTaking");
     case "summary":
       return outcome.summary ?? t("outcome.none");
+    case "disposition":
+      return t("outcome.disposition", {
+        disposition: humanizeDisposition(outcome.disposition ?? "completed"),
+      });
     default:
       return t("outcome.none");
   }
@@ -255,7 +292,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [mobileSelectedConversationId, setMobileSelectedConversationId] = useState<
     Id<"conversations"> | undefined
   >();
-  const [isOutcomeOpen, setIsOutcomeOpen] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -293,12 +329,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       setMobileSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
     }
   }, [filteredConversations, selectedConversationId]);
-
-  useEffect(() => {
-    if (selectedConversationId) {
-      setIsOutcomeOpen(true);
-    }
-  }, [selectedConversationId]);
 
   useEffect(() => {
     if (!businessId || !selectedConversationId || thread?.conversation.channel !== "sms") {
@@ -677,67 +707,61 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
-                    <div className="self-stretch pt-2">
-                      <button
-                        className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
-                        onClick={() => setIsOutcomeOpen((current) => !current)}
-                        type="button"
-                      >
-                        <span className="h-px w-64 bg-border/60 md:w-96" />
-                        <span className="inline-flex items-center justify-center gap-1.5 text-sm font-medium">
-                          {t("outcome.label")}
-                          <ChevronRight
-                            className={cn(
-                              "size-3.5 transition-transform duration-200",
-                              isOutcomeOpen && "rotate-90",
-                            )}
-                          />
-                        </span>
-                        <span className="h-px w-64 bg-border/60 md:w-96" />
-                      </button>
-                      {isOutcomeOpen ? (
-                        <p className="mt-3 text-center text-sm leading-6 text-muted-foreground">
-                          {formatMessageOutcomeSummary(thread.outcome, i18n.language, t)}
-                        </p>
-                      ) : null}
-                    </div>
-                    {[...thread.messages].reverse().map((message) => (
-                      <div
-                        className={cn(
-                          "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
-                          message.direction === "outbound"
-                            ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground"
-                            : "self-start rounded-[16px_16px_16px_0] bg-muted",
-                        )}
-                        key={String(message.id)}
-                      >
-                        <div className="space-y-2">
-                          {message.attachments.length > 0 ? (
-                            <div className="space-y-2">
-                              {message.attachments.map((attachment) => (
-                                <MessageAttachmentPreview
-                                  attachment={attachment}
-                                  key={attachment.id}
-                                />
-                              ))}
-                            </div>
-                          ) : null}
-                          {message.body.trim().length > 0 ? <p>{message.body}</p> : null}
-                        </div>
-                        <span
+                    {[...thread.timeline].reverse().map((item) =>
+                      item.kind === "message" ? (
+                        <div
                           className={cn(
-                            "mt-1 block text-xs font-light text-foreground/75 italic",
-                            message.direction === "outbound" &&
-                              "text-end text-primary-foreground/80",
+                            "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
+                            item.direction === "outbound"
+                              ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground"
+                              : "self-start rounded-[16px_16px_16px_0] bg-muted",
                           )}
+                          key={String(item.id)}
                         >
-                          {formatDateTime(message.createdAt, i18n.language, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    ))}
+                          <div className="space-y-2">
+                            {item.attachments.length > 0 ? (
+                              <div className="space-y-2">
+                                {item.attachments.map((attachment) => (
+                                  <MessageAttachmentPreview
+                                    attachment={attachment}
+                                    key={attachment.id}
+                                  />
+                                ))}
+                              </div>
+                            ) : null}
+                            {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
+                          </div>
+                          <span
+                            className={cn(
+                              "mt-1 block text-xs font-light text-foreground/75 italic",
+                              item.direction === "outbound" &&
+                                "text-end text-primary-foreground/80",
+                            )}
+                          >
+                            {formatDateTime(item.createdAt, i18n.language, {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="self-stretch pt-2" key={String(item.id)}>
+                          <div className="mx-auto w-full max-w-3xl rounded-md border border-border/70 bg-card px-4 py-3 text-sm shadow-xs">
+                            <div className="flex items-center justify-between gap-3 text-xs font-medium text-muted-foreground">
+                              <span>{t("outcome.label")}</span>
+                              <span>
+                                {formatInboxTimestamp(item.closedAt, i18n.language, {
+                                  yesterday: t("page.yesterday"),
+                                })}
+                              </span>
+                            </div>
+                            <p className="mt-2 whitespace-pre-line leading-6 text-muted-foreground">
+                              {formatSessionSummaryText(item.summary, i18n.language, t)}
+                            </p>
+                          </div>
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
               </div>

@@ -44,6 +44,22 @@ const messageMediaValidator = v.object({
   deliveryMode: v.optional(v.string()),
 });
 
+const conversationSessionSummaryKindValidator = v.union(
+  v.literal("booked"),
+  v.literal("booking_in_progress"),
+  v.literal("message_taking"),
+  v.literal("summary"),
+  v.literal("disposition"),
+);
+
+const conversationSessionSummaryValidator = v.object({
+  kind: conversationSessionSummaryKindValidator,
+  serviceName: v.optional(v.string()),
+  startsAt: v.optional(v.string()),
+  summary: v.optional(v.string()),
+  disposition: v.optional(v.string()),
+});
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -284,6 +300,7 @@ export default defineSchema({
   messages: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),
+    conversationSessionId: v.optional(v.id("conversation_sessions")),
     direction: v.string(),
     channel: v.string(),
     fromPhoneNumber: v.optional(v.string()),
@@ -299,7 +316,25 @@ export default defineSchema({
     aiGenerated: v.boolean(),
   })
     .index("by_conversation_id", ["conversationId"])
+    .index("by_conversation_session_id", ["conversationSessionId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),
+
+  conversation_sessions: defineTable({
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    channel: v.string(),
+    callId: v.optional(v.id("calls")),
+    status: v.string(),
+    startedAt: v.number(),
+    lastMessageAt: v.number(),
+    closedAt: v.optional(v.number()),
+    summaryGeneratedAt: v.optional(v.number()),
+    summaryKind: v.optional(conversationSessionSummaryKindValidator),
+    summary: v.optional(conversationSessionSummaryValidator),
+  })
+    .index("by_conversation_id_and_started_at", ["conversationId", "startedAt"])
+    .index("by_conversation_id_and_status", ["conversationId", "status"])
+    .index("by_call_id", ["callId"]),
 
   message_attachment_uploads: defineTable({
     businessId: v.id("businesses"),

@@ -21,6 +21,8 @@
     "scheduling": "Le client a commencé la prise de rendez-vous, mais aucun rendez-vous n'a encore été confirmé.",
     "schedulingWithService": "Le client est en train de planifier {{serviceName}}, mais aucun rendez-vous n'a encore été confirmé.",
     "schedulingWithServiceAndTime": "Le client est en train de planifier {{serviceName}} pour le {{startsAt}}, mais la réservation est encore en cours.",
+    "messageTaking": "Le client a laissé un message pour un suivi.",
+    "disposition": "Résultat de l'appel : {{disposition}}.",
     "none": "Le client a posé des questions, mais aucun résultat final n'a encore été capturé.",
     "genericService": "un rendez-vous",
     "unspecifiedTime": "une heure non précisée"

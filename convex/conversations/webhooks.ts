@@ -14,6 +14,7 @@ import { buildLinkOnlyAttachmentText } from "../lib/messageAttachments";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
+import { ensureSessionForStoredMessage } from "./sessions";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
@@ -352,7 +353,7 @@ export const ingestInboundSms = internalMutation({
         status: "open",
       }));
 
-    await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId,
       direction: "inbound",
@@ -364,6 +365,13 @@ export const ingestInboundSms = internalMutation({
       body: args.body,
       status: "received",
       aiGenerated: false,
+    });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      channel: args.channel,
+      messageId,
     });
 
     if (args.idempotencyKeyId) {
@@ -506,7 +514,7 @@ export const storeInboundMessage = internalMutation({
         status: "open",
       }));
 
-    await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId,
       direction: "inbound",
@@ -518,6 +526,13 @@ export const storeInboundMessage = internalMutation({
       body: args.body,
       status: "received",
       aiGenerated: false,
+    });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      channel: args.channel,
+      messageId,
     });
 
     return { conversationId };
@@ -547,7 +562,7 @@ export const storeOutboundMessage = internalMutation({
     aiGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
-    return await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId: args.conversationId,
       direction: "outbound",
@@ -559,6 +574,15 @@ export const storeOutboundMessage = internalMutation({
       status: "queued",
       aiGenerated: args.aiGenerated ?? true,
     });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      channel: args.channel,
+      messageId,
+    });
+
+    return messageId;
   },
 });
 

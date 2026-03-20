@@ -20,6 +20,11 @@ import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
+import {
+  ensureSessionForStoredMessage,
+  ensureVoiceSessionForCall,
+  finalizeVoiceSessionForCall,
+} from "../conversations/sessions";
 
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type ServicesForBusinessArgs = BusinessIdArgs;
@@ -369,6 +374,12 @@ export const startCall = internalMutation({
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
       });
+      await ensureVoiceSessionForCall(ctx, {
+        businessId: args.businessId,
+        conversationId,
+        callId: existingCall._id,
+        startedAt: Date.parse(args.startedAt),
+      });
       return {
         callId: existingCall._id,
         conversationId,
@@ -385,6 +396,13 @@ export const startCall = internalMutation({
         : {}),
       status: "in_progress",
       startedAt: args.startedAt,
+    });
+
+    await ensureVoiceSessionForCall(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      callId,
+      startedAt: Date.parse(args.startedAt),
     });
 
     return {
@@ -487,7 +505,7 @@ export const takeMessageForVoice = internalMutation({
     });
 
     if (args.conversationId) {
-      await ctx.db.insert("messages", {
+      const messageId = await ctx.db.insert("messages", {
         businessId: args.businessId,
         conversationId: args.conversationId,
         direction: "inbound",
@@ -495,6 +513,13 @@ export const takeMessageForVoice = internalMutation({
         body: args.message,
         status: "captured",
         aiGenerated: false,
+      });
+      await ensureSessionForStoredMessage(ctx, {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        channel: "voice",
+        messageId,
+        callId: args.callId,
       });
       await ctx.db.patch(args.conversationId, {
         currentIntent: "message_taking",
@@ -560,6 +585,11 @@ export const completeCall = internalMutation({
         status: "closed",
       });
     }
+
+    await finalizeVoiceSessionForCall(ctx, {
+      callId: args.callId,
+      endedAt: Date.parse(args.endedAt),
+    });
 
     return null;
   },
@@ -636,6 +666,13 @@ export const reconcileTwilioCallStatus = internalMutation({
           status: "closed",
         });
       }
+    }
+
+    if (isTerminalTwilioCallStatus(args.callStatus)) {
+      await finalizeVoiceSessionForCall(ctx, {
+        callId: call._id,
+        endedAt: Date.parse(args.providerUpdatedAt),
+      });
     }
 
     return { ignored: false, callId: call._id } as const;
