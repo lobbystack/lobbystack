@@ -12,12 +12,12 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
   Bot,
+  ChevronRight,
   Download,
   FileText,
   Globe,
   MessageCircle,
   MessagesSquare,
-  MoreVertical,
   Plus,
   Search as SearchIcon,
   Send,
@@ -299,7 +299,7 @@ function formatAutomationPausedByline(
   }
 
   if (conversation.automationPausedByName && conversation.automationPausedAt) {
-    return t("page.handoffPausedByWithTime", {
+    return t("page.handoffPausedStatus", {
       name: conversation.automationPausedByName,
       time: formatDateTime(conversation.automationPausedAt, locale, {
         dateStyle: "medium",
@@ -309,12 +309,12 @@ function formatAutomationPausedByline(
   }
 
   if (conversation.automationPausedByName) {
-    return t("page.handoffPausedBy", {
+    return t("page.handoffPausedStatusWithoutTime", {
       name: conversation.automationPausedByName,
     });
   }
 
-  return null;
+  return t("page.handoffPausedStatusFallback");
 }
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
@@ -349,6 +349,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [isUpdatingAutomation, setIsUpdatingAutomation] = useState(false);
   const [stagedAttachments, setStagedAttachments] = useState<Array<StagedAttachment>>([]);
   const [repairAttemptedConversationIds, setRepairAttemptedConversationIds] = useState<Array<string>>([]);
+  const [collapsedSummaryIds, setCollapsedSummaryIds] = useState<Array<string>>([]);
 
   const thread = useQuery(
     api.dashboard.messages.getConversationThread,
@@ -423,11 +424,20 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const pausedByline = thread
     ? formatAutomationPausedByline(thread.conversation, i18n.language, t)
     : null;
+  const isSummaryOpen = (summaryId: string) => !collapsedSummaryIds.includes(summaryId);
   const canSendMessage =
     Boolean(isSmsConversation) &&
     !isSending &&
     !isUploading &&
     (draftMessage.trim().length > 0 || stagedAttachments.length > 0);
+
+  function toggleSummary(summaryId: string) {
+    setCollapsedSummaryIds((current) =>
+      current.includes(summaryId)
+        ? current.filter((id) => id !== summaryId)
+        : [...current, summaryId],
+    );
+  }
 
   async function discardStagedAttachments(conversationId: Id<"conversations"> | undefined) {
     if (!businessId || !conversationId || stagedAttachments.length === 0) {
@@ -742,38 +752,44 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       >
         {thread ? (
           <>
-            <div className="mb-1 flex min-w-0 flex-none justify-between bg-card p-4 shadow-lg sm:rounded-t-md">
-              <div className="flex min-w-0 gap-3">
-                <Button
-                  className="-ms-2 h-full sm:hidden"
-                  onClick={() => setMobileSelectedConversationId(undefined)}
-                  size="icon"
-                  variant="ghost"
-                >
-                  <ArrowLeft className="rtl:rotate-180" />
-                </Button>
-                <div className="flex min-w-0 items-center gap-2 lg:gap-4">
-                  <Avatar className="size-9 lg:size-11">
-                    <AvatarFallback>
-                      {initials(
-                        thread.contact?.name ?? null,
-                        thread.contact?.phone ?? t("page.unknownShort"),
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <span className="col-start-2 row-span-2 text-sm font-semibold lg:text-base">
-                      {thread.contact?.name ??
-                        thread.contact?.phone ??
-                        t("page.unknownCaller")}
-                    </span>
-                    <span className="col-start-2 row-span-2 row-start-2 line-clamp-1 block max-w-32 text-xs text-nowrap text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
-                      {thread.contact?.phone ??
-                        thread.contact?.email ??
-                        t("page.noChannel")}
-                    </span>
+            <div className="mb-4 min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
+              <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex min-w-0 gap-3">
+                  <Button
+                    className="-ms-2 h-full sm:hidden"
+                    onClick={() => setMobileSelectedConversationId(undefined)}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <ArrowLeft className="rtl:rotate-180" />
+                  </Button>
+                  <div className="flex min-w-0 items-center gap-2 lg:gap-4">
+                    <Avatar className="size-9 lg:size-11">
+                      <AvatarFallback>
+                        {initials(
+                          thread.contact?.name ?? null,
+                          thread.contact?.phone ?? t("page.unknownShort"),
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <span className="block text-sm font-semibold lg:text-base">
+                        {thread.contact?.name ??
+                          thread.contact?.phone ??
+                          t("page.unknownCaller")}
+                      </span>
+                      <span className="block max-w-48 line-clamp-1 text-xs text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
+                        {thread.contact?.phone ??
+                          thread.contact?.email ??
+                          t("page.noChannel")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="min-w-0 w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
+                  <div className="flex min-h-12 items-center xl:justify-end">
                     {isSmsConversation ? (
-                      <div className="mt-2 inline-flex items-center rounded-full border border-border bg-background p-1 shadow-xs">
+                      <div className="inline-flex items-center rounded-full border border-border bg-background p-1 shadow-xs">
                         <button
                           className={cn(
                             "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
@@ -811,15 +827,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   </div>
                 </div>
               </div>
-              <div className="-me-1 flex items-center gap-1 lg:gap-2">
-                <Button
-                  className="h-10 rounded-md sm:h-8 sm:w-4 lg:h-10 lg:w-6"
-                  size="icon"
-                  variant="ghost"
-                >
-                  <MoreVertical className="stroke-muted-foreground sm:size-5" />
-                </Button>
-              </div>
+              {isHumanHandoff ? (
+                <div className="flex min-w-0 items-center justify-center gap-2 bg-amber-50 px-4 py-2 text-sm text-amber-950">
+                  <div className="size-2 shrink-0 rounded-full bg-amber-500" />
+                  <div className="min-w-0 text-center">
+                    <p className="font-medium text-amber-950">{pausedByline}</p>
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
               <div className="flex min-w-0 size-full flex-1">
@@ -864,21 +879,35 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         </div>
                       ) : (
                         <div className="self-stretch pt-2" key={String(item.id)}>
-                          <div className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground">
+                          <button
+                            className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
+                            onClick={() => toggleSummary(String(item.id))}
+                            type="button"
+                          >
                             <span className="h-px w-64 bg-border/60 md:w-96" />
-                            <span className="inline-flex items-center justify-center text-sm font-medium">
+                            <span className="inline-flex items-center justify-center gap-1.5 text-sm font-medium">
                               {t("outcome.label")}
+                              <ChevronRight
+                                className={cn(
+                                  "size-3.5 transition-transform duration-200",
+                                  isSummaryOpen(String(item.id)) && "rotate-90",
+                                )}
+                              />
                             </span>
                             <span className="h-px w-64 bg-border/60 md:w-96" />
-                          </div>
-                          <p className="mt-3 text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
-                            {formatSessionSummaryText(item.summary, i18n.language, t)}
-                          </p>
-                          <p className="mt-1 text-center text-xs text-muted-foreground/80">
-                            {formatInboxTimestamp(item.closedAt, i18n.language, {
-                              yesterday: t("page.yesterday"),
-                            })}
-                          </p>
+                          </button>
+                          {isSummaryOpen(String(item.id)) ? (
+                            <>
+                              <p className="mt-3 text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                                {formatSessionSummaryText(item.summary, i18n.language, t)}
+                              </p>
+                              <p className="mt-1 text-center text-xs text-muted-foreground/80">
+                                {formatInboxTimestamp(item.closedAt, i18n.language, {
+                                  yesterday: t("page.yesterday"),
+                                })}
+                              </p>
+                            </>
+                          ) : null}
                         </div>
                       ),
                     )}
@@ -886,40 +915,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <form className="flex w-full flex-none flex-col gap-2" onSubmit={handleSendMessage}>
-                {isSmsConversation ? (
-                  <div
-                    className={cn(
-                      "flex items-start gap-3 rounded-md border px-3 py-2 text-sm",
-                      isHumanHandoff
-                        ? "border-amber-200/80 bg-amber-50 text-amber-950"
-                        : "border-border/80 bg-muted/40 text-muted-foreground",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "mt-1 size-2 shrink-0 rounded-full",
-                        isHumanHandoff ? "bg-amber-500" : "bg-emerald-500",
-                      )}
-                    />
-                    <div className="min-w-0">
-                      <p className={cn("font-medium", isHumanHandoff ? "text-amber-950" : "text-foreground")}>
-                        {isHumanHandoff
-                          ? t("page.handoffPausedTitle")
-                          : t("page.handoffActiveTitle")}
-                      </p>
-                      <p className={cn("text-xs", isHumanHandoff ? "text-amber-900/80" : "text-muted-foreground")}>
-                        {isHumanHandoff
-                          ? t("page.handoffPausedDescription")
-                          : t("page.handoffActiveDescription")}
-                      </p>
-                      {isHumanHandoff && pausedByline ? (
-                        <p className="mt-1 text-xs text-amber-900/80">
-                          {pausedByline}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
                 {stagedAttachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {stagedAttachments.map((attachment) => (
