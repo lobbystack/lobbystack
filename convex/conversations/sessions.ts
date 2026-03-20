@@ -56,32 +56,119 @@ function summarizeText(value: string, maxLength = 220): string {
   return `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-function buildPlainSummaryFromMessages(messages: Array<Doc<"messages">>): string | null {
-  const nonEmptyBodies = messages
+function getSummaryLocale(locale: string | null | undefined): "en" | "fr" {
+  return locale?.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+function hasQuestionSignals(text: string): boolean {
+  return /\?/u.test(text) || /^(who|what|when|where|why|how|can|could|do|does|is|are|bonjour|salut|quand|quoi|comment|puis-je|est-ce que)/iu.test(text);
+}
+
+function hasAppointmentSignals(text: string): boolean {
+  return /appointment|booking|book|schedule|reschedule|consultation|rendez-vous|réserver|reservation|date|heure|time/iu.test(
+    text,
+  );
+}
+
+function buildPlainSummaryFromMessages(
+  messages: Array<Doc<"messages">>,
+  locale: string | null | undefined,
+): string | null {
+  const summaryLocale = getSummaryLocale(locale);
+  const inboundBodies = messages
+    .filter((message) => message.direction === "inbound")
     .map((message) => message.body.trim())
     .filter((body) => body.length > 0);
+  const outboundBodies = messages
+    .filter((message) => message.direction === "outbound")
+    .map((message) => message.body.trim())
+    .filter((body) => body.length > 0);
+  const allBodies = [...inboundBodies, ...outboundBodies];
 
-  if (nonEmptyBodies.length > 0) {
-    const inbound = messages
-      .filter((message) => message.direction === "inbound")
-      .map((message) => message.body.trim())
-      .find((body) => body.length > 0);
-    const outbound = [...messages]
-      .reverse()
-      .filter((message) => message.direction === "outbound")
-      .map((message) => message.body.trim())
-      .find((body) => body.length > 0);
+  if (allBodies.length > 0) {
+    const joinedInbound = inboundBodies.join(" ");
+    const questionCount = inboundBodies.filter((body) => hasQuestionSignals(body)).length;
+    const hasAppointmentTopic = hasAppointmentSignals(joinedInbound);
 
-    if (inbound && outbound && inbound !== outbound) {
-      return summarizeText(`${inbound} ${outbound}`);
+    if (hasAppointmentTopic) {
+      if (questionCount > 1) {
+        return summaryLocale === "fr"
+          ? "Le client a posé des questions de suivi au sujet d'un rendez-vous par SMS."
+          : "Customer asked follow-up questions about an appointment by SMS.";
+      }
+
+      return summaryLocale === "fr"
+        ? "Le client a posé une question au sujet d'un rendez-vous par SMS."
+        : "Customer asked about an appointment by SMS.";
     }
 
-    return summarizeText(inbound ?? outbound ?? nonEmptyBodies[0]!);
+    if (questionCount > 1 || (questionCount > 0 && inboundBodies.length > 1)) {
+      return summaryLocale === "fr"
+        ? "Le client a posé des questions de suivi par SMS."
+        : "Customer asked follow-up questions by SMS.";
+    }
+
+    if (questionCount > 0) {
+      return summaryLocale === "fr"
+        ? "Le client a posé une question par SMS."
+        : "Customer asked a question by SMS.";
+    }
+
+    if (inboundBodies.length > 0 && outboundBodies.length > 0) {
+      return summaryLocale === "fr"
+        ? "Le client a eu un échange par SMS."
+        : "Customer had an SMS exchange.";
+    }
+
+    if (inboundBodies.length > 0) {
+      if (inboundBodies.length === 1 && inboundBodies[0]!.length <= 12) {
+        return summaryLocale === "fr"
+          ? "Le client a envoyé un bref suivi par SMS."
+          : "Customer sent a brief SMS follow-up.";
+      }
+
+      return summaryLocale === "fr"
+        ? "Le client a envoyé un message par SMS."
+        : "Customer sent an SMS message.";
+    }
+
+    if (outboundBodies.length > 0) {
+      return summaryLocale === "fr"
+        ? "Une mise à jour a été envoyée par SMS."
+        : "An SMS update was sent.";
+    }
   }
 
-  const attachmentCount = messages.reduce((count, message) => count + (message.media?.length ?? 0), 0);
-  if (attachmentCount > 0) {
-    return attachmentCount === 1 ? "Attachment shared in conversation." : "Attachments shared in conversation.";
+  const attachments = messages.flatMap((message) => message.media ?? []);
+  if (attachments.length > 0) {
+    const imageCount = attachments.filter((attachment) =>
+      (attachment.contentType ?? "").startsWith("image/"),
+    ).length;
+    const documentCount = attachments.length - imageCount;
+
+    if (imageCount > 0 && documentCount === 0) {
+      return imageCount === 1
+        ? summaryLocale === "fr"
+          ? "Le client a partagé une photo par SMS."
+          : "Customer shared a photo by SMS."
+        : summaryLocale === "fr"
+          ? "Le client a partagé des photos par SMS."
+          : "Customer shared photos by SMS.";
+    }
+
+    if (documentCount > 0 && imageCount === 0) {
+      return documentCount === 1
+        ? summaryLocale === "fr"
+          ? "Le client a partagé un document par SMS."
+          : "Customer shared a document by SMS."
+        : summaryLocale === "fr"
+          ? "Le client a partagé des documents par SMS."
+          : "Customer shared documents by SMS.";
+    }
+
+    return summaryLocale === "fr"
+      ? "Le client a partagé des pièces jointes par SMS."
+      : "Customer shared attachments by SMS.";
   }
 
   return null;
@@ -181,7 +268,7 @@ async function buildSessionSummary(
     };
   }
 
-  const summary = buildPlainSummaryFromMessages(messages);
+  const summary = buildPlainSummaryFromMessages(messages, conversation.locale);
   if (summary) {
     return {
       kind: "summary",

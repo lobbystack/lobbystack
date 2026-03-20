@@ -506,6 +506,65 @@ describe("Dashboard outcome summaries", () => {
     expect(thread.timeline.at(-1)?.kind).toBe("session_summary");
   });
 
+  it("uses a generalized SMS summary instead of echoing the latest message text", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-generic-summary");
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "When is my appointment?",
+    });
+    await t.mutation(internal.conversations.webhooks.storeOutboundMessage, {
+      businessId,
+      conversationId,
+      channel: "sms",
+      body: "Your Initial Consultation is confirmed for Thursday, March 26 at 3:00 PM.",
+    });
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "agnooo",
+    });
+
+    const activeSession = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_status", (q) =>
+          q.eq("conversationId", conversationId).eq("status", "active"),
+        )
+        .unique();
+    });
+    if (!activeSession) {
+      throw new Error("Expected active session.");
+    }
+
+    await t.mutation(internal.conversations.sessions.finalizeSmsSessionAfterInactivity, {
+      sessionId: activeSession._id,
+      expectedLastMessageAt: activeSession.lastMessageAt,
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    expect(getSessionSummaryItems(thread)[0]).toMatchObject({
+      summaryKind: "summary",
+      summary: {
+        kind: "summary",
+        summary: "Customer asked about an appointment by SMS.",
+      },
+    });
+  });
+
   it("finalizes voice sessions per call instead of waiting for inactivity", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-voice");
