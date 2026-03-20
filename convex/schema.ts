@@ -36,8 +36,12 @@ const closureWindowValidator = v.object({
 });
 
 const messageMediaValidator = v.object({
-  url: v.string(),
+  url: v.optional(v.string()),
+  storageId: v.optional(v.id("_storage")),
+  fileName: v.optional(v.string()),
   contentType: v.optional(v.string()),
+  byteLength: v.optional(v.number()),
+  deliveryMode: v.optional(v.string()),
 });
 
 export default defineSchema({
@@ -296,6 +300,36 @@ export default defineSchema({
   })
     .index("by_conversation_id", ["conversationId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),
+
+  message_attachment_uploads: defineTable({
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    uploaderUserId: v.id("users"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    byteLength: v.number(),
+    deliveryMode: v.string(),
+    status: v.string(),
+    sentMessageId: v.optional(v.id("messages")),
+  })
+    .index("by_business_id_and_conversation_id", ["businessId", "conversationId"])
+    .index("by_uploader_user_id_and_conversation_id", ["uploaderUserId", "conversationId"])
+    .index("by_sent_message_id", ["sentMessageId"]),
+
+  message_attachment_download_tokens: defineTable({
+    businessId: v.id("businesses"),
+    messageId: v.id("messages"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    disposition: v.string(),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  })
+    .index("by_nonce", ["nonce"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_message_id", ["messageId"]),
 
   calls: defineTable({
     businessId: v.id("businesses"),

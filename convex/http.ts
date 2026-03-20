@@ -5,7 +5,7 @@ import {
 } from "./lib/twilioSecurity";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
 
@@ -129,6 +129,10 @@ const googleCalendarCallbackQuerySchema = z.object({
   error_description: z.string().min(1).optional(),
 });
 
+const messageAttachmentDownloadQuerySchema = z.object({
+  token: z.string().min(1),
+});
+
 function badRequest(message: string): Response {
   return new Response(message, { status: 400 });
 }
@@ -250,6 +254,66 @@ function requireServiceToken(request: Request): Response | null {
 }
 
 auth.addHttpRoutes(http);
+
+type MessageAttachmentDownloadCtx = {
+  runQuery: (
+    query: typeof internal.dashboard.messages.getMessageAttachmentDownloadToken,
+    args: { token: string },
+  ) => Promise<Doc<"message_attachment_download_tokens"> | null>;
+  storage: {
+    get: (
+      storageId: Id<"_storage">,
+    ) => Promise<Blob | null>;
+  };
+};
+
+async function handleMessageAttachmentDownload(
+  ctx: MessageAttachmentDownloadCtx,
+  request: Request,
+): Promise<Response> {
+  const parsedQuery = parseSearchParams(new URL(request.url), messageAttachmentDownloadQuerySchema);
+  if (!parsedQuery.ok) {
+    return parsedQuery.response;
+  }
+
+  const token = await ctx.runQuery(internal.dashboard.messages.getMessageAttachmentDownloadToken, {
+    token: parsedQuery.data.token,
+  });
+  if (!token) {
+    return new Response("Attachment not found", { status: 404 });
+  }
+
+  if (Date.parse(token.expiresAt) < Date.now()) {
+    return new Response("Attachment link expired", { status: 410 });
+  }
+
+  const blob = await ctx.storage.get(token.storageId);
+  if (!blob) {
+    return new Response("Attachment not found", { status: 404 });
+  }
+
+  const headers = new Headers();
+  headers.set("Content-Type", token.contentType);
+  headers.set(
+    "Content-Disposition",
+    `${token.disposition}; filename="${token.fileName}"`,
+  );
+
+  if (request.method === "HEAD") {
+    headers.set("Content-Length", String(blob.size));
+    return new Response(null, { status: 200, headers });
+  }
+
+  return new Response(blob, { status: 200, headers });
+}
+
+http.route({
+  path: "/messages/attachments/download",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    return await handleMessageAttachmentDownload(ctx, request);
+  }),
+});
 
 http.route({
   path: "/integrations/google/callback",

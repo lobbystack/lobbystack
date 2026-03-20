@@ -6,12 +6,14 @@
     "unknownShort": "UK",
     "yesterday": "Yesterday",
     "emptyPreview": "No messages yet.",
-    "channelSms": "SMS",
-    "channelWeb": "Web",
     "selectConversation": "Select a conversation to review the thread.",
     "noChannel": "No contact channel saved.",
     "composerPlaceholder": "Type your message...",
-    "send": "Send"
+    "composerPlaceholderSms": "Reply via SMS...",
+    "composerPlaceholderWeb": "Reply via Web...",
+    "send": "Send",
+    "sendFailed": "Couldn't send your message.",
+    "uploadFailed": "Couldn't upload that attachment."
   },
   "outcome": {
     "label": "Summary",

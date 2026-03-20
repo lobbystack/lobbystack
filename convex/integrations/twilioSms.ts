@@ -3,7 +3,13 @@
 import { v } from "convex/values";
 import twilio from "twilio";
 
+import type { Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
+import {
+  canDeliverAsMms,
+  inferFileNameFromContentType,
+  normalizeAttachmentFileName,
+} from "../lib/messageAttachments";
 
 function requireTwilioCredentials(): { accountSid: string; authToken: string } {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -18,6 +24,47 @@ function requireTwilioCredentials(): { accountSid: string; authToken: string } {
 function getTwilioClient() {
   const { accountSid, authToken } = requireTwilioCredentials();
   return twilio(accountSid, authToken);
+}
+
+function buildBasicAuthHeader(): string {
+  const { accountSid, authToken } = requireTwilioCredentials();
+  return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
+}
+
+function extractAttachmentFileName(input: {
+  contentDisposition: string | null;
+  contentType: string;
+  url: string;
+  index: number;
+}): string {
+  const fromHeader = input.contentDisposition?.match(/filename\*?=(?:UTF-8''|\"?)([^\";]+)/i)?.[1];
+  const decodedHeader = fromHeader ? decodeURIComponent(fromHeader.replace(/\"/g, "").trim()) : null;
+  const fromPath = (() => {
+    try {
+      const pathname = new URL(input.url).pathname;
+      const lastSegment = pathname.split("/").pop();
+      return lastSegment && lastSegment.length > 0 ? lastSegment : null;
+    } catch {
+      return null;
+    }
+  })();
+  const fallbackName = inferFileNameFromContentType(input.contentType);
+  const candidate = decodedHeader ?? fromPath ?? fallbackName;
+  const normalized = normalizeAttachmentFileName(
+    candidate,
+    fallbackName.split(".").pop() ?? "bin",
+  );
+
+  if (normalized !== "attachment.bin") {
+    return normalized;
+  }
+
+  const inferred = inferFileNameFromContentType(input.contentType);
+  if (inferred !== "attachment.bin") {
+    return inferred;
+  }
+
+  return `attachment-${input.index + 1}.bin`;
 }
 
 export const validateWebhookSignature = internalAction({
@@ -79,5 +126,61 @@ export const registerIncomingWebhook = internalAction({
       phoneNumberSid: phoneNumber.sid,
       smsWebhookTargetUrl: phoneNumber.smsUrl ?? args.webhookUrl,
     };
+  },
+});
+
+export const ingestInboundMedia = internalAction({
+  args: {
+    media: v.array(
+      v.object({
+        url: v.string(),
+        contentType: v.optional(v.string()),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const authHeader = buildBasicAuthHeader();
+
+    return await Promise.all(
+      args.media.map(async (attachment, index) => {
+        try {
+          const response = await fetch(attachment.url, {
+            headers: {
+              Authorization: authHeader,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Twilio media fetch failed with status ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          const contentType =
+            response.headers.get("content-type") ??
+            attachment.contentType ??
+            "application/octet-stream";
+          const fileName = extractAttachmentFileName({
+            contentDisposition: response.headers.get("content-disposition"),
+            contentType,
+            url: attachment.url,
+            index,
+          });
+          const storageId: Id<"_storage"> = await ctx.storage.store(blob);
+
+          return {
+            storageId,
+            fileName,
+            contentType,
+            byteLength: blob.size,
+            deliveryMode: canDeliverAsMms(contentType) ? "mms" : "link",
+          };
+        } catch {
+          return {
+            url: attachment.url,
+            ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
+          };
+        }
+      }),
+    );
   },
 });

@@ -1,7 +1,7 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { internal } from "../../../convex/_generated/api";
+import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import schema from "../../../convex/schema";
 
@@ -82,6 +82,7 @@ const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const originalFetch = globalThis.fetch;
 
 async function insertBusiness(
   ctx: TestContext,
@@ -147,12 +148,34 @@ beforeEach(() => {
     return `Auto-reply: ${prompt}`;
   });
   retrierRunMock.mockResolvedValue(null);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const rawUrl =
+        typeof input === "string" || input instanceof URL
+          ? String(input)
+          : input.url;
+
+      if (rawUrl === "https://example.com/image.jpg") {
+        return new Response(new Blob(["image-bytes"], { type: "image/jpeg" }), {
+          status: 200,
+          headers: {
+            "content-type": "image/jpeg",
+            "content-disposition": 'inline; filename="customer-photo.jpg"',
+          },
+        });
+      }
+
+      return await originalFetch(input as RequestInfo | URL, init);
+    }),
+  );
 });
 
 afterAll(() => {
   process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
   process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
   process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+  vi.unstubAllGlobals();
 });
 
 describe("Twilio SMS delivery flow", () => {
@@ -392,6 +415,7 @@ describe("Twilio SMS delivery flow", () => {
       status: "queued",
     });
 
+    const subject = "twilio-mms-inbound-owner";
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
         slug: "twilio-mms-inbound",
@@ -401,12 +425,22 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         e164: "+14165550101",
       });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
 
       return {
         businessId,
         smsNumber: "+14165550101",
       };
     });
+    const authed = t.withIdentity({ subject });
 
     const response = await postTwilioForm(t, "/twilio/sms/inbound", {
       MessageSid: "SM-inbound-mms-1",
@@ -420,7 +454,7 @@ describe("Twilio SMS delivery flow", () => {
 
     expect(response.status).toBe(200);
 
-    await t.run(async (ctx) => {
+    const { conversationId } = await t.run(async (ctx) => {
       const contact = await ctx.db
         .query("contacts")
         .withIndex("by_business_id_and_phone", (q) =>
@@ -439,14 +473,114 @@ describe("Twilio SMS delivery flow", () => {
       const inbound = messages.find((message) => message.direction === "inbound");
       const outbound = messages.find((message) => message.direction === "outbound");
 
-      expect(inbound?.media).toEqual([
-        {
-          url: "https://example.com/image.jpg",
-          contentType: "image/jpeg",
-        },
-      ]);
+      expect(inbound?.media).toHaveLength(1);
+      expect(inbound?.media?.[0]).toMatchObject({
+        fileName: "customer-photo.jpg",
+        contentType: "image/jpeg",
+        byteLength: 11,
+        deliveryMode: "mms",
+      });
+      expect(inbound?.media?.[0]?.storageId).toBeDefined();
+      expect(inbound?.media?.[0]?.url).toBeUndefined();
       expect(outbound?.providerMessageSid).toBe("SM-outbound-mms-reply");
+
+      return {
+        conversationId: conversation!._id,
+      };
     });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const inboundWithAttachment = thread.messages.find((message) =>
+      message.attachments.some((attachment) => attachment.fileName === "customer-photo.jpg"),
+    );
+    expect(inboundWithAttachment?.attachments[0]).toMatchObject({
+      fileName: "customer-photo.jpg",
+      contentType: "image/jpeg",
+      byteLength: 11,
+      kind: "image",
+    });
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).toBeTruthy();
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).not.toBe("https://example.com/image.jpg");
+  });
+
+  it("repairs legacy external inbound media into previewable stored attachments", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "twilio-legacy-media-repair-owner";
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-legacy-media-repair",
+        name: "Twilio Legacy Media Repair",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550177",
+        name: "Legacy Media Contact",
+      });
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "",
+        media: [
+          {
+            url: "https://example.com/image.jpg",
+            contentType: "image/jpeg",
+          },
+        ],
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return {
+        businessId,
+        conversationId,
+      };
+    });
+
+    const authed = t.withIdentity({ subject });
+    const repair = await authed.action(api.dashboard.messages.repairConversationAttachmentPreviews, {
+      businessId,
+      conversationId,
+    });
+    expect(repair).toEqual({
+      repairedMessages: 1,
+      repairedAttachments: 1,
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const repairedAttachment = thread.messages[0]?.attachments[0];
+    expect(repairedAttachment).toMatchObject({
+      fileName: "customer-photo.jpg",
+      contentType: "image/jpeg",
+      byteLength: 11,
+      kind: "image",
+      source: "storage",
+    });
+    expect(repairedAttachment?.previewUrl).toBeTruthy();
+    expect(repairedAttachment?.previewUrl).not.toBe("https://example.com/image.jpg");
   });
 
   it("replies from the same inbound business number when multiple SMS numbers are active", async () => {

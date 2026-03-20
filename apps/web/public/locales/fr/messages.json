@@ -6,12 +6,14 @@
     "unknownShort": "IN",
     "yesterday": "Hier",
     "emptyPreview": "Pas encore de messages.",
-    "channelSms": "SMS",
-    "channelWeb": "Web",
     "selectConversation": "Sélectionnez une conversation pour afficher le fil.",
     "noChannel": "Aucun canal de contact enregistré.",
     "composerPlaceholder": "Tapez votre message...",
-    "send": "Envoyer"
+    "composerPlaceholderSms": "Répondre par SMS...",
+    "composerPlaceholderWeb": "Répondre via le web...",
+    "send": "Envoyer",
+    "sendFailed": "Impossible d'envoyer votre message.",
+    "uploadFailed": "Impossible de téléverser cette pièce jointe."
   },
   "outcome": {
     "label": "Résumé",

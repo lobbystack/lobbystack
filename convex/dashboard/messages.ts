@@ -1,9 +1,34 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
-import { query, type QueryCtx } from "../_generated/server";
+import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type ActionCtx,
+  type MutationCtx,
+  type QueryCtx,
+} from "../_generated/server";
 import { buildConversationOutcome } from "./outcomes";
-import { requireMembership } from "../lib/auth";
+import { requireCurrentUser, requireIdentity, requireMembership } from "../lib/auth";
+import { buildMessageAttachmentDownloadUrl } from "../lib/messageAttachmentUrls";
+import {
+  ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS,
+  MAX_SMS_REPLY_ATTACHMENTS,
+  formatAttachmentDisplayName,
+  inferFileNameFromContentType,
+  isImageAttachment,
+  isSupportedAttachmentContentType,
+  normalizeAttachmentFileName,
+  resolveAttachmentDeliveryModes,
+} from "../lib/messageAttachments";
+import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
+
+type MessageMediaRecord = NonNullable<Doc<"messages">["media"]>[number];
 
 async function getContact(
   ctx: QueryCtx,
@@ -15,6 +40,461 @@ async function getContact(
 
   return await ctx.db.get(contactId);
 }
+
+function assertSmsConversation(
+  conversation: Doc<"conversations"> | null,
+  businessId: Id<"businesses">,
+): Doc<"conversations"> {
+  if (!conversation || conversation.businessId !== businessId) {
+    throw new Error("Conversation not found.");
+  }
+
+  if (conversation.channel !== "sms") {
+    throw new Error("Only SMS conversations can use attachments.");
+  }
+
+  return conversation;
+}
+
+function createAttachmentNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+type SmsReplyContextArgs = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  userId: Id<"users">;
+  attachmentIds?: Array<Id<"message_attachment_uploads">>;
+};
+
+type SmsReplyContextResult = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  fromPhoneNumber: string;
+  attachments: Array<{
+    storageId: Id<"_storage">;
+    fileName: string;
+    contentType: string;
+    byteLength: number;
+    deliveryMode: "mms" | "link";
+  }>;
+};
+
+type FinalizeStagedAttachmentContextArgs = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  userId: Id<"users">;
+  storageId: Id<"_storage">;
+};
+
+type FinalizeStagedAttachmentContextResult = {
+  contentType: string;
+  byteLength: number;
+};
+
+async function requireDashboardMessagesUserId(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<Id<"users">> {
+  const identity = await requireIdentity(ctx);
+  const authUserId = await getAuthUserId(ctx);
+  const userId = await ctx.runQuery(internal.users.resolveAuthenticatedUserForBusiness, {
+    businessId,
+    authSubject: identity.subject,
+    ...(authUserId !== null ? { authUserId } : {}),
+  });
+
+  if (!userId) {
+    throw new Error("User profile not initialized.");
+  }
+
+  const membership = await ctx.runQuery(internal.ai.agents.runtime.requireMembershipByUserId, {
+    businessId,
+    userId,
+  });
+  if (!membership || membership.status !== "active") {
+    throw new Error("Unauthorized.");
+  }
+
+  return userId;
+}
+
+export const assertDashboardMessagesWriteAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    await requireMembership(ctx, args.businessId);
+    return null;
+  },
+});
+
+export const getSmsReplyContext = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    attachmentIds: v.optional(v.array(v.id("message_attachment_uploads"))),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: SmsReplyContextArgs,
+  ): Promise<SmsReplyContextResult> => {
+    const conversation = assertSmsConversation(
+      await ctx.db.get(args.conversationId),
+      args.businessId,
+    );
+
+    if (!conversation.contactId) {
+      throw new Error("Conversation is missing a contact.");
+    }
+
+    const [contact, phoneNumbers, stagedAttachments] = await Promise.all([
+      ctx.db.get(conversation.contactId),
+      ctx.db
+        .query("phone_numbers")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+      Promise.all(
+        (args.attachmentIds ?? []).map(async (attachmentId) => {
+          const attachment = await ctx.db.get(attachmentId);
+          if (!attachment) {
+            throw new Error("Attachment not found.");
+          }
+          if (
+            attachment.businessId !== args.businessId ||
+            attachment.conversationId !== args.conversationId ||
+            attachment.uploaderUserId !== args.userId ||
+            attachment.status !== "staged"
+          ) {
+            throw new Error("Attachment is no longer available.");
+          }
+          return attachment;
+        }),
+      ),
+    ]);
+
+    if (!contact?.phone) {
+      throw new Error("Contact phone number not found.");
+    }
+
+    if (contact.smsConsentStatus === "opted_out") {
+      throw new Error("This contact has opted out of SMS messages.");
+    }
+
+    const fromPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
+    if (!fromPhoneNumber) {
+      throw new Error(
+        "At least one active SMS-enabled phone number must be mapped to the business.",
+      );
+    }
+
+    const attachmentIds = args.attachmentIds ?? [];
+    if (new Set(attachmentIds.map(String)).size !== attachmentIds.length) {
+      throw new Error("Duplicate attachments are not allowed.");
+    }
+    if (stagedAttachments.length > MAX_SMS_REPLY_ATTACHMENTS) {
+      throw new Error(`You can send up to ${MAX_SMS_REPLY_ATTACHMENTS} attachments at a time.`);
+    }
+
+    const attachments = resolveAttachmentDeliveryModes(
+      stagedAttachments.map((attachment) => ({
+        storageId: attachment.storageId,
+        fileName: attachment.fileName,
+        contentType: attachment.contentType,
+        byteLength: attachment.byteLength,
+      })),
+    );
+
+    return {
+      businessId: args.businessId,
+      conversationId: conversation._id,
+      fromPhoneNumber,
+      attachments,
+    };
+  },
+});
+
+export const generateAttachmentUploadUrl = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: MutationCtx, args): Promise<string> => {
+    await requireMembership(ctx, args.businessId);
+    assertSmsConversation(await ctx.db.get(args.conversationId), args.businessId);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getFinalizeStagedAttachmentContext = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: FinalizeStagedAttachmentContextArgs,
+  ): Promise<FinalizeStagedAttachmentContextResult> => {
+    assertSmsConversation(await ctx.db.get(args.conversationId), args.businessId);
+
+    const stagedAttachments = await ctx.db
+      .query("message_attachment_uploads")
+      .withIndex("by_uploader_user_id_and_conversation_id", (q) =>
+        q.eq("uploaderUserId", args.userId).eq("conversationId", args.conversationId),
+      )
+      .collect();
+    const activeAttachments = stagedAttachments.filter((attachment) => attachment.status === "staged");
+    if (activeAttachments.length >= MAX_SMS_REPLY_ATTACHMENTS) {
+      throw new Error(`You can send up to ${MAX_SMS_REPLY_ATTACHMENTS} attachments at a time.`);
+    }
+
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded file not found.");
+    }
+
+    return {
+      contentType: metadata.contentType ?? "application/octet-stream",
+      byteLength: metadata.size,
+    };
+  },
+});
+
+export const insertStagedAttachment = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    uploaderUserId: v.id("users"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    byteLength: v.number(),
+    deliveryMode: v.union(v.literal("mms"), v.literal("link")),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    return await ctx.db.insert("message_attachment_uploads", {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      uploaderUserId: args.uploaderUserId,
+      storageId: args.storageId,
+      fileName: args.fileName,
+      contentType: args.contentType,
+      byteLength: args.byteLength,
+      deliveryMode: args.deliveryMode,
+      status: "staged",
+    });
+  },
+});
+
+export const finalizeStagedAttachment = action({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args,
+  ): Promise<{
+    id: Id<"message_attachment_uploads">;
+    fileName: string;
+    contentType: string;
+    byteLength: number;
+    deliveryMode: "mms" | "link";
+    kind: "image" | "file";
+  }> => {
+    const userId = await requireDashboardMessagesUserId(ctx, args.businessId);
+    const metadata: FinalizeStagedAttachmentContextResult = await ctx.runQuery(
+      internal.dashboard.messages.getFinalizeStagedAttachmentContext,
+      {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        userId,
+        storageId: args.storageId,
+      },
+    );
+
+    const contentType = metadata.contentType;
+    if (!isSupportedAttachmentContentType(contentType)) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("This file type isn't supported for SMS/MMS attachments.");
+    }
+
+    const fallbackName = inferFileNameFromContentType(contentType);
+    const normalizedFileName = normalizeAttachmentFileName(args.fileName, fallbackName.split(".").pop() ?? "bin");
+    const deliveryMode =
+      contentType === "application/pdf" || contentType.startsWith("image/")
+        ? ("mms" as const)
+        : ("link" as const);
+    const attachmentId: Id<"message_attachment_uploads"> = await ctx.runMutation(
+      internal.dashboard.messages.insertStagedAttachment,
+      {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        uploaderUserId: userId,
+        storageId: args.storageId,
+        fileName: normalizedFileName,
+        contentType,
+        byteLength: metadata.byteLength,
+        deliveryMode,
+      },
+    );
+
+    return {
+      id: attachmentId,
+      fileName: normalizedFileName,
+      contentType,
+      byteLength: metadata.byteLength,
+      deliveryMode,
+      kind: contentType.startsWith("image/") ? ("image" as const) : ("file" as const),
+    };
+  },
+});
+
+export const removeStagedAttachment = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    attachmentId: v.id("message_attachment_uploads"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    const user = await requireCurrentUser(ctx);
+    await requireMembership(ctx, args.businessId);
+
+    const attachment = await ctx.db.get(args.attachmentId);
+    if (
+      !attachment ||
+      attachment.businessId !== args.businessId ||
+      attachment.conversationId !== args.conversationId ||
+      attachment.uploaderUserId !== user._id ||
+      attachment.status !== "staged"
+    ) {
+      throw new Error("Attachment not found.");
+    }
+
+    await ctx.storage.delete(attachment.storageId);
+    await ctx.db.delete(attachment._id);
+
+    return null;
+  },
+});
+
+export const materializeMessageAttachmentUrls = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message?.media || message.media.length === 0) {
+      return null;
+    }
+
+    const nextMedia = [];
+    for (const attachment of message.media) {
+      if (
+        attachment.url ||
+        !attachment.storageId ||
+        !attachment.fileName ||
+        !attachment.contentType
+      ) {
+        nextMedia.push(attachment);
+        continue;
+      }
+
+      const nonce = createAttachmentNonce();
+      const expiresAt = new Date(Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS).toISOString();
+      await ctx.db.insert("message_attachment_download_tokens", {
+        businessId: message.businessId,
+        messageId: message._id,
+        storageId: attachment.storageId,
+        fileName: attachment.fileName,
+        contentType: attachment.contentType,
+        disposition: attachment.deliveryMode === "link" ? "attachment" : "inline",
+        nonce,
+        expiresAt,
+      });
+
+      nextMedia.push({
+        ...attachment,
+        url: buildMessageAttachmentDownloadUrl(nonce),
+      });
+    }
+
+    await ctx.db.patch(args.messageId, {
+      media: nextMedia,
+    });
+
+    return null;
+  },
+});
+
+export const markStagedAttachmentsConsumed = internalMutation({
+  args: {
+    attachmentIds: v.array(v.id("message_attachment_uploads")),
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    for (const attachmentId of args.attachmentIds) {
+      await ctx.db.patch(attachmentId, {
+        status: "consumed",
+        sentMessageId: args.messageId,
+      });
+    }
+
+    return null;
+  },
+});
+
+export const getMessageAttachmentDownloadToken = internalQuery({
+  args: {
+    token: v.string(),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    return await ctx.db
+      .query("message_attachment_download_tokens")
+      .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
+      .unique();
+  },
+});
+
+export const getConversationMessages = internalQuery({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
+      .collect();
+  },
+});
+
+export const patchMessageMedia = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    media: v.array(
+      v.object({
+        url: v.optional(v.string()),
+        storageId: v.optional(v.id("_storage")),
+        fileName: v.optional(v.string()),
+        contentType: v.optional(v.string()),
+        byteLength: v.optional(v.number()),
+        deliveryMode: v.optional(v.string()),
+      }),
+    ),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    await ctx.db.patch(args.messageId, {
+      media: args.media,
+    });
+    return null;
+  },
+});
 
 export const listConversationSummaries = query({
   args: {
@@ -65,6 +545,35 @@ export const listConversationSummaries = query({
   },
 });
 
+async function hydrateMessageAttachments(
+  ctx: QueryCtx,
+  message: Doc<"messages">,
+) {
+  return await Promise.all(
+    (message.media ?? []).map(async (attachment: MessageMediaRecord, index) => {
+      const contentType = attachment.contentType ?? "application/octet-stream";
+      const signedUrl = attachment.storageId ? await ctx.storage.getUrl(attachment.storageId) : null;
+      const resolvedUrl = signedUrl ?? attachment.url ?? null;
+
+      return {
+        id: `${String(message._id)}:${index}`,
+        fileName: formatAttachmentDisplayName({
+          fileName: attachment.fileName ?? null,
+          contentType: attachment.contentType ?? null,
+          index,
+        }),
+        contentType,
+        byteLength: attachment.byteLength ?? null,
+        deliveryMode: attachment.deliveryMode ?? null,
+        kind: isImageAttachment(contentType) ? ("image" as const) : ("file" as const),
+        previewUrl: isImageAttachment(contentType) ? resolvedUrl : null,
+        downloadUrl: resolvedUrl,
+        source: attachment.storageId ? ("storage" as const) : ("external" as const),
+      };
+    }),
+  );
+}
+
 export const getConversationThread = query({
   args: {
     businessId: v.id("businesses"),
@@ -105,15 +614,175 @@ export const getConversationThread = query({
             email: contact.email ?? null,
           }
         : null,
-      messages: messages.map((message) => ({
-        id: message._id,
-        direction: message.direction,
-        body: message.body,
-        status: message.status,
-        channel: message.channel,
-        createdAt: message._creationTime,
-      })),
+      messages: await Promise.all(
+        messages.map(async (message) => ({
+          id: message._id,
+          direction: message.direction,
+          body: message.body,
+          status: message.status,
+          channel: message.channel,
+          createdAt: message._creationTime,
+          attachments: await hydrateMessageAttachments(ctx, message),
+        })),
+      ),
       outcome,
+    };
+  },
+});
+
+export const sendSmsReply = action({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    body: v.string(),
+    attachmentIds: v.optional(v.array(v.id("message_attachment_uploads"))),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args,
+  ): Promise<{ messageId: Id<"messages"> }> => {
+    const body = args.body.trim();
+    const userId = await requireDashboardMessagesUserId(ctx, args.businessId);
+
+    const replyContext: SmsReplyContextResult = await ctx.runQuery(
+      internal.dashboard.messages.getSmsReplyContext,
+      {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        userId,
+        ...(args.attachmentIds !== undefined ? { attachmentIds: args.attachmentIds } : {}),
+      },
+    );
+
+    if (body.length === 0 && replyContext.attachments.length === 0) {
+      throw new Error("Message body or attachments are required.");
+    }
+
+    const messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
+      businessId: replyContext.businessId,
+      conversationId: replyContext.conversationId,
+      channel: "sms",
+      body,
+      fromPhoneNumber: replyContext.fromPhoneNumber,
+      aiGenerated: false,
+      ...(replyContext.attachments.length > 0
+        ? {
+            media: replyContext.attachments.map((attachment) => ({
+              storageId: attachment.storageId,
+              fileName: attachment.fileName,
+              contentType: attachment.contentType,
+              byteLength: attachment.byteLength,
+              deliveryMode: attachment.deliveryMode,
+            })),
+          }
+        : {}),
+    });
+
+    if (replyContext.attachments.length > 0) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
+    if (args.attachmentIds && args.attachmentIds.length > 0) {
+      await ctx.runMutation(internal.dashboard.messages.markStagedAttachmentsConsumed, {
+        attachmentIds: args.attachmentIds,
+        messageId,
+      });
+    }
+
+    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+      messageId,
+    });
+
+    return { messageId };
+  },
+});
+
+export const repairConversationAttachmentPreviews = action({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args,
+  ): Promise<{ repairedMessages: number; repairedAttachments: number }> => {
+    await requireDashboardMessagesUserId(ctx, args.businessId);
+
+    const conversation: Doc<"conversations"> | null = await ctx.runQuery(
+      internal.conversations.webhooks.getConversationById,
+      {
+        conversationId: args.conversationId,
+      },
+    );
+    if (!conversation || conversation.businessId !== args.businessId) {
+      throw new Error("Conversation not found.");
+    }
+    if (conversation.channel !== "sms") {
+      throw new Error("Only SMS conversations support attachment preview repair.");
+    }
+
+    const messages: Array<Doc<"messages">> = await ctx.runQuery(
+      internal.dashboard.messages.getConversationMessages,
+      {
+        conversationId: args.conversationId,
+      },
+    );
+
+    let repairedMessages = 0;
+    let repairedAttachments = 0;
+
+    for (const message of messages) {
+      const mediaNeedingRepair =
+        message.direction === "inbound"
+          ? (message.media ?? []).filter((attachment) => attachment.url && !attachment.storageId)
+          : [];
+      if (mediaNeedingRepair.length === 0) {
+        continue;
+      }
+
+      const repairedMedia = await ctx.runAction(internal.integrations.twilioSms.ingestInboundMedia, {
+        media: mediaNeedingRepair.map((attachment) => ({
+          url: attachment.url ?? "",
+          ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
+        })),
+      });
+
+      let repairedForMessage = 0;
+      let repairedIndex = 0;
+      const nextMedia = (message.media ?? []).map((attachment) => {
+        if (!attachment.url || attachment.storageId) {
+          return attachment;
+        }
+
+        const replacement = repairedMedia[repairedIndex];
+        repairedIndex += 1;
+        if (
+          replacement &&
+          "storageId" in replacement &&
+          replacement.storageId
+        ) {
+          repairedForMessage += 1;
+          return replacement;
+        }
+
+        return attachment;
+      });
+
+      if (repairedForMessage > 0) {
+        repairedMessages += 1;
+        repairedAttachments += repairedForMessage;
+        await ctx.runMutation(internal.dashboard.messages.patchMessageMedia, {
+          messageId: message._id,
+          media: nextMedia,
+        });
+      }
+    }
+
+    return {
+      repairedMessages,
+      repairedAttachments,
     };
   },
 });

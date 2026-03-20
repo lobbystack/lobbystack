@@ -33,6 +33,8 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
+import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
+import type * as lib_messageAttachments from "../lib/messageAttachments.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
@@ -83,6 +85,8 @@ declare const fullApi: ApiFromModules<{
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
   "lib/indexedQueries": typeof lib_indexedQueries;
+  "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
+  "lib/messageAttachments": typeof lib_messageAttachments;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;

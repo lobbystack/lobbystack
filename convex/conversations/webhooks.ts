@@ -10,6 +10,7 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { buildLinkOnlyAttachmentText } from "../lib/messageAttachments";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
@@ -23,8 +24,12 @@ function asMessageId(value: string): Id<"messages"> {
 }
 
 type MessageMediaAttachment = {
-  url: string;
+  url?: string;
+  storageId?: Id<"_storage">;
+  fileName?: string;
   contentType?: string;
+  byteLength?: number;
+  deliveryMode?: string;
 };
 
 type ConversationIdArgs = { conversationId: Id<"conversations"> };
@@ -63,6 +68,8 @@ type StoreOutboundMessageArgs = {
   body: string;
   fromPhoneNumber?: string;
   appointmentId?: Id<"appointments">;
+  media?: Array<MessageMediaAttachment>;
+  aiGenerated?: boolean;
 };
 type OutboundMessageDeliveryContext = {
   businessId: Id<"businesses">;
@@ -285,8 +292,12 @@ export const ingestInboundSms = internalMutation({
     media: v.optional(
       v.array(
         v.object({
-          url: v.string(),
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
         }),
       ),
     ),
@@ -463,8 +474,12 @@ export const storeInboundMessage = internalMutation({
     media: v.optional(
       v.array(
         v.object({
-          url: v.string(),
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
         }),
       ),
     ),
@@ -517,6 +532,19 @@ export const storeOutboundMessage = internalMutation({
     body: v.string(),
     fromPhoneNumber: v.optional(v.string()),
     appointmentId: v.optional(v.id("appointments")),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
+          contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
+        }),
+      ),
+    ),
+    aiGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     return await ctx.db.insert("messages", {
@@ -526,9 +554,10 @@ export const storeOutboundMessage = internalMutation({
       channel: args.channel,
       ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
       ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       body: args.body,
       status: "queued",
-      aiGenerated: true,
+      aiGenerated: args.aiGenerated ?? true,
     });
   },
 });
@@ -615,14 +644,27 @@ export const sendStoredOutboundMessage = internalAction({
     }
 
     try {
+      const directMediaUrls =
+        context.media
+          ?.filter((attachment) => attachment.deliveryMode !== "link" && attachment.url)
+          .map((attachment) => attachment.url!)
+          .filter((url): url is string => Boolean(url)) ?? [];
+      const linkOnlyAttachments =
+        context.media?.filter(
+          (attachment): attachment is MessageMediaAttachment & { url: string } =>
+            attachment.deliveryMode === "link" && Boolean(attachment.url),
+        ) ?? [];
+      const outboundBodyParts = [
+        context.body.trim(),
+        linkOnlyAttachments.length > 0 ? buildLinkOnlyAttachmentText(linkOnlyAttachments) : "",
+      ].filter((part) => part.length > 0);
+
       const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
         to: context.to,
         from: context.from,
-        body: context.body,
+        body: outboundBodyParts.join("\n\n"),
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
-        ...(context.media !== undefined && context.media.length > 0
-          ? { mediaUrls: context.media.map((attachment) => attachment.url) }
-          : {}),
+        ...(directMediaUrls.length > 0 ? { mediaUrls: directMediaUrls } : {}),
       });
 
       await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageAccepted, {
@@ -749,6 +791,18 @@ export const handleTwilioSmsInbound = internalAction({
       }
     }
 
+    const normalizedMedia =
+      args.media && args.media.length > 0
+        ? await ctx.runAction(internal.integrations.twilioSms.ingestInboundMedia, {
+            media: args.media.map((attachment) => ({
+              url: attachment.url ?? "",
+              ...(attachment.contentType !== undefined
+                ? { contentType: attachment.contentType }
+                : {}),
+            })),
+          })
+        : undefined;
+
     const { conversationId, replySuppressed }: IngestInboundSmsResult = await ctx.runMutation(
       internal.conversations.webhooks.ingestInboundSms,
       {
@@ -759,7 +813,7 @@ export const handleTwilioSmsInbound = internalAction({
         ...(providerInboundSid !== undefined ? { providerMessageSid: providerInboundSid } : {}),
         ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
         ...(idempotencyKeyId !== null ? { idempotencyKeyId } : {}),
-        ...(args.media !== undefined ? { media: args.media } : {}),
+        ...(normalizedMedia !== undefined ? { media: normalizedMedia } : {}),
       },
     );
 
