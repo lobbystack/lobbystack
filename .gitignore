@@ -8,10 +8,8 @@ dist
 node_modules
 *.log
 .env
-.env.local
-.env.development.local
-.env.test.local
+.env.*
+!.env.example
 apps/web/dist
-convex/.generated
 *.tsbuildinfo
 references/shadcn-admin
