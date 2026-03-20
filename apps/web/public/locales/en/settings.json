@@ -1,22 +1,58 @@
 {
   "header": {
     "title": "Settings",
-    "description": "Configure the receptionist, hours, services, and transfer policy."
+    "description": "Manage your account details and sign-in credentials."
   },
   "layout": {
-    "title": "Settings",
-    "description": "Configure business operations and integrations with the shadcn-admin settings layout."
+    "businessDescription": "Manage your account details and sign-in credentials.",
+    "integrationsDescription": "Connect your favorite tools and applications."
   },
   "sections": {
-    "business": "Business Setup",
+    "business": "Account",
+    "appearance": "Preferences",
     "integrations": "Integrations"
   },
+  "appearance": {
+    "title": "Preferences",
+    "description": "Set your dashboard language, time format, and theme.",
+    "save": "Update preferences",
+    "saved": "Appearance preferences updated.",
+    "language": {
+      "label": "Dashboard language",
+      "description": "Choose the language used in the dashboard. This doesn't affect the AI."
+    },
+    "timeFormat": {
+      "label": "Time format",
+      "description": "Choose between 24-hour time or AM/PM.",
+      "twentyFourHour": "24-hour format",
+      "ampm": "AM/PM format"
+    },
+    "theme": {
+      "label": "Theme",
+      "description": "Choose your preferred visual theme.",
+      "light": "Light",
+      "lightDescription": "Bright surfaces with soft contrast for daytime work.",
+      "dark": "Dark",
+      "darkDescription": "Dimmed surfaces that keep late sessions easier on the eyes."
+    }
+  },
   "integrations": {
+    "actions": {
+      "connect": "Connect",
+      "connected": "Connected",
+      "settings": "Open integration settings"
+    },
     "providers": {
-      "google": "Connect Google Calendar to keep bookings and operator views aligned.",
-      "microsoft": "Connect Microsoft Calendar for Exchange and Outlook-backed teams."
+      "google": "Sync bookings with Google Calendar.",
+      "microsoft": "Connect Outlook and Exchange calendars."
     },
     "google": {
+      "sheetTitle": "Google Calendar",
+      "sheetDescription": "Connect staff calendars and choose which calendar receives bookings.",
+      "connectionSectionTitle": "Connection",
+      "connectionSectionDescription": "Choose a bookable team member and connect or reconnect Google Calendar.",
+      "calendarSectionTitle": "Calendar settings",
+      "calendarSectionDescription": "Choose the calendar to sync and review the latest sync state.",
       "staffLabel": "Team member",
       "selectStaff": "Choose a team member",
       "chooseStaffFirst": "Choose the team member whose Google Calendar you want to connect.",
@@ -55,10 +91,12 @@
     },
     "cards": {
       "google": {
-        "title": "Google Calendar"
+        "title": "Google Calendar",
+        "description": "Sync bookings with a Google Calendar."
       },
       "microsoft": {
-        "title": "Microsoft Calendar"
+        "title": "Microsoft Calendar",
+        "description": "Connect Outlook and Exchange calendars."
       }
     },
     "status": {
@@ -115,14 +153,21 @@
     "title": "Services",
     "description": "Service definitions power both booking logic and the receptionist snapshot callers hear.",
     "serviceName": "Service name",
+    "englishLabel": "English label",
+    "frenchLabel": "French label",
     "slug": "Slug",
     "durationMinutes": "Duration (minutes)",
     "descriptionLabel": "Description",
     "placeholders": {
       "serviceName": "Initial Consultation",
+      "englishLabel": "Initial Consultation",
+      "frenchLabel": "Consultation initiale",
       "description": "A 30 minute first appointment."
     },
     "save": "Add service",
+    "update": "Update service",
+    "cancelEdit": "Cancel",
+    "edit": "Edit service",
     "saving": "Saving...",
     "saved": "Saved service.",
     "noDescription": "No description yet.",

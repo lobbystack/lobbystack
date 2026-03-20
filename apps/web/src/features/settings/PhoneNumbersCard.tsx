@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
-import { Phone, Route } from "lucide-react";
+import { Phone } from "lucide-react";
 
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
@@ -45,7 +45,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId: props.businessId,
   });
-  const upsertPhoneNumber = useMutation(api.businesses.catalog.upsertPhoneNumber);
+  const savePhoneNumber = useAction(api.businesses.catalog.savePhoneNumber);
   const phoneNumbers = useMemo(
     () => (configuration?.phoneNumbers ?? []) as Array<Doc<"phone_numbers">>,
     [configuration],
@@ -106,17 +106,26 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
     setErrorMessage(null);
 
     try {
-      const result = await upsertPhoneNumber({
+      const normalizedTwilioPhoneSid = twilioPhoneSid.trim();
+      const result = await savePhoneNumber({
         businessId: props.businessId,
         ...(selectedPhoneNumber?._id ? { phoneNumberId: selectedPhoneNumber._id } : {}),
         e164: e164.replace(/\s+/g, ""),
-        ...(twilioPhoneSid.trim() ? { twilioPhoneSid: twilioPhoneSid.trim() } : {}),
+        ...(normalizedTwilioPhoneSid
+          ? { twilioPhoneSid: normalizedTwilioPhoneSid }
+          : selectedPhoneNumber
+            ? { twilioPhoneSid: null }
+            : {}),
         voiceEnabled,
         smsEnabled,
         status,
       });
 
       setSelectedPhoneNumberKey(String(result.phoneNumberId));
+      if (result.smsWebhookStatus === "failed") {
+        setErrorMessage(result.smsWebhookLastError ?? t("settings:phoneRouting.saveFailed"));
+        return;
+      }
       setSaveMessage(
         selectedPhoneNumber
           ? t("settings:phoneRouting.saved")
@@ -133,21 +142,16 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            <Route className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <CardTitle>{t("settings:phoneRouting.title")}</CardTitle>
-            <CardDescription>{t("settings:phoneRouting.description")}</CardDescription>
-          </div>
+      <CardHeader className="space-y-2 pb-2">
+        <div className="space-y-2">
+          <CardTitle>{t("settings:phoneRouting.title")}</CardTitle>
+          <CardDescription>{t("settings:phoneRouting.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="space-y-2">
-            <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+      <CardContent className="space-y-8">
+        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
+          <label className="space-y-3">
+            <span className="text-xs font-medium text-muted-foreground">
               {t("settings:phoneRouting.managedNumber")}
             </span>
             <Select
@@ -167,9 +171,9 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
               </SelectContent>
             </Select>
           </label>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="space-y-3">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.e164Number")}
               </span>
               <div className="relative">
@@ -182,8 +186,8 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                 />
               </div>
             </label>
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <label className="space-y-3">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.twilioPhoneSid")}
               </span>
               <Input
@@ -193,9 +197,9 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
               />
             </label>
           </div>
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-            <label className="space-y-2">
-              <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+            <label className="space-y-3">
+              <span className="text-xs font-medium text-muted-foreground">
                 {t("settings:phoneRouting.status")}
               </span>
               <Select onValueChange={(value) => setStatus(value ?? "active")} value={status}>
@@ -224,7 +228,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
               <span className="text-sm text-foreground">{t("settings:phoneRouting.smsEnabled")}</span>
             </label>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 pt-6">
             <Button disabled={isSaving || e164.trim().length === 0} type="submit">
               {isSaving
                 ? t("settings:phoneRouting.saving")
@@ -237,8 +241,8 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
           </div>
         </form>
 
-        <div className="space-y-3">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+        <div className="space-y-4">
+          <p className="text-xs font-medium text-muted-foreground">
             {t("settings:phoneRouting.currentMappings")}
           </p>
           {phoneNumbers.length > 0 ? (

@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+      <span className="text-xs font-medium text-muted-foreground">
         {t("language.label")}
       </span>
       <Select

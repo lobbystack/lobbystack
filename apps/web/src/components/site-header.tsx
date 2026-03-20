@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
-import { Settings2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
-import { ProfileDropdown } from "@/components/profile-dropdown";
-import { Search } from "@/components/search";
-import { ThemeSwitch } from "@/components/theme-switch";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type SiteHeaderProps = {
-  onSignOut: () => void;
+type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
+  fixed?: boolean;
+  className?: string;
   links?: Array<{
     title: string;
     href: string;
@@ -19,8 +13,12 @@ type SiteHeaderProps = {
   }>;
 };
 
-export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
-  const { t } = useTranslation("nav");
+export function SiteHeader({
+  className,
+  fixed,
+  links = [],
+  ...props
+}: SiteHeaderProps) {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -35,32 +33,22 @@ export function SiteHeader({ onSignOut, links = [] }: SiteHeaderProps) {
   return (
     <header
       className={cn(
-        "z-50 h-16 header-fixed peer/header sticky top-0 w-[inherit]",
-        offset > 10 ? "shadow" : "shadow-none",
+        "z-50 h-16 md:hidden",
+        fixed && "header-fixed peer/header sticky top-0 w-[inherit]",
+        offset > 10 && fixed ? "shadow" : "shadow-none",
+        className,
       )}
+      {...props}
     >
       <div
         className={cn(
           "relative flex h-full items-center gap-3 p-4 sm:gap-4",
           offset > 10 &&
+            fixed &&
             "after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg",
         )}
       >
-        <SidebarTrigger className="max-md:scale-125" variant="outline" />
-        <Separator className="h-6" orientation="vertical" />
-        <Search className="max-w-md" placeholder={t("search.placeholder")} />
-        <div className="ms-auto flex items-center space-x-4">
-          <ThemeSwitch />
-          <Button
-            aria-label="Open theme settings"
-            className="rounded-full"
-            size="icon"
-            variant="ghost"
-          >
-            <Settings2 className="size-4" />
-          </Button>
-          <ProfileDropdown onSignOut={onSignOut} />
-        </div>
+        <SidebarTrigger className="max-md:scale-125 md:hidden" variant="outline" />
       </div>
     </header>
   );

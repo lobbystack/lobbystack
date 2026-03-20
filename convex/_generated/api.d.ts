@@ -17,29 +17,41 @@ import type * as appointments_booking from "../appointments/booking.js";
 import type * as auth from "../auth.js";
 import type * as businesses_admin from "../businesses/admin.js";
 import type * as businesses_catalog from "../businesses/catalog.js";
+import type * as conversations_sessions from "../conversations/sessions.js";
 import type * as conversations_webhooks from "../conversations/webhooks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard_contacts from "../dashboard/contacts.js";
 import type * as dashboard_messages from "../dashboard/messages.js";
+import type * as dashboard_outcomes from "../dashboard/outcomes.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
+import type * as integrations_messageMedia from "../integrations/messageMedia.js";
 import type * as integrations_twilioMessageStatus from "../integrations/twilioMessageStatus.js";
 import type * as integrations_twilioSms from "../integrations/twilioSms.js";
+import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebug.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
+import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
+import type * as lib_messageAttachments from "../lib/messageAttachments.js";
+import type * as lib_node_imagePreviews from "../lib/node/imagePreviews.js";
+import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
 import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
+import type * as lib_serviceNameGeneration from "../lib/serviceNameGeneration.js";
+import type * as lib_serviceNames from "../lib/serviceNames.js";
 import type * as lib_smsPhoneNumbers from "../lib/smsPhoneNumbers.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
 import type * as lib_twilioMessageStatus from "../lib/twilioMessageStatus.js";
 import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
+import type * as lib_twilioUrls from "../lib/twilioUrls.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
+import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as users from "../users.js";
 import type * as users_preferences from "../users/preferences.js";
 import type * as voice_runtime from "../voice/runtime.js";
@@ -60,29 +72,41 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   "businesses/admin": typeof businesses_admin;
   "businesses/catalog": typeof businesses_catalog;
+  "conversations/sessions": typeof conversations_sessions;
   "conversations/webhooks": typeof conversations_webhooks;
   crons: typeof crons;
   "dashboard/contacts": typeof dashboard_contacts;
   "dashboard/messages": typeof dashboard_messages;
+  "dashboard/outcomes": typeof dashboard_outcomes;
   "dashboard/overview": typeof dashboard_overview;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
   "integrations/googleCalendar": typeof integrations_googleCalendar;
+  "integrations/messageMedia": typeof integrations_messageMedia;
   "integrations/twilioMessageStatus": typeof integrations_twilioMessageStatus;
   "integrations/twilioSms": typeof integrations_twilioSms;
+  "integrations/twilioSmsDebug": typeof integrations_twilioSmsDebug;
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
   "lib/indexedQueries": typeof lib_indexedQueries;
+  "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
+  "lib/messageAttachments": typeof lib_messageAttachments;
+  "lib/node/imagePreviews": typeof lib_node_imagePreviews;
+  "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;
   "lib/runtimeLocale": typeof lib_runtimeLocale;
+  "lib/serviceNameGeneration": typeof lib_serviceNameGeneration;
+  "lib/serviceNames": typeof lib_serviceNames;
   "lib/smsPhoneNumbers": typeof lib_smsPhoneNumbers;
   "lib/snapshot": typeof lib_snapshot;
   "lib/twilioMessageStatus": typeof lib_twilioMessageStatus;
   "lib/twilioSecurity": typeof lib_twilioSecurity;
+  "lib/twilioUrls": typeof lib_twilioUrls;
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "notifications/reminders": typeof notifications_reminders;
+  "services/localizedNames": typeof services_localizedNames;
   users: typeof users;
   "users/preferences": typeof users_preferences;
   "voice/runtime": typeof voice_runtime;
@@ -3647,7 +3671,7 @@ export declare const components: {
       cleanup: FunctionReference<
         "mutation",
         "internal",
-        { workflowId: string },
+        { force?: boolean; workflowId: string },
         boolean
       >;
       complete: FunctionReference<
@@ -3853,6 +3877,12 @@ export declare const components: {
           pageStatus?: "SplitRecommended" | "SplitRequired" | null;
           splitCursor?: string | null;
         }
+      >;
+      restart: FunctionReference<
+        "mutation",
+        "internal",
+        { from?: number | string; startAsync?: boolean; workflowId: string },
+        null
       >;
     };
   };

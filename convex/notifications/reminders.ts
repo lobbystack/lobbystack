@@ -22,7 +22,12 @@ type NotificationDeliveryContext = {
   notificationId: Id<"notifications">;
   to: string;
   from: string;
-  body: string;
+  kind: AppointmentNotificationKind;
+  serviceId: Id<"services">;
+  serviceName: string;
+  startsAt: string;
+  timezone: string;
+  locale: "en" | "fr";
 };
 
 type DeliverNotificationResult = {
@@ -119,19 +124,16 @@ export const getNotificationDeliveryContext = internalQuery({
       normalizeRuntimeLocale(contact.preferredLocale) ??
       normalizeRuntimeLocale(business.defaultLocale) ??
       "en";
-    const body = buildLocalizedAppointmentNotificationBody({
-      kind: notification.kind,
-      serviceName: service.name,
-      startsAt: appointment.startsAt,
-      timezone: appointment.timezone,
-      locale,
-    });
-
     return {
       notificationId: notification._id,
       to: contact.phone,
       from: senderPhoneNumber,
-      body,
+      kind: notification.kind,
+      serviceId: service._id,
+      serviceName: service.name,
+      startsAt: appointment.startsAt,
+      timezone: appointment.timezone,
+      locale,
     };
   },
 });
@@ -317,12 +319,26 @@ export const deliverNotification = internalAction({
     }
 
     try {
+      const localizedServiceName = await ctx.runAction(
+        internal.services.localizedNames.ensureLocalizedServiceName,
+        {
+          serviceId: deliveryContext.serviceId,
+          locale: deliveryContext.locale,
+        },
+      );
+      const body = buildLocalizedAppointmentNotificationBody({
+        kind: deliveryContext.kind,
+        serviceName: localizedServiceName,
+        startsAt: deliveryContext.startsAt,
+        timezone: deliveryContext.timezone,
+        locale: deliveryContext.locale,
+      });
       const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
         internal.integrations.twilioSms.sendMessage,
         {
         to: deliveryContext.to,
         from: deliveryContext.from,
-        body: deliveryContext.body,
+        body,
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
         },
       );

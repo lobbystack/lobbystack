@@ -5,7 +5,7 @@ import {
 } from "./lib/twilioSecurity";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
 
@@ -106,6 +106,7 @@ const bookAppointmentSchema = z.object({
   startsAt: z.string().min(1),
   timezone: z.string().min(1),
   preferredStaffId: z.string().min(1).optional(),
+  conversationId: z.string().min(1).optional(),
   contactName: z.string().min(1).optional(),
   contactPhone: z.string().min(1),
 });
@@ -126,6 +127,14 @@ const googleCalendarCallbackQuerySchema = z.object({
   state: z.string().min(1).optional(),
   error: z.string().min(1).optional(),
   error_description: z.string().min(1).optional(),
+});
+
+const messageAttachmentDownloadQuerySchema = z.object({
+  token: z.string().min(1),
+});
+
+const callRecordingDownloadQuerySchema = z.object({
+  token: z.string().min(1),
 });
 
 function badRequest(message: string): Response {
@@ -250,6 +259,184 @@ function requireServiceToken(request: Request): Response | null {
 
 auth.addHttpRoutes(http);
 
+type MessageAttachmentDownloadCtx = {
+  runQuery: (
+    query: typeof internal.dashboard.messages.getMessageAttachmentDownloadToken,
+    args: { token: string },
+  ) => Promise<Doc<"message_attachment_download_tokens"> | null>;
+  storage: {
+    get: (
+      storageId: Id<"_storage">,
+    ) => Promise<Blob | null>;
+  };
+};
+
+type CallRecordingDownloadCtx = {
+  runQuery: (
+    query: typeof internal.voice.runtime.getCallRecordingDownloadToken,
+    args: { token: string },
+  ) => Promise<Doc<"call_recording_download_tokens"> | null>;
+  storage: {
+    get: (
+      storageId: Id<"_storage">,
+    ) => Promise<Blob | null>;
+  };
+};
+
+function parseRangeHeader(rangeHeader: string | null, size: number) {
+  if (!rangeHeader) {
+    return null;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) {
+    return { error: "invalid" as const };
+  }
+
+  const [, rawStart, rawEnd] = match;
+  if (!rawStart && !rawEnd) {
+    return { error: "invalid" as const };
+  }
+
+  if (!rawStart) {
+    const suffixLength = Number(rawEnd);
+    if (!Number.isInteger(suffixLength) || suffixLength <= 0) {
+      return { error: "invalid" as const };
+    }
+    const start = Math.max(0, size - suffixLength);
+    return { start, end: size - 1 };
+  }
+
+  const start = Number(rawStart);
+  const end = rawEnd ? Number(rawEnd) : size - 1;
+  if (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 0 ||
+    end < start ||
+    start >= size
+  ) {
+    return { error: "invalid" as const };
+  }
+
+  return { start, end: Math.min(end, size - 1) };
+}
+
+async function handleMessageAttachmentDownload(
+  ctx: MessageAttachmentDownloadCtx,
+  request: Request,
+): Promise<Response> {
+  const parsedQuery = parseSearchParams(new URL(request.url), messageAttachmentDownloadQuerySchema);
+  if (!parsedQuery.ok) {
+    return parsedQuery.response;
+  }
+
+  const token = await ctx.runQuery(internal.dashboard.messages.getMessageAttachmentDownloadToken, {
+    token: parsedQuery.data.token,
+  });
+  if (!token) {
+    return new Response("Attachment not found", { status: 404 });
+  }
+
+  if (Date.parse(token.expiresAt) < Date.now()) {
+    return new Response("Attachment link expired", { status: 410 });
+  }
+
+  const blob = await ctx.storage.get(token.storageId);
+  if (!blob) {
+    return new Response("Attachment not found", { status: 404 });
+  }
+
+  const headers = new Headers();
+  headers.set("Content-Type", token.contentType);
+  headers.set(
+    "Content-Disposition",
+    `${token.disposition}; filename="${token.fileName}"`,
+  );
+  const remainingLifetimeMs = Date.parse(token.expiresAt) - Date.now();
+  const maxAgeSeconds = Math.max(0, Math.floor(remainingLifetimeMs / 1000));
+  headers.set(
+    "Cache-Control",
+    maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}, immutable` : "no-store",
+  );
+
+  if (request.method === "HEAD") {
+    headers.set("Content-Length", String(blob.size));
+    return new Response(null, { status: 200, headers });
+  }
+
+  return new Response(blob, { status: 200, headers });
+}
+
+async function handleCallRecordingDownload(
+  ctx: CallRecordingDownloadCtx,
+  request: Request,
+): Promise<Response> {
+  const parsedQuery = parseSearchParams(new URL(request.url), callRecordingDownloadQuerySchema);
+  if (!parsedQuery.ok) {
+    return parsedQuery.response;
+  }
+
+  const token = await ctx.runQuery(internal.voice.runtime.getCallRecordingDownloadToken, {
+    token: parsedQuery.data.token,
+  });
+  if (!token) {
+    return new Response("Recording not found", { status: 404 });
+  }
+
+  if (Date.parse(token.expiresAt) < Date.now()) {
+    return new Response("Recording link expired", { status: 410 });
+  }
+
+  const blob = await ctx.storage.get(token.storageId);
+  if (!blob) {
+    return new Response("Recording not found", { status: 404 });
+  }
+
+  const remainingLifetimeMs = Date.parse(token.expiresAt) - Date.now();
+  const maxAgeSeconds = Math.max(0, Math.floor(remainingLifetimeMs / 1000));
+  const baseHeaders = new Headers();
+  baseHeaders.set("Content-Type", token.contentType);
+  baseHeaders.set("Accept-Ranges", "bytes");
+  baseHeaders.set("Content-Disposition", `inline; filename="${token.fileName}"`);
+  baseHeaders.set(
+    "Cache-Control",
+    maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}, immutable` : "no-store",
+  );
+
+  const range = parseRangeHeader(request.headers.get("range"), blob.size);
+  if (range?.error) {
+    baseHeaders.set("Content-Range", `bytes */${blob.size}`);
+    return new Response("Invalid range", { status: 416, headers: baseHeaders });
+  }
+
+  if (range) {
+    const chunk = blob.slice(range.start, range.end + 1, token.contentType);
+    baseHeaders.set("Content-Length", String(range.end - range.start + 1));
+    baseHeaders.set("Content-Range", `bytes ${range.start}-${range.end}/${blob.size}`);
+    return new Response(chunk, { status: 206, headers: baseHeaders });
+  }
+
+  baseHeaders.set("Content-Length", String(blob.size));
+  return new Response(blob, { status: 200, headers: baseHeaders });
+}
+
+http.route({
+  path: "/messages/attachments/download",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    return await handleMessageAttachmentDownload(ctx, request);
+  }),
+});
+
+http.route({
+  path: "/calls/recordings/download",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    return await handleCallRecordingDownload(ctx, request);
+  }),
+});
+
 http.route({
   path: "/integrations/google/callback",
   method: "GET",
@@ -330,6 +517,9 @@ http.route({
         ? { messageSid: parsedPayload.data.MessageSid }
         : {}),
       ...(parsedPayload.data.SmsSid !== undefined ? { smsSid: parsedPayload.data.SmsSid } : {}),
+      ...(parsedPayload.data.OptOutType !== undefined
+        ? { optOutType: parsedPayload.data.OptOutType }
+        : {}),
       ...(media.length > 0 ? { media } : {}),
     });
 
@@ -686,6 +876,9 @@ http.route({
       timezone: body.data.timezone,
       ...(body.data.preferredStaffId !== undefined
         ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
+        : {}),
+      ...(body.data.conversationId !== undefined
+        ? { conversationId: asId("conversations", body.data.conversationId) }
         : {}),
       ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
       contactPhone: body.data.contactPhone,

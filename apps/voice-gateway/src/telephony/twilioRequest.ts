@@ -7,8 +7,25 @@ type TwilioSignatureInput = {
   params?: Record<string, string>;
 };
 
+type MediaStreamSignatureInput = {
+  authToken: string | undefined;
+  signatureHeader: string | string[] | undefined;
+  baseUrl: string;
+  path?: string;
+};
+
 export function buildTwilioRequestUrl(baseUrl: string, requestUrl: string): string {
   return new URL(requestUrl, baseUrl).toString();
+}
+
+export function buildMediaStreamValidationUrls(
+  baseUrl: string,
+  path = "/media-stream",
+): string[] {
+  const httpsUrl = new URL(path, baseUrl);
+  const websocketUrl = new URL(httpsUrl.toString());
+  websocketUrl.protocol = websocketUrl.protocol === "https:" ? "wss:" : "ws:";
+  return [websocketUrl.toString(), httpsUrl.toString()];
 }
 
 export function normalizeFormFields(
@@ -59,5 +76,15 @@ export function validateTwilioSignature(input: TwilioSignatureInput): boolean {
   return (
     providedBuffer.length === expectedBuffer.length &&
     timingSafeEqual(providedBuffer, expectedBuffer)
+  );
+}
+
+export function validateMediaStreamSignature(input: MediaStreamSignatureInput): boolean {
+  return buildMediaStreamValidationUrls(input.baseUrl, input.path).some((candidateUrl) =>
+    validateTwilioSignature({
+      authToken: input.authToken,
+      signatureHeader: input.signatureHeader,
+      url: candidateUrl,
+    }),
   );
 }

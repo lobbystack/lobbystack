@@ -16,7 +16,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Analytics } from "@/features/home/components/analytics";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -196,7 +195,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
           <div className="min-w-0 flex-1 overflow-x-auto">
             <TabsList>
               <TabsTrigger value="overview">{t("home.tabs.overview")}</TabsTrigger>
-              <TabsTrigger value="analytics">{t("home.tabs.analytics")}</TabsTrigger>
               <TabsTrigger disabled value="reports">
                 {t("home.tabs.reports")}
               </TabsTrigger>
@@ -204,15 +202,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                 {t("home.tabs.notifications")}
               </TabsTrigger>
             </TabsList>
-          </div>
-          <div className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 shadow-sm">
-            <span className="relative flex size-2.5 shrink-0">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-base font-semibold leading-none">
-              {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
-            </span>
           </div>
         </div>
         <TabsContent className="space-y-6" value="overview">
@@ -325,9 +314,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        <TabsContent className="space-y-4" value="analytics">
-          <Analytics businessId={businessId} />
         </TabsContent>
       </Tabs>
     </>

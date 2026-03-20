@@ -10,8 +10,15 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import {
+  buildLinkOnlyAttachmentText,
+  formatAttachmentDisplayName,
+  isImageAttachment,
+} from "../lib/messageAttachments";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
+import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
+import { ensureSessionForStoredMessage } from "./sessions";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
@@ -21,18 +28,18 @@ function asMessageId(value: string): Id<"messages"> {
   return value as Id<"messages">;
 }
 
-function buildTwilioSmsStatusCallbackUrl(): string {
-  const siteUrl = process.env.CONVEX_SITE_URL;
-  if (!siteUrl) {
-    throw new Error("CONVEX_SITE_URL is required to receive Twilio SMS callbacks.");
-  }
-
-  return new URL("/twilio/sms/status", siteUrl).toString();
-}
-
 type MessageMediaAttachment = {
-  url: string;
+  url?: string;
+  storageId?: Id<"_storage">;
+  fileName?: string;
   contentType?: string;
+  byteLength?: number;
+  previewUrl?: string;
+  previewStorageId?: Id<"_storage">;
+  previewFileName?: string;
+  previewContentType?: string;
+  previewByteLength?: number;
+  deliveryMode?: string;
 };
 
 type ConversationIdArgs = { conversationId: Id<"conversations"> };
@@ -71,6 +78,8 @@ type StoreOutboundMessageArgs = {
   body: string;
   fromPhoneNumber?: string;
   appointmentId?: Id<"appointments">;
+  media?: Array<MessageMediaAttachment>;
+  aiGenerated?: boolean;
 };
 type OutboundMessageDeliveryContext = {
   businessId: Id<"businesses">;
@@ -109,13 +118,104 @@ type HandleTwilioSmsInboundArgs = {
   body: string;
   messageSid?: string;
   smsSid?: string;
+  optOutType?: string;
   media?: Array<MessageMediaAttachment>;
 };
 type HandleTwilioSmsInboundResult = {
   businessId: Id<"businesses">;
   conversationId: Id<"conversations">;
-  reply: string;
+  reply: string | null;
 };
+type SmsConsentUpdate = {
+  status: "opted_out" | "subscribed";
+  source: string;
+};
+type IngestInboundSmsArgs = {
+  businessId: Id<"businesses">;
+  from: string;
+  channel: string;
+  body: string;
+  providerMessageSid?: string;
+  optOutType?: string;
+  idempotencyKeyId?: Id<"idempotency_keys">;
+  media?: Array<MessageMediaAttachment>;
+};
+type IngestInboundSmsResult = {
+  conversationId: Id<"conversations">;
+  contactId: Id<"contacts">;
+  replySuppressed: boolean;
+  automationState: "ai_active" | "human_handoff";
+};
+
+const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
+const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
+
+function normalizeSmsKeyword(value: string): string {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function classifySmsConsentUpdate(input: {
+  body: string;
+  optOutType?: string;
+}): SmsConsentUpdate | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  if (normalizedOptOutType) {
+    if (SMS_STOP_KEYWORDS.has(normalizedOptOutType)) {
+      return {
+        status: "opted_out",
+        source: `twilio_opt_out:${normalizedOptOutType}`,
+      };
+    }
+    if (SMS_START_KEYWORDS.has(normalizedOptOutType)) {
+      return {
+        status: "subscribed",
+        source: `twilio_opt_out:${normalizedOptOutType}`,
+      };
+    }
+  }
+
+  const normalizedBody = normalizeSmsKeyword(input.body);
+  if (SMS_STOP_KEYWORDS.has(normalizedBody)) {
+    return {
+      status: "opted_out",
+      source: `keyword:${normalizedBody}`,
+    };
+  }
+  if (SMS_START_KEYWORDS.has(normalizedBody)) {
+    return {
+      status: "subscribed",
+      source: `keyword:${normalizedBody}`,
+    };
+  }
+
+  return null;
+}
+
+function buildInboundSmsPrompt(input: {
+  body: string;
+  media?: Array<MessageMediaAttachment>;
+}): string {
+  const body = input.body.trim();
+  if (!input.media || input.media.length === 0) {
+    return body;
+  }
+
+  const attachmentLines = input.media.map((attachment, index) => {
+    const contentType = attachment.contentType ?? "application/octet-stream";
+    const label = formatAttachmentDisplayName({
+      fileName: attachment.fileName ?? null,
+      contentType: attachment.contentType ?? null,
+      index,
+    });
+    const kind = isImageAttachment(contentType) ? "Photo" : "File";
+
+    return `- ${kind}: ${label}`;
+  });
+
+  return [body, `Customer attachments:\n${attachmentLines.join("\n")}`]
+    .filter((part) => part.length > 0)
+    .join("\n\n");
+}
 
 export const getLatestOutboundReply = internalQuery({
   args: {
@@ -217,6 +317,145 @@ export const getConversationForContact = internalQuery({
   },
 });
 
+export const ingestInboundSms = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    from: v.string(),
+    channel: v.string(),
+    body: v.string(),
+    providerMessageSid: v.optional(v.string()),
+    optOutType: v.optional(v.string()),
+    idempotencyKeyId: v.optional(v.id("idempotency_keys")),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
+          contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
+        }),
+      ),
+    ),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: IngestInboundSmsArgs,
+  ): Promise<IngestInboundSmsResult> => {
+    const existingContact = await ctx.db
+      .query("contacts")
+      .withIndex("by_business_id_and_phone", (q) =>
+        q.eq("businessId", args.businessId).eq("phone", args.from),
+      )
+      .unique();
+
+    const consentUpdate = classifySmsConsentUpdate({
+      body: args.body,
+      ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+    });
+    const consentUpdatedAt = consentUpdate ? new Date().toISOString() : undefined;
+
+    const contactId =
+      existingContact?._id ??
+      (await ctx.db.insert("contacts", {
+        businessId: args.businessId,
+        phone: args.from,
+        ...(consentUpdate ? { smsConsentStatus: consentUpdate.status } : {}),
+        ...(consentUpdatedAt ? { smsConsentUpdatedAt: consentUpdatedAt } : {}),
+        ...(consentUpdate ? { smsConsentSource: consentUpdate.source } : {}),
+      }));
+
+    if (existingContact && consentUpdate) {
+      await ctx.db.patch(existingContact._id, {
+        smsConsentStatus: consentUpdate.status,
+        ...(consentUpdatedAt ? { smsConsentUpdatedAt: consentUpdatedAt } : {}),
+        smsConsentSource: consentUpdate.source,
+      });
+    }
+
+    const conversation = await ctx.runQuery(internal.conversations.webhooks.getConversationForContact, {
+      businessId: args.businessId,
+      contactId,
+      channel: args.channel,
+    });
+
+    const conversationId =
+      conversation?._id ??
+      (await ctx.db.insert("conversations", {
+        businessId: args.businessId,
+        contactId,
+        channel: args.channel,
+        status: "open",
+        automationState: "ai_active",
+      }));
+
+    const messageId = await ctx.db.insert("messages", {
+      businessId: args.businessId,
+      conversationId,
+      direction: "inbound",
+      channel: args.channel,
+      ...(args.providerMessageSid !== undefined
+        ? { providerMessageSid: args.providerMessageSid }
+        : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
+      body: args.body,
+      status: "received",
+      aiGenerated: false,
+    });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      channel: args.channel,
+      messageId,
+    });
+
+    if (
+      args.media?.some(
+        (attachment) =>
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
+    if (args.idempotencyKeyId) {
+      await ctx.db.patch(args.idempotencyKeyId, {
+        resourceTable: "conversations",
+        resourceId: String(conversationId),
+        status: "inbound_recorded",
+      });
+    }
+
+    const nextConsentStatus = consentUpdate?.status ?? existingContact?.smsConsentStatus;
+    const automationState =
+      conversation?.automationState === "human_handoff" ? "human_handoff" : "ai_active";
+
+    return {
+      conversationId,
+      contactId,
+      replySuppressed:
+        nextConsentStatus === "opted_out" || automationState === "human_handoff",
+      automationState,
+    };
+  },
+});
+
 export const getOrCreateContact = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -307,8 +546,17 @@ export const storeInboundMessage = internalMutation({
     media: v.optional(
       v.array(
         v.object({
-          url: v.string(),
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
         }),
       ),
     ),
@@ -335,7 +583,7 @@ export const storeInboundMessage = internalMutation({
         status: "open",
       }));
 
-    await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId,
       direction: "inbound",
@@ -349,6 +597,31 @@ export const storeInboundMessage = internalMutation({
       aiGenerated: false,
     });
 
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      channel: args.channel,
+      messageId,
+    });
+
+    if (
+      args.media?.some(
+        (attachment) =>
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
     return { conversationId };
   },
 });
@@ -361,19 +634,65 @@ export const storeOutboundMessage = internalMutation({
     body: v.string(),
     fromPhoneNumber: v.optional(v.string()),
     appointmentId: v.optional(v.id("appointments")),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
+          contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
+        }),
+      ),
+    ),
+    aiGenerated: v.optional(v.boolean()),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
-    return await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId: args.conversationId,
       direction: "outbound",
       channel: args.channel,
       ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
       ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       body: args.body,
       status: "queued",
-      aiGenerated: true,
+      aiGenerated: args.aiGenerated ?? true,
     });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      channel: args.channel,
+      messageId,
+    });
+
+    if (
+      args.media?.some(
+        (attachment) =>
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
+    return messageId;
   },
 });
 
@@ -459,14 +778,27 @@ export const sendStoredOutboundMessage = internalAction({
     }
 
     try {
+      const directMediaUrls =
+        context.media
+          ?.filter((attachment) => attachment.deliveryMode !== "link" && attachment.url)
+          .map((attachment) => attachment.url!)
+          .filter((url): url is string => Boolean(url)) ?? [];
+      const linkOnlyAttachments =
+        context.media?.filter(
+          (attachment): attachment is MessageMediaAttachment & { url: string } =>
+            attachment.deliveryMode === "link" && Boolean(attachment.url),
+        ) ?? [];
+      const outboundBodyParts = [
+        context.body.trim(),
+        linkOnlyAttachments.length > 0 ? buildLinkOnlyAttachmentText(linkOnlyAttachments) : "",
+      ].filter((part) => part.length > 0);
+
       const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
         to: context.to,
         from: context.from,
-        body: context.body,
+        body: outboundBodyParts.join("\n\n"),
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
-        ...(context.media !== undefined && context.media.length > 0
-          ? { mediaUrls: context.media.map((attachment) => attachment.url) }
-          : {}),
+        ...(directMediaUrls.length > 0 ? { mediaUrls: directMediaUrls } : {}),
       });
 
       await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageAccepted, {
@@ -516,6 +848,7 @@ export const handleTwilioSmsInbound = internalAction({
     body: v.string(),
     messageSid: v.optional(v.string()),
     smsSid: v.optional(v.string()),
+    optOutType: v.optional(v.string()),
     media: v.optional(
       v.array(
         v.object({
@@ -592,30 +925,56 @@ export const handleTwilioSmsInbound = internalAction({
       }
     }
 
-    const contactId: Id<"contacts"> = await ctx.runMutation(
-      internal.conversations.webhooks.getOrCreateContact,
-      {
-        businessId: phoneNumber.businessId,
-        phone: args.from,
-      },
-    );
+    const normalizedMedia =
+      args.media && args.media.length > 0
+        ? await ctx.runAction(internal.integrations.twilioSms.ingestInboundMedia, {
+            media: args.media.map((attachment) => ({
+              url: attachment.url ?? "",
+              ...(attachment.contentType !== undefined
+                ? { contentType: attachment.contentType }
+                : {}),
+            })),
+          })
+        : undefined;
 
-    const { conversationId }: { conversationId: Id<"conversations"> } = await ctx.runMutation(
-      internal.conversations.webhooks.storeInboundMessage,
+    const { conversationId, replySuppressed, automationState }: IngestInboundSmsResult = await ctx.runMutation(
+      internal.conversations.webhooks.ingestInboundSms,
       {
         businessId: phoneNumber.businessId,
-        contactId,
+        from: args.from,
         channel: "sms",
         body: args.body,
         ...(providerInboundSid !== undefined ? { providerMessageSid: providerInboundSid } : {}),
-        ...(args.media !== undefined ? { media: args.media } : {}),
+        ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+        ...(idempotencyKeyId !== null ? { idempotencyKeyId } : {}),
+        ...(normalizedMedia !== undefined ? { media: normalizedMedia } : {}),
       },
     );
 
+    if (replySuppressed) {
+      if (idempotencyKeyId) {
+        await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+          idempotencyKeyId,
+          resourceTable: "conversations",
+          resourceId: String(conversationId),
+          status:
+            automationState === "human_handoff"
+              ? "processed_human_handoff"
+              : "processed_no_reply",
+        });
+      }
+
+      return { businessId: phoneNumber.businessId, conversationId, reply: null };
+    }
+
+    const prompt = buildInboundSmsPrompt({
+      body: args.body,
+      ...(normalizedMedia ? { media: normalizedMedia } : {}),
+    });
     const rawReply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,
       conversationId,
-      prompt: args.body,
+      prompt,
     });
     const reply = rawReply.trim() || "I'm sorry, could you rephrase that?";
     const appointmentId: Id<"appointments"> | null = await ctx.runMutation(

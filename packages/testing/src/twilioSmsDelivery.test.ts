@@ -1,7 +1,8 @@
 import { convexTest, type TestConvex } from "convex-test";
+import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { internal } from "../../../convex/_generated/api";
+import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import schema from "../../../convex/schema";
 
@@ -82,6 +83,8 @@ const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const originalFetch = globalThis.fetch;
+let tinyPngBuffer: Buffer;
 
 async function insertBusiness(
   ctx: TestContext,
@@ -149,10 +152,45 @@ beforeEach(() => {
   retrierRunMock.mockResolvedValue(null);
 });
 
+beforeEach(async () => {
+  const image = new Jimp({ width: 2, height: 2, color: 0xff3366ff });
+  tinyPngBuffer = await image.getBuffer(JimpMime.png);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const rawUrl =
+        typeof input === "string" || input instanceof URL
+          ? String(input)
+          : input.url;
+
+      if (rawUrl === "https://example.com/image.jpg") {
+        return new Response(
+          new Blob(
+            [
+              Uint8Array.from(tinyPngBuffer),
+            ],
+            { type: "image/png" },
+          ),
+          {
+          status: 200,
+          headers: {
+            "content-type": "image/png",
+            "content-disposition": 'inline; filename="customer-photo.png"',
+          },
+          },
+        );
+      }
+
+      return await originalFetch(input as RequestInfo | URL, init);
+    }),
+  );
+});
+
 afterAll(() => {
   process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
   process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
   process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+  vi.unstubAllGlobals();
 });
 
 describe("Twilio SMS delivery flow", () => {
@@ -250,6 +288,203 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("stores STOP messages, marks the contact opted out, and suppresses replies", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-opt-out",
+        name: "Twilio Opt Out",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550126",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550126",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-stop-1",
+      From: "+14165550190",
+      To: smsNumber,
+      Body: "STOP",
+      OptOutType: "STOP",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-still-opted-out-1",
+      From: "+14165550190",
+      To: smsNumber,
+      Body: "Can you help me?",
+    });
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550190"),
+        )
+        .unique();
+      expect(contact).toMatchObject({
+        smsConsentStatus: "opted_out",
+        smsConsentSource: "twilio_opt_out:STOP",
+      });
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) =>
+          q.eq("businessId", contact!.businessId),
+        )
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      expect(messages).toHaveLength(2);
+      expect(messages.every((message) => message.direction === "inbound")).toBe(true);
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-stop-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "conversations",
+        status: "processed_no_reply",
+      });
+    });
+  });
+
+  it("stores inbound SMS during human handoff and suppresses AI replies", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-human-handoff",
+        name: "Twilio Human Handoff",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550128",
+      });
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550192",
+      });
+      await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+        automationState: "human_handoff",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550128",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-handoff-1",
+      From: "+14165550192",
+      To: smsNumber,
+      Body: "I have another question",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]?.direction).toBe("inbound");
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-handoff-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "conversations",
+        status: "processed_human_handoff",
+      });
+    });
+  });
+
+  it("clears opt-out on START and resumes reply generation", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-start-reply",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-start-opt-in",
+        name: "Twilio Start Opt In",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550127",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550127",
+      };
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-stop-2",
+      From: "+14165550191",
+      To: smsNumber,
+      Body: "STOP",
+      OptOutType: "STOP",
+    });
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-start-1",
+      From: "+14165550191",
+      To: smsNumber,
+      Body: "START",
+      OptOutType: "START",
+    });
+
+    expect(generateSmsReplyMock).toHaveBeenCalledTimes(1);
+    expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550191",
+      from: smsNumber,
+      body: "Auto-reply: START",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550191"),
+        )
+        .unique();
+      expect(contact).toMatchObject({
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "twilio_opt_out:START",
+      });
+    });
+  });
+
   it("stores inbound MMS attachments without breaking reply delivery", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
@@ -257,6 +492,7 @@ describe("Twilio SMS delivery flow", () => {
       status: "queued",
     });
 
+    const subject = "twilio-mms-inbound-owner";
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
         slug: "twilio-mms-inbound",
@@ -266,12 +502,22 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         e164: "+14165550101",
       });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
 
       return {
         businessId,
         smsNumber: "+14165550101",
       };
     });
+    const authed = t.withIdentity({ subject });
 
     const response = await postTwilioForm(t, "/twilio/sms/inbound", {
       MessageSid: "SM-inbound-mms-1",
@@ -280,12 +526,12 @@ describe("Twilio SMS delivery flow", () => {
       Body: "Photo attached",
       NumMedia: "1",
       MediaUrl0: "https://example.com/image.jpg",
-      MediaContentType0: "image/jpeg",
+      MediaContentType0: "image/png",
     });
 
     expect(response.status).toBe(200);
 
-    await t.run(async (ctx) => {
+    const { conversationId } = await t.run(async (ctx) => {
       const contact = await ctx.db
         .query("contacts")
         .withIndex("by_business_id_and_phone", (q) =>
@@ -304,14 +550,248 @@ describe("Twilio SMS delivery flow", () => {
       const inbound = messages.find((message) => message.direction === "inbound");
       const outbound = messages.find((message) => message.direction === "outbound");
 
-      expect(inbound?.media).toEqual([
-        {
-          url: "https://example.com/image.jpg",
-          contentType: "image/jpeg",
-        },
-      ]);
+      expect(inbound?.media).toHaveLength(1);
+      expect(inbound?.media?.[0]).toMatchObject({
+        fileName: "customer-photo.png",
+        contentType: "image/png",
+        byteLength: tinyPngBuffer.length,
+        deliveryMode: "mms",
+      });
+      expect(inbound?.media?.[0]?.storageId).toBeDefined();
+      expect(inbound?.media?.[0]?.url).toContain(
+        "/messages/attachments/download?token=",
+      );
       expect(outbound?.providerMessageSid).toBe("SM-outbound-mms-reply");
+
+      return {
+        conversationId: conversation!._id,
+      };
     });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const inboundWithAttachment = thread.messages.find((message) =>
+      message.attachments.some((attachment) => attachment.fileName === "customer-photo.png"),
+    );
+    expect(inboundWithAttachment?.attachments[0]).toMatchObject({
+      fileName: "customer-photo.png",
+      contentType: "image/png",
+      byteLength: tinyPngBuffer.length,
+      kind: "image",
+      hasDedicatedPreview: true,
+    });
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).toBeTruthy();
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).not.toBe("https://example.com/image.jpg");
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).not.toBe(
+      inboundWithAttachment?.attachments[0]?.downloadUrl,
+    );
+  });
+
+  it("builds a non-empty AI prompt for media-only inbound MMS", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-mms-media-only",
+      status: "queued",
+    });
+
+    const { smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-sms-media-only-prompt",
+        name: "Twilio SMS Media Only Prompt",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550165",
+      });
+
+      return {
+        smsNumber: "+14165550165",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-mms-media-only",
+      From: "+14165550186",
+      To: smsNumber,
+      Body: "",
+      NumMedia: "1",
+      MediaUrl0: "https://example.com/image.jpg",
+      MediaContentType0: "image/png",
+    });
+
+    expect(response.status).toBe(200);
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("Customer attachments:"),
+      }),
+    );
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("customer-photo.png"),
+      }),
+    );
+  });
+
+  it("falls back to a fresh storage URL after an attachment token expires", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "twilio-expired-attachment-token-owner";
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-expired-token",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-expired-attachment-token",
+        name: "Twilio Expired Attachment Token",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550166",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+
+      return {
+        businessId,
+        smsNumber: "+14165550166",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-expired-token",
+      From: "+14165550187",
+      To: smsNumber,
+      Body: "Photo attached",
+      NumMedia: "1",
+      MediaUrl0: "https://example.com/image.jpg",
+      MediaContentType0: "image/png",
+    });
+    expect(response.status).toBe(200);
+
+    const { conversationId, expiredDownloadUrl } = await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      const inbound = messages.find((message) => message.direction === "inbound");
+      const tokens = await ctx.db
+        .query("message_attachment_download_tokens")
+        .withIndex("by_message_id", (q) => q.eq("messageId", inbound!._id))
+        .collect();
+
+      for (const token of tokens) {
+        await ctx.db.patch(token._id, {
+          expiresAt: new Date(0).toISOString(),
+        });
+      }
+
+      return {
+        conversationId: conversation!._id,
+        expiredDownloadUrl: inbound?.media?.[0]?.url ?? null,
+      };
+    });
+
+    const authed = t.withIdentity({ subject });
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const inboundWithAttachment = thread.messages.find((message) =>
+      message.attachments.some((attachment) => attachment.fileName === "customer-photo.png"),
+    );
+
+    expect(inboundWithAttachment?.attachments[0]?.downloadUrl).toBeTruthy();
+    expect(inboundWithAttachment?.attachments[0]?.downloadUrl).not.toBe(expiredDownloadUrl);
+  });
+
+  it("repairs legacy external inbound media into previewable stored attachments", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "twilio-legacy-media-repair-owner";
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-legacy-media-repair",
+        name: "Twilio Legacy Media Repair",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550177",
+        name: "Legacy Media Contact",
+      });
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "",
+        media: [
+          {
+            url: "https://example.com/image.jpg",
+            contentType: "image/png",
+          },
+        ],
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return {
+        businessId,
+        conversationId,
+      };
+    });
+
+    const authed = t.withIdentity({ subject });
+    const repair = await authed.action(api.dashboard.messages.repairConversationAttachmentPreviews, {
+      businessId,
+      conversationId,
+    });
+    expect(repair).toEqual({
+      repairedMessages: 1,
+      repairedAttachments: 1,
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const repairedAttachment = thread.messages[0]?.attachments[0];
+    expect(repairedAttachment).toMatchObject({
+      fileName: "customer-photo.png",
+      contentType: "image/png",
+      byteLength: tinyPngBuffer.length,
+      kind: "image",
+      hasDedicatedPreview: true,
+      source: "tokenized",
+    });
+    expect(repairedAttachment?.previewUrl).toBeTruthy();
+    expect(repairedAttachment?.previewUrl).not.toBe("https://example.com/image.jpg");
+    expect(repairedAttachment?.previewUrl).not.toBe(repairedAttachment?.downloadUrl);
   });
 
   it("replies from the same inbound business number when multiple SMS numbers are active", async () => {
@@ -463,6 +943,61 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("supports backend debug lookups by provider SID and counterparty phone", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-debug-1",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-debug-lookups",
+        name: "Twilio Debug Lookups",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550128",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550128",
+      };
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-debug-1",
+      From: "+14165550192",
+      To: smsNumber,
+      Body: "Debug this thread",
+    });
+
+    const providerMessage = await t.query(
+      internal.integrations.twilioSmsDebug.getMessageByProviderMessageSid,
+      {
+        businessId,
+        providerMessageSid: "SM-debug-1",
+      },
+    );
+    expect(providerMessage).toMatchObject({
+      providerMessageSid: "SM-debug-1",
+      direction: "outbound",
+    });
+
+    const counterpartyMessages = await t.query(
+      internal.integrations.twilioSmsDebug.getMessagesByCounterpartyPhone,
+      {
+        businessId,
+        phone: "+14165550192",
+      },
+    );
+    expect(counterpartyMessages).toHaveLength(2);
+    expect(counterpartyMessages.map((message) => message.direction)).toEqual([
+      "inbound",
+      "outbound",
+    ]);
+  });
+
   it("sends appointment notifications through Twilio and reconciles delivery", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
@@ -498,6 +1033,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style",
         durationMinutes: 45,
         active: true,
@@ -589,6 +1128,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style-fr-contact",
         durationMinutes: 45,
         active: true,
@@ -623,7 +1166,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550156",
       from: "+14165550115",
-      body: expect.stringContaining("Rappel : votre rendez-vous pour Cut and Style est prévu"),
+      body: expect.stringContaining("Rappel : votre rendez-vous pour Coupe et coiffage est prévu"),
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -670,6 +1213,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Cut and Style",
+        localizedNames: {
+          en: "Cut and Style",
+          fr: "Coupe et coiffage",
+        },
         slug: "cut-and-style-fr-business",
         durationMinutes: 45,
         active: true,
@@ -704,7 +1251,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550157",
       from: "+14165550116",
-      body: expect.stringContaining("Votre rendez-vous pour Cut and Style est confirmé pour"),
+      body: expect.stringContaining("Votre rendez-vous pour Coupe et coiffage est confirmé pour"),
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -748,6 +1295,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,
@@ -835,6 +1386,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,
@@ -929,6 +1484,10 @@ describe("Twilio SMS delivery flow", () => {
       const serviceId = await ctx.db.insert("services", {
         businessId,
         name: "Initial Consultation",
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
         slug: "initial-consultation",
         durationMinutes: 30,
         active: true,

@@ -1,7 +1,11 @@
 {
   "page": {
     "title": "Appels",
-    "description": "Consultez le tableau des appels, puis ouvrez les transcriptions ou écoutez l'audio."
+    "description": "Consultez les appels récents, les transcriptions et l'audio enregistré.",
+    "emptyPreview": "Pas encore de transcription.",
+    "selectCall": "Sélectionnez un appel pour afficher la transcription.",
+    "yesterday": "Hier",
+    "unknownShort": "IN"
   },
   "filters": {
     "searchPlaceholder": "Rechercher des appels...",
@@ -23,6 +27,9 @@
     "viewTranscript": "Voir la transcription",
     "pendingTranscript": "Ouvrir la transcription",
     "listen": "Écouter",
+    "download": "Télécharger l'audio",
+    "play": "Lecture",
+    "pause": "Pause",
     "audioPending": "Enregistrement en attente"
   },
   "pagination": {
@@ -55,5 +62,25 @@
     "descriptionWithDate": "Consultez les tours enregistrés du client et de l'assistant du {{date}}.",
     "descriptionEmpty": "Sélectionnez un appel pour consulter la conversation enregistrée.",
     "noSegments": "Aucun segment de transcription n'est encore disponible pour cet appel."
+  },
+  "outcome": {
+    "label": "Résumé",
+    "booked": "L'appelant a réservé {{serviceName}} pour le {{startsAt}}.",
+    "scheduling": "L'appelant a commencé la prise de rendez-vous, mais aucun rendez-vous n'a été confirmé.",
+    "schedulingWithService": "L'appelant a discuté de la planification de {{serviceName}}, mais aucun rendez-vous n'a été confirmé.",
+    "schedulingWithServiceAndTime": "L'appelant a discuté de la planification de {{serviceName}} pour le {{startsAt}}, mais aucun rendez-vous n'a été confirmé.",
+    "messageTaken": "L'appelant a laissé un message pour suivi.",
+    "voicemail": "L'appel s'est terminé par une boîte vocale ou une prise de message.",
+    "busy": "L'appel s'est terminé parce que la ligne était occupée.",
+    "noAnswer": "L'appel s'est terminé sans réponse.",
+    "canceled": "L'appel a été annulé avant qu'un résultat final ne soit capturé.",
+    "completed": "L'appel s'est terminé, mais aucun résultat de réservation n'a été capturé.",
+    "technicalIssue": "L'appel s'est terminé à cause d'un problème technique avant qu'un résultat final ne soit capturé.",
+    "transferCompleted": "L'appel a été transféré avec succès.",
+    "transferBusy": "Un transfert a été tenté, mais la ligne de destination était occupée.",
+    "transferFailed": "Un transfert a été tenté, mais il n'a pas abouti.",
+    "none": "L'appelant a posé des questions, mais aucun résultat final n'a encore été capturé.",
+    "genericService": "un rendez-vous",
+    "unspecifiedTime": "une heure non précisée"
   }
 }

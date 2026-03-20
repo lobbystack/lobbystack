@@ -206,6 +206,9 @@ export async function executeVoiceTool(input: {
         ...(parsed.preferredStaffId !== undefined
           ? { preferredStaffId: parsed.preferredStaffId }
           : {}),
+        ...(input.conversationId !== undefined
+          ? { conversationId: input.conversationId }
+          : {}),
         ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
         contactPhone: parsed.contactPhone ?? input.callerPhone,
       });

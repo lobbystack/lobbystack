@@ -1,9 +1,11 @@
 export const SUPPORTED_LOCALES = ["en", "fr"] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export type TimeFormatPreference = "24h" | "ampm";
 
 export const DEFAULT_LOCALE: SupportedLocale = "en";
 export const LOCALE_STORAGE_KEY = "ai-receptionist.locale";
+export const TIME_FORMAT_STORAGE_KEY = "ai-receptionist.time-format";
 
 export function normalizeLocale(value: string | null | undefined): SupportedLocale | null {
   if (!value) {
@@ -66,13 +68,102 @@ export function writeStoredLocale(locale: SupportedLocale): void {
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
 }
 
+export function normalizeTimeFormatPreference(
+  value: string | null | undefined,
+): TimeFormatPreference | null {
+  if (value === "24h" || value === "ampm") {
+    return value;
+  }
+
+  return null;
+}
+
+export function readStoredTimeFormatPreference(): TimeFormatPreference | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return normalizeTimeFormatPreference(
+    window.localStorage.getItem(TIME_FORMAT_STORAGE_KEY),
+  );
+}
+
+export function writeStoredTimeFormatPreference(
+  value: TimeFormatPreference,
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(TIME_FORMAT_STORAGE_KEY, value);
+}
+
+export function resolveTimeFormatPreference(input: {
+  storedPreference?: string | null;
+  locale?: string | null;
+}): TimeFormatPreference {
+  const stored = normalizeTimeFormatPreference(input.storedPreference);
+  if (stored) {
+    return stored;
+  }
+
+  const locale = normalizeLocale(input.locale);
+  if (locale === "fr") {
+    return "24h";
+  }
+
+  return "ampm";
+}
+
+function applyTimeFormatPreference(
+  options: Intl.DateTimeFormatOptions | undefined,
+  preference: TimeFormatPreference | null,
+): Intl.DateTimeFormatOptions | undefined {
+  if (!preference) {
+    return options;
+  }
+
+  const hasTimePart = Boolean(
+    options?.timeStyle ||
+      options?.hour ||
+      options?.minute ||
+      options?.second ||
+      options?.hour12 ||
+      options?.hourCycle,
+  );
+
+  if (!hasTimePart) {
+    return options;
+  }
+
+  if (preference === "24h") {
+    return {
+      ...options,
+      hour12: false,
+      hourCycle: "h23",
+    };
+  }
+
+  return {
+    ...options,
+    hour12: true,
+    hourCycle: "h12",
+  };
+}
+
 export function formatDateTime(
   value: string | number | Date,
   locale: string,
   options?: Intl.DateTimeFormatOptions,
+  timeFormatPreference?: TimeFormatPreference | null,
 ): string {
   const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat(locale, options).format(date);
+  const resolvedPreference =
+    timeFormatPreference ?? readStoredTimeFormatPreference();
+  return new Intl.DateTimeFormat(
+    locale,
+    applyTimeFormatPreference(options, resolvedPreference),
+  ).format(date);
 }
 
 export function getWeekdayLabels(locale: string): Array<string> {
@@ -86,4 +177,48 @@ export function getWeekdayLabels(locale: string): Array<string> {
     date.setUTCDate(sunday.getUTCDate() + index);
     return formatter.format(date);
   });
+}
+
+function startOfLocalDay(value: Date): number {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
+
+export function formatInboxTimestamp(
+  value: string | number | Date,
+  locale: string,
+  labels: {
+    yesterday: string;
+  },
+  timeFormatPreference?: TimeFormatPreference | null,
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const now = new Date();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const dayDiff = Math.round((startOfLocalDay(now) - startOfLocalDay(date)) / oneDayMs);
+
+  if (dayDiff <= 0) {
+    const timeOptions =
+      applyTimeFormatPreference(
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+        timeFormatPreference ?? readStoredTimeFormatPreference(),
+      ) ?? {
+        hour: "2-digit",
+        minute: "2-digit",
+      };
+
+    return new Intl.DateTimeFormat(locale, {
+      ...timeOptions,
+    }).format(date);
+  }
+
+  if (dayDiff === 1) {
+    return labels.yesterday;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+  }).format(date);
 }

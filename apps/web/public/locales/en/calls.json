@@ -1,7 +1,11 @@
 {
   "page": {
     "title": "Calls",
-    "description": "Review the task-style call table, then open transcripts or listen to recorded audio."
+    "description": "Review recent calls, browse transcripts, and listen to recorded audio.",
+    "emptyPreview": "No transcript yet.",
+    "selectCall": "Select a call to review the transcript.",
+    "yesterday": "Yesterday",
+    "unknownShort": "UK"
   },
   "filters": {
     "searchPlaceholder": "Search calls...",
@@ -23,6 +27,9 @@
     "viewTranscript": "View transcript",
     "pendingTranscript": "Open transcript",
     "listen": "Listen",
+    "download": "Download audio",
+    "play": "Play",
+    "pause": "Pause",
     "audioPending": "Recording pending"
   },
   "pagination": {
@@ -55,5 +62,25 @@
     "descriptionWithDate": "Review the saved caller and assistant turns from {{date}}.",
     "descriptionEmpty": "Select a call to review the saved conversation.",
     "noSegments": "No transcript segments are available for this call yet."
+  },
+  "outcome": {
+    "label": "Summary",
+    "booked": "Caller booked {{serviceName}} for {{startsAt}}.",
+    "scheduling": "Caller started scheduling, but no appointment was confirmed.",
+    "schedulingWithService": "Caller discussed scheduling {{serviceName}}, but no appointment was confirmed.",
+    "schedulingWithServiceAndTime": "Caller discussed scheduling {{serviceName}} for {{startsAt}}, but no appointment was confirmed.",
+    "messageTaken": "Caller left a message for follow-up.",
+    "voicemail": "Call ended in voicemail or message capture.",
+    "busy": "Call ended because the line was busy.",
+    "noAnswer": "Call ended without an answer.",
+    "canceled": "Call was canceled before a final outcome was captured.",
+    "completed": "Call completed, but no booking outcome was captured.",
+    "technicalIssue": "Call ended because of a technical issue before a final outcome was captured.",
+    "transferCompleted": "Call was transferred successfully.",
+    "transferBusy": "Transfer was attempted, but the destination line was busy.",
+    "transferFailed": "Transfer was attempted, but it did not complete successfully.",
+    "none": "Caller asked questions, but no final outcome was captured yet.",
+    "genericService": "an appointment",
+    "unspecifiedTime": "an unspecified time"
   }
 }

@@ -52,7 +52,7 @@ export function PreviewPanel(props: PreviewPanelProps) {
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
-          <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+          <p className="text-xs font-medium text-muted-foreground">
             {t("common:labels.prompt")}
           </p>
           <Textarea
@@ -71,13 +71,13 @@ export function PreviewPanel(props: PreviewPanelProps) {
         </Button>
         <div className="space-y-3">
           <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-            <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">
               {t("common:labels.customer")}
             </div>
             <div className="text-sm leading-6 text-foreground">{prompt}</div>
           </div>
           <div className="rounded-2xl border border-border/70 bg-muted/25 p-4">
-            <div className="mb-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">
               {t("common:labels.receptionist")}
             </div>
             <div className="text-sm leading-6 text-foreground">

@@ -5,6 +5,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -21,12 +22,14 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
+import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { AgentPage } from "@/features/agent/AgentPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
 import { MessagesPage } from "@/features/messages/MessagesPage";
 import { SettingsLayout } from "@/features/settings/SettingsLayout";
+import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 
@@ -209,6 +212,7 @@ function PublicOnly(props: { children: ReactNode }) {
 
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
+  const location = useLocation();
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
@@ -256,13 +260,16 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
+  const usesFixedMain =
+    location.pathname === "/messages" || location.pathname === "/calls";
+
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
       {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       onSignOut={() => void signOut()}
     >
-      <Main className="flex flex-1 flex-col" fixed>
+      <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         <Routes>
           <Route
             element={<HomePage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
@@ -278,6 +285,10 @@ function WorkspaceShell() {
             path="/automations"
           />
           <Route
+            element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
+            path="/analytics"
+          />
+          <Route
             element={<AgentPage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
             path="/agent"
           />
@@ -289,12 +300,22 @@ function WorkspaceShell() {
             <Route
               element={
                 businessId ? (
-                  <SettingsBusinessPage businessId={businessId} snapshot={resolvedSnapshot} />
+                  <SettingsBusinessPage businessId={businessId} />
                 ) : (
                   <Navigate replace to="/settings" />
                 )
               }
               index
+            />
+            <Route
+              element={
+                businessId ? (
+                  <SettingsAppearancePage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/settings" />
+                )
+              }
+              path="appearance"
             />
             <Route
               element={

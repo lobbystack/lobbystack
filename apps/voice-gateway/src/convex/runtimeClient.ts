@@ -180,6 +180,7 @@ export async function bookVoiceAppointment(input: {
   startsAt: string;
   timezone: string;
   preferredStaffId?: string;
+  conversationId?: string;
   contactName?: string;
   contactPhone: string;
 }): Promise<BookAppointmentResponse> {

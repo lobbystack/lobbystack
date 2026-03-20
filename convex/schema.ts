@@ -5,10 +5,12 @@ import {
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
 } from "./lib/runtimeLocale";
+import { localizedServiceNamesValidator } from "./lib/serviceNames";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
   name: v.string(),
+  localizedNames: v.optional(localizedServiceNamesValidator),
   durationMinutes: v.number(),
   description: v.optional(v.string()),
 });
@@ -34,8 +36,33 @@ const closureWindowValidator = v.object({
 });
 
 const messageMediaValidator = v.object({
-  url: v.string(),
+  url: v.optional(v.string()),
+  storageId: v.optional(v.id("_storage")),
+  fileName: v.optional(v.string()),
   contentType: v.optional(v.string()),
+  byteLength: v.optional(v.number()),
+  previewUrl: v.optional(v.string()),
+  previewStorageId: v.optional(v.id("_storage")),
+  previewFileName: v.optional(v.string()),
+  previewContentType: v.optional(v.string()),
+  previewByteLength: v.optional(v.number()),
+  deliveryMode: v.optional(v.string()),
+});
+
+const conversationSessionSummaryKindValidator = v.union(
+  v.literal("booked"),
+  v.literal("booking_in_progress"),
+  v.literal("message_taking"),
+  v.literal("summary"),
+  v.literal("disposition"),
+);
+
+const conversationSessionSummaryValidator = v.object({
+  kind: conversationSessionSummaryKindValidator,
+  serviceName: v.optional(v.string()),
+  startsAt: v.optional(v.string()),
+  summary: v.optional(v.string()),
+  disposition: v.optional(v.string()),
 });
 
 export default defineSchema({
@@ -92,6 +119,7 @@ export default defineSchema({
   services: defineTable({
     businessId: v.id("businesses"),
     name: v.string(),
+    localizedNames: v.optional(localizedServiceNamesValidator),
     slug: v.string(),
     description: v.optional(v.string()),
     durationMinutes: v.number(),
@@ -130,6 +158,10 @@ export default defineSchema({
     voiceEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     status: v.string(),
+    smsWebhookStatus: v.optional(v.string()),
+    smsWebhookTargetUrl: v.optional(v.string()),
+    smsWebhookLastSyncedAt: v.optional(v.string()),
+    smsWebhookLastError: v.optional(v.string()),
   })
     .index("by_e164", ["e164"])
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
@@ -216,6 +248,9 @@ export default defineSchema({
     email: v.optional(v.string()),
     timezone: v.optional(v.string()),
     preferredLocale: v.optional(runtimeLocaleValidator),
+    smsConsentStatus: v.optional(v.string()),
+    smsConsentUpdatedAt: v.optional(v.string()),
+    smsConsentSource: v.optional(v.string()),
   })
     .index("by_business_id_and_phone", ["businessId", "phone"])
     .index("by_business_id_and_email", ["businessId", "email"]),
@@ -225,6 +260,11 @@ export default defineSchema({
     contactId: v.optional(v.id("contacts")),
     channel: v.string(),
     status: v.string(),
+    automationState: v.optional(
+      v.union(v.literal("ai_active"), v.literal("human_handoff")),
+    ),
+    automationPausedAt: v.optional(v.string()),
+    automationPausedByUserId: v.optional(v.id("users")),
     summary: v.optional(v.string()),
     currentIntent: v.optional(v.string()),
     locale: v.optional(runtimeLocaleValidator),
@@ -270,6 +310,7 @@ export default defineSchema({
   messages: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),
+    conversationSessionId: v.optional(v.id("conversation_sessions")),
     direction: v.string(),
     channel: v.string(),
     fromPhoneNumber: v.optional(v.string()),
@@ -285,7 +326,72 @@ export default defineSchema({
     aiGenerated: v.boolean(),
   })
     .index("by_conversation_id", ["conversationId"])
+    .index("by_conversation_session_id", ["conversationSessionId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),
+
+  conversation_sessions: defineTable({
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    channel: v.string(),
+    callId: v.optional(v.id("calls")),
+    status: v.string(),
+    startedAt: v.number(),
+    lastMessageAt: v.number(),
+    closedAt: v.optional(v.number()),
+    summaryGeneratedAt: v.optional(v.number()),
+    summaryKind: v.optional(conversationSessionSummaryKindValidator),
+    summary: v.optional(conversationSessionSummaryValidator),
+  })
+    .index("by_conversation_id_and_started_at", ["conversationId", "startedAt"])
+    .index("by_conversation_id_and_status", ["conversationId", "status"])
+    .index("by_call_id", ["callId"]),
+
+  message_attachment_uploads: defineTable({
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    uploaderUserId: v.id("users"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    byteLength: v.number(),
+    previewStorageId: v.optional(v.id("_storage")),
+    previewFileName: v.optional(v.string()),
+    previewContentType: v.optional(v.string()),
+    previewByteLength: v.optional(v.number()),
+    deliveryMode: v.string(),
+    status: v.string(),
+    sentMessageId: v.optional(v.id("messages")),
+  })
+    .index("by_business_id_and_conversation_id", ["businessId", "conversationId"])
+    .index("by_uploader_user_id_and_conversation_id", ["uploaderUserId", "conversationId"])
+    .index("by_sent_message_id", ["sentMessageId"]),
+
+  message_attachment_download_tokens: defineTable({
+    businessId: v.id("businesses"),
+    messageId: v.id("messages"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    disposition: v.string(),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  })
+    .index("by_nonce", ["nonce"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_message_id", ["messageId"]),
+
+  call_recording_download_tokens: defineTable({
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    contentType: v.string(),
+    nonce: v.string(),
+    expiresAt: v.string(),
+  })
+    .index("by_nonce", ["nonce"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_call_id", ["callId"]),
 
   calls: defineTable({
     businessId: v.id("businesses"),

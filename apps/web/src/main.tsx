@@ -6,6 +6,7 @@ import { ConvexReactClient } from "convex/react";
 import App from "./App";
 import "./i18n";
 import "./styles/index.css";
+import { AppearanceProvider } from "@/components/appearance-provider";
 import { LocaleProvider } from "@/components/locale-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -16,9 +17,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ConvexAuthProvider client={convex}>
       <ThemeProvider>
-        <LocaleProvider>
-          <App />
-        </LocaleProvider>
+        <AppearanceProvider>
+          <LocaleProvider>
+            <App />
+          </LocaleProvider>
+        </AppearanceProvider>
       </ThemeProvider>
     </ConvexAuthProvider>
   </React.StrictMode>,

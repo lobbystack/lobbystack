@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AuthenticatedLayoutProps = {
@@ -52,6 +53,7 @@ export function AuthenticatedLayout({
           "peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]",
         )}
       >
+        <SiteHeader fixed />
         {children}
       </SidebarInset>
     </SidebarProvider>

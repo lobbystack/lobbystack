@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAction, useQuery } from "convex/react";
-import { CalendarDays, CheckCircle2, RefreshCcw, TriangleAlert } from "lucide-react";
+import { CheckCircle2, RefreshCcw, Settings2, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -8,8 +8,21 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
@@ -39,6 +52,38 @@ type CalendarConnectionListItem = {
   lastSyncError?: string;
 };
 
+function GoogleCalendarLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-7"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function MicrosoftCalendarLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-7"
+      viewBox="0 0 13 14"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M13 4.69375v5.239c0 .115-.04.212-.119.288-.079.077-.176.115-.29.115H8.317v-3.4795l.8.6145c.051.0425.1145.063.1895.063.074 0 .1385-.0205.1945-.0635L13 4.69375Zm-4.6825-1.0105h4.2735c.1055 0 .1965.0315.2715.096.075.064.117.15.124.255l-3.6845 2.938-.9845-.7745V3.68325Zm-.6155-2.251v11.1355L1 11.40975v-8.7875l6.703-1.19Zm-2.0245 5.59-.018 0c-.0075.5585-.1575 1.0245-.4425 1.3985-.2855.373-.645.5675-1.0725.585-.4135-.0215-.765-.218-1.0505-.588-.285-.372-.435-0.837-.4425-1.3955.0075-.566.15-1.036.435-1.407.2855-.3705.638-.5655 1.05-.582.428.0165.788.212 1.0655.582.283.371.4295.8405.4395 1.407Zm-1.56-1.241-.0135.0195c-.2175.0155-.3985.1355-.5405.3605-.15.2245-.2175.5175-.2175.87 0 .352.0675.645.2175.877.15.232.3295.345.5475.345.218 0 .3975-.12.548-.352.143-.232.2175-.525.2175-.8855 0-.3535-.075-.6455-.2175-.876-.1445-.2305-.326-.3485-.5415-.3585Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function formatTimestamp(timestamp: string | undefined, locale: string): string | null {
   if (!timestamp) {
     return null;
@@ -55,6 +100,37 @@ function formatTimestamp(timestamp: string | undefined, locale: string): string 
   }).format(date);
 }
 
+type FeedbackBannerProps = {
+  message: string;
+  tone: "success" | "error";
+};
+
+function FeedbackBanner({ message, tone }: FeedbackBannerProps) {
+  const styles =
+    tone === "success"
+      ? {
+          wrapper:
+            "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+          icon: CheckCircle2,
+        }
+      : {
+          wrapper:
+            "border-destructive/30 bg-destructive/10 text-destructive dark:text-destructive",
+          icon: TriangleAlert,
+        };
+
+  const Icon = styles.icon;
+
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${styles.wrapper}`}
+    >
+      <Icon className="mt-0.5 size-4 shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
 export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,7 +140,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
   }) as Array<CalendarConnectionListItem> | undefined;
-  const summary = useQuery(api.integrations.calendar.getCalendarReconciliationSummary, { businessId });
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
   const selectGoogleCalendar = useAction(api.integrations.calendar.selectGoogleCalendar);
@@ -81,6 +156,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       ) as Array<CalendarConnectionListItem>),
     [connections],
   );
+  const googleConnected = googleConnections.length > 0;
   const microsoftConnected = (connections ?? []).some(
     (connection) => connection.provider === "microsoft",
   );
@@ -93,6 +169,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
+  const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
 
   const selectedConnection =
     googleConnections.find((connection) => String(connection.staffId) === selectedStaffId) ?? null;
@@ -141,14 +218,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     }
 
     if (status === "success") {
-      setStatusMessage(
-        message ?? t("integrations.google.connectedSuccess"),
-      );
+      setStatusMessage(message ?? t("integrations.google.connectedSuccess"));
       setErrorMessage(null);
     } else {
-      setErrorMessage(
-        message ?? t("integrations.google.connectFailed"),
-      );
+      setErrorMessage(message ?? t("integrations.google.connectFailed"));
       setStatusMessage(null);
     }
 
@@ -161,9 +234,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   useEffect(() => {
     async function loadCalendars() {
-      if (!selectedStaffId || !selectedConnection?.staffId) {
-        setCalendarOptions([]);
-        setSelectedCalendarId("");
+      if (!googleSheetOpen || !selectedStaffId || !selectedConnection?.staffId) {
+        if (!selectedConnection?.staffId) {
+          setCalendarOptions([]);
+          setSelectedCalendarId("");
+        }
         return;
       }
 
@@ -192,12 +267,23 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     void loadCalendars();
   }, [
     businessId,
+    googleSheetOpen,
     listGoogleCalendars,
     selectedConnection?.selectedCalendarId,
     selectedConnection?.staffId,
     selectedStaffId,
     t,
   ]);
+
+  function openGoogleSheet(): void {
+    if (googleConnections[0]?.staffId) {
+      setSelectedStaffId(String(googleConnections[0].staffId));
+    } else if (staff[0]?._id) {
+      setSelectedStaffId(String(staff[0]._id));
+    }
+
+    setGoogleSheetOpen(true);
+  }
 
   async function handleConnectGoogle(): Promise<void> {
     if (!selectedStaffId) {
@@ -248,28 +334,154 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     }
   }
 
+  async function handleRefreshCalendars(): Promise<void> {
+    const connectionStaffId = selectedConnection?.staffId;
+    if (!connectionStaffId) {
+      return;
+    }
+
+    setStatusMessage(null);
+    setErrorMessage(null);
+    setIsLoadingCalendars(true);
+
+    try {
+      const calendars = (await listGoogleCalendars({
+        businessId,
+        staffId: connectionStaffId,
+      })) as Array<GoogleCalendarOption>;
+      setCalendarOptions(calendars);
+      const selected =
+        calendars.find((calendar) => calendar.selected) ??
+        calendars.find((calendar) => calendar.id === selectedConnection?.selectedCalendarId) ??
+        calendars[0];
+      setSelectedCalendarId(selected?.id ?? "");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
+      );
+    } finally {
+      setIsLoadingCalendars(false);
+    }
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <div className="mb-2 inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CalendarDays className="size-5" />
+    <>
+      <div className="space-y-6">
+        {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
+        {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
+
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <li className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+            <div className="mb-8 flex items-center justify-between gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center">
+                <GoogleCalendarLogo />
+              </div>
+              <div className="flex items-center gap-2">
+                {googleConnected ? (
+                  <Button
+                    aria-label={t("integrations.actions.settings")}
+                    onClick={openGoogleSheet}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Settings2 className="size-4" />
+                  </Button>
+                ) : null}
+                <Button
+                  className={
+                    googleConnected
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      : undefined
+                  }
+                  disabled={googleConnected}
+                  onClick={openGoogleSheet}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {googleConnected
+                    ? t("integrations.actions.connected")
+                    : t("integrations.actions.connect")}
+                </Button>
+              </div>
             </div>
-            <CardTitle>{t("integrations.cards.google.title")}</CardTitle>
-            <CardDescription>{t("integrations.providers.google")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="space-y-1">
+              <h2 className="font-semibold">{t("integrations.cards.google.title")}</h2>
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {t("integrations.cards.google.description")}
+              </p>
+            </div>
+          </li>
+
+          <li className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+            <div className="mb-8 flex items-center justify-between gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
+                <MicrosoftCalendarLogo />
+              </div>
+              <Button
+                className={
+                  microsoftConnected
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                    : undefined
+                }
+                disabled
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {microsoftConnected
+                  ? t("integrations.actions.connected")
+                  : t("integrations.actions.connect")}
+              </Button>
+            </div>
+            <div className="space-y-1">
+              <h2 className="font-semibold">{t("integrations.cards.microsoft.title")}</h2>
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {t("integrations.cards.microsoft.description")}
+              </p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <Sheet onOpenChange={setGoogleSheetOpen} open={googleSheetOpen}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-xl" side="right">
+          <SheetHeader className="border-b pb-5">
+            <div className="flex items-start gap-4">
+              <div className="flex size-11 shrink-0 items-center justify-center">
+                <GoogleCalendarLogo />
+              </div>
+              <div className="space-y-1">
+                <SheetTitle>{t("integrations.google.sheetTitle")}</SheetTitle>
+                <SheetDescription>{t("integrations.google.sheetDescription")}</SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="space-y-6 p-6">
+            {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
+            {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
+
+            <section className="space-y-4 rounded-xl border p-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold">
+                  {t("integrations.google.connectionSectionTitle")}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t("integrations.google.connectionSectionDescription")}
+                </p>
+              </div>
+
               <label className="space-y-2">
-                <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                <span className="text-xs font-medium text-muted-foreground">
                   {t("integrations.google.staffLabel")}
                 </span>
                 <Select
                   onValueChange={(value) => setSelectedStaffId(value ?? "")}
                   value={selectedStaffId}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder={t("integrations.google.selectStaff")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -281,90 +493,75 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </SelectContent>
                 </Select>
               </label>
-              <div className="flex items-end">
-                <Button
-                  className="w-full md:w-auto"
-                  disabled={staff.length === 0 || isConnecting}
-                  onClick={() => void handleConnectGoogle()}
-                  type="button"
-                >
-                  {isConnecting
-                    ? t("integrations.google.connecting")
-                    : selectedConnection
-                      ? t("integrations.google.reconnect")
-                      : t("integrations.google.connect")}
-                </Button>
-              </div>
-            </div>
 
-            {statusMessage ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-                <span>{statusMessage}</span>
-              </div>
-            ) : null}
+              <Button
+                className="w-full sm:w-auto"
+                disabled={staff.length === 0 || isConnecting}
+                onClick={() => void handleConnectGoogle()}
+                type="button"
+              >
+                {isConnecting
+                  ? t("integrations.google.connecting")
+                  : selectedConnection
+                    ? t("integrations.google.reconnect")
+                    : t("integrations.google.connect")}
+              </Button>
 
-            {errorMessage ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            {selectedConnection ? (
-              <div className="space-y-4 rounded-2xl border border-border/70 bg-background/70 p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant="secondary">{t("integrations.status.connected")}</Badge>
-                  {selectedConnection.lastSyncError ? (
-                    <Badge variant="destructive">{t("integrations.google.syncNeedsAttention")}</Badge>
-                  ) : (
-                    <Badge variant="outline">{t("integrations.google.syncHealthy")}</Badge>
-                  )}
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
+              {selectedConnection ? (
+                <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.connectedAccount")}
                     </p>
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm">
                       {selectedConnection.externalAccountEmail ??
                         t("integrations.google.connectedAccountUnavailable")}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                      {t("integrations.google.selectedCalendar")}
-                    </p>
-                    <p className="text-sm text-foreground">
-                      {selectedConnection.selectedCalendarSummary ??
-                        selectedConnection.selectedCalendarId ??
-                        t("integrations.google.noCalendarSelected")}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.lastSync")}
                     </p>
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm">
                       {formatTimestamp(selectedConnection.lastSyncedAt, i18n.language) ??
                         t("integrations.google.neverSynced")}
                     </p>
                   </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed px-4 py-4 text-sm text-muted-foreground">
+                  {staff.length === 0
+                    ? t("integrations.google.noStaff")
+                    : t("integrations.google.notConnectedForStaff")}
+                </div>
+              )}
+            </section>
+
+            {selectedConnection ? (
+              <>
+                <section className="space-y-4 rounded-xl border p-4">
                   <div className="space-y-1">
-                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                      {t("integrations.google.lastSyncState")}
-                    </p>
-                    <p className="text-sm text-foreground">
-                      {selectedConnection.lastSyncError ??
-                        t("integrations.google.lastSyncOk")}
+                    <h3 className="text-sm font-semibold">
+                      {t("integrations.google.calendarSectionTitle")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t("integrations.google.calendarSectionDescription")}
                     </p>
                   </div>
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{t("integrations.status.connected")}</Badge>
+                    {selectedConnection.lastSyncError ? (
+                      <Badge variant="destructive">
+                        {t("integrations.google.syncNeedsAttention")}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">{t("integrations.google.syncHealthy")}</Badge>
+                    )}
+                  </div>
+
                   <label className="space-y-2">
-                    <span className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                    <span className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.calendarLabel")}
                     </span>
                     <Select
@@ -372,7 +569,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       onValueChange={(value) => setSelectedCalendarId(value ?? "")}
                       value={selectedCalendarId}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue
                           placeholder={
                             isLoadingCalendars
@@ -394,7 +591,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       </SelectContent>
                     </Select>
                   </label>
-                  <div className="flex items-end gap-2">
+
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       disabled={isLoadingCalendars || !selectedCalendarId || isSavingCalendar}
                       onClick={() => void handleSaveCalendar()}
@@ -407,34 +605,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </Button>
                     <Button
                       disabled={isLoadingCalendars || !selectedConnection.staffId}
-                      onClick={() => {
-                        const connectionStaffId = selectedConnection.staffId;
-                        if (!connectionStaffId) {
-                          return;
-                        }
-                        setSelectedCalendarId(selectedConnection.selectedCalendarId ?? "");
-                        setStatusMessage(null);
-                        setErrorMessage(null);
-                        setIsLoadingCalendars(true);
-                        void listGoogleCalendars({
-                          businessId,
-                          staffId: connectionStaffId,
-                        })
-                          .then((calendars) => {
-                            const nextCalendars = calendars as Array<GoogleCalendarOption>;
-                            setCalendarOptions(nextCalendars);
-                          })
-                          .catch((error) => {
-                            setErrorMessage(
-                              error instanceof Error
-                                ? error.message
-                                : t("integrations.google.calendarListFailed"),
-                            );
-                          })
-                          .finally(() => {
-                            setIsLoadingCalendars(false);
-                          });
-                      }}
+                      onClick={() => void handleRefreshCalendars()}
                       type="button"
                       variant="ghost"
                     >
@@ -442,106 +613,88 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       {t("integrations.google.refreshCalendars")}
                     </Button>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 px-4 py-5 text-sm text-muted-foreground">
-                {staff.length === 0
-                  ? t("integrations.google.noStaff")
-                  : t("integrations.google.notConnectedForStaff")}
-              </div>
-            )}
 
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                  {t("integrations.google.mappedConnections")}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t("integrations.google.mappedConnectionsDescription")}
-                </p>
-              </div>
-              {googleConnections.length > 0 ? (
-                <div className="grid gap-3">
-                  {googleConnections.map((connection) => {
-                    const member = staff.find(
-                      (candidate) => candidate._id === connection.staffId,
-                    );
-                    return (
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3"
-                        key={connection._id}
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {member?.name ?? t("integrations.google.unknownStaff")}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {connection.externalAccountEmail ??
-                              t("integrations.google.connectedAccountUnavailable")}
-                          </p>
+                  <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("integrations.google.selectedCalendar")}
+                      </p>
+                      <p className="text-sm">
+                        {selectedConnection.selectedCalendarSummary ??
+                          selectedConnection.selectedCalendarId ??
+                          t("integrations.google.noCalendarSelected")}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("integrations.google.lastSyncState")}
+                      </p>
+                      <p className="text-sm">
+                        {selectedConnection.lastSyncError ??
+                          t("integrations.google.lastSyncOk")}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">
+                      {t("integrations.google.mappedConnections")}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t("integrations.google.mappedConnectionsDescription")}
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {googleConnections.map((connection) => {
+                      const member = staff.find(
+                        (candidate) => candidate._id === connection.staffId,
+                      );
+
+                      return (
+                        <div
+                          className="rounded-xl border px-4 py-3"
+                          key={connection._id}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-foreground">
+                                {member?.name ?? t("integrations.google.unknownStaff")}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {connection.externalAccountEmail ??
+                                  t("integrations.google.connectedAccountUnavailable")}
+                              </p>
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground">
+                              <p>
+                                {connection.selectedCalendarSummary ??
+                                  connection.selectedCalendarId ??
+                                  t("integrations.google.noCalendarSelected")}
+                              </p>
+                              <p>
+                                {connection.lastSyncError ??
+                                  formatTimestamp(connection.lastSyncedAt, i18n.language) ??
+                                  t("integrations.google.neverSynced")}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-right text-xs text-muted-foreground">
-                          <p>
-                            {connection.selectedCalendarSummary ??
-                              connection.selectedCalendarId ??
-                              t("integrations.google.noCalendarSelected")}
-                          </p>
-                          <p>
-                            {connection.lastSyncError ??
-                              formatTimestamp(connection.lastSyncedAt, i18n.language) ??
-                              t("integrations.google.neverSynced")}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("integrations.google.noConnections")}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                      );
+                    })}
+                  </div>
+                </section>
+              </>
+            ) : null}
 
-        <Card>
-          <CardHeader>
-            <div className="mb-2 inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CalendarDays className="size-5" />
-            </div>
-            <CardTitle>{t("integrations.cards.microsoft.title")}</CardTitle>
-            <CardDescription>{t("integrations.providers.microsoft")}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {microsoftConnected
-              ? t("integrations.status.connected")
-              : t("integrations.status.notConnected")}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("integrations.summary.title")}</CardTitle>
-          <CardDescription>{t("integrations.summary.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span>{t("integrations.summary.connectedCalendars")}</span>
-            <span className="font-medium">{connections?.length ?? 0}</span>
+            <Separator />
+            <p className="text-xs text-muted-foreground">
+              {t("integrations.providers.microsoft")}
+            </p>
           </div>
-          <div className="flex items-center justify-between">
-            <span>{t("integrations.summary.openIssues")}</span>
-            <span className="font-medium">{summary?.openIssueCount ?? 0}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>{t("integrations.summary.syncedAppointments")}</span>
-            <span className="font-medium">{summary?.counts.synced ?? 0}</span>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

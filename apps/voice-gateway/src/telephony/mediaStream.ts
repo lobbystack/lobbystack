@@ -24,7 +24,8 @@ import {
   buildToolFailureRecoveryInstructions,
 } from "./failureRecovery";
 import {
-  validateTwilioSignature,
+  buildMediaStreamValidationUrls,
+  validateMediaStreamSignature,
 } from "./twilioRequest";
 
 type TwilioMediaMessage = {
@@ -129,13 +130,6 @@ type MediaStreamRequestContext = {
   url: string;
   headers: IncomingHttpHeaders;
 };
-
-function buildMediaStreamValidationUrls(baseUrl: string): string[] {
-  const httpsUrl = new URL("/media-stream", baseUrl);
-  const websocketUrl = new URL(httpsUrl.toString());
-  websocketUrl.protocol = websocketUrl.protocol === "https:" ? "wss:" : "ws:";
-  return [websocketUrl.toString(), httpsUrl.toString()];
-}
 
 function buildBusinessNowLabel(timezone: string): string | null {
   try {
@@ -1117,13 +1111,11 @@ export async function handleMediaStreamConnection(
       return true;
     }
 
-    const hasValidTwilioSignature = validationUrls.some((candidateUrl) =>
-      validateTwilioSignature({
-        authToken: runtimeConfig.TWILIO_AUTH_TOKEN,
-        signatureHeader: request.headers["x-twilio-signature"],
-        url: candidateUrl,
-      }),
-    );
+    const hasValidTwilioSignature = validateMediaStreamSignature({
+      authToken: runtimeConfig.TWILIO_AUTH_TOKEN,
+      signatureHeader: request.headers["x-twilio-signature"],
+      baseUrl: runtimeConfig.VOICE_GATEWAY_BASE_URL,
+    });
 
     if (!hasValidTwilioSignature) {
       server.log.warn(

@@ -16,7 +16,17 @@ import {
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
+import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
+import { getServiceNameCandidates } from "../lib/serviceNames";
+import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
+import {
+  ensureSessionForStoredMessage,
+  ensureVoiceSessionForCall,
+  finalizeVoiceSessionForCall,
+} from "../conversations/sessions";
 
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type ServicesForBusinessArgs = BusinessIdArgs;
@@ -131,6 +141,7 @@ type BookAppointmentForVoiceArgs = {
   startsAt: string;
   timezone: string;
   preferredStaffId?: Id<"staff">;
+  conversationId?: Id<"conversations">;
   contactName?: string;
   contactPhone: string;
 };
@@ -140,6 +151,11 @@ type BookAppointmentForVoiceResult = {
   serviceId: Id<"services">;
   serviceName: string;
 };
+
+function createCallRecordingNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 type ListRecentCallsArgs = {
   businessId: Id<"businesses">;
   limit?: number;
@@ -162,14 +178,20 @@ function tokenizeComparable(value: string): Array<string> {
 
 function scoreServiceMatch(service: Doc<"services">, serviceName: string): number {
   const comparable = normalizeComparable(serviceName);
-  const nameComparable = normalizeComparable(service.name);
   const slugComparable = normalizeComparable(service.slug);
+  const nameCandidates = getServiceNameCandidates(service).map((candidate) =>
+    normalizeComparable(candidate),
+  );
 
-  if (nameComparable === comparable || slugComparable === comparable) {
+  if (nameCandidates.includes(comparable) || slugComparable === comparable) {
     return 100;
   }
 
-  if (nameComparable.includes(comparable) || comparable.includes(nameComparable)) {
+  if (
+    nameCandidates.some(
+      (candidate) => candidate.includes(comparable) || comparable.includes(candidate),
+    )
+  ) {
     return 80;
   }
 
@@ -179,7 +201,7 @@ function scoreServiceMatch(service: Doc<"services">, serviceName: string): numbe
 
   const queryTokens = tokenizeComparable(serviceName);
   const serviceTokens = new Set([
-    ...tokenizeComparable(service.name),
+    ...nameCandidates.flatMap((candidate) => tokenizeComparable(candidate)),
     ...tokenizeComparable(service.slug),
   ]);
   const overlap = queryTokens.filter((token) => serviceTokens.has(token)).length;
@@ -210,6 +232,34 @@ async function resolveServiceDocument(
   return ranked[0]?.service ?? null;
 }
 
+async function getVoiceCustomerLocale(
+  ctx: Pick<ActionCtx, "runQuery">,
+  businessId: Id<"businesses">,
+): Promise<RuntimeLocale> {
+  const business = await ctx.runQuery(internal.voice.runtime.getBusinessDefaultLocale, {
+    businessId,
+  });
+  return business;
+}
+
+async function resolveVoiceCustomerFacingServiceName(
+  ctx: ActionCtx,
+  input: {
+    serviceId: Id<"services">;
+    fallbackName: string;
+    locale: RuntimeLocale;
+  },
+): Promise<string> {
+  try {
+    return await ctx.runAction(internal.services.localizedNames.ensureLocalizedServiceName, {
+      serviceId: input.serviceId,
+      locale: input.locale,
+    });
+  } catch {
+    return input.fallbackName;
+  }
+}
+
 export const getActiveServicesForBusiness = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -222,6 +272,16 @@ export const getActiveServicesForBusiness = internalQuery({
       .query("services")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
       .collect();
+  },
+});
+
+export const getBusinessDefaultLocale = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<RuntimeLocale> => {
+    const business = await ctx.db.get(args.businessId);
+    return normalizeRuntimeLocale(business?.defaultLocale) ?? "en";
   },
 });
 
@@ -321,6 +381,12 @@ export const startCall = internalMutation({
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
       });
+      await ensureVoiceSessionForCall(ctx, {
+        businessId: args.businessId,
+        conversationId,
+        callId: existingCall._id,
+        startedAt: Date.parse(args.startedAt),
+      });
       return {
         callId: existingCall._id,
         conversationId,
@@ -337,6 +403,13 @@ export const startCall = internalMutation({
         : {}),
       status: "in_progress",
       startedAt: args.startedAt,
+    });
+
+    await ensureVoiceSessionForCall(ctx, {
+      businessId: args.businessId,
+      conversationId,
+      callId,
+      startedAt: Date.parse(args.startedAt),
     });
 
     return {
@@ -439,7 +512,7 @@ export const takeMessageForVoice = internalMutation({
     });
 
     if (args.conversationId) {
-      await ctx.db.insert("messages", {
+      const messageId = await ctx.db.insert("messages", {
         businessId: args.businessId,
         conversationId: args.conversationId,
         direction: "inbound",
@@ -447,6 +520,13 @@ export const takeMessageForVoice = internalMutation({
         body: args.message,
         status: "captured",
         aiGenerated: false,
+      });
+      await ensureSessionForStoredMessage(ctx, {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        channel: "voice",
+        messageId,
+        callId: args.callId,
       });
       await ctx.db.patch(args.conversationId, {
         currentIntent: "message_taking",
@@ -468,6 +548,19 @@ export const attachCallRecording = internalMutation({
     recordingDurationMs: v.optional(v.number()),
   },
   handler: async (ctx: MutationCtx, args: AttachCallRecordingArgs) => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
+    const existingTokens = await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_call_id", (q) => q.eq("callId", args.callId))
+      .collect();
+    for (const token of existingTokens) {
+      await ctx.db.delete(token._id);
+    }
+
     await ctx.db.patch(args.callId, {
       recordingStorageId: args.recordingStorageId,
       recordingContentType: args.recordingContentType,
@@ -476,7 +569,30 @@ export const attachCallRecording = internalMutation({
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
     });
+
+    await ctx.db.insert("call_recording_download_tokens", {
+      businessId: call.businessId,
+      callId: args.callId,
+      storageId: args.recordingStorageId,
+      fileName: `call-recording-${String(args.callId)}.wav`,
+      contentType: args.recordingContentType,
+      nonce: createCallRecordingNonce(),
+      expiresAt: new Date(Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS).toISOString(),
+    });
+
     return null;
+  },
+});
+
+export const getCallRecordingDownloadToken = internalQuery({
+  args: {
+    token: v.string(),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    return await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
+      .unique();
   },
 });
 
@@ -512,6 +628,11 @@ export const completeCall = internalMutation({
         status: "closed",
       });
     }
+
+    await finalizeVoiceSessionForCall(ctx, {
+      callId: args.callId,
+      endedAt: Date.parse(args.endedAt),
+    });
 
     return null;
   },
@@ -590,6 +711,13 @@ export const reconcileTwilioCallStatus = internalMutation({
       }
     }
 
+    if (isTerminalTwilioCallStatus(args.callStatus)) {
+      await finalizeVoiceSessionForCall(ctx, {
+        callId: call._id,
+        endedAt: Date.parse(args.providerUpdatedAt),
+      });
+    }
+
     return { ignored: false, callId: call._id } as const;
   },
 });
@@ -611,6 +739,12 @@ export const checkAvailabilityForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
@@ -622,7 +756,7 @@ export const checkAvailabilityForVoice = internalAction({
     if (setup.assignmentCount === 0) {
       return {
         serviceId: service._id,
-        serviceName: service.name,
+        serviceName: localizedServiceName,
         availability: [],
         setupIssue:
           setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned",
@@ -646,7 +780,7 @@ export const checkAvailabilityForVoice = internalAction({
 
     return {
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
       availability,
       setupIssue: null,
     };
@@ -673,6 +807,12 @@ export const findAvailabilityForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
       internal.voice.runtime.getActiveStaffAssignmentsForService,
@@ -686,15 +826,15 @@ export const findAvailabilityForVoice = internalAction({
         setup.activeStaffCount === 0 ? "no_active_staff" : "no_staff_assigned";
       return {
         serviceId: service._id,
-        serviceName: service.name,
+        serviceName: localizedServiceName,
         timezone: args.timezone,
         date: args.date,
         slots: [],
         setupIssue,
         summary:
           setupIssue === "no_active_staff"
-            ? `${service.name} cannot be booked yet because no active team members are configured for booking.`
-            : `${service.name} cannot be booked yet because no active team member is assigned to that service.`,
+            ? `${localizedServiceName} cannot be booked yet because no active team members are configured for booking.`
+            : `${localizedServiceName} cannot be booked yet because no active team member is assigned to that service.`,
       };
     }
 
@@ -721,15 +861,15 @@ export const findAvailabilityForVoice = internalAction({
 
     return {
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
       timezone: args.timezone,
       date: args.date,
       slots,
       setupIssue: null,
       summary:
         slots.length === 0
-          ? `No availability found for ${service.name} on ${args.date}.`
-          : `Available ${service.name} slots on ${args.date}: ${slots
+          ? `No availability found for ${localizedServiceName} on ${args.date}.`
+          : `Available ${localizedServiceName} slots on ${args.date}: ${slots
               .map((slot) => slot.displayTime)
               .join(", ")}.`,
     };
@@ -744,6 +884,7 @@ export const bookAppointmentForVoice = internalAction({
     startsAt: v.string(),
     timezone: v.string(),
     preferredStaffId: v.optional(v.id("staff")),
+    conversationId: v.optional(v.id("conversations")),
     contactName: v.optional(v.string()),
     contactPhone: v.string(),
   },
@@ -755,6 +896,12 @@ export const bookAppointmentForVoice = internalAction({
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
     }
+    const locale = await getVoiceCustomerLocale(ctx, args.businessId);
+    const localizedServiceName = await resolveVoiceCustomerFacingServiceName(ctx, {
+      serviceId: service._id,
+      fallbackName: service.name,
+      locale,
+    });
 
     const result = await ctx.runMutation(
       internal.appointments.booking.bookAppointmentForBusiness,
@@ -772,10 +919,24 @@ export const bookAppointmentForVoice = internalAction({
       },
     );
 
+    if (args.conversationId) {
+      await ctx.runMutation(internal.ai.agents.runtime.saveConversationBookingState, {
+        businessId: args.businessId,
+        conversationId: args.conversationId,
+        mode: "booked",
+        selectedServiceId: service._id,
+        lastConfirmedAppointmentId: result.appointmentId,
+        lastConfirmedServiceId: service._id,
+        lastConfirmedStartsAt: args.startsAt,
+        lastOfferedStartsAt: [],
+        pendingConfirmationAppointmentId: result.appointmentId,
+      });
+    }
+
     return {
       ...result,
       serviceId: service._id,
-      serviceName: service.name,
+      serviceName: localizedServiceName,
     };
   },
 });
@@ -801,20 +962,37 @@ export const listRecentCalls = query({
           ctx.db
             .query("transcripts")
             .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+            .order("desc")
             .take(1),
         ]);
         const contact = conversation?.contactId
           ? await ctx.db.get(conversation.contactId)
           : null;
+        const outcome = await buildConversationOutcome(ctx, {
+          conversation,
+          fallbackDisposition: call.disposition ?? null,
+        });
+        const recordingToken = (
+          await ctx.db
+            .query("call_recording_download_tokens")
+            .withIndex("by_call_id", (q) => q.eq("callId", call._id))
+            .take(1)
+        )[0] ?? null;
+        const hasActiveRecordingToken =
+          recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
 
         return {
           ...call,
           recordingUrl: call.recordingStorageId
-            ? await ctx.storage.getUrl(call.recordingStorageId)
+            ? hasActiveRecordingToken
+              ? buildCallRecordingDownloadUrl(recordingToken.nonce)
+              : await ctx.storage.getUrl(call.recordingStorageId)
             : null,
           transcriptReady: transcriptPreview.length > 0,
+          transcriptPreview: transcriptPreview[0]?.text ?? null,
           contactName: contact?.name ?? null,
           contactPhone: contact?.phone ?? null,
+          outcome,
         };
       }),
     );

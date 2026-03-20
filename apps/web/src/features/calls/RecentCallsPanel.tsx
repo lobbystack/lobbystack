@@ -191,7 +191,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                   className="rounded-2xl border border-border/70 bg-muted/25 p-4"
                   key={segment._id}
                 >
-                  <div className="mb-2 flex items-center gap-2 text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <MessageCircle className="size-3.5" />
                     {segment.speaker}
                   </div>

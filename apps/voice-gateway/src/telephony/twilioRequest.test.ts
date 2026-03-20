@@ -2,8 +2,10 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import {
+  buildMediaStreamValidationUrls,
   buildTwilioRequestUrl,
   normalizeFormFields,
+  validateMediaStreamSignature,
   validateTwilioSignature,
 } from "./twilioRequest";
 
@@ -59,6 +61,19 @@ describe("twilioRequest helpers", () => {
         authToken: "token123",
         signatureHeader: signature,
         url,
+      }),
+    ).toBe(true);
+  });
+
+  it("validates media stream upgrades against the accepted public URL variants", () => {
+    const websocketUrl = buildMediaStreamValidationUrls("https://voice.example.com")[0]!;
+    const signature = computeSignature(websocketUrl, "token123");
+
+    expect(
+      validateMediaStreamSignature({
+        authToken: "token123",
+        signatureHeader: signature,
+        baseUrl: "https://voice.example.com",
       }),
     ).toBe(true);
   });

@@ -52,7 +52,7 @@ const workflowSteps: Array<WorkflowStep> = [
 function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+      <p className="text-xs font-medium text-muted-foreground">
         {eyebrow}
       </p>
       <div className="space-y-1">
@@ -92,7 +92,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
                   className="rounded-[1.5rem] border border-border/60 bg-white/70 p-5 shadow-sm backdrop-blur"
                   key={key}
                 >
-                  <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t(`empty.cards.${key}.eyebrow`)}
                   </p>
                   <p className="mt-3 text-base font-semibold tracking-tight text-foreground">
@@ -196,7 +196,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
                     <div className="text-2xl font-semibold tracking-tight text-foreground">
                       {metric.value}
                     </div>
-                    <p className="text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {metric.label}
                     </p>
                     <p className="text-sm leading-6 text-muted-foreground">{metric.hint}</p>
@@ -213,7 +213,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
                   <Bot className="size-5" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t("hero.panel.eyebrow")}
                   </p>
                   <h2 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -227,7 +227,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
 
               <div className="grid gap-3">
                 <div className="rounded-[1.25rem] border border-border/60 bg-white/72 p-4">
-                  <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t("hero.panel.businessType")}
                   </p>
                   <p className="mt-2 text-sm font-medium text-foreground">
@@ -235,7 +235,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
                   </p>
                 </div>
                 <div className="rounded-[1.25rem] border border-border/60 bg-white/72 p-4">
-                  <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t("hero.panel.greeting")}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-foreground">
@@ -243,7 +243,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
                   </p>
                 </div>
                 <div className="rounded-[1.25rem] border border-border/60 bg-white/72 p-4">
-                  <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {t("hero.panel.bookingPolicy")}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-foreground">
@@ -264,7 +264,7 @@ export function AgentPage({ businessId, snapshot }: AgentPageProps) {
           >
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-3">
-                <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
+                <p className="text-xs font-medium text-muted-foreground">
                   {t("workflow.step", { value: index + 1 })}
                 </p>
                 <div className="space-y-1">

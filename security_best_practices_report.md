@@ -1,193 +1,104 @@
 # Security Best Practices Report
 
+Date: 2026-03-20
+
+Scope reviewed:
+- Frontend: `apps/web`
+- Voice gateway: `apps/voice-gateway`
+- Backend and file handling: `convex`
+- Dependency tree: `package.json`, `pnpm-lock.yaml`
+
 ## Executive Summary
 
-I reviewed this branch against `main`, focusing on the changed Convex SMS runtime and its tests.
+This audit found 4 actionable security issues: 2 high severity, 1 medium severity, and 1 low severity. The most important risks are an unauthenticated websocket upgrade path on the Twilio media-stream endpoint and an untrusted image preview pipeline that currently depends on a vulnerable transitive parser. I did not find an obvious broken authorization boundary in the reviewed dashboard-facing Convex functions; the strongest issues are around ingress hardening, file processing, and secure authentication defaults.
 
-I found 3 security-relevant issues:
+## High Severity
 
-- 1 High severity integrity flaw where the model can supply booking-confirmation tool arguments that are trusted strongly enough to finalize a booking even if the customer's current SMS did not confirm it.
-- 1 Medium severity confidentiality/integrity flaw where overly broad appointment-change intent matching can disclose appointment details in response to unrelated "change" or "move" requests.
-- 1 Medium severity privacy/data-minimization issue where confirmed appointment details are injected into the LLM system prompt before any tool-backed lookup is required.
+### S-001: Validate Twilio signatures before accepting `/media-stream` websocket upgrades
 
-I did not find evidence in this branch diff of DOM XSS sinks, unsafe HTML rendering, dynamic code execution, unsafe third-party script loading, or direct secret leakage to the browser.
+Severity: High
 
-## Scope And Method
+Evidence:
+- `apps/voice-gateway/src/http/server.ts:25-41` upgrades any request whose path is `/media-stream` by calling `mediaStreamServer.handleUpgrade(...)` immediately after the pathname check.
+- `apps/voice-gateway/src/telephony/mediaStream.ts:984-988` performs `ensureMediaStreamRequestIsAllowed()` only after the websocket is already established and the first message arrives.
+- `apps/voice-gateway/src/telephony/mediaStream.ts:1115-1137` contains the actual Twilio signature validation and closes invalid sockets after the upgrade has already consumed a websocket connection.
+- `apps/voice-gateway/src/telephony/twilioRequest.ts:35-62` shows the signature helper only needs the URL and header, so this validation can happen during the HTTP upgrade phase.
 
-- Compared `main...HEAD`
-- Reviewed changed files:
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts)
-  - [packages/testing/src/smsAvailabilityFlow.test.ts](/Users/raphael/Coding/ai-receptionist/packages/testing/src/smsAvailabilityFlow.test.ts)
-- Applied the TypeScript/Node and React/frontend security guidance from the `security-best-practices` skill, focusing on:
-  - trust-boundary handling
-  - model/tool trust
-  - unintended data disclosure
-  - action confirmation and authorization-by-prompt patterns
+Why this matters:
+An unauthenticated internet client can complete the websocket upgrade and hold an idle `/media-stream` connection open without ever sending a valid Twilio-signed frame. That creates an avoidable socket and memory exhaustion path on the voice gateway, especially if the service is directly reachable from the public internet.
 
-## High Severity Findings
+Recommended fix:
+- Validate the `X-Twilio-Signature` inside the `upgrade` handler before calling `handleUpgrade(...)`.
+- Reject invalid or missing signatures with an HTTP error response and destroy the socket immediately.
+- Keep the in-session validation as defense in depth if desired, but do not rely on message-time validation as the first gate.
 
-### SEC-001: Model-supplied confirmation arguments can book an offered slot without user-confirmed intent
+### S-002: Remove the vulnerable `file-type` parser from the untrusted image preview path
 
-- Severity: High
-- Location:
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L2139)
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L2452)
-- Impact:
-  - A prompt-injected, hallucinating, or simply mistaken model can finalize a booking for a previously offered slot even if the user's latest SMS did not confirm that booking.
-  - This breaks the intended "backend validates actions from actual customer confirmation" boundary and allows unauthorized state changes driven by model-generated tool args rather than the customer's message.
-- Evidence:
+Severity: High
 
-```ts
-const structuredSchedulingText = buildSchedulingTextFromToolArgs(toolArgs);
-const schedulingText = structuredSchedulingText ?? promptSchedulingText;
-const selectedStartsAtInput = toolArgs?.selectedStartsAt?.trim();
-```
+Evidence:
+- `package.json:18-33` pulls in `jimp` as a production dependency.
+- `pnpm-lock.yaml:2896-2898` locks `file-type@16.5.4`.
+- `convex/integrations/messageMedia.ts:32-45` fetches stored user/Twilio media and passes it into the preview pipeline.
+- `convex/lib/node/imagePreviews.ts:30-45` decodes untrusted blobs with `Jimp.fromBuffer(...)`.
+- `pnpm audit --prod` reports `GHSA-5v7r-6r5c-r473` for `file-type >=13.0.0 <21.3.1`, and `pnpm why file-type` shows that dependency is brought in through `jimp`.
 
-```ts
-const shouldBookRequestedTime =
-  (toolArgs?.confirmSelection === true || looksLikeBookingConfirmation(prompt)) &&
-  selectedOfferedSlot !== null;
-if (exactAvailability.length > 0) {
-  if (shouldBookRequestedTime) {
-    const bookingResult = await bookConversationAppointment(ctx, {
-      businessId,
-      startsAt,
-      service,
-      timezone: snapshot.timezone,
-      conversationId,
-      locale,
-    });
-```
+Why this matters:
+The application decodes untrusted uploaded images and inbound message media in a production code path, and that path currently depends on a transitive parser version with a published infinite-loop advisory. A malformed file can therefore tie up preview generation workers and degrade attachment handling availability.
 
-- Why this is a security issue:
-  - The model is untrusted for state-changing authority. Tool arguments should help normalize user intent, not replace it.
-  - In the current code, `confirmSelection: true` from the model is sufficient to book an offered slot, even when the actual `prompt` is not a confirmation.
-- Fix:
-  - Require the customer's current SMS to independently satisfy a confirmation rule before booking.
-  - Treat model-supplied `confirmSelection` as advisory only, not authoritative.
-  - Keep `selectedStartsAt` for exact slot resolution, but gate final booking on prompt-backed confirmation or a server-side pending-confirmation state transition that can only be advanced by a prompt-confirmed reply.
-- Mitigation:
-  - Add regression tests where the model supplies `confirmSelection: true` on a non-confirming prompt and assert that no booking is created.
-  - Consider splitting the tool contract into:
-    - `resolveSlotSelection(...)`
-    - `confirmBookedSlot(...)`
-    so the mutating step always has an explicit prompt-backed confirmation check.
-- False positive notes:
-  - This is not a generic "LLMs can hallucinate" concern. The mutating booking path is concretely gated by `toolArgs?.confirmSelection === true`, which is model-controlled.
+Recommended fix:
+- Upgrade or replace the preview stack so the vulnerable `file-type` version is no longer reachable from production code.
+- Add an explicit dependency override if needed to force a patched version while evaluating a longer-term library change.
+- Keep strict file-size and image-dimension limits ahead of decode so malformed inputs are rejected before expensive parsing work begins.
 
-## Medium Severity Findings
+## Medium Severity
 
-### SEC-002: Overly broad appointment-change detection can disclose appointment details on unrelated "change" or "move" requests
+### S-003: Enforce server-side per-file upload limits before storage and preview generation
 
-- Severity: Medium
-- Location:
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L398)
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L1651)
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L1689)
-- Impact:
-  - Messages like "Can you change to English?" or "Move me to a human." can be misclassified as appointment-change requests.
-  - If the conversation has a confirmed appointment, the assistant can answer with appointment-specific details even though the user did not ask about cancelling or rescheduling that appointment.
-- Evidence:
+Severity: Medium
 
-```ts
-function looksLikeAppointmentChangeRequest(text: string): boolean {
-  return /\b(cancel(?:led|ling)?|resched(?:ule|uled|uling)?|move|change|annul(?:er|e|ee|é)?|report(?:er|e|ee|é)?|deplac(?:er|e|ee|é)|modifi(?:er|e|ee|é))\b/i.test(
-    normalizeComparable(text),
-  );
-}
-```
+Evidence:
+- `convex/dashboard/messages.ts:582-590` issues upload URLs for attachments without attaching or checking any byte-size constraint.
+- `apps/web/src/features/messages/MessagesPage.tsx:476-535` uploads each selected file as-is and does not apply a client-side size gate before sending it to storage.
+- `convex/dashboard/messages.ts:618-626` reads the uploaded object metadata, but only returns the size instead of enforcing one.
+- `convex/dashboard/messages.ts:693-726` validates content type and immediately generates previews for images, even though no hard per-file limit has been enforced.
+- `convex/lib/messageAttachments.ts:115-150` enforces Twilio's 5 MB MMS total only later when resolving delivery modes, after storage and optional preview work have already happened.
 
-```ts
-if (!looksLikeAppointmentChangeRequest(prompt)) {
-  return null;
-}
-```
+Why this matters:
+Any authenticated operator can upload arbitrarily large supported files into storage, and images can then be fed into the preview decoder before the system ever rejects them for delivery. That increases storage costs and creates an easy resource-exhaustion path against the preview pipeline, especially when combined with the parser issue above.
 
-```ts
-return buildAppointmentChangeUnavailableReply(status.appointment, locale);
-```
+Recommended fix:
+- Add a hard server-side per-file maximum in the finalize path and delete oversized blobs immediately.
+- Mirror the same limit in the web client for better UX, but keep the server-side check authoritative.
+- Consider separate limits for image previews versus link-only document attachments.
 
-- Why this is a security issue:
-  - Appointment data should only be disclosed when the prompt is actually about appointment cancellation or rescheduling.
-  - Matching generic words like `change` and `move` violates least-disclosure expectations and can leak appointment details in unrelated conversational flows.
-- Fix:
-  - Tighten the detector so change/cancel intent only matches when an appointment term is also present, for example requiring both:
-    - a change verb (`cancel`, `reschedule`, `move`, `change`)
-    - and an appointment object (`appointment`, `booking`, `rendez-vous`, etc.)
-  - Alternatively, move this classification fully into a structured model tool call and keep the backend matcher as a narrower guardrail.
-- Mitigation:
-  - Add regression tests for benign prompts such as:
-    - "Can you change to English?"
-    - "Move me to a human"
-    and assert that no appointment details are returned.
-- False positive notes:
-  - This is branch-specific because the new model-first flow makes appointment-change status a primary tool-backed path and keeps the broad matcher as the authoritative backend gate.
+## Low Severity
 
-### SEC-003: Confirmed appointment details are injected into the LLM system prompt even before a tool-backed lookup is needed
+### S-004: Strengthen the password policy beyond a bare 8-character minimum
 
-- Severity: Medium
-- Location:
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L1496)
-  - [convex/ai/agents/runtime.ts](/Users/raphael/Coding/ai-receptionist/convex/ai/agents/runtime.ts#L3044)
-- Impact:
-  - Exact confirmed appointment details are sent to the model as hidden system context for every model-routed SMS, even when the user has not asked an appointment question.
-  - This expands unnecessary disclosure of appointment metadata to the LLM provider and undermines the intended "tool-backed facts only" design, because the model can answer from hidden prompt state instead of calling the lookup tool.
-- Evidence:
+Severity: Low
 
-```ts
-if (mode === "booked" && input.state?.lastConfirmedStartsAt && input.state.lastConfirmedServiceId) {
-  const service = input.services.find(
-    (candidate) => candidate._id === input.state?.lastConfirmedServiceId,
-  );
-  const formattedStart = formatRuntimeAppointmentDateTime(
-    input.state.lastConfirmedStartsAt,
-    input.timezone,
-    "en",
-  );
-  return `A booking is already confirmed${service ? ` for ${service.name}` : ""} on ${formattedStart}. Answer unrelated questions directly unless the user asks to change that appointment.`;
-}
-```
+Evidence:
+- `convex/lib/passwordPolicy.ts:1-4` accepts any non-empty password with length 8 or more.
+- `convex/auth.ts:1-10` wires that check directly into the live password provider.
 
-```ts
-const result = await receptionistAgent.generateText(
-  ctx,
-  { threadId },
-  {
-    system: buildGroundedSystemPrompt({
-      ...
-      bookingStateSummary: buildBookingStateSummary({
-        state: bookingState,
-        services,
-        timezone: snapshot.timezone,
-      }),
-    }),
-```
+Why this matters:
+The current rule allows extremely weak passwords such as common dictionary words or low-entropy repeated characters. That leaves account security overly dependent on users choosing strong secrets on their own and weakens the baseline protection against credential stuffing and password reuse.
 
-- Why this is a security issue:
-  - The model now has access to exact appointment details even when no appointment tool was called.
-  - That weakens the branch's own security goal that appointment facts should come from structured, tool-backed validation rather than prompt memory.
-  - It also sends more personal scheduling data to the model provider than is strictly necessary for many non-appointment prompts.
-- Fix:
-  - Remove exact confirmed appointment date/time/service details from the always-present `bookingStateSummary`.
-  - Keep only coarse state such as "a booking is already confirmed" in the system prompt.
-  - Require `getCurrentAppointment` / `getAppointmentChangeStatus` to provide exact details on demand.
-- Mitigation:
-  - If some summary context must remain, redact it to the minimum useful shape, for example:
-    - `A booking is already confirmed. Use appointment tools if the customer asks about it.`
-- False positive notes:
-  - This is not a browser exposure issue; it is a model/provider data-minimization and tool-bypass issue within the backend prompt assembly.
+Recommended fix:
+- Raise the minimum length and add a blocklist or strength check for common and compromised passwords.
+- Consider adding rate limiting and MFA in the authentication flow if those controls are not already enforced outside this repo.
 
-## Recommended Next Steps
+## Runtime Verification Notes
 
-1. Fix SEC-001 before merging. It is the only finding here that can directly create unauthorized bookings.
-2. Tighten appointment-change intent matching in SEC-002 so unrelated "change" requests do not disclose appointment details.
-3. Remove exact appointment data from `bookingStateSummary` per SEC-003 so the model must rely on structured lookup tools for those facts.
-4. After fixes, rerun:
-   - `pnpm typecheck`
-   - `pnpm test`
-   - `pnpm build`
-   - manual SMS smoke tests for:
-     - non-confirming messages after offered slots
-     - locale-switch/change wording
-     - current appointment lookup
-     - unsupported cancel/reschedule replies
+These items were not scored as formal findings because they may be enforced outside this repository, but they should be verified explicitly:
+
+- I did not find repo-visible configuration for `Content-Security-Policy`, `frame-ancestors` / `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, or `X-Content-Type-Options`. `apps/web/index.html:1-12` contains no meta-based fallback either. If these headers are set at the CDN or hosting layer, document that ownership; if not, add them there.
+- `apps/voice-gateway/src/http/server.ts:12-24` creates the Fastify server without repo-visible hardening middleware such as `@fastify/helmet`. If the gateway is directly internet-facing, verify that equivalent headers and request size limits are enforced upstream.
+
+## Suggested Remediation Order
+
+1. Fix S-001 by validating Twilio signatures before websocket upgrade.
+2. Fix S-002 by removing or overriding the vulnerable parser chain in the preview pipeline.
+3. Fix S-003 by adding authoritative server-side upload size limits and early cleanup.
+4. Fix S-004 by hardening password policy and confirming authentication rate-limiting controls.
