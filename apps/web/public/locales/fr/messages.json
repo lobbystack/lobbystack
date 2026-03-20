@@ -25,7 +25,8 @@
     "automationUpdateFailed": "Impossible de mettre à jour l'état du relais.",
     "send": "Envoyer",
     "sendFailed": "Impossible d'envoyer votre message.",
-    "uploadFailed": "Impossible de téléverser cette pièce jointe."
+    "uploadFailed": "Impossible de téléverser cette pièce jointe.",
+    "deliveryFailed": "Échec de l'envoi"
   },
   "outcome": {
     "label": "Résumé",

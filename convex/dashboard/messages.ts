@@ -131,6 +131,8 @@ type SmsReplyContextResult = {
   }>;
 };
 
+type SmsReplyAttachment = SmsReplyContextResult["attachments"][number];
+
 type FinalizeStagedAttachmentContextArgs = {
   businessId: Id<"businesses">;
   conversationId: Id<"conversations">;
@@ -187,6 +189,69 @@ async function requireDashboardMessagesUserId(
   }
 
   return userId;
+}
+
+async function cloneSmsReplyAttachments(
+  ctx: ActionCtx,
+  attachments: Array<SmsReplyAttachment>,
+): Promise<Array<SmsReplyAttachment>> {
+  const createdStorageIds: Array<Id<"_storage">> = [];
+
+  try {
+    const clonedAttachments: Array<SmsReplyAttachment> = [];
+    for (const attachment of attachments) {
+      const blob = await ctx.storage.get(attachment.storageId);
+      if (!blob) {
+        throw new Error(`Attachment "${attachment.fileName}" is no longer available.`);
+      }
+
+      const storageId = await ctx.storage.store(blob);
+      createdStorageIds.push(storageId);
+
+      let previewFields:
+        | Pick<
+            SmsReplyAttachment,
+            | "previewStorageId"
+            | "previewFileName"
+            | "previewContentType"
+            | "previewByteLength"
+          >
+        | undefined;
+      if (
+        attachment.previewStorageId &&
+        attachment.previewFileName &&
+        attachment.previewContentType
+      ) {
+        const previewBlob = await ctx.storage.get(attachment.previewStorageId);
+        if (previewBlob) {
+          const previewStorageId = await ctx.storage.store(previewBlob);
+          createdStorageIds.push(previewStorageId);
+          previewFields = {
+            previewStorageId,
+            previewFileName: attachment.previewFileName,
+            previewContentType: attachment.previewContentType,
+            previewByteLength: previewBlob.size,
+          };
+        }
+      }
+
+      clonedAttachments.push({
+        storageId,
+        fileName: attachment.fileName,
+        contentType: attachment.contentType,
+        byteLength: blob.size,
+        ...(previewFields ?? {}),
+        deliveryMode: attachment.deliveryMode,
+      });
+    }
+
+    return clonedAttachments;
+  } catch (error) {
+    await Promise.allSettled(
+      createdStorageIds.map((storageId) => ctx.storage.delete(storageId)),
+    );
+    throw error;
+  }
 }
 
 export const assertDashboardMessagesWriteAccess = internalQuery({
@@ -525,6 +590,82 @@ export const removeStagedAttachment = mutation({
     await ctx.db.delete(attachment._id);
 
     return null;
+  },
+});
+
+export const clearStagedAttachments = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    const user = await requireCurrentUser(ctx);
+    await requireMembership(ctx, args.businessId);
+    assertSmsConversation(await ctx.db.get(args.conversationId), args.businessId);
+
+    const attachments = await ctx.db
+      .query("message_attachment_uploads")
+      .withIndex("by_uploader_user_id_and_conversation_id", (q) =>
+        q.eq("uploaderUserId", user._id).eq("conversationId", args.conversationId),
+      )
+      .collect();
+
+    for (const attachment of attachments) {
+      if (attachment.status !== "staged") {
+        continue;
+      }
+
+      await ctx.storage.delete(attachment.storageId);
+      if (attachment.previewStorageId) {
+        await ctx.storage.delete(attachment.previewStorageId);
+      }
+      await ctx.db.delete(attachment._id);
+    }
+
+    return null;
+  },
+});
+
+export const listStagedAttachments = query({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    const user = await requireCurrentUser(ctx);
+    await requireMembership(ctx, args.businessId);
+    assertSmsConversation(await ctx.db.get(args.conversationId), args.businessId);
+
+    const attachments = await ctx.db
+      .query("message_attachment_uploads")
+      .withIndex("by_uploader_user_id_and_conversation_id", (q) =>
+        q.eq("uploaderUserId", user._id).eq("conversationId", args.conversationId),
+      )
+      .collect();
+
+    return await Promise.all(
+      attachments
+        .filter((attachment) => attachment.status === "staged")
+        .map(async (attachment) => {
+          const previewUrl = attachment.previewStorageId
+            ? await ctx.storage.getUrl(attachment.previewStorageId)
+            : isImageAttachment(attachment.contentType)
+              ? await ctx.storage.getUrl(attachment.storageId)
+              : null;
+
+          return {
+            id: attachment._id,
+            fileName: attachment.fileName,
+            contentType: attachment.contentType,
+            byteLength: attachment.byteLength,
+            deliveryMode: attachment.deliveryMode as "mms" | "link",
+            kind: isImageAttachment(attachment.contentType)
+              ? ("image" as const)
+              : ("file" as const),
+            previewUrl,
+          };
+        }),
+    );
   },
 });
 
@@ -1005,6 +1146,10 @@ export const sendSmsReply = action({
       throw new Error("Message body or attachments are required.");
     }
 
+    const outboundAttachments =
+      replyContext.attachments.length > 0
+        ? await cloneSmsReplyAttachments(ctx, replyContext.attachments)
+        : [];
     const messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
       businessId: replyContext.businessId,
       conversationId: replyContext.conversationId,
@@ -1012,9 +1157,9 @@ export const sendSmsReply = action({
       body,
       fromPhoneNumber: replyContext.fromPhoneNumber,
       aiGenerated: false,
-      ...(replyContext.attachments.length > 0
+      ...(outboundAttachments.length > 0
         ? {
-            media: replyContext.attachments.map((attachment) => ({
+            media: outboundAttachments.map((attachment) => ({
               storageId: attachment.storageId,
               fileName: attachment.fileName,
               contentType: attachment.contentType,

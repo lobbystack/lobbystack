@@ -90,6 +90,7 @@ type ConversationThread = {
     conversationSessionId: string | null;
     direction: string;
     body: string;
+    status: string;
     createdAt: number;
     attachments: Array<ThreadAttachment>;
   }>;
@@ -100,6 +101,7 @@ type ConversationThread = {
         conversationSessionId: string | null;
         direction: string;
         body: string;
+        status: string;
         createdAt: number;
         attachments: Array<ThreadAttachment>;
       }
@@ -246,14 +248,6 @@ function getConversationPreviewText(
   return conversation.lastMessageBody ?? t("page.emptyPreview");
 }
 
-function revokePreviewUrls(attachments: Array<{ previewUrl: string | null }>) {
-  for (const attachment of attachments) {
-    if (attachment.previewUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(attachment.previewUrl);
-    }
-  }
-}
-
 function MessageAttachmentPreview({
   attachment,
 }: {
@@ -334,13 +328,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const resumeConversationAutomation = useAction(api.dashboard.messages.resumeConversationAutomation);
   const generateAttachmentUploadUrl = useMutation(api.dashboard.messages.generateAttachmentUploadUrl);
   const finalizeStagedAttachment = useAction(api.dashboard.messages.finalizeStagedAttachment);
+  const clearStagedAttachments = useMutation(api.dashboard.messages.clearStagedAttachments);
   const removeStagedAttachment = useMutation(api.dashboard.messages.removeStagedAttachment);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const allAttachmentInputRef = useRef<HTMLInputElement | null>(null);
   const selectedConversationIdRef = useRef<Id<"conversations"> | undefined>(undefined);
-  const stagedAttachmentsRef = useRef<Array<StagedAttachment>>([]);
 
   const [selectedConversationId, setSelectedConversationId] = useState<Id<"conversations"> | undefined>();
   const [mobileSelectedConversationId, setMobileSelectedConversationId] = useState<
@@ -352,7 +346,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUpdatingAutomation, setIsUpdatingAutomation] = useState(false);
-  const [stagedAttachments, setStagedAttachments] = useState<Array<StagedAttachment>>([]);
   const [repairAttemptedConversationIds, setRepairAttemptedConversationIds] = useState<Array<string>>([]);
   const [collapsedSummaryIds, setCollapsedSummaryIds] = useState<Array<string>>([]);
 
@@ -362,6 +355,17 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       ? { businessId, conversationId: selectedConversationId }
       : "skip",
   ) as ConversationThread | undefined;
+  const selectedConversationSummary = useMemo(
+    () => conversations?.find((conversation) => conversation.id === selectedConversationId) ?? null,
+    [conversations, selectedConversationId],
+  );
+  const stagedAttachmentsQuery = useQuery(
+    api.dashboard.messages.listStagedAttachments,
+    businessId && selectedConversationId && selectedConversationSummary?.channel === "sms"
+      ? { businessId, conversationId: selectedConversationId }
+      : "skip",
+  ) as Array<StagedAttachment> | undefined;
+  const stagedAttachments = stagedAttachmentsQuery ?? [];
 
   const filteredConversations = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -421,16 +425,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
 
-  useEffect(() => {
-    stagedAttachmentsRef.current = stagedAttachments;
-  }, [stagedAttachments]);
-
-  useEffect(() => {
-    return () => {
-      revokePreviewUrls(stagedAttachmentsRef.current);
-    };
-  }, []);
-
   if (!businessId) {
     return <BusinessSetupCard />;
   }
@@ -457,25 +451,15 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   async function discardStagedAttachments(conversationId: Id<"conversations"> | undefined) {
-    if (!businessId || !conversationId || stagedAttachments.length === 0) {
-      revokePreviewUrls(stagedAttachments);
-      setStagedAttachments([]);
+    const conversation = conversations?.find((item) => item.id === conversationId);
+    if (!businessId || !conversationId || conversation?.channel !== "sms") {
       return;
     }
 
-    const currentAttachments = stagedAttachments;
-    setStagedAttachments([]);
-    revokePreviewUrls(currentAttachments);
-
-    await Promise.allSettled(
-      currentAttachments.map((attachment) =>
-        removeStagedAttachment({
-          businessId,
-          conversationId,
-          attachmentId: attachment.id,
-        }),
-      ),
-    );
+    await clearStagedAttachments({
+      businessId,
+      conversationId,
+    });
   }
 
   async function selectConversation(conversationId: Id<"conversations">) {
@@ -518,7 +502,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     setIsUploading(true);
     const conversationId = selectedConversationId;
-    const nextAttachments: Array<StagedAttachment> = [];
+    const uploadedAttachmentIds: Array<Id<"message_attachment_uploads">> = [];
     try {
       for (const file of selectedFiles) {
         if (selectedConversationIdRef.current !== conversationId) {
@@ -548,42 +532,29 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           storageId: result.storageId,
           fileName: file.name,
         });
-
-        nextAttachments.push({
-          id: finalized.id as Id<"message_attachment_uploads">,
-          fileName: finalized.fileName,
-          contentType: finalized.contentType,
-          byteLength: finalized.byteLength,
-          deliveryMode: finalized.deliveryMode,
-          kind: finalized.kind,
-          previewUrl: finalized.kind === "image" ? URL.createObjectURL(file) : null,
-        });
+        uploadedAttachmentIds.push(finalized.id as Id<"message_attachment_uploads">);
       }
 
       if (selectedConversationIdRef.current !== conversationId) {
-        revokePreviewUrls(nextAttachments);
         await Promise.allSettled(
-          nextAttachments.map((attachment) =>
+          uploadedAttachmentIds.map((attachmentId) =>
             removeStagedAttachment({
               businessId,
               conversationId,
-              attachmentId: attachment.id,
+              attachmentId,
             }),
           ),
         );
         return;
       }
-
-      setStagedAttachments((current) => [...current, ...nextAttachments]);
     } catch (error) {
-      if (nextAttachments.length > 0) {
-        revokePreviewUrls(nextAttachments);
+      if (uploadedAttachmentIds.length > 0) {
         await Promise.allSettled(
-          nextAttachments.map((attachment) =>
+          uploadedAttachmentIds.map((attachmentId) =>
             removeStagedAttachment({
               businessId,
               conversationId,
-              attachmentId: attachment.id,
+              attachmentId,
             }),
           ),
         );
@@ -602,19 +573,12 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       return;
     }
 
-    const attachment = stagedAttachments.find((candidate) => candidate.id === attachmentId);
-    if (!attachment) {
-      return;
-    }
-
     try {
       await removeStagedAttachment({
         businessId,
         conversationId: selectedConversationId,
         attachmentId,
       });
-      revokePreviewUrls([attachment]);
-      setStagedAttachments((current) => current.filter((candidate) => candidate.id !== attachmentId));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : t("page.uploadFailed"));
     }
@@ -639,9 +603,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           ? { attachmentIds: stagedAttachments.map((attachment) => attachment.id) }
           : {}),
       });
-      revokePreviewUrls(stagedAttachments);
       setDraftMessage("");
-      setStagedAttachments([]);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : t("page.sendFailed"));
     } finally {
@@ -889,41 +851,57 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
                     {[...thread.timeline].reverse().map((item) =>
                       item.kind === "message" ? (
-                        <div
-                          className={cn(
-                            "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
-                            item.direction === "outbound"
-                              ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground"
-                              : "self-start rounded-[16px_16px_16px_0] bg-muted",
-                          )}
-                          key={String(item.id)}
-                        >
-                          <div className="space-y-2">
-                            {item.attachments.length > 0 ? (
+                        (() => {
+                          const isFailedOutboundMessage =
+                            item.direction === "outbound" && item.status === "failed";
+
+                          return (
+                            <div
+                              className={cn(
+                                "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
+                                isFailedOutboundMessage
+                                  ? "self-end rounded-[16px_16px_0_16px] border border-destructive/40 bg-destructive/10 text-foreground"
+                                  : item.direction === "outbound"
+                                    ? "self-end rounded-[16px_16px_0_16px] bg-primary/90 text-primary-foreground"
+                                    : "self-start rounded-[16px_16px_16px_0] bg-muted",
+                              )}
+                              key={String(item.id)}
+                            >
                               <div className="space-y-2">
-                                {item.attachments.map((attachment) => (
-                                  <MessageAttachmentPreview
-                                    attachment={attachment}
-                                    key={attachment.id}
-                                  />
-                                ))}
+                                {item.attachments.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {item.attachments.map((attachment) => (
+                                      <MessageAttachmentPreview
+                                        attachment={attachment}
+                                        key={attachment.id}
+                                      />
+                                    ))}
+                                  </div>
+                                ) : null}
+                                {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
                               </div>
-                            ) : null}
-                            {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
-                          </div>
-                          <span
-                            className={cn(
-                              "mt-1 block text-xs font-light text-foreground/75 italic",
-                              item.direction === "outbound" &&
-                                "text-end text-primary-foreground/80",
-                            )}
-                          >
-                            {formatDateTime(item.createdAt, i18n.language, {
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
+                              {isFailedOutboundMessage ? (
+                                <p className="mt-2 text-xs font-medium text-destructive">
+                                  {t("page.deliveryFailed")}
+                                </p>
+                              ) : null}
+                              <span
+                                className={cn(
+                                  "mt-1 block text-xs font-light text-foreground/75 italic",
+                                  item.direction === "outbound" &&
+                                    !isFailedOutboundMessage &&
+                                    "text-end text-primary-foreground/80",
+                                  isFailedOutboundMessage && "text-end text-destructive/80",
+                                )}
+                              >
+                                {formatDateTime(item.createdAt, i18n.language, {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          );
+                        })()
                       ) : (
                         <div className="self-stretch pt-2" key={String(item.id)}>
                           <button

@@ -281,6 +281,65 @@ describe("Dashboard SMS replies", () => {
     });
   });
 
+  it("keeps failed message attachments available after the staged draft is removed", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-send-failure-attachment-retention",
+    });
+
+    const attachmentId = await t.run(async (ctx) => {
+      return await storeAttachment(ctx, {
+        content: "pdf-file",
+        contentType: "application/pdf",
+        fileName: "details.pdf",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio unavailable"));
+
+    await expect(
+      authed.action(api.dashboard.messages.sendSmsReply, {
+        businessId,
+        conversationId,
+        body: "Please review the attachment",
+        attachmentIds: [attachmentId],
+      }),
+    ).rejects.toThrow("Twilio unavailable");
+
+    const failedAttachmentUrl = await t.run(async (ctx) => {
+      const outbound = (
+        await ctx.db
+          .query("messages")
+          .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+          .collect()
+      ).find((message) => message.direction === "outbound");
+
+      expect(outbound?.status).toBe("failed");
+      expect(outbound?.media).toHaveLength(1);
+      expect(outbound?.media?.[0]?.storageId).toBeDefined();
+      expect(outbound?.media?.[0]?.url).toContain("/messages/attachments/download?token=");
+
+      return outbound?.media?.[0]?.url ?? null;
+    });
+
+    await authed.mutation(api.dashboard.messages.removeStagedAttachment, {
+      businessId,
+      conversationId,
+      attachmentId,
+    });
+
+    const relativeUrl =
+      new URL(failedAttachmentUrl!).pathname + new URL(failedAttachmentUrl!).search;
+    const response = await t.fetch(relativeUrl, {
+      method: "GET",
+    });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("pdf-file");
+  });
+
   it("manually pauses and resumes conversation automation", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId, conversationId } = await seedSmsConversation(t, {
@@ -564,6 +623,39 @@ describe("Dashboard SMS replies", () => {
 
       expect(messages).toHaveLength(1);
       expect(messages[0]?.direction).toBe("inbound");
+    });
+  });
+
+  it("lists persisted staged attachments so drafts survive a refresh", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-list-staged",
+    });
+
+    await t.run(async (ctx) => {
+      await storeAttachment(ctx, {
+        content: "pdf-file",
+        contentType: "application/pdf",
+        fileName: "details.pdf",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    const stagedAttachments = await authed.query(api.dashboard.messages.listStagedAttachments, {
+      businessId,
+      conversationId,
+    });
+
+    expect(stagedAttachments).toHaveLength(1);
+    expect(stagedAttachments[0]).toMatchObject({
+      fileName: "details.pdf",
+      contentType: "application/pdf",
+      deliveryMode: "mms",
+      kind: "file",
+      byteLength: "pdf-file".length,
+      previewUrl: null,
     });
   });
 

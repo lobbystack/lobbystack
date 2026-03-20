@@ -25,7 +25,8 @@
     "automationUpdateFailed": "Couldn't update the handoff state.",
     "send": "Send",
     "sendFailed": "Couldn't send your message.",
-    "uploadFailed": "Couldn't upload that attachment."
+    "uploadFailed": "Couldn't upload that attachment.",
+    "deliveryFailed": "Failed to send"
   },
   "outcome": {
     "label": "Summary",
