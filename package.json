@@ -23,6 +23,7 @@
     "@convex-dev/crons": "latest",
     "@convex-dev/persistent-text-streaming": "latest",
     "@convex-dev/rag": "latest",
+    "@convex-dev/resend": "^0.2.3",
     "@convex-dev/workflow": "latest",
     "@convex-dev/workpool": "latest",
     "ai": "latest",
