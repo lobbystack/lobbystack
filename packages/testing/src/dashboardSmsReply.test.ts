@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
+import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../../../convex/_generated/api";
+import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import schema from "../../../convex/schema";
 
@@ -132,6 +133,11 @@ async function storeAttachment(
         : "link",
     status: "staged",
   });
+}
+
+async function createTinyPngBuffer(): Promise<Buffer> {
+  const image = new Jimp({ width: 2, height: 2, color: 0xff3366ff });
+  return await image.getBuffer(JimpMime.png);
 }
 
 describe("Dashboard SMS replies", () => {
@@ -334,6 +340,46 @@ describe("Dashboard SMS replies", () => {
     await t.run(async (ctx) => {
       const metadata = await ctx.db.system.get("_storage", storageId);
       expect(metadata).toBeNull();
+    });
+  });
+
+  it("creates dedicated preview files for stored image attachments", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-image-preview",
+    });
+
+    const storageId = await t.run(async (ctx) => {
+      const pngBuffer = await createTinyPngBuffer();
+      return await ctx.storage.store(
+        new Blob(
+          [
+            Uint8Array.from(pngBuffer),
+          ],
+          {
+            type: "image/png",
+          },
+        ),
+      );
+    });
+
+    const preview = await authed.action(internal.integrations.messageMedia.createImagePreviewForStorage, {
+      storageId,
+      fileName: "preview-source.png",
+      contentType: "image/png",
+    });
+
+    expect(preview).toMatchObject({
+      fileName: "preview-source-preview.jpg",
+      contentType: "image/jpeg",
+    });
+    expect(preview?.storageId).toBeDefined();
+    expect(preview?.byteLength).toBeGreaterThan(0);
+
+    await t.run(async (ctx) => {
+      const metadata = await ctx.db.system.get("_storage", preview!.storageId);
+      expect(metadata).not.toBeNull();
+      expect(metadata?.size).toBe(preview?.byteLength);
     });
   });
 

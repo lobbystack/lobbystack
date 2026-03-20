@@ -10,7 +10,10 @@
   "pnpm": {
     "overrides": {
       "hono": "4.12.7"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "sharp"
+    ]
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.43",
@@ -24,6 +27,7 @@
     "@convex-dev/workpool": "latest",
     "ai": "latest",
     "convex": "^1.31.2",
+    "jimp": "^1.6.0",
     "luxon": "^3.7.2",
     "twilio": "^5.12.2",
     "zod": "^3.24.2"

@@ -123,6 +123,10 @@ type SmsReplyContextResult = {
     fileName: string;
     contentType: string;
     byteLength: number;
+    previewStorageId?: Id<"_storage">;
+    previewFileName?: string;
+    previewContentType?: string;
+    previewByteLength?: number;
     deliveryMode: "mms" | "link";
   }>;
 };
@@ -263,7 +267,7 @@ export const getSmsReplyContext = internalQuery({
       throw new Error(`You can send up to ${MAX_SMS_REPLY_ATTACHMENTS} attachments at a time.`);
     }
 
-    const attachments = resolveAttachmentDeliveryModes(
+    const resolvedAttachments = resolveAttachmentDeliveryModes(
       stagedAttachments.map((attachment) => ({
         storageId: attachment.storageId,
         fileName: attachment.fileName,
@@ -271,6 +275,21 @@ export const getSmsReplyContext = internalQuery({
         byteLength: attachment.byteLength,
       })),
     );
+    const attachments = resolvedAttachments.map((attachment, index) => ({
+      ...attachment,
+      ...(stagedAttachments[index]?.previewStorageId
+        ? { previewStorageId: stagedAttachments[index].previewStorageId }
+        : {}),
+      ...(stagedAttachments[index]?.previewFileName
+        ? { previewFileName: stagedAttachments[index].previewFileName }
+        : {}),
+      ...(stagedAttachments[index]?.previewContentType
+        ? { previewContentType: stagedAttachments[index].previewContentType }
+        : {}),
+      ...(stagedAttachments[index]?.previewByteLength
+        ? { previewByteLength: stagedAttachments[index].previewByteLength }
+        : {}),
+    }));
 
     return {
       businessId: args.businessId,
@@ -376,6 +395,10 @@ export const insertStagedAttachment = internalMutation({
     fileName: v.string(),
     contentType: v.string(),
     byteLength: v.number(),
+    previewStorageId: v.optional(v.id("_storage")),
+    previewFileName: v.optional(v.string()),
+    previewContentType: v.optional(v.string()),
+    previewByteLength: v.optional(v.number()),
     deliveryMode: v.union(v.literal("mms"), v.literal("link")),
   },
   handler: async (ctx: MutationCtx, args) => {
@@ -387,6 +410,10 @@ export const insertStagedAttachment = internalMutation({
       fileName: args.fileName,
       contentType: args.contentType,
       byteLength: args.byteLength,
+      ...(args.previewStorageId ? { previewStorageId: args.previewStorageId } : {}),
+      ...(args.previewFileName ? { previewFileName: args.previewFileName } : {}),
+      ...(args.previewContentType ? { previewContentType: args.previewContentType } : {}),
+      ...(args.previewByteLength ? { previewByteLength: args.previewByteLength } : {}),
       deliveryMode: args.deliveryMode,
       status: "staged",
     });
@@ -434,6 +461,13 @@ export const finalizeStagedAttachment = action({
       contentType === "application/pdf" || contentType.startsWith("image/")
         ? ("mms" as const)
         : ("link" as const);
+    const preview = contentType.startsWith("image/")
+      ? await ctx.runAction(internal.integrations.messageMedia.createImagePreviewForStorage, {
+          storageId: args.storageId,
+          fileName: normalizedFileName,
+          contentType,
+        })
+      : null;
     const attachmentId: Id<"message_attachment_uploads"> = await ctx.runMutation(
       internal.dashboard.messages.insertStagedAttachment,
       {
@@ -444,6 +478,10 @@ export const finalizeStagedAttachment = action({
         fileName: normalizedFileName,
         contentType,
         byteLength: metadata.byteLength,
+        ...(preview?.storageId ? { previewStorageId: preview.storageId } : {}),
+        ...(preview?.fileName ? { previewFileName: preview.fileName } : {}),
+        ...(preview?.contentType ? { previewContentType: preview.contentType } : {}),
+        ...(preview?.byteLength ? { previewByteLength: preview.byteLength } : {}),
         deliveryMode,
       },
     );
@@ -499,33 +537,61 @@ export const materializeMessageAttachmentUrls = internalMutation({
 
     const nextMedia = [];
     for (const attachment of message.media) {
+      let nextAttachment = attachment;
+
       if (
-        attachment.url ||
-        !attachment.storageId ||
-        !attachment.fileName ||
-        !attachment.contentType
+        !nextAttachment.url &&
+        nextAttachment.storageId &&
+        nextAttachment.fileName &&
+        nextAttachment.contentType
       ) {
-        nextMedia.push(attachment);
-        continue;
+        const nonce = createAttachmentNonce();
+        const expiresAt = new Date(Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS).toISOString();
+        await ctx.db.insert("message_attachment_download_tokens", {
+          businessId: message.businessId,
+          messageId: message._id,
+          storageId: nextAttachment.storageId,
+          fileName: nextAttachment.fileName,
+          contentType: nextAttachment.contentType,
+          disposition: nextAttachment.deliveryMode === "link" ? "attachment" : "inline",
+          nonce,
+          expiresAt,
+        });
+
+        nextAttachment = {
+          ...nextAttachment,
+          url: buildMessageAttachmentDownloadUrl(nonce),
+        };
       }
 
-      const nonce = createAttachmentNonce();
-      const expiresAt = new Date(Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS).toISOString();
-      await ctx.db.insert("message_attachment_download_tokens", {
-        businessId: message.businessId,
-        messageId: message._id,
-        storageId: attachment.storageId,
-        fileName: attachment.fileName,
-        contentType: attachment.contentType,
-        disposition: attachment.deliveryMode === "link" ? "attachment" : "inline",
-        nonce,
-        expiresAt,
-      });
+      if (
+        !nextAttachment.previewUrl &&
+        nextAttachment.previewStorageId &&
+        nextAttachment.previewFileName &&
+        nextAttachment.previewContentType
+      ) {
+        const previewNonce = createAttachmentNonce();
+        const previewExpiresAt = new Date(
+          Date.now() + ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS,
+        ).toISOString();
+        await ctx.db.insert("message_attachment_download_tokens", {
+          businessId: message.businessId,
+          messageId: message._id,
+          storageId: nextAttachment.previewStorageId,
+          fileName: nextAttachment.previewFileName,
+          contentType: nextAttachment.previewContentType,
+          disposition: "inline",
+          nonce: previewNonce,
+          expiresAt: previewExpiresAt,
+        });
 
-      nextMedia.push({
-        ...attachment,
-        url: buildMessageAttachmentDownloadUrl(nonce),
-      });
+        nextAttachment = {
+          ...nextAttachment,
+          previewUrl: buildMessageAttachmentDownloadUrl(previewNonce),
+        };
+      }
+
+      nextMedia.push(nextAttachment);
     }
 
     await ctx.db.patch(args.messageId, {
@@ -587,6 +653,11 @@ export const patchMessageMedia = internalMutation({
         fileName: v.optional(v.string()),
         contentType: v.optional(v.string()),
         byteLength: v.optional(v.number()),
+        previewUrl: v.optional(v.string()),
+        previewStorageId: v.optional(v.id("_storage")),
+        previewFileName: v.optional(v.string()),
+        previewContentType: v.optional(v.string()),
+        previewByteLength: v.optional(v.number()),
         deliveryMode: v.optional(v.string()),
       }),
     ),
@@ -671,6 +742,17 @@ async function hydrateMessageAttachments(
       const signedUrl =
         !stableUrl && attachment.storageId ? await ctx.storage.getUrl(attachment.storageId) : null;
       const resolvedUrl = stableUrl ?? signedUrl ?? null;
+      const stablePreviewUrl =
+        attachment.previewUrl ??
+        (attachment.previewStorageId
+          ? stableUrlByStorageId.get(String(attachment.previewStorageId)) ?? null
+          : null);
+      const signedPreviewUrl =
+        !stablePreviewUrl && attachment.previewStorageId
+          ? await ctx.storage.getUrl(attachment.previewStorageId)
+          : null;
+      const resolvedPreviewUrl = stablePreviewUrl ?? signedPreviewUrl ?? resolvedUrl;
+      const hasDedicatedPreview = Boolean(attachment.previewStorageId && resolvedPreviewUrl !== resolvedUrl);
 
       return {
         id: `${String(message._id)}:${index}`,
@@ -683,8 +765,9 @@ async function hydrateMessageAttachments(
         byteLength: attachment.byteLength ?? null,
         deliveryMode: attachment.deliveryMode ?? null,
         kind: isImageAttachment(contentType) ? ("image" as const) : ("file" as const),
-        previewUrl: isImageAttachment(contentType) ? resolvedUrl : null,
+        previewUrl: isImageAttachment(contentType) ? resolvedPreviewUrl : null,
         downloadUrl: resolvedUrl,
+        hasDedicatedPreview,
         source: attachment.storageId
           ? stableUrl
             ? ("tokenized" as const)
@@ -936,6 +1019,18 @@ export const sendSmsReply = action({
               fileName: attachment.fileName,
               contentType: attachment.contentType,
               byteLength: attachment.byteLength,
+              ...(attachment.previewStorageId
+                ? { previewStorageId: attachment.previewStorageId }
+                : {}),
+              ...(attachment.previewFileName
+                ? { previewFileName: attachment.previewFileName }
+                : {}),
+              ...(attachment.previewContentType
+                ? { previewContentType: attachment.previewContentType }
+                : {}),
+              ...(attachment.previewByteLength
+                ? { previewByteLength: attachment.previewByteLength }
+                : {}),
               deliveryMode: attachment.deliveryMode,
             })),
           }
@@ -1026,16 +1121,29 @@ export const repairConversationAttachmentPreviews = action({
     let repairedAttachments = 0;
 
     for (const message of messages) {
-      const needsStableUrlMaterialization = (message.media ?? []).some(
+      let currentMedia = message.media ?? [];
+      const imageMediaMissingPreview = currentMedia.filter(
         (attachment) =>
           attachment.storageId &&
-          !attachment.url &&
           attachment.fileName &&
-          attachment.contentType,
+          attachment.contentType &&
+          isImageAttachment(attachment.contentType) &&
+          !attachment.previewStorageId,
+      );
+      const needsStableUrlMaterialization = currentMedia.some(
+        (attachment) =>
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
       );
       const mediaNeedingRepair =
         message.direction === "inbound"
-          ? (message.media ?? []).filter((attachment) => attachment.url && !attachment.storageId)
+          ? currentMedia.filter((attachment) => attachment.url && !attachment.storageId)
           : [];
       let patchedMessage = false;
 
@@ -1049,7 +1157,7 @@ export const repairConversationAttachmentPreviews = action({
 
         let repairedForMessage = 0;
         let repairedIndex = 0;
-        const nextMedia = (message.media ?? []).map((attachment) => {
+        const nextMedia = currentMedia.map((attachment) => {
           if (!attachment.url || attachment.storageId) {
             return attachment;
           }
@@ -1072,6 +1180,58 @@ export const repairConversationAttachmentPreviews = action({
           patchedMessage = true;
           repairedMessages += 1;
           repairedAttachments += repairedForMessage;
+          currentMedia = nextMedia;
+          await ctx.runMutation(internal.dashboard.messages.patchMessageMedia, {
+            messageId: message._id,
+            media: nextMedia,
+          });
+        }
+      }
+
+      if (imageMediaMissingPreview.length > 0) {
+        let generatedForMessage = 0;
+        const nextMedia = await Promise.all(
+          currentMedia.map(async (attachment) => {
+            if (
+              !attachment.storageId ||
+              !attachment.fileName ||
+              !attachment.contentType ||
+              !isImageAttachment(attachment.contentType) ||
+              attachment.previewStorageId
+            ) {
+              return attachment;
+            }
+
+            const preview = await ctx.runAction(
+              internal.integrations.messageMedia.createImagePreviewForStorage,
+              {
+                storageId: attachment.storageId,
+                fileName: attachment.fileName,
+                contentType: attachment.contentType,
+              },
+            );
+            if (!preview?.storageId) {
+              return attachment;
+            }
+
+            generatedForMessage += 1;
+            return {
+              ...attachment,
+              previewStorageId: preview.storageId,
+              previewFileName: preview.fileName,
+              previewContentType: preview.contentType,
+              previewByteLength: preview.byteLength,
+            };
+          }),
+        );
+
+        if (generatedForMessage > 0) {
+          if (!patchedMessage) {
+            repairedMessages += 1;
+          }
+          patchedMessage = true;
+          repairedAttachments += generatedForMessage;
+          currentMedia = nextMedia;
           await ctx.runMutation(internal.dashboard.messages.patchMessageMedia, {
             messageId: message._id,
             media: nextMedia,

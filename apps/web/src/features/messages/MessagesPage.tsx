@@ -60,6 +60,7 @@ type ThreadAttachment = {
   kind: "image" | "file";
   previewUrl: string | null;
   downloadUrl: string | null;
+  hasDedicatedPreview: boolean;
   source: "storage" | "tokenized" | "external";
 };
 
@@ -389,7 +390,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     }
 
     const needsRepair = thread.messages.some((message) =>
-      message.attachments.some((attachment) => attachment.source !== "tokenized"),
+      message.attachments.some(
+        (attachment) =>
+          attachment.source !== "tokenized" ||
+          (attachment.kind === "image" && !attachment.hasDedicatedPreview),
+      ),
     );
     if (!needsRepair || repairAttemptedConversationIds.includes(String(selectedConversationId))) {
       return;

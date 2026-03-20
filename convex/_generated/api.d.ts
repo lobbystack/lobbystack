@@ -27,6 +27,7 @@ import type * as dashboard_overview from "../dashboard/overview.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
+import type * as integrations_messageMedia from "../integrations/messageMedia.js";
 import type * as integrations_twilioMessageStatus from "../integrations/twilioMessageStatus.js";
 import type * as integrations_twilioSms from "../integrations/twilioSms.js";
 import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebug.js";
@@ -36,6 +37,7 @@ import type * as lib_components from "../lib/components.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
 import type * as lib_messageAttachments from "../lib/messageAttachments.js";
+import type * as lib_node_imagePreviews from "../lib/node/imagePreviews.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
@@ -80,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
   "integrations/googleCalendar": typeof integrations_googleCalendar;
+  "integrations/messageMedia": typeof integrations_messageMedia;
   "integrations/twilioMessageStatus": typeof integrations_twilioMessageStatus;
   "integrations/twilioSms": typeof integrations_twilioSms;
   "integrations/twilioSmsDebug": typeof integrations_twilioSmsDebug;
@@ -89,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
   "lib/messageAttachments": typeof lib_messageAttachments;
+  "lib/node/imagePreviews": typeof lib_node_imagePreviews;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;
@@ -3667,7 +3671,7 @@ export declare const components: {
       cleanup: FunctionReference<
         "mutation",
         "internal",
-        { workflowId: string },
+        { force?: boolean; workflowId: string },
         boolean
       >;
       complete: FunctionReference<
@@ -3873,6 +3877,12 @@ export declare const components: {
           pageStatus?: "SplitRecommended" | "SplitRequired" | null;
           splitCursor?: string | null;
         }
+      >;
+      restart: FunctionReference<
+        "mutation",
+        "internal",
+        { from?: number | string; startAsync?: boolean; workflowId: string },
+        null
       >;
     };
   };

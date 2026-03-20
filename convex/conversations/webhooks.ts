@@ -30,6 +30,11 @@ type MessageMediaAttachment = {
   fileName?: string;
   contentType?: string;
   byteLength?: number;
+  previewUrl?: string;
+  previewStorageId?: Id<"_storage">;
+  previewFileName?: string;
+  previewContentType?: string;
+  previewByteLength?: number;
   deliveryMode?: string;
 };
 
@@ -299,6 +304,11 @@ export const ingestInboundSms = internalMutation({
           fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
           byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
           deliveryMode: v.optional(v.string()),
         }),
       ),
@@ -379,10 +389,14 @@ export const ingestInboundSms = internalMutation({
     if (
       args.media?.some(
         (attachment) =>
-          attachment.storageId &&
-          !attachment.url &&
-          attachment.fileName &&
-          attachment.contentType,
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
       )
     ) {
       await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
@@ -507,6 +521,11 @@ export const storeInboundMessage = internalMutation({
           fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
           byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
           deliveryMode: v.optional(v.string()),
         }),
       ),
@@ -558,10 +577,14 @@ export const storeInboundMessage = internalMutation({
     if (
       args.media?.some(
         (attachment) =>
-          attachment.storageId &&
-          !attachment.url &&
-          attachment.fileName &&
-          attachment.contentType,
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
       )
     ) {
       await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
@@ -589,6 +612,11 @@ export const storeOutboundMessage = internalMutation({
           fileName: v.optional(v.string()),
           contentType: v.optional(v.string()),
           byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
           deliveryMode: v.optional(v.string()),
         }),
       ),
@@ -619,10 +647,14 @@ export const storeOutboundMessage = internalMutation({
     if (
       args.media?.some(
         (attachment) =>
-          attachment.storageId &&
-          !attachment.url &&
-          attachment.fileName &&
-          attachment.contentType,
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
       )
     ) {
       await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {

@@ -10,6 +10,7 @@ import {
   inferFileNameFromContentType,
   normalizeAttachmentFileName,
 } from "../lib/messageAttachments";
+import { generateImagePreview } from "../lib/node/imagePreviews";
 
 function requireTwilioCredentials(): { accountSid: string; authToken: string } {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -166,12 +167,40 @@ export const ingestInboundMedia = internalAction({
             index,
           });
           const storageId: Id<"_storage"> = await ctx.storage.store(blob);
+          let previewFields:
+            | {
+                previewStorageId: Id<"_storage">;
+                previewFileName: string;
+                previewContentType: string;
+                previewByteLength: number;
+              }
+            | undefined;
+          if (contentType.startsWith("image/")) {
+            try {
+              const preview = await generateImagePreview({
+                blob,
+                fileName,
+              });
+              if (preview) {
+                const previewStorageId = await ctx.storage.store(preview.blob);
+                previewFields = {
+                  previewStorageId,
+                  previewFileName: preview.fileName,
+                  previewContentType: preview.contentType,
+                  previewByteLength: preview.byteLength,
+                };
+              }
+            } catch {
+              previewFields = undefined;
+            }
+          }
 
           return {
             storageId,
             fileName,
             contentType,
             byteLength: blob.size,
+            ...(previewFields ?? {}),
             deliveryMode: canDeliverAsMms(contentType) ? "mms" : "link",
           };
         } catch {

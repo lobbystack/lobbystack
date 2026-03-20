@@ -41,6 +41,11 @@ const messageMediaValidator = v.object({
   fileName: v.optional(v.string()),
   contentType: v.optional(v.string()),
   byteLength: v.optional(v.number()),
+  previewUrl: v.optional(v.string()),
+  previewStorageId: v.optional(v.id("_storage")),
+  previewFileName: v.optional(v.string()),
+  previewContentType: v.optional(v.string()),
+  previewByteLength: v.optional(v.number()),
   deliveryMode: v.optional(v.string()),
 });
 
@@ -349,6 +354,10 @@ export default defineSchema({
     fileName: v.string(),
     contentType: v.string(),
     byteLength: v.number(),
+    previewStorageId: v.optional(v.id("_storage")),
+    previewFileName: v.optional(v.string()),
+    previewContentType: v.optional(v.string()),
+    previewByteLength: v.optional(v.number()),
     deliveryMode: v.string(),
     status: v.string(),
     sentMessageId: v.optional(v.id("messages")),

@@ -1,4 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
+import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
@@ -83,6 +84,7 @@ const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalFetch = globalThis.fetch;
+let tinyPngBuffer: Buffer;
 
 async function insertBusiness(
   ctx: TestContext,
@@ -148,6 +150,11 @@ beforeEach(() => {
     return `Auto-reply: ${prompt}`;
   });
   retrierRunMock.mockResolvedValue(null);
+});
+
+beforeEach(async () => {
+  const image = new Jimp({ width: 2, height: 2, color: 0xff3366ff });
+  tinyPngBuffer = await image.getBuffer(JimpMime.png);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -157,13 +164,21 @@ beforeEach(() => {
           : input.url;
 
       if (rawUrl === "https://example.com/image.jpg") {
-        return new Response(new Blob(["image-bytes"], { type: "image/jpeg" }), {
+        return new Response(
+          new Blob(
+            [
+              Uint8Array.from(tinyPngBuffer),
+            ],
+            { type: "image/png" },
+          ),
+          {
           status: 200,
           headers: {
-            "content-type": "image/jpeg",
-            "content-disposition": 'inline; filename="customer-photo.jpg"',
+            "content-type": "image/png",
+            "content-disposition": 'inline; filename="customer-photo.png"',
           },
-        });
+          },
+        );
       }
 
       return await originalFetch(input as RequestInfo | URL, init);
@@ -511,7 +526,7 @@ describe("Twilio SMS delivery flow", () => {
       Body: "Photo attached",
       NumMedia: "1",
       MediaUrl0: "https://example.com/image.jpg",
-      MediaContentType0: "image/jpeg",
+      MediaContentType0: "image/png",
     });
 
     expect(response.status).toBe(200);
@@ -537,9 +552,9 @@ describe("Twilio SMS delivery flow", () => {
 
       expect(inbound?.media).toHaveLength(1);
       expect(inbound?.media?.[0]).toMatchObject({
-        fileName: "customer-photo.jpg",
-        contentType: "image/jpeg",
-        byteLength: 11,
+        fileName: "customer-photo.png",
+        contentType: "image/png",
+        byteLength: tinyPngBuffer.length,
         deliveryMode: "mms",
       });
       expect(inbound?.media?.[0]?.storageId).toBeDefined();
@@ -558,16 +573,20 @@ describe("Twilio SMS delivery flow", () => {
       conversationId,
     });
     const inboundWithAttachment = thread.messages.find((message) =>
-      message.attachments.some((attachment) => attachment.fileName === "customer-photo.jpg"),
+      message.attachments.some((attachment) => attachment.fileName === "customer-photo.png"),
     );
     expect(inboundWithAttachment?.attachments[0]).toMatchObject({
-      fileName: "customer-photo.jpg",
-      contentType: "image/jpeg",
-      byteLength: 11,
+      fileName: "customer-photo.png",
+      contentType: "image/png",
+      byteLength: tinyPngBuffer.length,
       kind: "image",
+      hasDedicatedPreview: true,
     });
     expect(inboundWithAttachment?.attachments[0]?.previewUrl).toBeTruthy();
     expect(inboundWithAttachment?.attachments[0]?.previewUrl).not.toBe("https://example.com/image.jpg");
+    expect(inboundWithAttachment?.attachments[0]?.previewUrl).not.toBe(
+      inboundWithAttachment?.attachments[0]?.downloadUrl,
+    );
   });
 
   it("repairs legacy external inbound media into previewable stored attachments", async () => {
@@ -608,7 +627,7 @@ describe("Twilio SMS delivery flow", () => {
         media: [
           {
             url: "https://example.com/image.jpg",
-            contentType: "image/jpeg",
+            contentType: "image/png",
           },
         ],
         status: "received",
@@ -637,14 +656,16 @@ describe("Twilio SMS delivery flow", () => {
     });
     const repairedAttachment = thread.messages[0]?.attachments[0];
     expect(repairedAttachment).toMatchObject({
-      fileName: "customer-photo.jpg",
-      contentType: "image/jpeg",
-      byteLength: 11,
+      fileName: "customer-photo.png",
+      contentType: "image/png",
+      byteLength: tinyPngBuffer.length,
       kind: "image",
+      hasDedicatedPreview: true,
       source: "tokenized",
     });
     expect(repairedAttachment?.previewUrl).toBeTruthy();
     expect(repairedAttachment?.previewUrl).not.toBe("https://example.com/image.jpg");
+    expect(repairedAttachment?.previewUrl).not.toBe(repairedAttachment?.downloadUrl);
   });
 
   it("replies from the same inbound business number when multiple SMS numbers are active", async () => {
