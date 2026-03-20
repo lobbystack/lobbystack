@@ -61,7 +61,7 @@ export function CallRecordingPlayer({
     setIsPlaying(false);
 
     const audio = new Audio(src);
-    audio.preload = "metadata";
+    audio.preload = "none";
     audioRef.current = audio;
 
     function updateBufferedTime() {

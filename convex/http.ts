@@ -298,6 +298,12 @@ async function handleMessageAttachmentDownload(
     "Content-Disposition",
     `${token.disposition}; filename="${token.fileName}"`,
   );
+  const remainingLifetimeMs = Date.parse(token.expiresAt) - Date.now();
+  const maxAgeSeconds = Math.max(0, Math.floor(remainingLifetimeMs / 1000));
+  headers.set(
+    "Cache-Control",
+    maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}, immutable` : "no-store",
+  );
 
   if (request.method === "HEAD") {
     headers.set("Content-Length", String(blob.size));

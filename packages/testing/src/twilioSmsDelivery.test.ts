@@ -543,7 +543,9 @@ describe("Twilio SMS delivery flow", () => {
         deliveryMode: "mms",
       });
       expect(inbound?.media?.[0]?.storageId).toBeDefined();
-      expect(inbound?.media?.[0]?.url).toBeUndefined();
+      expect(inbound?.media?.[0]?.url).toContain(
+        "/messages/attachments/download?token=",
+      );
       expect(outbound?.providerMessageSid).toBe("SM-outbound-mms-reply");
 
       return {
@@ -639,7 +641,7 @@ describe("Twilio SMS delivery flow", () => {
       contentType: "image/jpeg",
       byteLength: 11,
       kind: "image",
-      source: "storage",
+      source: "tokenized",
     });
     expect(repairedAttachment?.previewUrl).toBeTruthy();
     expect(repairedAttachment?.previewUrl).not.toBe("https://example.com/image.jpg");

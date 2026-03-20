@@ -60,7 +60,7 @@ type ThreadAttachment = {
   kind: "image" | "file";
   previewUrl: string | null;
   downloadUrl: string | null;
-  source: "storage" | "external";
+  source: "storage" | "tokenized" | "external";
 };
 
 type ThreadSessionSummary = {
@@ -264,6 +264,8 @@ function MessageAttachmentPreview({
         <img
           alt={attachment.fileName}
           className="max-h-40 max-w-56 rounded-md object-cover"
+          decoding="async"
+          loading="lazy"
           src={attachment.previewUrl}
         />
       </a>
@@ -387,7 +389,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     }
 
     const needsRepair = thread.messages.some((message) =>
-      message.attachments.some((attachment) => attachment.source === "external"),
+      message.attachments.some((attachment) => attachment.source !== "tokenized"),
     );
     if (!needsRepair || repairAttemptedConversationIds.includes(String(selectedConversationId))) {
       return;

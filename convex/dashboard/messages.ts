@@ -653,11 +653,24 @@ async function hydrateMessageAttachments(
   ctx: QueryCtx,
   message: Doc<"messages">,
 ) {
+  const tokens = await ctx.db
+    .query("message_attachment_download_tokens")
+    .withIndex("by_message_id", (q) => q.eq("messageId", message._id))
+    .collect();
+  const stableUrlByStorageId = new Map<string, string>();
+  for (const token of tokens) {
+    stableUrlByStorageId.set(String(token.storageId), buildMessageAttachmentDownloadUrl(token.nonce));
+  }
+
   return await Promise.all(
     (message.media ?? []).map(async (attachment: MessageMediaRecord, index) => {
       const contentType = attachment.contentType ?? "application/octet-stream";
-      const signedUrl = attachment.storageId ? await ctx.storage.getUrl(attachment.storageId) : null;
-      const resolvedUrl = signedUrl ?? attachment.url ?? null;
+      const stableUrl =
+        attachment.url ??
+        (attachment.storageId ? stableUrlByStorageId.get(String(attachment.storageId)) ?? null : null);
+      const signedUrl =
+        !stableUrl && attachment.storageId ? await ctx.storage.getUrl(attachment.storageId) : null;
+      const resolvedUrl = stableUrl ?? signedUrl ?? null;
 
       return {
         id: `${String(message._id)}:${index}`,
@@ -672,7 +685,11 @@ async function hydrateMessageAttachments(
         kind: isImageAttachment(contentType) ? ("image" as const) : ("file" as const),
         previewUrl: isImageAttachment(contentType) ? resolvedUrl : null,
         downloadUrl: resolvedUrl,
-        source: attachment.storageId ? ("storage" as const) : ("external" as const),
+        source: attachment.storageId
+          ? stableUrl
+            ? ("tokenized" as const)
+            : ("storage" as const)
+          : ("external" as const),
       };
     }),
   );
@@ -925,12 +942,6 @@ export const sendSmsReply = action({
         : {}),
     });
 
-    if (replyContext.attachments.length > 0) {
-      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
-        messageId,
-      });
-    }
-
     if (args.attachmentIds && args.attachmentIds.length > 0) {
       await ctx.runMutation(internal.dashboard.messages.markStagedAttachmentsConsumed, {
         attachmentIds: args.attachmentIds,
@@ -1015,48 +1026,62 @@ export const repairConversationAttachmentPreviews = action({
     let repairedAttachments = 0;
 
     for (const message of messages) {
+      const needsStableUrlMaterialization = (message.media ?? []).some(
+        (attachment) =>
+          attachment.storageId &&
+          !attachment.url &&
+          attachment.fileName &&
+          attachment.contentType,
+      );
       const mediaNeedingRepair =
         message.direction === "inbound"
           ? (message.media ?? []).filter((attachment) => attachment.url && !attachment.storageId)
           : [];
-      if (mediaNeedingRepair.length === 0) {
-        continue;
+      let patchedMessage = false;
+
+      if (mediaNeedingRepair.length > 0) {
+        const repairedMedia = await ctx.runAction(internal.integrations.twilioSms.ingestInboundMedia, {
+          media: mediaNeedingRepair.map((attachment) => ({
+            url: attachment.url ?? "",
+            ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
+          })),
+        });
+
+        let repairedForMessage = 0;
+        let repairedIndex = 0;
+        const nextMedia = (message.media ?? []).map((attachment) => {
+          if (!attachment.url || attachment.storageId) {
+            return attachment;
+          }
+
+          const replacement = repairedMedia[repairedIndex];
+          repairedIndex += 1;
+          if (
+            replacement &&
+            "storageId" in replacement &&
+            replacement.storageId
+          ) {
+            repairedForMessage += 1;
+            return replacement;
+          }
+
+          return attachment;
+        });
+
+        if (repairedForMessage > 0) {
+          patchedMessage = true;
+          repairedMessages += 1;
+          repairedAttachments += repairedForMessage;
+          await ctx.runMutation(internal.dashboard.messages.patchMessageMedia, {
+            messageId: message._id,
+            media: nextMedia,
+          });
+        }
       }
 
-      const repairedMedia = await ctx.runAction(internal.integrations.twilioSms.ingestInboundMedia, {
-        media: mediaNeedingRepair.map((attachment) => ({
-          url: attachment.url ?? "",
-          ...(attachment.contentType ? { contentType: attachment.contentType } : {}),
-        })),
-      });
-
-      let repairedForMessage = 0;
-      let repairedIndex = 0;
-      const nextMedia = (message.media ?? []).map((attachment) => {
-        if (!attachment.url || attachment.storageId) {
-          return attachment;
-        }
-
-        const replacement = repairedMedia[repairedIndex];
-        repairedIndex += 1;
-        if (
-          replacement &&
-          "storageId" in replacement &&
-          replacement.storageId
-        ) {
-          repairedForMessage += 1;
-          return replacement;
-        }
-
-        return attachment;
-      });
-
-      if (repairedForMessage > 0) {
-        repairedMessages += 1;
-        repairedAttachments += repairedForMessage;
-        await ctx.runMutation(internal.dashboard.messages.patchMessageMedia, {
+      if (needsStableUrlMaterialization || patchedMessage) {
+        await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
           messageId: message._id,
-          media: nextMedia,
         });
       }
     }

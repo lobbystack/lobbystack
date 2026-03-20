@@ -376,6 +376,20 @@ export const ingestInboundSms = internalMutation({
       messageId,
     });
 
+    if (
+      args.media?.some(
+        (attachment) =>
+          attachment.storageId &&
+          !attachment.url &&
+          attachment.fileName &&
+          attachment.contentType,
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
     if (args.idempotencyKeyId) {
       await ctx.db.patch(args.idempotencyKeyId, {
         resourceTable: "conversations",
@@ -541,6 +555,20 @@ export const storeInboundMessage = internalMutation({
       messageId,
     });
 
+    if (
+      args.media?.some(
+        (attachment) =>
+          attachment.storageId &&
+          !attachment.url &&
+          attachment.fileName &&
+          attachment.contentType,
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
+
     return { conversationId };
   },
 });
@@ -587,6 +615,20 @@ export const storeOutboundMessage = internalMutation({
       channel: args.channel,
       messageId,
     });
+
+    if (
+      args.media?.some(
+        (attachment) =>
+          attachment.storageId &&
+          !attachment.url &&
+          attachment.fileName &&
+          attachment.contentType,
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId,
+      });
+    }
 
     return messageId;
   },
