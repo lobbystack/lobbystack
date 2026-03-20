@@ -7,6 +7,7 @@ import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
+import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import { createSnapshotCache } from "../sessions/snapshotCache";
 
 export function createServer(): ReturnType<typeof Fastify> {
@@ -29,6 +30,32 @@ export function createServer(): ReturnType<typeof Fastify> {
 
     if (pathname !== "/media-stream") {
       socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    const hasValidTwilioSignature = validateMediaStreamSignature({
+      authToken: env.TWILIO_AUTH_TOKEN,
+      signatureHeader: request.headers["x-twilio-signature"],
+      baseUrl: env.VOICE_GATEWAY_BASE_URL,
+      path: pathname,
+    });
+    if (!hasValidTwilioSignature) {
+      server.log.warn(
+        {
+          path: pathname,
+          host: request.headers.host,
+        },
+        "Rejected Twilio Media Stream upgrade with invalid signature",
+      );
+      socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    if (!env.OPENAI_API_KEY) {
+      server.log.error("OPENAI_API_KEY is required for live voice calls.");
+      socket.write("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }

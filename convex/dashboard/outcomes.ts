@@ -1,5 +1,5 @@
 import type { Doc } from "../_generated/dataModel";
-import type { QueryCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 export type ConversationOutcome =
   | {
@@ -53,7 +53,7 @@ async function getServiceName(
 }
 
 export async function buildConversationOutcome(
-  ctx: QueryCtx,
+  ctx: QueryCtx | MutationCtx,
   input: {
     conversation: Doc<"conversations"> | null;
     fallbackDisposition?: string | null;

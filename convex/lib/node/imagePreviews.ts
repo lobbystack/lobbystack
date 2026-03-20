@@ -1,10 +1,14 @@
 "use node";
 
-import { Jimp, JimpMime } from "jimp";
+import sharp from "sharp";
+
+import { MAX_SMS_ATTACHMENT_UPLOAD_BYTES } from "../messageAttachments";
 
 export const MESSAGE_IMAGE_PREVIEW_WIDTH = 640;
 export const MESSAGE_IMAGE_PREVIEW_HEIGHT = 640;
 export const MESSAGE_IMAGE_PREVIEW_QUALITY = 72;
+export const MESSAGE_IMAGE_PREVIEW_MAX_INPUT_PIXELS = 40_000_000;
+export const MESSAGE_IMAGE_PREVIEW_TIMEOUT_SECONDS = 5;
 
 type GenerateImagePreviewInput = {
   blob: Blob;
@@ -31,18 +35,27 @@ export async function generateImagePreview(
   input: GenerateImagePreviewInput,
 ): Promise<GeneratedImagePreview | null> {
   const sourceBuffer = Buffer.from(await input.blob.arrayBuffer());
-  if (sourceBuffer.length === 0) {
+  if (sourceBuffer.length === 0 || sourceBuffer.length > MAX_SMS_ATTACHMENT_UPLOAD_BYTES) {
     return null;
   }
 
-  const image = await Jimp.fromBuffer(sourceBuffer);
-  image.scaleToFit({
-    w: MESSAGE_IMAGE_PREVIEW_WIDTH,
-    h: MESSAGE_IMAGE_PREVIEW_HEIGHT,
-  });
-  const previewBuffer = await image.getBuffer(JimpMime.jpeg, {
-    quality: MESSAGE_IMAGE_PREVIEW_QUALITY,
-  });
+  const previewBuffer = await sharp(sourceBuffer, {
+    failOn: "error",
+    limitInputPixels: MESSAGE_IMAGE_PREVIEW_MAX_INPUT_PIXELS,
+  })
+    .rotate()
+    .resize({
+      width: MESSAGE_IMAGE_PREVIEW_WIDTH,
+      height: MESSAGE_IMAGE_PREVIEW_HEIGHT,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({
+      quality: MESSAGE_IMAGE_PREVIEW_QUALITY,
+      mozjpeg: true,
+    })
+    .timeout({ seconds: MESSAGE_IMAGE_PREVIEW_TIMEOUT_SECONDS })
+    .toBuffer();
 
   if (previewBuffer.length === 0) {
     return null;

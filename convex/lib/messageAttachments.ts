@@ -2,6 +2,7 @@ import type { Id } from "../_generated/dataModel";
 
 export const MAX_SMS_REPLY_ATTACHMENTS = 3;
 export const MAX_MMS_TOTAL_BYTES = 5 * 1024 * 1024;
+export const MAX_SMS_ATTACHMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const DIRECT_MMS_CONTENT_TYPES = new Set([

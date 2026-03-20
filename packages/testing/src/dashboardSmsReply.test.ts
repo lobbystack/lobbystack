@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { MAX_SMS_ATTACHMENT_UPLOAD_BYTES } from "../../../convex/lib/messageAttachments";
 import schema from "../../../convex/schema";
 
 declare global {
@@ -353,9 +354,7 @@ describe("Dashboard SMS replies", () => {
       });
     });
 
-    let resolveFirstSend:
-      | ((value: { sid: string; status: string }) => void)
-      | null = null;
+    let resolveFirstSend!: (value: { sid: string; status: string }) => void;
     sendTwilioMessageMock.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -383,10 +382,6 @@ describe("Dashboard SMS replies", () => {
         attachmentIds: [attachmentId],
       }),
     ).rejects.toThrow("Attachment is no longer available.");
-
-    if (!resolveFirstSend) {
-      throw new Error("Expected first send to be in flight.");
-    }
 
     resolveFirstSend({
       sid: "SM-dashboard-reply-race",
@@ -564,6 +559,8 @@ describe("Dashboard SMS replies", () => {
       const stagedDoc = await ctx.db.get("message_attachment_uploads", docAttachmentId);
       expect(stagedImage?.status).toBe("consumed");
       expect(stagedDoc?.status).toBe("consumed");
+      expect(await ctx.db.system.get("_storage", stagedImage!.storageId)).toBeNull();
+      expect(await ctx.db.system.get("_storage", stagedDoc!.storageId)).toBeNull();
 
       return documentUrl;
     });
@@ -575,6 +572,67 @@ describe("Dashboard SMS replies", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-disposition")).toContain("attachment");
     expect(await response.text()).toBe("agenda-docx");
+  });
+
+  it("keeps secure document links downloadable after their original token expires", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-expired-link",
+    });
+
+    const attachmentId = await t.run(async (ctx) => {
+      return await storeAttachment(ctx, {
+        content: "agenda-docx",
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        fileName: "agenda.docx",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    const result = await authed.action(api.dashboard.messages.sendSmsReply, {
+      businessId,
+      conversationId,
+      body: "Please review this file",
+      attachmentIds: [attachmentId],
+    });
+
+    const documentUrl = await t.run(async (ctx) => {
+      const outbound = await ctx.db.get("messages", result.messageId);
+      const documentUrl = outbound?.media?.[0]?.url ?? null;
+      if (!documentUrl) {
+        throw new Error("Expected tokenized document URL.");
+      }
+
+      const token = documentUrl.split("token=")[1];
+      if (!token) {
+        throw new Error("Expected attachment download token.");
+      }
+
+      const tokenRecord = await ctx.db
+        .query("message_attachment_download_tokens")
+        .withIndex("by_nonce", (q) => q.eq("nonce", token))
+        .unique();
+      if (!tokenRecord) {
+        throw new Error("Expected attachment token record.");
+      }
+
+      await ctx.db.patch(tokenRecord._id, {
+        expiresAt: new Date(Date.now() - 60_000).toISOString(),
+      });
+
+      return documentUrl;
+    });
+
+    const relativeUrl = new URL(documentUrl).pathname + new URL(documentUrl).search;
+    const response = await t.fetch(relativeUrl, {
+      method: "GET",
+    });
+
+    expect(response.status).toBe(410);
+    expect(await response.text()).toBe("Attachment link expired");
   });
 
   it("rejects unsupported attachment uploads during finalize and deletes the uploaded file", async () => {
@@ -599,6 +657,33 @@ describe("Dashboard SMS replies", () => {
         fileName: "notes.txt",
       }),
     ).rejects.toThrow("supported");
+
+    await t.run(async (ctx) => {
+      const metadata = await ctx.db.system.get("_storage", storageId);
+      expect(metadata).toBeNull();
+    });
+  });
+
+  it("rejects oversized attachment uploads during finalize and deletes the uploaded file", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-oversized-upload",
+    });
+
+    const storageId = await t.run(async (ctx) => {
+      return await ctx.storage.store(
+        new Blob([new Uint8Array(MAX_SMS_ATTACHMENT_UPLOAD_BYTES + 1)]),
+      );
+    });
+
+    await expect(
+      authed.action(api.dashboard.messages.finalizeStagedAttachment, {
+        businessId,
+        conversationId,
+        storageId,
+        fileName: "oversized.pdf",
+      }),
+    ).rejects.toThrow("10 MB or smaller");
 
     await t.run(async (ctx) => {
       const metadata = await ctx.db.system.get("_storage", storageId);

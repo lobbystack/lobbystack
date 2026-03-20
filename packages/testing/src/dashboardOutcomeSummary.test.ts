@@ -648,6 +648,91 @@ describe("Dashboard outcome summaries", () => {
     });
   });
 
+  it("keeps a backfilled legacy summary from changing after a later SMS session books", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(
+      t,
+      "dashboard-session-legacy-summary-frozen",
+    );
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      await ctx.db.patch(conversationId, {
+        currentIntent: "message_taking",
+        summary: "Callback: +14165550199\n\nPlease call me back tomorrow morning.",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "Please call me back tomorrow morning.",
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "Actually, can I book instead?",
+    });
+
+    const activeSession = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_conversation_id_and_status", (q) =>
+          q.eq("conversationId", conversationId).eq("status", "active"),
+        )
+        .unique();
+    });
+    if (!activeSession) {
+      throw new Error("Expected active session.");
+    }
+
+    await t.run(async (ctx) => {
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation-frozen",
+        durationMinutes: 30,
+        active: true,
+      });
+      await ctx.db.insert("conversation_booking_state", {
+        businessId,
+        conversationId,
+        mode: "booked",
+        lastConfirmedServiceId: serviceId,
+        lastConfirmedStartsAt: "2026-03-24T15:00:00.000Z",
+        updatedAt: new Date(activeSession.lastMessageAt).toISOString(),
+      });
+    });
+
+    await t.mutation(internal.conversations.sessions.finalizeSmsSessionAfterInactivity, {
+      sessionId: activeSession._id,
+      expectedLastMessageAt: activeSession.lastMessageAt,
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    const summaryItems = getSessionSummaryItems(thread);
+    expect(summaryItems).toHaveLength(2);
+    expect(summaryItems.filter((item) => item.summaryKind === "booked")).toHaveLength(1);
+    expect(summaryItems.filter((item) => item.summaryKind === "message_taking")).toHaveLength(1);
+    expect(
+      summaryItems.find((item) => item.summaryKind === "message_taking")?.summary,
+    ).toMatchObject({
+      kind: "message_taking",
+      summary: expect.stringContaining("Callback: +14165550199"),
+    });
+  });
+
   it("finalizes voice sessions per call instead of waiting for inactivity", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-voice");

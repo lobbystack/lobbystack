@@ -18,6 +18,7 @@ import { requireCurrentUser, requireIdentity, requireMembership } from "../lib/a
 import { buildMessageAttachmentDownloadUrl } from "../lib/messageAttachmentUrls";
 import {
   ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS,
+  MAX_SMS_ATTACHMENT_UPLOAD_BYTES,
   MAX_SMS_REPLY_ATTACHMENTS,
   formatAttachmentDisplayName,
   inferFileNameFromContentType,
@@ -182,6 +183,155 @@ function formatOperatorDisplayName(user: Doc<"users"> | null): string | null {
   }
 
   return user.displayName ?? user.name ?? user.email ?? null;
+}
+
+function normalizeSummary(summary: string | null | undefined): string | null {
+  const trimmed = summary?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^Business .* conversation$/u.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function getSummaryLocale(locale: string | null | undefined): "en" | "fr" {
+  return locale?.toLowerCase().startsWith("fr") ? "fr" : "en";
+}
+
+function hasQuestionSignals(text: string): boolean {
+  return /\?/u.test(text) ||
+    /^(who|what|when|where|why|how|can|could|do|does|is|are|bonjour|salut|quand|quoi|comment|puis-je|est-ce que)/iu.test(
+      text,
+    );
+}
+
+function hasAppointmentSignals(text: string): boolean {
+  return /appointment|booking|book|schedule|reschedule|consultation|rendez-vous|reserver|réserver|reservation|date|heure|time/iu.test(
+    text,
+  );
+}
+
+function buildSummaryFromMessages(
+  messages: Array<Doc<"messages">>,
+  locale: string | null | undefined,
+): string | null {
+  const summaryLocale = getSummaryLocale(locale);
+  const inboundBodies = messages
+    .filter((message) => message.direction === "inbound")
+    .map((message) => message.body.trim())
+    .filter((body) => body.length > 0);
+  const outboundBodies = messages
+    .filter((message) => message.direction === "outbound")
+    .map((message) => message.body.trim())
+    .filter((body) => body.length > 0);
+  const allBodies = [...inboundBodies, ...outboundBodies];
+
+  if (allBodies.length > 0) {
+    const joinedInbound = inboundBodies.join(" ");
+    const questionCount = inboundBodies.filter((body) => hasQuestionSignals(body)).length;
+    const hasAppointmentTopic = hasAppointmentSignals(joinedInbound);
+
+    if (hasAppointmentTopic) {
+      if (questionCount > 1) {
+        return summaryLocale === "fr"
+          ? "Le client a pose des questions de suivi au sujet d'un rendez-vous par SMS."
+          : "Customer asked follow-up questions about an appointment by SMS.";
+      }
+
+      return summaryLocale === "fr"
+        ? "Le client a pose une question au sujet d'un rendez-vous par SMS."
+        : "Customer asked about an appointment by SMS.";
+    }
+
+    if (questionCount > 1 || (questionCount > 0 && inboundBodies.length > 1)) {
+      return summaryLocale === "fr"
+        ? "Le client a pose des questions de suivi par SMS."
+        : "Customer asked follow-up questions by SMS.";
+    }
+
+    if (questionCount > 0) {
+      return summaryLocale === "fr"
+        ? "Le client a pose une question par SMS."
+        : "Customer asked a question by SMS.";
+    }
+
+    if (inboundBodies.length > 0 && outboundBodies.length > 0) {
+      return summaryLocale === "fr"
+        ? "Le client a eu un echange par SMS."
+        : "Customer had an SMS exchange.";
+    }
+
+    if (inboundBodies.length > 0) {
+      if (inboundBodies.length === 1 && inboundBodies[0]!.length <= 12) {
+        return summaryLocale === "fr"
+          ? "Le client a envoye un bref suivi par SMS."
+          : "Customer sent a brief SMS follow-up.";
+      }
+
+      return summaryLocale === "fr"
+        ? "Le client a envoye un message par SMS."
+        : "Customer sent an SMS message.";
+    }
+
+    if (outboundBodies.length > 0) {
+      return summaryLocale === "fr"
+        ? "Une mise a jour a ete envoyee par SMS."
+        : "An SMS update was sent.";
+    }
+  }
+
+  const attachments = messages.flatMap((message) => message.media ?? []);
+  if (attachments.length > 0) {
+    const imageCount = attachments.filter((attachment) =>
+      (attachment.contentType ?? "").startsWith("image/"),
+    ).length;
+    const documentCount = attachments.length - imageCount;
+
+    if (imageCount > 0 && documentCount === 0) {
+      return imageCount === 1
+        ? summaryLocale === "fr"
+          ? "Le client a partage une photo par SMS."
+          : "Customer shared a photo by SMS."
+        : summaryLocale === "fr"
+          ? "Le client a partage des photos par SMS."
+          : "Customer shared photos by SMS.";
+    }
+
+    if (documentCount > 0 && imageCount === 0) {
+      return documentCount === 1
+        ? summaryLocale === "fr"
+          ? "Le client a partage un document par SMS."
+          : "Customer shared a document by SMS."
+        : summaryLocale === "fr"
+          ? "Le client a partage des documents par SMS."
+          : "Customer shared documents by SMS.";
+    }
+
+    return summaryLocale === "fr"
+      ? "Le client a partage des pieces jointes par SMS."
+      : "Customer shared attachments by SMS.";
+  }
+
+  return null;
+}
+
+function buildLegacyConversationOutcomeFromMessages(input: {
+  conversation: Pick<Doc<"conversations">, "locale">;
+  messages: Array<Doc<"messages">>;
+}): ConversationOutcome {
+  const summary = buildSummaryFromMessages(input.messages, input.conversation.locale);
+  if (summary) {
+    return {
+      kind: "summary",
+      summary,
+    };
+  }
+
+  return { kind: "none" };
 }
 
 async function requireDashboardMessagesUserId(
@@ -541,6 +691,10 @@ export const finalizeStagedAttachment = action({
       },
     );
 
+    if (metadata.byteLength > MAX_SMS_ATTACHMENT_UPLOAD_BYTES) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Attachments must be 10 MB or smaller.");
+    }
     const contentType = metadata.contentType;
     if (!isSupportedAttachmentContentType(contentType)) {
       await ctx.storage.delete(args.storageId);
@@ -855,6 +1009,12 @@ export const finalizeStagedAttachmentsConsumed = internalMutation({
         throw new Error("Attachment is no longer available.");
       }
 
+      await Promise.allSettled([
+        ctx.storage.delete(attachment.storageId),
+        ...(attachment.previewStorageId
+          ? [ctx.storage.delete(attachment.previewStorageId)]
+          : []),
+      ]);
       await ctx.db.patch(attachmentId, {
         status: "consumed",
         sentMessageId: args.messageId,
@@ -1165,23 +1325,26 @@ export const getConversationThread = query({
         summary: session.summary!,
       }));
 
-    const hasLegacyMessages = hydratedMessages.some(
-      (message) => message.conversationSessionId === null,
-    );
-    const legacyOutcome = (await buildConversationOutcome(ctx, {
-      conversation,
-    })) as ConversationOutcome;
+    const legacyMessages = messages.filter((message) => message.conversationSessionId === undefined);
+    const hasLegacyMessages = legacyMessages.length > 0;
+    const legacyOutcome =
+      sessions.length === 0
+        ? ((await buildConversationOutcome(ctx, {
+            conversation,
+          })) as ConversationOutcome)
+        : buildLegacyConversationOutcomeFromMessages({
+            conversation,
+            messages: legacyMessages,
+          });
     const legacySummaryItem =
       (sessions.length === 0 || hasLegacyMessages) && legacyOutcome
         ? buildLegacySessionSummaryItem({
             outcome: legacyOutcome,
             createdAt:
-              [...hydratedMessages]
-                .reverse()
-                .find((message) => message.conversationSessionId === null)?.createdAt ??
+              legacyMessages[legacyMessages.length - 1]?._creationTime ??
               hydratedMessages[hydratedMessages.length - 1]?.createdAt ??
               conversation._creationTime,
-            legacySummary: conversation.summary ?? null,
+            legacySummary: normalizeSummary(conversation.summary),
           })
         : null;
 

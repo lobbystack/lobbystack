@@ -7,6 +7,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../_generated/server";
+import { buildConversationOutcome } from "../dashboard/outcomes";
 
 export const SMS_SESSION_INACTIVITY_MS = 60 * 60 * 1000;
 
@@ -33,6 +34,43 @@ export type PersistedConversationSessionSummary =
       kind: "disposition";
       disposition: string;
     };
+
+function buildPersistedSummaryFromOutcome(input: {
+  outcome: Awaited<ReturnType<typeof buildConversationOutcome>>;
+  legacySummary: string | null;
+}): PersistedConversationSessionSummary | null {
+  switch (input.outcome.kind) {
+    case "booked":
+      return {
+        kind: "booked",
+        ...(input.outcome.serviceName ? { serviceName: input.outcome.serviceName } : {}),
+        startsAt: input.outcome.startsAt,
+      };
+    case "booking_in_progress":
+      return {
+        kind: "booking_in_progress",
+        ...(input.outcome.serviceName ? { serviceName: input.outcome.serviceName } : {}),
+        ...(input.outcome.startsAt ? { startsAt: input.outcome.startsAt } : {}),
+      };
+    case "message_taking":
+      return {
+        kind: "message_taking",
+        ...(input.legacySummary ? { summary: input.legacySummary } : {}),
+      };
+    case "summary":
+      return {
+        kind: "summary",
+        summary: input.outcome.summary,
+      };
+    case "disposition":
+      return {
+        kind: "disposition",
+        disposition: input.outcome.disposition,
+      };
+    default:
+      return null;
+  }
+}
 
 function normalizeSummary(summary: string | null | undefined): string | null {
   const trimmed = summary?.trim();
@@ -196,6 +234,62 @@ async function getServiceName(
 
   const service = await ctx.db.get(serviceId);
   return service?.name ?? null;
+}
+
+async function backfillLegacyConversationSession(
+  ctx: MutationCtx,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId: Id<"conversations">;
+    channel: string;
+    excludeMessageId: Id<"messages">;
+  },
+): Promise<void> {
+  const legacyMessages = (
+    await ctx.db
+      .query("messages")
+      .withIndex("by_conversation_id", (q) => q.eq("conversationId", input.conversationId))
+      .collect()
+  ).filter(
+    (message) =>
+      message._id !== input.excludeMessageId && message.conversationSessionId === undefined,
+  );
+
+  if (legacyMessages.length === 0) {
+    return;
+  }
+
+  const conversation = await ctx.db.get(input.conversationId);
+  if (!conversation) {
+    return;
+  }
+
+  const outcome = await buildConversationOutcome(ctx, {
+    conversation,
+  });
+  const summary = buildPersistedSummaryFromOutcome({
+    outcome,
+    legacySummary: normalizeSummary(conversation.summary),
+  });
+  const startedAt = legacyMessages[0]!._creationTime;
+  const closedAt = legacyMessages[legacyMessages.length - 1]!._creationTime;
+  const sessionId = await ctx.db.insert("conversation_sessions", {
+    businessId: input.businessId,
+    conversationId: input.conversationId,
+    channel: input.channel,
+    status: "closed",
+    startedAt,
+    lastMessageAt: closedAt,
+    closedAt,
+    summaryGeneratedAt: Date.now(),
+    ...(summary ? { summaryKind: summary.kind, summary } : {}),
+  });
+
+  for (const message of legacyMessages) {
+    await ctx.db.patch(message._id, {
+      conversationSessionId: sessionId,
+    });
+  }
 }
 
 async function buildSessionSummary(
@@ -371,6 +465,13 @@ export async function ensureSessionForStoredMessage(
     });
     return session._id;
   }
+
+  await backfillLegacyConversationSession(ctx, {
+    businessId: input.businessId,
+    conversationId: input.conversationId,
+    channel: input.channel,
+    excludeMessageId: input.messageId,
+  });
 
   const activeSession = await getActiveConversationSession(ctx, input.conversationId);
   if (
