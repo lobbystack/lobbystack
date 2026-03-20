@@ -56,7 +56,10 @@ const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
-async function seedBusinessOwner(t: ReturnType<typeof convexTest>) {
+async function seedBusinessOwner(
+  t: ReturnType<typeof convexTest>,
+  input?: { membershipStatus?: "active" | "inactive" },
+) {
   const subject = "phone-number-owner";
 
   const { businessId } = await t.run(async (ctx) => {
@@ -76,7 +79,7 @@ async function seedBusinessOwner(t: ReturnType<typeof convexTest>) {
       businessId,
       userId,
       role: "business_owner",
-      status: "active",
+      status: input?.membershipStatus ?? "active",
     });
 
     return { businessId };
@@ -290,5 +293,24 @@ describe("Twilio SMS phone-number save flow", () => {
       phoneNumberId: failed.phoneNumberId,
       smsWebhookStatus: "synced",
     });
+  });
+
+  it("rejects phone-number updates for inactive memberships", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t, {
+      membershipStatus: "inactive",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.businesses.catalog.savePhoneNumber, {
+        businessId,
+        e164: "+14165550130",
+        twilioPhoneSid: "PN-inactive-member",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      }),
+    ).rejects.toThrow("You do not have access to this business.");
   });
 });

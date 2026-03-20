@@ -35,7 +35,10 @@ vi.mock("../../../convex/businesses/admin.ts", async () => {
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 
-async function seedBusinessOwner(t: ReturnType<typeof convexTest>) {
+async function seedBusinessOwner(
+  t: ReturnType<typeof convexTest>,
+  input?: { membershipStatus?: "active" | "inactive" },
+) {
   const subject = "service-localization-owner";
 
   const { businessId } = await t.run(async (ctx) => {
@@ -55,7 +58,7 @@ async function seedBusinessOwner(t: ReturnType<typeof convexTest>) {
       businessId,
       userId,
       role: "business_owner",
-      status: "active",
+      status: input?.membershipStatus ?? "active",
     });
 
     return { businessId };
@@ -188,5 +191,23 @@ describe("Service localization save flow", () => {
       en: "Initial Consultation",
       fr: "Consultation initiale",
     });
+  });
+
+  it("rejects service updates for inactive memberships", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t, {
+      membershipStatus: "inactive",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.action(api.businesses.catalog.upsertService, {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      }),
+    ).rejects.toThrow("You do not have access to this business.");
   });
 });

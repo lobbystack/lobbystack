@@ -290,8 +290,8 @@ export const assertCatalogWriteAccess = internalQuery({
         q.eq("userId", user._id).eq("businessId", args.businessId),
       )
       .unique();
-    if (!membership) {
-      throw new Error("Membership required.");
+    if (!membership || membership.status !== "active") {
+      throw new Error("You do not have access to this business.");
     }
 
     return { userId: user._id };
