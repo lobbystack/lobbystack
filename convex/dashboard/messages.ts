@@ -519,6 +519,9 @@ export const removeStagedAttachment = mutation({
     }
 
     await ctx.storage.delete(attachment.storageId);
+    if (attachment.previewStorageId) {
+      await ctx.storage.delete(attachment.previewStorageId);
+    }
     await ctx.db.delete(attachment._id);
 
     return null;
@@ -998,13 +1001,6 @@ export const sendSmsReply = action({
       throw new Error("Message body or attachments are required.");
     }
 
-    await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
-      businessId: args.businessId,
-      conversationId: args.conversationId,
-      automationState: "human_handoff",
-      actorUserId: userId,
-    });
-
     const messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
       businessId: replyContext.businessId,
       conversationId: replyContext.conversationId,
@@ -1046,6 +1042,13 @@ export const sendSmsReply = action({
 
     await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
       messageId,
+    });
+
+    await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      automationState: "human_handoff",
+      actorUserId: userId,
     });
 
     return { messageId };

@@ -206,6 +206,36 @@ describe("Dashboard SMS replies", () => {
     });
   });
 
+  it("keeps AI active when the operator SMS send fails", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-send-failure",
+    });
+
+    sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio unavailable"));
+
+    await expect(
+      authed.action(api.dashboard.messages.sendSmsReply, {
+        businessId,
+        conversationId,
+        body: "Please call us back",
+      }),
+    ).rejects.toThrow("Twilio unavailable");
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db.get("conversations", conversationId);
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .collect();
+      const outbound = messages.find((message) => message.direction === "outbound");
+
+      expect(conversation?.automationState ?? "ai_active").toBe("ai_active");
+      expect(conversation?.automationPausedAt).toBeUndefined();
+      expect(outbound?.status).toBe("failed");
+    });
+  });
+
   it("manually pauses and resumes conversation automation", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId, conversationId } = await seedSmsConversation(t, {
@@ -380,6 +410,75 @@ describe("Dashboard SMS replies", () => {
       const metadata = await ctx.db.system.get("_storage", preview!.storageId);
       expect(metadata).not.toBeNull();
       expect(metadata?.size).toBe(preview?.byteLength);
+    });
+  });
+
+  it("deletes preview blobs when a staged image attachment is removed", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-remove-preview",
+    });
+
+    const pngBuffer = await createTinyPngBuffer();
+    const { storageId } = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(
+        new Blob([Uint8Array.from(pngBuffer)], {
+          type: "image/png",
+        }),
+      );
+      return { storageId };
+    });
+
+    const preview = await authed.action(
+      internal.integrations.messageMedia.createImagePreviewForStorage,
+      {
+        storageId,
+        fileName: "preview-delete.png",
+        contentType: "image/png",
+      },
+    );
+
+    const { attachmentId, previewStorageId } = await t.run(async (ctx) => {
+      const attachmentId = await ctx.db.insert("message_attachment_uploads", {
+        businessId,
+        conversationId,
+        uploaderUserId: userId,
+        storageId,
+        fileName: "preview-delete.png",
+        contentType: "image/png",
+        byteLength: pngBuffer.length,
+        previewStorageId: preview!.storageId,
+        previewFileName: preview!.fileName,
+        previewContentType: preview!.contentType,
+        previewByteLength: preview!.byteLength,
+        deliveryMode: "mms",
+        status: "staged",
+      });
+
+      return { attachmentId, previewStorageId: preview!.storageId };
+    });
+
+    await authed.mutation(api.dashboard.messages.removeStagedAttachment, {
+      businessId,
+      conversationId,
+      attachmentId,
+    });
+
+    await t.run(async (ctx) => {
+      const attachment = await ctx.db.get("message_attachment_uploads", attachmentId);
+      const originalMetadata = await ctx.db.system.get("_storage", storageId);
+      const previewMetadata = await ctx.db.system.get("_storage", previewStorageId);
+      expect(attachment).toBeNull();
+      expect(originalMetadata).toBeNull();
+      expect(previewMetadata).toBeNull();
+
+      const previewRecords = await ctx.db
+        .query("message_attachment_uploads")
+        .withIndex("by_business_id_and_conversation_id", (q) =>
+          q.eq("businessId", businessId).eq("conversationId", conversationId),
+        )
+        .collect();
+      expect(previewRecords).toHaveLength(0);
     });
   });
 

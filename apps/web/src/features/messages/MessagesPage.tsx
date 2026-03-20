@@ -507,9 +507,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     }
 
     setIsUploading(true);
+    const nextAttachments: Array<StagedAttachment> = [];
     try {
-      const nextAttachments: Array<StagedAttachment> = [];
-
       for (const file of selectedFiles) {
         const uploadUrl = await generateAttachmentUploadUrl({
           businessId,
@@ -548,6 +547,18 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       setStagedAttachments((current) => [...current, ...nextAttachments]);
     } catch (error) {
+      if (nextAttachments.length > 0) {
+        revokePreviewUrls(nextAttachments);
+        await Promise.allSettled(
+          nextAttachments.map((attachment) =>
+            removeStagedAttachment({
+              businessId,
+              conversationId: selectedConversationId,
+              attachmentId: attachment.id,
+            }),
+          ),
+        );
+      }
       setErrorMessage(error instanceof Error ? error.message : t("page.uploadFailed"));
     } finally {
       setIsUploading(false);
