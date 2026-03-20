@@ -66,6 +66,26 @@ async function getContact(
   return await ctx.db.get(contactId);
 }
 
+async function getPreferredConversationSmsSenderPhoneNumber(
+  ctx: QueryCtx,
+  conversationId: Id<"conversations">,
+): Promise<string | null> {
+  const messages = ctx.db
+    .query("messages")
+    .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+    .order("desc");
+
+  for await (const message of messages) {
+    if (message.channel !== "sms" || message.direction !== "outbound" || !message.fromPhoneNumber) {
+      continue;
+    }
+
+    return message.fromPhoneNumber;
+  }
+
+  return null;
+}
+
 function getLatestMessagePreviewKind(
   message: Doc<"messages"> | null,
 ): "text" | "attachment_image" | "attachment_file" {
@@ -317,7 +337,14 @@ export const getSmsReplyContext = internalQuery({
       throw new Error("This contact has opted out of SMS messages.");
     }
 
-    const fromPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
+    const preferredSenderPhoneNumber = await getPreferredConversationSmsSenderPhoneNumber(
+      ctx,
+      conversation._id,
+    );
+    const fromPhoneNumber = selectSmsSenderPhoneNumber(
+      phoneNumbers,
+      preferredSenderPhoneNumber ?? undefined,
+    );
     if (!fromPhoneNumber) {
       throw new Error(
         "At least one active SMS-enabled phone number must be mapped to the business.",
@@ -1063,17 +1090,22 @@ export const getConversationThread = query({
         summary: session.summary!,
       }));
 
-    const legacyOutcome =
-      sessions.length === 0
-        ? ((await buildConversationOutcome(ctx, {
-            conversation,
-          })) as ConversationOutcome)
-        : null;
+    const hasLegacyMessages = hydratedMessages.some(
+      (message) => message.conversationSessionId === null,
+    );
+    const legacyOutcome = (await buildConversationOutcome(ctx, {
+      conversation,
+    })) as ConversationOutcome;
     const legacySummaryItem =
-      sessions.length === 0 && legacyOutcome
+      (sessions.length === 0 || hasLegacyMessages) && legacyOutcome
         ? buildLegacySessionSummaryItem({
             outcome: legacyOutcome,
-            createdAt: hydratedMessages[hydratedMessages.length - 1]?.createdAt ?? conversation._creationTime,
+            createdAt:
+              [...hydratedMessages]
+                .reverse()
+                .find((message) => message.conversationSessionId === null)?.createdAt ??
+              hydratedMessages[hydratedMessages.length - 1]?.createdAt ??
+              conversation._creationTime,
             legacySummary: conversation.summary ?? null,
           })
         : null;

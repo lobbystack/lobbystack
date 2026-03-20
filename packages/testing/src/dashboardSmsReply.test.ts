@@ -206,6 +206,46 @@ describe("Dashboard SMS replies", () => {
     });
   });
 
+  it("reuses the conversation's prior sender number for manual replies", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-prior-sender",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550121",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Following up from the secondary line.",
+        fromPhoneNumber: "+14165550121",
+        status: "sent",
+        aiGenerated: true,
+      });
+    });
+
+    await authed.action(api.dashboard.messages.sendSmsReply, {
+      businessId,
+      conversationId,
+      body: "Replying from the same number",
+    });
+
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550198",
+      from: "+14165550121",
+      body: "Replying from the same number",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+  });
+
   it("keeps AI active when the operator SMS send fails", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId, conversationId } = await seedSmsConversation(t, {

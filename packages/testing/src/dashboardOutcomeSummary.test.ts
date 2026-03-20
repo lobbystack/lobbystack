@@ -602,6 +602,52 @@ describe("Dashboard outcome summaries", () => {
     });
   });
 
+  it("keeps the legacy conversation summary visible after new sessions are created", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-legacy-summary");
+
+    const { conversationId, contactId } = await t.run(async (ctx) => {
+      const { contactId, conversationId } = await insertContactConversation(ctx, businessId);
+      await ctx.db.patch(conversationId, {
+        currentIntent: "message_taking",
+        summary: "Callback: +14165550199\n\nPlease call me back tomorrow morning.",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "Please call me back tomorrow morning.",
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return { conversationId, contactId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId,
+      contactId,
+      channel: "sms",
+      body: "Also, are you open in the afternoon?",
+    });
+
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+
+    const summaryItems = getSessionSummaryItems(thread);
+    expect(summaryItems).toHaveLength(1);
+    expect(summaryItems[0]).toMatchObject({
+      summaryKind: "message_taking",
+      summary: {
+        kind: "message_taking",
+        summary: expect.stringContaining("Callback: +14165550199"),
+      },
+    });
+  });
+
   it("finalizes voice sessions per call instead of waiting for inactivity", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-session-voice");
