@@ -589,6 +589,132 @@ describe("Twilio SMS delivery flow", () => {
     );
   });
 
+  it("builds a non-empty AI prompt for media-only inbound MMS", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-mms-media-only",
+      status: "queued",
+    });
+
+    const { smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-sms-media-only-prompt",
+        name: "Twilio SMS Media Only Prompt",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550165",
+      });
+
+      return {
+        smsNumber: "+14165550165",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-mms-media-only",
+      From: "+14165550186",
+      To: smsNumber,
+      Body: "",
+      NumMedia: "1",
+      MediaUrl0: "https://example.com/image.jpg",
+      MediaContentType0: "image/png",
+    });
+
+    expect(response.status).toBe(200);
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("Customer attachments:"),
+      }),
+    );
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("customer-photo.png"),
+      }),
+    );
+  });
+
+  it("falls back to a fresh storage URL after an attachment token expires", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "twilio-expired-attachment-token-owner";
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-expired-token",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-expired-attachment-token",
+        name: "Twilio Expired Attachment Token",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550166",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+
+      return {
+        businessId,
+        smsNumber: "+14165550166",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-expired-token",
+      From: "+14165550187",
+      To: smsNumber,
+      Body: "Photo attached",
+      NumMedia: "1",
+      MediaUrl0: "https://example.com/image.jpg",
+      MediaContentType0: "image/png",
+    });
+    expect(response.status).toBe(200);
+
+    const { conversationId, expiredDownloadUrl } = await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      const inbound = messages.find((message) => message.direction === "inbound");
+      const tokens = await ctx.db
+        .query("message_attachment_download_tokens")
+        .withIndex("by_message_id", (q) => q.eq("messageId", inbound!._id))
+        .collect();
+
+      for (const token of tokens) {
+        await ctx.db.patch(token._id, {
+          expiresAt: new Date(0).toISOString(),
+        });
+      }
+
+      return {
+        conversationId: conversation!._id,
+        expiredDownloadUrl: inbound?.media?.[0]?.url ?? null,
+      };
+    });
+
+    const authed = t.withIdentity({ subject });
+    const thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    const inboundWithAttachment = thread.messages.find((message) =>
+      message.attachments.some((attachment) => attachment.fileName === "customer-photo.png"),
+    );
+
+    expect(inboundWithAttachment?.attachments[0]?.downloadUrl).toBeTruthy();
+    expect(inboundWithAttachment?.attachments[0]?.downloadUrl).not.toBe(expiredDownloadUrl);
+  });
+
   it("repairs legacy external inbound media into previewable stored attachments", async () => {
     const t = convexTest(schema, convexModules);
     const subject = "twilio-legacy-media-repair-owner";

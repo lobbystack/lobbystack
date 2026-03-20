@@ -106,17 +106,26 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
     setErrorMessage(null);
 
     try {
+      const normalizedTwilioPhoneSid = twilioPhoneSid.trim();
       const result = await savePhoneNumber({
         businessId: props.businessId,
         ...(selectedPhoneNumber?._id ? { phoneNumberId: selectedPhoneNumber._id } : {}),
         e164: e164.replace(/\s+/g, ""),
-        ...(twilioPhoneSid.trim() ? { twilioPhoneSid: twilioPhoneSid.trim() } : {}),
+        ...(normalizedTwilioPhoneSid
+          ? { twilioPhoneSid: normalizedTwilioPhoneSid }
+          : selectedPhoneNumber
+            ? { twilioPhoneSid: null }
+            : {}),
         voiceEnabled,
         smsEnabled,
         status,
       });
 
       setSelectedPhoneNumberKey(String(result.phoneNumberId));
+      if (result.smsWebhookStatus === "failed") {
+        setErrorMessage(result.smsWebhookLastError ?? t("settings:phoneRouting.saveFailed"));
+        return;
+      }
       setSaveMessage(
         selectedPhoneNumber
           ? t("settings:phoneRouting.saved")

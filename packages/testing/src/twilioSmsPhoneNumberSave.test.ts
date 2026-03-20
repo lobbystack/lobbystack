@@ -177,6 +177,42 @@ describe("Twilio SMS phone-number save flow", () => {
     expect(updateIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
+  it("lets operators clear a previously saved Twilio SID", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const created = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      e164: "+14165550129",
+      twilioPhoneSid: "PN-clear-me",
+      voiceEnabled: true,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    const cleared = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      phoneNumberId: created.phoneNumberId as Id<"phone_numbers">,
+      e164: "+14165550129",
+      twilioPhoneSid: null,
+      voiceEnabled: true,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    expect(cleared.smsWebhookStatus).toBe("not_configured");
+
+    const configuration = await authed.query(api.businesses.catalog.getBusinessConfiguration, {
+      businessId,
+    });
+    expect(configuration.phoneNumbers[0]).toMatchObject({
+      e164: "+14165550129",
+      smsWebhookStatus: "not_configured",
+    });
+    expect(configuration.phoneNumbers[0]?.twilioPhoneSid).toBeUndefined();
+  });
+
   it("keeps the phone number saved and records a failed sync when Twilio registration fails", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);

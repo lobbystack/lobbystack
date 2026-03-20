@@ -727,12 +727,16 @@ async function hydrateMessageAttachments(
   ctx: QueryCtx,
   message: Doc<"messages">,
 ) {
+  const now = Date.now();
   const tokens = await ctx.db
     .query("message_attachment_download_tokens")
     .withIndex("by_message_id", (q) => q.eq("messageId", message._id))
     .collect();
   const stableUrlByStorageId = new Map<string, string>();
   for (const token of tokens) {
+    if (Date.parse(token.expiresAt) < now) {
+      continue;
+    }
     stableUrlByStorageId.set(String(token.storageId), buildMessageAttachmentDownloadUrl(token.nonce));
   }
 
@@ -740,16 +744,16 @@ async function hydrateMessageAttachments(
     (message.media ?? []).map(async (attachment: MessageMediaRecord, index) => {
       const contentType = attachment.contentType ?? "application/octet-stream";
       const stableUrl =
-        attachment.url ??
-        (attachment.storageId ? stableUrlByStorageId.get(String(attachment.storageId)) ?? null : null);
+        attachment.storageId
+          ? (stableUrlByStorageId.get(String(attachment.storageId)) ?? null)
+          : (attachment.url ?? null);
       const signedUrl =
         !stableUrl && attachment.storageId ? await ctx.storage.getUrl(attachment.storageId) : null;
       const resolvedUrl = stableUrl ?? signedUrl ?? null;
       const stablePreviewUrl =
-        attachment.previewUrl ??
-        (attachment.previewStorageId
-          ? stableUrlByStorageId.get(String(attachment.previewStorageId)) ?? null
-          : null);
+        attachment.previewStorageId
+          ? (stableUrlByStorageId.get(String(attachment.previewStorageId)) ?? null)
+          : (attachment.previewUrl ?? null);
       const signedPreviewUrl =
         !stablePreviewUrl && attachment.previewStorageId
           ? await ctx.storage.getUrl(attachment.previewStorageId)

@@ -34,7 +34,7 @@ const phoneNumberSaveArgs = {
   businessId: v.id("businesses"),
   phoneNumberId: v.optional(v.id("phone_numbers")),
   e164: v.string(),
-  twilioPhoneSid: v.optional(v.string()),
+  twilioPhoneSid: v.optional(v.union(v.string(), v.null())),
   voiceEnabled: v.boolean(),
   smsEnabled: v.boolean(),
   status: v.string(),
@@ -44,7 +44,7 @@ type PhoneNumberSaveArgs = {
   businessId: Id<"businesses">;
   phoneNumberId?: Id<"phone_numbers">;
   e164: string;
-  twilioPhoneSid?: string;
+  twilioPhoneSid?: string | null;
   voiceEnabled: boolean;
   smsEnabled: boolean;
   status: string;
@@ -556,7 +556,12 @@ export const upsertPhoneNumberInternal = internalMutation({
         throw new Error("Phone number not found for this business.");
       }
 
-      const nextTwilioPhoneSid = args.twilioPhoneSid ?? existingPhoneNumber.twilioPhoneSid;
+      const nextTwilioPhoneSid =
+        args.twilioPhoneSid === null
+          ? undefined
+          : args.twilioPhoneSid !== undefined
+            ? args.twilioPhoneSid
+            : existingPhoneNumber.twilioPhoneSid;
       const nextRecord = buildPhoneNumberWithWebhookState(
         {
           businessId: existingPhoneNumber.businessId,
@@ -588,19 +593,20 @@ export const upsertPhoneNumberInternal = internalMutation({
       } satisfies PhoneNumberUpsertInternalResult;
     }
 
+    const nextTwilioPhoneSid = args.twilioPhoneSid ?? undefined;
     const nextRecord = buildPhoneNumberWithWebhookState(
       {
         businessId: args.businessId,
         e164: args.e164,
-        ...(args.twilioPhoneSid !== undefined
-          ? { twilioPhoneSid: args.twilioPhoneSid }
+        ...(nextTwilioPhoneSid !== undefined
+          ? { twilioPhoneSid: nextTwilioPhoneSid }
           : {}),
         voiceEnabled: args.voiceEnabled,
         smsEnabled: args.smsEnabled,
         status: args.status,
       },
       shouldSyncSmsWebhook({
-        twilioPhoneSid: args.twilioPhoneSid,
+        twilioPhoneSid: nextTwilioPhoneSid,
         smsEnabled: args.smsEnabled,
         status: args.status,
       })
@@ -614,7 +620,7 @@ export const upsertPhoneNumberInternal = internalMutation({
       phoneNumberId,
       smsWebhookStatus: nextRecord.smsWebhookStatus ?? "not_configured",
       shouldSyncSmsWebhook: shouldSyncSmsWebhook({
-        twilioPhoneSid: args.twilioPhoneSid,
+        twilioPhoneSid: nextTwilioPhoneSid,
         smsEnabled: args.smsEnabled,
         status: args.status,
       }),

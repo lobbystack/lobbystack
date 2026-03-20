@@ -339,6 +339,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const allAttachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const stagedAttachmentsRef = useRef<Array<StagedAttachment>>([]);
 
   const [selectedConversationId, setSelectedConversationId] = useState<Id<"conversations"> | undefined>();
   const [mobileSelectedConversationId, setMobileSelectedConversationId] = useState<
@@ -416,10 +417,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   ]);
 
   useEffect(() => {
-    return () => {
-      revokePreviewUrls(stagedAttachments);
-    };
+    stagedAttachmentsRef.current = stagedAttachments;
   }, [stagedAttachments]);
+
+  useEffect(() => {
+    return () => {
+      revokePreviewUrls(stagedAttachmentsRef.current);
+    };
+  }, []);
 
   if (!businessId) {
     return <BusinessSetupCard />;

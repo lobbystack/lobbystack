@@ -10,7 +10,11 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
-import { buildLinkOnlyAttachmentText } from "../lib/messageAttachments";
+import {
+  buildLinkOnlyAttachmentText,
+  formatAttachmentDisplayName,
+  isImageAttachment,
+} from "../lib/messageAttachments";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
@@ -185,6 +189,32 @@ function classifySmsConsentUpdate(input: {
   }
 
   return null;
+}
+
+function buildInboundSmsPrompt(input: {
+  body: string;
+  media?: Array<MessageMediaAttachment>;
+}): string {
+  const body = input.body.trim();
+  if (!input.media || input.media.length === 0) {
+    return body;
+  }
+
+  const attachmentLines = input.media.map((attachment, index) => {
+    const contentType = attachment.contentType ?? "application/octet-stream";
+    const label = formatAttachmentDisplayName({
+      fileName: attachment.fileName ?? null,
+      contentType: attachment.contentType ?? null,
+      index,
+    });
+    const kind = isImageAttachment(contentType) ? "Photo" : "File";
+
+    return `- ${kind}: ${label}`;
+  });
+
+  return [body, `Customer attachments:\n${attachmentLines.join("\n")}`]
+    .filter((part) => part.length > 0)
+    .join("\n\n");
 }
 
 export const getLatestOutboundReply = internalQuery({
@@ -937,10 +967,14 @@ export const handleTwilioSmsInbound = internalAction({
       return { businessId: phoneNumber.businessId, conversationId, reply: null };
     }
 
+    const prompt = buildInboundSmsPrompt({
+      body: args.body,
+      ...(normalizedMedia ? { media: normalizedMedia } : {}),
+    });
     const rawReply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
       businessId: phoneNumber.businessId,
       conversationId,
-      prompt: args.body,
+      prompt,
     });
     const reply = rawReply.trim() || "I'm sorry, could you rephrase that?";
     const appointmentId: Id<"appointments"> | null = await ctx.runMutation(
