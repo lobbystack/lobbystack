@@ -139,6 +139,25 @@ type FinalizeStagedAttachmentContextResult = {
   byteLength: number;
 };
 
+type ConversationAutomationState = "ai_active" | "human_handoff";
+
+function resolveConversationAutomationState(
+  conversation: Pick<
+    Doc<"conversations">,
+    "automationState"
+  >,
+): ConversationAutomationState {
+  return conversation.automationState === "human_handoff" ? "human_handoff" : "ai_active";
+}
+
+function formatOperatorDisplayName(user: Doc<"users"> | null): string | null {
+  if (!user) {
+    return null;
+  }
+
+  return user.displayName ?? user.name ?? user.email ?? null;
+}
+
 async function requireDashboardMessagesUserId(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -259,6 +278,44 @@ export const getSmsReplyContext = internalQuery({
       fromPhoneNumber,
       attachments,
     };
+  },
+});
+
+export const setConversationAutomationState = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    automationState: v.union(v.literal("ai_active"), v.literal("human_handoff")),
+    actorUserId: v.id("users"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation || conversation.businessId !== args.businessId) {
+      throw new Error("Conversation not found.");
+    }
+    if (conversation.channel !== "sms") {
+      throw new Error("Only SMS conversations support human handoff controls.");
+    }
+
+    if (args.automationState === "human_handoff") {
+      await ctx.db.patch(args.conversationId, {
+        automationState: "human_handoff",
+        automationPausedAt: new Date().toISOString(),
+        automationPausedByUserId: args.actorUserId,
+      });
+      return null;
+    }
+
+    const { _id, _creationTime, automationPausedAt, automationPausedByUserId, ...rest } = conversation;
+    void _id;
+    void _creationTime;
+    void automationPausedAt;
+    void automationPausedByUserId;
+    await ctx.db.replace(args.conversationId, {
+      ...rest,
+      automationState: "ai_active",
+    });
+    return null;
   },
 });
 
@@ -791,6 +848,11 @@ export const getConversationThread = query({
         id: conversation._id,
         channel: conversation.channel,
         status: conversation.status,
+        automationState: resolveConversationAutomationState(conversation),
+        automationPausedAt: conversation.automationPausedAt ?? null,
+        automationPausedByName: conversation.automationPausedByUserId
+          ? formatOperatorDisplayName(await ctx.db.get(conversation.automationPausedByUserId))
+          : null,
         summary: conversation.summary ?? null,
         currentIntent: conversation.currentIntent ?? null,
       },
@@ -836,6 +898,13 @@ export const sendSmsReply = action({
       throw new Error("Message body or attachments are required.");
     }
 
+    await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      automationState: "human_handoff",
+      actorUserId: userId,
+    });
+
     const messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
       businessId: replyContext.businessId,
       conversationId: replyContext.conversationId,
@@ -874,6 +943,40 @@ export const sendSmsReply = action({
     });
 
     return { messageId };
+  },
+});
+
+export const pauseConversationAutomation = action({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: ActionCtx, args): Promise<null> => {
+    const userId = await requireDashboardMessagesUserId(ctx, args.businessId);
+    await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      automationState: "human_handoff",
+      actorUserId: userId,
+    });
+    return null;
+  },
+});
+
+export const resumeConversationAutomation = action({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx: ActionCtx, args): Promise<null> => {
+    const userId = await requireDashboardMessagesUserId(ctx, args.businessId);
+    await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      automationState: "ai_active",
+      actorUserId: userId,
+    });
+    return null;
   },
 });
 

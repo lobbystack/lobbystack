@@ -348,6 +348,68 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("stores inbound SMS during human handoff and suppresses AI replies", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-human-handoff",
+        name: "Twilio Human Handoff",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550128",
+      });
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550192",
+      });
+      await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+        automationState: "human_handoff",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550128",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-handoff-1",
+      From: "+14165550192",
+      To: smsNumber,
+      Body: "I have another question",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      expect(messages).toHaveLength(1);
+      expect(messages[0]?.direction).toBe("inbound");
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-handoff-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "conversations",
+        status: "processed_human_handoff",
+      });
+    });
+  });
+
   it("clears opt-out on START and resumes reply generation", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({

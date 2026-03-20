@@ -178,6 +178,7 @@ describe("Dashboard SMS replies", () => {
         .query("messages")
         .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
         .collect();
+      const conversation = await ctx.db.get("conversations", conversationId);
       const outbound = messages.find((message) => message.direction === "outbound");
 
       expect(outbound).toMatchObject({
@@ -191,7 +192,44 @@ describe("Dashboard SMS replies", () => {
         providerStatus: "queued",
         aiGenerated: false,
       });
+      expect(conversation).toMatchObject({
+        automationState: "human_handoff",
+      });
+      expect(conversation?.automationPausedAt).toBeTruthy();
+      expect(conversation?.automationPausedByUserId).toBeDefined();
     });
+  });
+
+  it("manually pauses and resumes conversation automation", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-handoff-toggle",
+    });
+
+    await authed.action(api.dashboard.messages.pauseConversationAutomation, {
+      businessId,
+      conversationId,
+    });
+
+    let thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    expect(thread.conversation.automationState).toBe("human_handoff");
+    expect(thread.conversation.automationPausedAt).toBeTruthy();
+
+    await authed.action(api.dashboard.messages.resumeConversationAutomation, {
+      businessId,
+      conversationId,
+    });
+
+    thread = await authed.query(api.dashboard.messages.getConversationThread, {
+      businessId,
+      conversationId,
+    });
+    expect(thread.conversation.automationState).toBe("ai_active");
+    expect(thread.conversation.automationPausedAt).toBeNull();
+    expect(thread.conversation.automationPausedByName).toBeNull();
   });
 
   it("sends images as MMS media and unsupported office documents as secure links", async () => {

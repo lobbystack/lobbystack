@@ -11,6 +11,7 @@ import {
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
+  Bot,
   Download,
   FileText,
   Globe,
@@ -20,6 +21,7 @@ import {
   Plus,
   Search as SearchIcon,
   Send,
+  User,
   X,
 } from "lucide-react";
 import type { TFunction } from "i18next";
@@ -72,6 +74,9 @@ type ThreadSessionSummary = {
 type ConversationThread = {
   conversation: {
     channel: string;
+    automationState: "ai_active" | "human_handoff";
+    automationPausedAt: string | null;
+    automationPausedByName: string | null;
   };
   contact: {
     name: string | null;
@@ -284,6 +289,34 @@ function MessageAttachmentPreview({
   );
 }
 
+function formatAutomationPausedByline(
+  conversation: ConversationThread["conversation"],
+  locale: string,
+  t: TFunction<"messages">,
+): string | null {
+  if (conversation.automationState !== "human_handoff") {
+    return null;
+  }
+
+  if (conversation.automationPausedByName && conversation.automationPausedAt) {
+    return t("page.handoffPausedByWithTime", {
+      name: conversation.automationPausedByName,
+      time: formatDateTime(conversation.automationPausedAt, locale, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }),
+    });
+  }
+
+  if (conversation.automationPausedByName) {
+    return t("page.handoffPausedBy", {
+      name: conversation.automationPausedByName,
+    });
+  }
+
+  return null;
+}
+
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
   const conversations = useQuery(
@@ -291,9 +324,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     businessId ? { businessId } : "skip",
   ) as Array<ConversationSummary> | undefined;
   const sendSmsReply = useAction(api.dashboard.messages.sendSmsReply);
+  const pauseConversationAutomation = useAction(api.dashboard.messages.pauseConversationAutomation);
   const repairConversationAttachmentPreviews = useAction(
     api.dashboard.messages.repairConversationAttachmentPreviews,
   );
+  const resumeConversationAutomation = useAction(api.dashboard.messages.resumeConversationAutomation);
   const generateAttachmentUploadUrl = useMutation(api.dashboard.messages.generateAttachmentUploadUrl);
   const finalizeStagedAttachment = useAction(api.dashboard.messages.finalizeStagedAttachment);
   const removeStagedAttachment = useMutation(api.dashboard.messages.removeStagedAttachment);
@@ -311,6 +346,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdatingAutomation, setIsUpdatingAutomation] = useState(false);
   const [stagedAttachments, setStagedAttachments] = useState<Array<StagedAttachment>>([]);
   const [repairAttemptedConversationIds, setRepairAttemptedConversationIds] = useState<Array<string>>([]);
 
@@ -382,6 +418,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   const isSmsConversation = thread?.conversation.channel === "sms";
+  const automationState = thread?.conversation.automationState ?? "ai_active";
+  const isHumanHandoff = isSmsConversation && automationState === "human_handoff";
+  const pausedByline = thread
+    ? formatAutomationPausedByline(thread.conversation, i18n.language, t)
+    : null;
   const canSendMessage =
     Boolean(isSmsConversation) &&
     !isSending &&
@@ -551,6 +592,33 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     }
   }
 
+  async function handleAutomationModeChange(nextState: "ai_active" | "human_handoff") {
+    if (!businessId || !selectedConversationId || !isSmsConversation || automationState === nextState) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsUpdatingAutomation(true);
+
+    try {
+      if (nextState === "human_handoff") {
+        await pauseConversationAutomation({
+          businessId,
+          conversationId: selectedConversationId,
+        });
+      } else {
+        await resumeConversationAutomation({
+          businessId,
+          conversationId: selectedConversationId,
+        });
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : t("page.automationUpdateFailed"));
+    } finally {
+      setIsUpdatingAutomation(false);
+    }
+  }
+
   return (
     <section className="flex h-full min-w-0 gap-6">
       <input
@@ -704,6 +772,42 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         thread.contact?.email ??
                         t("page.noChannel")}
                     </span>
+                    {isSmsConversation ? (
+                      <div className="mt-2 inline-flex items-center rounded-full border border-border bg-background p-1 shadow-xs">
+                        <button
+                          className={cn(
+                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+                            automationState === "ai_active"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                          disabled={isUpdatingAutomation}
+                          onClick={() => {
+                            void handleAutomationModeChange("ai_active");
+                          }}
+                          type="button"
+                        >
+                          <Bot className="size-3.5" />
+                          {t("page.automationAiActive")}
+                        </button>
+                        <button
+                          className={cn(
+                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+                            automationState === "human_handoff"
+                              ? "bg-foreground text-background"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                          disabled={isUpdatingAutomation}
+                          onClick={() => {
+                            void handleAutomationModeChange("human_handoff");
+                          }}
+                          type="button"
+                        >
+                          <User className="size-3.5" />
+                          {t("page.automationHumanHandoff")}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -782,6 +886,40 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <form className="flex w-full flex-none flex-col gap-2" onSubmit={handleSendMessage}>
+                {isSmsConversation ? (
+                  <div
+                    className={cn(
+                      "flex items-start gap-3 rounded-md border px-3 py-2 text-sm",
+                      isHumanHandoff
+                        ? "border-amber-200/80 bg-amber-50 text-amber-950"
+                        : "border-border/80 bg-muted/40 text-muted-foreground",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "mt-1 size-2 shrink-0 rounded-full",
+                        isHumanHandoff ? "bg-amber-500" : "bg-emerald-500",
+                      )}
+                    />
+                    <div className="min-w-0">
+                      <p className={cn("font-medium", isHumanHandoff ? "text-amber-950" : "text-foreground")}>
+                        {isHumanHandoff
+                          ? t("page.handoffPausedTitle")
+                          : t("page.handoffActiveTitle")}
+                      </p>
+                      <p className={cn("text-xs", isHumanHandoff ? "text-amber-900/80" : "text-muted-foreground")}>
+                        {isHumanHandoff
+                          ? t("page.handoffPausedDescription")
+                          : t("page.handoffActiveDescription")}
+                      </p>
+                      {isHumanHandoff && pausedByline ? (
+                        <p className="mt-1 text-xs text-amber-900/80">
+                          {pausedByline}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
                 {stagedAttachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {stagedAttachments.map((attachment) => (
@@ -822,7 +960,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="flex items-center">
                     <Button
                       className="h-8 rounded-md"
-                      disabled={!isSmsConversation || isSending || isUploading}
+                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
                       onClick={() => allAttachmentInputRef.current?.click()}
                       size="icon"
                       type="button"
@@ -835,7 +973,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     <span className="sr-only">Chat Text Box</span>
                     <input
                       className="h-8 w-full bg-inherit focus-visible:outline-hidden"
-                      disabled={!isSmsConversation || isSending || isUploading}
+                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
                       onChange={(event) => setDraftMessage(event.target.value)}
                       placeholder={
                         thread.conversation.channel === "sms"
@@ -848,7 +986,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   </label>
                   <Button
                     className="hidden sm:inline-flex"
-                    disabled={!canSendMessage}
+                    disabled={!canSendMessage || isUpdatingAutomation}
                     size="icon"
                     type="submit"
                     variant="ghost"
@@ -859,7 +997,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 {errorMessage ? <span className="px-1 text-sm text-destructive">{errorMessage}</span> : null}
                 <Button
                   className="h-full sm:hidden"
-                  disabled={!canSendMessage}
+                  disabled={!canSendMessage || isUpdatingAutomation}
                   type="submit"
                 >
                   <Send size={18} /> {t("page.send")}

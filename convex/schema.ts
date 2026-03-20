@@ -255,6 +255,11 @@ export default defineSchema({
     contactId: v.optional(v.id("contacts")),
     channel: v.string(),
     status: v.string(),
+    automationState: v.optional(
+      v.union(v.literal("ai_active"), v.literal("human_handoff")),
+    ),
+    automationPausedAt: v.optional(v.string()),
+    automationPausedByUserId: v.optional(v.id("users")),
     summary: v.optional(v.string()),
     currentIntent: v.optional(v.string()),
     locale: v.optional(runtimeLocaleValidator),

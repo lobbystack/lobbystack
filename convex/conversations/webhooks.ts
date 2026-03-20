@@ -135,6 +135,7 @@ type IngestInboundSmsResult = {
   conversationId: Id<"conversations">;
   contactId: Id<"contacts">;
   replySuppressed: boolean;
+  automationState: "ai_active" | "human_handoff";
 };
 
 const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
@@ -351,6 +352,7 @@ export const ingestInboundSms = internalMutation({
         contactId,
         channel: args.channel,
         status: "open",
+        automationState: "ai_active",
       }));
 
     const messageId = await ctx.db.insert("messages", {
@@ -383,11 +385,15 @@ export const ingestInboundSms = internalMutation({
     }
 
     const nextConsentStatus = consentUpdate?.status ?? existingContact?.smsConsentStatus;
+    const automationState =
+      conversation?.automationState === "human_handoff" ? "human_handoff" : "ai_active";
 
     return {
       conversationId,
       contactId,
-      replySuppressed: nextConsentStatus === "opted_out",
+      replySuppressed:
+        nextConsentStatus === "opted_out" || automationState === "human_handoff",
+      automationState,
     };
   },
 });
@@ -827,7 +833,7 @@ export const handleTwilioSmsInbound = internalAction({
           })
         : undefined;
 
-    const { conversationId, replySuppressed }: IngestInboundSmsResult = await ctx.runMutation(
+    const { conversationId, replySuppressed, automationState }: IngestInboundSmsResult = await ctx.runMutation(
       internal.conversations.webhooks.ingestInboundSms,
       {
         businessId: phoneNumber.businessId,
@@ -847,7 +853,10 @@ export const handleTwilioSmsInbound = internalAction({
           idempotencyKeyId,
           resourceTable: "conversations",
           resourceId: String(conversationId),
-          status: "processed_no_reply",
+          status:
+            automationState === "human_handoff"
+              ? "processed_human_handoff"
+              : "processed_no_reply",
         });
       }
 
