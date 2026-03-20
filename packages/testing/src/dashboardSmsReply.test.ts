@@ -140,6 +140,21 @@ async function createTinyPngBuffer(): Promise<Buffer> {
   return await image.getBuffer(JimpMime.png);
 }
 
+async function waitForCondition(
+  condition: () => boolean,
+  timeoutMs = 1000,
+): Promise<void> {
+  const startedAt = Date.now();
+
+  while (!condition()) {
+    if (Date.now() - startedAt >= timeoutMs) {
+      throw new Error("Timed out waiting for condition.");
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 describe("Dashboard SMS replies", () => {
   beforeEach(() => {
     process.env.CONVEX_SITE_URL = "https://example.convex.site";
@@ -318,6 +333,80 @@ describe("Dashboard SMS replies", () => {
       expect(outbound?.status).toBe("failed");
       expect(stagedAttachment?.status).toBe("staged");
       expect(stagedAttachment?.sentMessageId).toBeUndefined();
+    });
+  });
+
+  it("prevents concurrent replies from reusing the same staged attachment", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-attachment-race",
+    });
+
+    const attachmentId = await t.run(async (ctx) => {
+      return await storeAttachment(ctx, {
+        content: "pdf-file",
+        contentType: "application/pdf",
+        fileName: "details.pdf",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    let resolveFirstSend:
+      | ((value: { sid: string; status: string }) => void)
+      | null = null;
+    sendTwilioMessageMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirstSend = resolve as (value: {
+            sid: string;
+            status: string;
+          }) => void;
+        }),
+    );
+
+    const firstReplyPromise = authed.action(api.dashboard.messages.sendSmsReply, {
+      businessId,
+      conversationId,
+      body: "First reply",
+      attachmentIds: [attachmentId],
+    });
+
+    await waitForCondition(() => sendTwilioMessageMock.mock.calls.length === 1);
+
+    await expect(
+      authed.action(api.dashboard.messages.sendSmsReply, {
+        businessId,
+        conversationId,
+        body: "Second reply",
+        attachmentIds: [attachmentId],
+      }),
+    ).rejects.toThrow("Attachment is no longer available.");
+
+    if (!resolveFirstSend) {
+      throw new Error("Expected first send to be in flight.");
+    }
+
+    resolveFirstSend({
+      sid: "SM-dashboard-reply-race",
+      status: "queued",
+    });
+
+    const firstResult = await firstReplyPromise;
+
+    await t.run(async (ctx) => {
+      const outboundMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .collect();
+      const stagedAttachment = await ctx.db.get("message_attachment_uploads", attachmentId);
+
+      expect(outboundMessages.filter((message) => message.direction === "outbound")).toHaveLength(1);
+      expect(stagedAttachment).toMatchObject({
+        status: "consumed",
+        sentMessageId: firstResult.messageId as Id<"messages">,
+      });
     });
   });
 

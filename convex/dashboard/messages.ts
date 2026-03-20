@@ -773,13 +773,88 @@ export const materializeMessageAttachmentUrls = internalMutation({
   },
 });
 
-export const markStagedAttachmentsConsumed = internalMutation({
+export const claimStagedAttachmentsForSend = internalMutation({
   args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    attachmentIds: v.array(v.id("message_attachment_uploads")),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    for (const attachmentId of args.attachmentIds) {
+      const attachment = await ctx.db.get(attachmentId);
+      if (
+        !attachment ||
+        attachment.businessId !== args.businessId ||
+        attachment.conversationId !== args.conversationId ||
+        attachment.uploaderUserId !== args.userId ||
+        attachment.status !== "staged"
+      ) {
+        throw new Error("Attachment is no longer available.");
+      }
+
+      await ctx.db.patch(attachmentId, {
+        status: "sending",
+      });
+    }
+
+    return null;
+  },
+});
+
+export const releaseStagedAttachmentClaims = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    attachmentIds: v.array(v.id("message_attachment_uploads")),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    for (const attachmentId of args.attachmentIds) {
+      const attachment = await ctx.db.get(attachmentId);
+      if (
+        !attachment ||
+        attachment.businessId !== args.businessId ||
+        attachment.conversationId !== args.conversationId ||
+        attachment.uploaderUserId !== args.userId
+      ) {
+        continue;
+      }
+
+      if (attachment.status !== "sending") {
+        continue;
+      }
+
+      await ctx.db.patch(attachmentId, {
+        status: "staged",
+      });
+    }
+
+    return null;
+  },
+});
+
+export const finalizeStagedAttachmentsConsumed = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
     attachmentIds: v.array(v.id("message_attachment_uploads")),
     messageId: v.id("messages"),
   },
   handler: async (ctx: MutationCtx, args) => {
     for (const attachmentId of args.attachmentIds) {
+      const attachment = await ctx.db.get(attachmentId);
+      if (
+        !attachment ||
+        attachment.businessId !== args.businessId ||
+        attachment.conversationId !== args.conversationId ||
+        attachment.uploaderUserId !== args.userId ||
+        attachment.status !== "sending"
+      ) {
+        throw new Error("Attachment is no longer available.");
+      }
+
       await ctx.db.patch(attachmentId, {
         status: "consumed",
         sentMessageId: args.messageId,
@@ -1163,6 +1238,7 @@ export const sendSmsReply = action({
   ): Promise<{ messageId: Id<"messages"> }> => {
     const body = args.body.trim();
     const userId = await requireDashboardMessagesUserId(ctx, args.businessId);
+    const attachmentIds = args.attachmentIds ?? [];
 
     const replyContext: SmsReplyContextResult = await ctx.runQuery(
       internal.dashboard.messages.getSmsReplyContext,
@@ -1170,7 +1246,7 @@ export const sendSmsReply = action({
         businessId: args.businessId,
         conversationId: args.conversationId,
         userId,
-        ...(args.attachmentIds !== undefined ? { attachmentIds: args.attachmentIds } : {}),
+        ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
       },
     );
 
@@ -1178,51 +1254,81 @@ export const sendSmsReply = action({
       throw new Error("Message body or attachments are required.");
     }
 
-    const outboundAttachments =
-      replyContext.attachments.length > 0
-        ? await cloneSmsReplyAttachments(ctx, replyContext.attachments)
-        : [];
-    const messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
-      businessId: replyContext.businessId,
-      conversationId: replyContext.conversationId,
-      channel: "sms",
-      body,
-      fromPhoneNumber: replyContext.fromPhoneNumber,
-      aiGenerated: false,
-      ...(outboundAttachments.length > 0
-        ? {
-            media: outboundAttachments.map((attachment) => ({
-              storageId: attachment.storageId,
-              fileName: attachment.fileName,
-              contentType: attachment.contentType,
-              byteLength: attachment.byteLength,
-              ...(attachment.previewStorageId
-                ? { previewStorageId: attachment.previewStorageId }
-                : {}),
-              ...(attachment.previewFileName
-                ? { previewFileName: attachment.previewFileName }
-                : {}),
-              ...(attachment.previewContentType
-                ? { previewContentType: attachment.previewContentType }
-                : {}),
-              ...(attachment.previewByteLength
-                ? { previewByteLength: attachment.previewByteLength }
-                : {}),
-              deliveryMode: attachment.deliveryMode,
-            })),
-          }
-        : {}),
-    });
+    let attachmentsClaimed = false;
+    let messageId: Id<"messages"> | null = null;
+    let deliverySucceeded = false;
 
-    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
-      messageId,
-    });
+    try {
+      if (attachmentIds.length > 0) {
+        await ctx.runMutation(internal.dashboard.messages.claimStagedAttachmentsForSend, {
+          businessId: args.businessId,
+          conversationId: args.conversationId,
+          userId,
+          attachmentIds,
+        });
+        attachmentsClaimed = true;
+      }
 
-    if (args.attachmentIds && args.attachmentIds.length > 0) {
-      await ctx.runMutation(internal.dashboard.messages.markStagedAttachmentsConsumed, {
-        attachmentIds: args.attachmentIds,
+      const outboundAttachments =
+        replyContext.attachments.length > 0
+          ? await cloneSmsReplyAttachments(ctx, replyContext.attachments)
+          : [];
+      messageId = await ctx.runMutation(internal.conversations.webhooks.storeOutboundMessage, {
+        businessId: replyContext.businessId,
+        conversationId: replyContext.conversationId,
+        channel: "sms",
+        body,
+        fromPhoneNumber: replyContext.fromPhoneNumber,
+        aiGenerated: false,
+        ...(outboundAttachments.length > 0
+          ? {
+              media: outboundAttachments.map((attachment) => ({
+                storageId: attachment.storageId,
+                fileName: attachment.fileName,
+                contentType: attachment.contentType,
+                byteLength: attachment.byteLength,
+                ...(attachment.previewStorageId
+                  ? { previewStorageId: attachment.previewStorageId }
+                  : {}),
+                ...(attachment.previewFileName
+                  ? { previewFileName: attachment.previewFileName }
+                  : {}),
+                ...(attachment.previewContentType
+                  ? { previewContentType: attachment.previewContentType }
+                  : {}),
+                ...(attachment.previewByteLength
+                  ? { previewByteLength: attachment.previewByteLength }
+                  : {}),
+                deliveryMode: attachment.deliveryMode,
+              })),
+            }
+          : {}),
+      });
+
+      await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
         messageId,
       });
+      deliverySucceeded = true;
+
+      if (attachmentIds.length > 0) {
+        await ctx.runMutation(internal.dashboard.messages.finalizeStagedAttachmentsConsumed, {
+          businessId: args.businessId,
+          conversationId: args.conversationId,
+          userId,
+          attachmentIds,
+          messageId,
+        });
+      }
+    } catch (error) {
+      if (attachmentsClaimed && !deliverySucceeded) {
+        await ctx.runMutation(internal.dashboard.messages.releaseStagedAttachmentClaims, {
+          businessId: args.businessId,
+          conversationId: args.conversationId,
+          userId,
+          attachmentIds,
+        });
+      }
+      throw error;
     }
 
     await ctx.runMutation(internal.dashboard.messages.setConversationAutomationState, {
@@ -1231,6 +1337,10 @@ export const sendSmsReply = action({
       automationState: "human_handoff",
       actorUserId: userId,
     });
+
+    if (!messageId) {
+      throw new Error("Failed to create outbound message.");
+    }
 
     return { messageId };
   },
