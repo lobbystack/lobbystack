@@ -308,6 +308,10 @@ importers:
       '@ai-receptionist/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      lucia:
+        specifier: ^3.2.2
+        version: 3.2.2
 
 packages:
 

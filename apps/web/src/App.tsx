@@ -59,6 +59,7 @@ function PublicOnly(props: { children: ReactNode }) {
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
+  const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
@@ -114,6 +115,13 @@ function WorkspaceShell() {
       businessName={activeBusiness?.name ?? "AI Receptionist"}
       {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       onSignOut={() => void signOut()}
+      {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
+      {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
+      {...(
+        currentUser?.displayName ?? currentUser?.name
+          ? { operatorName: currentUser.displayName ?? currentUser.name! }
+          : {}
+      )}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         <Routes>

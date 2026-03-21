@@ -10,6 +10,9 @@ type AuthenticatedLayoutProps = {
   businessSlug?: string;
   children: ReactNode;
   onSignOut: () => void;
+  operatorAvatar?: string;
+  operatorEmail?: string;
+  operatorName?: string;
 };
 
 function getSidebarDefaultOpen(): boolean {
@@ -29,6 +32,9 @@ export function AuthenticatedLayout({
   businessSlug,
   children,
   onSignOut,
+  operatorAvatar,
+  operatorEmail,
+  operatorName,
 }: AuthenticatedLayoutProps) {
   const defaultOpen = getSidebarDefaultOpen();
 
@@ -45,6 +51,9 @@ export function AuthenticatedLayout({
         businessName={businessName}
         businessSlug={businessSlug}
         onSignOut={onSignOut}
+        {...(operatorAvatar ? { operatorAvatar } : {})}
+        {...(operatorEmail ? { operatorEmail } : {})}
+        {...(operatorName ? { operatorName } : {})}
       />
       <SidebarInset
         className={cn(

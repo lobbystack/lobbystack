@@ -139,6 +139,25 @@
       "transferNumber": "+1 555 123 4567"
     }
   },
+  "account": {
+    "changeEmail": {
+      "label": "Changer le courriel",
+      "description": "Entrez votre nouveau courriel et votre mot de passe actuel.",
+      "newEmailPlaceholder": "Nouveau courriel",
+      "currentPasswordPlaceholder": "Mot de passe actuel",
+      "save": "Enregistrer",
+      "currentEmail": "Courriel actuel : {{email}}",
+      "saved": "Courriel mis a jour vers {{email}}.",
+      "errors": {
+        "invalidPassword": "Le mot de passe actuel est incorrect.",
+        "alreadyExists": "Un compte existe deja avec ce courriel.",
+        "unchanged": "Entrez une adresse courriel differente.",
+        "noEmail": "Aucun courriel n'est configure pour ce compte.",
+        "required": "Entrez une nouvelle adresse courriel.",
+        "failed": "Impossible de mettre a jour votre courriel. Veuillez reessayer."
+      }
+    }
+  },
   "hours": {
     "title": "Heures d'ouverture",
     "description": "Les heures structurées font autorité sur les documents et aident la réceptionniste à répondre correctement aux questions de disponibilité.",

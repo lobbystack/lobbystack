@@ -1,6 +1,14 @@
 import { v } from "convex/values";
 
-import { internalQuery } from "./_generated/server";
+import { internalQuery, query } from "./_generated/server";
+import { getCurrentUser } from "./lib/auth";
+
+export const current = query({
+  args: {},
+  handler: async (ctx) => {
+    return await getCurrentUser(ctx);
+  },
+});
 
 export const resolveAuthenticatedUserForBusiness = internalQuery({
   args: {

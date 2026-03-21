@@ -139,6 +139,25 @@
       "transferNumber": "+1 555 123 4567"
     }
   },
+  "account": {
+    "changeEmail": {
+      "label": "Change email",
+      "description": "Enter your new email and current password.",
+      "newEmailPlaceholder": "New email",
+      "currentPasswordPlaceholder": "Current password",
+      "save": "Save",
+      "currentEmail": "Current email: {{email}}",
+      "saved": "Email updated to {{email}}.",
+      "errors": {
+        "invalidPassword": "Current password is incorrect.",
+        "alreadyExists": "An account with that email already exists.",
+        "unchanged": "Enter a different email address.",
+        "noEmail": "No email is configured for this account yet.",
+        "required": "Enter a new email address.",
+        "failed": "We couldn't update your email. Please try again."
+      }
+    }
+  },
   "hours": {
     "title": "Opening Hours",
     "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",

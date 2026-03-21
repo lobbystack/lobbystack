@@ -213,10 +213,66 @@ export const getCurrentUserForPasswordChange = internalQuery({
       throw new Error("User profile not initialized.");
     }
 
+    const passwordAccount = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) =>
+        q.eq("userId", user._id).eq("provider", "password"),
+      )
+      .unique();
+
     return {
       userId: user._id,
       email: user.email ?? null,
+      passwordAccountEmail: passwordAccount?.providerAccountId ?? null,
     };
+  },
+});
+
+export const updatePasswordAccountEmail = internalMutation({
+  args: {
+    newEmail: v.string(),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const existingAccount = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) =>
+        q.eq("userId", args.userId).eq("provider", "password"),
+      )
+      .unique();
+
+    if (!existingAccount) {
+      throw new Error("Password account not found.");
+    }
+
+    const duplicateAccount = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) =>
+        q.eq("provider", "password").eq("providerAccountId", args.newEmail),
+      )
+      .unique();
+
+    if (duplicateAccount && duplicateAccount._id !== existingAccount._id) {
+      throw new Error("An account with that email already exists.");
+    }
+
+    const duplicateUser = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.newEmail))
+      .unique();
+
+    if (duplicateUser && duplicateUser._id !== args.userId) {
+      throw new Error("An account with that email already exists.");
+    }
+
+    await ctx.db.patch(existingAccount._id, {
+      providerAccountId: args.newEmail,
+    });
+    await ctx.db.patch(args.userId, {
+      email: args.newEmail,
+    });
+
+    return null;
   },
 });
 
@@ -233,12 +289,16 @@ export const changePassword = action({
 
     validatePasswordRequirements(args.newPassword);
 
-    const user = await ctx.runQuery(
-      internal.businesses.catalog.getCurrentUserForPasswordChange,
-      { authSubject: identity.subject },
-    );
+    const user: {
+      userId: Id<"users">;
+      email: string | null;
+      passwordAccountEmail: string | null;
+    } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
+      authSubject: identity.subject,
+    });
+    const accountEmail = user.passwordAccountEmail ?? user.email;
 
-    if (!user.email) {
+    if (!accountEmail) {
       throw new Error("No email is configured for this account.");
     }
 
@@ -247,7 +307,7 @@ export const changePassword = action({
     await retrieveAccount(authCtx, {
       provider: "password",
       account: {
-        id: user.email,
+        id: accountEmail,
         secret: args.currentPassword,
       },
     });
@@ -255,7 +315,7 @@ export const changePassword = action({
     await modifyAccountCredentials(authCtx, {
       provider: "password",
       account: {
-        id: user.email,
+        id: accountEmail,
         secret: args.newPassword,
       },
     });
@@ -267,6 +327,66 @@ export const changePassword = action({
     });
 
     return null;
+  },
+});
+
+export const changeEmail = action({
+  args: {
+    currentPassword: v.string(),
+    newEmail: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ email: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required.");
+    }
+
+    const nextEmail = args.newEmail.trim().toLowerCase();
+    if (!nextEmail) {
+      throw new Error("New email is required.");
+    }
+
+    const user: {
+      userId: Id<"users">;
+      email: string | null;
+      passwordAccountEmail: string | null;
+    } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
+      authSubject: identity.subject,
+    });
+    const accountEmail = user.passwordAccountEmail ?? user.email;
+
+    if (!accountEmail) {
+      throw new Error("No email is configured for this account.");
+    }
+
+    if (accountEmail === nextEmail) {
+      throw new Error("This email is already on your account.");
+    }
+
+    const authCtx = ctx as unknown as Parameters<typeof retrieveAccount>[0];
+
+    await retrieveAccount(authCtx, {
+      provider: "password",
+      account: {
+        id: accountEmail,
+        secret: args.currentPassword,
+      },
+    });
+
+    await ctx.runMutation(internal.businesses.catalog.updatePasswordAccountEmail, {
+      newEmail: nextEmail,
+      userId: user.userId,
+    });
+
+    const sessionId = await getAuthSessionId(authCtx);
+    await invalidateSessions(authCtx, {
+      userId: user.userId,
+      ...(sessionId ? { except: [sessionId] } : {}),
+    });
+
+    return {
+      email: nextEmail,
+    };
   },
 });
 
