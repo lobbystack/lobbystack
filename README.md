@@ -30,6 +30,8 @@ docker/
 5. Seed demo data with `pnpm seed:demo`.
 
 Mock providers are part of the default development path so contributors can exercise flows without live Twilio, OpenAI, calendar, or email credentials.
+Password reset and email-change confirmation use the official Convex Resend component. Setup and local verification steps live in [docs/providers/resend.md](/Users/raphael/Coding/ai-receptionist/docs/providers/resend.md).
+These auth email flows also require `SITE_URL` on the Convex deployment so Convex Auth can build the correct reset and confirmation links.
 
 ## Product Principles
 

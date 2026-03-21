@@ -87,6 +87,15 @@ export default defineSchema({
     .index("email", ["email"])
     .index("phone", ["phone"]),
 
+  pending_email_changes: defineTable({
+    accountId: v.id("authAccounts"),
+    codeHash: v.string(),
+    email: v.string(),
+    expirationTime: v.number(),
+  })
+    .index("by_account_id", ["accountId"])
+    .index("by_code_hash", ["codeHash"]),
+
   businesses: defineTable({
     slug: v.string(),
     name: v.string(),

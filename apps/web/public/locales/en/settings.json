@@ -139,6 +139,26 @@
       "transferNumber": "+1 555 123 4567"
     }
   },
+  "account": {
+    "changeEmail": {
+      "label": "Change email",
+      "description": "Enter your new email and current password. We'll send a confirmation link before we update your sign-in email.",
+      "newEmailPlaceholder": "New email",
+      "currentPasswordPlaceholder": "Current password",
+      "save": "Send confirmation link",
+      "currentEmail": "Current email: {{email}}",
+      "confirmationSent": "We sent a confirmation link to {{email}}.",
+      "errors": {
+        "invalidPassword": "Current password is incorrect.",
+        "alreadyExists": "An account with that email already exists.",
+        "unchanged": "Enter a different email address.",
+        "noEmail": "No email is configured for this account yet.",
+        "missingSiteUrl": "Email confirmation isn't configured yet. Set SITE_URL on the Convex deployment and try again.",
+        "required": "Enter a new email address.",
+        "failed": "We couldn't send a confirmation link. Please try again."
+      }
+    }
+  },
   "hours": {
     "title": "Opening Hours",
     "description": "Structured hours stay authoritative over documents and help the receptionist answer availability questions reliably.",

@@ -1,6 +1,27 @@
 import { v } from "convex/values";
 
-import { internalQuery } from "./_generated/server";
+import { internalQuery, query } from "./_generated/server";
+import { getCurrentUser } from "./lib/auth";
+import { resolveCurrentUserForPasswordCredentials } from "./lib/accountCredentials";
+
+export const current = query({
+  args: {},
+  handler: async (ctx) => {
+    const { user, passwordAccount } = await resolveCurrentUserForPasswordCredentials(ctx);
+    if (!user) {
+      return null;
+    }
+
+    if (!passwordAccount || passwordAccount.providerAccountId === user.email) {
+      return user;
+    }
+
+    return {
+      ...user,
+      email: passwordAccount.providerAccountId,
+    };
+  },
+});
 
 export const resolveAuthenticatedUserForBusiness = internalQuery({
   args: {

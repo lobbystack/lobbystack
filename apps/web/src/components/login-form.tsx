@@ -70,7 +70,15 @@ export function LoginForm({
 
           <div>
             <Field>
-              <FieldLabel htmlFor="login-password">{t("login.password")}</FieldLabel>
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel htmlFor="login-password">{t("login.password")}</FieldLabel>
+                <Link
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                  to="/forgot-password"
+                >
+                  {t("login.forgotPassword")}
+                </Link>
+              </div>
               <Input
                 id="login-password"
                 autoComplete="current-password"

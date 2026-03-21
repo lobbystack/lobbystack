@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "@ai-receptionist/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "lucia": "^3.2.2"
   }
 }

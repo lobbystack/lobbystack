@@ -30,20 +30,26 @@ type AppSidebarProps = {
   businessName: string;
   businessSlug?: string | undefined;
   onSignOut: () => void;
+  operatorAvatar?: string;
+  operatorEmail?: string;
+  operatorName?: string;
 };
 
 export function AppSidebar({
   businessName,
   onSignOut,
+  operatorAvatar,
+  operatorEmail,
+  operatorName,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation(["common", "nav", "settings"]);
-  const operatorEmail = "operator@local";
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
-        name: businessName,
-        email: operatorEmail,
+        name: operatorName ?? businessName,
+        email: operatorEmail ?? "",
+        ...(operatorAvatar ? { avatar: operatorAvatar } : {}),
       },
       teams: [
         {
@@ -92,7 +98,7 @@ export function AppSidebar({
         },
       ],
     }),
-    [businessName, operatorEmail, t],
+    [businessName, operatorAvatar, operatorEmail, operatorName, t],
   );
 
   return (

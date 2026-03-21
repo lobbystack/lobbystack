@@ -1,104 +1,106 @@
 # Security Best Practices Report
 
-Date: 2026-03-20
-
-Scope reviewed:
-- Frontend: `apps/web`
-- Voice gateway: `apps/voice-gateway`
-- Backend and file handling: `convex`
-- Dependency tree: `package.json`, `pnpm-lock.yaml`
-
 ## Executive Summary
 
-This audit found 4 actionable security issues: 2 high severity, 1 medium severity, and 1 low severity. The most important risks are an unauthenticated websocket upgrade path on the Twilio media-stream endpoint and an untrusted image preview pipeline that currently depends on a vulnerable transitive parser. I did not find an obvious broken authorization boundary in the reviewed dashboard-facing Convex functions; the strongest issues are around ingress hardening, file processing, and secure authentication defaults.
+I reviewed the auth and email-delivery changes introduced on `feature/ope-55-resend-auth-email-delivery`, with emphasis on Convex Auth password reset, custom email-change confirmation, Resend integration, and the new settings/auth frontend surfaces.
 
-## High Severity
+I found 2 security issues worth addressing during the audit, and both have now been remediated on this branch:
 
-### S-001: Validate Twilio signatures before accepting `/media-stream` websocket upgrades
+1. An authenticated user can enumerate whether an email address already belongs to another account through the change-email flow.
+2. Email-change confirmation updates a sensitive login credential without invalidating existing sessions, unlike the password-change flow.
 
-Severity: High
-
-Evidence:
-- `apps/voice-gateway/src/http/server.ts:25-41` upgrades any request whose path is `/media-stream` by calling `mediaStreamServer.handleUpgrade(...)` immediately after the pathname check.
-- `apps/voice-gateway/src/telephony/mediaStream.ts:984-988` performs `ensureMediaStreamRequestIsAllowed()` only after the websocket is already established and the first message arrives.
-- `apps/voice-gateway/src/telephony/mediaStream.ts:1115-1137` contains the actual Twilio signature validation and closes invalid sockets after the upgrade has already consumed a websocket connection.
-- `apps/voice-gateway/src/telephony/twilioRequest.ts:35-62` shows the signature helper only needs the URL and header, so this validation can happen during the HTTP upgrade phase.
-
-Why this matters:
-An unauthenticated internet client can complete the websocket upgrade and hold an idle `/media-stream` connection open without ever sending a valid Twilio-signed frame. That creates an avoidable socket and memory exhaustion path on the voice gateway, especially if the service is directly reachable from the public internet.
-
-Recommended fix:
-- Validate the `X-Twilio-Signature` inside the `upgrade` handler before calling `handleUpgrade(...)`.
-- Reject invalid or missing signatures with an HTTP error response and destroy the socket immediately.
-- Keep the in-session validation as defense in depth if desired, but do not rely on message-time validation as the first gate.
-
-### S-002: Remove the vulnerable `file-type` parser from the untrusted image preview path
-
-Severity: High
-
-Evidence:
-- `package.json:18-33` pulls in `jimp` as a production dependency.
-- `pnpm-lock.yaml:2896-2898` locks `file-type@16.5.4`.
-- `convex/integrations/messageMedia.ts:32-45` fetches stored user/Twilio media and passes it into the preview pipeline.
-- `convex/lib/node/imagePreviews.ts:30-45` decodes untrusted blobs with `Jimp.fromBuffer(...)`.
-- `pnpm audit --prod` reports `GHSA-5v7r-6r5c-r473` for `file-type >=13.0.0 <21.3.1`, and `pnpm why file-type` shows that dependency is brought in through `jimp`.
-
-Why this matters:
-The application decodes untrusted uploaded images and inbound message media in a production code path, and that path currently depends on a transitive parser version with a published infinite-loop advisory. A malformed file can therefore tie up preview generation workers and degrade attachment handling availability.
-
-Recommended fix:
-- Upgrade or replace the preview stack so the vulnerable `file-type` version is no longer reachable from production code.
-- Add an explicit dependency override if needed to force a patched version while evaluating a longer-term library change.
-- Keep strict file-size and image-dimension limits ahead of decode so malformed inputs are rejected before expensive parsing work begins.
+I did not find evidence in the changed frontend code of client-side secret exposure, raw HTML injection, or dangerous DOM execution sinks.
 
 ## Medium Severity
 
-### S-003: Enforce server-side per-file upload limits before storage and preview generation
+### SEC-001: Authenticated email enumeration in the change-email flow
 
-Severity: Medium
+- Status: Fixed on this branch. The change-email action now returns the same outward success response for duplicate target emails and suppresses pending-change creation/email delivery when the target is unavailable.
 
-Evidence:
-- `convex/dashboard/messages.ts:582-590` issues upload URLs for attachments without attaching or checking any byte-size constraint.
-- `apps/web/src/features/messages/MessagesPage.tsx:476-535` uploads each selected file as-is and does not apply a client-side size gate before sending it to storage.
-- `convex/dashboard/messages.ts:618-626` reads the uploaded object metadata, but only returns the size instead of enforcing one.
-- `convex/dashboard/messages.ts:693-726` validates content type and immediately generates previews for images, even though no hard per-file limit has been enforced.
-- `convex/lib/messageAttachments.ts:115-150` enforces Twilio's 5 MB MMS total only later when resolving delivery modes, after storage and optional preview work have already happened.
+- Rule ID: REACT-CONFIG-001 / application auth privacy best practice
+- Severity: Medium
+- Location:
+  - [convex/businesses/catalog.ts:123](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L123)
+  - [convex/businesses/catalog.ts:142](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L142)
+  - [apps/web/src/features/settings/SettingsBusinessPage.tsx:200](/Users/raphael/Coding/ai-receptionist/apps/web/src/features/settings/SettingsBusinessPage.tsx#L200)
+  - [apps/web/public/locales/en/settings.json:153](/Users/raphael/Coding/ai-receptionist/apps/web/public/locales/en/settings.json#L153)
+- Evidence:
 
-Why this matters:
-Any authenticated operator can upload arbitrarily large supported files into storage, and images can then be fed into the preview decoder before the system ever rejects them for delivery. That increases storage costs and creates an easy resource-exhaustion path against the preview pipeline, especially when combined with the parser issue above.
+```ts
+if (
+  duplicateAccount &&
+  (!input.currentAccountId || duplicateAccount._id !== input.currentAccountId)
+) {
+  throw new Error("An account with that email already exists.");
+}
+```
 
-Recommended fix:
-- Add a hard server-side per-file maximum in the finalize path and delete oversized blobs immediately.
-- Mirror the same limit in the web client for better UX, but keep the server-side check authoritative.
-- Consider separate limits for image previews versus link-only document attachments.
+```ts
+if (message.includes("already exists")) {
+  return t("account.changeEmail.errors.alreadyExists");
+}
+```
+
+```json
+"alreadyExists": "An account with that email already exists."
+```
+
+- Impact: Any authenticated user can test arbitrary email addresses and learn whether they are already registered in the system, which can aid targeted phishing, credential-stuffing preparation, or user discovery across tenants.
+- Fix: Return the same generic success/error response for both “email already registered” and “confirmation link sent,” while still suppressing the actual email send internally when the target is unavailable.
+- Mitigation: If product UX requires a specific message, restrict visibility to trusted admin roles only and add request telemetry plus throttling for repeated change-email attempts.
+- False positive notes: This is still a privacy/security issue even though the attacker must already be logged in; the question is whether any normal user should be able to probe account existence for arbitrary email addresses.
 
 ## Low Severity
 
-### S-004: Strengthen the password policy beyond a bare 8-character minimum
+### SEC-002: Email-change confirmation does not revoke existing sessions
 
-Severity: Low
+- Status: Fixed on this branch. The confirm-email action now invalidates existing sessions after the email credential change is applied.
 
-Evidence:
-- `convex/lib/passwordPolicy.ts:1-4` accepts any non-empty password with length 8 or more.
-- `convex/auth.ts:1-10` wires that check directly into the live password provider.
+- Rule ID: session hardening after credential changes
+- Severity: Low
+- Location:
+  - [convex/businesses/catalog.ts:322](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L322)
+  - [convex/businesses/catalog.ts:363](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L363)
+  - [convex/businesses/catalog.ts:456](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L456)
+- Evidence:
 
-Why this matters:
-The current rule allows extremely weak passwords such as common dictionary words or low-entropy repeated characters. That leaves account security overly dependent on users choosing strong secrets on their own and weakens the baseline protection against credential stuffing and password reuse.
+The password-change flow explicitly revokes sessions:
 
-Recommended fix:
-- Raise the minimum length and add a blocklist or strength check for common and compromised passwords.
-- Consider adding rate limiting and MFA in the authentication flow if those controls are not already enforced outside this repo.
+```ts
+const sessionId = await getAuthSessionId(authCtx);
+await invalidateSessions(authCtx, {
+  userId: user.userId,
+  ...(sessionId ? { except: [sessionId] } : {}),
+});
+```
 
-## Runtime Verification Notes
+But the email-change confirmation flow updates the credential and returns without any session invalidation:
 
-These items were not scored as formal findings because they may be enforced outside this repository, but they should be verified explicitly:
+```ts
+await ctx.db.patch(account._id, {
+  providerAccountId: nextEmail,
+  emailVerified: nextEmail,
+});
+await ctx.db.patch(user._id, {
+  email: nextEmail,
+  emailVerificationTime: Date.now(),
+});
+await ctx.db.delete(verificationCode._id);
+```
 
-- I did not find repo-visible configuration for `Content-Security-Policy`, `frame-ancestors` / `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, or `X-Content-Type-Options`. `apps/web/index.html:1-12` contains no meta-based fallback either. If these headers are set at the CDN or hosting layer, document that ownership; if not, add them there.
-- `apps/voice-gateway/src/http/server.ts:12-24` creates the Fastify server without repo-visible hardening middleware such as `@fastify/helmet`. If the gateway is directly internet-facing, verify that equivalent headers and request size limits are enforced upstream.
+- Impact: Existing sessions remain valid after a sensitive sign-in identifier change, so a previously stolen session continues to work even after the account’s email login is moved.
+- Fix: Invalidate all other sessions after successful email confirmation, mirroring the password-change behavior and optionally keeping only the confirming session if there is one.
+- Mitigation: At minimum, log and alert on email-change events and force re-authentication before additional sensitive actions.
+- False positive notes: This does not make email change unauthenticated; the confirmation link is still required. The issue is reduced containment after a credential update.
 
-## Suggested Remediation Order
+## What I Checked
 
-1. Fix S-001 by validating Twilio signatures before websocket upgrade.
-2. Fix S-002 by removing or overriding the vulnerable parser chain in the preview pipeline.
-3. Fix S-003 by adding authoritative server-side upload size limits and early cleanup.
-4. Fix S-004 by hardening password policy and confirming authentication rate-limiting controls.
+- Password reset uses Convex Auth `Password({ reset: ... })` rather than a custom ad hoc endpoint.
+- Reset-code verification inherits Convex Auth rate limiting for failed code attempts.
+- Email templates are rendered from plain strings with HTML escaping, not from raw user HTML.
+- The changed frontend code does not use `dangerouslySetInnerHTML`, `innerHTML`, `eval`, or other obvious XSS sinks.
+- I did not see secrets added to `VITE_*` variables or other browser-exposed config in this branch.
+
+## Remaining Recommendation
+
+1. Consider refactoring email-change onto a more first-class Convex Auth flow over time, since the current implementation still relies on custom auth-table handling.
