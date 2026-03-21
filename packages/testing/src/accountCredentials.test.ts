@@ -105,6 +105,15 @@ describe("account credential settings", () => {
         email: nextEmail,
       });
 
+      await ctx.db.insert("authSessions", {
+        userId,
+        expirationTime: Date.now() + 60 * 60 * 1000,
+      });
+      await ctx.db.insert("authSessions", {
+        userId,
+        expirationTime: Date.now() + 60 * 60 * 1000,
+      });
+
       return { userId };
     });
 
@@ -138,6 +147,10 @@ describe("account credential settings", () => {
           q.eq("provider", "password").eq("providerAccountId", nextEmail),
         )
         .unique();
+      const sessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", seeded.userId))
+        .collect();
 
       expect(user?.email).toBe(nextEmail);
       expect(oldAccount).toBeNull();
@@ -145,6 +158,7 @@ describe("account credential settings", () => {
       expect(newAccount?.providerAccountId).toBe(nextEmail);
       expect(newAccount?.emailVerified).toBe(nextEmail);
       expect(newAccount?.secret).not.toBe(secret);
+      expect(sessions).toHaveLength(0);
       expect(
         await ctx.db
           .query("pending_email_changes")
@@ -245,13 +259,13 @@ describe("account credential settings", () => {
     });
   });
 
-  it("rejects changing to an email that already belongs to another password account", async () => {
+  it("does not reveal whether a target email already belongs to another password account", async () => {
     const t = convexTest(schema, convexModules);
     const currentPassword = "CurrentPass123!";
     const currentSecret = await new Scrypt().hash(currentPassword);
     const takenSecret = await new Scrypt().hash("AnotherPass123!");
 
-    await t.run(async (ctx) => {
+    const seeded = await t.run(async (ctx) => {
       const ownerId: Id<"users"> = await ctx.db.insert("users", {
         authSubject: "account-owner",
         email: "owner@example.com",
@@ -273,6 +287,8 @@ describe("account credential settings", () => {
         providerAccountId: "taken@example.com",
         secret: takenSecret,
       });
+
+      return { ownerId };
     });
 
     const asOwner = t.withIdentity({ subject: "account-owner" });
@@ -282,7 +298,26 @@ describe("account credential settings", () => {
         currentPassword,
         newEmail: "taken@example.com",
       }),
-    ).rejects.toThrow("already exists");
+    ).resolves.toEqual({ email: "taken@example.com" });
+
+    await t.run(async (ctx) => {
+      const ownerUser = await ctx.db.get(seeded.ownerId);
+      const ownerAccount = await ctx.db
+        .query("authAccounts")
+        .withIndex("providerAndAccountId", (accountQuery) =>
+          accountQuery
+            .eq("provider", "password")
+            .eq("providerAccountId", "owner@example.com"),
+        )
+        .unique();
+      const ownerPendingEmailChange = await ctx.db
+        .query("pending_email_changes")
+        .withIndex("by_account_id", (q) => q.eq("accountId", ownerAccount!._id))
+        .unique();
+
+      expect(ownerUser?.email).toBe("owner@example.com");
+      expect(ownerPendingEmailChange).toBeNull();
+    });
   });
 });
 

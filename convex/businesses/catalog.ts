@@ -310,13 +310,20 @@ export const assertPendingEmailChangeTarget = internalQuery({
       throw new Error("Password account not found.");
     }
 
-    await assertPasswordEmailAvailable(ctx, {
-      newEmail: args.newEmail,
-      userId: args.userId,
-      currentAccountId: passwordAccount._id,
-    });
-
-    return null;
+    try {
+      await assertPasswordEmailAvailable(ctx, {
+        newEmail: args.newEmail,
+        userId: args.userId,
+        currentAccountId: passwordAccount._id,
+      });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("already exists")) {
+        return false;
+      }
+      throw error;
+    }
   },
 });
 
@@ -512,10 +519,18 @@ export const changeEmail = action({
       },
     });
 
-    await ctx.runQuery(internal.businesses.catalog.assertPendingEmailChangeTarget, {
-      newEmail: nextEmail,
-      userId: user.userId,
-    });
+    const canSendConfirmation: boolean = await ctx.runQuery(
+      internal.businesses.catalog.assertPendingEmailChangeTarget,
+      {
+        newEmail: nextEmail,
+        userId: user.userId,
+      },
+    );
+    if (!canSendConfirmation) {
+      return {
+        email: nextEmail,
+      };
+    }
     const confirmationToken = generateEmailChangeToken();
     const createPendingEmailChangeResult: null = await ctx.runMutation(
       (internal as any).businesses.catalog.createPendingEmailChange,
@@ -557,6 +572,12 @@ export const confirmEmailChange = action({
     const result = await ctx.runMutation(internal.businesses.catalog.confirmPendingEmailChange, {
       codeHash: await hashVerificationCode(code),
       email,
+    });
+    const authCtx = ctx as unknown as Parameters<typeof invalidateSessions>[0];
+    const sessionId = await getAuthSessionId(authCtx);
+    await invalidateSessions(authCtx, {
+      userId: result.userId,
+      ...(sessionId ? { except: [sessionId] } : {}),
     });
 
     return {
