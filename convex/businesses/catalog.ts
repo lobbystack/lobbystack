@@ -22,7 +22,6 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import {
   EMAIL_CHANGE_MAX_AGE_SECONDS,
-  EMAIL_CHANGE_PROVIDER_ID,
   generateEmailChangeToken,
   sendEmailChangeConfirmation,
 } from "../lib/emailChange";
@@ -76,6 +75,7 @@ type PhoneNumberWebhookSyncInput = {
 };
 
 type CredentialsDbCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
+type CredentialsWriterCtx = Pick<MutationCtx, "db">;
 
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
   return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
@@ -158,6 +158,34 @@ async function hashVerificationCode(code: string): Promise<string> {
   return Array.from(new Uint8Array(hash), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
+}
+
+async function clearPendingEmailChangesForAccount(
+  ctx: CredentialsWriterCtx,
+  accountId: Id<"authAccounts">,
+): Promise<void> {
+  const existingRequests = await ctx.db
+    .query("pending_email_changes")
+    .withIndex("by_account_id", (q) => q.eq("accountId", accountId))
+    .collect();
+
+  for (const existingRequest of existingRequests) {
+    await ctx.db.delete(existingRequest._id);
+  }
+}
+
+async function clearVerificationCodesForAccount(
+  ctx: CredentialsWriterCtx,
+  accountId: Id<"authAccounts">,
+): Promise<void> {
+  const verificationCodes = await ctx.db
+    .query("authVerificationCodes")
+    .withIndex("accountId", (q) => q.eq("accountId", accountId))
+    .collect();
+
+  for (const verificationCode of verificationCodes) {
+    await ctx.db.delete(verificationCode._id);
+  }
 }
 
 export const resolveBusinessByPhoneNumber = internalQuery({
@@ -335,14 +363,7 @@ export const createPendingEmailChange = internalMutation({
     expirationTime: v.number(),
   },
   handler: async (ctx, args) => {
-    const existingRequests = await ctx.db
-      .query("pending_email_changes")
-      .withIndex("by_account_id", (q) => q.eq("accountId", args.accountId))
-      .collect();
-
-    for (const existingRequest of existingRequests) {
-      await ctx.db.delete(existingRequest._id);
-    }
+    await clearPendingEmailChangesForAccount(ctx, args.accountId);
 
     await ctx.db.insert("pending_email_changes", {
       accountId: args.accountId,
@@ -396,6 +417,7 @@ export const confirmPendingEmailChange = internalMutation({
       currentAccountId: account._id,
     });
 
+    await clearVerificationCodesForAccount(ctx, account._id);
     await ctx.db.patch(account._id, {
       providerAccountId: nextEmail,
       emailVerified: nextEmail,
@@ -527,6 +549,13 @@ export const changeEmail = action({
       },
     );
     if (!canSendConfirmation) {
+      const clearPendingEmailChangesResult: null = await ctx.runMutation(
+        (internal as any).businesses.catalog.clearPendingEmailChanges,
+        {
+          accountId: user.passwordAccountId,
+        },
+      );
+      void clearPendingEmailChangesResult;
       return {
         email: nextEmail,
       };
@@ -553,6 +582,16 @@ export const changeEmail = action({
     return {
       email: nextEmail,
     };
+  },
+});
+
+export const clearPendingEmailChanges = internalMutation({
+  args: {
+    accountId: v.id("authAccounts"),
+  },
+  handler: async (ctx, args) => {
+    await clearPendingEmailChangesForAccount(ctx, args.accountId);
+    return null;
   },
 });
 

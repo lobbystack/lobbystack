@@ -168,6 +168,62 @@ describe("account credential settings", () => {
     });
   });
 
+  it("revokes outstanding reset codes when confirming an email change", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "account-owner";
+    const currentEmail = "owner@example.com";
+    const nextEmail = "updated@example.com";
+    const confirmationCode = "confirm-email-change";
+    const resetCode = "12345678";
+
+    const seeded = await t.run(async (ctx) => {
+      const userId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: subject,
+        email: currentEmail,
+      });
+
+      const accountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId,
+        provider: "password",
+        providerAccountId: currentEmail,
+        secret: "hashed-secret",
+      });
+
+      await ctx.db.insert("pending_email_changes", {
+        accountId,
+        codeHash: await hashCode(confirmationCode),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        email: nextEmail,
+      });
+
+      await ctx.db.insert("authVerificationCodes", {
+        accountId,
+        provider: "email",
+        code: await hashCode(resetCode),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        emailVerified: currentEmail,
+      });
+
+      return { accountId };
+    });
+
+    await expect(
+      t.action(api.businesses.catalog.confirmEmailChange, {
+        code: confirmationCode,
+        email: nextEmail,
+      }),
+    ).resolves.toEqual({ email: nextEmail });
+
+    await t.run(async (ctx) => {
+      const remainingResetCode = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", seeded.accountId))
+        .unique();
+
+      expect(remainingResetCode).toBeNull();
+    });
+  });
+
   it("stores a pending email change without updating the current user email", async () => {
     const t = convexTest(schema, convexModules);
     const currentEmail = "owner@example.com";
@@ -316,6 +372,63 @@ describe("account credential settings", () => {
         .unique();
 
       expect(ownerUser?.email).toBe("owner@example.com");
+      expect(ownerPendingEmailChange).toBeNull();
+    });
+  });
+
+  it("clears existing pending email changes when masking a taken target email", async () => {
+    const t = convexTest(schema, convexModules);
+    const currentPassword = "CurrentPass123!";
+    const currentSecret = await new Scrypt().hash(currentPassword);
+    const takenSecret = await new Scrypt().hash("AnotherPass123!");
+
+    const seeded = await t.run(async (ctx) => {
+      const ownerId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-owner",
+        email: "owner@example.com",
+      });
+      const otherId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-other",
+        email: "taken@example.com",
+      });
+
+      const ownerAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId: ownerId,
+        provider: "password",
+        providerAccountId: "owner@example.com",
+        secret: currentSecret,
+      });
+      await ctx.db.insert("authAccounts", {
+        userId: otherId,
+        provider: "password",
+        providerAccountId: "taken@example.com",
+        secret: takenSecret,
+      });
+      await ctx.db.insert("pending_email_changes", {
+        accountId: ownerAccountId,
+        codeHash: await hashCode("previous-request"),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        email: "first-target@example.com",
+      });
+
+      return { ownerAccountId };
+    });
+
+    const asOwner = t.withIdentity({ subject: "account-owner" });
+
+    await expect(
+      asOwner.action(api.businesses.catalog.changeEmail, {
+        currentPassword,
+        newEmail: "taken@example.com",
+      }),
+    ).resolves.toEqual({ email: "taken@example.com" });
+
+    await t.run(async (ctx) => {
+      const ownerPendingEmailChange = await ctx.db
+        .query("pending_email_changes")
+        .withIndex("by_account_id", (q) => q.eq("accountId", seeded.ownerAccountId))
+        .unique();
+
       expect(ownerPendingEmailChange).toBeNull();
     });
   });
