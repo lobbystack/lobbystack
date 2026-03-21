@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import {
   getAuthSessionId,
+  getAuthUserId,
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
@@ -202,12 +203,18 @@ export const updateBusinessName = mutation({
 export const getCurrentUserForPasswordChange = internalQuery({
   args: {
     authSubject: v.string(),
+    authUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    const authUserId = args.authUserId
+      ? await ctx.db.normalizeId("users", args.authUserId)
+      : null;
+    const authUser = authUserId ? await ctx.db.get(authUserId) : null;
+    const legacyUser = await ctx.db
       .query("users")
       .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
       .unique();
+    const user = authUser ?? legacyUser;
 
     if (!user) {
       throw new Error("User profile not initialized.");
@@ -286,6 +293,7 @@ export const changePassword = action({
     if (!identity) {
       throw new Error("Authentication required.");
     }
+    const authUserId = await getAuthUserId(ctx);
 
     validatePasswordRequirements(args.newPassword);
 
@@ -295,6 +303,7 @@ export const changePassword = action({
       passwordAccountEmail: string | null;
     } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
       authSubject: identity.subject,
+      ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
     const accountEmail = user.passwordAccountEmail ?? user.email;
 
@@ -340,6 +349,7 @@ export const changeEmail = action({
     if (!identity) {
       throw new Error("Authentication required.");
     }
+    const authUserId = await getAuthUserId(ctx);
 
     const nextEmail = args.newEmail.trim().toLowerCase();
     if (!nextEmail) {
@@ -352,6 +362,7 @@ export const changeEmail = action({
       passwordAccountEmail: string | null;
     } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
       authSubject: identity.subject,
+      ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
     const accountEmail = user.passwordAccountEmail ?? user.email;
 
