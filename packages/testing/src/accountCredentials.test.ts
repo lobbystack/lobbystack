@@ -110,6 +110,7 @@ describe("account credential settings", () => {
       expect(oldAccount).toBeNull();
       expect(newAccount?.userId).toBe(seeded.userId);
       expect(newAccount?.providerAccountId).toBe(nextEmail);
+      expect(newAccount?.emailVerified).toBe(nextEmail);
       expect(newAccount?.secret).not.toBe(secret);
       expect(
         await ctx.db

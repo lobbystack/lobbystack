@@ -362,6 +362,7 @@ export const confirmPendingEmailChange = internalMutation({
 
     await ctx.db.patch(account._id, {
       providerAccountId: nextEmail,
+      emailVerified: nextEmail,
     });
     await ctx.db.patch(user._id, {
       email: nextEmail,
