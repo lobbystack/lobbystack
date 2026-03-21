@@ -19,6 +19,10 @@ import {
   type QueryCtx,
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import {
+  getPasswordAccountForUser,
+  resolveUserForPasswordCredentials,
+} from "../lib/accountCredentials";
 import { requireMembership } from "../lib/auth";
 import {
   EMAIL_CHANGE_MAX_AGE_SECONDS,
@@ -74,7 +78,6 @@ type PhoneNumberWebhookSyncInput = {
   status: string;
 };
 
-type CredentialsDbCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
 type CredentialsWriterCtx = Pick<MutationCtx, "db">;
 
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
@@ -108,20 +111,8 @@ function buildPhoneNumberWithWebhookState(
   return next;
 }
 
-async function getPasswordAccountForUser(
-  ctx: CredentialsDbCtx,
-  userId: Id<"users">,
-): Promise<Doc<"authAccounts"> | null> {
-  return await ctx.db
-    .query("authAccounts")
-    .withIndex("userIdAndProvider", (q) =>
-      q.eq("userId", userId).eq("provider", "password"),
-    )
-    .unique();
-}
-
 async function assertPasswordEmailAvailable(
-  ctx: CredentialsDbCtx,
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   input: {
     newEmail: string;
     userId: Id<"users">;
@@ -296,23 +287,7 @@ export const getCurrentUserForPasswordChange = internalQuery({
     authUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const authUserId = args.authUserId
-      ? await ctx.db.normalizeId("users", args.authUserId)
-      : null;
-    const authUser = authUserId ? await ctx.db.get(authUserId) : null;
-    const legacyUser = await ctx.db
-      .query("users")
-      .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
-      .unique();
-    const [authPasswordAccount, legacyPasswordAccount] = await Promise.all([
-      authUser ? getPasswordAccountForUser(ctx, authUser._id) : Promise.resolve(null),
-      legacyUser && legacyUser._id !== authUser?._id
-        ? getPasswordAccountForUser(ctx, legacyUser._id)
-        : Promise.resolve(null),
-    ]);
-    const user =
-      authPasswordAccount || !legacyPasswordAccount ? (authUser ?? legacyUser) : legacyUser;
-    const passwordAccount = authPasswordAccount ?? legacyPasswordAccount;
+    const { user, passwordAccount } = await resolveUserForPasswordCredentials(ctx, args);
 
     if (!user) {
       throw new Error("User profile not initialized.");

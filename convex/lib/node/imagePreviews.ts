@@ -1,6 +1,6 @@
 "use node";
 
-import { Jimp, JimpMime } from "jimp";
+import sharp from "sharp";
 
 import { MAX_SMS_ATTACHMENT_UPLOAD_BYTES } from "../messageAttachments";
 
@@ -41,33 +41,23 @@ export async function generateImagePreview(
 
   let previewBuffer: Buffer;
   try {
-    const image = await withTimeout(
-      Jimp.fromBuffer(sourceBuffer),
-      MESSAGE_IMAGE_PREVIEW_TIMEOUT_SECONDS,
-    );
-
-    const inputPixels = image.bitmap.width * image.bitmap.height;
-    if (
-      inputPixels === 0 ||
-      inputPixels > MESSAGE_IMAGE_PREVIEW_MAX_INPUT_PIXELS
-    ) {
-      return null;
-    }
-
-    if (
-      image.bitmap.width > MESSAGE_IMAGE_PREVIEW_WIDTH ||
-      image.bitmap.height > MESSAGE_IMAGE_PREVIEW_HEIGHT
-    ) {
-      image.scaleToFit({
-        w: MESSAGE_IMAGE_PREVIEW_WIDTH,
-        h: MESSAGE_IMAGE_PREVIEW_HEIGHT,
-      });
-    }
-
-    previewBuffer = await withTimeout(
-      image.getBuffer(JimpMime.jpeg, { quality: MESSAGE_IMAGE_PREVIEW_QUALITY }),
-      MESSAGE_IMAGE_PREVIEW_TIMEOUT_SECONDS,
-    );
+    previewBuffer = await sharp(sourceBuffer, {
+      failOn: "error",
+      limitInputPixels: MESSAGE_IMAGE_PREVIEW_MAX_INPUT_PIXELS,
+    })
+      .rotate()
+      .resize({
+        width: MESSAGE_IMAGE_PREVIEW_WIDTH,
+        height: MESSAGE_IMAGE_PREVIEW_HEIGHT,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: MESSAGE_IMAGE_PREVIEW_QUALITY,
+        mozjpeg: true,
+      })
+      .timeout({ seconds: MESSAGE_IMAGE_PREVIEW_TIMEOUT_SECONDS })
+      .toBuffer();
   } catch {
     return null;
   }
@@ -82,23 +72,4 @@ export async function generateImagePreview(
     contentType: "image/jpeg",
     byteLength: previewBuffer.length,
   };
-}
-
-async function withTimeout<T>(promise: Promise<T>, timeoutSeconds: number): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error("Image preview generation timed out."));
-        }, timeoutSeconds * 1000);
-      }),
-    ]);
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
 }

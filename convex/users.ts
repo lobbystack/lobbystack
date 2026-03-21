@@ -2,21 +2,15 @@ import { v } from "convex/values";
 
 import { internalQuery, query } from "./_generated/server";
 import { getCurrentUser } from "./lib/auth";
+import { resolveCurrentUserForPasswordCredentials } from "./lib/accountCredentials";
 
 export const current = query({
   args: {},
   handler: async (ctx) => {
-    const user = await getCurrentUser(ctx);
+    const { user, passwordAccount } = await resolveCurrentUserForPasswordCredentials(ctx);
     if (!user) {
       return null;
     }
-
-    const passwordAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) =>
-        q.eq("userId", user._id).eq("provider", "password"),
-      )
-      .unique();
 
     if (!passwordAccount || passwordAccount.providerAccountId === user.email) {
       return user;

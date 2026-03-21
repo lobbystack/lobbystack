@@ -112,4 +112,25 @@ describe("ForgotPasswordPage", () => {
 
     expect(screen.getByText("errors.invalidResetCode")).toBeTruthy();
   });
+
+  it("masks missing accounts as invalid reset codes during verification", async () => {
+    signInMock
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("InvalidAccountId"));
+
+    render(
+      <MemoryRouter>
+        <ForgotPasswordPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
+    await user.type(screen.getByLabelText("forgotPassword.code"), "12345678");
+    await user.type(screen.getByLabelText("forgotPassword.newPassword"), "a-secure-password");
+    await user.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+
+    expect(screen.getByText("errors.invalidResetCode")).toBeTruthy();
+  });
 });

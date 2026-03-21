@@ -40,6 +40,37 @@ describe("account credential settings", () => {
     });
   });
 
+  it("returns the legacy password-account email for migrated users", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const seeded = await t.run(async (ctx) => {
+      const authUserId: Id<"users"> = await ctx.db.insert("users", {
+        email: "auth-user@example.com",
+      });
+      const authSubject = `${String(authUserId)}|session-1`;
+
+      const legacyUserId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject,
+        email: "legacy-user@example.com",
+      });
+
+      await ctx.db.insert("authAccounts", {
+        userId: legacyUserId,
+        provider: "password",
+        providerAccountId: "legacy-login@example.com",
+        secret: "hashed-secret",
+      });
+
+      return { authSubject };
+    });
+
+    const asOwner = t.withIdentity({ subject: seeded.authSubject });
+
+    await expect(asOwner.query(api.users.current, {})).resolves.toMatchObject({
+      email: "legacy-login@example.com",
+    });
+  });
+
   it("resolves credential changes from the row that owns the password account", async () => {
     const t = convexTest(schema, convexModules);
 

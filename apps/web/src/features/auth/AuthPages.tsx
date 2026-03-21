@@ -56,7 +56,11 @@ function getAuthErrorMessage(
   }
 
   if (flow === "resetVerification") {
-    if (message.includes("Invalid code") || message.includes("Could not verify code")) {
+    if (
+      message.includes("Invalid code") ||
+      message.includes("Could not verify code") ||
+      message.includes("InvalidAccountId")
+    ) {
       return t("errors.invalidResetCode");
     }
 
