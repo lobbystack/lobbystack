@@ -60,6 +60,10 @@ function getAuthErrorMessage(
     return t("errors.passwordResetFailed");
   }
 
+  if (flow === "resetRequest" && message.includes("Missing environment variable `SITE_URL`")) {
+    return t("errors.passwordResetMissingSiteUrl");
+  }
+
   return t("errors.passwordResetRequestFailed");
 }
 

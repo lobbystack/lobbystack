@@ -8,8 +8,10 @@ Set these variables before testing auth email:
 
 - `RESEND_API_KEY`
 - `EMAIL_FROM_ADDRESS`
+- `SITE_URL`
 
 Development keeps the Resend component in test mode by default because the repo uses `DEPLOYMENT_MODE=development`.
+Convex Auth uses `SITE_URL` internally for password reset. Set it on the Convex deployment to your web app origin, for example `http://localhost:5173` in local development.
 
 ## Local Verification
 

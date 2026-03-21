@@ -47,6 +47,22 @@ describe("ForgotPasswordPage", () => {
     expect(screen.getByText("forgotPassword.verifyTitle")).toBeTruthy();
   });
 
+  it("renders a specific error when SITE_URL is missing on the Convex deployment", async () => {
+    signInMock.mockRejectedValueOnce(new Error("Missing environment variable `SITE_URL`"));
+
+    render(
+      <MemoryRouter>
+        <ForgotPasswordPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
+
+    expect(screen.getByText("errors.passwordResetMissingSiteUrl")).toBeTruthy();
+  });
+
   it("submits reset verification with email, code, and new password", async () => {
     signInMock
       .mockResolvedValueOnce({})
