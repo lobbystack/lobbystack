@@ -5,7 +5,6 @@ import {
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
-  signInViaProvider,
 } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import {
@@ -21,7 +20,12 @@ import {
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
-import { EMAIL_CHANGE_PROVIDER_ID, emailChangeProvider } from "../lib/emailChange";
+import {
+  EMAIL_CHANGE_MAX_AGE_SECONDS,
+  EMAIL_CHANGE_PROVIDER_ID,
+  generateEmailChangeToken,
+  sendEmailChangeConfirmation,
+} from "../lib/emailChange";
 import {
   listStaffServiceAssignmentsForBusiness,
   replaceBusinessStaffServiceAssignments,
@@ -482,14 +486,23 @@ export const changeEmail = action({
       newEmail: nextEmail,
       userId: user.userId,
     });
-    await signInViaProvider(
-      ctx as unknown as Parameters<typeof signInViaProvider>[0],
-      emailChangeProvider,
-      {
+    const confirmationToken = generateEmailChangeToken();
+    await ctx.runMutation("auth:store" as any, {
+      args: {
+        type: "createVerificationCode",
         accountId: user.passwordAccountId,
-        params: {
-          email: nextEmail,
-        },
+        provider: EMAIL_CHANGE_PROVIDER_ID,
+        email: nextEmail,
+        code: confirmationToken,
+        expirationTime: Date.now() + EMAIL_CHANGE_MAX_AGE_SECONDS * 1000,
+        allowExtraProviders: true,
+      },
+    });
+    await sendEmailChangeConfirmation(
+      ctx as unknown as Pick<ActionCtx, "runMutation">,
+      {
+        email: nextEmail,
+        token: confirmationToken,
       },
     );
 
