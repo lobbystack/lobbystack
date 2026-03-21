@@ -16,6 +16,31 @@ declare global {
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 
 describe("account credential settings", () => {
+  it("returns the password credential email as the current email", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "account-owner";
+
+    await t.run(async (ctx) => {
+      const userId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: subject,
+        email: "stale@example.com",
+      });
+
+      await ctx.db.insert("authAccounts", {
+        userId,
+        provider: "password",
+        providerAccountId: "current@example.com",
+        secret: "hashed-secret",
+      });
+    });
+
+    const asOwner = t.withIdentity({ subject });
+
+    await expect(asOwner.query(api.users.current, {})).resolves.toMatchObject({
+      email: "current@example.com",
+    });
+  });
+
   it("confirms an email change link and updates the password account email", async () => {
     const t = convexTest(schema, convexModules);
     const subject = "account-owner";

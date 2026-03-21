@@ -6,7 +6,26 @@ import { getCurrentUser } from "./lib/auth";
 export const current = query({
   args: {},
   handler: async (ctx) => {
-    return await getCurrentUser(ctx);
+    const user = await getCurrentUser(ctx);
+    if (!user) {
+      return null;
+    }
+
+    const passwordAccount = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) =>
+        q.eq("userId", user._id).eq("provider", "password"),
+      )
+      .unique();
+
+    if (!passwordAccount || passwordAccount.providerAccountId === user.email) {
+      return user;
+    }
+
+    return {
+      ...user,
+      email: passwordAccount.providerAccountId,
+    };
   },
 });
 
