@@ -31,6 +31,7 @@ import type * as integrations_messageMedia from "../integrations/messageMedia.js
 import type * as integrations_twilioMessageStatus from "../integrations/twilioMessageStatus.js";
 import type * as integrations_twilioSms from "../integrations/twilioSms.js";
 import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebug.js";
+import type * as lib_accountCredentials from "../lib/accountCredentials.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/twilioMessageStatus": typeof integrations_twilioMessageStatus;
   "integrations/twilioSms": typeof integrations_twilioSms;
   "integrations/twilioSmsDebug": typeof integrations_twilioSmsDebug;
+  "lib/accountCredentials": typeof lib_accountCredentials;
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
