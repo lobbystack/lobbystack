@@ -1,4 +1,3 @@
-import { Email } from "@convex-dev/auth/providers/Email";
 import type { ActionCtx } from "../_generated/server";
 
 import { sendTransactionalEmail } from "./providers/email";
@@ -8,25 +7,6 @@ export const EMAIL_CHANGE_MAX_AGE_SECONDS = 60 * 30;
 const EMAIL_CHANGE_TOKEN_LENGTH = 32;
 
 const EMAIL_CHANGE_CONFIRMATION_PATH = "/confirm-email-change";
-
-export const emailChangeProvider = Email({
-  id: EMAIL_CHANGE_PROVIDER_ID,
-  maxAge: EMAIL_CHANGE_MAX_AGE_SECONDS,
-  sendVerificationRequest: (async (
-    { identifier, token }: { identifier: string; token: string },
-    ctx: Pick<ActionCtx, "runMutation">,
-  ) => {
-    await sendTransactionalEmail(ctx, {
-      template: "verify_email",
-      to: identifier,
-      subject: "Confirm your new email",
-      variables: {
-        confirmUrl: buildEmailChangeConfirmationUrl(identifier, token),
-        expiresMinutes: String(EMAIL_CHANGE_MAX_AGE_SECONDS / 60),
-      },
-    });
-  }) as any,
-});
 
 export async function sendEmailChangeConfirmation(
   ctx: Pick<ActionCtx, "runMutation">,

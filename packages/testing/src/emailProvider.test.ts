@@ -66,6 +66,17 @@ describe("transactional email provider", () => {
     });
   });
 
+  it("fails closed when deployment mode is unset", async () => {
+    vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
+    vi.stubEnv("RESEND_API_KEY", "re_test_123");
+
+    const { getTransactionalEmailConfig } = await import("../../../convex/lib/providers/email");
+
+    expect(() => getTransactionalEmailConfig()).toThrow(
+      "DEPLOYMENT_MODE is required to determine whether auth email should use Resend test mode.",
+    );
+  });
+
   it("fails clearly when Resend credentials are missing outside development", async () => {
     vi.stubEnv("DEPLOYMENT_MODE", "cloud");
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");

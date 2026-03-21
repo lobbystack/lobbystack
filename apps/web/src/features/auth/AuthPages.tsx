@@ -32,6 +32,10 @@ function getAuthErrorMessage(
 ): string {
   const message = error instanceof Error ? error.message : "";
 
+  if (message.includes("Missing environment variable `SITE_URL`")) {
+    return t("errors.passwordResetMissingSiteUrl");
+  }
+
   if (flow === "signIn") {
     if (message.includes("InvalidSecret") || message.includes("Invalid credentials")) {
       return t("errors.incorrectCredentials");

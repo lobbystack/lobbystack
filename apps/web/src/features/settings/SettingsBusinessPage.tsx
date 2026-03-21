@@ -209,7 +209,7 @@ function getChangeEmailErrorMessage(
   if (message.includes("No email is configured")) {
     return t("account.changeEmail.errors.noEmail");
   }
-  if (message.includes("required")) {
+  if (message.includes("New email is required")) {
     return t("account.changeEmail.errors.required");
   }
 

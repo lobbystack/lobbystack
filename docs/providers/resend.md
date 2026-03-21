@@ -7,11 +7,12 @@ The current auth flows are password reset and email-change confirmation.
 
 Set these variables before testing auth email:
 
+- `DEPLOYMENT_MODE`
 - `RESEND_API_KEY`
 - `EMAIL_FROM_ADDRESS`
 - `SITE_URL`
 
-Development keeps the Resend component in test mode by default because the repo uses `DEPLOYMENT_MODE=development`.
+Development keeps the Resend component in test mode when `DEPLOYMENT_MODE=development`.
 Convex Auth uses `SITE_URL` internally for password reset and email confirmation links. Set it on the Convex deployment to your web app origin, for example `http://localhost:5173` in local development.
 
 ## Local Verification

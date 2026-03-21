@@ -276,18 +276,19 @@ export const getCurrentUserForPasswordChange = internalQuery({
       .query("users")
       .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
       .unique();
-    const user = authUser ?? legacyUser;
+    const [authPasswordAccount, legacyPasswordAccount] = await Promise.all([
+      authUser ? getPasswordAccountForUser(ctx, authUser._id) : Promise.resolve(null),
+      legacyUser && legacyUser._id !== authUser?._id
+        ? getPasswordAccountForUser(ctx, legacyUser._id)
+        : Promise.resolve(null),
+    ]);
+    const user =
+      authPasswordAccount || !legacyPasswordAccount ? (authUser ?? legacyUser) : legacyUser;
+    const passwordAccount = authPasswordAccount ?? legacyPasswordAccount;
 
     if (!user) {
       throw new Error("User profile not initialized.");
     }
-
-    const passwordAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) =>
-        q.eq("userId", user._id).eq("provider", "password"),
-      )
-      .unique();
 
     return {
       userId: user._id,
@@ -319,32 +320,60 @@ export const assertPendingEmailChangeTarget = internalQuery({
   },
 });
 
+export const createPendingEmailChange = internalMutation({
+  args: {
+    accountId: v.id("authAccounts"),
+    codeHash: v.string(),
+    email: v.string(),
+    expirationTime: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingRequests = await ctx.db
+      .query("pending_email_changes")
+      .withIndex("by_account_id", (q) => q.eq("accountId", args.accountId))
+      .collect();
+
+    for (const existingRequest of existingRequests) {
+      await ctx.db.delete(existingRequest._id);
+    }
+
+    await ctx.db.insert("pending_email_changes", {
+      accountId: args.accountId,
+      codeHash: args.codeHash,
+      expirationTime: args.expirationTime,
+      email: args.email,
+    });
+
+    return null;
+  },
+});
+
 export const confirmPendingEmailChange = internalMutation({
   args: {
     codeHash: v.string(),
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    const verificationCode = await ctx.db
-      .query("authVerificationCodes")
-      .withIndex("code", (q) => q.eq("code", args.codeHash))
+    const pendingEmailChange = await ctx.db
+      .query("pending_email_changes")
+      .withIndex("by_code_hash", (q) => q.eq("codeHash", args.codeHash))
       .unique();
 
-    if (!verificationCode || verificationCode.provider !== EMAIL_CHANGE_PROVIDER_ID) {
+    if (!pendingEmailChange) {
       throw new Error("Invalid or expired email confirmation link.");
     }
 
-    if (verificationCode.expirationTime < Date.now()) {
-      await ctx.db.delete(verificationCode._id);
+    if (pendingEmailChange.expirationTime < Date.now()) {
+      await ctx.db.delete(pendingEmailChange._id);
       throw new Error("Invalid or expired email confirmation link.");
     }
 
-    const nextEmail = verificationCode.emailVerified?.trim().toLowerCase();
+    const nextEmail = pendingEmailChange.email.trim().toLowerCase();
     if (!nextEmail || nextEmail !== args.email) {
       throw new Error("Invalid or expired email confirmation link.");
     }
 
-    const account = await ctx.db.get(verificationCode.accountId);
+    const account = await ctx.db.get(pendingEmailChange.accountId);
     if (!account || account.provider !== "password") {
       throw new Error("Password account not found.");
     }
@@ -368,7 +397,7 @@ export const confirmPendingEmailChange = internalMutation({
       email: nextEmail,
       emailVerificationTime: Date.now(),
     });
-    await ctx.db.delete(verificationCode._id);
+    await ctx.db.delete(pendingEmailChange._id);
 
     return {
       email: nextEmail,
@@ -488,17 +517,15 @@ export const changeEmail = action({
       userId: user.userId,
     });
     const confirmationToken = generateEmailChangeToken();
-    await ctx.runMutation("auth:store" as any, {
-      args: {
-        type: "createVerificationCode",
+    const createPendingEmailChangeResult: null = await ctx.runMutation(
+      (internal as any).businesses.catalog.createPendingEmailChange,
+      {
         accountId: user.passwordAccountId,
-        provider: EMAIL_CHANGE_PROVIDER_ID,
+        codeHash: await hashVerificationCode(confirmationToken),
         email: nextEmail,
-        code: confirmationToken,
         expirationTime: Date.now() + EMAIL_CHANGE_MAX_AGE_SECONDS * 1000,
-        allowExtraProviders: true,
       },
-    });
+    );
     await sendEmailChangeConfirmation(
       ctx as unknown as Pick<ActionCtx, "runMutation">,
       {
@@ -506,6 +533,7 @@ export const changeEmail = action({
         token: confirmationToken,
       },
     );
+    void createPendingEmailChangeResult;
 
     return {
       email: nextEmail,

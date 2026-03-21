@@ -1,6 +1,5 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
-import { emailChangeProvider } from "./lib/emailChange";
 import { validatePasswordRequirements } from "./lib/passwordPolicy";
 import { passwordResetProvider } from "./lib/passwordReset";
 
@@ -14,6 +13,5 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       reset: passwordResetProvider,
       validatePasswordRequirements,
     }),
-    emailChangeProvider,
   ],
 });
