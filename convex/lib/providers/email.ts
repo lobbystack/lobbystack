@@ -30,12 +30,7 @@ export function getTransactionalEmailConfig(
     throw new Error("EMAIL_FROM_ADDRESS is required to send transactional email.");
   }
 
-  const deploymentMode = env.DEPLOYMENT_MODE;
-  if (!deploymentMode) {
-    throw new Error(
-      "DEPLOYMENT_MODE is required to determine whether auth email should use Resend test mode.",
-    );
-  }
+  const deploymentMode = env.DEPLOYMENT_MODE ?? "development";
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error(
