@@ -1,9 +1,12 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useAction, useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import { Link, useSearchParams } from "react-router-dom";
 
+import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
@@ -268,6 +271,85 @@ export function ForgotPasswordPage() {
         statusMessage={statusMessage}
         step={step}
       />
+    </AuthShell>
+  );
+}
+
+export function ConfirmEmailChangePage() {
+  const { t } = useTranslation("auth");
+  const auth = useConvexAuth();
+  const confirmEmailChange = useAction(api.businesses.catalog.confirmEmailChange);
+  const [searchParams] = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const token = searchParams.get("token")?.trim() ?? "";
+  const email = searchParams.get("email")?.trim().toLowerCase() ?? "";
+  const hasConfirmationParams = token.length > 0 && email.length > 0;
+  const returnHref = auth.isAuthenticated ? "/settings" : "/login";
+  const returnLabel = auth.isAuthenticated
+    ? t("confirmEmailChange.backToSettings")
+    : t("confirmEmailChange.backToLogin");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setStatusMessage(null);
+    setErrorMessage(null);
+
+    if (!hasConfirmationParams) {
+      setErrorMessage(t("confirmEmailChange.invalidLink"));
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await confirmEmailChange({
+        code: token,
+        email,
+      });
+      setStatusMessage(t("confirmEmailChange.success", { email: result.email }));
+    } catch {
+      setErrorMessage(t("confirmEmailChange.invalidLink"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <AuthShell>
+      <div className="space-y-6 text-center">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            {t("confirmEmailChange.title")}
+          </h1>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {hasConfirmationParams
+              ? t("confirmEmailChange.subtitle", { email })
+              : t("confirmEmailChange.invalidLink")}
+          </p>
+        </div>
+
+        {statusMessage ? <p className="text-sm text-muted-foreground">{statusMessage}</p> : null}
+        {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <button
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+            disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
+            type="submit"
+          >
+            {isSubmitting
+              ? t("confirmEmailChange.submitting")
+              : t("confirmEmailChange.submit")}
+          </button>
+        </form>
+
+        <Link className="text-sm text-muted-foreground hover:text-foreground" to={returnHref}>
+          {returnLabel}
+        </Link>
+      </div>
     </AuthShell>
   );
 }

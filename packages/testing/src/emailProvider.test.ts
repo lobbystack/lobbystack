@@ -30,6 +30,26 @@ describe("transactional email provider", () => {
     expect(email.html).toContain("<strong>12345678</strong>");
   });
 
+  it("renders the email confirmation template with the requested link", async () => {
+    const { renderTransactionalEmail } = await import("../../../convex/lib/providers/email");
+
+    const email = renderTransactionalEmail({
+      template: "verify_email",
+      to: "updated@example.com",
+      subject: "Confirm your new email",
+      variables: {
+        confirmUrl: "https://example.com/confirm-email-change?token=test&email=updated%40example.com",
+        expiresMinutes: "30",
+      },
+    });
+
+    expect(email.subject).toBe("Confirm your new email");
+    expect(email.text).toContain("confirm-email-change");
+    expect(email.text).toContain("30 minutes");
+    expect(email.html).toContain("Confirm your new email");
+    expect(email.html).toContain("href=\"https://example.com/confirm-email-change?token=test&amp;email=updated%40example.com\"");
+  });
+
   it("uses Resend test mode in development", async () => {
     vi.stubEnv("DEPLOYMENT_MODE", "development");
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");

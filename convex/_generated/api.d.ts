@@ -34,6 +34,7 @@ import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebu
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
+import type * as lib_emailChange from "../lib/emailChange.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
 import type * as lib_messageAttachments from "../lib/messageAttachments.js";
@@ -91,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
+  "lib/emailChange": typeof lib_emailChange;
   "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
   "lib/messageAttachments": typeof lib_messageAttachments;

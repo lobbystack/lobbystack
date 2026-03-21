@@ -5,6 +5,7 @@ import {
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
+  signInViaProvider,
 } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import {
@@ -15,9 +16,12 @@ import {
   mutation,
   query,
   type ActionCtx,
+  type MutationCtx,
+  type QueryCtx,
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { EMAIL_CHANGE_PROVIDER_ID, emailChangeProvider } from "../lib/emailChange";
 import {
   listStaffServiceAssignmentsForBusiness,
   replaceBusinessStaffServiceAssignments,
@@ -67,6 +71,8 @@ type PhoneNumberWebhookSyncInput = {
   status: string;
 };
 
+type CredentialsDbCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
+
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
   return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
 }
@@ -96,6 +102,58 @@ function buildPhoneNumberWithWebhookState(
   }
 
   return next;
+}
+
+async function getPasswordAccountForUser(
+  ctx: CredentialsDbCtx,
+  userId: Id<"users">,
+): Promise<Doc<"authAccounts"> | null> {
+  return await ctx.db
+    .query("authAccounts")
+    .withIndex("userIdAndProvider", (q) =>
+      q.eq("userId", userId).eq("provider", "password"),
+    )
+    .unique();
+}
+
+async function assertPasswordEmailAvailable(
+  ctx: CredentialsDbCtx,
+  input: {
+    newEmail: string;
+    userId: Id<"users">;
+    currentAccountId?: Id<"authAccounts">;
+  },
+): Promise<void> {
+  const duplicateAccount = await ctx.db
+    .query("authAccounts")
+    .withIndex("providerAndAccountId", (q) =>
+      q.eq("provider", "password").eq("providerAccountId", input.newEmail),
+    )
+    .unique();
+
+  if (
+    duplicateAccount &&
+    (!input.currentAccountId || duplicateAccount._id !== input.currentAccountId)
+  ) {
+    throw new Error("An account with that email already exists.");
+  }
+
+  const duplicateUser = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", input.newEmail))
+    .unique();
+
+  if (duplicateUser && duplicateUser._id !== input.userId) {
+    throw new Error("An account with that email already exists.");
+  }
+}
+
+async function hashVerificationCode(code: string): Promise<string> {
+  const encoded = new TextEncoder().encode(code);
+  const hash = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 export const resolveBusinessByPhoneNumber = internalQuery({
@@ -230,56 +288,87 @@ export const getCurrentUserForPasswordChange = internalQuery({
     return {
       userId: user._id,
       email: user.email ?? null,
+      passwordAccountId: passwordAccount?._id ?? null,
       passwordAccountEmail: passwordAccount?.providerAccountId ?? null,
     };
   },
 });
 
-export const updatePasswordAccountEmail = internalMutation({
+export const assertPendingEmailChangeTarget = internalQuery({
   args: {
     newEmail: v.string(),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const existingAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (q) =>
-        q.eq("userId", args.userId).eq("provider", "password"),
-      )
-      .unique();
-
-    if (!existingAccount) {
+    const passwordAccount = await getPasswordAccountForUser(ctx, args.userId);
+    if (!passwordAccount) {
       throw new Error("Password account not found.");
     }
 
-    const duplicateAccount = await ctx.db
-      .query("authAccounts")
-      .withIndex("providerAndAccountId", (q) =>
-        q.eq("provider", "password").eq("providerAccountId", args.newEmail),
-      )
-      .unique();
-
-    if (duplicateAccount && duplicateAccount._id !== existingAccount._id) {
-      throw new Error("An account with that email already exists.");
-    }
-
-    const duplicateUser = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", args.newEmail))
-      .unique();
-
-    if (duplicateUser && duplicateUser._id !== args.userId) {
-      throw new Error("An account with that email already exists.");
-    }
-
-    await ctx.db.patch(existingAccount._id, {
-      providerAccountId: args.newEmail,
-    });
-    await ctx.db.patch(args.userId, {
-      email: args.newEmail,
+    await assertPasswordEmailAvailable(ctx, {
+      newEmail: args.newEmail,
+      userId: args.userId,
+      currentAccountId: passwordAccount._id,
     });
 
     return null;
+  },
+});
+
+export const confirmPendingEmailChange = internalMutation({
+  args: {
+    codeHash: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const verificationCode = await ctx.db
+      .query("authVerificationCodes")
+      .withIndex("code", (q) => q.eq("code", args.codeHash))
+      .unique();
+
+    if (!verificationCode || verificationCode.provider !== EMAIL_CHANGE_PROVIDER_ID) {
+      throw new Error("Invalid or expired email confirmation link.");
+    }
+
+    if (verificationCode.expirationTime < Date.now()) {
+      await ctx.db.delete(verificationCode._id);
+      throw new Error("Invalid or expired email confirmation link.");
+    }
+
+    const nextEmail = verificationCode.emailVerified?.trim().toLowerCase();
+    if (!nextEmail || nextEmail !== args.email) {
+      throw new Error("Invalid or expired email confirmation link.");
+    }
+
+    const account = await ctx.db.get(verificationCode.accountId);
+    if (!account || account.provider !== "password") {
+      throw new Error("Password account not found.");
+    }
+
+    const user = await ctx.db.get(account.userId);
+    if (!user) {
+      throw new Error("User profile not initialized.");
+    }
+
+    await assertPasswordEmailAvailable(ctx, {
+      newEmail: nextEmail,
+      userId: user._id,
+      currentAccountId: account._id,
+    });
+
+    await ctx.db.patch(account._id, {
+      providerAccountId: nextEmail,
+    });
+    await ctx.db.patch(user._id, {
+      email: nextEmail,
+      emailVerificationTime: Date.now(),
+    });
+    await ctx.db.delete(verificationCode._id);
+
+    return {
+      email: nextEmail,
+      userId: user._id,
+    };
   },
 });
 
@@ -300,6 +389,7 @@ export const changePassword = action({
     const user: {
       userId: Id<"users">;
       email: string | null;
+      passwordAccountId: Id<"authAccounts"> | null;
       passwordAccountEmail: string | null;
     } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
       authSubject: identity.subject,
@@ -359,6 +449,7 @@ export const changeEmail = action({
     const user: {
       userId: Id<"users">;
       email: string | null;
+      passwordAccountId: Id<"authAccounts"> | null;
       passwordAccountEmail: string | null;
     } = await ctx.runQuery(internal.businesses.catalog.getCurrentUserForPasswordChange, {
       authSubject: identity.subject,
@@ -373,6 +464,9 @@ export const changeEmail = action({
     if (accountEmail === nextEmail) {
       throw new Error("This email is already on your account.");
     }
+    if (!user.passwordAccountId) {
+      throw new Error("Password account not found.");
+    }
 
     const authCtx = ctx as unknown as Parameters<typeof retrieveAccount>[0];
 
@@ -384,19 +478,47 @@ export const changeEmail = action({
       },
     });
 
-    await ctx.runMutation(internal.businesses.catalog.updatePasswordAccountEmail, {
+    await ctx.runQuery(internal.businesses.catalog.assertPendingEmailChangeTarget, {
       newEmail: nextEmail,
       userId: user.userId,
     });
-
-    const sessionId = await getAuthSessionId(authCtx);
-    await invalidateSessions(authCtx, {
-      userId: user.userId,
-      ...(sessionId ? { except: [sessionId] } : {}),
-    });
+    await signInViaProvider(
+      ctx as unknown as Parameters<typeof signInViaProvider>[0],
+      emailChangeProvider,
+      {
+        accountId: user.passwordAccountId,
+        params: {
+          email: nextEmail,
+        },
+      },
+    );
 
     return {
       email: nextEmail,
+    };
+  },
+});
+
+export const confirmEmailChange = action({
+  args: {
+    code: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ email: string }> => {
+    const code = args.code.trim();
+    const email = args.email.trim().toLowerCase();
+
+    if (!code || !email) {
+      throw new Error("Invalid or expired email confirmation link.");
+    }
+
+    const result = await ctx.runMutation(internal.businesses.catalog.confirmPendingEmailChange, {
+      codeHash: await hashVerificationCode(code),
+      email,
+    });
+
+    return {
+      email: result.email,
     };
   },
 });

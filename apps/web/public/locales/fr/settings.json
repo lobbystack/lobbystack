@@ -142,19 +142,20 @@
   "account": {
     "changeEmail": {
       "label": "Changer le courriel",
-      "description": "Entrez votre nouveau courriel et votre mot de passe actuel.",
+      "description": "Entrez votre nouveau courriel et votre mot de passe actuel. Nous enverrons un lien de confirmation avant de modifier votre courriel de connexion.",
       "newEmailPlaceholder": "Nouveau courriel",
       "currentPasswordPlaceholder": "Mot de passe actuel",
-      "save": "Enregistrer",
+      "save": "Envoyer le lien de confirmation",
       "currentEmail": "Courriel actuel : {{email}}",
-      "saved": "Courriel mis a jour vers {{email}}.",
+      "confirmationSent": "Nous avons envoye un lien de confirmation a {{email}}.",
       "errors": {
         "invalidPassword": "Le mot de passe actuel est incorrect.",
         "alreadyExists": "Un compte existe deja avec ce courriel.",
         "unchanged": "Entrez une adresse courriel differente.",
         "noEmail": "Aucun courriel n'est configure pour ce compte.",
+        "missingSiteUrl": "La confirmation du courriel n'est pas encore configuree. Definissez SITE_URL sur le deploiement Convex puis reessayez.",
         "required": "Entrez une nouvelle adresse courriel.",
-        "failed": "Impossible de mettre a jour votre courriel. Veuillez reessayer."
+        "failed": "Impossible d'envoyer un lien de confirmation. Veuillez reessayer."
       }
     }
   },

@@ -15,6 +15,7 @@ type TransactionalTemplateInput = {
 };
 
 const DEFAULT_PASSWORD_RESET_SUBJECT = "Reset your password";
+const DEFAULT_VERIFY_EMAIL_SUBJECT = "Confirm your new email";
 
 export type TransactionalEmailConfig = {
   fromAddress: string;
@@ -56,9 +57,10 @@ export function renderTransactionalEmail(
   text: string;
 } {
   switch (input.template) {
+    case "verify_email":
+      return renderVerifyEmailTemplate(input);
     case "password_reset":
       return renderPasswordResetEmail(input);
-    case "verify_email":
     case "operator_alert":
       throw new Error(`Email template "${input.template}" is not implemented yet.`);
     default: {
@@ -85,6 +87,39 @@ export async function sendTransactionalEmail(
   });
 
   return { messageId: String(messageId) };
+}
+
+function renderVerifyEmailTemplate(input: TransactionalTemplateInput): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const confirmUrl = requireTemplateVariable(input.template, input.variables, "confirmUrl");
+  const expiresMinutes = requireTemplateVariable(
+    input.template,
+    input.variables,
+    "expiresMinutes",
+  );
+
+  const subject = input.subject || DEFAULT_VERIFY_EMAIL_SUBJECT;
+  const escapedConfirmUrl = escapeHtml(confirmUrl);
+  const escapedExpiresMinutes = escapeHtml(expiresMinutes);
+
+  return {
+    subject,
+    html: [
+      "<p>You requested to change the sign-in email for your AI Receptionist account.</p>",
+      `<p><a href="${escapedConfirmUrl}">Confirm your new email</a></p>`,
+      `<p>This confirmation link expires in ${escapedExpiresMinutes} minutes.</p>`,
+      "<p>If you did not request this change, you can safely ignore this email.</p>",
+    ].join(""),
+    text: [
+      "You requested to change the sign-in email for your AI Receptionist account.",
+      `Confirm your new email: ${confirmUrl}`,
+      `This confirmation link expires in ${expiresMinutes} minutes.`,
+      "If you did not request this change, you can safely ignore this email.",
+    ].join("\n\n"),
+  };
 }
 
 function renderPasswordResetEmail(input: TransactionalTemplateInput): {

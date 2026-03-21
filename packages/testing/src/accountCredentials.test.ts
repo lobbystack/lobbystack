@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { EMAIL_CHANGE_PROVIDER_ID } from "../../../convex/lib/emailChange";
 import schema from "../../../convex/schema";
 
 declare global {
@@ -15,13 +16,14 @@ declare global {
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 
 describe("account credential settings", () => {
-  it("lets an authenticated user change the email on their password account", async () => {
+  it("confirms an email change link and updates the password account email", async () => {
     const t = convexTest(schema, convexModules);
     const subject = "account-owner";
     const currentPassword = "CurrentPass123!";
     const currentEmail = "owner@example.com";
     const nextEmail = "updated@example.com";
     const nextPassword = "ChangedPass123!";
+    const confirmationCode = "confirm-email-change";
     const secret = await new Scrypt().hash(currentPassword);
 
     const seeded = await t.run(async (ctx) => {
@@ -30,11 +32,19 @@ describe("account credential settings", () => {
         email: currentEmail,
       });
 
-      await ctx.db.insert("authAccounts", {
+      const accountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
         userId,
         provider: "password",
         providerAccountId: currentEmail,
         secret,
+      });
+
+      await ctx.db.insert("authVerificationCodes", {
+        accountId,
+        provider: EMAIL_CHANGE_PROVIDER_ID,
+        code: await hashCode(confirmationCode),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        emailVerified: nextEmail,
       });
 
       return { userId };
@@ -43,9 +53,9 @@ describe("account credential settings", () => {
     const asOwner = t.withIdentity({ subject });
 
     await expect(
-      asOwner.action(api.businesses.catalog.changeEmail, {
-        currentPassword,
-        newEmail: nextEmail,
+      t.action(api.businesses.catalog.confirmEmailChange, {
+        code: confirmationCode,
+        email: nextEmail,
       }),
     ).resolves.toEqual({ email: nextEmail });
 
@@ -76,6 +86,12 @@ describe("account credential settings", () => {
       expect(newAccount?.userId).toBe(seeded.userId);
       expect(newAccount?.providerAccountId).toBe(nextEmail);
       expect(newAccount?.secret).not.toBe(secret);
+      expect(
+        await ctx.db
+          .query("authVerificationCodes")
+          .withIndex("accountId", (q) => q.eq("accountId", newAccount!._id))
+          .unique(),
+      ).toBeNull();
     });
   });
 
@@ -119,3 +135,11 @@ describe("account credential settings", () => {
     ).rejects.toThrow("already exists");
   });
 });
+
+async function hashCode(code: string): Promise<string> {
+  const encoded = new TextEncoder().encode(code);
+  const hash = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}

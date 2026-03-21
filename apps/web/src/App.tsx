@@ -12,6 +12,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import {
+  ConfirmEmailChangePage,
   ForgotPasswordPage,
   LoginPage,
   SignupPage,
@@ -218,6 +219,7 @@ export default function App() {
             }
             path="/forgot-password"
           />
+          <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
           <Route
             element={
               <RequireAuth>

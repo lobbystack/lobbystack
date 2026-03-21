@@ -71,7 +71,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
       setEmail("");
       setCurrentEmailPassword("");
-      setEmailStatus(t("account.changeEmail.saved", { email: result.email }));
+      setEmailStatus(t("account.changeEmail.confirmationSent", { email: result.email }));
     } catch (error) {
       setEmailError(getChangeEmailErrorMessage(error, t));
     }
@@ -202,6 +202,9 @@ function getChangeEmailErrorMessage(
   }
   if (message.includes("already on your account")) {
     return t("account.changeEmail.errors.unchanged");
+  }
+  if (message.includes("SITE_URL is required")) {
+    return t("account.changeEmail.errors.missingSiteUrl");
   }
   if (message.includes("No email is configured")) {
     return t("account.changeEmail.errors.noEmail");
