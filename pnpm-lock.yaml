@@ -47,6 +47,9 @@ importers:
       convex:
         specifier: ^1.31.2
         version: 1.32.0(react@19.2.4)
+      jimp:
+        specifier: ^1.6.0
+        version: 1.6.0
       luxon:
         specifier: ^3.7.2
         version: 3.7.2
@@ -75,9 +78,6 @@ importers:
       convex-test:
         specifier: ^0.0.41
         version: 0.0.41(convex@1.32.0(react@19.2.4))
-      jimp:
-        specifier: ^1.6.0
-        version: 1.6.0
       tsx:
         specifier: ^4.20.3
         version: 4.21.0

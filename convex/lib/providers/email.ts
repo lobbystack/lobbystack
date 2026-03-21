@@ -1,12 +1,18 @@
-import type { EmailProvider } from "@ai-receptionist/providers";
 import { Resend, type ResendOptions } from "@convex-dev/resend";
 
 import { components } from "../../_generated/api";
 import type { ActionCtx, MutationCtx } from "../../_generated/server";
 
-type TransactionalTemplateInput = Parameters<EmailProvider["sendTemplate"]>[0];
-type TransactionalTemplateName = TransactionalTemplateInput["template"];
 type SendEmailCtx = Pick<ActionCtx, "runMutation"> | Pick<MutationCtx, "runMutation">;
+
+type TransactionalTemplateName = "verify_email" | "password_reset" | "operator_alert";
+
+type TransactionalTemplateInput = {
+  template: TransactionalTemplateName;
+  to: string;
+  subject: string;
+  variables: Record<string, string>;
+};
 
 const DEFAULT_PASSWORD_RESET_SUBJECT = "Reset your password";
 
