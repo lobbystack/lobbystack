@@ -143,11 +143,11 @@
   "account": {
     "changeEmail": {
       "label": "Change email",
-      "description": "Enter your new email and current password. We'll send a confirmation link before we update your sign-in email.",
+      "description": "Email address you use to log in.",
       "newEmailPlaceholder": "New email",
       "currentPasswordPlaceholder": "Current password",
       "save": "Send confirmation link",
-      "currentEmail": "Current email: {{email}}",
+      "currentEmail": "{{email}}",
       "confirmationSent": "We sent a confirmation link to {{email}}.",
       "errors": {
         "invalidPassword": "Current password is incorrect.",
