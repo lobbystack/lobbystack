@@ -208,13 +208,6 @@ export function CallRecordingPlayer({
     return (currentTime / duration) * 100;
   }, [currentTime, duration]);
 
-  const bufferedProgress = useMemo(() => {
-    if (duration <= 0) {
-      return 0;
-    }
-    return (bufferedTime / duration) * 100;
-  }, [bufferedTime, duration]);
-
   const displayedRemainingSeconds = useMemo(() => {
     if (duration <= 0) {
       return 0;
@@ -243,7 +236,6 @@ export function CallRecordingPlayer({
         </Button>
 
         <Slider
-          bufferValue={bufferedProgress}
           className="min-w-24 flex-1"
           max={100}
           min={0}

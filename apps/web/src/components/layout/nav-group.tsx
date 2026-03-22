@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type {
   NavCollapsibleItem,
   NavGroup as NavGroupProps,
@@ -116,20 +117,18 @@ function SidebarMenuCollapsible({
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Collapsible
-      asChild
-      className="group/collapsible"
-      open={isOpen}
-      onOpenChange={onToggle}
-    >
-      <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title}>
+    <SidebarMenuItem>
+      <Collapsible className="group/collapsible" open={isOpen} onOpenChange={onToggle}>
+        <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
             {item.icon ? <item.icon /> : null}
             <span>{item.title}</span>
             {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[open]/collapsible:rotate-90 rtl:rotate-180" />
-          </SidebarMenuButton>
+            <ChevronRight
+              className={cn(
+                "ms-auto transition-transform duration-200 rtl:rotate-180",
+                isOpen && "rotate-90",
+              )}
+            />
         </CollapsibleTrigger>
         <CollapsibleContent className="CollapsibleContent">
           <SidebarMenuSub>
@@ -148,8 +147,8 @@ function SidebarMenuCollapsible({
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+      </Collapsible>
+    </SidebarMenuItem>
   );
 }
 
