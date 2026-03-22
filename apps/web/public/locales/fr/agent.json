@@ -1,66 +1,32 @@
 {
   "page": {
     "eyebrow": "Espace agent",
-    "title": "Façonnez la manière dont votre réceptionniste pense, dirige et répond.",
-    "description": "Ajustez le playbook opérateur, gardez la connaissance métier à jour et testez les réponses avant qu'elles n'atteignent un client."
-  },
-  "workflow": {
-    "step": "Étape {{value}}",
-    "steps": {
-      "behavior": {
-        "title": "Définir le ton et les règles d'escalade",
-        "description": "Déterminez la voix du réceptionniste, la logique d'aiguillage et les cas qui doivent déclencher un transfert."
-      },
-      "knowledge": {
-        "title": "Lui donner le bon contexte",
-        "description": "Gardez les FAQ et les documents longs bien organisés pour que l'agent s'appuie sur des faits métier réels."
-      },
-      "preview": {
-        "title": "Tester les réponses avant la mise en ligne",
-        "description": "Essayez de vraies invites clients et vérifiez comment la couche de connaissance actuelle répond."
-      }
-    }
+    "title": "Agent",
+    "description": "Configurez le comportement de votre réceptionniste IA, ses connaissances et sa gestion des appels et messages."
   },
   "sections": {
-    "profile": {
-      "eyebrow": "Conception du comportement",
-      "title": "Persona, instructions et routage",
-      "description": "Ajustez la voix du réceptionniste, la langue client, la politique de réservation et le comportement de transfert."
-    },
-    "knowledge": {
-      "eyebrow": "Couche de connaissance",
-      "title": "FAQ et références longues",
-      "description": "Ajoutez des réponses courtes et des sources détaillées qui doivent guider les réponses de l'agent."
-    },
-    "snapshot": {
-      "eyebrow": "Contexte compilé",
-      "title": "Instantané métier actuel",
-      "description": "Vérifiez le contexte métier généré qui alimente le comportement vocal et messagerie."
-    },
-    "preview": {
-      "eyebrow": "Répétition en direct",
-      "title": "Aperçu du traitement des invites",
-      "description": "Exécutez des invites de test sur l'état actuel de la connaissance avant la mise en service."
+    "basicSettings": {
+      "title": "Paramètres de base",
+      "description": "Message d'accueil et langue par défaut de votre réceptionniste."
     }
   },
-  "empty": {
-    "description": "Créez d'abord une entreprise, puis revenez ici pour façonner la persona du réceptionniste, charger la connaissance et répéter les réponses dans une seule surface de contrôle.",
-    "cards": {
-      "behavior": {
-        "eyebrow": "Comportement",
-        "title": "Définir le ton et la politique de transfert",
-        "description": "Décidez du style du réceptionniste, de ses priorités et des moments où il doit escalader."
-      },
-      "knowledge": {
-        "eyebrow": "Connaissance",
-        "title": "Charger les FAQ et les sources",
-        "description": "Ajoutez des réponses pratiques, des documents et du contexte métier pour garder les réponses ancrées."
-      },
-      "preview": {
-        "eyebrow": "Aperçu",
-        "title": "Tester les invites clients avant le lancement",
-        "description": "Simulez de vraies questions et validez la réponse de la configuration actuelle de l'agent."
-      }
+  "fields": {
+    "greeting": {
+      "label": "Message d'accueil",
+      "placeholder": "Bonjour, merci d'avoir appelé…",
+      "hint": "La phrase d'ouverture utilisée par votre réceptionniste lorsqu'il répond à un appel ou démarre une conversation."
+    },
+    "defaultLanguage": {
+      "label": "Langue par défaut",
+      "hint": "La langue dans laquelle le réceptionniste commence avant de détecter la préférence de l'appelant."
     }
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Modifications enregistrées"
+  },
+  "empty": {
+    "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."
   }
 }

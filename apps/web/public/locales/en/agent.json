@@ -1,66 +1,32 @@
 {
   "page": {
     "eyebrow": "Agent workspace",
-    "title": "Shape how your receptionist thinks, routes, and responds.",
-    "description": "Tune the operator playbook, keep business knowledge fresh, and test replies before they reach a customer."
-  },
-  "workflow": {
-    "step": "Step {{value}}",
-    "steps": {
-      "behavior": {
-        "title": "Set tone and escalation rules",
-        "description": "Define the receptionist voice, routing logic, and what should trigger a handoff."
-      },
-      "knowledge": {
-        "title": "Feed it the right context",
-        "description": "Keep FAQs and longer documents organized so the agent can ground answers in real business facts."
-      },
-      "preview": {
-        "title": "Pressure-test replies before go-live",
-        "description": "Try real customer prompts and inspect how the current knowledge layer responds."
-      }
-    }
+    "title": "Agent",
+    "description": "Configure how your AI receptionist behaves, what it knows, and how it handles calls and messages."
   },
   "sections": {
-    "profile": {
-      "eyebrow": "Behavior design",
-      "title": "Persona, instructions, and routing",
-      "description": "Adjust the receptionist voice, customer language, booking policy, and transfer behavior."
-    },
-    "knowledge": {
-      "eyebrow": "Knowledge layer",
-      "title": "FAQs and long-form references",
-      "description": "Capture short answers and deeper source material that should inform agent replies."
-    },
-    "snapshot": {
-      "eyebrow": "Compiled context",
-      "title": "Current business snapshot",
-      "description": "Review the generated business context that powers voice and messaging behavior."
-    },
-    "preview": {
-      "eyebrow": "Live rehearsal",
-      "title": "Preview prompt handling",
-      "description": "Run test prompts against the current knowledge state before making the page live."
+    "basicSettings": {
+      "title": "Basic Settings",
+      "description": "Greeting and default language for your receptionist."
     }
   },
-  "empty": {
-    "description": "Create a business first, then return here to shape the receptionist persona, load knowledge, and rehearse replies in one control surface.",
-    "cards": {
-      "behavior": {
-        "eyebrow": "Behavior",
-        "title": "Define tone and transfer policy",
-        "description": "Decide how the receptionist should sound, what it should prioritize, and when it should escalate."
-      },
-      "knowledge": {
-        "eyebrow": "Knowledge",
-        "title": "Load FAQs and source material",
-        "description": "Add practical answers, documents, and business context so replies stay grounded."
-      },
-      "preview": {
-        "eyebrow": "Preview",
-        "title": "Test customer prompts before launch",
-        "description": "Simulate real questions and validate how the current agent configuration responds."
-      }
+  "fields": {
+    "greeting": {
+      "label": "Greeting",
+      "placeholder": "Hello, thank you for calling…",
+      "hint": "The opening line your receptionist uses when answering a call or starting a conversation."
+    },
+    "defaultLanguage": {
+      "label": "Default language",
+      "hint": "The language the receptionist starts with before detecting the caller's preference."
     }
+  },
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved"
+  },
+  "empty": {
+    "description": "Create a business first, then return here to configure your AI receptionist."
   }
 }

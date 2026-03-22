@@ -144,7 +144,7 @@ function WorkspaceShell() {
             path="/analytics"
           />
           <Route
-            element={<AgentPage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
+            element={<AgentPage {...(businessId ? { businessId } : {})} />}
             path="/agent"
           />
           <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
