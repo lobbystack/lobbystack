@@ -8,6 +8,31 @@
     "basicSettings": {
       "title": "Paramètres de base",
       "description": "Message d'accueil et langue par défaut de votre réceptionniste."
+    },
+    "knowledge": {
+      "title": "Connaissances",
+      "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
+      "listTitle": "Base de connaissances",
+      "addKnowledge": "Ajouter",
+      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des FAQ ou toute autre information que votre réceptionniste devrait connaître.",
+      "emptyState": "Aucune connaissance ajoutée pour le moment.",
+      "fields": {
+        "title": {
+          "label": "Titre",
+          "placeholder": "ex: Heures d'ouverture",
+          "hint": "Un titre court et descriptif pour cette information."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "ex: Nous sommes ouverts du lundi au vendredi de 9h à 17h.",
+          "hint": "L'information réelle que le réceptionniste doit utiliser."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "ex: horaires, adresse",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
+        }
+      }
     }
   },
   "fields": {

@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 type AgentLayoutProps = {
@@ -16,16 +17,22 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
     return <BusinessSetupCard />;
   }
 
-  const header =
-    location.pathname === "/agent/basic-settings" || location.pathname === "/agent"
-      ? {
-          title: t("sections.basicSettings.title"),
-          description: t("sections.basicSettings.description"),
-        }
-      : {
-          title: t("page.title"),
-          description: t("page.description"),
-        };
+  let header = {
+    title: t("page.title"),
+    description: t("page.description"),
+  };
+
+  if (location.pathname === "/agent/basic-settings" || location.pathname === "/agent") {
+    header = {
+      title: t("sections.basicSettings.title"),
+      description: t("sections.basicSettings.description"),
+    };
+  } else if (location.pathname === "/agent/knowledge") {
+    header = {
+      title: t("sections.knowledge.title"),
+      description: t("sections.knowledge.description"),
+    };
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,6 +41,9 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
           <h1 className="text-2xl font-bold">{header.title}</h1>
           <p className="text-sm text-muted-foreground">{header.description}</p>
         </div>
+        {location.pathname === "/agent/knowledge" && (
+          <AddKnowledgeSheet businessId={businessId} />
+        )}
       </div>
       <div className="w-full">
         <Outlet />

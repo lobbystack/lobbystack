@@ -12,6 +12,7 @@ import {
   ListChecks,
   UserRound,
   Workflow,
+  BookOpenText,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -81,6 +82,11 @@ export function AppSidebar({
                   title: t("agent:sections.basicSettings.title"),
                   url: "/agent",
                   icon: ListChecks,
+                },
+                {
+                  title: t("agent:sections.knowledge.title"),
+                  url: "/agent/knowledge",
+                  icon: BookOpenText,
                 },
               ],
             },

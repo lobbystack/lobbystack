@@ -8,6 +8,31 @@
     "basicSettings": {
       "title": "Basic Settings",
       "description": "Greeting and default language for your receptionist."
+    },
+    "knowledge": {
+      "title": "Knowledge",
+      "description": "Information and guidelines your receptionist uses to answer questions.",
+      "listTitle": "Knowledge Base",
+      "addKnowledge": "Add Knowledge",
+      "addKnowledgeDescription": "Add opening hours, pricing, FAQs, or any other information your receptionist should know.",
+      "emptyState": "No knowledge added yet.",
+      "fields": {
+        "title": {
+          "label": "Title",
+          "placeholder": "e.g., Opening Hours",
+          "hint": "A short, descriptive title for this piece of knowledge."
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "e.g., We are open Monday to Friday from 9am to 5pm.",
+          "hint": "The actual information the receptionist should use."
+        },
+        "tags": {
+          "label": "Tags (optional)",
+          "placeholder": "e.g., hours, location",
+          "hint": "Comma-separated keywords to help categorize this knowledge."
+        }
+      }
     }
   },
   "fields": {
