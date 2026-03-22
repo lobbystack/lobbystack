@@ -67,19 +67,22 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="agent-greeting">{t("agent:fields.greeting.label")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t("agent:fields.greeting.hint")}
+            </p>
             <Input
               id="agent-greeting"
               placeholder={t("agent:fields.greeting.placeholder")}
               value={greeting}
               onChange={(event) => setGreeting(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              {t("agent:fields.greeting.hint")}
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="agent-default-language">{t("agent:fields.defaultLanguage.label")}</Label>
+            <p className="text-xs text-muted-foreground">
+              {t("agent:fields.defaultLanguage.hint")}
+            </p>
             <Select
               value={defaultLocale}
               onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}
@@ -92,9 +95,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 <SelectItem value="fr">{t("common:language.french")}</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              {t("agent:fields.defaultLanguage.hint")}
-            </p>
           </div>
         </div>
 
