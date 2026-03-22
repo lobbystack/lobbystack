@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -38,6 +38,13 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const location = useLocation();
   const href = location.pathname;
 
+  // Derive which collapsible should be initially open based on current path
+  const collapsibleItems = items.filter((item): item is NavCollapsibleItem => !isNavLinkItem(item));
+  const initialOpen = collapsibleItems.find((item) => checkIsActive(href, item, true));
+  const [openKey, setOpenKey] = useState<string | null>(
+    initialOpen ? `${initialOpen.title}-${initialOpen.items[0]?.url ?? title}` : null,
+  );
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -53,7 +60,15 @@ export function NavGroup({ title, items }: NavGroupProps) {
             return <SidebarMenuCollapsedDropdown href={href} item={item} key={key} />;
           }
 
-          return <SidebarMenuCollapsible href={href} item={item} key={key} />;
+          return (
+            <SidebarMenuCollapsible
+              href={href}
+              isOpen={openKey === key}
+              item={item}
+              key={key}
+              onToggle={(open) => setOpenKey(open ? key : null)}
+            />
+          );
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -90,9 +105,13 @@ function SidebarMenuLink({ item, href }: { item: NavLinkItem; href: string }) {
 function SidebarMenuCollapsible({
   item,
   href,
+  isOpen,
+  onToggle,
 }: {
   item: NavCollapsibleItem;
   href: string;
+  isOpen: boolean;
+  onToggle: (open: boolean) => void;
 }) {
   const { setOpenMobile } = useSidebar();
 
@@ -100,7 +119,8 @@ function SidebarMenuCollapsible({
     <Collapsible
       asChild
       className="group/collapsible"
-      defaultOpen={checkIsActive(href, item, true)}
+      open={isOpen}
+      onOpenChange={onToggle}
     >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
