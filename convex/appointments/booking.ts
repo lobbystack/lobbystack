@@ -258,6 +258,11 @@ async function bookAppointmentWithSource(
     internal.ai.workflows.runtime.afterAppointmentBookedWorkflow,
     { appointmentId },
   );
+  await workflowManager.start(
+    ctx,
+    internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
+    { appointmentId },
+  );
 
   return { appointmentId, contactId: contact._id };
 }

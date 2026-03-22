@@ -178,11 +178,11 @@
   overflow: hidden;
 }
 
-.CollapsibleContent[data-state="open"] {
+.CollapsibleContent[data-open] {
   animation: slideDown 300ms ease-out;
 }
 
-.CollapsibleContent[data-state="closed"] {
+.CollapsibleContent[data-closed] {
   animation: slideUp 300ms ease-out;
 }
 
@@ -192,13 +192,13 @@
   }
 
   to {
-    height: var(--radix-collapsible-content-height, auto);
+    height: var(--collapsible-panel-height, auto);
   }
 }
 
 @keyframes slideUp {
   from {
-    height: var(--radix-collapsible-content-height, auto);
+    height: var(--collapsible-panel-height, auto);
   }
 
   to {

@@ -27,6 +27,16 @@ export const afterAppointmentBookedWorkflow = workflowManager.define({
       internal.notifications.reminders.createAppointmentNotifications,
       { appointmentId: args.appointmentId },
     );
+    return null;
+  },
+});
+
+export const appointmentCalendarSyncWorkflow = workflowManager.define({
+  args: {
+    appointmentId: v.id("appointments"),
+  },
+  returns: v.null(),
+  handler: async (step, args): Promise<null> => {
     await step.runAction(
       internal.integrations.calendar.syncAppointmentToExternalCalendars,
       { appointmentId: args.appointmentId },

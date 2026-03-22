@@ -101,6 +101,7 @@
     },
     "status": {
       "connected": "Connecté",
+      "reconnectRequired": "Reconnexion requise",
       "notConnected": "Pas encore connecté"
     },
     "summary": {

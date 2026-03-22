@@ -248,8 +248,7 @@ export function CallRecordingPlayer({
           max={100}
           min={0}
           onValueChange={(value) => {
-            const nextValue = value[0];
-            if (nextValue === undefined || duration <= 0) {
+            if (typeof value !== "number" || duration <= 0) {
               return;
             }
 
@@ -258,11 +257,11 @@ export function CallRecordingPlayer({
               return;
             }
 
-            const nextTime = (nextValue / 100) * duration;
+            const nextTime = (value / 100) * duration;
             audio.currentTime = nextTime;
             setCurrentTime(nextTime);
           }}
-          value={[progress]}
+          value={progress}
         />
 
         <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">

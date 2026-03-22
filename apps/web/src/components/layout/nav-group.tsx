@@ -108,7 +108,7 @@ function SidebarMenuCollapsible({
             {item.icon ? <item.icon /> : null}
             <span>{item.title}</span>
             {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180" />
+            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[open]/collapsible:rotate-90 rtl:rotate-180" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className="CollapsibleContent">

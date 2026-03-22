@@ -60,12 +60,14 @@ const originalSessionEncryptionKey = process.env.SESSION_ENCRYPTION_KEY;
 let googleEventCounter = 0;
 let failGoogleEventWrites = false;
 let forceInvalidGoogleSyncToken = false;
+let forceGoogleRefreshTokenRevoked = false;
 let googleEventsByCalendar: Record<string, Record<string, MockGoogleEvent>> = {};
 
 function resetGoogleMockState(): void {
   googleEventCounter = 0;
   failGoogleEventWrites = false;
   forceInvalidGoogleSyncToken = false;
+  forceGoogleRefreshTokenRevoked = false;
   googleEventsByCalendar = {
     "primary-calendar": {},
     "team-calendar": {},
@@ -98,6 +100,19 @@ function installGoogleFetchMock(): void {
             expires_in: 3600,
             token_type: "Bearer",
           });
+        }
+
+        if (forceGoogleRefreshTokenRevoked) {
+          return new Response(
+            JSON.stringify({
+              error: "invalid_grant",
+              error_description: "Token has been expired or revoked.",
+            }),
+            {
+              status: 400,
+              headers: { "content-type": "application/json" },
+            },
+          );
         }
 
         return Response.json({
@@ -1044,6 +1059,44 @@ describe("calendar reconciliation backend", () => {
         .collect();
       expect(blocks).toHaveLength(1);
       expect(blocks[0]?.externalEventId).toBe("busy-2");
+    });
+  });
+
+  it("marks Google connections as reconnect required when the refresh token is revoked", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, staffId } = await t.run(async (ctx) => {
+      const seeded = await seedBookableBusiness(ctx, {
+        slug: "revoked-google-refresh-business",
+        name: "Revoked Google Refresh Business",
+      });
+      return { businessId: seeded.businessId, staffId: seeded.staffId };
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(connectionId, {
+        tokenExpiresAt: "2020-01-01T00:00:00.000Z",
+      });
+    });
+
+    forceGoogleRefreshTokenRevoked = true;
+
+    const result = await t.action(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+      connectionId,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: "reconnect_required",
+      message: "Google Calendar authorization expired or was revoked. Reconnect Google Calendar.",
+    });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      expect(connection?.status).toBe("reconnect_required");
+      expect(connection?.lastSyncError).toBe(
+        "Google Calendar authorization expired or was revoked. Reconnect Google Calendar.",
+      );
     });
   });
 

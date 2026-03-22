@@ -156,7 +156,9 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       ) as Array<CalendarConnectionListItem>),
     [connections],
   );
-  const googleConnected = googleConnections.length > 0;
+  const googleHasConnection = googleConnections.length > 0;
+  const googleConnected = googleConnections.some((connection) => connection.status === "connected");
+  const googleNeedsReconnect = googleHasConnection && !googleConnected;
   const microsoftConnected = (connections ?? []).some(
     (connection) => connection.provider === "microsoft",
   );
@@ -234,10 +236,18 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   useEffect(() => {
     async function loadCalendars() {
-      if (!googleSheetOpen || !selectedStaffId || !selectedConnection?.staffId) {
+      if (
+        !googleSheetOpen ||
+        !selectedStaffId ||
+        !selectedConnection?.staffId ||
+        selectedConnection.status !== "connected"
+      ) {
         if (!selectedConnection?.staffId) {
           setCalendarOptions([]);
           setSelectedCalendarId("");
+        } else if (selectedConnection.status !== "connected") {
+          setCalendarOptions([]);
+          setSelectedCalendarId(selectedConnection.selectedCalendarId ?? "");
         }
         return;
       }
@@ -310,6 +320,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   }
 
   async function handleSaveCalendar(): Promise<void> {
+    if (selectedConnection?.status !== "connected") {
+      setErrorMessage("Reconnect Google Calendar before choosing a calendar.");
+      return;
+    }
+
     if (!selectedStaffId || !selectedCalendarId) {
       setErrorMessage(t("integrations.google.chooseCalendarFirst"));
       return;
@@ -336,7 +351,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   async function handleRefreshCalendars(): Promise<void> {
     const connectionStaffId = selectedConnection?.staffId;
-    if (!connectionStaffId) {
+    if (!connectionStaffId || selectedConnection?.status !== "connected") {
       return;
     }
 
@@ -377,7 +392,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 <GoogleCalendarLogo />
               </div>
               <div className="flex items-center gap-2">
-                {googleConnected ? (
+                {googleHasConnection ? (
                   <Button
                     aria-label={t("integrations.actions.settings")}
                     onClick={openGoogleSheet}
@@ -390,18 +405,20 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 ) : null}
                 <Button
                   className={
-                    googleConnected
+                    googleConnected && !googleNeedsReconnect
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
                       : undefined
                   }
-                  disabled={googleConnected}
+                  disabled={googleConnected && !googleNeedsReconnect}
                   onClick={openGoogleSheet}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  {googleConnected
-                    ? t("integrations.actions.connected")
+                  {googleNeedsReconnect
+                    ? t("integrations.google.reconnect")
+                    : googleConnected
+                      ? t("integrations.actions.connected")
                     : t("integrations.actions.connect")}
                 </Button>
               </div>
@@ -550,7 +567,15 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{t("integrations.status.connected")}</Badge>
+                    <Badge
+                      variant={
+                        selectedConnection.status === "connected" ? "secondary" : "destructive"
+                      }
+                    >
+                      {selectedConnection.status === "connected"
+                        ? t("integrations.status.connected")
+                        : t("integrations.status.reconnectRequired")}
+                    </Badge>
                     {selectedConnection.lastSyncError ? (
                       <Badge variant="destructive">
                         {t("integrations.google.syncNeedsAttention")}
@@ -594,7 +619,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      disabled={isLoadingCalendars || !selectedCalendarId || isSavingCalendar}
+                      disabled={
+                        isLoadingCalendars ||
+                        !selectedCalendarId ||
+                        isSavingCalendar ||
+                        selectedConnection.status !== "connected"
+                      }
                       onClick={() => void handleSaveCalendar()}
                       type="button"
                       variant="secondary"
@@ -604,7 +634,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                         : t("integrations.google.saveCalendar")}
                     </Button>
                     <Button
-                      disabled={isLoadingCalendars || !selectedConnection.staffId}
+                      disabled={
+                        isLoadingCalendars ||
+                        !selectedConnection.staffId ||
+                        selectedConnection.status !== "connected"
+                      }
                       onClick={() => void handleRefreshCalendars()}
                       type="button"
                       variant="ghost"

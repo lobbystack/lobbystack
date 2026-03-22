@@ -39,6 +39,7 @@ function buildGroundedSystemPrompt(input: {
   timezone: string;
   businessNowLabel: string;
   bookingStateSummary: string;
+  hasKnownCustomerName: boolean;
   services: Array<{ name: string; durationMinutes: number }>;
 }): string {
   return [
@@ -47,6 +48,7 @@ function buildGroundedSystemPrompt(input: {
     `Business timezone: ${input.timezone}`,
     `Current local business time: ${input.businessNowLabel}`,
     `Active customer language: ${getRuntimeLanguageName(input.locale)}.`,
+    `Customer name on file: ${input.hasKnownCustomerName ? "known" : "unknown"}.`,
     `Available services: ${input.services
       .map((service) => `${service.name} (${service.durationMinutes} min)`)
       .join(", ") || "No services configured."}`,
@@ -69,7 +71,9 @@ function buildGroundedSystemPrompt(input: {
     "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
     "Never book an offered slot unless the current customer SMS clearly confirms that option.",
     "Before a first SMS booking is finalized, make sure you have the customer's name for the appointment.",
+    "If the customer name on file is known, do not ask for the customer's name again unless the customer is explicitly correcting or changing it.",
     "If a tool returns replyText, use that reply directly or with only very light editing.",
+    "Do not add a request for the customer's name unless the tool-backed reply itself asks for it or the customer name on file is unknown.",
     "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
     "If the appointment-change tool returns structured facts without replyText, explain naturally whether there is a confirmed appointment and that SMS cancellations or reschedules are not supported here yet.",
     "If the customer asks when their appointment is, lead with the appointment date and time. Do not start with 'Yes, you are booked' unless they asked whether they are booked.",
@@ -1355,6 +1359,12 @@ function buildContactNameRequestReply(
   });
 }
 
+function looksLikeContactNameRequest(body: string): boolean {
+  return /(?:what name should i put on it|may i have your name|provide your name|what'?s your name|quel nom dois-je inscrire|quel est votre nom|puis-je avoir votre nom)/iu.test(
+    body,
+  );
+}
+
 function hasKnownContactName(contact: ConversationSmsContact | null): boolean {
   return Boolean(contact?.contactName?.trim());
 }
@@ -2144,7 +2154,7 @@ async function maybeHandlePendingBookingNameCollection(
   snapshot: Doc<"business_context_snapshots">,
   locale: RuntimeLocale,
 ): Promise<string | null> {
-  const [bookingState, contact, services] = await Promise.all([
+  const [bookingState, contact, services, recentMessages] = await Promise.all([
     ctx.runQuery(internal.ai.agents.runtime.getConversationBookingState, {
       conversationId,
     }),
@@ -2154,21 +2164,32 @@ async function maybeHandlePendingBookingNameCollection(
     ctx.runQuery(internal.voice.runtime.getActiveServicesForBusiness, {
       businessId,
     }),
+    ctx.runQuery(internal.ai.agents.runtime.getRecentConversationMessages, {
+      conversationId,
+      limit: 4,
+    }),
   ]);
 
-  if (
-    !isAwaitingPendingBookingNameCollection(bookingState) ||
-    hasKnownContactName(contact)
-  ) {
-    return null;
-  }
   const pendingStartsAt = bookingState?.pendingStartsAt;
   if (!pendingStartsAt) {
     return null;
   }
+  const providedContactName = extractContactNameFromReply(prompt);
+  const mostRecentOutbound = [...recentMessages]
+    .reverse()
+    .find((message) => message.direction === "outbound");
+  if (
+    !isAwaitingPendingBookingNameCollection(bookingState) &&
+    !(
+      providedContactName &&
+      mostRecentOutbound &&
+      looksLikeContactNameRequest(mostRecentOutbound.body)
+    )
+  ) {
+    return null;
+  }
 
   const selectedService = resolveServiceFromState(services, bookingState);
-  const providedContactName = extractContactNameFromReply(prompt);
   if (providedContactName && selectedService) {
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationContactName, {
       conversationId,
@@ -2183,6 +2204,10 @@ async function maybeHandlePendingBookingNameCollection(
       locale,
     });
     return bookingResult.replyText;
+  }
+
+  if (hasKnownContactName(contact)) {
+    return null;
   }
 
   if (looksLikeBookingConfirmation(prompt) || looksLikeGenericNonNameReply(prompt)) {
@@ -3464,6 +3489,10 @@ async function generateGroundedReply(
     internal.ai.agents.runtime.getConversationBookingState,
     { conversationId },
   );
+  const contact = await ctx.runQuery(
+    internal.ai.agents.runtime.getConversationSmsContact,
+    { conversationId },
+  );
   const isAppointmentIntent = looksLikeAppointmentIntent(prompt, bookingState);
 
   const deterministicReply = await maybeGenerateDeterministicSmsReply(
@@ -3528,6 +3557,7 @@ async function generateGroundedReply(
           services,
           timezone: snapshot.timezone,
         }),
+        hasKnownCustomerName: Boolean(contact?.contactName?.trim()),
       }),
       prompt: `${isAppointmentIntent ? "This SMS is appointment-related. Use appointment tools first before answering.\n\n" : ""}${buildGroundedUserPrompt({
         customerMessage: prompt,

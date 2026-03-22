@@ -4,38 +4,6 @@
     "title": "Shape how your receptionist thinks, routes, and responds.",
     "description": "Tune the operator playbook, keep business knowledge fresh, and test replies before they reach a customer."
   },
-  "hero": {
-    "version": "Context {{value}}",
-    "updatedAt": "Snapshot refreshed {{value}}",
-    "locales": {
-      "en": "English",
-      "fr": "French"
-    },
-    "metrics": {
-      "services": {
-        "label": "Services",
-        "hint": "Bookable offers currently in the snapshot"
-      },
-      "faqs": {
-        "label": "Priority FAQs",
-        "hint": "High-signal answers available to the agent"
-      },
-      "locale": {
-        "label": "Default language"
-      },
-      "transfer": {
-        "label": "Escalation mode",
-        "none": "No handoff channel configured yet"
-      }
-    },
-    "panel": {
-      "eyebrow": "Operator playbook",
-      "businessType": "Business type",
-      "greeting": "Opening greeting",
-      "bookingPolicy": "Booking guardrail",
-      "empty": "Not configured yet"
-    }
-  },
   "workflow": {
     "step": "Step {{value}}",
     "steps": {
@@ -94,19 +62,5 @@
         "description": "Simulate real questions and validate how the current agent configuration responds."
       }
     }
-  },
-  "businessTypes": {
-    "clinic": "Clinic",
-    "repair_shop": "Repair shop",
-    "salon": "Salon",
-    "service_company": "Service company",
-    "other": "Other"
-  },
-  "transferModes": {
-    "never": "Never transfer",
-    "always": "Always transfer",
-    "on_request": "Transfer on request",
-    "on_urgent": "Transfer urgent cases",
-    "during_business_hours": "Transfer during business hours"
   }
 }
