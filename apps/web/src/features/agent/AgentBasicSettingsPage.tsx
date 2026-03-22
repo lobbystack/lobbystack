@@ -88,7 +88,11 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}
             >
               <SelectTrigger id="agent-default-language">
-                <SelectValue />
+                <SelectValue>
+                  {defaultLocale === "fr"
+                    ? t("common:language.french")
+                    : t("common:language.english")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="en">{t("common:language.english")}</SelectItem>

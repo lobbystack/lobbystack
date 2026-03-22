@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -186,136 +185,117 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
       <div className="flex items-center justify-between gap-4 py-2">
         <h1 className="text-2xl font-bold">{t("home.title")}</h1>
       </div>
-      <Tabs
-        className="space-y-6"
-        defaultValue="overview"
-        orientation="vertical"
-      >
-        <div className="flex items-center justify-between gap-4 pb-4">
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <TabsList>
-              <TabsTrigger value="overview">{t("home.tabs.overview")}</TabsTrigger>
-              <TabsTrigger disabled value="reports">
-                {t("home.tabs.reports")}
-              </TabsTrigger>
-              <TabsTrigger disabled value="notifications">
-                {t("home.tabs.notifications")}
-              </TabsTrigger>
-            </TabsList>
-          </div>
-        </div>
-        <TabsContent className="space-y-6" value="overview">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metricCards.map((card) => {
-              const metric = summary?.kpis[card.key];
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {metricCards.map((card) => {
+            const metric = summary?.kpis[card.key];
 
-              return (
-                <Card key={card.key}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-semibold tracking-tight">
-                      {t(`home.metrics.${card.key}.title`)}
-                    </CardTitle>
-                    {card.icon}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-extrabold leading-none tracking-tight">
-                      {card.value.toLocaleString(i18n.language)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {metric
-                        ? formatDelta(metric.deltaPercent)
-                        : t("home.metrics.loading")}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            <Card className="col-span-1 lg:col-span-4">
-              <CardHeader>
-                <CardTitle>{t("home.chart.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="ps-2">
-                <ResponsiveContainer height={350} width="100%">
-                  <BarChart
-                    data={(summary?.monthlyCalls ?? []).map((item) => ({
-                      name: formatDateTime(item.monthStart, i18n.language, {
-                        month: "short",
-                        timeZone: "UTC",
-                      }),
-                      total: item.total,
-                    }))}
-                  >
-                    <XAxis
-                      axisLine={false}
-                      dataKey="name"
-                      fontSize={12}
-                      stroke="#888888"
-                      tickLine={false}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      direction="ltr"
-                      fontSize={12}
-                      stroke="#888888"
-                      tickLine={false}
-                    />
-                    <Bar
-                      className="fill-primary"
-                      dataKey="total"
-                      fill="currentColor"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="col-span-1 lg:col-span-3">
-              <CardHeader>
-                <CardTitle>{t("home.recentCalls.title")}</CardTitle>
-                <CardDescription>
-                  {t("home.recentCalls.description", {
-                    count: summary?.recentCalls.length ?? 0,
-                  })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-8">
-                  {(summary?.recentCalls ?? []).map((call) => (
-                    <div className="flex items-center gap-4" key={String(call.id)}>
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback>{initialsFromName(call.contactName)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-1 flex-wrap items-center justify-between">
-                        <div className="space-y-1">
-                          <p className="text-sm leading-none font-medium">
-                            {call.contactName ?? t("home.recentCalls.unknownCaller")}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {call.contactPhone ??
-                              formatDateTime(call.startedAt, i18n.language, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                          </p>
-                        </div>
-                        <div className="font-medium">
-                          {call.durationSeconds
-                            ? t("home.recentCalls.durationValue", {
-                                value: call.durationSeconds,
-                              })
-                            : call.status}
-                        </div>
+            return (
+              <Card key={card.key}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-semibold tracking-tight">
+                    {t(`home.metrics.${card.key}.title`)}
+                  </CardTitle>
+                  {card.icon}
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-extrabold leading-none tracking-tight">
+                    {card.value.toLocaleString(i18n.language)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {metric
+                      ? formatDelta(metric.deltaPercent)
+                      : t("home.metrics.loading")}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+          <Card className="col-span-1 lg:col-span-4">
+            <CardHeader>
+              <CardTitle>{t("home.chart.title")}</CardTitle>
+            </CardHeader>
+            <CardContent className="ps-2">
+              <ResponsiveContainer height={350} width="100%">
+                <BarChart
+                  data={(summary?.monthlyCalls ?? []).map((item) => ({
+                    name: formatDateTime(item.monthStart, i18n.language, {
+                      month: "short",
+                      timeZone: "UTC",
+                    }),
+                    total: item.total,
+                  }))}
+                >
+                  <XAxis
+                    axisLine={false}
+                    dataKey="name"
+                    fontSize={12}
+                    stroke="#888888"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    direction="ltr"
+                    fontSize={12}
+                    stroke="#888888"
+                    tickLine={false}
+                  />
+                  <Bar
+                    className="fill-primary"
+                    dataKey="total"
+                    fill="currentColor"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card className="col-span-1 lg:col-span-3">
+            <CardHeader>
+              <CardTitle>{t("home.recentCalls.title")}</CardTitle>
+              <CardDescription>
+                {t("home.recentCalls.description", {
+                  count: summary?.recentCalls.length ?? 0,
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
+                {(summary?.recentCalls ?? []).map((call) => (
+                  <div className="flex items-center gap-4" key={String(call.id)}>
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback>{initialsFromName(call.contactName)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-1 flex-wrap items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm leading-none font-medium">
+                          {call.contactName ?? t("home.recentCalls.unknownCaller")}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {call.contactPhone ??
+                            formatDateTime(call.startedAt, i18n.language, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                        </p>
+                      </div>
+                      <div className="font-medium">
+                        {call.durationSeconds
+                          ? t("home.recentCalls.durationValue", {
+                              value: call.durationSeconds,
+                            })
+                          : call.status}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </>
   );
 }

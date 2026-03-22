@@ -6,13 +6,20 @@ import { Plus } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -65,8 +72,8 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
     <Sheet onOpenChange={setIsSheetOpen} open={isSheetOpen}>
       <SheetTrigger
         render={
-          <Button size="sm">
-            <Plus className="mr-2 size-4" />
+          <Button>
+            <Plus data-icon="inline-start" />
             {t("agent:sections.knowledge.addKnowledge")}
           </Button>
         }
@@ -78,60 +85,68 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
             {t("agent:sections.knowledge.addKnowledgeDescription")}
           </SheetDescription>
         </SheetHeader>
-        <div className="py-6">
-          <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-title">
-                {t("agent:sections.knowledge.fields.title.label")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("agent:sections.knowledge.fields.title.hint")}
-              </p>
-              <Input
-                id="knowledge-title"
-                placeholder={t("agent:sections.knowledge.fields.title.placeholder")}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-content">
-                {t("agent:sections.knowledge.fields.content.label")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("agent:sections.knowledge.fields.content.hint")}
-              </p>
-              <Textarea
-                className="min-h-[150px]"
-                id="knowledge-content"
-                placeholder={t("agent:sections.knowledge.fields.content.placeholder")}
-                value={content}
-                onChange={(event) => setContent(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-tags">
-                {t("agent:sections.knowledge.fields.tags.label")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("agent:sections.knowledge.fields.tags.hint")}
-              </p>
-              <Input
-                id="knowledge-tags"
-                placeholder={t("agent:sections.knowledge.fields.tags.placeholder")}
-                value={tags}
-                onChange={(event) => setTags(event.target.value)}
-              />
-            </div>
-            <div className="pt-4 flex items-center justify-end gap-3">
-              <Button disabled={isSaving} type="submit">
-                {isSaving
-                  ? t("agent:actions.saving")
-                  : t("agent:actions.save")}
-              </Button>
-            </div>
-          </form>
-        </div>
+        <form className="flex h-full flex-col" onSubmit={(event) => void handleSubmit(event)}>
+          <div className="px-4 pb-4">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="knowledge-title">
+                  {t("agent:sections.knowledge.fields.title.label")}
+                </FieldLabel>
+                <FieldDescription>
+                  {t("agent:sections.knowledge.fields.title.hint")}
+                </FieldDescription>
+                <Input
+                  id="knowledge-title"
+                  placeholder={t("agent:sections.knowledge.fields.title.placeholder")}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="knowledge-content">
+                  {t("agent:sections.knowledge.fields.content.label")}
+                </FieldLabel>
+                <FieldDescription>
+                  {t("agent:sections.knowledge.fields.content.hint")}
+                </FieldDescription>
+                <Textarea
+                  className="min-h-40"
+                  id="knowledge-content"
+                  placeholder={t("agent:sections.knowledge.fields.content.placeholder")}
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="knowledge-tags">
+                  {t("agent:sections.knowledge.fields.tags.label")}
+                </FieldLabel>
+                <FieldDescription>
+                  {t("agent:sections.knowledge.fields.tags.hint")}
+                </FieldDescription>
+                <Input
+                  id="knowledge-tags"
+                  placeholder={t("agent:sections.knowledge.fields.tags.placeholder")}
+                  value={tags}
+                  onChange={(event) => setTags(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <SheetFooter>
+            <Button disabled={isSaving} type="submit">
+              {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+            </Button>
+            <SheetClose
+              render={<Button variant="outline" />}
+            >
+              Close
+            </SheetClose>
+          </SheetFooter>
+        </form>
       </SheetContent>
     </Sheet>
   );

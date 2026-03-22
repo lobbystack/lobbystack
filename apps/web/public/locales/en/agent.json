@@ -19,17 +19,17 @@
       "fields": {
         "title": {
           "label": "Title",
-          "placeholder": "e.g., Opening Hours",
+          "placeholder": "Opening Hours",
           "hint": "A short, descriptive title for this piece of knowledge."
         },
         "content": {
           "label": "Content",
-          "placeholder": "e.g., We are open Monday to Friday from 9am to 5pm.",
+          "placeholder": "We are open Monday to Friday from 9am to 5pm.",
           "hint": "The actual information the receptionist should use."
         },
         "tags": {
           "label": "Tags (optional)",
-          "placeholder": "e.g., hours, location",
+          "placeholder": "Hours, location",
           "hint": "Comma-separated keywords to help categorize this knowledge."
         }
       }
