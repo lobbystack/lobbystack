@@ -3850,7 +3850,8 @@ describe("SMS scheduling flow", () => {
     });
 
     const request = getCapturedAgentRequest();
-    expect(request.system).toContain("Known customer name on file: Raphaël Morency.");
+    expect(request.system).toContain("Customer name on file: known.");
+    expect(request.system).not.toContain("Raphaël Morency");
     expect(request.system).toContain(
       "do not ask for the customer's name again unless the customer is explicitly correcting or changing it",
     );

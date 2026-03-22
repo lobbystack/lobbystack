@@ -619,7 +619,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      disabled={isLoadingCalendars || !selectedCalendarId || isSavingCalendar}
+                      disabled={
+                        isLoadingCalendars ||
+                        !selectedCalendarId ||
+                        isSavingCalendar ||
+                        selectedConnection.status !== "connected"
+                      }
                       onClick={() => void handleSaveCalendar()}
                       type="button"
                       variant="secondary"
@@ -629,7 +634,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                         : t("integrations.google.saveCalendar")}
                     </Button>
                     <Button
-                      disabled={isLoadingCalendars || !selectedConnection.staffId}
+                      disabled={
+                        isLoadingCalendars ||
+                        !selectedConnection.staffId ||
+                        selectedConnection.status !== "connected"
+                      }
                       onClick={() => void handleRefreshCalendars()}
                       type="button"
                       variant="ghost"

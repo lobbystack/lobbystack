@@ -39,7 +39,7 @@ function buildGroundedSystemPrompt(input: {
   timezone: string;
   businessNowLabel: string;
   bookingStateSummary: string;
-  knownCustomerName?: string;
+  hasKnownCustomerName: boolean;
   services: Array<{ name: string; durationMinutes: number }>;
 }): string {
   return [
@@ -48,7 +48,7 @@ function buildGroundedSystemPrompt(input: {
     `Business timezone: ${input.timezone}`,
     `Current local business time: ${input.businessNowLabel}`,
     `Active customer language: ${getRuntimeLanguageName(input.locale)}.`,
-    `Known customer name on file: ${input.knownCustomerName ?? "unknown"}.`,
+    `Customer name on file: ${input.hasKnownCustomerName ? "known" : "unknown"}.`,
     `Available services: ${input.services
       .map((service) => `${service.name} (${service.durationMinutes} min)`)
       .join(", ") || "No services configured."}`,
@@ -71,9 +71,9 @@ function buildGroundedSystemPrompt(input: {
     "Use the booking and hours tools whenever the user asks about appointments, existing bookings, or business hours.",
     "Never book an offered slot unless the current customer SMS clearly confirms that option.",
     "Before a first SMS booking is finalized, make sure you have the customer's name for the appointment.",
-    "If the known customer name on file is not 'unknown', do not ask for the customer's name again unless the customer is explicitly correcting or changing it.",
+    "If the customer name on file is known, do not ask for the customer's name again unless the customer is explicitly correcting or changing it.",
     "If a tool returns replyText, use that reply directly or with only very light editing.",
-    "Do not add a request for the customer's name unless the tool-backed reply itself asks for it or the known customer name on file is 'unknown'.",
+    "Do not add a request for the customer's name unless the tool-backed reply itself asks for it or the customer name on file is unknown.",
     "If the current-appointment tool returns structured appointment facts without replyText, answer the customer's actual question directly in one short SMS grounded only in those facts.",
     "If the appointment-change tool returns structured facts without replyText, explain naturally whether there is a confirmed appointment and that SMS cancellations or reschedules are not supported here yet.",
     "If the customer asks when their appointment is, lead with the appointment date and time. Do not start with 'Yes, you are booked' unless they asked whether they are booked.",
@@ -3557,7 +3557,7 @@ async function generateGroundedReply(
           services,
           timezone: snapshot.timezone,
         }),
-        ...(contact?.contactName ? { knownCustomerName: contact.contactName } : {}),
+        hasKnownCustomerName: Boolean(contact?.contactName?.trim()),
       }),
       prompt: `${isAppointmentIntent ? "This SMS is appointment-related. Use appointment tools first before answering.\n\n" : ""}${buildGroundedUserPrompt({
         customerMessage: prompt,
