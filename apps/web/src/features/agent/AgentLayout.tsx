@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { Separator } from "@/components/ui/separator";
 
 type AgentLayoutProps = {
   businessId?: Id<"businesses">;
@@ -29,12 +28,13 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
         };
 
   return (
-    <div>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{header.title}</h1>
-        <p className="text-muted-foreground">{header.description}</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-4 py-2">
+        <div>
+          <h1 className="text-2xl font-bold">{header.title}</h1>
+          <p className="text-sm text-muted-foreground">{header.description}</p>
+        </div>
       </div>
-      <Separator className="my-4 lg:my-6" />
       <div className="w-full">
         <Outlet />
       </div>

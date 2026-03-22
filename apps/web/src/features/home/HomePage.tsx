@@ -183,8 +183,8 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">{t("home.title")}</h1>
+      <div className="flex items-center justify-between gap-4 py-2">
+        <h1 className="text-2xl font-bold">{t("home.title")}</h1>
       </div>
       <Tabs
         className="space-y-6"
