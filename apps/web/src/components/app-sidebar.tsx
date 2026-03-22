@@ -9,7 +9,7 @@ import {
   Phone,
   Settings,
   SlidersHorizontal,
-  Sparkles,
+  ListChecks,
   UserRound,
   Workflow,
 } from "lucide-react";
@@ -80,7 +80,7 @@ export function AppSidebar({
                 {
                   title: t("agent:sections.basicSettings.title"),
                   url: "/agent",
-                  icon: Sparkles,
+                  icon: ListChecks,
                 },
               ],
             },
