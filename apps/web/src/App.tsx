@@ -19,7 +19,8 @@ import {
 } from "@/features/auth/AuthPages";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
-import { AgentPage } from "@/features/agent/AgentPage";
+import { AgentLayout } from "@/features/agent/AgentLayout";
+import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
@@ -144,9 +145,20 @@ function WorkspaceShell() {
             path="/analytics"
           />
           <Route
-            element={<AgentPage {...(businessId ? { businessId } : {})} />}
-            path="/agent"
-          />
+            element={<AgentLayout {...(businessId ? { businessId } : {})} />}
+            path="/agent/*"
+          >
+            <Route
+              element={
+                businessId ? (
+                  <AgentBasicSettingsPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              index
+            />
+          </Route>
           <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
           <Route
             element={<SettingsLayout {...(businessId ? { businessId } : {})} />}

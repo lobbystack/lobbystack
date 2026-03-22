@@ -43,7 +43,7 @@ export function AppSidebar({
   operatorName,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
-  const { t } = useTranslation(["common", "nav", "settings"]);
+  const { t } = useTranslation(["common", "nav", "settings", "agent"]);
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
@@ -72,7 +72,17 @@ export function AppSidebar({
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: ChartColumnIncreasing },
             { title: t("nav:items.automations"), url: "/automations", icon: Workflow },
-            { title: t("nav:items.agent"), url: "/agent", icon: Bot },
+            {
+              title: t("nav:items.agent"),
+              icon: Bot,
+              items: [
+                {
+                  title: t("agent:sections.basicSettings.title"),
+                  url: "/agent",
+                  icon: SlidersHorizontal,
+                },
+              ],
+            },
             {
               title: t("nav:items.settings"),
               icon: Settings,
