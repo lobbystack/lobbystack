@@ -482,7 +482,10 @@ http.route({
         internal.integrations.googleCalendar.buildCallbackRedirect,
         {
           status: "error",
-          message: "Google Calendar connection failed. Please try again.",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Google Calendar connection failed. Please try again.",
         },
       );
       return Response.redirect(redirect.redirectUrl, 302);

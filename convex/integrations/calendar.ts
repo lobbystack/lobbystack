@@ -717,6 +717,20 @@ export const updateCalendarConnectionCredentials = internalMutation({
   },
 });
 
+export const markCalendarConnectionReconnectRequired = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      status: "reconnect_required",
+      lastSyncError: args.message,
+    });
+    return null;
+  },
+});
+
 export const recordCalendarConnectionSyncSuccess = internalMutation({
   args: {
     connectionId: v.id("calendar_connections"),
@@ -1808,6 +1822,16 @@ export const listGoogleCalendars = action({
       return [];
     }
 
+    const connection = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionById,
+      {
+        connectionId: accessContext.existingConnectionId,
+      },
+    );
+    if (!connection || connection.status !== "connected") {
+      return [];
+    }
+
     return (await ctx.runAction(
       internal.integrations.googleCalendar.listAvailableCalendars,
       {
@@ -1841,6 +1865,16 @@ export const selectGoogleCalendar = action({
 
     if (!accessContext.existingConnectionId) {
       throw new Error("Connect Google Calendar before choosing a calendar.");
+    }
+
+    const connection = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionById,
+      {
+        connectionId: accessContext.existingConnectionId,
+      },
+    );
+    if (!connection || connection.status !== "connected") {
+      throw new Error("Reconnect Google Calendar before choosing a calendar.");
     }
 
     const calendars: Array<GoogleCalendarOption> = await ctx.runAction(

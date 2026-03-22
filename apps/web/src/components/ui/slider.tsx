@@ -1,11 +1,15 @@
 "use client";
 
-import { Slider as SliderPrimitive } from "radix-ui";
 import React from "react";
+
+import { Slider as SliderPrimitive } from "@base-ui/react/slider";
+
 import { cn } from "@/lib/utils";
 
+type SliderValue = number | readonly number[];
+
 interface SliderProps
-  extends React.ComponentProps<typeof SliderPrimitive.Root> {
+  extends SliderPrimitive.Root.Props<SliderValue> {
   bufferValue?: number;
 }
 
@@ -18,18 +22,30 @@ function Slider({
   bufferValue,
   ...props
 }: SliderProps) {
-  const _values = React.useMemo(() => {
+  const values = React.useMemo(() => {
+    if (typeof value === "number") {
+      return [value];
+    }
     if (Array.isArray(value)) {
       return value;
+    }
+    if (typeof defaultValue === "number") {
+      return [defaultValue];
     }
     if (Array.isArray(defaultValue)) {
       return defaultValue;
     }
-    return [min, max];
+    return [min];
   }, [value, defaultValue, min, max]);
 
   const controlledProps = value === undefined ? {} : { value };
   const defaultProps = defaultValue === undefined ? {} : { defaultValue };
+  const normalizedBufferValue =
+    bufferValue === undefined ? undefined : Math.min(Math.max(bufferValue, min), max);
+  const bufferPercent =
+    normalizedBufferValue === undefined || max === min
+      ? undefined
+      : ((normalizedBufferValue - min) / (max - min)) * 100;
 
   return (
     <SliderPrimitive.Root
@@ -44,36 +60,46 @@ function Slider({
       {...controlledProps}
       {...props}
     >
-      <SliderPrimitive.Track
+      <SliderPrimitive.Control
         className={cn(
-          "relative grow overflow-hidden rounded-full bg-muted data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-1.5"
+          "relative grow touch-none select-none data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-1.5"
         )}
-        data-slot="slider-track"
+        data-slot="slider-control"
       >
-        <SliderPrimitive.Range
+        <SliderPrimitive.Track
           className={cn(
-            "absolute bg-primary data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+            "relative grow rounded-full bg-muted data-[orientation=horizontal]:h-1.5 data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-full"
           )}
-          data-slot="slider-range"
-        />
-        {bufferValue !== undefined && (
-          <SliderPrimitive.Range
-            className="absolute z-0 bg-primary/40 data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
-            data-slot="buffer-indicator"
-            style={{
-              width: `${bufferValue || 0}%`,
-              transform: `translateX(-${100 - (bufferValue || 0)}%)`,
-            }}
+          data-slot="slider-track"
+        >
+          {bufferPercent !== undefined ? (
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 z-0 bg-primary/40 data-[orientation=vertical]:inset-x-0 data-[orientation=vertical]:bottom-0 data-[orientation=vertical]:top-auto"
+              data-orientation={props.orientation ?? "horizontal"}
+              data-slot="buffer-indicator"
+              style={
+                (props.orientation ?? "horizontal") === "vertical"
+                  ? { height: `${bufferPercent}%` }
+                  : { width: `${bufferPercent}%` }
+              }
+            />
+          ) : null}
+          <SliderPrimitive.Indicator
+            className={cn(
+              "absolute bg-primary data-[orientation=horizontal]:h-full data-[orientation=vertical]:bottom-0 data-[orientation=vertical]:w-full"
+            )}
+            data-slot="slider-range"
           />
-        )}
-      </SliderPrimitive.Track>
-      {Array.from({ length: _values.length }, (_, index) => (
-        <SliderPrimitive.Thumb
-          className="block size-4 shrink-0 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:outline-hidden focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50"
-          data-slot="slider-thumb"
-          key={String(index)}
-        />
-      ))}
+          {values.map((_, index) => (
+            <SliderPrimitive.Thumb
+              className="z-10 block size-4 shrink-0 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-[color,box-shadow] hover:ring-4 focus-visible:outline-hidden focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50"
+              data-slot="slider-thumb"
+              index={index}
+              key={String(index)}
+            />
+          ))}
+        </SliderPrimitive.Track>
+      </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   );
 }

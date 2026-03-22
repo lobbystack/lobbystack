@@ -20,7 +20,7 @@ const GOOGLE_CALENDAR_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+  "https://www.googleapis.com/auth/calendar.readonly",
 ];
 
 type GoogleTokenResponse = {
@@ -62,6 +62,9 @@ type GoogleCalendarEvent = {
   start?: GoogleEventDateTime;
   end?: GoogleEventDateTime;
 };
+
+const GOOGLE_RECONNECT_REQUIRED_MESSAGE =
+  "Google Calendar authorization expired or was revoked. Reconnect Google Calendar.";
 
 type GoogleEventsResponse = {
   items?: Array<GoogleCalendarEvent>;
@@ -379,6 +382,20 @@ async function refreshGoogleAccessToken(input: {
   };
 }
 
+function getGoogleReconnectRequiredMessage(error: unknown): string | null {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("missing a refresh token") ||
+    normalizedMessage.includes("invalid_grant")
+  ) {
+    return GOOGLE_RECONNECT_REQUIRED_MESSAGE;
+  }
+
+  return null;
+}
+
 async function withGoogleAccessToken(
   ctx: Pick<ActionCtx, "runQuery" | "runMutation">,
   connectionId: Id<"calendar_connections">,
@@ -415,12 +432,32 @@ async function withGoogleAccessToken(
     };
   }
 
-  const refreshed = await refreshGoogleAccessToken({
-    connectionId,
-    ...(connection.encryptedRefreshToken !== undefined
-      ? { encryptedRefreshToken: connection.encryptedRefreshToken }
-      : {}),
-  });
+  let refreshed: {
+    accessToken: string;
+    tokenExpiresAt?: string;
+  };
+  try {
+    refreshed = await refreshGoogleAccessToken({
+      connectionId,
+      ...(connection.encryptedRefreshToken !== undefined
+        ? { encryptedRefreshToken: connection.encryptedRefreshToken }
+        : {}),
+    });
+  } catch (error) {
+    const reconnectRequiredMessage = getGoogleReconnectRequiredMessage(error);
+    if (reconnectRequiredMessage) {
+      await ctx.runMutation(
+        internal.integrations.calendar.markCalendarConnectionReconnectRequired,
+        {
+          connectionId,
+          message: reconnectRequiredMessage,
+        },
+      );
+      throw new Error(reconnectRequiredMessage);
+    }
+
+    throw error;
+  }
   await ctx.runMutation(internal.integrations.calendar.updateCalendarConnectionCredentials, {
     connectionId,
     encryptedAccessToken: encryptSecret(refreshed.accessToken),
@@ -617,6 +654,7 @@ export const syncBusyTimeForConnection = internalAction({
   ): Promise<
     | { ok: true; mode: "full_resync" }
     | { ok: true; synced: number; removed: number }
+    | { ok: false; status: "reconnect_required"; message: string }
   > => {
     const attemptedAt = new Date().toISOString();
     await ctx.runMutation(internal.integrations.calendar.recordCalendarConnectionSyncAttempt, {
@@ -735,6 +773,13 @@ export const syncBusyTimeForConnection = internalAction({
         attemptedAt,
         message,
       });
+      if (message === GOOGLE_RECONNECT_REQUIRED_MESSAGE) {
+        return {
+          ok: false,
+          status: "reconnect_required" as const,
+          message,
+        };
+      }
       throw error;
     }
   },
