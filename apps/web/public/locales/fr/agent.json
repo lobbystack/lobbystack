@@ -4,38 +4,6 @@
     "title": "Façonnez la manière dont votre réceptionniste pense, dirige et répond.",
     "description": "Ajustez le playbook opérateur, gardez la connaissance métier à jour et testez les réponses avant qu'elles n'atteignent un client."
   },
-  "hero": {
-    "version": "Contexte {{value}}",
-    "updatedAt": "Instantané actualisé le {{value}}",
-    "locales": {
-      "en": "Anglais",
-      "fr": "Français"
-    },
-    "metrics": {
-      "services": {
-        "label": "Services",
-        "hint": "Offres réservables actuellement dans l'instantané"
-      },
-      "faqs": {
-        "label": "FAQ prioritaires",
-        "hint": "Réponses à fort signal disponibles pour l'agent"
-      },
-      "locale": {
-        "label": "Langue par défaut"
-      },
-      "transfer": {
-        "label": "Mode d'escalade",
-        "none": "Aucun canal de transfert n'est encore configuré"
-      }
-    },
-    "panel": {
-      "eyebrow": "Playbook opérateur",
-      "businessType": "Type d'activité",
-      "greeting": "Salutation d'ouverture",
-      "bookingPolicy": "Règle de réservation",
-      "empty": "Pas encore configuré"
-    }
-  },
   "workflow": {
     "step": "Étape {{value}}",
     "steps": {
@@ -94,19 +62,5 @@
         "description": "Simulez de vraies questions et validez la réponse de la configuration actuelle de l'agent."
       }
     }
-  },
-  "businessTypes": {
-    "clinic": "Clinique",
-    "repair_shop": "Atelier de réparation",
-    "salon": "Salon",
-    "service_company": "Entreprise de services",
-    "other": "Autre"
-  },
-  "transferModes": {
-    "never": "Ne jamais transférer",
-    "always": "Toujours transférer",
-    "on_request": "Transférer sur demande",
-    "on_urgent": "Transférer les urgences",
-    "during_business_hours": "Transférer pendant les heures d'ouverture"
   }
 }
