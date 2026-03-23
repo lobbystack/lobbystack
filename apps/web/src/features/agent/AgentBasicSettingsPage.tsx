@@ -64,7 +64,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   return (
     <div className="w-full max-w-xl">
       <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
-        <div className="space-y-4">
+        <div className="space-y-8">
           <div className="space-y-2">
             <Label htmlFor="agent-greeting">{t("agent:fields.greeting.label")}</Label>
             <p className="text-xs text-muted-foreground">

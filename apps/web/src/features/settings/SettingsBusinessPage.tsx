@@ -27,8 +27,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemGroup,
-  ItemSeparator,
   ItemTitle,
 } from "@/components/ui/item";
 
@@ -120,7 +118,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="w-full max-w-xl">
-        <div className="flex flex-col gap-8">
+        <div className="space-y-8">
           <form className="flex flex-col gap-6" onSubmit={(event) => event.preventDefault()}>
             <FieldGroup>
               <Field>
@@ -143,151 +141,148 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             </div>
           </form>
 
-          <ItemGroup>
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle>{t("account.changeEmail.label")}</ItemTitle>
+                <ItemTitle>Email</ItemTitle>
                 <ItemDescription>{t("account.changeEmail.description")}</ItemDescription>
                 {currentUser?.email ? (
-                  <ItemDescription>
+                  <p className="text-sm text-foreground">
                     {t("account.changeEmail.currentEmail", { email: currentUser.email })}
-                  </ItemDescription>
+                  </p>
                 ) : null}
-                {emailStatus ? <ItemDescription>{emailStatus}</ItemDescription> : null}
-              </ItemContent>
-              <ItemActions>
-                <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
-                    Change
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{t("account.changeEmail.label")}</DialogTitle>
-                      <DialogDescription>
-                        {t("account.changeEmail.description")}
-                      </DialogDescription>
-                    </DialogHeader>
+              {emailStatus ? <ItemDescription>{emailStatus}</ItemDescription> : null}
+            </ItemContent>
+            <ItemActions>
+              <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
+                <DialogTrigger render={<Button variant="outline" />}>
+                  Change
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{t("account.changeEmail.label")}</DialogTitle>
+                    <DialogDescription>
+                      {t("account.changeEmail.description")}
+                    </DialogDescription>
+                  </DialogHeader>
 
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="profile-email">
-                          {t("account.changeEmail.label")}
-                        </FieldLabel>
-                        <Input
-                          id="profile-email"
-                          type="email"
-                          autoComplete="email"
-                          placeholder={t("account.changeEmail.newEmailPlaceholder")}
-                          value={email}
-                          onChange={(event) => setEmail(event.target.value)}
-                        />
-                      </Field>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="profile-email">
+                        {t("account.changeEmail.label")}
+                      </FieldLabel>
+                      <Input
+                        id="profile-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder={t("account.changeEmail.newEmailPlaceholder")}
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                      />
+                    </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="profile-password">
-                          Current password
-                        </FieldLabel>
-                        <Input
-                          id="profile-password"
-                          type="password"
-                          autoComplete="current-password"
-                          placeholder={t("account.changeEmail.currentPasswordPlaceholder")}
-                          value={currentEmailPassword}
-                          onChange={(event) => setCurrentEmailPassword(event.target.value)}
-                        />
-                      </Field>
-                    </FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="profile-password">
+                        Current password
+                      </FieldLabel>
+                      <Input
+                        id="profile-password"
+                        type="password"
+                        autoComplete="current-password"
+                        placeholder={t("account.changeEmail.currentPasswordPlaceholder")}
+                        value={currentEmailPassword}
+                        onChange={(event) => setCurrentEmailPassword(event.target.value)}
+                      />
+                    </Field>
+                  </FieldGroup>
 
-                    {emailError ? <p className="text-sm text-destructive">{emailError}</p> : null}
+                  {emailError ? <p className="text-sm text-destructive">{emailError}</p> : null}
 
-                    <DialogFooter>
-                      <Button type="button" onClick={() => void handleEmailSave()}>
-                        {t("account.changeEmail.save")}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </ItemActions>
-            </Item>
-
-            <ItemSeparator />
+                  <DialogFooter>
+                    <Button type="button" onClick={() => void handleEmailSave()}>
+                      {t("account.changeEmail.save")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </ItemActions>
+          </Item>
 
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle>Change password</ItemTitle>
+                <ItemTitle>Password</ItemTitle>
                 <ItemDescription>
-                  Enter your current password and choose a new one.
+                  Password you use to log in.
                 </ItemDescription>
+                <div className="text-lg leading-none text-foreground">••••••••</div>
                 {passwordStatus ? <ItemDescription>{passwordStatus}</ItemDescription> : null}
               </ItemContent>
-              <ItemActions>
-                <Dialog onOpenChange={setIsPasswordDialogOpen} open={isPasswordDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
-                    Change
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Change password</DialogTitle>
-                      <DialogDescription>
-                        Enter your current password and a new password.
-                      </DialogDescription>
-                    </DialogHeader>
+            <ItemActions>
+              <Dialog onOpenChange={setIsPasswordDialogOpen} open={isPasswordDialogOpen}>
+                <DialogTrigger render={<Button variant="outline" />}>
+                  Change
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change password</DialogTitle>
+                    <DialogDescription>
+                      Enter your current password and a new password.
+                    </DialogDescription>
+                  </DialogHeader>
 
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="profile-current-password">
-                          Current password
-                        </FieldLabel>
-                        <Input
-                          id="profile-current-password"
-                          type="password"
-                          placeholder="Current password"
-                          value={currentPassword}
-                          onChange={(event) => setCurrentPassword(event.target.value)}
-                        />
-                      </Field>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="profile-current-password">
+                        Current password
+                      </FieldLabel>
+                      <Input
+                        id="profile-current-password"
+                        type="password"
+                        placeholder="Current password"
+                        value={currentPassword}
+                        onChange={(event) => setCurrentPassword(event.target.value)}
+                      />
+                    </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="profile-new-password">
-                          New password
-                        </FieldLabel>
-                        <Input
-                          id="profile-new-password"
-                          type="password"
-                          placeholder="New password"
-                          value={newPassword}
-                          onChange={(event) => setNewPassword(event.target.value)}
-                        />
-                      </Field>
+                    <Field>
+                      <FieldLabel htmlFor="profile-new-password">
+                        New password
+                      </FieldLabel>
+                      <Input
+                        id="profile-new-password"
+                        type="password"
+                        placeholder="New password"
+                        value={newPassword}
+                        onChange={(event) => setNewPassword(event.target.value)}
+                      />
+                    </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="profile-confirm-new-password">
-                          Confirm new password
-                        </FieldLabel>
-                        <Input
-                          id="profile-confirm-new-password"
-                          type="password"
-                          placeholder="Confirm new password"
-                          value={confirmNewPassword}
-                          onChange={(event) => setConfirmNewPassword(event.target.value)}
-                        />
-                      </Field>
-                    </FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="profile-confirm-new-password">
+                        Confirm new password
+                      </FieldLabel>
+                      <Input
+                        id="profile-confirm-new-password"
+                        type="password"
+                        placeholder="Confirm new password"
+                        value={confirmNewPassword}
+                        onChange={(event) => setConfirmNewPassword(event.target.value)}
+                      />
+                    </Field>
+                  </FieldGroup>
 
-                    {passwordError ? (
-                      <p className="text-sm text-destructive">{passwordError}</p>
-                    ) : null}
+                  {passwordError ? (
+                    <p className="text-sm text-destructive">{passwordError}</p>
+                  ) : null}
 
-                    <DialogFooter>
-                      <Button type="button" onClick={() => void handlePasswordSave()}>
-                        Save
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </ItemActions>
-            </Item>
-          </ItemGroup>
+                  <DialogFooter>
+                    <Button type="button" onClick={() => void handlePasswordSave()}>
+                      Save
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </ItemActions>
+          </Item>
         </div>
       </div>
     </div>
