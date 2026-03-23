@@ -11,17 +11,16 @@ import {
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
-  Bot,
   ChevronRight,
   Download,
   FileText,
   Globe,
   MessageCircle,
   MessagesSquare,
+  Power,
   Plus,
   Search as SearchIcon,
   Send,
-  User,
   X,
 } from "lucide-react";
 import type { TFunction } from "i18next";
@@ -33,6 +32,7 @@ import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Toggle } from "@/components/ui/toggle";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -763,7 +763,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           <>
             <div className="min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="flex min-w-0 gap-3">
+                <div className="flex min-w-0 flex-1 gap-3">
                   <Button
                     className="-ms-2 h-full sm:hidden"
                     onClick={() => setMobileSelectedConversationId(undefined)}
@@ -772,7 +772,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   >
                     <ArrowLeft className="rtl:rotate-180" />
                   </Button>
-                  <div className="flex min-w-0 items-center gap-2 lg:gap-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-4">
                     <Avatar className="size-9 lg:size-11">
                       <AvatarFallback>
                         {initials(
@@ -781,7 +781,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold lg:text-base">
                         {thread.contact?.name ??
                           thread.contact?.phone ??
@@ -793,45 +793,24 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           t("page.noChannel")}
                       </span>
                     </div>
-                  </div>
-                </div>
-                <div className="min-w-0 w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
-                  <div className="flex min-h-12 items-center xl:justify-end">
                     {isSmsConversation ? (
-                      <div className="inline-flex items-center rounded-full border border-border bg-background p-1 shadow-xs">
-                        <button
-                          className={cn(
-                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-                            automationState === "ai_active"
-                              ? "bg-foreground text-background"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                          disabled={isUpdatingAutomation}
-                          onClick={() => {
-                            void handleAutomationModeChange("ai_active");
-                          }}
-                          type="button"
-                        >
-                          <Bot className="size-3.5" />
-                          {t("page.automationAiActive")}
-                        </button>
-                        <button
-                          className={cn(
-                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-                            automationState === "human_handoff"
-                              ? "bg-foreground text-background"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                          disabled={isUpdatingAutomation}
-                          onClick={() => {
-                            void handleAutomationModeChange("human_handoff");
-                          }}
-                          type="button"
-                        >
-                          <User className="size-3.5" />
-                          {t("page.automationHumanHandoff")}
-                        </button>
-                      </div>
+                      <Toggle
+                        aria-label={t("page.automationHumanHandoff")}
+                        className="shrink-0"
+                        disabled={isUpdatingAutomation}
+                        onPressedChange={(pressed) => {
+                          void handleAutomationModeChange(
+                            pressed ? "human_handoff" : "ai_active",
+                          );
+                        }}
+                        pressed={isHumanHandoff}
+                        variant="outline"
+                      >
+                        <Power data-icon="inline-start" />
+                        {isHumanHandoff
+                          ? t("page.automationResumeAi")
+                          : t("page.automationHumanHandoff")}
+                      </Toggle>
                     ) : null}
                   </div>
                 </div>
