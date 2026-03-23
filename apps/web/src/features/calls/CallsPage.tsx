@@ -222,9 +222,9 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
   return (
     <section className="flex min-w-0 h-full gap-6">
-      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between gap-4 py-2">
+      <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <Phone className="size-5" />
@@ -319,7 +319,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
       >
         {selectedCall ? (
           <>
-            <div className="mb-4 flex min-w-0 flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex min-w-0 flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
               <div className="flex min-w-0 gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
@@ -370,11 +370,11 @@ export function CallsPage({ businessId }: CallsPageProps) {
               </div>
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
-                    <div className="self-stretch pt-2">
+                    <div className="flex self-stretch flex-col gap-3 pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
                         onClick={() => setIsOutcomeOpen((current) => !current)}
@@ -393,7 +393,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                         <span className="h-px w-64 bg-border/60 md:w-96" />
                       </button>
                       {isOutcomeOpen ? (
-                        <p className="mt-3 text-center text-sm leading-6 text-muted-foreground">
+                        <p className="text-center text-sm leading-6 text-muted-foreground">
                           {formatCallOutcomeSummary(selectedCall.outcome, i18n.language, t)}
                         </p>
                       ) : null}

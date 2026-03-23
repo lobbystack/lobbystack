@@ -7,6 +7,12 @@ import { api } from "../../../../../convex/_generated/api";
 import { getWeekdayLabels } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 type BusinessHoursFormProps = {
@@ -116,15 +122,19 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="space-y-2">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-2">
           <CardTitle>{t("hours.title")}</CardTitle>
           <CardDescription>{t("hours.description")}</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
-        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="space-y-4">
+        <form className="flex flex-col gap-8" onSubmit={(event) => void handleSubmit(event)}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel>{t("hours.title")}</FieldLabel>
+              <FieldDescription>{t("hours.leaveBlank")}</FieldDescription>
+            </Field>
             {rows.map((row, index) => (
               <div
                 className="grid gap-4 rounded-2xl border border-border/70 bg-background/70 p-4 md:grid-cols-[160px_1fr_1fr]"
@@ -145,8 +155,8 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
                 />
               </div>
             ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-3 pt-6">
+          </FieldGroup>
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving} type="submit">
               {isSaving ? t("hours.saving") : t("hours.save")}
             </Button>

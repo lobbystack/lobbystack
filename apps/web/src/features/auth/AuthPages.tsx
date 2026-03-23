@@ -10,6 +10,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
+import { Button } from "@/components/ui/button";
 
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 
@@ -323,8 +324,8 @@ export function ConfirmEmailChangePage() {
 
   return (
     <AuthShell>
-      <div className="space-y-6 text-center">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-6 text-center">
+        <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight">
             {t("confirmEmailChange.title")}
           </h1>
@@ -338,16 +339,17 @@ export function ConfirmEmailChangePage() {
         {statusMessage ? <p className="text-sm text-muted-foreground">{statusMessage}</p> : null}
         {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <button
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        <form className="flex flex-col" onSubmit={handleSubmit}>
+          <Button
+            className="w-full"
             disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
+            size="lg"
             type="submit"
           >
             {isSubmitting
               ? t("confirmEmailChange.submitting")
               : t("confirmEmailChange.submit")}
-          </button>
+          </Button>
         </form>
 
         <Link className="text-sm text-muted-foreground hover:text-foreground" to={returnHref}>

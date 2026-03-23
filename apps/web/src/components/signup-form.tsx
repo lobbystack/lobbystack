@@ -49,7 +49,7 @@ export function SignupForm({
             <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Rows3 className="size-5" />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <h1 className="text-xl font-semibold tracking-tight">{t("signup.title")}</h1>
               <FieldDescription>{t("signup.subtitle")}</FieldDescription>
             </div>
@@ -68,7 +68,7 @@ export function SignupForm({
             />
           </Field>
 
-          <div>
+          <div className="flex flex-col gap-6">
             <Field>
               <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
               <Input
@@ -83,7 +83,7 @@ export function SignupForm({
             </Field>
 
             {statusMessage || errorMessage ? (
-              <div className="mb-6 mt-2 space-y-2">
+              <div className="flex flex-col gap-2">
                 {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
                 {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
               </div>

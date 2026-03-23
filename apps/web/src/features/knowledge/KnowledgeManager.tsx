@@ -8,6 +8,12 @@ import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -100,7 +106,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
     <Card className="border border-border/70 bg-card/90 shadow-sm">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <CardTitle>{t("manager.title")}</CardTitle>
             <CardDescription>{t("manager.description")}</CardDescription>
           </div>
@@ -109,28 +115,49 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <form className="space-y-4" onSubmit={(event) => void handleFaqSubmit(event)}>
+      <CardContent className="flex flex-col gap-8">
+        <form className="flex flex-col gap-4" onSubmit={(event) => void handleFaqSubmit(event)}>
           <div className="flex items-center gap-2">
             <CircleQuestionMark className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.faqSnippet")}</p>
           </div>
-          <Input
-            placeholder={t("manager.placeholders.faqTitle")}
-            value={faqTitle}
-            onChange={(event) => setFaqTitle(event.target.value)}
-          />
-          <Textarea
-            placeholder={t("manager.placeholders.faqContent")}
-            rows={3}
-            value={faqContent}
-            onChange={(event) => setFaqContent(event.target.value)}
-          />
-          <Input
-            placeholder={t("manager.faqTagsPlaceholder")}
-            value={faqTags}
-            onChange={(event) => setFaqTags(event.target.value)}
-          />
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="knowledge-faq-title">
+                {t("manager.placeholders.faqTitle")}
+              </FieldLabel>
+              <Input
+                id="knowledge-faq-title"
+                placeholder={t("manager.placeholders.faqTitle")}
+                value={faqTitle}
+                onChange={(event) => setFaqTitle(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="knowledge-faq-content">
+                {t("manager.placeholders.faqContent")}
+              </FieldLabel>
+              <Textarea
+                id="knowledge-faq-content"
+                placeholder={t("manager.placeholders.faqContent")}
+                rows={3}
+                value={faqContent}
+                onChange={(event) => setFaqContent(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="knowledge-faq-tags">
+                {t("manager.faqTagsPlaceholder")}
+              </FieldLabel>
+              <FieldDescription>{t("manager.faqTagsPlaceholder")}</FieldDescription>
+              <Input
+                id="knowledge-faq-tags"
+                placeholder={t("manager.faqTagsPlaceholder")}
+                value={faqTags}
+                onChange={(event) => setFaqTags(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           <div className="flex flex-wrap items-center gap-3">
             <Button
               disabled={
@@ -142,27 +169,48 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
             </Button>
           </div>
         </form>
-        <form className="space-y-4 border-t border-border/70 pt-8" onSubmit={(event) => void handleDocumentSubmit(event)}>
+        <form className="flex flex-col gap-4 border-t border-border/70 pt-8" onSubmit={(event) => void handleDocumentSubmit(event)}>
           <div className="flex items-center gap-2">
             <BookOpenText className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.manualDocument")}</p>
           </div>
-          <Input
-            placeholder={t("manager.placeholders.documentTitle")}
-            value={documentTitle}
-            onChange={(event) => setDocumentTitle(event.target.value)}
-          />
-          <Textarea
-            placeholder={t("manager.placeholders.documentBody")}
-            rows={5}
-            value={documentBody}
-            onChange={(event) => setDocumentBody(event.target.value)}
-          />
-          <Input
-            placeholder={t("manager.documentTagsPlaceholder")}
-            value={documentTags}
-            onChange={(event) => setDocumentTags(event.target.value)}
-          />
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="knowledge-document-title">
+                {t("manager.placeholders.documentTitle")}
+              </FieldLabel>
+              <Input
+                id="knowledge-document-title"
+                placeholder={t("manager.placeholders.documentTitle")}
+                value={documentTitle}
+                onChange={(event) => setDocumentTitle(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="knowledge-document-body">
+                {t("manager.placeholders.documentBody")}
+              </FieldLabel>
+              <Textarea
+                id="knowledge-document-body"
+                placeholder={t("manager.placeholders.documentBody")}
+                rows={5}
+                value={documentBody}
+                onChange={(event) => setDocumentBody(event.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="knowledge-document-tags">
+                {t("manager.documentTagsPlaceholder")}
+              </FieldLabel>
+              <FieldDescription>{t("manager.documentTagsPlaceholder")}</FieldDescription>
+              <Input
+                id="knowledge-document-tags"
+                placeholder={t("manager.documentTagsPlaceholder")}
+                value={documentTags}
+                onChange={(event) => setDocumentTags(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
           <div className="flex flex-wrap items-center gap-3">
             <Button
               disabled={
@@ -177,7 +225,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
         </form>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <CircleQuestionMark className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.currentFaqs")}</p>
@@ -188,7 +236,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
                 <strong className="text-sm text-foreground">{snippet.title}</strong>
                 {snippet.tags?.length ? <Badge variant="secondary">{snippet.tags[0]}</Badge> : null}
               </div>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{snippet.content}</p>
+              <p className="text-sm leading-6 text-muted-foreground">{snippet.content}</p>
             </div>
           ))}
           {knowledge && snippets.length === 0 ? (
@@ -197,7 +245,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
             </div>
           ) : null}
         </div>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <FileText className="size-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">{t("manager.currentDocuments")}</p>
@@ -208,7 +256,7 @@ export function KnowledgeManager(props: KnowledgeManagerProps) {
                 <strong className="text-sm text-foreground">{document.title}</strong>
                 <Badge variant="outline">{document.status}</Badge>
               </div>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-6 text-muted-foreground">
                 {document.status}
                 {document.textContent ? ` • ${document.textContent.slice(0, 120)}` : ""}
               </p>

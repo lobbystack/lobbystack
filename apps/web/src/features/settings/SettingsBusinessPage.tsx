@@ -118,8 +118,8 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="w-full max-w-xl">
-        <div className="space-y-8">
-          <form className="flex flex-col gap-6" onSubmit={(event) => event.preventDefault()}>
+        <div className="flex flex-col gap-8">
+          <form className="flex flex-col gap-8" onSubmit={(event) => event.preventDefault()}>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="profile-username">Business name</FieldLabel>
@@ -132,13 +132,13 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                   value={businessName}
                   onChange={(event) => setBusinessName(event.target.value)}
                 />
+                <div className="flex items-center gap-3">
+                  <Button type="button" onClick={() => void handleBusinessNameSave()}>
+                    Save
+                  </Button>
+                </div>
               </Field>
             </FieldGroup>
-            <div className="flex items-center gap-3">
-              <Button type="button" onClick={() => void handleBusinessNameSave()}>
-                Save
-              </Button>
-            </div>
           </form>
 
             <Item variant="outline">

@@ -16,10 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -85,67 +83,60 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
             {t("agent:sections.knowledge.addKnowledgeDescription")}
           </SheetDescription>
         </SheetHeader>
-        <form className="flex h-full flex-col" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="px-4 pb-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="knowledge-title">
-                  {t("agent:sections.knowledge.fields.title.label")}
-                </FieldLabel>
-                <FieldDescription>
-                  {t("agent:sections.knowledge.fields.title.hint")}
-                </FieldDescription>
-                <Input
-                  id="knowledge-title"
-                  placeholder={t("agent:sections.knowledge.fields.title.placeholder")}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
-              </Field>
+        <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="knowledge-title">
+                {t("agent:sections.knowledge.fields.title.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:sections.knowledge.fields.title.hint")}
+              </FieldDescription>
+              <Input
+                id="knowledge-title"
+                placeholder={t("agent:sections.knowledge.fields.title.placeholder")}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </Field>
 
-              <Field>
-                <FieldLabel htmlFor="knowledge-content">
-                  {t("agent:sections.knowledge.fields.content.label")}
-                </FieldLabel>
-                <FieldDescription>
-                  {t("agent:sections.knowledge.fields.content.hint")}
-                </FieldDescription>
-                <Textarea
-                  className="min-h-40"
-                  id="knowledge-content"
-                  placeholder={t("agent:sections.knowledge.fields.content.placeholder")}
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                />
-              </Field>
+            <Field>
+              <FieldLabel htmlFor="knowledge-content">
+                {t("agent:sections.knowledge.fields.content.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:sections.knowledge.fields.content.hint")}
+              </FieldDescription>
+              <Textarea
+                className="min-h-40"
+                id="knowledge-content"
+                placeholder={t("agent:sections.knowledge.fields.content.placeholder")}
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+              />
+            </Field>
 
-              <Field>
-                <FieldLabel htmlFor="knowledge-tags">
-                  {t("agent:sections.knowledge.fields.tags.label")}
-                </FieldLabel>
-                <FieldDescription>
-                  {t("agent:sections.knowledge.fields.tags.hint")}
-                </FieldDescription>
-                <Input
-                  id="knowledge-tags"
-                  placeholder={t("agent:sections.knowledge.fields.tags.placeholder")}
-                  value={tags}
-                  onChange={(event) => setTags(event.target.value)}
-                />
-              </Field>
-            </FieldGroup>
-          </div>
+            <Field>
+              <FieldLabel htmlFor="knowledge-tags">
+                {t("agent:sections.knowledge.fields.tags.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:sections.knowledge.fields.tags.hint")}
+              </FieldDescription>
+              <Input
+                id="knowledge-tags"
+                placeholder={t("agent:sections.knowledge.fields.tags.placeholder")}
+                value={tags}
+                onChange={(event) => setTags(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
 
-          <SheetFooter>
+          <div className="mt-auto pt-6">
             <Button disabled={isSaving} type="submit">
               {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
             </Button>
-            <SheetClose
-              render={<Button variant="outline" />}
-            >
-              Close
-            </SheetClose>
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

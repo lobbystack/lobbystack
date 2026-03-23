@@ -11,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -68,53 +74,52 @@ export function BusinessSetupCard() {
       </CardHeader>
       <CardContent>
         <form className="flex flex-col gap-5" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("setup.businessName")}
-              </span>
-              <Input
-                onChange={(event) => handleNameChange(event.target.value)}
-                placeholder={t("setup.placeholders.businessName")}
-                value={name}
-              />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("setup.slug")}
-              </span>
-              <Input
-                onChange={(event) => setSlug(slugify(event.target.value))}
-                placeholder={t("setup.placeholders.slug")}
-                value={slug}
-              />
-            </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("setup.timezone")}
-              </span>
-              <Input onChange={(event) => setTimezone(event.target.value)} value={timezone} />
-            </label>
-            <label className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("setup.businessType")}
-              </span>
-              <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("setup.selectBusinessType")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="clinic">{t("setup.businessTypes.clinic")}</SelectItem>
-                  <SelectItem value="repair_shop">{t("setup.businessTypes.repair_shop")}</SelectItem>
-                  <SelectItem value="salon">{t("setup.businessTypes.salon")}</SelectItem>
-                  <SelectItem value="service_company">{t("setup.businessTypes.service_company")}</SelectItem>
-                  <SelectItem value="other">{t("setup.businessTypes.other")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
+          <FieldGroup>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="setup-business-name">{t("setup.businessName")}</FieldLabel>
+                <FieldDescription>{t("setup.placeholders.businessName")}</FieldDescription>
+                <Input
+                  id="setup-business-name"
+                  onChange={(event) => handleNameChange(event.target.value)}
+                  placeholder={t("setup.placeholders.businessName")}
+                  value={name}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="setup-business-slug">{t("setup.slug")}</FieldLabel>
+                <FieldDescription>{t("setup.placeholders.slug")}</FieldDescription>
+                <Input
+                  id="setup-business-slug"
+                  onChange={(event) => setSlug(slugify(event.target.value))}
+                  placeholder={t("setup.placeholders.slug")}
+                  value={slug}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="setup-timezone">{t("setup.timezone")}</FieldLabel>
+                <Input id="setup-timezone" onChange={(event) => setTimezone(event.target.value)} value={timezone} />
+              </Field>
+              <Field>
+                <FieldLabel>{t("setup.businessType")}</FieldLabel>
+                <FieldDescription>{t("setup.selectBusinessType")}</FieldDescription>
+                <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("setup.selectBusinessType")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clinic">{t("setup.businessTypes.clinic")}</SelectItem>
+                    <SelectItem value="repair_shop">{t("setup.businessTypes.repair_shop")}</SelectItem>
+                    <SelectItem value="salon">{t("setup.businessTypes.salon")}</SelectItem>
+                    <SelectItem value="service_company">{t("setup.businessTypes.service_company")}</SelectItem>
+                    <SelectItem value="other">{t("setup.businessTypes.other")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </FieldGroup>
           <div className="flex flex-wrap items-center gap-3">
             <Button
               disabled={isSubmitting || name.trim().length === 0 || slug.trim().length === 0}

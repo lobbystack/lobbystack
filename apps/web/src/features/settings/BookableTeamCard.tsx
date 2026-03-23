@@ -8,6 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -178,18 +184,18 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="space-y-2">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-2">
           <CardTitle>{t("settings:team.title")}</CardTitle>
           <CardDescription>{t("settings:team.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <form className="space-y-8" onSubmit={(event) => void handleStaffSubmit(event)}>
-          <label className="space-y-3">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("settings:team.member")}
-            </span>
+      <CardContent className="flex flex-col gap-8">
+        <form className="flex flex-col gap-8" onSubmit={(event) => void handleStaffSubmit(event)}>
+          <FieldGroup>
+          <Field>
+            <FieldLabel>{t("settings:team.member")}</FieldLabel>
+            <FieldDescription>{t("settings:team.selectMember")}</FieldDescription>
             <Select
               onValueChange={(value) => setSelectedStaffKey(value ?? NEW_STAFF_VALUE)}
               value={selectedStaffKey}
@@ -206,42 +212,39 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                 <SelectItem value={NEW_STAFF_VALUE}>{t("settings:team.addNewMember")}</SelectItem>
               </SelectContent>
             </Select>
-          </label>
+          </Field>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:team.name")}
-              </span>
+            <Field>
+              <FieldLabel htmlFor="team-name">{t("settings:team.name")}</FieldLabel>
               <Input
+                id="team-name"
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("settings:team.placeholders.name")}
                 value={name}
               />
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:team.timezone")}
-              </span>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="team-timezone">{t("settings:team.timezone")}</FieldLabel>
               <Input
+                id="team-timezone"
                 onChange={(event) => setTimezone(event.target.value)}
                 placeholder={t("settings:team.placeholders.timezone")}
                 value={timezone}
               />
-            </label>
+            </Field>
           </div>
 
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:team.transferNumber")}
-              </span>
+            <Field>
+              <FieldLabel htmlFor="team-transfer">{t("settings:team.transferNumber")}</FieldLabel>
               <Input
+                id="team-transfer"
                 onChange={(event) => setTransferNumber(event.target.value)}
                 placeholder={t("settings:team.placeholders.transferNumber")}
                 value={transferNumber}
               />
-            </label>
+            </Field>
             <label className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/80 px-4 py-3">
               <Checkbox
                 checked={active}
@@ -251,7 +254,8 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-6">
+          </FieldGroup>
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSavingStaff || name.trim().length === 0} type="submit">
               {isSavingStaff
                 ? t("settings:team.saving")
@@ -265,8 +269,8 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
           </div>
         </form>
 
-        <div className="space-y-6">
-          <div className="space-y-1">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
             <p className="text-xs font-medium text-muted-foreground">
               {t("settings:team.serviceAssignments")}
             </p>
@@ -288,7 +292,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
           ) : null}
 
           {staff.length > 0 && services.length > 0 ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {staff.map((member) => {
                 const assignedCount = services.filter((service) =>
                   assignmentState[assignmentKey(String(member._id), String(service._id))],
@@ -296,13 +300,13 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
 
                 return (
                   <div
-                    className="space-y-4 rounded-2xl border border-border/70 bg-background/80 p-4"
+                    className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-background/80 p-4"
                     key={member._id}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-foreground">{member.name}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {member.timezone}
                           {member.transferNumber ? ` • ${member.transferNumber}` : ""}
                         </p>
@@ -336,7 +340,7 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
                                 )
                               }
                             />
-                            <span className="space-y-1">
+                            <span className="flex flex-col gap-1">
                               <span className="block text-sm font-medium text-foreground">
                                 {service.name}
                               </span>

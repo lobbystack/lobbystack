@@ -183,7 +183,9 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
   return (
     <>
       <div className="flex items-center justify-between gap-4 py-2">
-        <h1 className="text-2xl font-bold">{t("home.title")}</h1>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">{t("home.title")}</h1>
+        </div>
       </div>
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -262,14 +264,14 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-8">
+              <div className="flex flex-col gap-6">
                 {(summary?.recentCalls ?? []).map((call) => (
                   <div className="flex items-center gap-4" key={String(call.id)}>
                     <Avatar className="h-9 w-9">
                       <AvatarFallback>{initialsFromName(call.contactName)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-1 flex-wrap items-center justify-between">
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-1">
                         <p className="text-sm leading-none font-medium">
                           {call.contactName ?? t("home.recentCalls.unknownCaller")}
                         </p>

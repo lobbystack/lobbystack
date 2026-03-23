@@ -12,9 +12,11 @@ export function AnalyticsPage({ businessId }: AnalyticsPageProps) {
   }
 
   return (
-    <section className="flex flex-1 flex-col">
+    <section className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between gap-4 py-2">
-        <h1 className="text-2xl font-bold">Analytics</h1>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold">Analytics</h1>
+        </div>
       </div>
       <Analytics businessId={businessId} />
     </section>

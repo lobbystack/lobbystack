@@ -8,6 +8,12 @@ import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 type ServicesCardProps = {
@@ -98,70 +104,78 @@ export function ServicesCard(props: ServicesCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="space-y-2">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-2">
           <CardTitle>{t("services.title")}</CardTitle>
           <CardDescription>{t("services.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
+      <CardContent className="flex flex-col gap-8">
+        <form className="flex flex-col gap-8" onSubmit={(event) => void handleSubmit(event)}>
+          <FieldGroup>
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.serviceName")}</span>
+            <Field>
+              <FieldLabel htmlFor="service-name">{t("services.serviceName")}</FieldLabel>
               <Input
+                id="service-name"
                 placeholder={t("services.placeholders.serviceName")}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.slug")}</span>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="service-slug">{t("services.slug")}</FieldLabel>
               <Input
+                id="service-slug"
                 value={slug}
                 onChange={(event) => setSlug(event.target.value)}
               />
-            </label>
+            </Field>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.englishLabel")}</span>
+            <Field>
+              <FieldLabel htmlFor="service-en">{t("services.englishLabel")}</FieldLabel>
               <Input
+                id="service-en"
                 placeholder={t("services.placeholders.englishLabel")}
                 value={englishLabel}
                 onChange={(event) => setEnglishLabel(event.target.value)}
               />
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.frenchLabel")}</span>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="service-fr">{t("services.frenchLabel")}</FieldLabel>
               <Input
+                id="service-fr"
                 placeholder={t("services.placeholders.frenchLabel")}
                 value={frenchLabel}
                 onChange={(event) => setFrenchLabel(event.target.value)}
               />
-            </label>
+            </Field>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.durationMinutes")}</span>
+            <Field>
+              <FieldLabel htmlFor="service-duration">{t("services.durationMinutes")}</FieldLabel>
               <Input
+                id="service-duration"
                 min="5"
                 step="5"
                 type="number"
                 value={durationMinutes}
                 onChange={(event) => setDurationMinutes(event.target.value)}
               />
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("services.descriptionLabel")}</span>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="service-description">{t("services.descriptionLabel")}</FieldLabel>
               <Input
+                id="service-description"
                 placeholder={t("services.placeholders.description")}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
-            </label>
+            </Field>
           </div>
-          <div className="flex flex-wrap items-center gap-3 pt-6">
+          </FieldGroup>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               disabled={isSaving || name.trim().length === 0 || slug.trim().length === 0}
               type="submit"
@@ -180,11 +194,11 @@ export function ServicesCard(props: ServicesCardProps) {
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
           </div>
         </form>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {services.map((service) => (
             <div className="rounded-2xl border border-border/70 bg-background/80 p-4" key={service._id}>
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
+                <div className="flex flex-col gap-1">
                   <strong className="text-sm text-foreground">{service.name}</strong>
                   <div className="text-xs text-muted-foreground">
                     {t("services.englishLabel")}: {service.localizedNames?.en || service.name}
@@ -201,7 +215,7 @@ export function ServicesCard(props: ServicesCardProps) {
                   </Button>
                 </div>
               </div>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-6 text-muted-foreground">
                 {service.description || t("services.noDescription")}
               </p>
             </div>

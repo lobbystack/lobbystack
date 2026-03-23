@@ -128,7 +128,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
     : [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
           <CardTitle>{t("home.analytics.chart.title")}</CardTitle>
@@ -202,7 +202,7 @@ function SimpleBarList({
   const max = Math.max(...items.map((item) => item.value), 1);
 
   return (
-    <ul className="space-y-3">
+    <ul className="flex flex-col gap-3">
       {items.map((item) => {
         const width = `${Math.round((item.value / max) * 100)}%`;
 

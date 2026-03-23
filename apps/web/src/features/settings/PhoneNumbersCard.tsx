@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -142,18 +148,18 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
 
   return (
     <Card className="border border-border/70 bg-card/90 shadow-sm">
-      <CardHeader className="space-y-2 pb-2">
-        <div className="space-y-2">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-2">
           <CardTitle>{t("settings:phoneRouting.title")}</CardTitle>
           <CardDescription>{t("settings:phoneRouting.description")}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="space-y-3">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("settings:phoneRouting.managedNumber")}
-            </span>
+      <CardContent className="flex flex-col gap-8">
+        <form className="flex flex-col gap-8" onSubmit={(event) => void handleSubmit(event)}>
+          <FieldGroup>
+          <Field>
+            <FieldLabel>{t("settings:phoneRouting.managedNumber")}</FieldLabel>
+            <FieldDescription>{t("settings:phoneRouting.selectNumber")}</FieldDescription>
             <Select
               onValueChange={(value) => setSelectedPhoneNumberKey(value ?? NEW_PHONE_VALUE)}
               value={selectedPhoneNumberKey}
@@ -170,38 +176,34 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                 <SelectItem value={NEW_PHONE_VALUE}>{t("settings:phoneRouting.addNewNumber")}</SelectItem>
               </SelectContent>
             </Select>
-          </label>
+          </Field>
           <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:phoneRouting.e164Number")}
-              </span>
+            <Field>
+              <FieldLabel htmlFor="phone-e164">{t("settings:phoneRouting.e164Number")}</FieldLabel>
               <div className="relative">
                 <Phone className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  id="phone-e164"
                   className="pl-10"
                   onChange={(event) => setE164(event.target.value)}
                   placeholder="+18708763750"
                   value={e164}
                 />
               </div>
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:phoneRouting.twilioPhoneSid")}
-              </span>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="phone-sid">{t("settings:phoneRouting.twilioPhoneSid")}</FieldLabel>
               <Input
+                id="phone-sid"
                 onChange={(event) => setTwilioPhoneSid(event.target.value)}
                 placeholder="PNxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 value={twilioPhoneSid}
               />
-            </label>
+            </Field>
           </div>
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("settings:phoneRouting.status")}
-              </span>
+            <Field>
+              <FieldLabel>{t("settings:phoneRouting.status")}</FieldLabel>
               <Select onValueChange={(value) => setStatus(value ?? "active")} value={status}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("settings:phoneRouting.selectStatus")} />
@@ -212,7 +214,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                   <SelectItem value="inactive">{t("settings:phoneRouting.statuses.inactive")}</SelectItem>
                 </SelectContent>
               </Select>
-            </label>
+            </Field>
             <label className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/80 px-4 py-3">
               <Checkbox
                 checked={voiceEnabled}
@@ -228,7 +230,8 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
               <span className="text-sm text-foreground">{t("settings:phoneRouting.smsEnabled")}</span>
             </label>
           </div>
-          <div className="flex flex-wrap items-center gap-3 pt-6">
+          </FieldGroup>
+          <div className="flex flex-wrap items-center gap-3">
             <Button disabled={isSaving || e164.trim().length === 0} type="submit">
               {isSaving
                 ? t("settings:phoneRouting.saving")
@@ -241,7 +244,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
           </div>
         </form>
 
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <p className="text-xs font-medium text-muted-foreground">
             {t("settings:phoneRouting.currentMappings")}
           </p>
@@ -254,7 +257,7 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">{phoneNumber.e164}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {phoneNumber.twilioPhoneSid ?? t("settings:phoneRouting.noSid")}
                     </p>
                   </div>

@@ -669,9 +669,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         type="file"
       />
 
-      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between py-2">
+      <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{t("page.title")}</h1>
               <MessagesSquare className="size-5" />
@@ -761,7 +761,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       >
         {thread ? (
           <>
-            <div className="mb-4 min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
+            <div className="min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="flex min-w-0 gap-3">
                   <Button
@@ -845,7 +845,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
@@ -867,9 +867,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                               )}
                               key={String(item.id)}
                             >
-                              <div className="space-y-2">
+                              <div className="flex flex-col gap-2">
                                 {item.attachments.length > 0 ? (
-                                  <div className="space-y-2">
+                                  <div className="flex flex-col gap-2">
                                     {item.attachments.map((attachment) => (
                                       <MessageAttachmentPreview
                                         attachment={attachment}
@@ -881,7 +881,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                                 {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
                               </div>
                               {isFailedOutboundMessage ? (
-                                <p className="mt-2 text-xs font-medium text-destructive">
+                                <p className="pt-2 text-xs font-medium text-destructive">
                                   {t("page.deliveryFailed")}
                                 </p>
                               ) : null}
@@ -903,7 +903,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           );
                         })()
                       ) : (
-                        <div className="self-stretch pt-2" key={String(item.id)}>
+                        <div className="flex self-stretch flex-col gap-3 pt-2" key={String(item.id)}>
                           <button
                             className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
                             onClick={() => toggleSummary(String(item.id))}
@@ -923,10 +923,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           </button>
                           {isSummaryOpen(String(item.id)) ? (
                             <>
-                              <p className="mt-3 text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                              <p className="text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
                                 {formatSessionSummaryText(item.summary, i18n.language, t)}
                               </p>
-                              <p className="mt-1 text-center text-xs text-muted-foreground/80">
+                              <p className="text-center text-xs text-muted-foreground/80">
                                 {formatInboxTimestamp(item.closedAt, i18n.language, {
                                   yesterday: t("page.yesterday"),
                                 })}

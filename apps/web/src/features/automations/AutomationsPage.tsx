@@ -25,7 +25,7 @@ export function AutomationsPage({ businessId }: AutomationsPageProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4 py-2">
-        <div>
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold">{t("page.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("page.description")}</p>
         </div>

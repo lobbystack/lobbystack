@@ -23,8 +23,8 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
 
   return (
-    <div className="w-full space-y-6">
-      <div className="flex flex-col gap-3">
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {knowledge && snippets.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
             <p>{t("agent:sections.knowledge.emptyState")}</p>
