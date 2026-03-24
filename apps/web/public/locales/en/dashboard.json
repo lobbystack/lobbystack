@@ -86,8 +86,8 @@
       "description": "Customer follow-up tasks that still need a human.",
       "titleWithContact": "{{message}} for {{name}}",
       "urgent": "Urgent",
-      "emptyTitle": "No open follow-up tasks",
-      "emptyDescription": "New callback requests and human handoffs will show up here.",
+      "emptyTitle": "No action required",
+      "emptyDescription": "Things that require manuel action will appear here.",
       "fields": {
         "callback": "Callback",
         "callbackWindow": "Preferred callback"
