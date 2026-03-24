@@ -111,6 +111,18 @@ function InlineConfirmDeleteButton({
   );
 }
 
+function getSectionKey(pathname: string): "knowledge" | "services" | "rules" {
+  if (pathname === "/agent/services") {
+    return "services";
+  }
+
+  if (pathname === "/agent/rules") {
+    return "rules";
+  }
+
+  return "knowledge";
+}
+
 export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   const { t } = useTranslation(["agent", "knowledge"]);
   const location = useLocation();
@@ -118,7 +130,7 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
     businessId,
   });
-  const sectionKey = location.pathname === "/agent/rules" ? "rules" : "knowledge";
+  const sectionKey = getSectionKey(location.pathname);
   const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
   const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
   const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);

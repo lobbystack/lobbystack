@@ -31,11 +31,23 @@ function parseTags(value: string): Array<string> {
     .filter(Boolean);
 }
 
+function getSectionKey(pathname: string): "knowledge" | "services" | "rules" {
+  if (pathname === "/agent/services") {
+    return "services";
+  }
+
+  if (pathname === "/agent/rules") {
+    return "rules";
+  }
+
+  return "knowledge";
+}
+
 export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses"> }) {
   const { t } = useTranslation(["agent", "knowledge"]);
   const location = useLocation();
   const upsertKnowledgeSnippet = useMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);
-  const sectionKey = location.pathname === "/agent/rules" ? "rules" : "knowledge";
+  const sectionKey = getSectionKey(location.pathname);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [title, setTitle] = useState("");

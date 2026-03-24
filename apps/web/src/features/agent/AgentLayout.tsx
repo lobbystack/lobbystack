@@ -33,6 +33,11 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
       title: t("sections.knowledge.title"),
       description: t("sections.knowledge.description"),
     };
+  } else if (location.pathname === "/agent/services") {
+    header = {
+      title: t("sections.services.title"),
+      description: t("sections.services.description"),
+    };
   } else if (location.pathname === "/agent/rules") {
     header = {
       title: t("sections.rules.title"),
@@ -45,7 +50,7 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
       <div className="flex flex-col gap-1 py-2">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">{header.title}</h1>
-          {location.pathname === "/agent/knowledge" && (
+          {(location.pathname === "/agent/knowledge" || location.pathname === "/agent/services") && (
             <div className="flex items-center gap-2">
               <UploadKnowledgeDocumentSheet businessId={businessId} />
               <AddKnowledgeSheet businessId={businessId} />

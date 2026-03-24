@@ -72,6 +72,18 @@ function resolveFileContentType(file: File): string {
   return inferContentTypeFromFileName(file.name);
 }
 
+function getSectionKey(pathname: string): "knowledge" | "services" | "rules" {
+  if (pathname === "/agent/services") {
+    return "services";
+  }
+
+  if (pathname === "/agent/rules") {
+    return "rules";
+  }
+
+  return "knowledge";
+}
+
 export function UploadKnowledgeDocumentSheet({
   businessId,
 }: {
@@ -83,7 +95,7 @@ export function UploadKnowledgeDocumentSheet({
   const finalizeKnowledgeDocumentUpload = useAction(
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
   );
-  const sectionKey = location.pathname === "/agent/rules" ? "rules" : "knowledge";
+  const sectionKey = getSectionKey(location.pathname);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);

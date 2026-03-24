@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   Bot,
+  BriefcaseBusiness,
   ChartColumnIncreasing,
   ContactRound,
   House,
@@ -88,6 +89,11 @@ export function AppSidebar({
                   title: t("agent:sections.knowledge.title"),
                   url: "/agent/knowledge",
                   icon: BookOpenText,
+                },
+                {
+                  title: t("agent:sections.services.title"),
+                  url: "/agent/services",
+                  icon: BriefcaseBusiness,
                 },
                 {
                   title: t("agent:sections.rules.title"),

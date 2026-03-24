@@ -7,7 +7,7 @@
   "sections": {
     "basicSettings": {
       "title": "Paramètres de base",
-      "description": "Message d'accueil et langue par défaut de votre réceptionniste."
+      "description": "Message d'accueil et paramètres de transfert de votre réceptionniste."
     },
     "knowledge": {
       "title": "Connaissances",
@@ -54,6 +54,54 @@
           "label": "Mots-clés (optionnel)",
           "placeholder": "Horaires, adresse",
           "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
+        }
+      }
+    },
+    "services": {
+      "title": "Services",
+      "description": "Détails des services que votre réceptionniste peut utiliser pour expliquer vos offres et aider à réserver le bon rendez-vous.",
+      "listTitle": "Services",
+      "addKnowledge": "Ajouter un service",
+      "uploadDocument": "Téléverser un document",
+      "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre réceptionniste devrait mentionner.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
+      "emptyState": "Aucun service ajouté pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
+      },
+      "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
+        },
+        "title": {
+          "label": "Titre",
+          "placeholder": "Consultation initiale",
+          "hint": "Un titre court et descriptif pour ce service."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "Une consultation de 30 minutes pour comprendre les besoins de l'appelant et recommander la bonne suite.",
+          "hint": "Décrivez le service pour que le réceptionniste puisse l'expliquer clairement."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "Consultation, nouveaux clients",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser ces services."
         }
       }
     },
