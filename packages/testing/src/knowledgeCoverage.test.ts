@@ -716,4 +716,90 @@ describe("Knowledge coverage", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("keeps knowledge sections isolated in list results", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "knowledge-sections-owner";
+
+    const { businessId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-sections",
+        name: "Knowledge Sections",
+      });
+
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+
+      return { businessId };
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("knowledge_snippets", {
+        businessId,
+        section: "services",
+        title: "Consultation",
+        content: "Service details.",
+        tags: [],
+        priority: 75,
+        active: true,
+      });
+      await ctx.db.insert("knowledge_snippets", {
+        businessId,
+        section: "rules",
+        title: "Escalation Rule",
+        content: "Transfer urgent callers.",
+        tags: [],
+        priority: 75,
+        active: true,
+      });
+      await ctx.db.insert("knowledge_snippets", {
+        businessId,
+        title: "Hours",
+        content: "Open weekdays.",
+        tags: [],
+        priority: 75,
+        active: true,
+      });
+      await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "services",
+        sourceType: "manual_text",
+        title: "Service Brochure",
+        mimeType: "text/plain",
+        textContent: "Brochure text",
+        status: "indexed",
+        tags: [],
+        importance: 50,
+      });
+    });
+
+    const asKnowledgeOwner = t.withIdentity({ subject });
+
+    const services = await asKnowledgeOwner.query(api.ai.context.knowledge.listKnowledge, {
+      businessId,
+      section: "services",
+    });
+    const rules = await asKnowledgeOwner.query(api.ai.context.knowledge.listKnowledge, {
+      businessId,
+      section: "rules",
+    });
+    const knowledge = await asKnowledgeOwner.query(api.ai.context.knowledge.listKnowledge, {
+      businessId,
+      section: "knowledge",
+    });
+
+    expect(services.snippets.map((snippet) => snippet.title)).toEqual(["Consultation"]);
+    expect(services.documents.map((document) => document.title)).toEqual(["Service Brochure"]);
+    expect(rules.snippets.map((snippet) => snippet.title)).toEqual(["Escalation Rule"]);
+    expect(rules.documents).toHaveLength(0);
+    expect(knowledge.snippets.map((snippet) => snippet.title)).toEqual(["Hours"]);
+    expect(knowledge.documents).toHaveLength(0);
+  });
 });

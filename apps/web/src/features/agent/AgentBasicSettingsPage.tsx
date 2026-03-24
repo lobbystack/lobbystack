@@ -75,6 +75,12 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         tone: configuration?.profile?.tone ?? "",
         summary: configuration?.profile?.summary ?? "",
         bookingPolicy: configuration?.profile?.bookingPolicy ?? "",
+        ...(configuration?.profile?.voiceInstructions !== undefined
+          ? { voiceInstructions: configuration.profile.voiceInstructions }
+          : {}),
+        ...(configuration?.profile?.smsInstructions !== undefined
+          ? { smsInstructions: configuration.profile.smsInstructions }
+          : {}),
         transferMode: configuration?.profile?.transferMode ?? "on_request",
         ...(transferNumber.trim().length > 0
           ? { transferNumber: transferNumber.trim() }
@@ -98,6 +104,12 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         tone: configuration?.profile?.tone ?? "",
         summary: configuration?.profile?.summary ?? "",
         bookingPolicy: configuration?.profile?.bookingPolicy ?? "",
+        ...(configuration?.profile?.voiceInstructions !== undefined
+          ? { voiceInstructions: configuration.profile.voiceInstructions }
+          : {}),
+        ...(configuration?.profile?.smsInstructions !== undefined
+          ? { smsInstructions: configuration.profile.smsInstructions }
+          : {}),
         transferMode: configuration?.profile?.transferMode ?? "on_request",
         ...(trimmedTransferNumber.length > 0
           ? { transferNumber: trimmedTransferNumber }

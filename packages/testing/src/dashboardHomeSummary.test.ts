@@ -328,4 +328,58 @@ describe("Dashboard home summary", () => {
       body: expect.stringContaining("Please call me back."),
     });
   });
+
+  it("shows the six most recent handoffs instead of the first six collected", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-handoff-order");
+
+    await t.run(async (ctx) => {
+      const conversationIds: Array<Id<"conversations">> = [];
+
+      for (let index = 0; index < 7; index += 1) {
+        const contactId = await insertContact(ctx, businessId, {
+          name: `Handoff ${index}`,
+          phone: `+14165550${String(index).padStart(3, "0")}`,
+        });
+        const conversationId = await ctx.db.insert("conversations", {
+          businessId,
+          contactId,
+          channel: "sms",
+          status: "open",
+          automationState: "human_handoff",
+        });
+        conversationIds.push(conversationId);
+        await ctx.db.insert("messages", {
+          businessId,
+          conversationId,
+          direction: "inbound",
+          channel: "sms",
+          body: `Need help ${index}`,
+          status: "received",
+          aiGenerated: false,
+        });
+      }
+
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId: conversationIds[6],
+        direction: "inbound",
+        channel: "sms",
+        body: "Need help 6 latest",
+        status: "received",
+        aiGenerated: false,
+      });
+    });
+
+    const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId,
+    });
+
+    expect(summary.actionRequired.filter((item) => item.kind === "human_handoff")).toHaveLength(6);
+    expect(
+      summary.actionRequired.some(
+        (item) => item.kind === "human_handoff" && item.body === "Need help 6 latest",
+      ),
+    ).toBe(true);
+  });
 });

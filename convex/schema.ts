@@ -5,6 +5,7 @@ import {
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
 } from "./lib/runtimeLocale";
+import { knowledgeSectionValidator } from "./lib/knowledgeSections";
 import { localizedServiceNamesValidator } from "./lib/serviceNames";
 
 const serviceSummaryValidator = v.object({
@@ -190,6 +191,7 @@ export default defineSchema({
 
   knowledge_documents: defineTable({
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
     sourceType: v.string(),
     title: v.string(),
     storageId: v.optional(v.id("_storage")),
@@ -209,6 +211,7 @@ export default defineSchema({
 
   knowledge_snippets: defineTable({
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
     title: v.string(),
     content: v.string(),
     tags: v.array(v.string()),

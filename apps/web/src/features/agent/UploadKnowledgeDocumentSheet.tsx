@@ -2,7 +2,6 @@ import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { Upload } from "lucide-react";
-import { useLocation } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -22,6 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { AgentSection } from "./sections";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -72,30 +72,18 @@ function resolveFileContentType(file: File): string {
   return inferContentTypeFromFileName(file.name);
 }
 
-function getSectionKey(pathname: string): "knowledge" | "services" | "rules" {
-  if (pathname === "/agent/services") {
-    return "services";
-  }
-
-  if (pathname === "/agent/rules") {
-    return "rules";
-  }
-
-  return "knowledge";
-}
-
 export function UploadKnowledgeDocumentSheet({
   businessId,
+  section,
 }: {
   businessId: Id<"businesses">;
+  section: AgentSection;
 }) {
   const { t } = useTranslation("agent");
-  const location = useLocation();
   const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
   const finalizeKnowledgeDocumentUpload = useAction(
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
   );
-  const sectionKey = getSectionKey(location.pathname);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -121,7 +109,7 @@ export function UploadKnowledgeDocumentSheet({
     if (file && file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
       setSelectedFile(null);
       setTitle("");
-      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.maxSize`));
+      setErrorMessage(t(`sections.${section}.uploadValidation.maxSize`));
       return;
     }
 
@@ -139,18 +127,18 @@ export function UploadKnowledgeDocumentSheet({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selectedFile) {
-      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.fileRequired`));
+      setErrorMessage(t(`sections.${section}.uploadValidation.fileRequired`));
       return;
     }
 
     const contentType = resolveFileContentType(selectedFile);
     if (!isSupportedContentType(contentType)) {
-      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.unsupportedFile`));
+      setErrorMessage(t(`sections.${section}.uploadValidation.unsupportedFile`));
       return;
     }
 
     if (selectedFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
-      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.maxSize`));
+      setErrorMessage(t(`sections.${section}.uploadValidation.maxSize`));
       return;
     }
 
@@ -174,6 +162,7 @@ export function UploadKnowledgeDocumentSheet({
       const result = (await uploadResponse.json()) as { storageId: Id<"_storage"> };
       await finalizeKnowledgeDocumentUpload({
         businessId,
+        section,
         storageId: result.storageId,
         fileName: selectedFile.name,
         title: title.trim(),
@@ -183,7 +172,7 @@ export function UploadKnowledgeDocumentSheet({
       setIsSheetOpen(false);
       resetState();
     } catch {
-      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.uploadFailed`));
+      setErrorMessage(t(`sections.${section}.uploadValidation.uploadFailed`));
     } finally {
       setIsUploading(false);
     }
@@ -209,19 +198,19 @@ export function UploadKnowledgeDocumentSheet({
       />
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{t(`sections.${sectionKey}.uploadDocument`)}</SheetTitle>
+          <SheetTitle>{t(`sections.${section}.uploadDocument`)}</SheetTitle>
           <SheetDescription>
-            {t(`sections.${sectionKey}.uploadDocumentDescription`)}
+            {t(`sections.${section}.uploadDocumentDescription`)}
           </SheetDescription>
         </SheetHeader>
         <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="knowledge-document-file">
-                {t(`sections.${sectionKey}.fields.file.label`)}
+                {t(`sections.${section}.fields.file.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`sections.${sectionKey}.fields.file.hint`)}
+                {t(`sections.${section}.fields.file.hint`)}
               </FieldDescription>
               <Input
                 accept={ACCEPTED_FILE_TYPES}
@@ -260,9 +249,9 @@ export function UploadKnowledgeDocumentSheet({
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="size-5 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {t(`sections.${sectionKey}.fields.file.dropzonePrefix`)}{" "}
+                    {t(`sections.${section}.fields.file.dropzonePrefix`)}{" "}
                     <span className="underline underline-offset-2">
-                      {t(`sections.${sectionKey}.fields.file.chooseFile`)}
+                      {t(`sections.${section}.fields.file.chooseFile`)}
                     </span>
                   </p>
                   {resolvedFileName ? (
@@ -274,14 +263,14 @@ export function UploadKnowledgeDocumentSheet({
 
             <Field>
               <FieldLabel htmlFor="knowledge-document-title">
-                {t(`sections.${sectionKey}.fields.title.label`)}
+                {t(`sections.${section}.fields.title.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`sections.${sectionKey}.fields.title.hint`)}
+                {t(`sections.${section}.fields.title.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-document-title"
-                placeholder={t(`sections.${sectionKey}.fields.title.placeholder`)}
+                placeholder={t(`sections.${section}.fields.title.placeholder`)}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
@@ -289,14 +278,14 @@ export function UploadKnowledgeDocumentSheet({
 
             <Field>
               <FieldLabel htmlFor="knowledge-document-tags">
-                {t(`sections.${sectionKey}.fields.tags.label`)}
+                {t(`sections.${section}.fields.tags.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`sections.${sectionKey}.fields.tags.hint`)}
+                {t(`sections.${section}.fields.tags.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-document-tags"
-                placeholder={t(`sections.${sectionKey}.fields.tags.placeholder`)}
+                placeholder={t(`sections.${section}.fields.tags.placeholder`)}
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
               />

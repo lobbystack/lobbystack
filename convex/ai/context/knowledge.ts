@@ -28,6 +28,11 @@ import {
   MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES,
 } from "../../lib/knowledgeDocuments";
 import { normalizeAttachmentFileName } from "../../lib/messageAttachments";
+import {
+  knowledgeSectionValidator,
+  resolveKnowledgeSection,
+  type KnowledgeSection,
+} from "../../lib/knowledgeSections";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -71,14 +76,20 @@ type MarkSnippetIndexedArgs = {
 type UpsertKnowledgeSnippetArgs = {
   businessId: Id<"businesses">;
   snippetId?: Id<"knowledge_snippets">;
+  section?: KnowledgeSection;
   title: string;
   content: string;
   tags: Array<string>;
   priority: number;
   active: boolean;
 };
+type ListKnowledgeArgs = {
+  businessId: Id<"businesses">;
+  section?: KnowledgeSection;
+};
 type CreateKnowledgeDocumentArgs = {
   businessId: Id<"businesses">;
+  section?: KnowledgeSection;
   sourceType: string;
   title: string;
   storageId?: Id<"_storage">;
@@ -90,6 +101,7 @@ type CreateKnowledgeDocumentArgs = {
 };
 type FinalizeKnowledgeDocumentUploadArgs = {
   businessId: Id<"businesses">;
+  section?: KnowledgeSection;
   storageId: Id<"_storage">;
   fileName: string;
   title: string;
@@ -468,6 +480,7 @@ export const upsertKnowledgeSnippet = mutation({
   args: {
     businessId: v.id("businesses"),
     snippetId: v.optional(v.id("knowledge_snippets")),
+    section: v.optional(knowledgeSectionValidator),
     title: v.string(),
     content: v.string(),
     tags: v.array(v.string()),
@@ -481,6 +494,7 @@ export const upsertKnowledgeSnippet = mutation({
       args.snippetId ??
       (await ctx.db.insert("knowledge_snippets", {
         businessId: args.businessId,
+        ...(args.section !== undefined ? { section: args.section } : {}),
         title: args.title,
         content: args.content,
         tags: args.tags,
@@ -490,6 +504,7 @@ export const upsertKnowledgeSnippet = mutation({
 
     if (args.snippetId) {
       await ctx.db.patch(args.snippetId, {
+        ...(args.section !== undefined ? { section: args.section } : {}),
         title: args.title,
         content: args.content,
         tags: args.tags,
@@ -513,6 +528,7 @@ export const upsertKnowledgeSnippet = mutation({
 export const createKnowledgeDocument = mutation({
   args: {
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
     sourceType: v.string(),
     title: v.string(),
     storageId: v.optional(v.id("_storage")),
@@ -526,6 +542,7 @@ export const createKnowledgeDocument = mutation({
     await requireMembership(ctx, args.businessId);
     const documentId = await ctx.db.insert("knowledge_documents", {
       businessId: args.businessId,
+      ...(args.section !== undefined ? { section: args.section } : {}),
       sourceType: args.sourceType,
       title: args.title,
       ...(args.storageId !== undefined ? { storageId: args.storageId } : {}),
@@ -567,6 +584,7 @@ export const generateKnowledgeDocumentUploadUrl = mutation({
 export const finalizeKnowledgeDocumentUpload = action({
   args: {
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
     storageId: v.id("_storage"),
     fileName: v.string(),
     title: v.string(),
@@ -612,6 +630,7 @@ export const finalizeKnowledgeDocumentUpload = action({
 
     return await ctx.runMutation(api.ai.context.knowledge.createKnowledgeDocument, {
       businessId: args.businessId,
+      ...(args.section !== undefined ? { section: args.section } : {}),
       sourceType: "upload",
       title: documentTitle,
       storageId: args.storageId,
@@ -625,8 +644,9 @@ export const finalizeKnowledgeDocumentUpload = action({
 export const listKnowledge = query({
   args: {
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
   },
-  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
+  handler: async (ctx: QueryCtx, args: ListKnowledgeArgs) => {
     await requireMembership(ctx, args.businessId);
     const [documents, snippets] = await Promise.all([
       ctx.db
@@ -639,7 +659,18 @@ export const listKnowledge = query({
         .collect(),
     ]);
 
-    return { documents, snippets };
+    if (args.section === undefined) {
+      return { documents, snippets };
+    }
+
+    return {
+      documents: documents.filter(
+        (document) => resolveKnowledgeSection(document.section) === args.section,
+      ),
+      snippets: snippets.filter(
+        (snippet) => resolveKnowledgeSection(snippet.section) === args.section,
+      ),
+    };
   },
 });
 

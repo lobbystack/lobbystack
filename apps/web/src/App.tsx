@@ -164,7 +164,7 @@ function WorkspaceShell() {
             <Route
               element={
                 businessId ? (
-                  <AgentKnowledgePage businessId={businessId} />
+                  <AgentKnowledgePage businessId={businessId} section="knowledge" />
                 ) : (
                   <Navigate replace to="/agent" />
                 )

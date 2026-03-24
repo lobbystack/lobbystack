@@ -39,6 +39,7 @@ import type * as lib_components from "../lib/components.js";
 import type * as lib_emailChange from "../lib/emailChange.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_knowledgeDocuments from "../lib/knowledgeDocuments.js";
+import type * as lib_knowledgeSections from "../lib/knowledgeSections.js";
 import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
 import type * as lib_messageAttachments from "../lib/messageAttachments.js";
 import type * as lib_node_imagePreviews from "../lib/node/imagePreviews.js";
@@ -101,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   "lib/emailChange": typeof lib_emailChange;
   "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/knowledgeDocuments": typeof lib_knowledgeDocuments;
+  "lib/knowledgeSections": typeof lib_knowledgeSections;
   "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
   "lib/messageAttachments": typeof lib_messageAttachments;
   "lib/node/imagePreviews": typeof lib_node_imagePreviews;

@@ -333,8 +333,7 @@ export const getHomeSummary = query({
           conversation.status === "open" &&
           conversation.channel === "sms" &&
           conversation.automationState === "human_handoff",
-      )
-      .slice(0, 6);
+      );
 
     const actionRequiredFromHandoffs = await Promise.all(
       handoffConversations.map(async (conversation) => {
@@ -343,9 +342,10 @@ export const getHomeSummary = query({
           ctx.db
             .query("messages")
             .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .collect(),
+            .order("desc")
+            .take(1),
         ]);
-        const latestMessage = messages[messages.length - 1] ?? null;
+        const latestMessage = messages[0] ?? null;
 
         return {
           id: String(conversation._id),
@@ -362,6 +362,9 @@ export const getHomeSummary = query({
           conversationId: conversation._id,
         };
       }),
+    );
+    actionRequiredFromHandoffs.sort(
+      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
     );
 
     const actionRequired = [...actionRequiredFromVoice, ...actionRequiredFromHandoffs]

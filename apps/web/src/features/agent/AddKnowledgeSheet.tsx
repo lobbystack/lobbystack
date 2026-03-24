@@ -2,7 +2,6 @@ import { FormEvent, useState } from "react";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
-import { useLocation } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -23,6 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { AgentSection } from "./sections";
 
 function parseTags(value: string): Array<string> {
   return value
@@ -31,23 +31,15 @@ function parseTags(value: string): Array<string> {
     .filter(Boolean);
 }
 
-function getSectionKey(pathname: string): "knowledge" | "services" | "rules" {
-  if (pathname === "/agent/services") {
-    return "services";
-  }
-
-  if (pathname === "/agent/rules") {
-    return "rules";
-  }
-
-  return "knowledge";
-}
-
-export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses"> }) {
+export function AddKnowledgeSheet({
+  businessId,
+  section,
+}: {
+  businessId: Id<"businesses">;
+  section: AgentSection;
+}) {
   const { t } = useTranslation(["agent", "knowledge"]);
-  const location = useLocation();
   const upsertKnowledgeSnippet = useMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);
-  const sectionKey = getSectionKey(location.pathname);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -66,6 +58,7 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
     try {
       await upsertKnowledgeSnippet({
         businessId,
+        section,
         title: trimmedTitle,
         content: trimmedContent,
         tags: parseTags(tags),
@@ -87,29 +80,29 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
         render={
           <Button>
             <Plus data-icon="inline-start" />
-            {t(`agent:sections.${sectionKey}.addKnowledge`)}
+            {t(`agent:sections.${section}.addKnowledge`)}
           </Button>
         }
       />
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{t(`agent:sections.${sectionKey}.addKnowledge`)}</SheetTitle>
+          <SheetTitle>{t(`agent:sections.${section}.addKnowledge`)}</SheetTitle>
           <SheetDescription>
-            {t(`agent:sections.${sectionKey}.addKnowledgeDescription`)}
+            {t(`agent:sections.${section}.addKnowledgeDescription`)}
           </SheetDescription>
         </SheetHeader>
         <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="knowledge-title">
-                {t(`agent:sections.${sectionKey}.fields.title.label`)}
+                {t(`agent:sections.${section}.fields.title.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`agent:sections.${sectionKey}.fields.title.hint`)}
+                {t(`agent:sections.${section}.fields.title.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-title"
-                placeholder={t(`agent:sections.${sectionKey}.fields.title.placeholder`)}
+                placeholder={t(`agent:sections.${section}.fields.title.placeholder`)}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
@@ -117,15 +110,15 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
 
             <Field>
               <FieldLabel htmlFor="knowledge-content">
-                {t(`agent:sections.${sectionKey}.fields.content.label`)}
+                {t(`agent:sections.${section}.fields.content.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`agent:sections.${sectionKey}.fields.content.hint`)}
+                {t(`agent:sections.${section}.fields.content.hint`)}
               </FieldDescription>
               <Textarea
                 className="min-h-40"
                 id="knowledge-content"
-                placeholder={t(`agent:sections.${sectionKey}.fields.content.placeholder`)}
+                placeholder={t(`agent:sections.${section}.fields.content.placeholder`)}
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
               />
@@ -133,14 +126,14 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
 
             <Field>
               <FieldLabel htmlFor="knowledge-tags">
-                {t(`agent:sections.${sectionKey}.fields.tags.label`)}
+                {t(`agent:sections.${section}.fields.tags.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t(`agent:sections.${sectionKey}.fields.tags.hint`)}
+                {t(`agent:sections.${section}.fields.tags.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-tags"
-                placeholder={t(`agent:sections.${sectionKey}.fields.tags.placeholder`)}
+                placeholder={t(`agent:sections.${section}.fields.tags.placeholder`)}
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
               />
