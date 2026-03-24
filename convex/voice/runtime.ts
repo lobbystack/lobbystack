@@ -170,6 +170,10 @@ type GetCallForDashboardArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
 };
+type GetVoiceFollowUpTaskForDashboardArgs = {
+  businessId: Id<"businesses">;
+  inboxItemId: Id<"inbox_items">;
+};
 type CompleteVoiceFollowUpTaskArgs = {
   businessId: Id<"businesses">;
   inboxItemId: Id<"inbox_items">;
@@ -1093,6 +1097,34 @@ export const getCallForDashboard = query({
     );
 
     return await hydrateDashboardCallRow(ctx, call, voiceFollowUpByCallId);
+  },
+});
+
+export const getVoiceFollowUpTaskForDashboard = query({
+  args: {
+    businessId: v.id("businesses"),
+    inboxItemId: v.id("inbox_items"),
+  },
+  handler: async (ctx: QueryCtx, args: GetVoiceFollowUpTaskForDashboardArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const inboxItem = await ctx.db.get(args.inboxItemId);
+    if (
+      !inboxItem ||
+      inboxItem.businessId !== args.businessId ||
+      inboxItem.kind !== "voice_message" ||
+      inboxItem.status !== "open"
+    ) {
+      return null;
+    }
+
+    return {
+      id: inboxItem._id,
+      title: inboxItem.title,
+      body: inboxItem.body,
+      createdAt: new Date(inboxItem._creationTime).toISOString(),
+      callId: inboxItem.relatedId ? (inboxItem.relatedId as Id<"calls">) : null,
+    };
   },
 });
 
