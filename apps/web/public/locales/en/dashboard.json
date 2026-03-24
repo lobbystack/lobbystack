@@ -84,6 +84,7 @@
     "actionRequired": {
       "title": "Action required",
       "description": "Customer follow-up tasks that still need a human.",
+      "titleWithContact": "{{message}} for {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "No open follow-up tasks",
       "emptyDescription": "New callback requests and human handoffs will show up here.",

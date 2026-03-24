@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { PanelLeftIcon } from "lucide-react";
 
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type SiteHeaderProps = React.HTMLAttributes<HTMLElement> & {
@@ -19,6 +21,7 @@ export function SiteHeader({
   links = [],
   ...props
 }: SiteHeaderProps) {
+  const { toggleSidebar } = useSidebar();
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -48,7 +51,18 @@ export function SiteHeader({
             "after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg",
         )}
       >
-        <SidebarTrigger className="max-md:scale-125 md:hidden" variant="outline" />
+        <Button
+          aria-label="Toggle sidebar"
+          className="md:hidden"
+          onClick={() => {
+            toggleSidebar();
+          }}
+          size="icon"
+          type="button"
+          variant="outline"
+        >
+          <PanelLeftIcon />
+        </Button>
       </div>
     </header>
   );

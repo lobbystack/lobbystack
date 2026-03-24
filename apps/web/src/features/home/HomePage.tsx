@@ -24,6 +24,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
@@ -225,6 +235,42 @@ function getAppointmentSourceLabel(
   return sourceChannel;
 }
 
+function normalizeActionTitleText(value: string): string {
+  return value.trim().replace(/[.]+$/u, "");
+}
+
+function extractActionContactName(item: HomeSummary["actionRequired"][number]): string | null {
+  if (item.kind === "voice_message") {
+    const match = item.title.match(/from\s+(.+)$/i);
+    return match?.[1]?.trim() ?? null;
+  }
+
+  const normalizedTitle = item.title.trim();
+  return normalizedTitle.length > 0 ? normalizedTitle : null;
+}
+
+function getActionDisplayTitle(
+  item: HomeSummary["actionRequired"][number],
+  details: ReturnType<typeof parseFollowUpTaskBody>,
+  t: ReturnType<typeof useTranslation<"dashboard">>["t"],
+): string {
+  const message = normalizeActionTitleText(details.message);
+  const callbackWindow = details.callbackWindow
+    ? normalizeActionTitleText(details.callbackWindow)
+    : "";
+  const contactName = extractActionContactName(item);
+  const baseTitle = message || callbackWindow || item.title;
+
+  if (!contactName) {
+    return baseTitle;
+  }
+
+  return t("home.actionRequired.titleWithContact", {
+    message: baseTitle,
+    name: contactName,
+  });
+}
+
 export function HomePage({ businessId, snapshot }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
   const summary = useQuery(
@@ -311,7 +357,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
             animate={{ opacity: 1, y: 0 }}
             initial={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.05, duration: 0.2, ease: "easeOut" }}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-3 xl:h-full"
           >
             <div className="flex items-center justify-between gap-4 px-1">
               <h2 className="text-lg font-semibold">{t("home.actionRequired.title")}</h2>
@@ -320,99 +366,84 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </Badge>
             </div>
             {summary && summary.actionRequired.length > 0 ? (
-              <Card className="border-border/70 shadow-sm">
-                <CardContent className="flex flex-col gap-4">
-                  {summary.actionRequired.map((item, index) => (
-                    <motion.div
-                      animate={{ opacity: 1, y: 0 }}
-                      initial={{ opacity: 0, y: 8 }}
-                      key={item.id}
-                      transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
-                    >
-                      {(() => {
-                        const details = parseFollowUpTaskBody(item.body);
-                        const destination =
-                          item.kind === "voice_message" && item.callId
-                            ? {
-                                pathname: "/calls",
-                                search: `?callId=${encodeURIComponent(String(item.callId))}${item.taskId ? `&taskId=${encodeURIComponent(item.taskId)}` : ""}`,
-                              }
-                            : item.conversationId
-                              ? {
-                                  pathname: "/messages",
-                                  search: `?conversationId=${encodeURIComponent(String(item.conversationId))}`,
-                                }
-                              : null;
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent>
+                    <ItemGroup>
+                      {summary.actionRequired.map((item, index) => (
+                        <motion.div
+                          animate={{ opacity: 1, y: 0 }}
+                          initial={{ opacity: 0, y: 8 }}
+                          key={item.id}
+                          transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
+                        >
+                          {(() => {
+                            const details = parseFollowUpTaskBody(item.body);
+                            const displayTitle = getActionDisplayTitle(item, details, t);
+                            const destination =
+                              item.kind === "voice_message" && item.callId
+                                ? {
+                                    pathname: "/calls",
+                                    search: `?callId=${encodeURIComponent(String(item.callId))}${item.taskId ? `&taskId=${encodeURIComponent(item.taskId)}` : ""}`,
+                                  }
+                                : item.conversationId
+                                  ? {
+                                      pathname: "/messages",
+                                      search: `?conversationId=${encodeURIComponent(String(item.conversationId))}`,
+                                    }
+                                  : null;
 
-                        return (
-                          <div className="flex items-start gap-3 px-1 py-1">
-                        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/70">
-                          {getActionKindIcon(item.kind)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              {destination ? (
-                                <Link
-                                  className="inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold transition-colors hover:text-primary"
-                                  to={destination}
-                                >
-                                  <span className="truncate">{item.title}</span>
-                                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-                                </Link>
-                              ) : (
-                                <p className="truncate text-sm font-semibold">{item.title}</p>
-                              )}
-                              <div className="mt-3 space-y-2 text-sm">
-                                {details.callbackWindow ? (
-                                  <div className="space-y-1.5">
-                                    <p className="leading-5 text-muted-foreground">
-                                      {t("home.actionRequired.fields.callbackWindow")}: {details.callbackWindow}
-                                    </p>
-                                  </div>
-                                ) : null}
-                                {details.message ? (
-                                  <p className="leading-6 text-muted-foreground">
-                                    {details.message}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {details.callbackPhone ? (
-                                <span className="text-sm text-muted-foreground">
-                                  {details.callbackPhone}
-                                </span>
-                              ) : null}
-                              <Badge variant="secondary">
-                                {getActionKindLabel(item.kind, t)}
-                              </Badge>
-                              {isUrgentFollowUpValue(details.urgency) ? (
-                                <Badge variant="destructive">
-                                  {t("home.actionRequired.urgent")}
-                                </Badge>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                            <span>
-                              {formatDateTime(item.createdAt, i18n.language, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                        );
-                      })()}
-                      {index < summary.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
-                    </motion.div>
-                  ))}
+                            return (
+                              <Item className="px-1 py-1" size="sm" variant="default">
+                                <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
+                                  {getActionKindIcon(item.kind)}
+                                </ItemMedia>
+                                <ItemContent className="min-w-0">
+                                  {destination ? (
+                                    <ItemTitle>
+                                      <Link
+                                        className="inline-flex max-w-full items-center gap-1 truncate transition-colors hover:text-primary"
+                                        to={destination}
+                                      >
+                                        <span className="truncate">{displayTitle}</span>
+                                        <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                                      </Link>
+                                    </ItemTitle>
+                                  ) : (
+                                    <ItemTitle className="truncate">{displayTitle}</ItemTitle>
+                                  )}
+                                  {details.callbackPhone ? (
+                                    <ItemDescription>{details.callbackPhone}</ItemDescription>
+                                  ) : null}
+                                  <ItemFooter className="text-xs text-muted-foreground">
+                                    <span>
+                                      {formatDateTime(item.createdAt, i18n.language, {
+                                        dateStyle: "medium",
+                                        timeStyle: "short",
+                                      })}
+                                    </span>
+                                  </ItemFooter>
+                                </ItemContent>
+                                <ItemActions className="shrink-0 self-start">
+                                  <Badge variant="secondary">
+                                    {getActionKindLabel(item.kind, t)}
+                                  </Badge>
+                                  {isUrgentFollowUpValue(details.urgency) ? (
+                                    <Badge variant="destructive">
+                                      {t("home.actionRequired.urgent")}
+                                    </Badge>
+                                  ) : null}
+                                </ItemActions>
+                              </Item>
+                            );
+                          })()}
+                          {index < summary.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
+                        </motion.div>
+                      ))}
+                    </ItemGroup>
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-2xl border border-dashed p-12 text-center">
+              <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
                 <p className="text-sm font-medium">{t("home.actionRequired.emptyTitle")}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {t("home.actionRequired.emptyDescription")}
@@ -424,7 +455,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
             animate={{ opacity: 1, y: 0 }}
             initial={{ opacity: 0, y: 12 }}
             transition={{ delay: 0.1, duration: 0.22, ease: "easeOut" }}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-3 xl:h-full"
           >
             <div className="flex items-center justify-between gap-4 px-1">
               <h2 className="text-lg font-semibold">{t("home.upcoming.title")}</h2>
@@ -486,7 +517,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-2xl border border-dashed p-12 text-center">
+              <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
                 <p className="text-sm font-medium">{t("home.upcoming.emptyTitle")}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {t("home.upcoming.emptyDescription")}

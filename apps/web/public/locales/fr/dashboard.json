@@ -84,6 +84,7 @@
     "actionRequired": {
       "title": "Action requise",
       "description": "Tâches de suivi client qui nécessitent encore une intervention humaine.",
+      "titleWithContact": "{{message}} pour {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "Aucune tâche de suivi ouverte",
       "emptyDescription": "Les nouvelles demandes de rappel et les relais humains apparaîtront ici.",
