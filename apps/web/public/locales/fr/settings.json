@@ -141,6 +141,11 @@
     }
   },
   "account": {
+    "businessName": {
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saved": "Modifications enregistrées"
+    },
     "changeEmail": {
       "label": "Changer le courriel",
       "description": "Entrez votre nouveau courriel et votre mot de passe actuel. Nous enverrons un lien de confirmation avant de modifier votre courriel de connexion.",

@@ -43,6 +43,18 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
   }, [configuration]);
 
+  useEffect(() => {
+    if (!status) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStatus(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [status]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setIsSaving(true);
@@ -78,7 +90,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               id="agent-greeting"
               placeholder={t("agent:fields.greeting.placeholder")}
               value={greeting}
-              onChange={(event) => setGreeting(event.target.value)}
+              onChange={(event) => {
+                setGreeting(event.target.value);
+                setStatus(null);
+              }}
             />
             <div className="flex items-center gap-3">
               <Button disabled={isSaving} type="submit">

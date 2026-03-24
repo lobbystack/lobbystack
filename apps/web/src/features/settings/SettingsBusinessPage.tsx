@@ -55,6 +55,8 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
+  const [isSavingBusinessName, setIsSavingBusinessName] = useState(false);
 
   useEffect(() => {
     const nextName = configuration?.business?.name;
@@ -63,11 +65,31 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     }
   }, [configuration?.business?.name]);
 
+  useEffect(() => {
+    if (!businessNameStatus) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setBusinessNameStatus(null);
+    }, 3000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [businessNameStatus]);
+
   async function handleBusinessNameSave(): Promise<void> {
-    await updateBusinessName({
-      businessId: props.businessId,
-      name: businessName,
-    });
+    setIsSavingBusinessName(true);
+    setBusinessNameStatus(null);
+
+    try {
+      await updateBusinessName({
+        businessId: props.businessId,
+        name: businessName,
+      });
+      setBusinessNameStatus(t("account.businessName.saved"));
+    } finally {
+      setIsSavingBusinessName(false);
+    }
   }
 
   async function handlePasswordSave(): Promise<void> {
@@ -130,12 +152,24 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                   id="profile-username"
                   placeholder="Maple Family Clinic"
                   value={businessName}
-                  onChange={(event) => setBusinessName(event.target.value)}
+                  onChange={(event) => {
+                    setBusinessName(event.target.value);
+                    setBusinessNameStatus(null);
+                  }}
                 />
                 <div className="flex items-center gap-3">
-                  <Button type="button" onClick={() => void handleBusinessNameSave()}>
-                    Save
+                  <Button
+                    disabled={isSavingBusinessName}
+                    type="button"
+                    onClick={() => void handleBusinessNameSave()}
+                  >
+                    {isSavingBusinessName
+                      ? t("account.businessName.saving")
+                      : t("account.businessName.save")}
                   </Button>
+                  {businessNameStatus ? (
+                    <span className="text-sm text-muted-foreground">{businessNameStatus}</span>
+                  ) : null}
                 </div>
               </Field>
             </FieldGroup>
@@ -168,7 +202,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="profile-email">
-                        {t("account.changeEmail.label")}
+                        {t("account.changeEmail.newEmailPlaceholder")}
                       </FieldLabel>
                       <Input
                         id="profile-email"

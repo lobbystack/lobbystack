@@ -141,6 +141,11 @@
     }
   },
   "account": {
+    "businessName": {
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Changes saved"
+    },
     "changeEmail": {
       "label": "Change email",
       "description": "Email address you use to log in.",
