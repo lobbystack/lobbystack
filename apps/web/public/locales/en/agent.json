@@ -56,6 +56,54 @@
           "hint": "Comma-separated keywords to help categorize this knowledge."
         }
       }
+    },
+    "rules": {
+      "title": "Rules",
+      "description": "Instructions that guide how your receptionist should handle calls and messages.",
+      "listTitle": "Rules",
+      "addKnowledge": "Add Rule",
+      "uploadDocument": "Upload Document",
+      "addKnowledgeDescription": "What your receptionist should do, like transfer calls, ask questions and send texts.",
+      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "documentBadge": "Document",
+      "emptyState": "No rules added yet.",
+      "previewPending": "This document is being processed.",
+      "previewError": "This document couldn't be processed.",
+      "status": {
+        "queued": "Queued",
+        "indexing": "Indexing",
+        "indexed": "Ready",
+        "error": "Error"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choose a file to upload.",
+        "unsupportedFile": "Supported document types are PDF, DOCX, TXT, and Markdown.",
+        "maxSize": "Documents must be 10 MB or smaller.",
+        "uploadFailed": "We couldn't upload this document. Please try again."
+      },
+      "fields": {
+        "file": {
+          "label": "File",
+          "hint": "Supports PDF, DOCX, TXT, and Markdown.",
+          "dropzonePrefix": "Drag and drop a file here, or",
+          "chooseFile": "Choose File"
+        },
+        "title": {
+          "label": "Title",
+          "placeholder": "Call Transfers",
+          "hint": "A short, descriptive title for this rule."
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "Transfer urgent billing calls to the front desk and text the manager after hours.",
+          "hint": "Describe what the receptionist should do."
+        },
+        "tags": {
+          "label": "Tags (optional)",
+          "placeholder": "Transfers, escalation",
+          "hint": "Comma-separated keywords to help categorize these rules."
+        }
+      }
     }
   },
   "fields": {

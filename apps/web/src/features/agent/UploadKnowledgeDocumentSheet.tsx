@@ -2,6 +2,7 @@ import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { Upload } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -77,10 +78,12 @@ export function UploadKnowledgeDocumentSheet({
   businessId: Id<"businesses">;
 }) {
   const { t } = useTranslation("agent");
+  const location = useLocation();
   const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
   const finalizeKnowledgeDocumentUpload = useAction(
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
   );
+  const sectionKey = location.pathname === "/agent/rules" ? "rules" : "knowledge";
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -106,7 +109,7 @@ export function UploadKnowledgeDocumentSheet({
     if (file && file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
       setSelectedFile(null);
       setTitle("");
-      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
+      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.maxSize`));
       return;
     }
 
@@ -124,18 +127,18 @@ export function UploadKnowledgeDocumentSheet({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!selectedFile) {
-      setErrorMessage(t("sections.knowledge.uploadValidation.fileRequired"));
+      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.fileRequired`));
       return;
     }
 
     const contentType = resolveFileContentType(selectedFile);
     if (!isSupportedContentType(contentType)) {
-      setErrorMessage(t("sections.knowledge.uploadValidation.unsupportedFile"));
+      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.unsupportedFile`));
       return;
     }
 
     if (selectedFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
-      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
+      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.maxSize`));
       return;
     }
 
@@ -168,7 +171,7 @@ export function UploadKnowledgeDocumentSheet({
       setIsSheetOpen(false);
       resetState();
     } catch {
-      setErrorMessage(t("sections.knowledge.uploadValidation.uploadFailed"));
+      setErrorMessage(t(`sections.${sectionKey}.uploadValidation.uploadFailed`));
     } finally {
       setIsUploading(false);
     }
@@ -194,19 +197,19 @@ export function UploadKnowledgeDocumentSheet({
       />
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>{t("sections.knowledge.uploadDocument")}</SheetTitle>
+          <SheetTitle>{t(`sections.${sectionKey}.uploadDocument`)}</SheetTitle>
           <SheetDescription>
-            {t("sections.knowledge.uploadDocumentDescription")}
+            {t(`sections.${sectionKey}.uploadDocumentDescription`)}
           </SheetDescription>
         </SheetHeader>
         <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="knowledge-document-file">
-                {t("sections.knowledge.fields.file.label")}
+                {t(`sections.${sectionKey}.fields.file.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t("sections.knowledge.fields.file.hint")}
+                {t(`sections.${sectionKey}.fields.file.hint`)}
               </FieldDescription>
               <Input
                 accept={ACCEPTED_FILE_TYPES}
@@ -245,9 +248,9 @@ export function UploadKnowledgeDocumentSheet({
                 <div className="flex flex-col items-center gap-3">
                   <Upload className="size-5 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {t("sections.knowledge.fields.file.dropzonePrefix")}{" "}
+                    {t(`sections.${sectionKey}.fields.file.dropzonePrefix`)}{" "}
                     <span className="underline underline-offset-2">
-                      {t("sections.knowledge.fields.file.chooseFile")}
+                      {t(`sections.${sectionKey}.fields.file.chooseFile`)}
                     </span>
                   </p>
                   {resolvedFileName ? (
@@ -259,14 +262,14 @@ export function UploadKnowledgeDocumentSheet({
 
             <Field>
               <FieldLabel htmlFor="knowledge-document-title">
-                {t("sections.knowledge.fields.title.label")}
+                {t(`sections.${sectionKey}.fields.title.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t("sections.knowledge.fields.title.hint")}
+                {t(`sections.${sectionKey}.fields.title.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-document-title"
-                placeholder={t("sections.knowledge.fields.title.placeholder")}
+                placeholder={t(`sections.${sectionKey}.fields.title.placeholder`)}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
               />
@@ -274,14 +277,14 @@ export function UploadKnowledgeDocumentSheet({
 
             <Field>
               <FieldLabel htmlFor="knowledge-document-tags">
-                {t("sections.knowledge.fields.tags.label")}
+                {t(`sections.${sectionKey}.fields.tags.label`)}
               </FieldLabel>
               <FieldDescription>
-                {t("sections.knowledge.fields.tags.hint")}
+                {t(`sections.${sectionKey}.fields.tags.hint`)}
               </FieldDescription>
               <Input
                 id="knowledge-document-tags"
-                placeholder={t("sections.knowledge.fields.tags.placeholder")}
+                placeholder={t(`sections.${sectionKey}.fields.tags.placeholder`)}
                 value={tags}
                 onChange={(event) => setTags(event.target.value)}
               />

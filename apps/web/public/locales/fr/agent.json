@@ -56,6 +56,54 @@
           "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
         }
       }
+    },
+    "rules": {
+      "title": "Règles",
+      "description": "Instructions qui guident la manière dont votre réceptionniste doit gérer les appels et les messages.",
+      "listTitle": "Règles",
+      "addKnowledge": "Ajouter une règle",
+      "uploadDocument": "Téléverser un document",
+      "addKnowledgeDescription": "Ce que votre réceptionniste doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
+      "emptyState": "Aucune règle ajoutée pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
+      },
+      "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
+        },
+        "title": {
+          "label": "Titre",
+          "placeholder": "Transfert des appels",
+          "hint": "Un titre court et descriptif pour cette règle."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "Transférez les appels urgents de facturation à l'accueil et envoyez un texto au gestionnaire après les heures d'ouverture.",
+          "hint": "Décrivez ce que le réceptionniste doit faire."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "Transferts, escalade",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser ces règles."
+        }
+      }
     }
   },
   "fields": {

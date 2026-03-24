@@ -22,6 +22,7 @@ import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { AgentLayout } from "@/features/agent/AgentLayout";
 import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
 import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
+import { AgentRulesPage } from "@/features/agent/AgentRulesPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
@@ -168,6 +169,12 @@ function WorkspaceShell() {
                 )
               }
               path="knowledge"
+            />
+            <Route
+              element={
+                businessId ? <AgentRulesPage businessId={businessId} /> : <Navigate replace to="/agent" />
+              }
+              path="rules"
             />
           </Route>
           <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />

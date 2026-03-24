@@ -3,6 +3,7 @@ import { useAction, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Trash2 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
@@ -112,10 +113,12 @@ function InlineConfirmDeleteButton({
 
 export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   const { t } = useTranslation(["agent", "knowledge"]);
+  const location = useLocation();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
   const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
     businessId,
   });
+  const sectionKey = location.pathname === "/agent/rules" ? "rules" : "knowledge";
   const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
   const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
   const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
@@ -126,13 +129,13 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   function getDocumentStatusLabel(status: Doc<"knowledge_documents">["status"]): string {
     switch (status) {
       case "queued":
-        return t("agent:sections.knowledge.status.queued");
+        return t(`agent:sections.${sectionKey}.status.queued`);
       case "indexing":
-        return t("agent:sections.knowledge.status.indexing");
+        return t(`agent:sections.${sectionKey}.status.indexing`);
       case "indexed":
-        return t("agent:sections.knowledge.status.indexed");
+        return t(`agent:sections.${sectionKey}.status.indexed`);
       case "error":
-        return t("agent:sections.knowledge.status.error");
+        return t(`agent:sections.${sectionKey}.status.error`);
       default:
         return status;
     }
@@ -168,7 +171,7 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
       <div className="flex flex-col gap-4">
         {knowledge && visibleEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-            <p>{t("agent:sections.knowledge.emptyState")}</p>
+            <p>{t(`agent:sections.${sectionKey}.emptyState`)}</p>
           </div>
         ) : null}
 
@@ -182,7 +185,7 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
                 <span className="font-semibold">{entry.title}</span>
                 {"sourceType" in entry ? (
                   <>
-                    <Badge variant="outline">{t("agent:sections.knowledge.documentBadge")}</Badge>
+                    <Badge variant="outline">{t(`agent:sections.${sectionKey}.documentBadge`)}</Badge>
                     <Badge
                       variant={entry.status === "error" ? "destructive" : entry.status === "indexed" ? "secondary" : "outline"}
                     >
@@ -211,10 +214,10 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
                 {"sourceType" in entry ? (
                   <div className="rounded-xl bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
                     {entry.status === "error"
-                      ? entry.error ?? t("agent:sections.knowledge.previewError")
+                      ? entry.error ?? t(`agent:sections.${sectionKey}.previewError`)
                       : entry.textContent?.trim()
                         ? `${entry.textContent.trim().slice(0, 280)}${entry.textContent.trim().length > 280 ? "…" : ""}`
-                        : t("agent:sections.knowledge.previewPending")}
+                        : t(`agent:sections.${sectionKey}.previewPending`)}
                   </div>
                 ) : (
                   <div className="rounded-xl bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">

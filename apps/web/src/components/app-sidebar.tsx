@@ -88,6 +88,11 @@ export function AppSidebar({
                   url: "/agent/knowledge",
                   icon: BookOpenText,
                 },
+                {
+                  title: t("agent:sections.rules.title"),
+                  url: "/agent/rules",
+                  icon: BookOpenText,
+                },
               ],
             },
             {
