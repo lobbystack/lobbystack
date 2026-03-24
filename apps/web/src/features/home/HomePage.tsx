@@ -31,6 +31,7 @@ import {
   ItemDescription,
   ItemFooter,
   ItemGroup,
+  ItemHeader,
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
@@ -398,19 +399,37 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                   {getActionKindIcon(item.kind)}
                                 </ItemMedia>
                                 <ItemContent className="min-w-0">
-                                  {destination ? (
-                                    <ItemTitle>
-                                      <Link
-                                        className="inline-flex max-w-full items-center gap-1 truncate transition-colors hover:text-primary"
-                                        to={destination}
-                                      >
-                                        <span className="truncate">{displayTitle}</span>
-                                        <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-                                      </Link>
-                                    </ItemTitle>
-                                  ) : (
-                                    <ItemTitle className="truncate">{displayTitle}</ItemTitle>
-                                  )}
+                                  <ItemHeader className="flex-col items-start gap-2 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                                    <div className="min-w-0 flex-1">
+                                      {destination ? (
+                                        <ItemTitle className="w-full min-w-0 max-w-full items-start 2xl:items-center">
+                                          <Link
+                                            className="inline-flex min-w-0 max-w-full items-start gap-1 transition-colors hover:text-primary 2xl:items-center"
+                                            to={destination}
+                                          >
+                                            <span className="min-w-0 overflow-hidden line-clamp-2 2xl:truncate">
+                                              {displayTitle}
+                                            </span>
+                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground 2xl:mt-0" />
+                                          </Link>
+                                        </ItemTitle>
+                                      ) : (
+                                        <ItemTitle className="w-full min-w-0 max-w-full line-clamp-2 2xl:truncate">
+                                          {displayTitle}
+                                        </ItemTitle>
+                                      )}
+                                    </div>
+                                    <ItemActions className="w-full justify-start ps-0 2xl:w-auto 2xl:shrink-0 2xl:justify-end">
+                                      <Badge variant="secondary">
+                                        {getActionKindLabel(item.kind, t)}
+                                      </Badge>
+                                      {isUrgentFollowUpValue(details.urgency) ? (
+                                        <Badge variant="destructive">
+                                          {t("home.actionRequired.urgent")}
+                                        </Badge>
+                                      ) : null}
+                                    </ItemActions>
+                                  </ItemHeader>
                                   {details.callbackPhone ? (
                                     <ItemDescription>{details.callbackPhone}</ItemDescription>
                                   ) : null}
@@ -423,16 +442,6 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                     </span>
                                   </ItemFooter>
                                 </ItemContent>
-                                <ItemActions className="shrink-0 self-start">
-                                  <Badge variant="secondary">
-                                    {getActionKindLabel(item.kind, t)}
-                                  </Badge>
-                                  {isUrgentFollowUpValue(details.urgency) ? (
-                                    <Badge variant="destructive">
-                                      {t("home.actionRequired.urgent")}
-                                    </Badge>
-                                  ) : null}
-                                </ItemActions>
                               </Item>
                             );
                           })()}
@@ -473,7 +482,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                       key={String(appointment.id)}
                       transition={{ delay: 0.12 + index * 0.03, duration: 0.18, ease: "easeOut" }}
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-semibold">
@@ -493,7 +502,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                               : ""}
                           </p>
                         </div>
-                        <div className="shrink-0 text-right">
+                        <div className="shrink-0 text-left sm:text-right">
                           <p className="text-sm font-semibold">
                             {formatDateTime(appointment.startsAt, i18n.language, {
                               weekday: "short",

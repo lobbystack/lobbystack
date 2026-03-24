@@ -66,11 +66,13 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const previousIsMobileRef = React.useRef(isMobile)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
+  const desktopOpenRef = React.useRef(open)
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
@@ -85,6 +87,31 @@ function SidebarProvider({
     },
     [setOpenProp, open]
   )
+
+  React.useEffect(() => {
+    if (!isMobile) {
+      desktopOpenRef.current = open
+    }
+  }, [isMobile, open])
+
+  React.useEffect(() => {
+    const wasMobile = previousIsMobileRef.current
+
+    if (!wasMobile && isMobile) {
+      desktopOpenRef.current = open
+      setOpenMobile(false)
+    }
+
+    if (wasMobile && !isMobile) {
+      setOpenMobile(false)
+
+      if (open !== desktopOpenRef.current) {
+        setOpen(desktopOpenRef.current)
+      }
+    }
+
+    previousIsMobileRef.current = isMobile
+  }, [isMobile, open, setOpen, setOpenMobile])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
