@@ -2961,7 +2961,7 @@ describe("SMS scheduling flow", () => {
         .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
         .unique();
       expect(conversation?.locale).toBe("fr");
-      expect(conversation?.localeSource).toBe("business_default");
+      expect(conversation?.localeSource).toBe("detected_conversation");
     });
   });
 

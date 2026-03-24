@@ -152,10 +152,6 @@ function buildBusinessNowLabel(timezone: string): string | null {
   }
 }
 
-function getRuntimeLanguageName(locale: BusinessContextSnapshot["defaultLocale"]): string {
-  return locale === "fr" ? "French" : "English";
-}
-
 function createRealtimeToolDefinitions() {
   return [
     {
@@ -692,9 +688,9 @@ async function configureOpenAiSession(
     session: {
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
-        `The business default call language is ${getRuntimeLanguageName(session.snapshot.defaultLocale)}.`,
-        `Reply in ${getRuntimeLanguageName(session.snapshot.defaultLocale)} unless the caller clearly asks to switch languages.`,
         "You are speaking on a live phone call.",
+        "Start in the language implied by the configured greeting.",
+        "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, transfer, and message taking.",
         "Do not make up availability, hours, or business policy.",
@@ -744,7 +740,7 @@ async function configureOpenAiSession(
     response: {
       instructions: [
         `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
-        `After the greeting, continue in ${getRuntimeLanguageName(session.snapshot.defaultLocale)} unless the caller clearly asks to switch languages.`,
+        "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
         "After the greeting, stop speaking and wait for the caller to respond.",
         "Do not add any extra sentence before or after the greeting.",
       ].join(" "),

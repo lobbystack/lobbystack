@@ -1,9 +1,5 @@
 import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 
-function getRuntimeLanguageName(locale: BusinessContextSnapshot["defaultLocale"]): string {
-  return locale === "fr" ? "French" : "English";
-}
-
 export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): string {
   const services = snapshot.services
     .map((service) => `${service.name} (${service.durationMinutes} min)`)
@@ -15,8 +11,8 @@ export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): strin
 
   return [
     snapshot.voiceInstructions,
-    `Default conversation language: ${getRuntimeLanguageName(snapshot.defaultLocale)}.`,
-    `Speak in ${getRuntimeLanguageName(snapshot.defaultLocale)} unless the caller clearly asks to switch languages.`,
+    "Start in the language implied by the configured greeting.",
+    "Adapt to the caller's language as soon as the caller clearly establishes one.",
     `Greeting: ${snapshot.greeting}`,
     `Business summary: ${snapshot.summary}`,
     `Booking policy: ${snapshot.bookingPolicy}`,

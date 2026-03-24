@@ -83,6 +83,37 @@ function buildGroundedSystemPrompt(input: {
   ].join("\n\n");
 }
 
+function inferLocaleFromBusinessContext(input: {
+  greeting: string;
+  smsInstructions: string;
+  summary: string;
+  bookingPolicy: string;
+}): RuntimeLocale | null {
+  const combinedText = [
+    input.greeting,
+    input.smsInstructions,
+    input.summary,
+    input.bookingPolicy,
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join("\n");
+
+  if (!combinedText) {
+    return null;
+  }
+
+  const explicitLocale = detectExplicitRuntimeLocaleRequest(combinedText);
+  if (explicitLocale) {
+    return explicitLocale;
+  }
+
+  const classifiedLocale = classifyRuntimeLocale(combinedText);
+  return classifiedLocale === "en" || classifiedLocale === "fr"
+    ? classifiedLocale
+    : null;
+}
+
 function formatKnowledgeReferenceEntry(
   entry: { text: string; title?: string },
   index: number,
@@ -3024,7 +3055,7 @@ export const saveConversationLocaleState = internalMutation({
   args: {
     conversationId: v.id("conversations"),
     locale: runtimeLocaleValidator,
-    localeSource: runtimeLocaleSourceValidator,
+    localeSource: v.optional(runtimeLocaleSourceValidator),
     rememberForContact: v.boolean(),
   },
   handler: async (ctx, args) => {
@@ -3033,10 +3064,12 @@ export const saveConversationLocaleState = internalMutation({
       throw new Error("Conversation not found.");
     }
 
-    await ctx.db.patch(args.conversationId, {
-      locale: args.locale,
-      localeSource: args.localeSource,
-    });
+    if (args.localeSource !== undefined) {
+      await ctx.db.patch(args.conversationId, {
+        locale: args.locale,
+        localeSource: args.localeSource,
+      });
+    }
 
     if (args.rememberForContact && conversation.contactId) {
       await ctx.db.patch(conversation.contactId, {
@@ -3434,28 +3467,35 @@ async function generateGroundedReply(
     normalizeRuntimeLocale(localeContext.conversationLocale) ?? undefined;
   const contactPreferredLocale =
     normalizeRuntimeLocale(localeContext.contactPreferredLocale) ?? undefined;
-  const defaultLocale =
-    normalizeRuntimeLocale(snapshot.defaultLocale) ?? "en";
-  const fallbackLocale = existingConversationLocale ?? contactPreferredLocale ?? defaultLocale;
+  const inferredBusinessLocale = inferLocaleFromBusinessContext({
+    greeting: snapshot.greeting,
+    smsInstructions: snapshot.smsInstructions,
+    summary: snapshot.summary,
+    bookingPolicy: snapshot.bookingPolicy,
+  });
+  const localeHint = existingConversationLocale ?? contactPreferredLocale;
   const explicitLocale = detectExplicitRuntimeLocaleRequest(prompt);
   const classifiedLocale = explicitLocale ?? classifyRuntimeLocale(prompt);
   const nextLocale =
-    classifiedLocale === "unknown" ? fallbackLocale : classifiedLocale;
-  const nextLocaleSource: RuntimeLocaleSource =
+    classifiedLocale === "unknown"
+      ? localeHint ?? inferredBusinessLocale ?? "en"
+      : classifiedLocale;
+  const nextLocaleSource: RuntimeLocaleSource | null =
     explicitLocale !== null
       ? "explicit_customer"
-      : classifiedLocale !== "unknown" && classifiedLocale !== fallbackLocale
+      : classifiedLocale !== "unknown" && classifiedLocale !== localeHint
         ? "detected_conversation"
-        : contactPreferredLocale === nextLocale
+      : contactPreferredLocale === nextLocale
           ? "contact_preference"
-          : existingConversationLocale !== undefined &&
-              localeContext.conversationLocaleSource !== undefined
+      : existingConversationLocale !== undefined &&
+          localeContext.conversationLocaleSource !== undefined
             ? localeContext.conversationLocaleSource
-            : "business_default";
+            : null;
 
   const shouldPersistConversationLocale =
-    existingConversationLocale !== nextLocale ||
-    localeContext.conversationLocaleSource !== nextLocaleSource;
+    nextLocaleSource !== null &&
+    (existingConversationLocale !== nextLocale ||
+      localeContext.conversationLocaleSource !== nextLocaleSource);
   const shouldPersistContactLocale =
     (explicitLocale !== null || classifiedLocale === "en" || classifiedLocale === "fr") &&
     contactPreferredLocale !== nextLocale;
@@ -3467,7 +3507,7 @@ async function generateGroundedReply(
     await ctx.runMutation(internal.ai.agents.runtime.saveConversationLocaleState, {
       conversationId,
       locale: nextLocale,
-      localeSource: nextLocaleSource,
+      ...(nextLocaleSource !== null ? { localeSource: nextLocaleSource } : {}),
       rememberForContact: shouldPersistContactLocale,
     });
   }

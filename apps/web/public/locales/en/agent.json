@@ -112,10 +112,6 @@
       "placeholder": "Hello, thank you for calling…",
       "hint": "The opening line your receptionist uses when answering a call or starting a conversation."
     },
-    "defaultLanguage": {
-      "label": "Default language",
-      "hint": "The language the receptionist starts with before detecting the caller's preference."
-    },
     "transferNumber": {
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",
