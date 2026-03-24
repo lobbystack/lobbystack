@@ -44,6 +44,17 @@ type PreviewKnowledgeArgs = {
 };
 type DocumentIdArgs = { documentId: Id<"knowledge_documents"> };
 type SnippetIdArgs = { snippetId: Id<"knowledge_snippets"> };
+type DeleteKnowledgeEntryArgs =
+  | {
+      businessId: Id<"businesses">;
+      documentId: Id<"knowledge_documents">;
+      snippetId?: never;
+    }
+  | {
+      businessId: Id<"businesses">;
+      snippetId: Id<"knowledge_snippets">;
+      documentId?: never;
+    };
 type MarkDocumentIndexedArgs = {
   documentId: Id<"knowledge_documents">;
   status: string;
@@ -282,6 +293,63 @@ async function generatePreviewAnswer(
   return { text: result.text, threadId };
 }
 
+async function deleteKnowledgeEntryById(
+  ctx: ActionCtx,
+  args: DeleteKnowledgeEntryArgs,
+): Promise<null> {
+  await requireKnowledgeAccess(ctx, args.businessId);
+
+  if ("documentId" in args && args.documentId) {
+    const document = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
+      documentId: args.documentId,
+    });
+
+    if (!document || document.businessId !== args.businessId) {
+      throw new Error("Knowledge document not found.");
+    }
+
+    if (document.indexedEntryId) {
+      await rag.delete(ctx, { entryId: document.indexedEntryId as never });
+    }
+    if (document.storageId) {
+      await ctx.storage.delete(document.storageId);
+    }
+
+    await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeDocumentRecord, {
+      documentId: args.documentId,
+    });
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: args.businessId,
+    });
+    return null;
+  }
+
+  const snippetId = args.snippetId;
+  if (!snippetId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  const snippet = await ctx.runQuery(internal.ai.context.knowledge.getSnippetForIndexing, {
+    snippetId,
+  });
+
+  if (!snippet || snippet.businessId !== args.businessId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  if (snippet.indexedEntryId) {
+    await rag.delete(ctx, { entryId: snippet.indexedEntryId as never });
+  }
+
+  await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeSnippetRecord, {
+    snippetId,
+  });
+  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+    businessId: args.businessId,
+  });
+  return null;
+}
+
 export const getDocumentForIndexing = internalQuery({
   args: {
     documentId: v.id("knowledge_documents"),
@@ -331,6 +399,16 @@ export const markDocumentIndexed = internalMutation({
   },
 });
 
+export const deleteKnowledgeDocumentRecord = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+  },
+  handler: async (ctx: MutationCtx, args: DocumentIdArgs) => {
+    await ctx.db.delete(args.documentId);
+    return null;
+  },
+});
+
 export const storeKnowledgeDocumentExtraction = internalMutation({
   args: {
     documentId: v.id("knowledge_documents"),
@@ -372,6 +450,16 @@ export const markSnippetIndexed = internalMutation({
       error: args.error,
       lastIndexedAt: new Date().toISOString(),
     });
+    return null;
+  },
+});
+
+export const deleteKnowledgeSnippetRecord = internalMutation({
+  args: {
+    snippetId: v.id("knowledge_snippets"),
+  },
+  handler: async (ctx: MutationCtx, args: SnippetIdArgs) => {
+    await ctx.db.delete(args.snippetId);
     return null;
   },
 });
@@ -575,6 +663,39 @@ export const searchKnowledgeForDashboard = action({
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await requireKnowledgeAccess(ctx, args.businessId);
     return await searchKnowledge(ctx, args);
+  },
+});
+
+export const deleteKnowledgeEntry = action({
+  args: {
+    businessId: v.id("businesses"),
+    documentId: v.optional(v.id("knowledge_documents")),
+    snippetId: v.optional(v.id("knowledge_snippets")),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: {
+      businessId: Id<"businesses">;
+      documentId?: Id<"knowledge_documents">;
+      snippetId?: Id<"knowledge_snippets">;
+    },
+  ) => {
+    if ((args.documentId ? 1 : 0) + (args.snippetId ? 1 : 0) !== 1) {
+      throw new Error("Specify exactly one knowledge entry to delete.");
+    }
+
+    return await deleteKnowledgeEntryById(
+      ctx,
+      args.documentId
+        ? {
+            businessId: args.businessId,
+            documentId: args.documentId,
+          }
+        : {
+            businessId: args.businessId,
+            snippetId: args.snippetId!,
+          },
+    );
   },
 });
 

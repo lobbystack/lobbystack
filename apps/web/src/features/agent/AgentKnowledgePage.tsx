@@ -1,10 +1,12 @@
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,12 +19,14 @@ type AgentKnowledgePageProps = {
 
 export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
   const { t } = useTranslation(["agent", "knowledge"]);
+  const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
   const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
     businessId,
   });
   const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
   const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
   const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   function getDocumentStatusLabel(status: Doc<"knowledge_documents">["status"]): string {
     switch (status) {
@@ -36,6 +40,25 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
         return t("agent:sections.knowledge.status.error");
       default:
         return status;
+    }
+  }
+
+  async function handleDelete(entry: Doc<"knowledge_documents"> | Doc<"knowledge_snippets">): Promise<void> {
+    setDeletingEntryId(String(entry._id));
+    try {
+      if ("sourceType" in entry) {
+        await deleteKnowledgeEntry({
+          businessId,
+          documentId: entry._id,
+        });
+      } else {
+        await deleteKnowledgeEntry({
+          businessId,
+          snippetId: entry._id,
+        });
+      }
+    } finally {
+      setDeletingEntryId(null);
     }
   }
 
@@ -72,7 +95,24 @@ export function AgentKnowledgePage({ businessId }: AgentKnowledgePageProps) {
                   <Badge variant="secondary">{entry.tags[0]}</Badge>
                 ) : null}
               </div>
-              <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
+              <div className="flex items-center gap-1">
+                <Button
+                  aria-label={t("agent:actions.delete")}
+                  disabled={deletingEntryId === String(entry._id)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void handleDelete(entry);
+                  }}
+                  size="icon-sm"
+                  title={t("agent:actions.delete")}
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2 />
+                </Button>
+                <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
+              </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-4 pb-4">

@@ -617,4 +617,103 @@ describe("Knowledge coverage", () => {
       },
     ]);
   });
+
+  it("deletes uploaded documents and snippets only for the current business", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "knowledge-delete-owner";
+
+    const { businessAId, businessBId, documentId, snippetId } = await t.run(async (ctx) => {
+      const businessAId = await insertBusiness(ctx, {
+        slug: "knowledge-delete-a",
+        name: "Knowledge Delete A",
+      });
+      const businessBId = await insertBusiness(ctx, {
+        slug: "knowledge-delete-b",
+        name: "Knowledge Delete B",
+      });
+
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: businessAId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId: businessAId,
+        businessName: "Knowledge Delete A",
+      });
+
+      const storageId = await ctx.storage.store(
+        new Blob(["Delete me"], { type: "text/plain" }),
+      );
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId: businessAId,
+        sourceType: "upload",
+        title: "Delete Document",
+        storageId,
+        mimeType: "text/plain",
+        textContent: "Delete me",
+        status: "indexed",
+        tags: [],
+        importance: 5,
+      });
+      const snippetId = await ctx.db.insert("knowledge_snippets", {
+        businessId: businessAId,
+        title: "Delete Snippet",
+        content: "Delete me too",
+        tags: [],
+        priority: 10,
+        active: true,
+      });
+
+      await ctx.db.insert("knowledge_documents", {
+        businessId: businessBId,
+        sourceType: "upload",
+        title: "Other Tenant Document",
+        textContent: "Should remain",
+        status: "indexed",
+        tags: [],
+        importance: 5,
+      });
+
+      return {
+        businessAId,
+        businessBId,
+        documentId,
+        snippetId,
+      };
+    });
+
+    const asKnowledgeOwner = t.withIdentity({ subject });
+
+    await asKnowledgeOwner.action(api.ai.context.knowledge.deleteKnowledgeEntry, {
+      businessId: businessAId,
+      documentId,
+    });
+    await asKnowledgeOwner.action(api.ai.context.knowledge.deleteKnowledgeEntry, {
+      businessId: businessAId,
+      snippetId,
+    });
+
+    const deletedRows = await t.run(async (ctx) => {
+      return {
+        document: await ctx.db.get(documentId),
+        snippet: await ctx.db.get(snippetId),
+      };
+    });
+
+    expect(deletedRows.document).toBeNull();
+    expect(deletedRows.snippet).toBeNull();
+
+    await expect(
+      asKnowledgeOwner.action(api.ai.context.knowledge.deleteKnowledgeEntry, {
+        businessId: businessBId,
+        documentId,
+      }),
+    ).rejects.toThrow();
+  });
 });
