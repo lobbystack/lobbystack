@@ -25,12 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/ui/table";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { isUrgentFollowUpValue, parseFollowUpTaskBody } from "@/lib/follow-up-task";
@@ -369,35 +363,25 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                               ) : (
                                 <p className="truncate text-sm font-semibold">{item.title}</p>
                               )}
-                              <div className="mt-2 text-sm">
+                              <div className="mt-3 space-y-2 text-sm">
                                 {details.callbackPhone || details.callbackWindow ? (
-                                  <Table>
-                                    <TableBody>
-                                      {details.callbackPhone ? (
-                                        <TableRow className="border-none hover:bg-transparent">
-                                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-0.5 text-muted-foreground">
-                                            {t("home.actionRequired.fields.callback")}
-                                          </TableCell>
-                                          <TableCell className="h-auto px-3 py-0.5">
-                                            {details.callbackPhone}
-                                          </TableCell>
-                                        </TableRow>
-                                      ) : null}
-                                      {details.callbackWindow ? (
-                                        <TableRow className="border-none hover:bg-transparent">
-                                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-0.5 text-muted-foreground">
-                                            {t("home.actionRequired.fields.callbackWindow")}
-                                          </TableCell>
-                                          <TableCell className="h-auto px-3 py-0.5">
-                                            {details.callbackWindow}
-                                          </TableCell>
-                                        </TableRow>
-                                      ) : null}
-                                    </TableBody>
-                                  </Table>
+                                  <div className="space-y-1.5">
+                                    {details.callbackPhone ? (
+                                      <p className="font-medium leading-none">
+                                        {details.callbackPhone}
+                                      </p>
+                                    ) : null}
+                                    {details.callbackWindow ? (
+                                      <p className="leading-5 text-muted-foreground">
+                                        {t("home.actionRequired.fields.callbackWindow")}: {details.callbackWindow}
+                                      </p>
+                                    ) : null}
+                                  </div>
                                 ) : null}
                                 {details.message ? (
-                                  <p className="pt-1 text-muted-foreground">{details.message}</p>
+                                  <p className="leading-6 text-muted-foreground">
+                                    {details.message}
+                                  </p>
                                 ) : null}
                               </div>
                             </div>
