@@ -21,6 +21,7 @@ import {
   formatRuntimeTimeOfDay,
   formatRuntimeWeekday,
   getRuntimeLanguageName,
+  inferRuntimeLocaleFromBusinessContext,
   normalizeRuntimeLocale,
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
@@ -81,37 +82,6 @@ function buildGroundedSystemPrompt(input: {
     "If you list multiple times on the same day, list only the times and do not repeat the weekday before every slot.",
     "If a booking tool already confirmed or booked a slot, do not ask for another confirmation.",
   ].join("\n\n");
-}
-
-function inferLocaleFromBusinessContext(input: {
-  greeting: string;
-  smsInstructions: string;
-  summary: string;
-  bookingPolicy: string;
-}): RuntimeLocale | null {
-  const combinedText = [
-    input.greeting,
-    input.smsInstructions,
-    input.summary,
-    input.bookingPolicy,
-  ]
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .join("\n");
-
-  if (!combinedText) {
-    return null;
-  }
-
-  const explicitLocale = detectExplicitRuntimeLocaleRequest(combinedText);
-  if (explicitLocale) {
-    return explicitLocale;
-  }
-
-  const classifiedLocale = classifyRuntimeLocale(combinedText);
-  return classifiedLocale === "en" || classifiedLocale === "fr"
-    ? classifiedLocale
-    : null;
 }
 
 function formatKnowledgeReferenceEntry(
@@ -3467,7 +3437,7 @@ async function generateGroundedReply(
     normalizeRuntimeLocale(localeContext.conversationLocale) ?? undefined;
   const contactPreferredLocale =
     normalizeRuntimeLocale(localeContext.contactPreferredLocale) ?? undefined;
-  const inferredBusinessLocale = inferLocaleFromBusinessContext({
+  const inferredBusinessLocale = inferRuntimeLocaleFromBusinessContext({
     greeting: snapshot.greeting,
     smsInstructions: snapshot.smsInstructions,
     summary: snapshot.summary,

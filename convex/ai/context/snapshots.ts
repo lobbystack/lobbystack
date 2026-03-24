@@ -11,9 +11,8 @@ import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 import {
+  inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
-  runtimeLocaleValidator,
-  type RuntimeLocale,
 } from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
@@ -21,7 +20,6 @@ type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {
   businessId: Id<"businesses">;
-  defaultLocale: RuntimeLocale;
   greeting: string;
   tone: string;
   summary: string;
@@ -80,7 +78,6 @@ export const getForDashboard = query({
 export const updateReceptionistProfile = mutation({
   args: {
     businessId: v.id("businesses"),
-    defaultLocale: runtimeLocaleValidator,
     greeting: v.string(),
     tone: v.string(),
     summary: v.string(),
@@ -92,7 +89,15 @@ export const updateReceptionistProfile = mutation({
   },
   handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
     await requireMembership(ctx, args.businessId);
-    await ctx.db.patch(args.businessId, { defaultLocale: args.defaultLocale });
+    const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
+      greeting: args.greeting,
+      smsInstructions: args.smsInstructions,
+      summary: args.summary,
+      bookingPolicy: args.bookingPolicy,
+    });
+    if (inferredDefaultLocale) {
+      await ctx.db.patch(args.businessId, { defaultLocale: inferredDefaultLocale });
+    }
     const existing = await ctx.db
       .query("receptionist_profiles")
       .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
@@ -191,6 +196,19 @@ export const refreshSnapshot = internalMutation({
       throw new Error("Receptionist profile not found.");
     }
 
+    const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
+      greeting: profile.greeting,
+      smsInstructions: profile.smsInstructions,
+      summary: profile.summary,
+      bookingPolicy: profile.bookingPolicy,
+    });
+    const snapshotDefaultLocale =
+      inferredDefaultLocale ?? resolveRuntimeLocale(business.defaultLocale);
+
+    if (inferredDefaultLocale && business.defaultLocale !== inferredDefaultLocale) {
+      await ctx.db.patch(args.businessId, { defaultLocale: inferredDefaultLocale });
+    }
+
     const activePhoneNumbers = phoneNumbers.filter((row) => row.status === "active");
     const primaryPhone =
       activePhoneNumbers.find((row) => row.voiceEnabled) ?? activePhoneNumbers[0];
@@ -202,7 +220,7 @@ export const refreshSnapshot = internalMutation({
       generatedAt: new Date().toISOString(),
       displayName: business.name,
       timezone: business.timezone,
-      defaultLocale: resolveRuntimeLocale(business.defaultLocale),
+      defaultLocale: snapshotDefaultLocale,
       businessType: business.businessType as SnapshotBuilderInput["businessType"],
       greeting: profile.greeting,
       tone: profile.tone,

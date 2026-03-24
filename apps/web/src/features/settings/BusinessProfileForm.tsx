@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 
@@ -24,7 +23,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const [greeting, setGreeting] = useState("");
   const [tone, setTone] = useState("");
-  const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [summary, setSummary] = useState("");
   const [bookingPolicy, setBookingPolicy] = useState("");
   const [voiceInstructions, setVoiceInstructions] = useState("");
@@ -41,7 +39,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
     }
     setGreeting(profile.greeting);
     setTone(profile.tone);
-    setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setSummary(profile.summary);
     setBookingPolicy(profile.bookingPolicy);
     setVoiceInstructions(profile.voiceInstructions ?? "");
@@ -57,7 +54,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
     try {
       await saveProfile({
         businessId: props.businessId,
-        defaultLocale,
         greeting,
         tone,
         summary,
@@ -99,18 +95,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               />
             </label>
           </div>
-          <label className="space-y-3">
-            <span className="text-xs font-medium text-muted-foreground">{t("profile.defaultCustomerLanguage")}</span>
-            <Select value={defaultLocale} onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("profile.selectDefaultLanguage")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">{t("common:language.english")}</SelectItem>
-                <SelectItem value="fr">{t("common:language.french")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
           <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.businessSummary")}</span>
             <Textarea

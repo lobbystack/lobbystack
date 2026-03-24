@@ -241,6 +241,37 @@ export function classifyRuntimeLocale(text: string): RuntimeLocaleDetection {
   return "unknown";
 }
 
+export function inferRuntimeLocaleFromBusinessContext(input: {
+  greeting?: string | null | undefined;
+  smsInstructions?: string | null | undefined;
+  summary?: string | null | undefined;
+  bookingPolicy?: string | null | undefined;
+}): RuntimeLocale | null {
+  const combinedText = [
+    input.greeting,
+    input.smsInstructions,
+    input.summary,
+    input.bookingPolicy,
+  ]
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean)
+    .join("\n");
+
+  if (!combinedText) {
+    return null;
+  }
+
+  const explicitLocale = detectExplicitRuntimeLocaleRequest(combinedText);
+  if (explicitLocale) {
+    return explicitLocale;
+  }
+
+  const classifiedLocale = classifyRuntimeLocale(combinedText);
+  return classifiedLocale === "en" || classifiedLocale === "fr"
+    ? classifiedLocale
+    : null;
+}
+
 export function formatRuntimeDateLabel(
   startsAt: string,
   timezone: string,

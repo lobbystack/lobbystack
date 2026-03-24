@@ -40,8 +40,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setTransferNumber(profile.transferNumber ?? "");
   }, [configuration]);
 
-  const businessDefaultLocale = configuration?.business?.defaultLocale ?? "en";
-
   useEffect(() => {
     const timeouts: number[] = [];
 
@@ -70,7 +68,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     try {
       await saveProfile({
         businessId,
-        defaultLocale: businessDefaultLocale,
         greeting,
         tone: configuration?.profile?.tone ?? "",
         summary: configuration?.profile?.summary ?? "",
@@ -99,7 +96,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
-        defaultLocale: businessDefaultLocale,
         greeting,
         tone: configuration?.profile?.tone ?? "",
         summary: configuration?.profile?.summary ?? "",
