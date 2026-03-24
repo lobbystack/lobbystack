@@ -1,13 +1,23 @@
 import type { ReactNode } from "react";
 import { useQuery } from "convex/react";
+import { motion } from "framer-motion";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowRight,
+  CalendarClock,
+  PhoneCall,
+  UserRound,
+} from "lucide-react";
 
 import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -15,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -40,6 +51,24 @@ type HomeSummary = {
     durationSeconds: number | null;
     contactName: string | null;
     contactPhone: string | null;
+  }>;
+  actionRequired: Array<{
+    id: string;
+    kind: "voice_message" | "operator_alert" | "calendar_sync_issue" | "human_handoff" | string;
+    title: string;
+    body: string;
+    createdAt: string;
+    route: string;
+  }>;
+  upcoming: Array<{
+    id: Id<"appointments">;
+    startsAt: string;
+    timezone: string;
+    status: string;
+    sourceChannel: string;
+    contactName: string | null;
+    serviceName: string | null;
+    staffName: string | null;
   }>;
 };
 
@@ -133,6 +162,75 @@ function metricIcon(key: MetricCard["key"]): ReactNode {
   );
 }
 
+function getActionKindLabel(
+  kind: HomeSummary["actionRequired"][number]["kind"],
+  t: ReturnType<typeof useTranslation<"dashboard">>["t"],
+): string {
+  if (kind === "voice_message") {
+    return t("home.actionRequired.kinds.voice_message");
+  }
+
+  if (kind === "human_handoff") {
+    return t("home.actionRequired.kinds.human_handoff");
+  }
+
+  if (kind === "calendar_sync_issue") {
+    return t("home.actionRequired.kinds.calendar_sync_issue");
+  }
+
+  if (kind === "operator_alert") {
+    return t("home.actionRequired.kinds.operator_alert");
+  }
+
+  return t("home.actionRequired.kinds.other");
+}
+
+function getActionKindIcon(kind: HomeSummary["actionRequired"][number]["kind"]): ReactNode {
+  if (kind === "voice_message") {
+    return <PhoneCall className="size-4 text-muted-foreground" />;
+  }
+
+  if (kind === "human_handoff") {
+    return <UserRound className="size-4 text-muted-foreground" />;
+  }
+
+  return <AlertCircle className="size-4 text-muted-foreground" />;
+}
+
+function getAppointmentStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslation<"dashboard">>["t"],
+): string {
+  if (status === "booked") {
+    return t("home.upcoming.status.booked");
+  }
+
+  if (status === "confirmed") {
+    return t("home.upcoming.status.confirmed");
+  }
+
+  return status;
+}
+
+function getAppointmentSourceLabel(
+  sourceChannel: string,
+  t: ReturnType<typeof useTranslation<"dashboard">>["t"],
+): string {
+  if (sourceChannel === "voice") {
+    return t("home.upcoming.source.voice");
+  }
+
+  if (sourceChannel === "sms") {
+    return t("home.upcoming.source.sms");
+  }
+
+  if (sourceChannel === "dashboard") {
+    return t("home.upcoming.source.dashboard");
+  }
+
+  return sourceChannel;
+}
+
 export function HomePage({ businessId, snapshot }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
   const summary = useQuery(
@@ -213,6 +311,159 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
               </Card>
             );
           })}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+          <motion.section
+            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            transition={{ delay: 0.05, duration: 0.2, ease: "easeOut" }}
+          >
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="gap-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>{t("home.actionRequired.title")}</CardTitle>
+                    <CardDescription>{t("home.actionRequired.description")}</CardDescription>
+                  </div>
+                  <Badge variant="outline">
+                    {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                {summary && summary.actionRequired.length > 0 ? (
+                  summary.actionRequired.map((item, index) => (
+                    <motion.div
+                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      key={item.id}
+                      transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
+                    >
+                      <Link
+                        className="group flex items-start gap-3 rounded-xl border border-transparent px-1 py-1 transition-colors hover:border-border/70 hover:bg-muted/30"
+                        to={item.route}
+                      >
+                        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/70">
+                          {getActionKindIcon(item.kind)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{item.title}</p>
+                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                {item.body}
+                              </p>
+                            </div>
+                            <Badge className="shrink-0" variant="secondary">
+                              {getActionKindLabel(item.kind, t)}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                            <span>
+                              {formatDateTime(item.createdAt, i18n.language, {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </span>
+                            <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                              {t("home.actionRequired.open")}
+                              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                      {index < summary.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed px-5 py-10 text-center">
+                    <p className="text-sm font-medium">{t("home.actionRequired.emptyTitle")}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t("home.actionRequired.emptyDescription")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.section>
+          <motion.section
+            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 12 }}
+            transition={{ delay: 0.1, duration: 0.22, ease: "easeOut" }}
+          >
+            <Card className="border-border/70 shadow-sm">
+              <CardHeader className="gap-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>{t("home.upcoming.title")}</CardTitle>
+                    <CardDescription>{t("home.upcoming.description")}</CardDescription>
+                  </div>
+                  <div className="flex size-10 items-center justify-center rounded-full bg-muted/70">
+                    <CalendarClock className="size-4 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                {summary && summary.upcoming.length > 0 ? (
+                  summary.upcoming.map((appointment, index) => (
+                    <motion.div
+                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      key={String(appointment.id)}
+                      transition={{ delay: 0.12 + index * 0.03, duration: 0.18, ease: "easeOut" }}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold">
+                              {appointment.contactName ?? t("home.upcoming.unknownContact")}
+                            </p>
+                            <Badge variant="outline">
+                              {getAppointmentStatusLabel(appointment.status, t)}
+                            </Badge>
+                            <Badge variant="secondary">
+                              {getAppointmentSourceLabel(appointment.sourceChannel, t)}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {appointment.serviceName ?? t("home.upcoming.unknownService")}
+                            {appointment.staffName
+                              ? ` ${t("home.upcoming.withStaff", { name: appointment.staffName })}`
+                              : ""}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold">
+                            {formatDateTime(appointment.startsAt, i18n.language, {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              timeZone: appointment.timezone,
+                            })}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {formatDateTime(appointment.startsAt, i18n.language, {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              timeZone: appointment.timezone,
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      {index < summary.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed px-5 py-10 text-center">
+                    <p className="text-sm font-medium">{t("home.upcoming.emptyTitle")}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {t("home.upcoming.emptyDescription")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.section>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4">

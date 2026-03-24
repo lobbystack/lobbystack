@@ -80,6 +80,38 @@
       "description": "{{count}} recent calls in the latest activity feed.",
       "unknownCaller": "Unknown caller",
       "durationValue": "{{value}} sec"
+    },
+    "actionRequired": {
+      "title": "Action required",
+      "description": "Operator work waiting for a follow-up, reply, or fix.",
+      "open": "Open",
+      "emptyTitle": "No open operator tasks",
+      "emptyDescription": "New callback requests, human handoffs, and sync issues will show up here.",
+      "kinds": {
+        "voice_message": "Callback",
+        "human_handoff": "Handoff",
+        "calendar_sync_issue": "Calendar",
+        "operator_alert": "Alert",
+        "other": "Open"
+      }
+    },
+    "upcoming": {
+      "title": "Upcoming",
+      "description": "The next appointments on the calendar.",
+      "unknownContact": "Unknown contact",
+      "unknownService": "Unknown service",
+      "withStaff": "with {{name}}",
+      "emptyTitle": "No upcoming appointments",
+      "emptyDescription": "Future bookings will appear here as soon as they are created.",
+      "status": {
+        "booked": "Booked",
+        "confirmed": "Confirmed"
+      },
+      "source": {
+        "voice": "Voice",
+        "sms": "SMS",
+        "dashboard": "Dashboard"
+      }
     }
   },
   "setup": {

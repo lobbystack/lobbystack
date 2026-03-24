@@ -80,6 +80,38 @@
       "description": "{{count}} appels récents dans le flux d'activité.",
       "unknownCaller": "Appelant inconnu",
       "durationValue": "{{value}} sec"
+    },
+    "actionRequired": {
+      "title": "Action requise",
+      "description": "Travail opérateur en attente d'un suivi, d'une réponse ou d'une correction.",
+      "open": "Ouvrir",
+      "emptyTitle": "Aucune tâche opérateur ouverte",
+      "emptyDescription": "Les demandes de rappel, les transferts humains et les problèmes de synchronisation apparaîtront ici.",
+      "kinds": {
+        "voice_message": "Rappel",
+        "human_handoff": "Transfert",
+        "calendar_sync_issue": "Calendrier",
+        "operator_alert": "Alerte",
+        "other": "Ouvert"
+      }
+    },
+    "upcoming": {
+      "title": "À venir",
+      "description": "Les prochains rendez-vous au calendrier.",
+      "unknownContact": "Contact inconnu",
+      "unknownService": "Service inconnu",
+      "withStaff": "avec {{name}}",
+      "emptyTitle": "Aucun rendez-vous à venir",
+      "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",
+      "status": {
+        "booked": "Réservé",
+        "confirmed": "Confirmé"
+      },
+      "source": {
+        "voice": "Voix",
+        "sms": "SMS",
+        "dashboard": "Tableau de bord"
+      }
     }
   },
   "setup": {
