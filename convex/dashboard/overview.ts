@@ -342,10 +342,14 @@ export const getHomeSummary = query({
           ctx.db
             .query("messages")
             .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .order("desc")
-            .take(1),
+            .collect(),
         ]);
-        const latestMessage = messages[0] ?? null;
+        const latestMessage = messages[messages.length - 1] ?? null;
+        const latestMessageTimestamp =
+          latestMessage?._creationTime ??
+          (conversation.automationPausedAt
+            ? Date.parse(conversation.automationPausedAt)
+            : conversation._creationTime);
 
         return {
           id: String(conversation._id),
@@ -360,16 +364,35 @@ export const getHomeSummary = query({
               ? new Date(latestMessage._creationTime).toISOString()
               : conversation.automationPausedAt ?? new Date(conversation._creationTime).toISOString(),
           conversationId: conversation._id,
+          _sortTimestamp: latestMessageTimestamp,
+          _messageCount: messages.length,
+          _conversationCreatedAt: conversation._creationTime,
         };
       }),
     );
     actionRequiredFromHandoffs.sort(
-      (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+      (left, right) =>
+        right._sortTimestamp - left._sortTimestamp ||
+        right._messageCount - left._messageCount ||
+        right._conversationCreatedAt - left._conversationCreatedAt,
     );
 
     const actionRequired = [...actionRequiredFromVoice, ...actionRequiredFromHandoffs]
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
-      .slice(0, 6);
+      .slice(0, 6)
+      .map((item) => {
+        if (!("conversationId" in item)) {
+          return item;
+        }
+
+        const {
+          _sortTimestamp: _unusedSortTimestamp,
+          _messageCount: _unusedMessageCount,
+          _conversationCreatedAt: _unusedConversationCreatedAt,
+          ...cleanItem
+        } = item;
+        return cleanItem;
+      });
 
     const upcomingAppointments = appointments
       .filter(

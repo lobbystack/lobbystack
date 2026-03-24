@@ -97,6 +97,9 @@ export function UploadKnowledgeDocumentSheet({
   const resolvedFileName = useMemo(() => selectedFile?.name ?? "", [selectedFile]);
 
   function resetState(): void {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setSelectedFile(null);
     setTitle("");
     setTags("");

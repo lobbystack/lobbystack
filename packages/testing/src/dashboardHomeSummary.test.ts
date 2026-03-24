@@ -360,9 +360,14 @@ describe("Dashboard home summary", () => {
         });
       }
 
+      const latestConversationId = conversationIds[6];
+      if (!latestConversationId) {
+        throw new Error("Expected latest handoff conversation to exist.");
+      }
+
       await ctx.db.insert("messages", {
         businessId,
-        conversationId: conversationIds[6],
+        conversationId: latestConversationId,
         direction: "inbound",
         channel: "sms",
         body: "Need help 6 latest",
