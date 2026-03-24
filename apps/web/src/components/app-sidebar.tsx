@@ -10,6 +10,7 @@ import {
   Settings,
   SlidersHorizontal,
   ListChecks,
+  ScrollText,
   UserRound,
   Workflow,
   BookOpenText,
@@ -91,7 +92,7 @@ export function AppSidebar({
                 {
                   title: t("agent:sections.rules.title"),
                   url: "/agent/rules",
-                  icon: BookOpenText,
+                  icon: ScrollText,
                 },
               ],
             },
