@@ -115,6 +115,11 @@
     "defaultLanguage": {
       "label": "Langue par défaut",
       "hint": "La langue dans laquelle le réceptionniste commence avant de détecter la préférence de l'appelant."
+    },
+    "transferNumber": {
+      "label": "Numéro de transfert par défaut",
+      "placeholder": "+1 555-123-4567",
+      "hint": "Le numéro que votre réceptionniste doit utiliser lorsqu'il transfère un appel à une personne."
     }
   },
   "actions": {

@@ -90,12 +90,12 @@
         },
         "title": {
           "label": "Title",
-          "placeholder": "Call Transfers",
+          "placeholder": "Transfer requests to talk to someone to Jannie",
           "hint": "A short, descriptive title for this rule."
         },
         "content": {
           "label": "Content",
-          "placeholder": "Transfer urgent billing calls to the front desk and text the manager after hours.",
+          "placeholder": "When someone asks to speak to a human, transfer them to 555-123-4567.",
           "hint": "Describe what the receptionist should do."
         },
         "tags": {
@@ -115,6 +115,11 @@
     "defaultLanguage": {
       "label": "Default language",
       "hint": "The language the receptionist starts with before detecting the caller's preference."
+    },
+    "transferNumber": {
+      "label": "Default transfer number",
+      "placeholder": "+1 555-123-4567",
+      "hint": "The phone number your receptionist should use when handing a caller off to a human."
     }
   },
   "actions": {
