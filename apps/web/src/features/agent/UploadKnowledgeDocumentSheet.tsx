@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { Upload } from "lucide-react";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 function parseTags(value: string): Array<string> {
   return value
@@ -87,6 +88,8 @@ export function UploadKnowledgeDocumentSheet({
   const [tags, setTags] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resolvedFileName = useMemo(() => selectedFile?.name ?? "", [selectedFile]);
 
@@ -96,6 +99,26 @@ export function UploadKnowledgeDocumentSheet({
     setTags("");
     setErrorMessage(null);
     setIsUploading(false);
+    setIsDraggingFile(false);
+  }
+
+  function handleSelectedFile(file: File | null): void {
+    if (file && file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+      setSelectedFile(null);
+      setTitle("");
+      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
+      return;
+    }
+
+    setSelectedFile(file);
+    setTitle(file ? stripExtension(file.name) : "");
+    setErrorMessage(null);
+  }
+
+  function handleFileDrop(event: DragEvent<HTMLLabelElement>): void {
+    event.preventDefault();
+    setIsDraggingFile(false);
+    handleSelectedFile(event.dataTransfer.files?.[0] ?? null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -108,6 +131,11 @@ export function UploadKnowledgeDocumentSheet({
     const contentType = resolveFileContentType(selectedFile);
     if (!isSupportedContentType(contentType)) {
       setErrorMessage(t("sections.knowledge.uploadValidation.unsupportedFile"));
+      return;
+    }
+
+    if (selectedFile.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+      setErrorMessage(t("sections.knowledge.uploadValidation.maxSize"));
       return;
     }
 
@@ -182,15 +210,51 @@ export function UploadKnowledgeDocumentSheet({
               </FieldDescription>
               <Input
                 accept={ACCEPTED_FILE_TYPES}
+                className="sr-only"
                 id="knowledge-document-file"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  setSelectedFile(file);
-                  setTitle(file ? stripExtension(file.name) : "");
-                  setErrorMessage(null);
+                  handleSelectedFile(event.target.files?.[0] ?? null);
                 }}
+                ref={fileInputRef}
                 type="file"
               />
+              <label
+                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-8 text-center transition-colors ${
+                  isDraggingFile
+                    ? "border-foreground/30 bg-muted/40"
+                    : "border-border/70 bg-muted/20 hover:bg-muted/30"
+                }`}
+                htmlFor="knowledge-document-file"
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setIsDraggingFile(true);
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    return;
+                  }
+                  setIsDraggingFile(false);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setIsDraggingFile(true);
+                }}
+                onDrop={handleFileDrop}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <Upload className="size-5 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {t("sections.knowledge.fields.file.dropzonePrefix")}{" "}
+                    <span className="underline underline-offset-2">
+                      {t("sections.knowledge.fields.file.chooseFile")}
+                    </span>
+                  </p>
+                  {resolvedFileName ? (
+                    <p className="text-sm font-medium text-foreground">{resolvedFileName}</p>
+                  ) : null}
+                </div>
+              </label>
             </Field>
 
             <Field>
@@ -225,12 +289,9 @@ export function UploadKnowledgeDocumentSheet({
           </FieldGroup>
 
           <div className="mt-auto flex flex-col gap-3 pt-6">
-            {resolvedFileName ? (
-              <p className="text-sm text-muted-foreground">{resolvedFileName}</p>
-            ) : null}
             {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
-            <Button disabled={isUploading} type="submit">
-              {isUploading ? t("actions.uploading") : t("actions.upload")}
+            <Button className="w-full" disabled={isUploading} type="submit">
+              {isUploading ? t("actions.saving") : t("actions.save")}
             </Button>
           </div>
         </form>

@@ -16,7 +16,7 @@
       "addKnowledge": "Add Knowledge",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "Add opening hours, pricing, FAQs, or any other information your receptionist should know.",
-      "uploadDocumentDescription": "Upload a PDF, DOCX, TXT, or Markdown file so your receptionist can use it.",
+      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
       "emptyState": "No knowledge added yet.",
       "previewPending": "This document is being processed.",
@@ -30,12 +30,15 @@
       "uploadValidation": {
         "fileRequired": "Choose a file to upload.",
         "unsupportedFile": "Supported document types are PDF, DOCX, TXT, and Markdown.",
+        "maxSize": "Documents must be 10 MB or smaller.",
         "uploadFailed": "We couldn't upload this document. Please try again."
       },
       "fields": {
         "file": {
           "label": "File",
-          "hint": "Supported document types: PDF, DOCX, TXT, and Markdown."
+          "hint": "Supports PDF, DOCX, TXT, and Markdown.",
+          "dropzonePrefix": "Drag and drop a file here, or",
+          "chooseFile": "Choose File"
         },
         "title": {
           "label": "Title",
@@ -71,6 +74,7 @@
     "saving": "Saving…",
     "saved": "Changes saved",
     "delete": "Delete",
+    "confirmDelete": "Confirm?",
     "upload": "Upload",
     "uploading": "Uploading…"
   },

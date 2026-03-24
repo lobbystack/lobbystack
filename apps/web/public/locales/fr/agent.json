@@ -16,7 +16,7 @@
       "addKnowledge": "Ajouter",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des FAQ ou toute autre information que votre réceptionniste devrait connaître.",
-      "uploadDocumentDescription": "Téléversez un fichier PDF, DOCX, TXT ou Markdown que votre réceptionniste pourra utiliser.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",
       "previewPending": "Ce document est en cours de traitement.",
@@ -30,26 +30,29 @@
       "uploadValidation": {
         "fileRequired": "Choisissez un fichier à téléverser.",
         "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
         "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
       },
       "fields": {
         "file": {
           "label": "Fichier",
-          "hint": "Formats pris en charge : PDF, DOCX, TXT et Markdown."
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
         },
         "title": {
           "label": "Titre",
-          "placeholder": "ex: Heures d'ouverture",
+          "placeholder": "Heures d'ouverture",
           "hint": "Un titre court et descriptif pour cette information."
         },
         "content": {
           "label": "Contenu",
-          "placeholder": "ex: Nous sommes ouverts du lundi au vendredi de 9h à 17h.",
+          "placeholder": "Nous sommes ouverts du lundi au vendredi de 9h à 17h.",
           "hint": "L'information réelle que le réceptionniste doit utiliser."
         },
         "tags": {
           "label": "Mots-clés (optionnel)",
-          "placeholder": "ex: horaires, adresse",
+          "placeholder": "Horaires, adresse",
           "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
         }
       }
@@ -71,6 +74,7 @@
     "saving": "Enregistrement…",
     "saved": "Modifications enregistrées",
     "delete": "Supprimer",
+    "confirmDelete": "Confirmer ?",
     "upload": "Téléverser",
     "uploading": "Téléversement…"
   },

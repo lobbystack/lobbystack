@@ -133,7 +133,7 @@ export function AddKnowledgeSheet({ businessId }: { businessId: Id<"businesses">
           </FieldGroup>
 
           <div className="mt-auto pt-6">
-            <Button disabled={isSaving} type="submit">
+            <Button className="w-full" disabled={isSaving} type="submit">
               {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
             </Button>
           </div>
