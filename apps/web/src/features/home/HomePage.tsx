@@ -6,8 +6,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
-  ArrowRight,
   CalendarClock,
+  ChevronRight,
   PhoneCall,
   UserRound,
 } from "lucide-react";
@@ -339,17 +339,20 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                       key={item.id}
                       transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
                     >
-                      <Link
-                        className="group flex items-start gap-3 rounded-xl border border-transparent px-1 py-1 transition-colors hover:border-border/70 hover:bg-muted/30"
-                        to={item.route}
-                      >
+                      <div className="flex items-start gap-3 px-1 py-1">
                         <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/70">
                           {getActionKindIcon(item.kind)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold">{item.title}</p>
+                              <Link
+                                className="inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold transition-colors hover:text-primary"
+                                to={item.route}
+                              >
+                                <span className="truncate">{item.title}</span>
+                                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                              </Link>
                               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                                 {item.body}
                               </p>
@@ -365,13 +368,9 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                 timeStyle: "short",
                               })}
                             </span>
-                            <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                              {t("home.actionRequired.open")}
-                              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                            </span>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                       {index < summary.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
                     </motion.div>
                   ))
@@ -398,9 +397,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                     <CardTitle>{t("home.upcoming.title")}</CardTitle>
                     <CardDescription>{t("home.upcoming.description")}</CardDescription>
                   </div>
-                  <div className="flex size-10 items-center justify-center rounded-full bg-muted/70">
-                    <CalendarClock className="size-4 text-muted-foreground" />
-                  </div>
+                  <CalendarClock className="size-4 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
