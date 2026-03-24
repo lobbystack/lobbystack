@@ -364,18 +364,11 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                 <p className="truncate text-sm font-semibold">{item.title}</p>
                               )}
                               <div className="mt-3 space-y-2 text-sm">
-                                {details.callbackPhone || details.callbackWindow ? (
+                                {details.callbackWindow ? (
                                   <div className="space-y-1.5">
-                                    {details.callbackPhone ? (
-                                      <p className="font-medium leading-none">
-                                        {details.callbackPhone}
-                                      </p>
-                                    ) : null}
-                                    {details.callbackWindow ? (
-                                      <p className="leading-5 text-muted-foreground">
-                                        {t("home.actionRequired.fields.callbackWindow")}: {details.callbackWindow}
-                                      </p>
-                                    ) : null}
+                                    <p className="leading-5 text-muted-foreground">
+                                      {t("home.actionRequired.fields.callbackWindow")}: {details.callbackWindow}
+                                    </p>
                                   </div>
                                 ) : null}
                                 {details.message ? (
@@ -386,6 +379,11 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                               </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
+                              {details.callbackPhone ? (
+                                <span className="text-sm text-muted-foreground">
+                                  {details.callbackPhone}
+                                </span>
+                              ) : null}
                               <Badge variant="secondary">
                                 {getActionKindLabel(item.kind, t)}
                               </Badge>
