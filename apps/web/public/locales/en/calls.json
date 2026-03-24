@@ -34,9 +34,11 @@
   },
   "followUp": {
     "title": "Follow-up task",
+    "titleWithContact": "{{message}} for {{name}}",
     "createdAt": "Created {{time}}",
     "markDone": "Mark done",
     "markingDone": "Marking done...",
+    "urgent": "Urgent",
     "callUnavailable": "The original call is unavailable, but this callback task is still open.",
     "completeFailed": "Couldn't mark the callback task done.",
     "fields": {

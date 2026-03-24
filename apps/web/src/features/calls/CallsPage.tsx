@@ -12,9 +12,21 @@ import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { parseFollowUpTaskBody } from "@/lib/follow-up-task";
+import {
+  getFollowUpDisplayTitle,
+  isUrgentFollowUpValue,
+  parseFollowUpTaskBody,
+} from "@/lib/follow-up-task";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -182,6 +194,22 @@ function formatCallOutcomeSummary(
   }
 }
 
+function getCallFollowUpDisplayTitle(
+  task: { title: string; body: string },
+  t: TFunction<"calls">,
+): string {
+  return getFollowUpDisplayTitle({
+    title: task.title,
+    kind: "voice_message",
+    body: task.body,
+    formatWithContact: (message, name) =>
+      t("followUp.titleWithContact", {
+        message,
+        name,
+      }),
+  });
+}
+
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -270,6 +298,9 @@ export function CallsPage({ businessId }: CallsPageProps) {
     (requestedCallId !== null && selectedCall === null ? requestedFollowUpTask ?? null : null);
   const selectedCallFollowUpDetails = activeFollowUpTask
     ? parseFollowUpTaskBody(activeFollowUpTask.body)
+    : null;
+  const activeFollowUpDisplayTitle = activeFollowUpTask
+    ? getCallFollowUpDisplayTitle(activeFollowUpTask, t)
     : null;
 
   useEffect(() => {
@@ -474,68 +505,54 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
             <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
               {activeFollowUpTask ? (
-                <Card className="mt-4 border-border/70 shadow-none">
-                  <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-sm">{t("followUp.title")}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {activeFollowUpTask.title}
-                      </p>
-                    </div>
-                    <Button
-                      disabled={isCompletingFollowUp}
-                      onClick={() => void handleMarkFollowUpDone(activeFollowUpTask.id)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      {isCompletingFollowUp ? t("followUp.markingDone") : t("followUp.markDone")}
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-3">
-                    {selectedCallFollowUpDetails?.callbackPhone || selectedCallFollowUpDetails?.callbackWindow ? (
-                      <Table>
-                        <TableBody>
-                          {selectedCallFollowUpDetails?.callbackPhone ? (
-                            <TableRow className="border-none hover:bg-transparent">
-                              <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
-                                {t("followUp.fields.callback")}
-                              </TableCell>
-                              <TableCell className="h-auto px-3 py-1">
-                                {selectedCallFollowUpDetails.callbackPhone}
-                              </TableCell>
-                            </TableRow>
-                          ) : null}
-                          {selectedCallFollowUpDetails?.callbackWindow ? (
-                            <TableRow className="border-none hover:bg-transparent">
-                              <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
-                                {t("followUp.fields.callbackWindow")}
-                              </TableCell>
-                              <TableCell className="h-auto px-3 py-1">
-                                {selectedCallFollowUpDetails.callbackWindow}
-                              </TableCell>
-                            </TableRow>
-                          ) : null}
-                        </TableBody>
-                      </Table>
-                    ) : null}
-                    {selectedCallFollowUpDetails?.message ? (
-                      <p className="text-sm text-muted-foreground">
-                        {selectedCallFollowUpDetails.message}
-                      </p>
-                    ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      {t("followUp.createdAt", {
-                        time: formatDateTime(activeFollowUpTask.createdAt, i18n.language, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        }),
-                      })}
-                    </p>
-                    {followUpError ? (
-                      <p className="text-sm text-destructive">{followUpError}</p>
-                    ) : null}
-                  </CardContent>
-                </Card>
+                <div className="mt-4 flex flex-col gap-3">
+                  <Item className="px-0 py-0" size="sm" variant="default">
+                    <ItemContent className="min-w-0">
+                      <ItemHeader>
+                        <ItemTitle className="w-full min-w-0 max-w-full">
+                          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {activeFollowUpDisplayTitle}
+                          </span>
+                        </ItemTitle>
+                        <ItemActions>
+                          <Button
+                            disabled={isCompletingFollowUp}
+                            onClick={() => void handleMarkFollowUpDone(activeFollowUpTask.id)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {isCompletingFollowUp
+                              ? t("followUp.markingDone")
+                              : t("followUp.markDone")}
+                          </Button>
+                        </ItemActions>
+                      </ItemHeader>
+                      {selectedCallFollowUpDetails?.callbackWindow ? (
+                        <ItemDescription>
+                          {selectedCallFollowUpDetails.callbackWindow}
+                        </ItemDescription>
+                      ) : null}
+                      <ItemFooter className="text-xs text-muted-foreground">
+                        <span>
+                          {t("followUp.createdAt", {
+                            time: formatDateTime(activeFollowUpTask.createdAt, i18n.language, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }),
+                          })}
+                        </span>
+                        {isUrgentFollowUpValue(selectedCallFollowUpDetails?.urgency) ? (
+                          <span className="font-medium text-destructive">
+                            {t("followUp.urgent")}
+                          </span>
+                        ) : null}
+                      </ItemFooter>
+                    </ItemContent>
+                  </Item>
+                  {followUpError ? (
+                    <p className="text-sm text-destructive">{followUpError}</p>
+                  ) : null}
+                </div>
               ) : null}
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
@@ -604,71 +621,57 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </>
         ) : requestedFollowUpTask ? (
           <div className="flex flex-1 flex-col gap-4 p-4">
-            <Card className="border-border/70 shadow-none">
-              <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-sm">{t("followUp.title")}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {requestedFollowUpTask.title}
-                  </p>
-                </div>
-                <Button
-                  disabled={isCompletingFollowUp}
-                  onClick={() => void handleMarkFollowUpDone(requestedFollowUpTask.id)}
-                  size="sm"
-                  variant="outline"
-                >
-                  {isCompletingFollowUp ? t("followUp.markingDone") : t("followUp.markDone")}
-                </Button>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {selectedCallFollowUpDetails?.callbackPhone || selectedCallFollowUpDetails?.callbackWindow ? (
-                  <Table>
-                    <TableBody>
-                      {selectedCallFollowUpDetails?.callbackPhone ? (
-                        <TableRow className="border-none hover:bg-transparent">
-                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
-                            {t("followUp.fields.callback")}
-                          </TableCell>
-                          <TableCell className="h-auto px-3 py-1">
-                            {selectedCallFollowUpDetails.callbackPhone}
-                          </TableCell>
-                        </TableRow>
-                      ) : null}
-                      {selectedCallFollowUpDetails?.callbackWindow ? (
-                        <TableRow className="border-none hover:bg-transparent">
-                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
-                            {t("followUp.fields.callbackWindow")}
-                          </TableCell>
-                          <TableCell className="h-auto px-3 py-1">
-                            {selectedCallFollowUpDetails.callbackWindow}
-                          </TableCell>
-                        </TableRow>
-                      ) : null}
-                    </TableBody>
-                  </Table>
-                ) : null}
-                {selectedCallFollowUpDetails?.message ? (
-                  <p className="text-sm text-muted-foreground">
-                    {selectedCallFollowUpDetails.message}
-                  </p>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  {t("followUp.createdAt", {
-                    time: formatDateTime(requestedFollowUpTask.createdAt, i18n.language, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }),
-                  })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {t("followUp.callUnavailable")}
-                </p>
-                {followUpError ? (
-                  <p className="text-sm text-destructive">{followUpError}</p>
-                ) : null}
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-3">
+              <Item className="px-0 py-0" size="sm" variant="default">
+                <ItemContent className="min-w-0">
+                  <ItemHeader>
+                    <ItemTitle className="w-full min-w-0 max-w-full">
+                      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {activeFollowUpDisplayTitle}
+                      </span>
+                    </ItemTitle>
+                    <ItemActions>
+                      <Button
+                        disabled={isCompletingFollowUp}
+                        onClick={() => void handleMarkFollowUpDone(requestedFollowUpTask.id)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {isCompletingFollowUp
+                          ? t("followUp.markingDone")
+                          : t("followUp.markDone")}
+                      </Button>
+                    </ItemActions>
+                  </ItemHeader>
+                  {selectedCallFollowUpDetails?.callbackWindow ? (
+                    <ItemDescription>
+                      {selectedCallFollowUpDetails.callbackWindow}
+                    </ItemDescription>
+                  ) : null}
+                  <ItemFooter className="text-xs text-muted-foreground">
+                    <span>
+                      {t("followUp.createdAt", {
+                        time: formatDateTime(requestedFollowUpTask.createdAt, i18n.language, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }),
+                      })}
+                    </span>
+                    {isUrgentFollowUpValue(selectedCallFollowUpDetails?.urgency) ? (
+                      <span className="font-medium text-destructive">
+                        {t("followUp.urgent")}
+                      </span>
+                    ) : null}
+                  </ItemFooter>
+                </ItemContent>
+              </Item>
+              <p className="text-sm text-muted-foreground">
+                {t("followUp.callUnavailable")}
+              </p>
+              {followUpError ? (
+                <p className="text-sm text-destructive">{followUpError}</p>
+              ) : null}
+            </div>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">

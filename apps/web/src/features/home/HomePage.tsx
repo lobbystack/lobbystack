@@ -38,7 +38,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
-import { isUrgentFollowUpValue, parseFollowUpTaskBody } from "@/lib/follow-up-task";
+import {
+  getFollowUpDisplayTitle,
+  isUrgentFollowUpValue,
+  parseFollowUpTaskBody,
+} from "@/lib/follow-up-task";
 import { formatDateTime } from "@/lib/locale";
 
 type HomePageProps = {
@@ -236,39 +240,19 @@ function getAppointmentSourceLabel(
   return sourceChannel;
 }
 
-function normalizeActionTitleText(value: string): string {
-  return value.trim().replace(/[.]+$/u, "");
-}
-
-function extractActionContactName(item: HomeSummary["actionRequired"][number]): string | null {
-  if (item.kind === "voice_message") {
-    const match = item.title.match(/from\s+(.+)$/i);
-    return match?.[1]?.trim() ?? null;
-  }
-
-  const normalizedTitle = item.title.trim();
-  return normalizedTitle.length > 0 ? normalizedTitle : null;
-}
-
 function getActionDisplayTitle(
   item: HomeSummary["actionRequired"][number],
-  details: ReturnType<typeof parseFollowUpTaskBody>,
   t: ReturnType<typeof useTranslation<"dashboard">>["t"],
 ): string {
-  const message = normalizeActionTitleText(details.message);
-  const callbackWindow = details.callbackWindow
-    ? normalizeActionTitleText(details.callbackWindow)
-    : "";
-  const contactName = extractActionContactName(item);
-  const baseTitle = message || callbackWindow || item.title;
-
-  if (!contactName) {
-    return baseTitle;
-  }
-
-  return t("home.actionRequired.titleWithContact", {
-    message: baseTitle,
-    name: contactName,
+  return getFollowUpDisplayTitle({
+    title: item.title,
+    kind: item.kind,
+    body: item.body,
+    formatWithContact: (message, name) =>
+      t("home.actionRequired.titleWithContact", {
+        message,
+        name,
+      }),
   });
 }
 
@@ -379,7 +363,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                         >
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
-                            const displayTitle = getActionDisplayTitle(item, details, t);
+                            const displayTitle = getActionDisplayTitle(item, t);
                             const destination =
                               item.kind === "voice_message" && item.callId
                                 ? {
@@ -399,27 +383,27 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                   {getActionKindIcon(item.kind)}
                                 </ItemMedia>
                                 <ItemContent className="min-w-0">
-                                  <ItemHeader className="flex-col items-start gap-2 2xl:flex-row 2xl:items-start 2xl:justify-between">
+                                  <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
                                     <div className="min-w-0 flex-1">
                                       {destination ? (
-                                        <ItemTitle className="w-full min-w-0 max-w-full items-start 2xl:items-center">
+                                        <ItemTitle className="w-full min-w-0 max-w-full items-start">
                                           <Link
-                                            className="inline-flex min-w-0 max-w-full items-start gap-1 transition-colors hover:text-primary 2xl:items-center"
+                                            className="inline-flex min-w-0 max-w-full items-start gap-1 transition-colors hover:text-primary"
                                             to={destination}
                                           >
-                                            <span className="min-w-0 overflow-hidden line-clamp-2 2xl:truncate">
+                                            <span className="min-w-0 overflow-hidden line-clamp-2">
                                               {displayTitle}
                                             </span>
-                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground 2xl:mt-0" />
+                                            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                                           </Link>
                                         </ItemTitle>
                                       ) : (
-                                        <ItemTitle className="w-full min-w-0 max-w-full line-clamp-2 2xl:truncate">
+                                        <ItemTitle className="w-full min-w-0 max-w-full line-clamp-2">
                                           {displayTitle}
                                         </ItemTitle>
                                       )}
                                     </div>
-                                    <ItemActions className="w-full justify-start ps-0 2xl:w-auto 2xl:shrink-0 2xl:justify-end">
+                                    <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
                                       <Badge variant="secondary">
                                         {getActionKindLabel(item.kind, t)}
                                       </Badge>
@@ -433,12 +417,22 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                   {details.callbackPhone ? (
                                     <ItemDescription>{details.callbackPhone}</ItemDescription>
                                   ) : null}
-                                  <ItemFooter className="text-xs text-muted-foreground">
+                                  <ItemFooter className="flex-wrap gap-2 text-xs text-muted-foreground">
                                     <span>
                                       {formatDateTime(item.createdAt, i18n.language, {
                                         dateStyle: "medium",
                                         timeStyle: "short",
                                       })}
+                                    </span>
+                                    <span className="flex items-center gap-2 sm:hidden">
+                                      <Badge variant="secondary">
+                                        {getActionKindLabel(item.kind, t)}
+                                      </Badge>
+                                      {isUrgentFollowUpValue(details.urgency) ? (
+                                        <Badge variant="destructive">
+                                          {t("home.actionRequired.urgent")}
+                                        </Badge>
+                                      ) : null}
                                     </span>
                                   </ItemFooter>
                                 </ItemContent>

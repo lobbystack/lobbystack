@@ -34,11 +34,16 @@
   },
   "followUp": {
     "title": "Tâche de suivi",
+    "titleWithContact": "{{message}} pour {{name}}",
     "createdAt": "Créé {{time}}",
     "markDone": "Marquer comme fait",
     "markingDone": "Mise à jour...",
+    "urgent": "Urgent",
     "callUnavailable": "L'appel d'origine n'est plus disponible, mais cette tâche de rappel est encore ouverte.",
     "completeFailed": "Impossible de marquer la tâche de rappel comme terminée.",
+    "kind": {
+      "callback": "Rappel"
+    },
     "fields": {
       "callback": "Rappel",
       "callbackWindow": "Rappel préféré"
