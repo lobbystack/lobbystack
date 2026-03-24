@@ -199,6 +199,14 @@ export function CallsPage({ businessId }: CallsPageProps) {
   const [searchValue, setSearchValue] = useState("");
   const [isCompletingFollowUp, setIsCompletingFollowUp] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const selectedCallDetail = useQuery(
+    api.voice.runtime.getCallForDashboard,
+    businessId && requestedCallId
+      ? { businessId, callId: requestedCallId as Id<"calls"> }
+      : businessId && selectedCallId
+        ? { businessId, callId: selectedCallId }
+        : "skip",
+  ) as CallRow | null | undefined;
 
   const transcript = useQuery(
     api.voice.runtime.getCallTranscript,
@@ -224,23 +232,32 @@ export function CallsPage({ businessId }: CallsPageProps) {
     });
   }, [rows, searchValue]);
 
-  const selectedCall = filteredRows.find((call) => call._id === selectedCallId) ??
-    rows.find((call) => call._id === selectedCallId);
+  const requestedCall = requestedCallId
+    ? rows.find((call) => String(call._id) === requestedCallId) ??
+      (selectedCallDetail === undefined ? undefined : selectedCallDetail)
+    : null;
+  const selectedCall =
+    requestedCallId !== null
+      ? requestedCall ?? null
+      : filteredRows.find((call) => call._id === selectedCallId) ??
+        rows.find((call) => call._id === selectedCallId) ??
+        selectedCallDetail ??
+        null;
   const selectedCallFollowUpDetails = selectedCall?.followUpTask
     ? parseFollowUpTaskBody(selectedCall.followUpTask.body)
     : null;
 
   useEffect(() => {
-    const requestedCall = requestedCallId
-      ? rows.find((call) => String(call._id) === requestedCallId)
-      : null;
-    const nextSelectedCall = requestedCall ?? filteredRows[0] ?? rows[0] ?? null;
+    const nextSelectedCall =
+      requestedCallId !== null
+        ? requestedCall ?? null
+        : filteredRows[0] ?? rows[0] ?? null;
 
     if (nextSelectedCall && selectedCallId !== nextSelectedCall._id) {
       setSelectedCallId(nextSelectedCall._id);
       setMobileSelectedCallId(nextSelectedCall._id);
     }
-  }, [filteredRows, rows, searchParams, selectedCallId]);
+  }, [filteredRows, requestedCallId, rows, selectedCallDetail, selectedCallId]);
 
   useEffect(() => {
     if (selectedCallId) {

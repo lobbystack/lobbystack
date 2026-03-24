@@ -166,6 +166,10 @@ type GetCallTranscriptArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
 };
+type GetCallForDashboardArgs = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+};
 type CompleteVoiceFollowUpTaskArgs = {
   businessId: Id<"businesses">;
   inboxItemId: Id<"inbox_items">;
@@ -231,6 +235,57 @@ function dedupeVoiceFollowUpItems(
   }
 
   return deduped;
+}
+
+async function hydrateDashboardCallRow(
+  ctx: QueryCtx,
+  call: Doc<"calls">,
+  voiceFollowUpByCallId: Map<string, Doc<"inbox_items">>,
+) {
+  const followUpTask = voiceFollowUpByCallId.get(String(call._id)) ?? null;
+  const [conversation, transcriptPreview] = await Promise.all([
+    call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
+    ctx.db
+      .query("transcripts")
+      .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+      .order("desc")
+      .take(1),
+  ]);
+  const contact = conversation?.contactId ? await ctx.db.get(conversation.contactId) : null;
+  const outcome = await buildConversationOutcome(ctx, {
+    conversation,
+    fallbackDisposition: call.disposition ?? null,
+  });
+  const recordingToken = (
+    await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_call_id", (q) => q.eq("callId", call._id))
+      .take(1)
+  )[0] ?? null;
+  const hasActiveRecordingToken =
+    recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
+
+  return {
+    ...call,
+    recordingUrl: call.recordingStorageId
+      ? hasActiveRecordingToken
+        ? buildCallRecordingDownloadUrl(recordingToken.nonce)
+        : await ctx.storage.getUrl(call.recordingStorageId)
+      : null,
+    transcriptReady: transcriptPreview.length > 0,
+    transcriptPreview: transcriptPreview[0]?.text ?? null,
+    contactName: contact?.name ?? null,
+    contactPhone: contact?.phone ?? null,
+    followUpTask: followUpTask
+      ? {
+          id: followUpTask._id,
+          title: followUpTask.title,
+          body: followUpTask.body,
+          createdAt: new Date(followUpTask._creationTime).toISOString(),
+        }
+      : null,
+    outcome,
+  };
 }
 
 async function resolveServiceDocument(
@@ -1005,55 +1060,39 @@ export const listRecentCalls = query({
     );
 
     return await Promise.all(
-      calls.map(async (call) => {
-        const followUpTask = voiceFollowUpByCallId.get(String(call._id)) ?? null;
-        const [conversation, transcriptPreview] = await Promise.all([
-          call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
-          ctx.db
-            .query("transcripts")
-            .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
-            .order("desc")
-            .take(1),
-        ]);
-        const contact = conversation?.contactId
-          ? await ctx.db.get(conversation.contactId)
-          : null;
-        const outcome = await buildConversationOutcome(ctx, {
-          conversation,
-          fallbackDisposition: call.disposition ?? null,
-        });
-        const recordingToken = (
-          await ctx.db
-            .query("call_recording_download_tokens")
-            .withIndex("by_call_id", (q) => q.eq("callId", call._id))
-            .take(1)
-        )[0] ?? null;
-        const hasActiveRecordingToken =
-          recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
-
-        return {
-          ...call,
-          recordingUrl: call.recordingStorageId
-            ? hasActiveRecordingToken
-              ? buildCallRecordingDownloadUrl(recordingToken.nonce)
-              : await ctx.storage.getUrl(call.recordingStorageId)
-            : null,
-          transcriptReady: transcriptPreview.length > 0,
-          transcriptPreview: transcriptPreview[0]?.text ?? null,
-          contactName: contact?.name ?? null,
-          contactPhone: contact?.phone ?? null,
-          followUpTask: followUpTask
-            ? {
-                id: followUpTask._id,
-                title: followUpTask.title,
-                body: followUpTask.body,
-                createdAt: new Date(followUpTask._creationTime).toISOString(),
-              }
-            : null,
-          outcome,
-        };
-      }),
+      calls.map((call) => hydrateDashboardCallRow(ctx, call, voiceFollowUpByCallId)),
     );
+  },
+});
+
+export const getCallForDashboard = query({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+  },
+  handler: async (ctx: QueryCtx, args: GetCallForDashboardArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const [call, openVoiceFollowUpItems]: [Doc<"calls"> | null, Array<Doc<"inbox_items">>] =
+      await Promise.all([
+        ctx.db.get(args.callId),
+        ctx.db
+          .query("inbox_items")
+          .withIndex("by_business_id_and_kind_and_status", (q) =>
+            q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+          )
+          .collect(),
+      ]);
+
+    if (!call || call.businessId !== args.businessId) {
+      return null;
+    }
+
+    const voiceFollowUpByCallId = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    );
+
+    return await hydrateDashboardCallRow(ctx, call, voiceFollowUpByCallId);
   },
 });
 
