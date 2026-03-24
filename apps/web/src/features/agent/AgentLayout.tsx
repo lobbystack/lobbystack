@@ -50,12 +50,13 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
       <div className="flex flex-col gap-1 py-2">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">{header.title}</h1>
-          {(location.pathname === "/agent/knowledge" || location.pathname === "/agent/services") && (
+          {location.pathname === "/agent/knowledge" && (
             <div className="flex items-center gap-2">
               <UploadKnowledgeDocumentSheet businessId={businessId} />
               <AddKnowledgeSheet businessId={businessId} />
             </div>
           )}
+          {location.pathname === "/agent/services" && <AddKnowledgeSheet businessId={businessId} />}
           {location.pathname === "/agent/rules" && <AddKnowledgeSheet businessId={businessId} />}
         </div>
         <p className="text-sm text-muted-foreground">{header.description}</p>
