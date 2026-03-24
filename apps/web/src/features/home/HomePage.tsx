@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
-  CalendarClock,
   ChevronRight,
   PhoneCall,
   UserRound,
@@ -26,6 +25,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime } from "@/lib/locale";
@@ -231,6 +236,58 @@ function getAppointmentSourceLabel(
   return sourceChannel;
 }
 
+function parseActionRequiredBody(body: string): {
+  callbackPhone?: string;
+  urgency?: string;
+  callbackWindow?: string;
+  message: string;
+} {
+  const lines = body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let callbackPhone: string | undefined;
+  let urgency: string | undefined;
+  let callbackWindow: string | undefined;
+  const messageLines: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("Callback:")) {
+      callbackPhone = line.replace("Callback:", "").trim();
+      continue;
+    }
+
+    if (line.startsWith("Urgency:")) {
+      urgency = line.replace("Urgency:", "").trim();
+      continue;
+    }
+
+    if (line.startsWith("Preferred callback:")) {
+      callbackWindow = line.replace("Preferred callback:", "").trim();
+      continue;
+    }
+
+    messageLines.push(line);
+  }
+
+  return {
+    ...(callbackPhone ? { callbackPhone } : {}),
+    ...(urgency ? { urgency } : {}),
+    ...(callbackWindow ? { callbackWindow } : {}),
+    message: messageLines.join(" "),
+  };
+}
+
+function isUrgentValue(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === "urgent" || normalized === "high" || normalized === "élevée" || normalized === "elevee";
+}
+
 export function HomePage({ businessId, snapshot }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
   const summary = useQuery(
@@ -317,29 +374,29 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
             animate={{ opacity: 1, y: 0 }}
             initial={{ opacity: 0, y: 10 }}
             transition={{ delay: 0.05, duration: 0.2, ease: "easeOut" }}
+            className="flex flex-col gap-3"
           >
-            <Card className="border-border/70 shadow-sm">
-              <CardHeader className="gap-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle>{t("home.actionRequired.title")}</CardTitle>
-                    <CardDescription>{t("home.actionRequired.description")}</CardDescription>
-                  </div>
-                  <Badge variant="outline">
-                    {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {summary && summary.actionRequired.length > 0 ? (
-                  summary.actionRequired.map((item, index) => (
+            <div className="flex items-center justify-between gap-4 px-1">
+              <h2 className="text-lg font-semibold">{t("home.actionRequired.title")}</h2>
+              <Badge variant="outline">
+                {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
+              </Badge>
+            </div>
+            {summary && summary.actionRequired.length > 0 ? (
+              <Card className="border-border/70 shadow-sm">
+                <CardContent className="flex flex-col gap-4">
+                  {summary.actionRequired.map((item, index) => (
                     <motion.div
                       animate={{ opacity: 1, y: 0 }}
                       initial={{ opacity: 0, y: 8 }}
                       key={item.id}
                       transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
                     >
-                      <div className="flex items-start gap-3 px-1 py-1">
+                      {(() => {
+                        const details = parseActionRequiredBody(item.body);
+
+                        return (
+                          <div className="flex items-start gap-3 px-1 py-1">
                         <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted/70">
                           {getActionKindIcon(item.kind)}
                         </div>
@@ -353,13 +410,48 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                                 <span className="truncate">{item.title}</span>
                                 <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
                               </Link>
-                              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                {item.body}
-                              </p>
+                              <div className="mt-2 text-sm">
+                                {details.callbackPhone || details.callbackWindow ? (
+                                  <Table>
+                                    <TableBody>
+                                      {details.callbackPhone ? (
+                                        <TableRow className="border-none hover:bg-transparent">
+                                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-0.5 text-muted-foreground">
+                                            {t("home.actionRequired.fields.callback")}
+                                          </TableCell>
+                                          <TableCell className="h-auto px-3 py-0.5">
+                                            {details.callbackPhone}
+                                          </TableCell>
+                                        </TableRow>
+                                      ) : null}
+                                      {details.callbackWindow ? (
+                                        <TableRow className="border-none hover:bg-transparent">
+                                          <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-0.5 text-muted-foreground">
+                                            {t("home.actionRequired.fields.callbackWindow")}
+                                          </TableCell>
+                                          <TableCell className="h-auto px-3 py-0.5">
+                                            {details.callbackWindow}
+                                          </TableCell>
+                                        </TableRow>
+                                      ) : null}
+                                    </TableBody>
+                                  </Table>
+                                ) : null}
+                                {details.message ? (
+                                  <p className="pt-1 text-muted-foreground">{details.message}</p>
+                                ) : null}
+                              </div>
                             </div>
-                            <Badge className="shrink-0" variant="secondary">
-                              {getActionKindLabel(item.kind, t)}
-                            </Badge>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <Badge variant="secondary">
+                                {getActionKindLabel(item.kind, t)}
+                              </Badge>
+                              {isUrgentValue(details.urgency) ? (
+                                <Badge variant="destructive">
+                                  {t("home.actionRequired.urgent")}
+                                </Badge>
+                              ) : null}
+                            </div>
                           </div>
                           <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                             <span>
@@ -371,38 +463,38 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                           </div>
                         </div>
                       </div>
+                        );
+                      })()}
                       {index < summary.actionRequired.length - 1 ? <Separator className="mt-4" /> : null}
                     </motion.div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed px-5 py-10 text-center">
-                    <p className="text-sm font-medium">{t("home.actionRequired.emptyTitle")}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {t("home.actionRequired.emptyDescription")}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-2xl border border-dashed p-12 text-center">
+                <p className="text-sm font-medium">{t("home.actionRequired.emptyTitle")}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("home.actionRequired.emptyDescription")}
+                </p>
+              </div>
+            )}
           </motion.section>
           <motion.section
             animate={{ opacity: 1, y: 0 }}
             initial={{ opacity: 0, y: 12 }}
             transition={{ delay: 0.1, duration: 0.22, ease: "easeOut" }}
+            className="flex flex-col gap-3"
           >
-            <Card className="border-border/70 shadow-sm">
-              <CardHeader className="gap-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle>{t("home.upcoming.title")}</CardTitle>
-                    <CardDescription>{t("home.upcoming.description")}</CardDescription>
-                  </div>
-                  <CalendarClock className="size-4 text-muted-foreground" />
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {summary && summary.upcoming.length > 0 ? (
-                  summary.upcoming.map((appointment, index) => (
+            <div className="flex items-center justify-between gap-4 px-1">
+              <h2 className="text-lg font-semibold">{t("home.upcoming.title")}</h2>
+              <Badge variant="outline">
+                {(summary?.upcoming.length ?? 0).toLocaleString(i18n.language)}
+              </Badge>
+            </div>
+            {summary && summary.upcoming.length > 0 ? (
+              <Card className="border-border/70 shadow-sm">
+                <CardContent className="flex flex-col gap-4">
+                  {summary.upcoming.map((appointment, index) => (
                     <motion.div
                       animate={{ opacity: 1, y: 0 }}
                       initial={{ opacity: 0, y: 8 }}
@@ -449,17 +541,17 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                       </div>
                       {index < summary.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
                     </motion.div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-dashed px-5 py-10 text-center">
-                    <p className="text-sm font-medium">{t("home.upcoming.emptyTitle")}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {t("home.upcoming.emptyDescription")}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-2xl border border-dashed p-12 text-center">
+                <p className="text-sm font-medium">{t("home.upcoming.emptyTitle")}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("home.upcoming.emptyDescription")}
+                </p>
+              </div>
+            )}
           </motion.section>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">

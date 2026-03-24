@@ -85,8 +85,13 @@
       "title": "Action required",
       "description": "Operator work waiting for a follow-up, reply, or fix.",
       "open": "Open",
+      "urgent": "Urgent",
       "emptyTitle": "No open operator tasks",
       "emptyDescription": "New callback requests, human handoffs, and sync issues will show up here.",
+      "fields": {
+        "callback": "Callback",
+        "callbackWindow": "Preferred callback"
+      },
       "kinds": {
         "voice_message": "Callback",
         "human_handoff": "Handoff",

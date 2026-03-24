@@ -85,8 +85,13 @@
       "title": "Action requise",
       "description": "Travail opérateur en attente d'un suivi, d'une réponse ou d'une correction.",
       "open": "Ouvrir",
+      "urgent": "Urgent",
       "emptyTitle": "Aucune tâche opérateur ouverte",
       "emptyDescription": "Les demandes de rappel, les transferts humains et les problèmes de synchronisation apparaîtront ici.",
+      "fields": {
+        "callback": "Rappel",
+        "callbackWindow": "Rappel préféré"
+      },
       "kinds": {
         "voice_message": "Rappel",
         "human_handoff": "Transfert",
