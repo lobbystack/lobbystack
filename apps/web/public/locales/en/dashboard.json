@@ -83,11 +83,10 @@
     },
     "actionRequired": {
       "title": "Action required",
-      "description": "Operator work waiting for a follow-up, reply, or fix.",
-      "open": "Open",
+      "description": "Customer follow-up tasks that still need a human.",
       "urgent": "Urgent",
-      "emptyTitle": "No open operator tasks",
-      "emptyDescription": "New callback requests, human handoffs, and sync issues will show up here.",
+      "emptyTitle": "No open follow-up tasks",
+      "emptyDescription": "New callback requests and human handoffs will show up here.",
       "fields": {
         "callback": "Callback",
         "callbackWindow": "Preferred callback"
@@ -95,8 +94,6 @@
       "kinds": {
         "voice_message": "Callback",
         "human_handoff": "Handoff",
-        "calendar_sync_issue": "Calendar",
-        "operator_alert": "Alert",
         "other": "Open"
       }
     },

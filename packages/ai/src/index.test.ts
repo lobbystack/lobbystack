@@ -16,6 +16,9 @@ describe("buildVoiceSystemPrompt", () => {
     expect(prompt).toContain(
       "Adapt to the caller's language as soon as the caller clearly establishes one.",
     );
+    expect(prompt).toContain(
+      "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
+    );
     expect(prompt).not.toContain("Default conversation language:");
     expect(prompt).not.toContain("Speak in French unless the caller clearly asks to switch languages.");
   });

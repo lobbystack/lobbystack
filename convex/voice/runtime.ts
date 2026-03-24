@@ -9,6 +9,7 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -164,6 +165,10 @@ type GetCallTranscriptArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
 };
+type CompleteVoiceFollowUpTaskArgs = {
+  businessId: Id<"businesses">;
+  inboxItemId: Id<"inbox_items">;
+};
 
 function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
@@ -210,6 +215,21 @@ function scoreServiceMatch(service: Doc<"services">, serviceName: string): numbe
   }
 
   return 0;
+}
+
+function dedupeVoiceFollowUpItems(
+  items: Array<Doc<"inbox_items">>,
+): Map<string, Doc<"inbox_items">> {
+  const deduped = new Map<string, Doc<"inbox_items">>();
+
+  for (const item of items) {
+    const key = item.relatedId ?? String(item._id);
+    if (!deduped.has(key)) {
+      deduped.set(key, item);
+    }
+  }
+
+  return deduped;
 }
 
 async function resolveServiceDocument(
@@ -949,14 +969,28 @@ export const listRecentCalls = query({
   },
   handler: async (ctx: QueryCtx, args: ListRecentCallsArgs) => {
     await requireMembership(ctx, args.businessId);
-    const calls: Array<Doc<"calls">> = await ctx.db
-      .query("calls")
-      .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
-      .order("desc")
-      .take(args.limit ?? 20);
+    const [calls, openVoiceFollowUpItems]: [Array<Doc<"calls">>, Array<Doc<"inbox_items">>] =
+      await Promise.all([
+        ctx.db
+          .query("calls")
+          .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
+          .order("desc")
+          .take(args.limit ?? 20),
+        ctx.db
+          .query("inbox_items")
+          .withIndex("by_business_id_and_kind_and_status", (q) =>
+            q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+          )
+          .collect(),
+      ]);
+
+    const voiceFollowUpByCallId = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    );
 
     return await Promise.all(
       calls.map(async (call) => {
+        const followUpTask = voiceFollowUpByCallId.get(String(call._id)) ?? null;
         const [conversation, transcriptPreview] = await Promise.all([
           call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
           ctx.db
@@ -992,10 +1026,47 @@ export const listRecentCalls = query({
           transcriptPreview: transcriptPreview[0]?.text ?? null,
           contactName: contact?.name ?? null,
           contactPhone: contact?.phone ?? null,
+          followUpTask: followUpTask
+            ? {
+                id: followUpTask._id,
+                title: followUpTask.title,
+                body: followUpTask.body,
+                createdAt: new Date(followUpTask._creationTime).toISOString(),
+              }
+            : null,
           outcome,
         };
       }),
     );
+  },
+});
+
+export const completeVoiceFollowUpTask = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    inboxItemId: v.id("inbox_items"),
+  },
+  handler: async (ctx: MutationCtx, args: CompleteVoiceFollowUpTaskArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const inboxItem = await ctx.db.get(args.inboxItemId);
+    if (!inboxItem || inboxItem.businessId !== args.businessId) {
+      throw new Error("Follow-up task not found.");
+    }
+
+    if (inboxItem.kind !== "voice_message") {
+      throw new Error("Only voice follow-up tasks can be completed here.");
+    }
+
+    if (inboxItem.status === "done") {
+      return null;
+    }
+
+    await ctx.db.patch(args.inboxItemId, {
+      status: "done",
+    });
+
+    return null;
   },
 });
 

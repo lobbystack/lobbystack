@@ -32,6 +32,17 @@
     "pause": "Pause",
     "audioPending": "Recording pending"
   },
+  "followUp": {
+    "title": "Follow-up task",
+    "createdAt": "Created {{time}}",
+    "markDone": "Mark done",
+    "markingDone": "Marking done...",
+    "completeFailed": "Couldn't mark the callback task done.",
+    "fields": {
+      "callback": "Callback",
+      "callbackWindow": "Preferred callback"
+    }
+  },
   "pagination": {
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {{page}} of {{total}}",

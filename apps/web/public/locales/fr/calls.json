@@ -32,6 +32,17 @@
     "pause": "Pause",
     "audioPending": "Enregistrement en attente"
   },
+  "followUp": {
+    "title": "Tâche de suivi",
+    "createdAt": "Créé {{time}}",
+    "markDone": "Marquer comme fait",
+    "markingDone": "Mise à jour...",
+    "completeFailed": "Impossible de marquer la tâche de rappel comme terminée.",
+    "fields": {
+      "callback": "Rappel",
+      "callbackWindow": "Rappel préféré"
+    }
+  },
   "pagination": {
     "rowsPerPage": "Lignes par page",
     "pageOf": "Page {{page}} sur {{total}}",

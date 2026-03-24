@@ -252,7 +252,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "transferCall",
       description:
-        "Transfer the live call to a human when transfer policy allows it and the caller requests or needs a human handoff.",
+        "Transfer the live call to a human when transfer policy allows it, someone is available to receive the transfer, and the caller requests or needs a human handoff.",
       parameters: {
         type: "object",
         properties: {
@@ -265,7 +265,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "takeMessage",
       description:
-        "Capture a structured callback message when a transfer is not possible or the caller wants a message left for staff.",
+        "Capture a structured callback or follow-up message when a transfer is not possible, no one is available to receive it, or the caller wants a message left for staff.",
       parameters: {
         type: "object",
         properties: {

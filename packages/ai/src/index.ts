@@ -13,6 +13,7 @@ export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): strin
     snapshot.voiceInstructions,
     "Start in the language implied by the configured greeting.",
     "Adapt to the caller's language as soon as the caller clearly establishes one.",
+    "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
     `Greeting: ${snapshot.greeting}`,
     `Business summary: ${snapshot.summary}`,
     `Booking policy: ${snapshot.bookingPolicy}`,

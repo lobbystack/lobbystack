@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { isUrgentFollowUpValue, parseFollowUpTaskBody } from "@/lib/follow-up-task";
 import { formatDateTime } from "@/lib/locale";
 
 type HomePageProps = {
@@ -59,11 +60,13 @@ type HomeSummary = {
   }>;
   actionRequired: Array<{
     id: string;
-    kind: "voice_message" | "operator_alert" | "calendar_sync_issue" | "human_handoff" | string;
+    kind: "voice_message" | "human_handoff" | string;
     title: string;
     body: string;
     createdAt: string;
-    route: string;
+    taskId?: string;
+    callId?: Id<"calls">;
+    conversationId?: Id<"conversations">;
   }>;
   upcoming: Array<{
     id: Id<"appointments">;
@@ -179,14 +182,6 @@ function getActionKindLabel(
     return t("home.actionRequired.kinds.human_handoff");
   }
 
-  if (kind === "calendar_sync_issue") {
-    return t("home.actionRequired.kinds.calendar_sync_issue");
-  }
-
-  if (kind === "operator_alert") {
-    return t("home.actionRequired.kinds.operator_alert");
-  }
-
   return t("home.actionRequired.kinds.other");
 }
 
@@ -234,58 +229,6 @@ function getAppointmentSourceLabel(
   }
 
   return sourceChannel;
-}
-
-function parseActionRequiredBody(body: string): {
-  callbackPhone?: string;
-  urgency?: string;
-  callbackWindow?: string;
-  message: string;
-} {
-  const lines = body
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  let callbackPhone: string | undefined;
-  let urgency: string | undefined;
-  let callbackWindow: string | undefined;
-  const messageLines: string[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith("Callback:")) {
-      callbackPhone = line.replace("Callback:", "").trim();
-      continue;
-    }
-
-    if (line.startsWith("Urgency:")) {
-      urgency = line.replace("Urgency:", "").trim();
-      continue;
-    }
-
-    if (line.startsWith("Preferred callback:")) {
-      callbackWindow = line.replace("Preferred callback:", "").trim();
-      continue;
-    }
-
-    messageLines.push(line);
-  }
-
-  return {
-    ...(callbackPhone ? { callbackPhone } : {}),
-    ...(urgency ? { urgency } : {}),
-    ...(callbackWindow ? { callbackWindow } : {}),
-    message: messageLines.join(" "),
-  };
-}
-
-function isUrgentValue(value: string | undefined): boolean {
-  if (!value) {
-    return false;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  return normalized === "urgent" || normalized === "high" || normalized === "élevée" || normalized === "elevee";
 }
 
 export function HomePage({ businessId, snapshot }: HomePageProps) {
@@ -393,7 +336,19 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                       transition={{ delay: 0.08 + index * 0.03, duration: 0.18, ease: "easeOut" }}
                     >
                       {(() => {
-                        const details = parseActionRequiredBody(item.body);
+                        const details = parseFollowUpTaskBody(item.body);
+                        const destination =
+                          item.kind === "voice_message" && item.callId
+                            ? {
+                                pathname: "/calls",
+                                search: `?callId=${encodeURIComponent(String(item.callId))}${item.taskId ? `&taskId=${encodeURIComponent(item.taskId)}` : ""}`,
+                              }
+                            : item.conversationId
+                              ? {
+                                  pathname: "/messages",
+                                  search: `?conversationId=${encodeURIComponent(String(item.conversationId))}`,
+                                }
+                              : null;
 
                         return (
                           <div className="flex items-start gap-3 px-1 py-1">
@@ -403,13 +358,17 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <Link
-                                className="inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold transition-colors hover:text-primary"
-                                to={item.route}
-                              >
-                                <span className="truncate">{item.title}</span>
-                                <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-                              </Link>
+                              {destination ? (
+                                <Link
+                                  className="inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold transition-colors hover:text-primary"
+                                  to={destination}
+                                >
+                                  <span className="truncate">{item.title}</span>
+                                  <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                                </Link>
+                              ) : (
+                                <p className="truncate text-sm font-semibold">{item.title}</p>
+                              )}
                               <div className="mt-2 text-sm">
                                 {details.callbackPhone || details.callbackWindow ? (
                                   <Table>
@@ -446,7 +405,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
                               <Badge variant="secondary">
                                 {getActionKindLabel(item.kind, t)}
                               </Badge>
-                              {isUrgentValue(details.urgency) ? (
+                              {isUrgentFollowUpValue(details.urgency) ? (
                                 <Badge variant="destructive">
                                   {t("home.actionRequired.urgent")}
                                 </Badge>

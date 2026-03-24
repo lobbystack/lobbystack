@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -316,6 +317,7 @@ function formatAutomationPausedByline(
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
+  const [searchParams, setSearchParams] = useSearchParams();
   const conversations = useQuery(
     api.dashboard.messages.listConversationSummaries,
     businessId ? { businessId } : "skip",
@@ -384,11 +386,19 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }, [conversations, searchValue]);
 
   useEffect(() => {
-    if (!selectedConversationId && filteredConversations[0]?.id) {
-      setSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
-      setMobileSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
+    const requestedConversationId = searchParams.get("conversationId");
+    const requestedConversation = requestedConversationId
+      ? (conversations ?? []).find(
+          (conversation) => String(conversation.id) === requestedConversationId,
+        ) ?? null
+      : null;
+    const nextSelectedConversation = requestedConversation ?? filteredConversations[0] ?? conversations?.[0] ?? null;
+
+    if (nextSelectedConversation && selectedConversationId !== nextSelectedConversation.id) {
+      setSelectedConversationId(nextSelectedConversation.id as Id<"conversations">);
+      setMobileSelectedConversationId(nextSelectedConversation.id as Id<"conversations">);
     }
-  }, [filteredConversations, selectedConversationId]);
+  }, [conversations, filteredConversations, searchParams, selectedConversationId]);
 
   useEffect(() => {
     if (!businessId || !selectedConversationId || thread?.conversation.channel !== "sms") {
@@ -471,6 +481,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     setSelectedConversationId(conversationId);
     setMobileSelectedConversationId(conversationId);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("conversationId", String(conversationId));
+      return next;
+    });
   }
 
   async function handleAttachmentFiles(

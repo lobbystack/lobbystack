@@ -168,16 +168,22 @@ async function getConversationContact(
   return await ctx.db.get(conversation.contactId);
 }
 
-function getActionRoute(kind: string): string {
-  if (kind === "voice_message") {
-    return "/calls";
+function dedupeVoiceFollowUpItems(
+  items: Array<Doc<"inbox_items">>,
+): Array<Doc<"inbox_items">> {
+  const seen = new Set<string>();
+  const deduped: Array<Doc<"inbox_items">> = [];
+
+  for (const item of items) {
+    const key = item.relatedId ?? String(item._id);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(item);
   }
 
-  if (kind === "calendar_sync_issue") {
-    return "/settings/integrations";
-  }
-
-  return "/messages";
+  return deduped;
 }
 
 export const getHomeSummary = query({
@@ -194,7 +200,7 @@ export const getHomeSummary = query({
     const previousMonthStart = getMonthBoundary(now, -1);
     const seriesMonthStart = getMonthBoundary(now, -11);
 
-    const [calls, appointments, contacts, conversations, openInboxItems] = await Promise.all([
+    const [calls, appointments, contacts, conversations, openVoiceFollowUpItems] = await Promise.all([
       ctx.db
         .query("calls")
         .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
@@ -213,7 +219,9 @@ export const getHomeSummary = query({
         .collect(),
       ctx.db
         .query("inbox_items")
-        .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
+        .withIndex("by_business_id_and_kind_and_status", (q) =>
+          q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+        )
         .collect(),
     ]);
 
@@ -305,9 +313,9 @@ export const getHomeSummary = query({
       (call) => call.status === "in_progress" || call.status === "open",
     ).length;
 
-    const actionRequiredFromInbox = openInboxItems
-      .filter((item) => item.status === "open")
-      .sort((left, right) => right._creationTime - left._creationTime)
+    const actionRequiredFromVoice = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    )
       .slice(0, 6)
       .map((item) => ({
         id: String(item._id),
@@ -315,7 +323,8 @@ export const getHomeSummary = query({
         title: item.title,
         body: item.body,
         createdAt: new Date(item._creationTime).toISOString(),
-        route: getActionRoute(item.kind),
+        taskId: item._id,
+        ...(item.relatedId ? { callId: item.relatedId as Id<"calls"> } : {}),
       }));
 
     const handoffConversations = conversations
@@ -350,12 +359,12 @@ export const getHomeSummary = query({
             latestMessage !== null
               ? new Date(latestMessage._creationTime).toISOString()
               : conversation.automationPausedAt ?? new Date(conversation._creationTime).toISOString(),
-          route: "/messages",
+          conversationId: conversation._id,
         };
       }),
     );
 
-    const actionRequired = [...actionRequiredFromInbox, ...actionRequiredFromHandoffs]
+    const actionRequired = [...actionRequiredFromVoice, ...actionRequiredFromHandoffs]
       .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
       .slice(0, 6);
 

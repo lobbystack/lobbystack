@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { ArrowLeft, ChevronRight, Phone, Search as SearchIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
@@ -10,7 +11,10 @@ import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { parseFollowUpTaskBody } from "@/lib/follow-up-task";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +35,12 @@ type CallRow = Doc<"calls"> & {
     summary?: string | null;
     disposition?: string | null;
   };
+  followUpTask: {
+    id: Id<"inbox_items">;
+    title: string;
+    body: string;
+    createdAt: string;
+  } | null;
 };
 
 type TranscriptSegment = Doc<"transcripts">;
@@ -166,15 +176,19 @@ function formatCallOutcomeSummary(
 
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
+  const [searchParams, setSearchParams] = useSearchParams();
   const calls = useQuery(api.voice.runtime.listRecentCalls, businessId ? { businessId, limit: 50 } : "skip");
   const summary = useQuery(
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId } : "skip",
   );
+  const completeVoiceFollowUpTask = useMutation(api.voice.runtime.completeVoiceFollowUpTask);
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [mobileSelectedCallId, setMobileSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [isOutcomeOpen, setIsOutcomeOpen] = useState(true);
   const [searchValue, setSearchValue] = useState("");
+  const [isCompletingFollowUp, setIsCompletingFollowUp] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
 
   const transcript = useQuery(
     api.voice.runtime.getCallTranscript,
@@ -202,19 +216,58 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
   const selectedCall = filteredRows.find((call) => call._id === selectedCallId) ??
     rows.find((call) => call._id === selectedCallId);
+  const selectedCallFollowUpDetails = selectedCall?.followUpTask
+    ? parseFollowUpTaskBody(selectedCall.followUpTask.body)
+    : null;
 
   useEffect(() => {
-    if (!selectedCallId && filteredRows[0]?._id) {
-      setSelectedCallId(filteredRows[0]._id);
-      setMobileSelectedCallId(filteredRows[0]._id);
+    const requestedCallId = searchParams.get("callId");
+    const requestedCall = requestedCallId
+      ? rows.find((call) => String(call._id) === requestedCallId)
+      : null;
+    const nextSelectedCall = requestedCall ?? filteredRows[0] ?? rows[0] ?? null;
+
+    if (nextSelectedCall && selectedCallId !== nextSelectedCall._id) {
+      setSelectedCallId(nextSelectedCall._id);
+      setMobileSelectedCallId(nextSelectedCall._id);
     }
-  }, [filteredRows, selectedCallId]);
+  }, [filteredRows, rows, searchParams, selectedCallId]);
 
   useEffect(() => {
     if (selectedCallId) {
       setIsOutcomeOpen(true);
     }
   }, [selectedCallId]);
+
+  function setSelectedCall(callId: Id<"calls">) {
+    setSelectedCallId(callId);
+    setMobileSelectedCallId(callId);
+    setFollowUpError(null);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("callId", String(callId));
+      return next;
+    });
+  }
+
+  async function handleMarkFollowUpDone(taskId: Id<"inbox_items">) {
+    if (!businessId) {
+      return;
+    }
+
+    setFollowUpError(null);
+    setIsCompletingFollowUp(true);
+    try {
+      await completeVoiceFollowUpTask({
+        businessId,
+        inboxItemId: taskId,
+      });
+    } catch (error) {
+      setFollowUpError(error instanceof Error ? error.message : t("followUp.completeFailed"));
+    } finally {
+      setIsCompletingFollowUp(false);
+    }
+  }
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -273,10 +326,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                     "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
                     isActive && "sm:bg-muted",
                   )}
-                  onClick={() => {
-                    setSelectedCallId(call._id);
-                    setMobileSelectedCallId(call._id);
-                  }}
+                  onClick={() => setSelectedCall(call._id)}
                   type="button"
                 >
                   <div className="flex gap-2">
@@ -371,6 +421,70 @@ export function CallsPage({ businessId }: CallsPageProps) {
             </div>
 
             <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
+              {selectedCall.followUpTask ? (
+                <Card className="mt-4 border-border/70 shadow-none">
+                  <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-sm">{t("followUp.title")}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedCall.followUpTask.title}
+                      </p>
+                    </div>
+                    <Button
+                      disabled={isCompletingFollowUp}
+                      onClick={() => void handleMarkFollowUpDone(selectedCall.followUpTask!.id)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {isCompletingFollowUp ? t("followUp.markingDone") : t("followUp.markDone")}
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-3">
+                    {selectedCallFollowUpDetails?.callbackPhone || selectedCallFollowUpDetails?.callbackWindow ? (
+                      <Table>
+                        <TableBody>
+                          {selectedCallFollowUpDetails?.callbackPhone ? (
+                            <TableRow className="border-none hover:bg-transparent">
+                              <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
+                                {t("followUp.fields.callback")}
+                              </TableCell>
+                              <TableCell className="h-auto px-3 py-1">
+                                {selectedCallFollowUpDetails.callbackPhone}
+                              </TableCell>
+                            </TableRow>
+                          ) : null}
+                          {selectedCallFollowUpDetails?.callbackWindow ? (
+                            <TableRow className="border-none hover:bg-transparent">
+                              <TableCell className="h-auto w-0 whitespace-nowrap px-0 py-1 text-muted-foreground">
+                                {t("followUp.fields.callbackWindow")}
+                              </TableCell>
+                              <TableCell className="h-auto px-3 py-1">
+                                {selectedCallFollowUpDetails.callbackWindow}
+                              </TableCell>
+                            </TableRow>
+                          ) : null}
+                        </TableBody>
+                      </Table>
+                    ) : null}
+                    {selectedCallFollowUpDetails?.message ? (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedCallFollowUpDetails.message}
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      {t("followUp.createdAt", {
+                        time: formatDateTime(selectedCall.followUpTask.createdAt, i18n.language, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }),
+                      })}
+                    </p>
+                    {followUpError ? (
+                      <p className="text-sm text-destructive">{followUpError}</p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ) : null}
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
