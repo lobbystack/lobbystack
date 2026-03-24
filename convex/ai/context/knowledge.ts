@@ -12,7 +12,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../../_generated/server";
-import { internal } from "../../_generated/api";
+import { api, internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../../lib/auth";
 import {
@@ -22,6 +22,12 @@ import {
   rag,
   receptionistAgent,
 } from "../../lib/components";
+import {
+  inferKnowledgeDocumentContentTypeFromFileName,
+  isSupportedKnowledgeDocumentContentType,
+  MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES,
+} from "../../lib/knowledgeDocuments";
+import { normalizeAttachmentFileName } from "../../lib/messageAttachments";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -64,11 +70,23 @@ type CreateKnowledgeDocumentArgs = {
   businessId: Id<"businesses">;
   sourceType: string;
   title: string;
+  storageId?: Id<"_storage">;
   mimeType?: string;
   textContent?: string;
   tags: Array<string>;
   importance: number;
   contentHash?: string;
+};
+type FinalizeKnowledgeDocumentUploadArgs = {
+  businessId: Id<"businesses">;
+  storageId: Id<"_storage">;
+  fileName: string;
+  title: string;
+  tags: Array<string>;
+};
+type UploadedKnowledgeDocumentMetadata = {
+  contentType: string;
+  byteLength: number;
 };
 type KnowledgeReindexState = {
   documentIds: Array<Id<"knowledge_documents">>;
@@ -115,6 +133,11 @@ async function indexKnowledgeDocumentById(
     });
     return null;
   }
+
+  await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+    documentId,
+    status: "indexing",
+  });
 
   const result = await rag.add(ctx, {
     namespace: getKnowledgeNamespace(String(document.businessId)),
@@ -268,6 +291,26 @@ export const getDocumentForIndexing = internalQuery({
   },
 });
 
+export const getUploadedKnowledgeDocumentMetadata = internalQuery({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: { storageId: Id<"_storage"> },
+  ): Promise<UploadedKnowledgeDocumentMetadata> => {
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded file not found.");
+    }
+
+    return {
+      contentType: metadata.contentType ?? "application/octet-stream",
+      byteLength: metadata.size,
+    };
+  },
+});
+
 export const markDocumentIndexed = internalMutation({
   args: {
     documentId: v.id("knowledge_documents"),
@@ -283,6 +326,33 @@ export const markDocumentIndexed = internalMutation({
       indexVersion: args.indexVersion,
       error: args.error,
       lastIndexedAt: new Date().toISOString(),
+    });
+    return null;
+  },
+});
+
+export const storeKnowledgeDocumentExtraction = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+    mimeType: v.string(),
+    textContent: v.string(),
+    contentHash: v.string(),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      documentId: Id<"knowledge_documents">;
+      mimeType: string;
+      textContent: string;
+      contentHash: string;
+    },
+  ) => {
+    await ctx.db.patch(args.documentId, {
+      mimeType: args.mimeType,
+      textContent: args.textContent,
+      contentHash: args.contentHash,
+      status: "queued",
+      error: undefined,
     });
     return null;
   },
@@ -357,6 +427,7 @@ export const createKnowledgeDocument = mutation({
     businessId: v.id("businesses"),
     sourceType: v.string(),
     title: v.string(),
+    storageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
     textContent: v.optional(v.string()),
     tags: v.array(v.string()),
@@ -369,6 +440,7 @@ export const createKnowledgeDocument = mutation({
       businessId: args.businessId,
       sourceType: args.sourceType,
       title: args.title,
+      ...(args.storageId !== undefined ? { storageId: args.storageId } : {}),
       ...(args.mimeType !== undefined ? { mimeType: args.mimeType } : {}),
       ...(args.textContent !== undefined ? { textContent: args.textContent } : {}),
       status: "queued",
@@ -377,12 +449,88 @@ export const createKnowledgeDocument = mutation({
       ...(args.contentHash !== undefined ? { contentHash: args.contentHash } : {}),
     });
 
-    await bulkWorkpool.enqueueAction(
-      ctx,
-      internal.ai.context.knowledge.indexKnowledgeDocument,
-      { documentId },
-    );
+    if (args.storageId !== undefined && args.textContent === undefined) {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument,
+        { documentId },
+      );
+    } else {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledge.indexKnowledgeDocument,
+        { documentId },
+      );
+    }
     return { documentId };
+  },
+});
+
+export const generateKnowledgeDocumentUploadUrl = mutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: MutationCtx, args: BusinessIdArgs): Promise<string> => {
+    await requireMembership(ctx, args.businessId);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const finalizeKnowledgeDocumentUpload = action({
+  args: {
+    businessId: v.id("businesses"),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    title: v.string(),
+    tags: v.array(v.string()),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: FinalizeKnowledgeDocumentUploadArgs,
+  ): Promise<{ documentId: Id<"knowledge_documents"> }> => {
+    await requireKnowledgeAccess(ctx, args.businessId);
+
+    const metadata: UploadedKnowledgeDocumentMetadata = await ctx.runQuery(
+      internal.ai.context.knowledge.getUploadedKnowledgeDocumentMetadata,
+      {
+        storageId: args.storageId,
+      },
+    );
+
+    if (metadata.byteLength > MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Documents must be 10 MB or smaller.");
+    }
+
+    const resolvedContentType = isSupportedKnowledgeDocumentContentType(metadata.contentType)
+      ? metadata.contentType
+      : inferKnowledgeDocumentContentTypeFromFileName(args.fileName);
+
+    if (!resolvedContentType || !isSupportedKnowledgeDocumentContentType(resolvedContentType)) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Supported document types are PDF, DOCX, TXT, and Markdown.");
+    }
+
+    const fallbackExtension = resolvedContentType === "application/pdf"
+      ? "pdf"
+      : resolvedContentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ? "docx"
+        : resolvedContentType === "text/markdown" || resolvedContentType === "text/x-markdown"
+          ? "md"
+          : "txt";
+    const normalizedFileName = normalizeAttachmentFileName(args.fileName, fallbackExtension);
+    const fallbackTitle = normalizedFileName.replace(/\.[^.]+$/u, "").trim();
+    const documentTitle = args.title.trim() || fallbackTitle || "Uploaded document";
+
+    return await ctx.runMutation(api.ai.context.knowledge.createKnowledgeDocument, {
+      businessId: args.businessId,
+      sourceType: "upload",
+      title: documentTitle,
+      storageId: args.storageId,
+      mimeType: resolvedContentType,
+      tags: args.tags,
+      importance: 75,
+    });
   },
 });
 

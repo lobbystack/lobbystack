@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import { UploadKnowledgeDocumentSheet } from "./UploadKnowledgeDocumentSheet";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 type AgentLayoutProps = {
@@ -40,7 +41,10 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">{header.title}</h1>
           {location.pathname === "/agent/knowledge" && (
-            <AddKnowledgeSheet businessId={businessId} />
+            <div className="flex items-center gap-2">
+              <UploadKnowledgeDocumentSheet businessId={businessId} />
+              <AddKnowledgeSheet businessId={businessId} />
+            </div>
           )}
         </div>
         <p className="text-sm text-muted-foreground">{header.description}</p>

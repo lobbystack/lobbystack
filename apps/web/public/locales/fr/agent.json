@@ -14,9 +14,29 @@
       "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
       "addKnowledge": "Ajouter",
+      "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des FAQ ou toute autre information que votre réceptionniste devrait connaître.",
+      "uploadDocumentDescription": "Téléversez un fichier PDF, DOCX, TXT ou Markdown que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
+      },
       "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Formats pris en charge : PDF, DOCX, TXT et Markdown."
+        },
         "title": {
           "label": "Titre",
           "placeholder": "ex: Heures d'ouverture",
@@ -49,7 +69,9 @@
   "actions": {
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "saved": "Modifications enregistrées"
+    "saved": "Modifications enregistrées",
+    "upload": "Téléverser",
+    "uploading": "Téléversement…"
   },
   "empty": {
     "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."

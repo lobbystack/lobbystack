@@ -52,6 +52,104 @@ async function insertReceptionistProfile(
 }
 
 describe("Knowledge coverage", () => {
+  it("only lets business members generate knowledge document upload URLs", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "knowledge-upload-owner";
+
+    const { businessAId, businessBId } = await t.run(async (ctx) => {
+      const businessAId = await insertBusiness(ctx, {
+        slug: "knowledge-upload-a",
+        name: "Knowledge Upload A",
+      });
+      const businessBId = await insertBusiness(ctx, {
+        slug: "knowledge-upload-b",
+        name: "Knowledge Upload B",
+      });
+
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId: businessAId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+
+      return {
+        businessAId,
+        businessBId,
+      };
+    });
+
+    const asKnowledgeOwner = t.withIdentity({ subject });
+    const uploadUrl = await asKnowledgeOwner.mutation(
+      api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl,
+      {
+        businessId: businessAId,
+      },
+    );
+
+    expect(uploadUrl).toEqual(expect.any(String));
+
+    await expect(
+      asKnowledgeOwner.mutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl, {
+        businessId: businessBId,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects unsupported uploaded knowledge document types and cleans up storage", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "knowledge-upload-errors";
+
+    const { businessId, storageId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-upload-errors",
+        name: "Knowledge Upload Errors",
+      });
+
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+
+      const storageId = await ctx.storage.store(
+        new Blob(["not supported"], {
+          type: "application/octet-stream",
+        }),
+      );
+
+      return {
+        businessId,
+        storageId,
+      };
+    });
+
+    const asKnowledgeOwner = t.withIdentity({ subject });
+
+    await expect(
+      asKnowledgeOwner.action(api.ai.context.knowledge.finalizeKnowledgeDocumentUpload, {
+        businessId,
+        storageId,
+        fileName: "notes.bin",
+        title: "Notes",
+        tags: [],
+      }),
+    ).rejects.toThrow("Supported document types are PDF, DOCX, TXT, and Markdown.");
+
+    const metadata = await t.run(async (ctx) => {
+      return await ctx.db.system.get("_storage", storageId);
+    });
+
+    expect(metadata).toBeNull();
+  });
+
   it("keeps public knowledge retrieval isolated to the caller's business", async () => {
     const t = convexTest(schema, convexModules);
     const subject = "knowledge-owner";
