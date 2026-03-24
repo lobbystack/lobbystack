@@ -208,6 +208,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
   const [searchValue, setSearchValue] = useState("");
   const [isCompletingFollowUp, setIsCompletingFollowUp] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [resolvedRows, setResolvedRows] = useState<Array<CallRow>>([]);
   const selectedCallDetail = useQuery(
     api.voice.runtime.getCallForDashboard,
     businessId && requestedCallId
@@ -228,7 +229,13 @@ export function CallsPage({ businessId }: CallsPageProps) {
     businessId && selectedCallId ? { businessId, callId: selectedCallId } : "skip",
   ) as Array<TranscriptSegment> | undefined;
 
-  const rows = (calls ?? []) as Array<CallRow>;
+  useEffect(() => {
+    if (calls !== undefined) {
+      setResolvedRows(calls as Array<CallRow>);
+    }
+  }, [calls]);
+
+  const rows = calls === undefined ? resolvedRows : (calls as Array<CallRow>);
   const filteredRows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     return rows.filter((call) => {
