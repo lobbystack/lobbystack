@@ -177,7 +177,17 @@ function formatCallOutcomeSummary(
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const [searchParams, setSearchParams] = useSearchParams();
-  const calls = useQuery(api.voice.runtime.listRecentCalls, businessId ? { businessId, limit: 50 } : "skip");
+  const requestedCallId = searchParams.get("callId");
+  const calls = useQuery(
+    api.voice.runtime.listRecentCalls,
+    businessId
+      ? {
+          businessId,
+          limit: 50,
+          ...(requestedCallId ? { selectedCallId: requestedCallId as Id<"calls"> } : {}),
+        }
+      : "skip",
+  );
   const summary = useQuery(
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId } : "skip",
@@ -221,7 +231,6 @@ export function CallsPage({ businessId }: CallsPageProps) {
     : null;
 
   useEffect(() => {
-    const requestedCallId = searchParams.get("callId");
     const requestedCall = requestedCallId
       ? rows.find((call) => String(call._id) === requestedCallId)
       : null;

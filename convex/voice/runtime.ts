@@ -160,6 +160,7 @@ function createCallRecordingNonce(): string {
 type ListRecentCallsArgs = {
   businessId: Id<"businesses">;
   limit?: number;
+  selectedCallId?: Id<"calls">;
 };
 type GetCallTranscriptArgs = {
   businessId: Id<"businesses">;
@@ -966,23 +967,38 @@ export const listRecentCalls = query({
   args: {
     businessId: v.id("businesses"),
     limit: v.optional(v.number()),
+    selectedCallId: v.optional(v.id("calls")),
   },
   handler: async (ctx: QueryCtx, args: ListRecentCallsArgs) => {
     await requireMembership(ctx, args.businessId);
-    const [calls, openVoiceFollowUpItems]: [Array<Doc<"calls">>, Array<Doc<"inbox_items">>] =
-      await Promise.all([
-        ctx.db
-          .query("calls")
-          .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
-          .order("desc")
-          .take(args.limit ?? 20),
-        ctx.db
-          .query("inbox_items")
-          .withIndex("by_business_id_and_kind_and_status", (q) =>
-            q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
-          )
-          .collect(),
-      ]);
+    const [recentCalls, selectedCall, openVoiceFollowUpItems]: [
+      Array<Doc<"calls">>,
+      Doc<"calls"> | null,
+      Array<Doc<"inbox_items">>,
+    ] = await Promise.all([
+      ctx.db
+        .query("calls")
+        .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
+        .order("desc")
+        .take(args.limit ?? 20),
+      args.selectedCallId ? ctx.db.get(args.selectedCallId) : Promise.resolve(null),
+      ctx.db
+        .query("inbox_items")
+        .withIndex("by_business_id_and_kind_and_status", (q) =>
+          q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+        )
+        .collect(),
+    ]);
+
+    const calls = recentCalls.slice();
+    if (
+      selectedCall &&
+      selectedCall.businessId === args.businessId &&
+      !calls.some((call) => call._id === selectedCall._id)
+    ) {
+      calls.push(selectedCall);
+      calls.sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt));
+    }
 
     const voiceFollowUpByCallId = dedupeVoiceFollowUpItems(
       openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),

@@ -258,4 +258,74 @@ describe("Dashboard home summary", () => {
       ),
     ).toBe(false);
   });
+
+  it("includes an explicitly requested older call in the recent calls payload", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(
+      t,
+      "dashboard-home-selected-call",
+    );
+
+    const { olderCallId } = await t.run(async (ctx) => {
+      const oldContactId = await insertContact(ctx, businessId, {
+        name: "Raphael Morency",
+        phone: "+15817484609",
+      });
+      const oldConversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId: oldContactId,
+        channel: "voice",
+        status: "open",
+      });
+      const olderCallId = await ctx.db.insert("calls", {
+        businessId,
+        conversationId: oldConversationId,
+        twilioCallSid: "CA-dashboard-home-older-call",
+        status: "completed",
+        startedAt: "2026-03-19T12:00:00.000Z",
+      });
+      await ctx.db.insert("inbox_items", {
+        businessId,
+        kind: "voice_message",
+        title: "Voice message from Raphael Morency",
+        body: "Callback: +15817484609\n\nPlease call me back.",
+        relatedId: String(olderCallId),
+        status: "open",
+      });
+
+      for (let index = 0; index < 55; index += 1) {
+        const contactId = await insertContact(ctx, businessId, {
+          name: `Recent Caller ${index}`,
+          phone: `+1416555${String(index).padStart(4, "0")}`,
+        });
+        const conversationId = await ctx.db.insert("conversations", {
+          businessId,
+          contactId,
+          channel: "voice",
+          status: "open",
+        });
+        await ctx.db.insert("calls", {
+          businessId,
+          conversationId,
+          twilioCallSid: `CA-dashboard-home-recent-${index}`,
+          status: "completed",
+          startedAt: `2026-03-24T15:${String(index % 60).padStart(2, "0")}:00.000Z`,
+        });
+      }
+
+      return { olderCallId };
+    });
+
+    const calls = await authed.query(api.voice.runtime.listRecentCalls, {
+      businessId,
+      limit: 50,
+      selectedCallId: olderCallId,
+    });
+
+    const selectedCall = calls.find((call) => call._id === olderCallId);
+    expect(selectedCall).toBeTruthy();
+    expect(selectedCall?.followUpTask).toMatchObject({
+      body: expect.stringContaining("Please call me back."),
+    });
+  });
 });
