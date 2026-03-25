@@ -252,7 +252,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "transferCall",
       description:
-        "Transfer the live call to a human when transfer policy allows it and the caller requests or needs a human handoff.",
+        "Transfer the live call to a human when transfer policy allows it, someone is available to receive the transfer, and the caller requests or needs a human handoff.",
       parameters: {
         type: "object",
         properties: {
@@ -265,7 +265,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "takeMessage",
       description:
-        "Capture a structured callback message when a transfer is not possible or the caller wants a message left for staff.",
+        "Capture a structured callback or follow-up message when a transfer is not possible, no one is available to receive it, or the caller wants a message left for staff.",
       parameters: {
         type: "object",
         properties: {
@@ -689,6 +689,8 @@ async function configureOpenAiSession(
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
         "You are speaking on a live phone call.",
+        "Start in the language implied by the configured greeting.",
+        "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, transfer, and message taking.",
         "Do not make up availability, hours, or business policy.",
@@ -738,6 +740,7 @@ async function configureOpenAiSession(
     response: {
       instructions: [
         `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
+        "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
         "After the greeting, stop speaking and wait for the caller to respond.",
         "Do not add any extra sentence before or after the greeting.",
       ].join(" "),

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,13 +55,8 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 sm:gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t("page.title")}</h2>
-          <p className="text-muted-foreground">{t("page.description")}</p>
-        </div>
-      </div>
+    <div className="flex flex-1 flex-col gap-6">
+      <PageHeader description={t("page.description")} title={t("page.title")} />
 
       <div className="relative max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

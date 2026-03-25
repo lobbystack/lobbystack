@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { getLocalizedServiceName } from "../lib/serviceNames";
 
 type KpiWindow = {
   current: number;
@@ -168,20 +169,40 @@ async function getConversationContact(
   return await ctx.db.get(conversation.contactId);
 }
 
+function dedupeVoiceFollowUpItems(
+  items: Array<Doc<"inbox_items">>,
+): Array<Doc<"inbox_items">> {
+  const seen = new Set<string>();
+  const deduped: Array<Doc<"inbox_items">> = [];
+
+  for (const item of items) {
+    const key = item.relatedId ?? String(item._id);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(item);
+  }
+
+  return deduped;
+}
+
 export const getHomeSummary = query({
   args: {
     businessId: v.id("businesses"),
+    locale: v.union(v.literal("en"), v.literal("fr")),
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
 
     const now = new Date();
+    const nowIso = now.toISOString();
     const currentMonthStart = getMonthBoundary(now, 0);
     const nextMonthStart = getMonthBoundary(now, 1);
     const previousMonthStart = getMonthBoundary(now, -1);
     const seriesMonthStart = getMonthBoundary(now, -11);
 
-    const [calls, appointments, contacts, conversations] = await Promise.all([
+    const [calls, appointments, contacts, conversations, openVoiceFollowUpItems] = await Promise.all([
       ctx.db
         .query("calls")
         .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
@@ -197,6 +218,12 @@ export const getHomeSummary = query({
       ctx.db
         .query("conversations")
         .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+      ctx.db
+        .query("inbox_items")
+        .withIndex("by_business_id_and_kind_and_status", (q) =>
+          q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+        )
         .collect(),
     ]);
 
@@ -288,6 +315,116 @@ export const getHomeSummary = query({
       (call) => call.status === "in_progress" || call.status === "open",
     ).length;
 
+    const actionRequiredFromVoice = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    )
+      .slice(0, 6)
+      .map((item) => ({
+        id: String(item._id),
+        kind: item.kind,
+        title: item.title,
+        body: item.body,
+        createdAt: new Date(item._creationTime).toISOString(),
+        taskId: item._id,
+        ...(item.relatedId ? { callId: item.relatedId as Id<"calls"> } : {}),
+      }));
+
+    const handoffConversations = conversations
+      .filter(
+        (conversation) =>
+          conversation.status === "open" &&
+          conversation.channel === "sms" &&
+          conversation.automationState === "human_handoff",
+      );
+
+    const actionRequiredFromHandoffs = await Promise.all(
+      handoffConversations.map(async (conversation) => {
+        const [contact, latestMessages] = await Promise.all([
+          conversation.contactId ? ctx.db.get(conversation.contactId) : Promise.resolve(null),
+          ctx.db
+            .query("messages")
+            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
+            .order("desc")
+            .take(1),
+        ]);
+        const latestMessage = latestMessages[0] ?? null;
+        const latestMessageTimestamp =
+          latestMessage?._creationTime ??
+          (conversation.automationPausedAt
+            ? Date.parse(conversation.automationPausedAt)
+            : conversation._creationTime);
+
+        return {
+          id: String(conversation._id),
+          kind: "human_handoff",
+          title: contact?.name ?? contact?.phone ?? "Human handoff",
+          body:
+            latestMessage?.body?.trim() ||
+            conversation.summary ||
+            "AI is paused and waiting for an operator reply.",
+          createdAt:
+            latestMessage !== null
+              ? new Date(latestMessage._creationTime).toISOString()
+              : conversation.automationPausedAt ?? new Date(conversation._creationTime).toISOString(),
+          conversationId: conversation._id,
+          _sortTimestamp: latestMessageTimestamp,
+          _conversationCreatedAt: conversation._creationTime,
+        };
+      }),
+    );
+    actionRequiredFromHandoffs.sort(
+      (left, right) =>
+        right._sortTimestamp - left._sortTimestamp ||
+        right._conversationCreatedAt - left._conversationCreatedAt,
+    );
+
+    const actionRequired = [...actionRequiredFromVoice, ...actionRequiredFromHandoffs]
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+      .slice(0, 6)
+      .map((item) => {
+        if (!("conversationId" in item)) {
+          return item;
+        }
+
+        const {
+          _sortTimestamp: _unusedSortTimestamp,
+          _conversationCreatedAt: _unusedConversationCreatedAt,
+          ...cleanItem
+        } = item;
+        return cleanItem;
+      });
+
+    const upcomingAppointments = appointments
+      .filter(
+        (appointment) =>
+          Date.parse(appointment.startsAt) >= now.getTime() &&
+          appointment.status !== "cancelled" &&
+          appointment.status !== "canceled",
+      )
+      .sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt))
+      .slice(0, 5);
+
+    const upcoming = await Promise.all(
+      upcomingAppointments.map(async (appointment) => {
+        const [contact, service, staff] = await Promise.all([
+          ctx.db.get(appointment.contactId),
+          ctx.db.get(appointment.serviceId),
+          ctx.db.get(appointment.staffId),
+        ]);
+
+        return {
+          id: appointment._id,
+          startsAt: appointment.startsAt,
+          timezone: appointment.timezone,
+          status: appointment.status,
+          sourceChannel: appointment.sourceChannel,
+          contactName: contact?.name ?? contact?.phone ?? null,
+          serviceName: service ? getLocalizedServiceName(service, args.locale) : null,
+          staffName: staff?.name ?? null,
+        };
+      }),
+    );
+
     return {
       generatedAt: new Date().toISOString(),
       kpis: {
@@ -317,6 +454,8 @@ export const getHomeSummary = query({
         },
       },
       liveCalls,
+      actionRequired,
+      upcoming,
       monthlyCalls,
       recentCalls,
     };

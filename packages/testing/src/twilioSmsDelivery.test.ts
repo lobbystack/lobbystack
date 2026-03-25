@@ -101,6 +101,29 @@ async function insertBusiness(
   });
 }
 
+async function insertReceptionistProfile(
+  ctx: TestContext,
+  input: {
+    businessId: Id<"businesses">;
+    greeting: string;
+    summary: string;
+    bookingPolicy: string;
+    smsInstructions?: string;
+  },
+): Promise<Id<"receptionist_profiles">> {
+  return await ctx.db.insert("receptionist_profiles", {
+    businessId: input.businessId,
+    greeting: input.greeting,
+    tone: "warm and direct",
+    summary: input.summary,
+    bookingPolicy: input.bookingPolicy,
+    ...(input.smsInstructions !== undefined
+      ? { smsInstructions: input.smsInstructions }
+      : {}),
+    transferMode: "on_request",
+  });
+}
+
 async function insertSmsPhoneNumber(
   ctx: TestContext,
   input: { businessId: Id<"businesses">; e164: string },
@@ -1181,7 +1204,7 @@ describe("Twilio SMS delivery flow", () => {
     );
   });
 
-  it("falls back to the business default French locale for booking confirmations", async () => {
+  it("uses the stored French business locale for booking confirmations with mixed profile text", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-fr-business",
@@ -1193,6 +1216,13 @@ describe("Twilio SMS delivery flow", () => {
         slug: "twilio-notification-french-business",
         name: "Twilio Notification French Business",
         defaultLocale: "fr",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        greeting: "Bonjour.",
+        summary: "Twilio Notification French Business handles appointment confirmations.",
+        bookingPolicy: "Only confirm a booking after availability is checked.",
+        smsInstructions: "Keep replies short and direct.",
       });
       await insertSmsPhoneNumber(ctx, {
         businessId,

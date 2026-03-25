@@ -12,6 +12,7 @@ import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
 import {
   buildLocalizedAppointmentNotificationBody,
+  inferRuntimeLocaleFromBusinessContext,
   normalizeRuntimeLocale,
 } from "../lib/runtimeLocale";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
@@ -88,10 +89,14 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Appointment not found for notification.");
     }
 
-    const [service, contact, business, phoneNumbers] = await Promise.all([
+    const [service, contact, business, profile, phoneNumbers] = await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
       ctx.db.get(notification.businessId),
+      ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
+        .unique(),
       ctx.db
         .query("phone_numbers")
         .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
@@ -123,6 +128,12 @@ export const getNotificationDeliveryContext = internalQuery({
     const locale =
       normalizeRuntimeLocale(contact.preferredLocale) ??
       normalizeRuntimeLocale(business.defaultLocale) ??
+      inferRuntimeLocaleFromBusinessContext({
+        greeting: profile?.greeting,
+        smsInstructions: profile?.smsInstructions,
+        summary: profile?.summary,
+        bookingPolicy: profile?.bookingPolicy,
+      }) ??
       "en";
     return {
       notificationId: notification._id,

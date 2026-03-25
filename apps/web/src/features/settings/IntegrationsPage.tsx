@@ -9,6 +9,13 @@ import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -17,12 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
@@ -381,7 +388,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
         {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
 
@@ -423,7 +430,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 </Button>
               </div>
             </div>
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <h2 className="font-semibold">{t("integrations.cards.google.title")}</h2>
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 {t("integrations.cards.google.description")}
@@ -452,7 +459,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   : t("integrations.actions.connect")}
               </Button>
             </div>
-            <div className="space-y-1">
+            <div className="flex flex-col gap-1">
               <h2 className="font-semibold">{t("integrations.cards.microsoft.title")}</h2>
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 {t("integrations.cards.microsoft.description")}
@@ -462,26 +469,26 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         </ul>
       </div>
 
-      <Sheet onOpenChange={setGoogleSheetOpen} open={googleSheetOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl" side="right">
-          <SheetHeader className="border-b pb-5">
+      <Dialog onOpenChange={setGoogleSheetOpen} open={googleSheetOpen}>
+        <DialogContent className="max-h-[90vh] w-full overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="gap-0 border-b p-6 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex size-11 shrink-0 items-center justify-center">
                 <GoogleCalendarLogo />
               </div>
-              <div className="space-y-1">
-                <SheetTitle>{t("integrations.google.sheetTitle")}</SheetTitle>
-                <SheetDescription>{t("integrations.google.sheetDescription")}</SheetDescription>
+              <div className="flex flex-col gap-1">
+                <DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle>
+                <DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription>
               </div>
             </div>
-          </SheetHeader>
+          </DialogHeader>
 
-          <div className="space-y-6 p-6">
+          <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
             {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
             {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
 
-            <section className="space-y-4 rounded-xl border p-4">
-              <div className="space-y-1">
+            <section className="flex flex-col gap-4 rounded-xl border p-4">
+              <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold">
                   {t("integrations.google.connectionSectionTitle")}
                 </h3>
@@ -490,26 +497,31 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 </p>
               </div>
 
-              <label className="space-y-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t("integrations.google.staffLabel")}
-                </span>
-                <Select
-                  onValueChange={(value) => setSelectedStaffId(value ?? "")}
-                  value={selectedStaffId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("integrations.google.selectStaff")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member._id} value={String(member._id)}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
+              <FieldGroup>
+                <Field>
+                  <FieldContent>
+                    <FieldLabel>{t("integrations.google.staffLabel")}</FieldLabel>
+                    <FieldDescription>
+                      {t("integrations.google.selectStaff")}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Select
+                    onValueChange={(value) => setSelectedStaffId(value ?? "")}
+                    value={selectedStaffId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t("integrations.google.selectStaff")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((member) => (
+                        <SelectItem key={member._id} value={String(member._id)}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
 
               <Button
                 className="w-full sm:w-auto"
@@ -526,7 +538,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
               {selectedConnection ? (
                 <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.connectedAccount")}
                     </p>
@@ -535,7 +547,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                         t("integrations.google.connectedAccountUnavailable")}
                     </p>
                   </div>
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <p className="text-xs font-medium text-muted-foreground">
                       {t("integrations.google.lastSync")}
                     </p>
@@ -556,8 +568,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
             {selectedConnection ? (
               <>
-                <section className="space-y-4 rounded-xl border p-4">
-                  <div className="space-y-1">
+                <section className="flex flex-col gap-4 rounded-xl border p-4">
+                  <div className="flex flex-col gap-1">
                     <h3 className="text-sm font-semibold">
                       {t("integrations.google.calendarSectionTitle")}
                     </h3>
@@ -585,37 +597,44 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     )}
                   </div>
 
-                  <label className="space-y-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {t("integrations.google.calendarLabel")}
-                    </span>
-                    <Select
-                      disabled={isLoadingCalendars || calendarOptions.length === 0}
-                      onValueChange={(value) => setSelectedCalendarId(value ?? "")}
-                      value={selectedCalendarId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={
-                            isLoadingCalendars
-                              ? t("integrations.google.loadingCalendars")
-                              : t("integrations.google.selectCalendar")
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {calendarOptions.map((calendar) => (
-                          <SelectItem key={calendar.id} value={calendar.id}>
-                            {calendar.primary
-                              ? t("integrations.google.primaryCalendarLabel", {
-                                  summary: calendar.summary,
-                                })
-                              : calendar.summary}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </label>
+                  <FieldGroup>
+                    <Field>
+                      <FieldContent>
+                        <FieldLabel>{t("integrations.google.calendarLabel")}</FieldLabel>
+                        <FieldDescription>
+                          {selectedConnection.status === "connected"
+                            ? t("integrations.google.selectCalendar")
+                            : t("integrations.google.reconnect")}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Select
+                        disabled={isLoadingCalendars || calendarOptions.length === 0}
+                        onValueChange={(value) => setSelectedCalendarId(value ?? "")}
+                        value={selectedCalendarId}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              isLoadingCalendars
+                                ? t("integrations.google.loadingCalendars")
+                                : t("integrations.google.selectCalendar")
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {calendarOptions.map((calendar) => (
+                            <SelectItem key={calendar.id} value={calendar.id}>
+                              {calendar.primary
+                                ? t("integrations.google.primaryCalendarLabel", {
+                                    summary: calendar.summary,
+                                  })
+                                : calendar.summary}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </FieldGroup>
 
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -649,7 +668,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </div>
 
                   <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-xs font-medium text-muted-foreground">
                         {t("integrations.google.selectedCalendar")}
                       </p>
@@ -659,7 +678,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                           t("integrations.google.noCalendarSelected")}
                       </p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-xs font-medium text-muted-foreground">
                         {t("integrations.google.lastSyncState")}
                       </p>
@@ -671,8 +690,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </div>
                 </section>
 
-                <section className="space-y-4">
-                  <div className="space-y-1">
+                <section className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
                     <h3 className="text-sm font-semibold">
                       {t("integrations.google.mappedConnections")}
                     </h3>
@@ -680,7 +699,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       {t("integrations.google.mappedConnectionsDescription")}
                     </p>
                   </div>
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-3">
                     {googleConnections.map((connection) => {
                       const member = staff.find(
                         (candidate) => candidate._id === connection.staffId,
@@ -692,7 +711,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                           key={connection._id}
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="space-y-1">
+                            <div className="flex flex-col gap-1">
                               <p className="text-sm font-medium text-foreground">
                                 {member?.name ?? t("integrations.google.unknownStaff")}
                               </p>
@@ -727,8 +746,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               {t("integrations.providers.microsoft")}
             </p>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

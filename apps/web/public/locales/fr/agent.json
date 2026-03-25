@@ -1,66 +1,186 @@
 {
   "page": {
     "eyebrow": "Espace agent",
-    "title": "Façonnez la manière dont votre réceptionniste pense, dirige et répond.",
-    "description": "Ajustez le playbook opérateur, gardez la connaissance métier à jour et testez les réponses avant qu'elles n'atteignent un client."
-  },
-  "workflow": {
-    "step": "Étape {{value}}",
-    "steps": {
-      "behavior": {
-        "title": "Définir le ton et les règles d'escalade",
-        "description": "Déterminez la voix du réceptionniste, la logique d'aiguillage et les cas qui doivent déclencher un transfert."
-      },
-      "knowledge": {
-        "title": "Lui donner le bon contexte",
-        "description": "Gardez les FAQ et les documents longs bien organisés pour que l'agent s'appuie sur des faits métier réels."
-      },
-      "preview": {
-        "title": "Tester les réponses avant la mise en ligne",
-        "description": "Essayez de vraies invites clients et vérifiez comment la couche de connaissance actuelle répond."
-      }
-    }
+    "title": "Agent",
+    "description": "Configurez le comportement de votre réceptionniste IA, ses connaissances et sa gestion des appels et messages."
   },
   "sections": {
-    "profile": {
-      "eyebrow": "Conception du comportement",
-      "title": "Persona, instructions et routage",
-      "description": "Ajustez la voix du réceptionniste, la langue client, la politique de réservation et le comportement de transfert."
+    "basicSettings": {
+      "title": "Paramètres de base",
+      "description": "Message d'accueil et paramètres de transfert de votre réceptionniste."
     },
     "knowledge": {
-      "eyebrow": "Couche de connaissance",
-      "title": "FAQ et références longues",
-      "description": "Ajoutez des réponses courtes et des sources détaillées qui doivent guider les réponses de l'agent."
-    },
-    "snapshot": {
-      "eyebrow": "Contexte compilé",
-      "title": "Instantané métier actuel",
-      "description": "Vérifiez le contexte métier généré qui alimente le comportement vocal et messagerie."
-    },
-    "preview": {
-      "eyebrow": "Répétition en direct",
-      "title": "Aperçu du traitement des invites",
-      "description": "Exécutez des invites de test sur l'état actuel de la connaissance avant la mise en service."
-    }
-  },
-  "empty": {
-    "description": "Créez d'abord une entreprise, puis revenez ici pour façonner la persona du réceptionniste, charger la connaissance et répéter les réponses dans une seule surface de contrôle.",
-    "cards": {
-      "behavior": {
-        "eyebrow": "Comportement",
-        "title": "Définir le ton et la politique de transfert",
-        "description": "Décidez du style du réceptionniste, de ses priorités et des moments où il doit escalader."
+      "title": "Connaissances",
+      "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
+      "listTitle": "Base de connaissances",
+      "addKnowledge": "Ajouter",
+      "uploadDocument": "Téléverser un document",
+      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des FAQ ou toute autre information que votre réceptionniste devrait connaître.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
+      "emptyState": "Aucune connaissance ajoutée pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
       },
-      "knowledge": {
-        "eyebrow": "Connaissance",
-        "title": "Charger les FAQ et les sources",
-        "description": "Ajoutez des réponses pratiques, des documents et du contexte métier pour garder les réponses ancrées."
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
       },
-      "preview": {
-        "eyebrow": "Aperçu",
-        "title": "Tester les invites clients avant le lancement",
-        "description": "Simulez de vraies questions et validez la réponse de la configuration actuelle de l'agent."
+      "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
+        },
+        "title": {
+          "label": "Titre",
+          "placeholder": "Heures d'ouverture",
+          "hint": "Un titre court et descriptif pour cette information."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "Nous sommes ouverts du lundi au vendredi de 9h à 17h.",
+          "hint": "L'information réelle que le réceptionniste doit utiliser."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "Horaires, adresse",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
+        }
+      }
+    },
+    "services": {
+      "title": "Services",
+      "description": "Détails des services que votre réceptionniste peut utiliser pour expliquer vos offres et aider à réserver le bon rendez-vous.",
+      "listTitle": "Services",
+      "addKnowledge": "Ajouter un service",
+      "uploadDocument": "Téléverser un document",
+      "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre réceptionniste devrait mentionner.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
+      "emptyState": "Aucun service ajouté pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
+      },
+      "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
+        },
+        "title": {
+          "label": "Titre",
+          "placeholder": "Consultation initiale",
+          "hint": "Un titre court et descriptif pour ce service."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "Une consultation de 30 minutes pour comprendre les besoins de l'appelant et recommander la bonne suite.",
+          "hint": "Décrivez le service pour que le réceptionniste puisse l'expliquer clairement."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "Consultation, nouveaux clients",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser ces services."
+        }
+      }
+    },
+    "rules": {
+      "title": "Règles",
+      "description": "Instructions qui guident la manière dont votre réceptionniste doit gérer les appels et les messages.",
+      "listTitle": "Règles",
+      "addKnowledge": "Ajouter une règle",
+      "uploadDocument": "Téléverser un document",
+      "addKnowledgeDescription": "Ce que votre réceptionniste doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
+      "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
+      "documentBadge": "Document",
+      "emptyState": "Aucune règle ajoutée pour le moment.",
+      "previewPending": "Ce document est en cours de traitement.",
+      "previewError": "Ce document n'a pas pu être traité.",
+      "status": {
+        "queued": "En attente",
+        "indexing": "Indexation",
+        "indexed": "Prêt",
+        "error": "Erreur"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choisissez un fichier à téléverser.",
+        "unsupportedFile": "Les formats pris en charge sont PDF, DOCX, TXT et Markdown.",
+        "maxSize": "Les documents doivent faire 10 Mo ou moins.",
+        "uploadFailed": "Nous n'avons pas pu téléverser ce document. Réessayez."
+      },
+      "fields": {
+        "file": {
+          "label": "Fichier",
+          "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
+          "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
+          "chooseFile": "Choisir un fichier"
+        },
+        "title": {
+          "label": "Titre",
+          "placeholder": "Transfert des appels",
+          "hint": "Un titre court et descriptif pour cette règle."
+        },
+        "content": {
+          "label": "Contenu",
+          "placeholder": "Transférez les appels urgents de facturation à l'accueil et envoyez un texto au gestionnaire après les heures d'ouverture.",
+          "hint": "Décrivez ce que le réceptionniste doit faire."
+        },
+        "tags": {
+          "label": "Mots-clés (optionnel)",
+          "placeholder": "Transferts, escalade",
+          "hint": "Mots-clés séparés par des virgules pour catégoriser ces règles."
+        }
       }
     }
+  },
+  "fields": {
+    "greeting": {
+      "label": "Message d'accueil",
+      "placeholder": "Bonjour, merci d'avoir appelé…",
+      "hint": "La phrase d'ouverture utilisée par votre réceptionniste lorsqu'il répond à un appel ou démarre une conversation."
+    },
+    "defaultLocale": {
+      "label": "Langue client par défaut",
+      "placeholder": "Choisir une langue par défaut",
+      "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
+    },
+    "transferNumber": {
+      "label": "Numéro de transfert par défaut",
+      "placeholder": "+1 555-123-4567",
+      "hint": "Le numéro que votre réceptionniste doit utiliser lorsqu'il transfère un appel à une personne."
+    }
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Modifications enregistrées",
+    "delete": "Supprimer",
+    "confirmDelete": "Confirmer ?",
+    "upload": "Téléverser",
+    "uploading": "Téléversement…"
+  },
+  "empty": {
+    "description": "Créez d'abord une entreprise, puis revenez ici pour configurer votre réceptionniste IA."
   }
 }

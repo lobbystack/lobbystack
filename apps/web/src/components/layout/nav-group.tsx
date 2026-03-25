@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -26,6 +26,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type {
   NavCollapsibleItem,
   NavGroup as NavGroupProps,
@@ -38,12 +39,27 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const location = useLocation();
   const href = location.pathname;
 
+  // Derive which collapsible should be initially open based on current path
+  const collapsibleItems = useMemo(
+    () => items.filter((item): item is NavCollapsibleItem => !isNavLinkItem(item)),
+    [items],
+  );
+  const initialOpen = collapsibleItems.find((item) => checkIsActive(href, item, true));
+  const [openKey, setOpenKey] = useState<string | null>(
+    initialOpen ? getNavItemKey(initialOpen, title) : null,
+  );
+
+  useEffect(() => {
+    const activeItem = collapsibleItems.find((item) => checkIsActive(href, item, true));
+    setOpenKey(activeItem ? getNavItemKey(activeItem, title) : null);
+  }, [href, title, collapsibleItems]);
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const key = `${item.title}-${"url" in item ? item.url : item.items[0]?.url ?? title}`;
+          const key = getNavItemKey(item, title);
 
           if (isNavLinkItem(item)) {
             return <SidebarMenuLink href={href} item={item} key={key} />;
@@ -53,7 +69,15 @@ export function NavGroup({ title, items }: NavGroupProps) {
             return <SidebarMenuCollapsedDropdown href={href} item={item} key={key} />;
           }
 
-          return <SidebarMenuCollapsible href={href} item={item} key={key} />;
+          return (
+            <SidebarMenuCollapsible
+              href={href}
+              isOpen={openKey === key}
+              item={item}
+              key={key}
+              onToggle={(open) => setOpenKey(open ? key : null)}
+            />
+          );
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -62,6 +86,15 @@ export function NavGroup({ title, items }: NavGroupProps) {
 
 function isNavLinkItem(item: NavItem): item is NavLinkItem {
   return "url" in item;
+}
+
+function getNavItemKey(item: NavItem, fallback: string): string {
+  if (isNavLinkItem(item)) {
+    return `link:${item.url}`;
+  }
+
+  const itemUrls = item.items.map((subItem) => subItem.url).join("|");
+  return `group:${itemUrls || fallback}`;
 }
 
 function NavBadge({ children }: { children: ReactNode }) {
@@ -90,26 +123,29 @@ function SidebarMenuLink({ item, href }: { item: NavLinkItem; href: string }) {
 function SidebarMenuCollapsible({
   item,
   href,
+  isOpen,
+  onToggle,
 }: {
   item: NavCollapsibleItem;
   href: string;
+  isOpen: boolean;
+  onToggle: (open: boolean) => void;
 }) {
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Collapsible
-      asChild
-      className="group/collapsible"
-      defaultOpen={checkIsActive(href, item, true)}
-    >
-      <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title}>
+    <SidebarMenuItem>
+      <Collapsible className="group/collapsible" open={isOpen} onOpenChange={onToggle}>
+        <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
             {item.icon ? <item.icon /> : null}
             <span>{item.title}</span>
             {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
-            <ChevronRight className="ms-auto transition-transform duration-200 group-data-[open]/collapsible:rotate-90 rtl:rotate-180" />
-          </SidebarMenuButton>
+            <ChevronRight
+              className={cn(
+                "ms-auto transition-transform duration-200 rtl:rotate-180",
+                isOpen && "rotate-90",
+              )}
+            />
         </CollapsibleTrigger>
         <CollapsibleContent className="CollapsibleContent">
           <SidebarMenuSub>
@@ -128,8 +164,8 @@ function SidebarMenuCollapsible({
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+      </Collapsible>
+    </SidebarMenuItem>
   );
 }
 

@@ -141,12 +141,25 @@
     }
   },
   "account": {
+    "actions": {
+      "change": "Modifier"
+    },
+    "businessName": {
+      "label": "Nom de l'entreprise",
+      "description": "Il s'agit du nom affiche partout dans le tableau de bord et dans les renseignements visibles par les clients.",
+      "placeholder": "Clinique familiale Maple",
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "saved": "Modifications enregistrées"
+    },
     "changeEmail": {
       "label": "Changer le courriel",
       "description": "Entrez votre nouveau courriel et votre mot de passe actuel. Nous enverrons un lien de confirmation avant de modifier votre courriel de connexion.",
       "newEmailPlaceholder": "Nouveau courriel",
       "currentPasswordPlaceholder": "Mot de passe actuel",
       "save": "Envoyer le lien de confirmation",
+      "title": "Courriel",
+      "currentPasswordLabel": "Mot de passe actuel",
       "currentEmail": "Courriel actuel : {{email}}",
       "confirmationSent": "Nous avons envoye un lien de confirmation a {{email}}.",
       "errors": {
@@ -157,6 +170,24 @@
         "missingSiteUrl": "La confirmation du courriel n'est pas encore configuree. Definissez SITE_URL sur le deploiement Convex puis reessayez.",
         "required": "Entrez une nouvelle adresse courriel.",
         "failed": "Impossible d'envoyer un lien de confirmation. Veuillez reessayer."
+      }
+    },
+    "changePassword": {
+      "title": "Mot de passe",
+      "label": "Changer le mot de passe",
+      "description": "Mot de passe utilise pour vous connecter.",
+      "dialogDescription": "Entrez votre mot de passe actuel et un nouveau mot de passe.",
+      "currentPasswordLabel": "Mot de passe actuel",
+      "currentPasswordPlaceholder": "Mot de passe actuel",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Nouveau mot de passe",
+      "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+      "confirmPasswordPlaceholder": "Confirmer le nouveau mot de passe",
+      "save": "Enregistrer",
+      "saved": "Mot de passe mis a jour.",
+      "errors": {
+        "mismatch": "Les nouveaux mots de passe ne correspondent pas.",
+        "failed": "Impossible de mettre a jour le mot de passe."
       }
     }
   },

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AutomationsPageProps = {
@@ -24,10 +25,7 @@ export function AutomationsPage({ businessId }: AutomationsPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("page.title")}</h1>
-        <p className="text-muted-foreground">{t("page.description")}</p>
-      </div>
+      <PageHeader description={t("page.description")} title={t("page.title")} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         {cards.map((card) => (

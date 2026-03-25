@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   Bot,
+  BriefcaseBusiness,
   ChartColumnIncreasing,
   ContactRound,
   House,
@@ -9,8 +10,11 @@ import {
   Phone,
   Settings,
   SlidersHorizontal,
+  ListChecks,
+  ScrollText,
   UserRound,
   Workflow,
+  BookOpenText,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -43,7 +47,7 @@ export function AppSidebar({
   operatorName,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
-  const { t } = useTranslation(["common", "nav", "settings"]);
+  const { t } = useTranslation(["common", "nav", "settings", "agent"]);
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
@@ -72,7 +76,32 @@ export function AppSidebar({
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: ChartColumnIncreasing },
             { title: t("nav:items.automations"), url: "/automations", icon: Workflow },
-            { title: t("nav:items.agent"), url: "/agent", icon: Bot },
+            {
+              title: t("nav:items.agent"),
+              icon: Bot,
+              items: [
+                {
+                  title: t("agent:sections.basicSettings.title"),
+                  url: "/agent",
+                  icon: ListChecks,
+                },
+                {
+                  title: t("agent:sections.knowledge.title"),
+                  url: "/agent/knowledge",
+                  icon: BookOpenText,
+                },
+                {
+                  title: t("agent:sections.services.title"),
+                  url: "/agent/services",
+                  icon: BriefcaseBusiness,
+                },
+                {
+                  title: t("agent:sections.rules.title"),
+                  url: "/agent/rules",
+                  icon: ScrollText,
+                },
+              ],
+            },
             {
               title: t("nav:items.settings"),
               icon: Settings,

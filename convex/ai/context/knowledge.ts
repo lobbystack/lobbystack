@@ -12,7 +12,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../../_generated/server";
-import { internal } from "../../_generated/api";
+import { api, internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../../lib/auth";
 import {
@@ -22,6 +22,17 @@ import {
   rag,
   receptionistAgent,
 } from "../../lib/components";
+import {
+  inferKnowledgeDocumentContentTypeFromFileName,
+  isSupportedKnowledgeDocumentContentType,
+  MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES,
+} from "../../lib/knowledgeDocuments";
+import { normalizeAttachmentFileName } from "../../lib/messageAttachments";
+import {
+  knowledgeSectionValidator,
+  resolveKnowledgeSection,
+  type KnowledgeSection,
+} from "../../lib/knowledgeSections";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -38,6 +49,17 @@ type PreviewKnowledgeArgs = {
 };
 type DocumentIdArgs = { documentId: Id<"knowledge_documents"> };
 type SnippetIdArgs = { snippetId: Id<"knowledge_snippets"> };
+type DeleteKnowledgeEntryArgs =
+  | {
+      businessId: Id<"businesses">;
+      documentId: Id<"knowledge_documents">;
+      snippetId?: never;
+    }
+  | {
+      businessId: Id<"businesses">;
+      snippetId: Id<"knowledge_snippets">;
+      documentId?: never;
+    };
 type MarkDocumentIndexedArgs = {
   documentId: Id<"knowledge_documents">;
   status: string;
@@ -54,21 +76,40 @@ type MarkSnippetIndexedArgs = {
 type UpsertKnowledgeSnippetArgs = {
   businessId: Id<"businesses">;
   snippetId?: Id<"knowledge_snippets">;
+  section?: KnowledgeSection;
   title: string;
   content: string;
   tags: Array<string>;
   priority: number;
   active: boolean;
 };
+type ListKnowledgeArgs = {
+  businessId: Id<"businesses">;
+  section?: KnowledgeSection;
+};
 type CreateKnowledgeDocumentArgs = {
   businessId: Id<"businesses">;
+  section?: KnowledgeSection;
   sourceType: string;
   title: string;
+  storageId?: Id<"_storage">;
   mimeType?: string;
   textContent?: string;
   tags: Array<string>;
   importance: number;
   contentHash?: string;
+};
+type FinalizeKnowledgeDocumentUploadArgs = {
+  businessId: Id<"businesses">;
+  section?: KnowledgeSection;
+  storageId: Id<"_storage">;
+  fileName: string;
+  title: string;
+  tags: Array<string>;
+};
+type UploadedKnowledgeDocumentMetadata = {
+  contentType: string;
+  byteLength: number;
 };
 type KnowledgeReindexState = {
   documentIds: Array<Id<"knowledge_documents">>;
@@ -116,34 +157,48 @@ async function indexKnowledgeDocumentById(
     return null;
   }
 
-  const result = await rag.add(ctx, {
-    namespace: getKnowledgeNamespace(String(document.businessId)),
-    title: document.title,
-    text: document.textContent,
-    key: `document:${String(documentId)}`,
-    ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
-    filterValues: [
-      { name: "businessId", value: String(document.businessId) },
-      { name: "sourceType", value: document.sourceType },
-      {
-        name: "businessAndSource",
-        value: {
-          businessId: String(document.businessId),
-          sourceType: document.sourceType,
-        },
-      },
-    ],
-  });
-
   await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
     documentId,
-    status: result.status === "ready" ? "indexed" : "indexing",
-    indexedEntryId: String(result.entryId),
-    indexVersion: KNOWLEDGE_INDEX_VERSION,
+    status: "indexing",
   });
-  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
-    businessId: document.businessId,
-  });
+
+  try {
+    const result = await rag.add(ctx, {
+      namespace: getKnowledgeNamespace(String(document.businessId)),
+      title: document.title,
+      text: document.textContent,
+      key: `document:${String(documentId)}`,
+      ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
+      filterValues: [
+        { name: "businessId", value: String(document.businessId) },
+        { name: "sourceType", value: document.sourceType },
+        {
+          name: "businessAndSource",
+          value: {
+            businessId: String(document.businessId),
+            sourceType: document.sourceType,
+          },
+        },
+      ],
+    });
+
+    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+      documentId,
+      status: result.status === "ready" ? "indexed" : "indexing",
+      indexedEntryId: String(result.entryId),
+      indexVersion: KNOWLEDGE_INDEX_VERSION,
+    });
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: document.businessId,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to index this document.";
+    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+      documentId,
+      status: "error",
+      error: message,
+    });
+  }
   return null;
 }
 
@@ -259,12 +314,89 @@ async function generatePreviewAnswer(
   return { text: result.text, threadId };
 }
 
+async function deleteKnowledgeEntryById(
+  ctx: ActionCtx,
+  args: DeleteKnowledgeEntryArgs,
+): Promise<null> {
+  await requireKnowledgeAccess(ctx, args.businessId);
+
+  if ("documentId" in args && args.documentId) {
+    const document = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
+      documentId: args.documentId,
+    });
+
+    if (!document || document.businessId !== args.businessId) {
+      throw new Error("Knowledge document not found.");
+    }
+
+    if (document.indexedEntryId) {
+      await rag.delete(ctx, { entryId: document.indexedEntryId as never });
+    }
+    if (document.storageId) {
+      await ctx.storage.delete(document.storageId);
+    }
+
+    await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeDocumentRecord, {
+      documentId: args.documentId,
+    });
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: args.businessId,
+    });
+    return null;
+  }
+
+  const snippetId = args.snippetId;
+  if (!snippetId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  const snippet = await ctx.runQuery(internal.ai.context.knowledge.getSnippetForIndexing, {
+    snippetId,
+  });
+
+  if (!snippet || snippet.businessId !== args.businessId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  if (snippet.indexedEntryId) {
+    await rag.delete(ctx, { entryId: snippet.indexedEntryId as never });
+  }
+
+  await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeSnippetRecord, {
+    snippetId,
+  });
+  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+    businessId: args.businessId,
+  });
+  return null;
+}
+
 export const getDocumentForIndexing = internalQuery({
   args: {
     documentId: v.id("knowledge_documents"),
   },
   handler: async (ctx: QueryCtx, args: DocumentIdArgs) => {
     return await ctx.db.get(args.documentId);
+  },
+});
+
+export const getUploadedKnowledgeDocumentMetadata = internalQuery({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: { storageId: Id<"_storage"> },
+  ): Promise<UploadedKnowledgeDocumentMetadata> => {
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded file not found.");
+    }
+
+    return {
+      contentType: metadata.contentType ?? "application/octet-stream",
+      byteLength: metadata.size,
+    };
   },
 });
 
@@ -288,6 +420,43 @@ export const markDocumentIndexed = internalMutation({
   },
 });
 
+export const deleteKnowledgeDocumentRecord = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+  },
+  handler: async (ctx: MutationCtx, args: DocumentIdArgs) => {
+    await ctx.db.delete(args.documentId);
+    return null;
+  },
+});
+
+export const storeKnowledgeDocumentExtraction = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+    mimeType: v.string(),
+    textContent: v.string(),
+    contentHash: v.string(),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      documentId: Id<"knowledge_documents">;
+      mimeType: string;
+      textContent: string;
+      contentHash: string;
+    },
+  ) => {
+    await ctx.db.patch(args.documentId, {
+      mimeType: args.mimeType,
+      textContent: args.textContent,
+      contentHash: args.contentHash,
+      status: "queued",
+      error: undefined,
+    });
+    return null;
+  },
+});
+
 export const markSnippetIndexed = internalMutation({
   args: {
     snippetId: v.id("knowledge_snippets"),
@@ -306,10 +475,21 @@ export const markSnippetIndexed = internalMutation({
   },
 });
 
+export const deleteKnowledgeSnippetRecord = internalMutation({
+  args: {
+    snippetId: v.id("knowledge_snippets"),
+  },
+  handler: async (ctx: MutationCtx, args: SnippetIdArgs) => {
+    await ctx.db.delete(args.snippetId);
+    return null;
+  },
+});
+
 export const upsertKnowledgeSnippet = mutation({
   args: {
     businessId: v.id("businesses"),
     snippetId: v.optional(v.id("knowledge_snippets")),
+    section: v.optional(knowledgeSectionValidator),
     title: v.string(),
     content: v.string(),
     tags: v.array(v.string()),
@@ -323,6 +503,7 @@ export const upsertKnowledgeSnippet = mutation({
       args.snippetId ??
       (await ctx.db.insert("knowledge_snippets", {
         businessId: args.businessId,
+        ...(args.section !== undefined ? { section: args.section } : {}),
         title: args.title,
         content: args.content,
         tags: args.tags,
@@ -332,6 +513,7 @@ export const upsertKnowledgeSnippet = mutation({
 
     if (args.snippetId) {
       await ctx.db.patch(args.snippetId, {
+        ...(args.section !== undefined ? { section: args.section } : {}),
         title: args.title,
         content: args.content,
         tags: args.tags,
@@ -355,8 +537,10 @@ export const upsertKnowledgeSnippet = mutation({
 export const createKnowledgeDocument = mutation({
   args: {
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
     sourceType: v.string(),
     title: v.string(),
+    storageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
     textContent: v.optional(v.string()),
     tags: v.array(v.string()),
@@ -367,8 +551,10 @@ export const createKnowledgeDocument = mutation({
     await requireMembership(ctx, args.businessId);
     const documentId = await ctx.db.insert("knowledge_documents", {
       businessId: args.businessId,
+      ...(args.section !== undefined ? { section: args.section } : {}),
       sourceType: args.sourceType,
       title: args.title,
+      ...(args.storageId !== undefined ? { storageId: args.storageId } : {}),
       ...(args.mimeType !== undefined ? { mimeType: args.mimeType } : {}),
       ...(args.textContent !== undefined ? { textContent: args.textContent } : {}),
       status: "queued",
@@ -377,20 +563,99 @@ export const createKnowledgeDocument = mutation({
       ...(args.contentHash !== undefined ? { contentHash: args.contentHash } : {}),
     });
 
-    await bulkWorkpool.enqueueAction(
-      ctx,
-      internal.ai.context.knowledge.indexKnowledgeDocument,
-      { documentId },
-    );
+    if (args.storageId !== undefined && args.textContent === undefined) {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument,
+        { documentId },
+      );
+    } else {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledge.indexKnowledgeDocument,
+        { documentId },
+      );
+    }
     return { documentId };
+  },
+});
+
+export const generateKnowledgeDocumentUploadUrl = mutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: MutationCtx, args: BusinessIdArgs): Promise<string> => {
+    await requireMembership(ctx, args.businessId);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const finalizeKnowledgeDocumentUpload = action({
+  args: {
+    businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+    title: v.string(),
+    tags: v.array(v.string()),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: FinalizeKnowledgeDocumentUploadArgs,
+  ): Promise<{ documentId: Id<"knowledge_documents"> }> => {
+    await requireKnowledgeAccess(ctx, args.businessId);
+
+    const metadata: UploadedKnowledgeDocumentMetadata = await ctx.runQuery(
+      internal.ai.context.knowledge.getUploadedKnowledgeDocumentMetadata,
+      {
+        storageId: args.storageId,
+      },
+    );
+
+    if (metadata.byteLength > MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Documents must be 10 MB or smaller.");
+    }
+
+    const resolvedContentType = isSupportedKnowledgeDocumentContentType(metadata.contentType)
+      ? metadata.contentType
+      : inferKnowledgeDocumentContentTypeFromFileName(args.fileName);
+
+    if (!resolvedContentType || !isSupportedKnowledgeDocumentContentType(resolvedContentType)) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error("Supported document types are PDF, DOCX, TXT, and Markdown.");
+    }
+
+    const fallbackExtension = resolvedContentType === "application/pdf"
+      ? "pdf"
+      : resolvedContentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ? "docx"
+        : resolvedContentType === "text/markdown" || resolvedContentType === "text/x-markdown"
+          ? "md"
+          : "txt";
+    const normalizedFileName = normalizeAttachmentFileName(args.fileName, fallbackExtension);
+    const fallbackTitle = normalizedFileName.replace(/\.[^.]+$/u, "").trim();
+    const documentTitle = args.title.trim() || fallbackTitle || "Uploaded document";
+
+    return await ctx.runMutation(api.ai.context.knowledge.createKnowledgeDocument, {
+      businessId: args.businessId,
+      ...(args.section !== undefined ? { section: args.section } : {}),
+      sourceType: "upload",
+      title: documentTitle,
+      storageId: args.storageId,
+      mimeType: resolvedContentType,
+      tags: args.tags,
+      importance: 75,
+    });
   },
 });
 
 export const listKnowledge = query({
   args: {
     businessId: v.id("businesses"),
+    section: v.optional(knowledgeSectionValidator),
   },
-  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
+  handler: async (ctx: QueryCtx, args: ListKnowledgeArgs) => {
     await requireMembership(ctx, args.businessId);
     const [documents, snippets] = await Promise.all([
       ctx.db
@@ -403,7 +668,18 @@ export const listKnowledge = query({
         .collect(),
     ]);
 
-    return { documents, snippets };
+    if (args.section === undefined) {
+      return { documents, snippets };
+    }
+
+    return {
+      documents: documents.filter(
+        (document) => resolveKnowledgeSection(document.section) === args.section,
+      ),
+      snippets: snippets.filter(
+        (snippet) => resolveKnowledgeSection(snippet.section) === args.section,
+      ),
+    };
   },
 });
 
@@ -427,6 +703,39 @@ export const searchKnowledgeForDashboard = action({
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await requireKnowledgeAccess(ctx, args.businessId);
     return await searchKnowledge(ctx, args);
+  },
+});
+
+export const deleteKnowledgeEntry = action({
+  args: {
+    businessId: v.id("businesses"),
+    documentId: v.optional(v.id("knowledge_documents")),
+    snippetId: v.optional(v.id("knowledge_snippets")),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: {
+      businessId: Id<"businesses">;
+      documentId?: Id<"knowledge_documents">;
+      snippetId?: Id<"knowledge_snippets">;
+    },
+  ) => {
+    if ((args.documentId ? 1 : 0) + (args.snippetId ? 1 : 0) !== 1) {
+      throw new Error("Specify exactly one knowledge entry to delete.");
+    }
+
+    return await deleteKnowledgeEntryById(
+      ctx,
+      args.documentId
+        ? {
+            businessId: args.businessId,
+            documentId: args.documentId,
+          }
+        : {
+            businessId: args.businessId,
+            snippetId: args.snippetId!,
+          },
+    );
   },
 });
 

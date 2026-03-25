@@ -80,6 +80,41 @@
       "description": "{{count}} appels récents dans le flux d'activité.",
       "unknownCaller": "Appelant inconnu",
       "durationValue": "{{value}} sec"
+    },
+    "actionRequired": {
+      "title": "Action requise",
+      "description": "Tâches de suivi client qui nécessitent encore une intervention humaine.",
+      "titleWithContact": "{{message}} pour {{name}}",
+      "urgent": "Urgent",
+      "emptyTitle": "Aucune tâche de suivi ouverte",
+      "emptyDescription": "Les nouvelles demandes de rappel et les relais humains apparaîtront ici.",
+      "fields": {
+        "callback": "Rappel",
+        "callbackWindow": "Rappel préféré"
+      },
+      "kinds": {
+        "voice_message": "Rappel",
+        "human_handoff": "Transfert",
+        "other": "Ouvert"
+      }
+    },
+    "upcoming": {
+      "title": "À venir",
+      "description": "Les prochains rendez-vous au calendrier.",
+      "unknownContact": "Contact inconnu",
+      "unknownService": "Service inconnu",
+      "withStaff": "avec {{name}}",
+      "emptyTitle": "Aucun rendez-vous à venir",
+      "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",
+      "status": {
+        "booked": "Réservé",
+        "confirmed": "Confirmé"
+      },
+      "source": {
+        "voice": "Voix",
+        "sms": "SMS",
+        "dashboard": "Tableau de bord"
+      }
     }
   },
   "setup": {

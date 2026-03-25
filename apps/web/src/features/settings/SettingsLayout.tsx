@@ -2,8 +2,9 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { PageHeader } from "@/components/page-header";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { Separator } from "@/components/ui/separator";
+
 
 type SettingsLayoutProps = {
   businessId?: Id<"businesses">;
@@ -34,12 +35,8 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
           };
 
   return (
-    <div>
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{header.title}</h1>
-        <p className="text-muted-foreground">{header.description}</p>
-      </div>
-      <Separator className="my-4 lg:my-6" />
+    <div className="flex flex-col gap-6">
+      <PageHeader description={header.description} title={header.title} />
       <div className="w-full">
         <Outlet />
       </div>

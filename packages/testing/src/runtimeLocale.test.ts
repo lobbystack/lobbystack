@@ -4,6 +4,7 @@ import {
   buildLocalizedAppointmentNotificationBody,
   classifyRuntimeLocale,
   detectExplicitRuntimeLocaleRequest,
+  inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
 } from "../../../convex/lib/runtimeLocale";
 
@@ -44,6 +45,16 @@ describe("runtime locale detection", () => {
   it("falls back to English when a stored runtime locale is missing", () => {
     expect(resolveRuntimeLocale(undefined)).toBe("en");
     expect(resolveRuntimeLocale(null)).toBe("en");
+  });
+
+  it("infers the business locale from French greeting and policy text", () => {
+    expect(
+      inferRuntimeLocaleFromBusinessContext({
+        greeting: "Bonjour, merci d'avoir appelé Clinique Example.",
+        summary: "Nous aidons avec les rendez-vous et les suivis.",
+        bookingPolicy: "Annuler mon rendez-vous par SMS n'est pas pris en charge.",
+      }),
+    ).toBe("fr");
   });
 
   it("keeps timezone information in localized appointment notifications", () => {

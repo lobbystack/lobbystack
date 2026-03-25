@@ -11,28 +11,30 @@ import {
 import { useAction, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
-  Bot,
   ChevronRight,
   Download,
   FileText,
   Globe,
   MessageCircle,
   MessagesSquare,
+  Power,
   Plus,
   Search as SearchIcon,
   Send,
-  User,
   X,
 } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Toggle } from "@/components/ui/toggle";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
@@ -316,6 +318,7 @@ function formatAutomationPausedByline(
 
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
+  const [searchParams, setSearchParams] = useSearchParams();
   const conversations = useQuery(
     api.dashboard.messages.listConversationSummaries,
     businessId ? { businessId } : "skip",
@@ -384,11 +387,19 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }, [conversations, searchValue]);
 
   useEffect(() => {
-    if (!selectedConversationId && filteredConversations[0]?.id) {
-      setSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
-      setMobileSelectedConversationId(filteredConversations[0].id as Id<"conversations">);
+    const requestedConversationId = searchParams.get("conversationId");
+    const requestedConversation = requestedConversationId
+      ? (conversations ?? []).find(
+          (conversation) => String(conversation.id) === requestedConversationId,
+        ) ?? null
+      : null;
+    const nextSelectedConversation = requestedConversation ?? filteredConversations[0] ?? conversations?.[0] ?? null;
+
+    if (nextSelectedConversation && selectedConversationId !== nextSelectedConversation.id) {
+      setSelectedConversationId(nextSelectedConversation.id as Id<"conversations">);
+      setMobileSelectedConversationId(nextSelectedConversation.id as Id<"conversations">);
     }
-  }, [filteredConversations, selectedConversationId]);
+  }, [conversations, filteredConversations, searchParams, selectedConversationId]);
 
   useEffect(() => {
     if (!businessId || !selectedConversationId || thread?.conversation.channel !== "sms") {
@@ -471,6 +482,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     setSelectedConversationId(conversationId);
     setMobileSelectedConversationId(conversationId);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("conversationId", String(conversationId));
+      return next;
+    });
   }
 
   async function handleAttachmentFiles(
@@ -669,14 +685,17 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         type="file"
       />
 
-      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{t("page.title")}</h1>
-              <MessagesSquare className="size-5" />
-            </div>
-          </div>
+      <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <PageHeader
+            className="py-0"
+            title={
+              <span className="flex items-center gap-2">
+                {t("page.title")}
+                <MessagesSquare className="size-5" />
+              </span>
+            }
+          />
           <label
             className={cn(
               "focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring",
@@ -761,9 +780,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       >
         {thread ? (
           <>
-            <div className="mb-4 min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
+            <div className="min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="flex min-w-0 gap-3">
+                <div className="flex min-w-0 flex-1 gap-3">
                   <Button
                     className="-ms-2 h-full sm:hidden"
                     onClick={() => setMobileSelectedConversationId(undefined)}
@@ -772,7 +791,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   >
                     <ArrowLeft className="rtl:rotate-180" />
                   </Button>
-                  <div className="flex min-w-0 items-center gap-2 lg:gap-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-4">
                     <Avatar className="size-9 lg:size-11">
                       <AvatarFallback>
                         {initials(
@@ -781,7 +800,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold lg:text-base">
                         {thread.contact?.name ??
                           thread.contact?.phone ??
@@ -793,45 +812,24 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           t("page.noChannel")}
                       </span>
                     </div>
-                  </div>
-                </div>
-                <div className="min-w-0 w-full xl:-me-2 xl:ms-auto xl:max-w-lg">
-                  <div className="flex min-h-12 items-center xl:justify-end">
                     {isSmsConversation ? (
-                      <div className="inline-flex items-center rounded-full border border-border bg-background p-1 shadow-xs">
-                        <button
-                          className={cn(
-                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-                            automationState === "ai_active"
-                              ? "bg-foreground text-background"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                          disabled={isUpdatingAutomation}
-                          onClick={() => {
-                            void handleAutomationModeChange("ai_active");
-                          }}
-                          type="button"
-                        >
-                          <Bot className="size-3.5" />
-                          {t("page.automationAiActive")}
-                        </button>
-                        <button
-                          className={cn(
-                            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-                            automationState === "human_handoff"
-                              ? "bg-foreground text-background"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                          disabled={isUpdatingAutomation}
-                          onClick={() => {
-                            void handleAutomationModeChange("human_handoff");
-                          }}
-                          type="button"
-                        >
-                          <User className="size-3.5" />
-                          {t("page.automationHumanHandoff")}
-                        </button>
-                      </div>
+                      <Toggle
+                        aria-label={t("page.automationHumanHandoff")}
+                        className="shrink-0"
+                        disabled={isUpdatingAutomation}
+                        onPressedChange={(pressed) => {
+                          void handleAutomationModeChange(
+                            pressed ? "human_handoff" : "ai_active",
+                          );
+                        }}
+                        pressed={isHumanHandoff}
+                        variant="outline"
+                      >
+                        <Power data-icon="inline-start" />
+                        {isHumanHandoff
+                          ? t("page.automationResumeAi")
+                          : t("page.automationHumanHandoff")}
+                      </Toggle>
                     ) : null}
                   </div>
                 </div>
@@ -845,7 +843,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               ) : null}
             </div>
-            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
@@ -867,9 +865,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                               )}
                               key={String(item.id)}
                             >
-                              <div className="space-y-2">
+                              <div className="flex flex-col gap-2">
                                 {item.attachments.length > 0 ? (
-                                  <div className="space-y-2">
+                                  <div className="flex flex-col gap-2">
                                     {item.attachments.map((attachment) => (
                                       <MessageAttachmentPreview
                                         attachment={attachment}
@@ -881,7 +879,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                                 {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
                               </div>
                               {isFailedOutboundMessage ? (
-                                <p className="mt-2 text-xs font-medium text-destructive">
+                                <p className="pt-2 text-xs font-medium text-destructive">
                                   {t("page.deliveryFailed")}
                                 </p>
                               ) : null}
@@ -903,7 +901,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           );
                         })()
                       ) : (
-                        <div className="self-stretch pt-2" key={String(item.id)}>
+                        <div className="flex self-stretch flex-col gap-3 pt-2" key={String(item.id)}>
                           <button
                             className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
                             onClick={() => toggleSummary(String(item.id))}
@@ -923,10 +921,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           </button>
                           {isSummaryOpen(String(item.id)) ? (
                             <>
-                              <p className="mt-3 text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                              <p className="text-center text-sm leading-6 whitespace-pre-line text-muted-foreground">
                                 {formatSessionSummaryText(item.summary, i18n.language, t)}
                               </p>
-                              <p className="mt-1 text-center text-xs text-muted-foreground/80">
+                              <p className="text-center text-xs text-muted-foreground/80">
                                 {formatInboxTimestamp(item.closedAt, i18n.language, {
                                   yesterday: t("page.yesterday"),
                                 })}

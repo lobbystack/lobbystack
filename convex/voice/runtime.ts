@@ -9,6 +9,7 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -159,10 +160,23 @@ function createCallRecordingNonce(): string {
 type ListRecentCallsArgs = {
   businessId: Id<"businesses">;
   limit?: number;
+  selectedCallId?: Id<"calls">;
 };
 type GetCallTranscriptArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
+};
+type GetCallForDashboardArgs = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+};
+type GetVoiceFollowUpTaskForDashboardArgs = {
+  businessId: Id<"businesses">;
+  inboxItemId: Id<"inbox_items">;
+};
+type CompleteVoiceFollowUpTaskArgs = {
+  businessId: Id<"businesses">;
+  inboxItemId: Id<"inbox_items">;
 };
 
 function normalizeComparable(value: string): string {
@@ -210,6 +224,72 @@ function scoreServiceMatch(service: Doc<"services">, serviceName: string): numbe
   }
 
   return 0;
+}
+
+function dedupeVoiceFollowUpItems(
+  items: Array<Doc<"inbox_items">>,
+): Map<string, Doc<"inbox_items">> {
+  const deduped = new Map<string, Doc<"inbox_items">>();
+
+  for (const item of items) {
+    const key = item.relatedId ?? String(item._id);
+    if (!deduped.has(key)) {
+      deduped.set(key, item);
+    }
+  }
+
+  return deduped;
+}
+
+async function hydrateDashboardCallRow(
+  ctx: QueryCtx,
+  call: Doc<"calls">,
+  voiceFollowUpByCallId: Map<string, Doc<"inbox_items">>,
+) {
+  const followUpTask = voiceFollowUpByCallId.get(String(call._id)) ?? null;
+  const [conversation, transcriptPreview] = await Promise.all([
+    call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
+    ctx.db
+      .query("transcripts")
+      .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
+      .order("desc")
+      .take(1),
+  ]);
+  const contact = conversation?.contactId ? await ctx.db.get(conversation.contactId) : null;
+  const outcome = await buildConversationOutcome(ctx, {
+    conversation,
+    fallbackDisposition: call.disposition ?? null,
+  });
+  const recordingToken = (
+    await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_call_id", (q) => q.eq("callId", call._id))
+      .take(1)
+  )[0] ?? null;
+  const hasActiveRecordingToken =
+    recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
+
+  return {
+    ...call,
+    recordingUrl: call.recordingStorageId
+      ? hasActiveRecordingToken
+        ? buildCallRecordingDownloadUrl(recordingToken.nonce)
+        : await ctx.storage.getUrl(call.recordingStorageId)
+      : null,
+    transcriptReady: transcriptPreview.length > 0,
+    transcriptPreview: transcriptPreview[0]?.text ?? null,
+    contactName: contact?.name ?? null,
+    contactPhone: contact?.phone ?? null,
+    followUpTask: followUpTask
+      ? {
+          id: followUpTask._id,
+          title: followUpTask.title,
+          body: followUpTask.body,
+          createdAt: new Date(followUpTask._creationTime).toISOString(),
+        }
+      : null,
+    outcome,
+  };
 }
 
 async function resolveServiceDocument(
@@ -946,56 +1026,153 @@ export const listRecentCalls = query({
   args: {
     businessId: v.id("businesses"),
     limit: v.optional(v.number()),
+    selectedCallId: v.optional(v.id("calls")),
   },
   handler: async (ctx: QueryCtx, args: ListRecentCallsArgs) => {
     await requireMembership(ctx, args.businessId);
-    const calls: Array<Doc<"calls">> = await ctx.db
-      .query("calls")
-      .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
-      .order("desc")
-      .take(args.limit ?? 20);
+    const [recentCalls, selectedCall, openVoiceFollowUpItems]: [
+      Array<Doc<"calls">>,
+      Doc<"calls"> | null,
+      Array<Doc<"inbox_items">>,
+    ] = await Promise.all([
+      ctx.db
+        .query("calls")
+        .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
+        .order("desc")
+        .take(args.limit ?? 20),
+      args.selectedCallId ? ctx.db.get(args.selectedCallId) : Promise.resolve(null),
+      ctx.db
+        .query("inbox_items")
+        .withIndex("by_business_id_and_kind_and_status", (q) =>
+          q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+        )
+        .collect(),
+    ]);
+
+    const calls = recentCalls.slice();
+    if (
+      selectedCall &&
+      selectedCall.businessId === args.businessId &&
+      !calls.some((call) => call._id === selectedCall._id)
+    ) {
+      calls.push(selectedCall);
+      calls.sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt));
+    }
+
+    const voiceFollowUpByCallId = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    );
 
     return await Promise.all(
-      calls.map(async (call) => {
-        const [conversation, transcriptPreview] = await Promise.all([
-          call.conversationId ? ctx.db.get(call.conversationId) : Promise.resolve(null),
-          ctx.db
-            .query("transcripts")
-            .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
-            .order("desc")
-            .take(1),
-        ]);
-        const contact = conversation?.contactId
-          ? await ctx.db.get(conversation.contactId)
-          : null;
-        const outcome = await buildConversationOutcome(ctx, {
-          conversation,
-          fallbackDisposition: call.disposition ?? null,
-        });
-        const recordingToken = (
-          await ctx.db
-            .query("call_recording_download_tokens")
-            .withIndex("by_call_id", (q) => q.eq("callId", call._id))
-            .take(1)
-        )[0] ?? null;
-        const hasActiveRecordingToken =
-          recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
-
-        return {
-          ...call,
-          recordingUrl: call.recordingStorageId
-            ? hasActiveRecordingToken
-              ? buildCallRecordingDownloadUrl(recordingToken.nonce)
-              : await ctx.storage.getUrl(call.recordingStorageId)
-            : null,
-          transcriptReady: transcriptPreview.length > 0,
-          transcriptPreview: transcriptPreview[0]?.text ?? null,
-          contactName: contact?.name ?? null,
-          contactPhone: contact?.phone ?? null,
-          outcome,
-        };
-      }),
+      calls.map((call) => hydrateDashboardCallRow(ctx, call, voiceFollowUpByCallId)),
     );
+  },
+});
+
+export const getCallForDashboard = query({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+  },
+  handler: async (ctx: QueryCtx, args: GetCallForDashboardArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const [call, openVoiceFollowUpItems]: [Doc<"calls"> | null, Array<Doc<"inbox_items">>] =
+      await Promise.all([
+        ctx.db.get(args.callId),
+        ctx.db
+          .query("inbox_items")
+          .withIndex("by_business_id_and_kind_and_status", (q) =>
+            q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+          )
+          .collect(),
+      ]);
+
+    if (!call || call.businessId !== args.businessId) {
+      return null;
+    }
+
+    const voiceFollowUpByCallId = dedupeVoiceFollowUpItems(
+      openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
+    );
+
+    return await hydrateDashboardCallRow(ctx, call, voiceFollowUpByCallId);
+  },
+});
+
+export const getVoiceFollowUpTaskForDashboard = query({
+  args: {
+    businessId: v.id("businesses"),
+    inboxItemId: v.id("inbox_items"),
+  },
+  handler: async (ctx: QueryCtx, args: GetVoiceFollowUpTaskForDashboardArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const inboxItem = await ctx.db.get(args.inboxItemId);
+    if (
+      !inboxItem ||
+      inboxItem.businessId !== args.businessId ||
+      inboxItem.kind !== "voice_message" ||
+      inboxItem.status !== "open"
+    ) {
+      return null;
+    }
+
+    return {
+      id: inboxItem._id,
+      title: inboxItem.title,
+      body: inboxItem.body,
+      createdAt: new Date(inboxItem._creationTime).toISOString(),
+      callId: inboxItem.relatedId ? (inboxItem.relatedId as Id<"calls">) : null,
+    };
+  },
+});
+
+export const completeVoiceFollowUpTask = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    inboxItemId: v.id("inbox_items"),
+  },
+  handler: async (ctx: MutationCtx, args: CompleteVoiceFollowUpTaskArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const inboxItem = await ctx.db.get(args.inboxItemId);
+    if (!inboxItem || inboxItem.businessId !== args.businessId) {
+      throw new Error("Follow-up task not found.");
+    }
+
+    if (inboxItem.kind !== "voice_message") {
+      throw new Error("Only voice follow-up tasks can be completed here.");
+    }
+
+    if (inboxItem.status === "done") {
+      return null;
+    }
+
+    if (!inboxItem.relatedId) {
+      await ctx.db.patch(args.inboxItemId, {
+        status: "done",
+      });
+      return null;
+    }
+
+    const relatedItems = await ctx.db
+      .query("inbox_items")
+      .withIndex("by_business_id_and_kind_and_status", (q) =>
+        q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+      )
+      .collect();
+
+    const duplicateFollowUps = relatedItems.filter((item) => item.relatedId === inboxItem.relatedId);
+    await Promise.all(
+      duplicateFollowUps.map((item) =>
+        ctx.db.patch(item._id, {
+          status: "done",
+        }),
+      ),
+    );
+
+    return null;
   },
 });
 

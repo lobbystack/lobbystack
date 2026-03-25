@@ -1,17 +1,34 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { ArrowLeft, ChevronRight, Phone, Search as SearchIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
+import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
+import {
+  getFollowUpDisplayTitle,
+  isUrgentFollowUpValue,
+  parseFollowUpTaskBody,
+} from "@/lib/follow-up-task";
+import { formatDateTime, formatInboxTimestamp, resolveLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type CallsPageProps = {
@@ -31,9 +48,25 @@ type CallRow = Doc<"calls"> & {
     summary?: string | null;
     disposition?: string | null;
   };
+  followUpTask: {
+    id: Id<"inbox_items">;
+    title: string;
+    body: string;
+    createdAt: string;
+  } | null;
+};
+
+type VoiceFollowUpTaskRow = {
+  id: Id<"inbox_items">;
+  title: string;
+  body: string;
+  createdAt: string;
+  callId: Id<"calls"> | null;
 };
 
 type TranscriptSegment = Doc<"transcripts">;
+
+const CONVEX_ID_PARAM_PATTERN = /^[a-z0-9]{32}$/;
 
 function initials(value: string | null, fallback: string): string {
   if (!value) {
@@ -73,6 +106,10 @@ function isAgentSpeaker(value: string): boolean {
   return ["assistant", "agent", "receptionist", "system", "ai"].some((token) =>
     normalized.includes(token),
   );
+}
+
+function isConvexIdParam(value: string | null): value is string {
+  return value !== null && CONVEX_ID_PARAM_PATTERN.test(value);
 }
 
 function formatCallDispositionSummary(
@@ -164,24 +201,110 @@ function formatCallOutcomeSummary(
   }
 }
 
+function getCallFollowUpDisplayTitle(
+  task: { title: string; body: string },
+  t: TFunction<"calls">,
+): string {
+  return getFollowUpDisplayTitle({
+    title: task.title,
+    kind: "voice_message",
+    body: task.body,
+    formatWithContact: (message, name) =>
+      t("followUp.titleWithContact", {
+        message,
+        name,
+      }),
+  });
+}
+
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
-  const calls = useQuery(api.voice.runtime.listRecentCalls, businessId ? { businessId, limit: 50 } : "skip");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedCallId = searchParams.get("callId");
+  const requestedTaskId = searchParams.get("taskId");
+  const normalizedRequestedCallId = isConvexIdParam(requestedCallId)
+    ? (requestedCallId as Id<"calls">)
+    : null;
+  const normalizedRequestedTaskId = isConvexIdParam(requestedTaskId)
+    ? (requestedTaskId as Id<"inbox_items">)
+    : null;
+  const calls = useQuery(
+    api.voice.runtime.listRecentCalls,
+    businessId
+      ? {
+          businessId,
+          limit: 50,
+          ...(normalizedRequestedCallId ? { selectedCallId: normalizedRequestedCallId } : {}),
+        }
+      : "skip",
+  );
   const summary = useQuery(
     api.dashboard.overview.getHomeSummary,
-    businessId ? { businessId } : "skip",
+    businessId ? { businessId, locale } : "skip",
   );
+  const completeVoiceFollowUpTask = useMutation(api.voice.runtime.completeVoiceFollowUpTask);
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [mobileSelectedCallId, setMobileSelectedCallId] = useState<Id<"calls"> | undefined>();
   const [isOutcomeOpen, setIsOutcomeOpen] = useState(true);
   const [searchValue, setSearchValue] = useState("");
+  const [isCompletingFollowUp, setIsCompletingFollowUp] = useState(false);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
+  const [resolvedRows, setResolvedRows] = useState<Array<CallRow>>([]);
+  const selectedCallDetail = useQuery(
+    api.voice.runtime.getCallForDashboard,
+    businessId && normalizedRequestedCallId
+      ? { businessId, callId: normalizedRequestedCallId }
+      : businessId && selectedCallId
+        ? { businessId, callId: selectedCallId }
+      : "skip",
+  ) as CallRow | null | undefined;
+  const requestedFollowUpTask = useQuery(
+    api.voice.runtime.getVoiceFollowUpTaskForDashboard,
+    businessId && normalizedRequestedTaskId
+      ? { businessId, inboxItemId: normalizedRequestedTaskId }
+      : "skip",
+  ) as VoiceFollowUpTaskRow | null | undefined;
 
   const transcript = useQuery(
     api.voice.runtime.getCallTranscript,
     businessId && selectedCallId ? { businessId, callId: selectedCallId } : "skip",
   ) as Array<TranscriptSegment> | undefined;
 
-  const rows = (calls ?? []) as Array<CallRow>;
+  useEffect(() => {
+    if (
+      (requestedCallId !== null && normalizedRequestedCallId === null) ||
+      (requestedTaskId !== null && normalizedRequestedTaskId === null)
+    ) {
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (requestedCallId !== null && normalizedRequestedCallId === null) {
+            next.delete("callId");
+          }
+          if (requestedTaskId !== null && normalizedRequestedTaskId === null) {
+            next.delete("taskId");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [
+    normalizedRequestedCallId,
+    normalizedRequestedTaskId,
+    requestedCallId,
+    requestedTaskId,
+    setSearchParams,
+  ]);
+
+  useEffect(() => {
+    if (calls !== undefined) {
+      setResolvedRows(calls as Array<CallRow>);
+    }
+  }, [calls]);
+
+  const rows = calls === undefined ? resolvedRows : (calls as Array<CallRow>);
   const filteredRows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     return rows.filter((call) => {
@@ -200,15 +323,56 @@ export function CallsPage({ businessId }: CallsPageProps) {
     });
   }, [rows, searchValue]);
 
-  const selectedCall = filteredRows.find((call) => call._id === selectedCallId) ??
-    rows.find((call) => call._id === selectedCallId);
+  const requestedCall = normalizedRequestedCallId
+    ? rows.find((call) => String(call._id) === normalizedRequestedCallId) ??
+      (selectedCallDetail === undefined ? undefined : selectedCallDetail)
+    : null;
+  const selectedCall =
+    normalizedRequestedCallId !== null
+      ? requestedCall ?? null
+      : filteredRows.find((call) => call._id === selectedCallId) ??
+        rows.find((call) => call._id === selectedCallId) ??
+        selectedCallDetail ??
+        null;
+  const activeFollowUpTask =
+    selectedCall?.followUpTask ??
+    (selectedCall === null ? requestedFollowUpTask ?? null : null);
+  const selectedCallFollowUpDetails = activeFollowUpTask
+    ? parseFollowUpTaskBody(activeFollowUpTask.body)
+    : null;
+  const activeFollowUpDisplayTitle = activeFollowUpTask
+    ? getCallFollowUpDisplayTitle(activeFollowUpTask, t)
+    : null;
+  const hasTaskOnlyRequest =
+    normalizedRequestedCallId === null && normalizedRequestedTaskId !== null;
 
   useEffect(() => {
-    if (!selectedCallId && filteredRows[0]?._id) {
-      setSelectedCallId(filteredRows[0]._id);
-      setMobileSelectedCallId(filteredRows[0]._id);
+    if (hasTaskOnlyRequest) {
+      if (selectedCallId !== undefined || mobileSelectedCallId !== undefined) {
+        setSelectedCallId(undefined);
+        setMobileSelectedCallId(undefined);
+      }
+      return;
     }
-  }, [filteredRows, selectedCallId]);
+
+    const nextSelectedCall =
+      normalizedRequestedCallId !== null
+        ? requestedCall ?? null
+        : filteredRows[0] ?? rows[0] ?? null;
+
+    if (nextSelectedCall && selectedCallId !== nextSelectedCall._id) {
+      setSelectedCallId(nextSelectedCall._id);
+      setMobileSelectedCallId(nextSelectedCall._id);
+    }
+  }, [
+    filteredRows,
+    hasTaskOnlyRequest,
+    mobileSelectedCallId,
+    normalizedRequestedCallId,
+    requestedCall,
+    rows,
+    selectedCallId,
+  ]);
 
   useEffect(() => {
     if (selectedCallId) {
@@ -216,29 +380,65 @@ export function CallsPage({ businessId }: CallsPageProps) {
     }
   }, [selectedCallId]);
 
+  function setSelectedCall(callId: Id<"calls">) {
+    setSelectedCallId(callId);
+    setMobileSelectedCallId(callId);
+    setFollowUpError(null);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("callId", String(callId));
+      next.delete("taskId");
+      return next;
+    });
+  }
+
+  async function handleMarkFollowUpDone(taskId: Id<"inbox_items">) {
+    if (!businessId) {
+      return;
+    }
+
+    setFollowUpError(null);
+    setIsCompletingFollowUp(true);
+    try {
+      await completeVoiceFollowUpTask({
+        businessId,
+        inboxItemId: taskId,
+      });
+    } catch (error) {
+      setFollowUpError(error instanceof Error ? error.message : t("followUp.completeFailed"));
+    } finally {
+      setIsCompletingFollowUp(false);
+    }
+  }
+
   if (!businessId) {
     return <BusinessSetupCard />;
   }
 
   return (
     <section className="flex min-w-0 h-full gap-6">
-      <div className="flex min-w-0 w-full flex-col gap-2 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 bg-background px-4 pb-3 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between gap-4 py-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="text-2xl font-bold">{t("page.title")}</h1>
-              <Phone className="size-5" />
-            </div>
-            <div className="inline-flex shrink-0 items-center gap-2">
-              <span className="text-base font-semibold leading-none">
-                {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
+      <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+          <PageHeader
+            actions={
+              <div className="inline-flex shrink-0 items-center gap-2">
+                <span className="text-base font-semibold leading-none">
+                  {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
+                </span>
+                <span className="relative flex size-2.5 shrink-0">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+                </span>
+              </div>
+            }
+            className="py-0"
+            title={
+              <span className="flex min-w-0 items-center gap-2">
+                {t("page.title")}
+                <Phone className="size-5" />
               </span>
-              <span className="relative flex size-2.5 shrink-0">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
-              </span>
-            </div>
-          </div>
+            }
+          />
           <label
             className={cn(
               "focus-within:ring-1 focus-within:ring-ring focus-within:outline-hidden",
@@ -273,10 +473,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                     "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
                     isActive && "sm:bg-muted",
                   )}
-                  onClick={() => {
-                    setSelectedCallId(call._id);
-                    setMobileSelectedCallId(call._id);
-                  }}
+                  onClick={() => setSelectedCall(call._id)}
                   type="button"
                 >
                   <div className="flex gap-2">
@@ -319,7 +516,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
       >
         {selectedCall ? (
           <>
-            <div className="mb-4 flex min-w-0 flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex min-w-0 flex-none flex-col gap-4 bg-card p-4 shadow-lg sm:rounded-t-md xl:flex-row xl:items-start xl:justify-between">
               <div className="flex min-w-0 gap-3">
                 <Button
                   className="-ms-2 h-full sm:hidden"
@@ -370,11 +567,61 @@ export function CallsPage({ businessId }: CallsPageProps) {
               </div>
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 rounded-md px-4 pt-0 pb-4">
+            <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
+              {activeFollowUpTask ? (
+                <div className="mt-4 flex flex-col gap-3">
+                  <Item className="px-0 py-0" size="sm" variant="default">
+                    <ItemContent className="min-w-0">
+                      <ItemHeader>
+                        <ItemTitle className="w-full min-w-0 max-w-full">
+                          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {activeFollowUpDisplayTitle}
+                          </span>
+                        </ItemTitle>
+                        <ItemActions>
+                          <Button
+                            disabled={isCompletingFollowUp}
+                            onClick={() => void handleMarkFollowUpDone(activeFollowUpTask.id)}
+                            size="sm"
+                            variant="outline"
+                          >
+                            {isCompletingFollowUp
+                              ? t("followUp.markingDone")
+                              : t("followUp.markDone")}
+                          </Button>
+                        </ItemActions>
+                      </ItemHeader>
+                      {selectedCallFollowUpDetails?.callbackWindow ? (
+                        <ItemDescription>
+                          {selectedCallFollowUpDetails.callbackWindow}
+                        </ItemDescription>
+                      ) : null}
+                      <ItemFooter className="text-xs text-muted-foreground">
+                        <span>
+                          {t("followUp.createdAt", {
+                            time: formatDateTime(activeFollowUpTask.createdAt, i18n.language, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }),
+                          })}
+                        </span>
+                        {isUrgentFollowUpValue(selectedCallFollowUpDetails?.urgency) ? (
+                          <span className="font-medium text-destructive">
+                            {t("followUp.urgent")}
+                          </span>
+                        ) : null}
+                      </ItemFooter>
+                    </ItemContent>
+                  </Item>
+                  {followUpError ? (
+                    <p className="text-sm text-destructive">{followUpError}</p>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex min-w-0 size-full flex-1">
                 <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
                   <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
-                    <div className="self-stretch pt-2">
+                    <div className="flex self-stretch flex-col gap-3 pt-2">
                       <button
                         className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3 text-muted-foreground"
                         onClick={() => setIsOutcomeOpen((current) => !current)}
@@ -393,7 +640,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                         <span className="h-px w-64 bg-border/60 md:w-96" />
                       </button>
                       {isOutcomeOpen ? (
-                        <p className="mt-3 text-center text-sm leading-6 text-muted-foreground">
+                        <p className="text-center text-sm leading-6 text-muted-foreground">
                           {formatCallOutcomeSummary(selectedCall.outcome, i18n.language, t)}
                         </p>
                       ) : null}
@@ -436,6 +683,60 @@ export function CallsPage({ businessId }: CallsPageProps) {
               </div>
             </div>
           </>
+        ) : requestedFollowUpTask ? (
+          <div className="flex flex-1 flex-col gap-4 p-4">
+            <div className="flex flex-col gap-3">
+              <Item className="px-0 py-0" size="sm" variant="default">
+                <ItemContent className="min-w-0">
+                  <ItemHeader>
+                    <ItemTitle className="w-full min-w-0 max-w-full">
+                      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {activeFollowUpDisplayTitle}
+                      </span>
+                    </ItemTitle>
+                    <ItemActions>
+                      <Button
+                        disabled={isCompletingFollowUp}
+                        onClick={() => void handleMarkFollowUpDone(requestedFollowUpTask.id)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {isCompletingFollowUp
+                          ? t("followUp.markingDone")
+                          : t("followUp.markDone")}
+                      </Button>
+                    </ItemActions>
+                  </ItemHeader>
+                  {selectedCallFollowUpDetails?.callbackWindow ? (
+                    <ItemDescription>
+                      {selectedCallFollowUpDetails.callbackWindow}
+                    </ItemDescription>
+                  ) : null}
+                  <ItemFooter className="text-xs text-muted-foreground">
+                    <span>
+                      {t("followUp.createdAt", {
+                        time: formatDateTime(requestedFollowUpTask.createdAt, i18n.language, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }),
+                      })}
+                    </span>
+                    {isUrgentFollowUpValue(selectedCallFollowUpDetails?.urgency) ? (
+                      <span className="font-medium text-destructive">
+                        {t("followUp.urgent")}
+                      </span>
+                    ) : null}
+                  </ItemFooter>
+                </ItemContent>
+              </Item>
+              <p className="text-sm text-muted-foreground">
+                {t("followUp.callUnavailable")}
+              </p>
+              {followUpError ? (
+                <p className="text-sm text-destructive">{followUpError}</p>
+              ) : null}
+            </div>
+          </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
             {t("page.selectCall")}

@@ -19,7 +19,11 @@ import {
 } from "@/features/auth/AuthPages";
 import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
-import { AgentPage } from "@/features/agent/AgentPage";
+import { AgentLayout } from "@/features/agent/AgentLayout";
+import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
+import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
+import { AgentRulesPage } from "@/features/agent/AgentRulesPage";
+import { AgentServicesPage } from "@/features/agent/AgentServicesPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
@@ -144,9 +148,61 @@ function WorkspaceShell() {
             path="/analytics"
           />
           <Route
-            element={<AgentPage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
-            path="/agent"
-          />
+            element={<AgentLayout {...(businessId ? { businessId } : {})} />}
+            path="/agent/*"
+          >
+            <Route
+              element={
+                businessId ? (
+                  <AgentBasicSettingsPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              index
+            />
+            <Route
+              element={
+                businessId ? (
+                  <AgentBasicSettingsPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              path="basic-settings"
+            />
+            <Route
+              element={
+                businessId ? (
+                  <AgentKnowledgePage businessId={businessId} section="knowledge" />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              path="knowledge"
+            />
+            <Route
+              element={
+                businessId ? (
+                  <AgentServicesPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              path="services"
+            />
+            <Route
+              element={
+                businessId ? (
+                  <AgentRulesPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              path="rules"
+            />
+            <Route element={<Navigate replace to="/agent" />} path="*" />
+          </Route>
           <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
           <Route
             element={<SettingsLayout {...(businessId ? { businessId } : {})} />}

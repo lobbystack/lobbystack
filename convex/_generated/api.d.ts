@@ -10,6 +10,7 @@
 
 import type * as ai_agents_runtime from "../ai/agents/runtime.js";
 import type * as ai_context_knowledge from "../ai/context/knowledge.js";
+import type * as ai_context_knowledgeUploads from "../ai/context/knowledgeUploads.js";
 import type * as ai_context_snapshots from "../ai/context/snapshots.js";
 import type * as ai_preview_stream from "../ai/preview/stream.js";
 import type * as ai_workflows_runtime from "../ai/workflows/runtime.js";
@@ -37,14 +38,18 @@ import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_emailChange from "../lib/emailChange.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
+import type * as lib_knowledgeDocuments from "../lib/knowledgeDocuments.js";
+import type * as lib_knowledgeSections from "../lib/knowledgeSections.js";
 import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js";
 import type * as lib_messageAttachments from "../lib/messageAttachments.js";
 import type * as lib_node_imagePreviews from "../lib/node/imagePreviews.js";
+import type * as lib_node_knowledgeExtraction from "../lib/node/knowledgeExtraction.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
+import type * as lib_receptionistProfileDefaults from "../lib/receptionistProfileDefaults.js";
 import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
 import type * as lib_serviceNameGeneration from "../lib/serviceNameGeneration.js";
 import type * as lib_serviceNames from "../lib/serviceNames.js";
@@ -69,6 +74,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   "ai/agents/runtime": typeof ai_agents_runtime;
   "ai/context/knowledge": typeof ai_context_knowledge;
+  "ai/context/knowledgeUploads": typeof ai_context_knowledgeUploads;
   "ai/context/snapshots": typeof ai_context_snapshots;
   "ai/preview/stream": typeof ai_preview_stream;
   "ai/workflows/runtime": typeof ai_workflows_runtime;
@@ -96,14 +102,18 @@ declare const fullApi: ApiFromModules<{
   "lib/components": typeof lib_components;
   "lib/emailChange": typeof lib_emailChange;
   "lib/indexedQueries": typeof lib_indexedQueries;
+  "lib/knowledgeDocuments": typeof lib_knowledgeDocuments;
+  "lib/knowledgeSections": typeof lib_knowledgeSections;
   "lib/messageAttachmentUrls": typeof lib_messageAttachmentUrls;
   "lib/messageAttachments": typeof lib_messageAttachments;
   "lib/node/imagePreviews": typeof lib_node_imagePreviews;
+  "lib/node/knowledgeExtraction": typeof lib_node_knowledgeExtraction;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;
   "lib/providers/email": typeof lib_providers_email;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;
+  "lib/receptionistProfileDefaults": typeof lib_receptionistProfileDefaults;
   "lib/runtimeLocale": typeof lib_runtimeLocale;
   "lib/serviceNameGeneration": typeof lib_serviceNameGeneration;
   "lib/serviceNames": typeof lib_serviceNames;

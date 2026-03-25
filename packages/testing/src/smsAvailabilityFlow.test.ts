@@ -2961,6 +2961,126 @@ describe("SMS scheduling flow", () => {
         .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
         .unique();
       expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("detected_conversation");
+    });
+  });
+
+  it("falls back to the stored business locale for ambiguous first SMS messages", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-ambiguous-first-message-french-default",
+        name: "SMS Ambiguous First Message French Default",
+        smsNumber: "+14165550927",
+        defaultLocale: "fr",
+      });
+
+      const profile = await ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!profile) {
+        throw new Error("Expected receptionist profile to exist.");
+      }
+
+      await ctx.db.patch(profile._id, {
+        greeting: "Welcome.",
+        summary: "General help.",
+        bookingPolicy: "Confirm after checking.",
+        smsInstructions: "Keep replies short.",
+      });
+
+      return { businessId, smsNumber: "+14165550927" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-ambiguous-first-message-french-default-1",
+      From: "+14165550989",
+      To: smsNumber,
+      Body: "Allo",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550989"),
+        )
+        .unique();
+      expect(contact?.preferredLocale).toBeUndefined();
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
+  it("keeps the stored business locale for ambiguous replies on existing conversations", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-ambiguous-existing-conversation-french-default",
+        name: "SMS Ambiguous Existing Conversation French Default",
+        smsNumber: "+14165550928",
+        defaultLocale: "fr",
+      });
+
+      const profile = await ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!profile) {
+        throw new Error("Expected receptionist profile to exist.");
+      }
+
+      await ctx.db.patch(profile._id, {
+        greeting: "Bonjour.",
+        summary: "French SMS scheduling.",
+        bookingPolicy: "Only confirm a booking after availability is checked.",
+        smsInstructions: "Keep replies short.",
+      });
+
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550988",
+      });
+
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        defaultLocale: "fr",
+      });
+
+      const snapshot = await ctx.db
+        .query("business_context_snapshots")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!snapshot) {
+        throw new Error("Expected business context snapshot to exist.");
+      }
+
+      await ctx.db.patch(snapshot._id, {
+        defaultLocale: "fr",
+      });
+    });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Allo",
+    });
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db.get(conversationId);
+      expect(conversation?.locale).toBe("fr");
       expect(conversation?.localeSource).toBe("business_default");
     });
   });

@@ -1,6 +1,7 @@
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Analytics } from "@/features/home/components/analytics";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { PageHeader } from "@/components/page-header";
 
 type AnalyticsPageProps = {
   businessId?: Id<"businesses">;
@@ -12,10 +13,8 @@ export function AnalyticsPage({ businessId }: AnalyticsPageProps) {
   }
 
   return (
-    <section className="flex flex-1 flex-col">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-      </div>
+    <section className="flex flex-1 flex-col gap-6">
+      <PageHeader title="Analytics" />
       <Analytics businessId={businessId} />
     </section>
   );

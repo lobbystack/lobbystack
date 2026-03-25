@@ -1,66 +1,186 @@
 {
   "page": {
     "eyebrow": "Agent workspace",
-    "title": "Shape how your receptionist thinks, routes, and responds.",
-    "description": "Tune the operator playbook, keep business knowledge fresh, and test replies before they reach a customer."
-  },
-  "workflow": {
-    "step": "Step {{value}}",
-    "steps": {
-      "behavior": {
-        "title": "Set tone and escalation rules",
-        "description": "Define the receptionist voice, routing logic, and what should trigger a handoff."
-      },
-      "knowledge": {
-        "title": "Feed it the right context",
-        "description": "Keep FAQs and longer documents organized so the agent can ground answers in real business facts."
-      },
-      "preview": {
-        "title": "Pressure-test replies before go-live",
-        "description": "Try real customer prompts and inspect how the current knowledge layer responds."
-      }
-    }
+    "title": "Agent",
+    "description": "Configure how your AI receptionist behaves, what it knows, and how it handles calls and messages."
   },
   "sections": {
-    "profile": {
-      "eyebrow": "Behavior design",
-      "title": "Persona, instructions, and routing",
-      "description": "Adjust the receptionist voice, customer language, booking policy, and transfer behavior."
+    "basicSettings": {
+      "title": "Basic Settings",
+      "description": "Greeting and transfer settings for your receptionist."
     },
     "knowledge": {
-      "eyebrow": "Knowledge layer",
-      "title": "FAQs and long-form references",
-      "description": "Capture short answers and deeper source material that should inform agent replies."
-    },
-    "snapshot": {
-      "eyebrow": "Compiled context",
-      "title": "Current business snapshot",
-      "description": "Review the generated business context that powers voice and messaging behavior."
-    },
-    "preview": {
-      "eyebrow": "Live rehearsal",
-      "title": "Preview prompt handling",
-      "description": "Run test prompts against the current knowledge state before making the page live."
-    }
-  },
-  "empty": {
-    "description": "Create a business first, then return here to shape the receptionist persona, load knowledge, and rehearse replies in one control surface.",
-    "cards": {
-      "behavior": {
-        "eyebrow": "Behavior",
-        "title": "Define tone and transfer policy",
-        "description": "Decide how the receptionist should sound, what it should prioritize, and when it should escalate."
+      "title": "Knowledge",
+      "description": "Information and guidelines your receptionist uses to answer questions.",
+      "listTitle": "Knowledge Base",
+      "addKnowledge": "Add Knowledge",
+      "uploadDocument": "Upload Document",
+      "addKnowledgeDescription": "Add opening hours, pricing, FAQs, or any other information your receptionist should know.",
+      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "documentBadge": "Document",
+      "emptyState": "No knowledge added yet.",
+      "previewPending": "This document is being processed.",
+      "previewError": "This document couldn't be processed.",
+      "status": {
+        "queued": "Queued",
+        "indexing": "Indexing",
+        "indexed": "Ready",
+        "error": "Error"
       },
-      "knowledge": {
-        "eyebrow": "Knowledge",
-        "title": "Load FAQs and source material",
-        "description": "Add practical answers, documents, and business context so replies stay grounded."
+      "uploadValidation": {
+        "fileRequired": "Choose a file to upload.",
+        "unsupportedFile": "Supported document types are PDF, DOCX, TXT, and Markdown.",
+        "maxSize": "Documents must be 10 MB or smaller.",
+        "uploadFailed": "We couldn't upload this document. Please try again."
       },
-      "preview": {
-        "eyebrow": "Preview",
-        "title": "Test customer prompts before launch",
-        "description": "Simulate real questions and validate how the current agent configuration responds."
+      "fields": {
+        "file": {
+          "label": "File",
+          "hint": "Supports PDF, DOCX, TXT, and Markdown.",
+          "dropzonePrefix": "Drag and drop a file here, or",
+          "chooseFile": "Choose File"
+        },
+        "title": {
+          "label": "Title",
+          "placeholder": "Opening Hours",
+          "hint": "A short, descriptive title for this piece of knowledge."
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "We are open Monday to Friday from 9am to 5pm.",
+          "hint": "The actual information the receptionist should use."
+        },
+        "tags": {
+          "label": "Tags (optional)",
+          "placeholder": "Hours, location",
+          "hint": "Comma-separated keywords to help categorize this knowledge."
+        }
+      }
+    },
+    "services": {
+      "title": "Services",
+      "description": "Service details your receptionist can use to explain offerings and help book the right appointment.",
+      "listTitle": "Services",
+      "addKnowledge": "Add Service",
+      "uploadDocument": "Upload Document",
+      "addKnowledgeDescription": "Add your services, what they include, who they are for, and anything your receptionist should mention.",
+      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "documentBadge": "Document",
+      "emptyState": "No services added yet.",
+      "previewPending": "This document is being processed.",
+      "previewError": "This document couldn't be processed.",
+      "status": {
+        "queued": "Queued",
+        "indexing": "Indexing",
+        "indexed": "Ready",
+        "error": "Error"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choose a file to upload.",
+        "unsupportedFile": "Supported document types are PDF, DOCX, TXT, and Markdown.",
+        "maxSize": "Documents must be 10 MB or smaller.",
+        "uploadFailed": "We couldn't upload this document. Please try again."
+      },
+      "fields": {
+        "file": {
+          "label": "File",
+          "hint": "Supports PDF, DOCX, TXT, and Markdown.",
+          "dropzonePrefix": "Drag and drop a file here, or",
+          "chooseFile": "Choose File"
+        },
+        "title": {
+          "label": "Title",
+          "placeholder": "Initial Consultation",
+          "hint": "A short, descriptive title for this service."
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "A 30-minute consultation to understand the caller's needs and recommend the right next step.",
+          "hint": "Describe the service so the receptionist can explain it clearly."
+        },
+        "tags": {
+          "label": "Tags (optional)",
+          "placeholder": "Consultation, new clients",
+          "hint": "Comma-separated keywords to help categorize these services."
+        }
+      }
+    },
+    "rules": {
+      "title": "Rules",
+      "description": "Instructions that guide how your receptionist should handle calls and messages.",
+      "listTitle": "Rules",
+      "addKnowledge": "Add Rule",
+      "uploadDocument": "Upload Document",
+      "addKnowledgeDescription": "What your receptionist should do, like transfer calls, ask questions and send texts.",
+      "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
+      "documentBadge": "Document",
+      "emptyState": "No rules added yet.",
+      "previewPending": "This document is being processed.",
+      "previewError": "This document couldn't be processed.",
+      "status": {
+        "queued": "Queued",
+        "indexing": "Indexing",
+        "indexed": "Ready",
+        "error": "Error"
+      },
+      "uploadValidation": {
+        "fileRequired": "Choose a file to upload.",
+        "unsupportedFile": "Supported document types are PDF, DOCX, TXT, and Markdown.",
+        "maxSize": "Documents must be 10 MB or smaller.",
+        "uploadFailed": "We couldn't upload this document. Please try again."
+      },
+      "fields": {
+        "file": {
+          "label": "File",
+          "hint": "Supports PDF, DOCX, TXT, and Markdown.",
+          "dropzonePrefix": "Drag and drop a file here, or",
+          "chooseFile": "Choose File"
+        },
+        "title": {
+          "label": "Title",
+          "placeholder": "Transfer requests to talk to someone to Jannie",
+          "hint": "A short, descriptive title for this rule."
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "When someone asks to speak to a human, transfer them to 555-123-4567.",
+          "hint": "Describe what the receptionist should do."
+        },
+        "tags": {
+          "label": "Tags (optional)",
+          "placeholder": "Transfers, escalation",
+          "hint": "Comma-separated keywords to help categorize these rules."
+        }
       }
     }
+  },
+  "fields": {
+    "greeting": {
+      "label": "Greeting",
+      "placeholder": "Hello, thank you for calling…",
+      "hint": "The opening line your receptionist uses when answering a call or starting a conversation."
+    },
+    "defaultLocale": {
+      "label": "Default customer language",
+      "placeholder": "Select a default language",
+      "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
+    },
+    "transferNumber": {
+      "label": "Default transfer number",
+      "placeholder": "+1 555-123-4567",
+      "hint": "The phone number your receptionist should use when handing a caller off to a human."
+    }
+  },
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved",
+    "delete": "Delete",
+    "confirmDelete": "Confirm?",
+    "upload": "Upload",
+    "uploading": "Uploading…"
+  },
+  "empty": {
+    "description": "Create a business first, then return here to configure your AI receptionist."
   }
 }
