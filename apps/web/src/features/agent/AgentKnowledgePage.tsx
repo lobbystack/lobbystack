@@ -181,7 +181,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             key={entry._id}
           >
             <div className="flex items-center gap-2 p-4">
-              <CollapsibleTrigger className="flex flex-1 items-center justify-between outline-none">
+              <CollapsibleTrigger className="flex flex-1 items-center outline-none">
                 <div className="flex items-center gap-3">
                   <span className="font-semibold">{entry.title}</span>
                   {"sourceType" in entry ? (
@@ -200,15 +200,17 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                     <Badge variant="secondary">{entry.tags[0]}</Badge>
                   ) : null}
                 </div>
-                <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
               </CollapsibleTrigger>
-              <div className="shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <InlineConfirmDeleteButton
                   deleting={deletingEntryId === String(entry._id)}
                   onConfirm={() => {
                     void handleDelete(entry);
                   }}
                 />
+                <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md p-1 outline-none">
+                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
+                </CollapsibleTrigger>
               </div>
             </div>
             <CollapsibleContent>
