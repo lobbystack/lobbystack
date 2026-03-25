@@ -28,7 +28,7 @@ import {
   isUrgentFollowUpValue,
   parseFollowUpTaskBody,
 } from "@/lib/follow-up-task";
-import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
+import { formatDateTime, formatInboxTimestamp, resolveLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 
 type CallsPageProps = {
@@ -219,6 +219,7 @@ function getCallFollowUpDisplayTitle(
 
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCallId = searchParams.get("callId");
   const requestedTaskId = searchParams.get("taskId");
@@ -240,7 +241,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
   );
   const summary = useQuery(
     api.dashboard.overview.getHomeSummary,
-    businessId ? { businessId } : "skip",
+    businessId ? { businessId, locale } : "skip",
   );
   const completeVoiceFollowUpTask = useMutation(api.voice.runtime.completeVoiceFollowUpTask);
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>();

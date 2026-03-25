@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import { getLocalizedServiceName } from "../lib/serviceNames";
 
 type KpiWindow = {
   current: number;
@@ -189,6 +190,7 @@ function dedupeVoiceFollowUpItems(
 export const getHomeSummary = query({
   args: {
     businessId: v.id("businesses"),
+    locale: v.union(v.literal("en"), v.literal("fr")),
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
@@ -417,11 +419,7 @@ export const getHomeSummary = query({
           status: appointment.status,
           sourceChannel: appointment.sourceChannel,
           contactName: contact?.name ?? contact?.phone ?? null,
-          serviceName:
-            service?.localizedNames?.en ??
-            service?.localizedNames?.fr ??
-            service?.name ??
-            null,
+          serviceName: service ? getLocalizedServiceName(service, args.locale) : null,
           staffName: staff?.name ?? null,
         };
       }),

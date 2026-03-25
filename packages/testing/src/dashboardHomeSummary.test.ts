@@ -12,6 +12,7 @@ declare global {
 }
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const HOME_SUMMARY_LOCALE = "en" as const;
 
 async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: string) {
   const { businessId, userId } = await t.run(async (ctx) => {
@@ -137,6 +138,7 @@ describe("Dashboard home summary", () => {
 
     const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
       businessId,
+      locale: HOME_SUMMARY_LOCALE,
     });
 
     expect(summary.actionRequired).toHaveLength(2);
@@ -237,6 +239,7 @@ describe("Dashboard home summary", () => {
 
     let summary = await authed.query(api.dashboard.overview.getHomeSummary, {
       businessId,
+      locale: HOME_SUMMARY_LOCALE,
     });
     expect(
       summary.actionRequired.some(
@@ -260,6 +263,7 @@ describe("Dashboard home summary", () => {
 
     summary = await authed.query(api.dashboard.overview.getHomeSummary, {
       businessId,
+      locale: HOME_SUMMARY_LOCALE,
     });
     expect(
       summary.actionRequired.some(
@@ -387,6 +391,7 @@ describe("Dashboard home summary", () => {
 
     const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
       businessId,
+      locale: HOME_SUMMARY_LOCALE,
     });
 
     expect(summary.actionRequired.filter((item) => item.kind === "human_handoff")).toHaveLength(6);
@@ -456,10 +461,70 @@ describe("Dashboard home summary", () => {
     try {
       const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
         businessId,
+        locale: HOME_SUMMARY_LOCALE,
       });
 
       expect(summary.upcoming).toHaveLength(1);
       expect(summary.upcoming[0]?.startsAt).toBe("2026-03-25T10:00:00.000-04:00");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns locale-aware service names for upcoming appointments", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(
+      t,
+      "dashboard-home-upcoming-service-locale",
+    );
+
+    await t.run(async (ctx) => {
+      const contactId = await insertContact(ctx, businessId, {
+        name: "Taylor Customer",
+        phone: "+14165550199",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jannie",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Consultation",
+        slug: "consultation",
+        durationMinutes: 30,
+        active: true,
+        localizedNames: {
+          en: "Initial Consultation",
+          fr: "Consultation initiale",
+        },
+      });
+
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-26T14:00:00.000Z",
+        endsAt: "2026-03-26T14:30:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-25T13:30:00.000Z"));
+
+    try {
+      const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+        businessId,
+        locale: "fr",
+      });
+
+      expect(summary.upcoming[0]?.serviceName).toBe("Consultation initiale");
     } finally {
       vi.useRealTimers();
     }

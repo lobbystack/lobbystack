@@ -44,7 +44,7 @@ import {
   isUrgentFollowUpValue,
   parseFollowUpTaskBody,
 } from "@/lib/follow-up-task";
-import { formatDateTime } from "@/lib/locale";
+import { formatDateTime, resolveLocale } from "@/lib/locale";
 
 type HomePageProps = {
   businessId?: Id<"businesses">;
@@ -259,9 +259,10 @@ function getActionDisplayTitle(
 
 export function HomePage({ businessId, snapshot }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const summary = useQuery(
     api.dashboard.overview.getHomeSummary,
-    businessId ? { businessId } : "skip",
+    businessId ? { businessId, locale } : "skip",
   ) as HomeSummary | undefined;
 
   function formatDelta(deltaPercent: number): string {
