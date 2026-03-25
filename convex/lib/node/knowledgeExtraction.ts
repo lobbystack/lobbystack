@@ -1,7 +1,6 @@
 "use node";
 
 import mammoth from "mammoth";
-import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
   pdfjsWorker?: {
@@ -9,7 +8,17 @@ type PdfJsWorkerGlobal = typeof globalThis & {
   };
 };
 
-async function ensurePdfParseGlobals(): Promise<void> {
+type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+type PdfJsWorkerModule = {
+  WorkerMessageHandler?: unknown;
+};
+
+let pdfJsModulesPromise: Promise<{
+  pdfjs: PdfJsModule;
+  pdfjsWorker: PdfJsWorkerModule;
+}> | null = null;
+
+function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
     class MinimalDOMMatrix {
       multiplySelf(): this {
@@ -53,19 +62,41 @@ async function ensurePdfParseGlobals(): Promise<void> {
     class MinimalPath2D {}
     globalThis.Path2D = MinimalPath2D as unknown as typeof Path2D;
   }
+}
+
+async function loadPdfJsModules(): Promise<{
+  pdfjs: PdfJsModule;
+  pdfjsWorker: PdfJsWorkerModule;
+}> {
+  ensurePdfParseGlobals();
+
+  if (!pdfJsModulesPromise) {
+    pdfJsModulesPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      // @ts-expect-error pdfjs-dist does not publish typings for the worker bundle entrypoint.
+      const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+      return { pdfjs, pdfjsWorker };
+    })();
+  }
+
+  return await pdfJsModulesPromise;
+}
+
+async function ensurePdfJsWorkerInstalled(): Promise<PdfJsModule> {
+  const { pdfjs, pdfjsWorker } = await loadPdfJsModules();
 
   const globalWithPdfWorker = globalThis as PdfJsWorkerGlobal;
   if (!globalWithPdfWorker.pdfjsWorker?.WorkerMessageHandler) {
-    // @ts-expect-error pdfjs-dist does not publish typings for the worker bundle entrypoint.
-    const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
     globalWithPdfWorker.pdfjsWorker = {
       WorkerMessageHandler: pdfjsWorker.WorkerMessageHandler,
     };
   }
+
+  return pdfjs;
 }
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  await ensurePdfParseGlobals();
+  const pdfjs = await ensurePdfJsWorkerInstalled();
 
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
