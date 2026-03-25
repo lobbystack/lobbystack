@@ -14,7 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
@@ -184,21 +184,25 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 {t("agent:fields.defaultLocale.hint")}
               </FieldDescription>
             </FieldContent>
-            <Select
-              value={defaultLocale}
-              onValueChange={(value) => {
-                setDefaultLocale((value as RuntimeLocale | "") || "en");
-                setLocaleStatus(null);
-              }}
-            >
-              <SelectTrigger id="agent-default-language">
-                <SelectValue placeholder={t("agent:fields.defaultLocale.placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">{t("common:language.english")}</SelectItem>
-                <SelectItem value="fr">{t("common:language.french")}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div style={{ width: "13ch" }}>
+              <NativeSelect
+                aria-label={t("agent:fields.defaultLocale.label")}
+                className="w-full"
+                id="agent-default-language"
+                onChange={(event) => {
+                  setDefaultLocale((event.target.value as RuntimeLocale | "") || "en");
+                  setLocaleStatus(null);
+                }}
+                value={defaultLocale}
+              >
+                <NativeSelectOption value="en">
+                  {t("common:language.english")}
+                </NativeSelectOption>
+                <NativeSelectOption value="fr">
+                  {t("common:language.french")}
+                </NativeSelectOption>
+              </NativeSelect>
+            </div>
             <div className="flex items-center gap-3">
               <Button
                 disabled={isLocaleSaving || !persistedProfile}
