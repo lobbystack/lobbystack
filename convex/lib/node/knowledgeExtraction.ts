@@ -9,6 +9,13 @@ const require = createRequire(import.meta.url);
 
 let pdfParseModulePromise: Promise<{ PDFParse: typeof PDFParseClass }> | null = null;
 let pdfWorkerSourcePromise: Promise<string | null> | null = null;
+let pdfWorkerInstallPromise: Promise<void> | null = null;
+
+type PdfJsWorkerGlobal = typeof globalThis & {
+  pdfjsWorker?: {
+    WorkerMessageHandler?: unknown;
+  };
+};
 
 function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
@@ -62,7 +69,7 @@ async function loadPdfParseModule(): Promise<{ PDFParse: typeof PDFParseClass }>
     pdfParseModulePromise = (async () => {
       const [pdfParseModule, pdfWorkerSource] = await Promise.all([
         import("pdf-parse"),
-        loadPdfWorkerSource(),
+        ensurePdfWorkerInstalled(),
       ]);
 
       if (pdfWorkerSource) {
@@ -95,6 +102,37 @@ async function loadPdfWorkerSource(): Promise<string | null> {
   }
 
   return await pdfWorkerSourcePromise;
+}
+
+async function ensurePdfWorkerInstalled(): Promise<string | null> {
+  const workerSource = await loadPdfWorkerSource();
+  if (!workerSource) {
+    return null;
+  }
+
+  const globalWithPdfWorker = globalThis as PdfJsWorkerGlobal;
+
+  if (globalWithPdfWorker.pdfjsWorker?.WorkerMessageHandler) {
+    return workerSource;
+  }
+
+  if (!pdfWorkerInstallPromise) {
+    pdfWorkerInstallPromise = (async () => {
+      try {
+        const workerModule = await import(workerSource);
+        if (workerModule.WorkerMessageHandler) {
+          globalWithPdfWorker.pdfjsWorker = {
+            WorkerMessageHandler: workerModule.WorkerMessageHandler,
+          };
+        }
+      } catch (error) {
+        console.warn("Unable to install pdf.js worker module.", error);
+      }
+    })();
+  }
+
+  await pdfWorkerInstallPromise;
+  return workerSource;
 }
 
 type ExtractKnowledgeDocumentTextArgs = {
