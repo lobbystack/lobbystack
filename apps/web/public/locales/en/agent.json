@@ -160,6 +160,11 @@
       "placeholder": "Hello, thank you for calling…",
       "hint": "The opening line your receptionist uses when answering a call or starting a conversation."
     },
+    "defaultLocale": {
+      "label": "Default customer language",
+      "placeholder": "Select a default language",
+      "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
+    },
     "transferNumber": {
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",

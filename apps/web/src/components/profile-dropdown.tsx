@@ -39,16 +39,12 @@ export function ProfileDropdown({ onSignOut }: ProfileDropdownProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem render={<Link to="/settings" />}>
-            {t("settings:sections.business")}
-            <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<Link to="/settings/appearance" />}>
             {t("settings:sections.appearance")}
-            <DropdownMenuShortcut>⌘⇧A</DropdownMenuShortcut>
+            <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem render={<Link to="/settings/integrations" />}>
             {t("settings:sections.integrations")}
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+            <DropdownMenuShortcut>⌘⇧A</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

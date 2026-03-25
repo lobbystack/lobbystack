@@ -160,6 +160,11 @@
       "placeholder": "Bonjour, merci d'avoir appelé…",
       "hint": "La phrase d'ouverture utilisée par votre réceptionniste lorsqu'il répond à un appel ou démarre une conversation."
     },
+    "defaultLocale": {
+      "label": "Langue client par défaut",
+      "placeholder": "Choisir une langue par défaut",
+      "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
+    },
     "transferNumber": {
       "label": "Numéro de transfert par défaut",
       "placeholder": "+1 555-123-4567",

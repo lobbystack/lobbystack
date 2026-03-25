@@ -31,7 +31,6 @@ import { MessagesPage } from "@/features/messages/MessagesPage";
 import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
-import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -208,22 +207,13 @@ function WorkspaceShell() {
             element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
             path="/settings/*"
           >
-            <Route
-              element={
-                businessId ? (
-                  <SettingsBusinessPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              index
-            />
+            <Route element={<Navigate replace to="/settings/appearance" />} index />
             <Route
               element={
                 businessId ? (
                   <SettingsAppearancePage businessId={businessId} />
                 ) : (
-                  <Navigate replace to="/settings" />
+                  <Navigate replace to="/settings/appearance" />
                 )
               }
               path="appearance"
@@ -233,7 +223,7 @@ function WorkspaceShell() {
                 businessId ? (
                   <IntegrationsPage businessId={businessId} />
                 ) : (
-                  <Navigate replace to="/settings" />
+                  <Navigate replace to="/settings/appearance" />
                 )
               }
               path="integrations"

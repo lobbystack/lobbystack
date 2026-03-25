@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -13,6 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
@@ -27,10 +29,13 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const persistedProfile = configuration?.profile;
 
   const [greeting, setGreeting] = useState("");
+  const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [transferNumber, setTransferNumber] = useState("");
   const [greetingStatus, setGreetingStatus] = useState<string | null>(null);
+  const [localeStatus, setLocaleStatus] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
+  const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
 
   useEffect(() => {
@@ -39,6 +44,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       return;
     }
     setGreeting(profile.greeting);
+    setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setTransferNumber(profile.transferNumber ?? "");
   }, [configuration]);
 
@@ -48,6 +54,12 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     if (greetingStatus) {
       timeouts.push(window.setTimeout(() => {
         setGreetingStatus(null);
+      }, 3000));
+    }
+
+    if (localeStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setLocaleStatus(null);
       }, 3000));
     }
 
@@ -62,11 +74,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         window.clearTimeout(timeoutId);
       }
     };
-  }, [greetingStatus, transferStatus]);
+  }, [greetingStatus, localeStatus, transferStatus]);
 
   async function saveGreeting(): Promise<void> {
-    const defaultLocale = configuration?.business?.defaultLocale;
-    if (!persistedProfile || !defaultLocale) {
+    if (!persistedProfile) {
       return;
     }
 
@@ -86,9 +97,29 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     }
   }
 
+  async function saveDefaultLocale(): Promise<void> {
+    if (!persistedProfile) {
+      return;
+    }
+
+    setIsLocaleSaving(true);
+    setLocaleStatus(null);
+    try {
+      const trimmedTransferNumber = transferNumber.trim();
+      await saveProfile({
+        businessId,
+        defaultLocale,
+        greeting,
+        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
+      });
+      setLocaleStatus(t("agent:actions.saved"));
+    } finally {
+      setIsLocaleSaving(false);
+    }
+  }
+
   async function saveTransferNumber(): Promise<void> {
-    const defaultLocale = configuration?.business?.defaultLocale;
-    if (!persistedProfile || !defaultLocale) {
+    if (!persistedProfile) {
       return;
     }
 
@@ -140,6 +171,44 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </Button>
               {greetingStatus ? (
                 <span className="text-sm text-muted-foreground">{greetingStatus}</span>
+              ) : null}
+            </div>
+          </Field>
+
+          <Field>
+            <FieldContent>
+              <FieldLabel htmlFor="agent-default-language">
+                {t("agent:fields.defaultLocale.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:fields.defaultLocale.hint")}
+              </FieldDescription>
+            </FieldContent>
+            <Select
+              value={defaultLocale}
+              onValueChange={(value) => {
+                setDefaultLocale((value as RuntimeLocale | "") || "en");
+                setLocaleStatus(null);
+              }}
+            >
+              <SelectTrigger id="agent-default-language">
+                <SelectValue placeholder={t("agent:fields.defaultLocale.placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t("common:language.english")}</SelectItem>
+                <SelectItem value="fr">{t("common:language.french")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-3">
+              <Button
+                disabled={isLocaleSaving || !persistedProfile}
+                onClick={() => void saveDefaultLocale()}
+                type="button"
+              >
+                {isLocaleSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+              </Button>
+              {localeStatus ? (
+                <span className="text-sm text-muted-foreground">{localeStatus}</span>
               ) : null}
             </div>
           </Field>

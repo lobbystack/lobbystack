@@ -12,7 +12,6 @@ import {
   SlidersHorizontal,
   ListChecks,
   ScrollText,
-  UserRound,
   Workflow,
   BookOpenText,
 } from "lucide-react";
@@ -107,13 +106,8 @@ export function AppSidebar({
               icon: Settings,
               items: [
                 {
-                  title: t("settings:sections.business"),
-                  url: "/settings",
-                  icon: UserRound,
-                },
-                {
                   title: t("settings:sections.appearance"),
-                  url: "/settings/appearance",
+                  url: "/settings",
                   icon: SlidersHorizontal,
                 },
                 {
