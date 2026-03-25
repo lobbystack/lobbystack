@@ -1149,9 +1149,28 @@ export const completeVoiceFollowUpTask = mutation({
       return null;
     }
 
-    await ctx.db.patch(args.inboxItemId, {
-      status: "done",
-    });
+    if (!inboxItem.relatedId) {
+      await ctx.db.patch(args.inboxItemId, {
+        status: "done",
+      });
+      return null;
+    }
+
+    const relatedItems = await ctx.db
+      .query("inbox_items")
+      .withIndex("by_business_id_and_kind_and_status", (q) =>
+        q.eq("businessId", args.businessId).eq("kind", "voice_message").eq("status", "open"),
+      )
+      .collect();
+
+    const duplicateFollowUps = relatedItems.filter((item) => item.relatedId === inboxItem.relatedId);
+    await Promise.all(
+      duplicateFollowUps.map((item) =>
+        ctx.db.patch(item._id, {
+          status: "done",
+        }),
+      ),
+    );
 
     return null;
   },

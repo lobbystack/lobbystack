@@ -180,35 +180,37 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             className="group rounded-2xl border border-border/70 bg-card shadow-sm"
             key={entry._id}
           >
-            <CollapsibleTrigger className="flex w-full items-center justify-between p-4 outline-none">
-              <div className="flex items-center gap-3">
-                <span className="font-semibold">{entry.title}</span>
-                {"sourceType" in entry ? (
-                  <>
-                    <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                    <Badge
-                      variant={entry.status === "error" ? "destructive" : entry.status === "indexed" ? "secondary" : "outline"}
-                    >
-                      {getDocumentStatusLabel(entry.status)}
-                    </Badge>
-                    {entry.tags?.length && entry.tags[0] ? (
-                      <Badge variant="secondary">{entry.tags[0]}</Badge>
-                    ) : null}
-                  </>
-                ) : entry.tags?.length && entry.tags[0] ? (
-                  <Badge variant="secondary">{entry.tags[0]}</Badge>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 p-4">
+              <CollapsibleTrigger className="flex flex-1 items-center justify-between outline-none">
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold">{entry.title}</span>
+                  {"sourceType" in entry ? (
+                    <>
+                      <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
+                      <Badge
+                        variant={entry.status === "error" ? "destructive" : entry.status === "indexed" ? "secondary" : "outline"}
+                      >
+                        {getDocumentStatusLabel(entry.status)}
+                      </Badge>
+                      {entry.tags?.length && entry.tags[0] ? (
+                        <Badge variant="secondary">{entry.tags[0]}</Badge>
+                      ) : null}
+                    </>
+                  ) : entry.tags?.length && entry.tags[0] ? (
+                    <Badge variant="secondary">{entry.tags[0]}</Badge>
+                  ) : null}
+                </div>
+                <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
+              </CollapsibleTrigger>
+              <div className="shrink-0">
                 <InlineConfirmDeleteButton
                   deleting={deletingEntryId === String(entry._id)}
                   onConfirm={() => {
                     void handleDelete(entry);
                   }}
                 />
-                <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
               </div>
-            </CollapsibleTrigger>
+            </div>
             <CollapsibleContent>
               <div className="px-4 pb-4">
                 {"sourceType" in entry ? (

@@ -181,11 +181,19 @@ describe("Dashboard home summary", () => {
         status: "completed",
         startedAt: "2026-03-19T12:00:00.000Z",
       });
+      await ctx.db.insert("inbox_items", {
+        businessId,
+        kind: "voice_message",
+        title: "Voice message from Raphael Morency",
+        body: "Callback: +15817484609\n\nOlder callback note.",
+        relatedId: String(callId),
+        status: "open",
+      });
       const voiceTaskId = await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
         title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\n\nPlease call me back.",
+        body: "Callback: +15817484609\n\nNewest callback note.",
         relatedId: String(callId),
         status: "open",
       });
@@ -235,6 +243,7 @@ describe("Dashboard home summary", () => {
         (item) => "taskId" in item && item.taskId === voiceTaskId,
       ),
     ).toBe(false);
+    expect(summary.actionRequired.some((item) => item.kind === "voice_message")).toBe(false);
 
     const callsAfter = await authed.query(api.voice.runtime.listRecentCalls, {
       businessId,
