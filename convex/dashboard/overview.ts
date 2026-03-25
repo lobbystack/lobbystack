@@ -337,14 +337,15 @@ export const getHomeSummary = query({
 
     const actionRequiredFromHandoffs = await Promise.all(
       handoffConversations.map(async (conversation) => {
-        const [contact, messages] = await Promise.all([
+        const [contact, latestMessages] = await Promise.all([
           conversation.contactId ? ctx.db.get(conversation.contactId) : Promise.resolve(null),
           ctx.db
             .query("messages")
             .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .collect(),
+            .order("desc")
+            .take(1),
         ]);
-        const latestMessage = messages[messages.length - 1] ?? null;
+        const latestMessage = latestMessages[0] ?? null;
         const latestMessageTimestamp =
           latestMessage?._creationTime ??
           (conversation.automationPausedAt
@@ -365,7 +366,6 @@ export const getHomeSummary = query({
               : conversation.automationPausedAt ?? new Date(conversation._creationTime).toISOString(),
           conversationId: conversation._id,
           _sortTimestamp: latestMessageTimestamp,
-          _messageCount: messages.length,
           _conversationCreatedAt: conversation._creationTime,
         };
       }),
@@ -373,7 +373,6 @@ export const getHomeSummary = query({
     actionRequiredFromHandoffs.sort(
       (left, right) =>
         right._sortTimestamp - left._sortTimestamp ||
-        right._messageCount - left._messageCount ||
         right._conversationCreatedAt - left._conversationCreatedAt,
     );
 
@@ -387,7 +386,6 @@ export const getHomeSummary = query({
 
         const {
           _sortTimestamp: _unusedSortTimestamp,
-          _messageCount: _unusedMessageCount,
           _conversationCreatedAt: _unusedConversationCreatedAt,
           ...cleanItem
         } = item;

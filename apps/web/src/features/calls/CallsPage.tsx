@@ -335,7 +335,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
         null;
   const activeFollowUpTask =
     selectedCall?.followUpTask ??
-    (normalizedRequestedCallId !== null && selectedCall === null ? requestedFollowUpTask ?? null : null);
+    (selectedCall === null ? requestedFollowUpTask ?? null : null);
   const selectedCallFollowUpDetails = activeFollowUpTask
     ? parseFollowUpTaskBody(activeFollowUpTask.body)
     : null;
