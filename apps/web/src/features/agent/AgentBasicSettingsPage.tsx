@@ -24,6 +24,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     businessId,
   });
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
+  const persistedProfile = configuration?.profile;
 
   const [greeting, setGreeting] = useState("");
   const [transferNumber, setTransferNumber] = useState("");
@@ -64,13 +65,17 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }, [greetingStatus, transferStatus]);
 
   async function saveGreeting(): Promise<void> {
+    if (!persistedProfile) {
+      return;
+    }
+
     setIsGreetingSaving(true);
     setGreetingStatus(null);
     try {
       await saveProfile({
         businessId,
         greeting,
-        transferNumber: transferNumber.trim().length > 0 ? transferNumber.trim() : null,
+        transferNumber: persistedProfile.transferNumber ?? null,
       });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
@@ -79,13 +84,17 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }
 
   async function saveTransferNumber(): Promise<void> {
+    if (!persistedProfile) {
+      return;
+    }
+
     setIsTransferSaving(true);
     setTransferStatus(null);
     try {
       const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
-        greeting,
+        greeting: persistedProfile.greeting,
         transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });
       setTransferStatus(t("agent:actions.saved"));
@@ -117,7 +126,11 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               }}
             />
             <div className="flex items-center gap-3">
-              <Button disabled={isGreetingSaving} onClick={() => void saveGreeting()} type="button">
+              <Button
+                disabled={isGreetingSaving || !persistedProfile}
+                onClick={() => void saveGreeting()}
+                type="button"
+              >
                 {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
               </Button>
               {greetingStatus ? (
@@ -148,7 +161,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
             </div>
             <div className="flex items-center gap-3">
               <Button
-                disabled={isTransferSaving}
+                disabled={isTransferSaving || !persistedProfile}
                 onClick={() => void saveTransferNumber()}
                 type="button"
               >

@@ -54,13 +54,11 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          !isBasicSettingsRoute && section === "knowledge" ? (
+          !isBasicSettingsRoute ? (
             <>
               <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
               <AddKnowledgeSheet businessId={businessId} section={section} />
             </>
-          ) : section === "services" || section === "rules" ? (
-            <AddKnowledgeSheet businessId={businessId} section={section} />
           ) : undefined
         }
         description={header.description}

@@ -129,12 +129,15 @@ export const updateReceptionistProfile = mutation({
 
     const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
       greeting: args.greeting,
-      smsInstructions,
-      bookingPolicy,
+      smsInstructions: args.smsInstructions,
+      bookingPolicy: args.bookingPolicy,
     });
-    await ctx.db.patch(args.businessId, {
-      defaultLocale: inferredDefaultLocale ?? "en",
-    });
+    const nextDefaultLocale = inferredDefaultLocale ?? business.defaultLocale ?? "en";
+    if (business.defaultLocale !== nextDefaultLocale) {
+      await ctx.db.patch(args.businessId, {
+        defaultLocale: nextDefaultLocale,
+      });
+    }
 
     if (existing) {
       await ctx.db.replace(existing._id, nextProfile);

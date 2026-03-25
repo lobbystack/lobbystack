@@ -62,7 +62,7 @@ describe("Receptionist profile settings", () => {
 
     await authed.mutation(api.ai.context.snapshots.updateReceptionistProfile, {
       businessId,
-      greeting: "Welcome.",
+      greeting: "Bonjour.",
     });
 
     const result = await t.run(async (ctx) => {
@@ -77,7 +77,7 @@ describe("Receptionist profile settings", () => {
 
     expect(result.profile).toMatchObject({
       businessId: businessId as Id<"businesses">,
-      greeting: "Welcome.",
+      greeting: "Bonjour.",
       tone: DEFAULT_RECEPTIONIST_TONE,
       summary: buildDefaultReceptionistSummary("Receptionist Profile Business"),
       bookingPolicy: "Only confirm a booking after availability is checked.",
@@ -86,6 +86,6 @@ describe("Receptionist profile settings", () => {
       transferMode: "always",
       transferNumber: "+14165550111",
     });
-    expect(result.business?.defaultLocale).toBe("en");
+    expect(result.business?.defaultLocale).toBe("fr");
   });
 });
