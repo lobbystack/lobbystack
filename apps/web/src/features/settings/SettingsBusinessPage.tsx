@@ -101,7 +101,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
     try {
       if (newPassword !== confirmNewPassword) {
-        throw new Error("New passwords do not match.");
+        throw new Error(t("account.changePassword.errors.mismatch"));
       }
 
       await changePassword({
@@ -112,11 +112,11 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setPasswordStatus("Password updated.");
+      setPasswordStatus(t("account.changePassword.saved"));
       setIsPasswordDialogOpen(false);
     } catch (error) {
       setPasswordError(
-        error instanceof Error ? error.message : "Unable to update password.",
+        error instanceof Error ? error.message : t("account.changePassword.errors.failed"),
       );
     }
   }
@@ -148,14 +148,14 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             <FieldGroup>
               <Field>
                 <FieldContent>
-                  <FieldLabel htmlFor="profile-username">Business name</FieldLabel>
+                  <FieldLabel htmlFor="profile-username">{t("account.businessName.label")}</FieldLabel>
                   <FieldDescription>
-                    This is the name shown across the dashboard and customer-facing business details.
+                    {t("account.businessName.description")}
                   </FieldDescription>
                 </FieldContent>
                 <Input
                   id="profile-username"
-                  placeholder="Maple Family Clinic"
+                  placeholder={t("account.businessName.placeholder")}
                   value={businessName}
                   onChange={(event) => {
                     setBusinessName(event.target.value);
@@ -183,7 +183,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
           <ItemGroup>
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle>Email</ItemTitle>
+                <ItemTitle>{t("account.changeEmail.title")}</ItemTitle>
                 <ItemDescription>{t("account.changeEmail.description")}</ItemDescription>
                 {currentUser?.email ? (
                   <p className="text-sm text-foreground">
@@ -195,7 +195,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             <ItemActions>
               <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
                 <DialogTrigger render={<Button variant="outline" />}>
-                  Change
+                  {t("account.actions.change")}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -222,7 +222,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
                     <Field>
                       <FieldLabel htmlFor="profile-password">
-                        Current password
+                        {t("account.changeEmail.currentPasswordLabel")}
                       </FieldLabel>
                       <Input
                         id="profile-password"
@@ -249,9 +249,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
             <Item variant="outline">
               <ItemContent>
-                <ItemTitle>Password</ItemTitle>
+                <ItemTitle>{t("account.changePassword.title")}</ItemTitle>
                 <ItemDescription>
-                  Password you use to log in.
+                  {t("account.changePassword.description")}
                 </ItemDescription>
                 <div className="text-lg leading-none text-foreground">••••••••</div>
                 {passwordStatus ? <ItemDescription>{passwordStatus}</ItemDescription> : null}
@@ -259,25 +259,25 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             <ItemActions>
               <Dialog onOpenChange={setIsPasswordDialogOpen} open={isPasswordDialogOpen}>
                 <DialogTrigger render={<Button variant="outline" />}>
-                  Change
+                  {t("account.actions.change")}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Change password</DialogTitle>
+                    <DialogTitle>{t("account.changePassword.label")}</DialogTitle>
                     <DialogDescription>
-                      Enter your current password and a new password.
+                      {t("account.changePassword.dialogDescription")}
                     </DialogDescription>
                   </DialogHeader>
 
                   <FieldGroup>
                     <Field>
                       <FieldLabel htmlFor="profile-current-password">
-                        Current password
+                        {t("account.changePassword.currentPasswordLabel")}
                       </FieldLabel>
                       <Input
                         id="profile-current-password"
                         type="password"
-                        placeholder="Current password"
+                        placeholder={t("account.changePassword.currentPasswordPlaceholder")}
                         value={currentPassword}
                         onChange={(event) => setCurrentPassword(event.target.value)}
                       />
@@ -285,12 +285,12 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
                     <Field>
                       <FieldLabel htmlFor="profile-new-password">
-                        New password
+                        {t("account.changePassword.newPasswordLabel")}
                       </FieldLabel>
                       <Input
                         id="profile-new-password"
                         type="password"
-                        placeholder="New password"
+                        placeholder={t("account.changePassword.newPasswordPlaceholder")}
                         value={newPassword}
                         onChange={(event) => setNewPassword(event.target.value)}
                       />
@@ -298,12 +298,12 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
                     <Field>
                       <FieldLabel htmlFor="profile-confirm-new-password">
-                        Confirm new password
+                        {t("account.changePassword.confirmPasswordLabel")}
                       </FieldLabel>
                       <Input
                         id="profile-confirm-new-password"
                         type="password"
-                        placeholder="Confirm new password"
+                        placeholder={t("account.changePassword.confirmPasswordPlaceholder")}
                         value={confirmNewPassword}
                         onChange={(event) => setConfirmNewPassword(event.target.value)}
                       />
@@ -314,7 +314,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
                   <DialogFooter>
                     <Button type="button" onClick={() => void handlePasswordSave()}>
-                      Save
+                      {t("account.changePassword.save")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

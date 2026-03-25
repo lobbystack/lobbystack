@@ -141,7 +141,13 @@
     }
   },
   "account": {
+    "actions": {
+      "change": "Change"
+    },
     "businessName": {
+      "label": "Business name",
+      "description": "This is the name shown across the dashboard and customer-facing business details.",
+      "placeholder": "Maple Family Clinic",
       "save": "Save",
       "saving": "Saving...",
       "saved": "Changes saved"
@@ -152,6 +158,8 @@
       "newEmailPlaceholder": "New email",
       "currentPasswordPlaceholder": "Current password",
       "save": "Send confirmation link",
+      "title": "Email",
+      "currentPasswordLabel": "Current password",
       "currentEmail": "{{email}}",
       "confirmationSent": "We sent a confirmation link to {{email}}.",
       "errors": {
@@ -162,6 +170,24 @@
         "missingSiteUrl": "Email confirmation isn't configured yet. Set SITE_URL on the Convex deployment and try again.",
         "required": "Enter a new email address.",
         "failed": "We couldn't send a confirmation link. Please try again."
+      }
+    },
+    "changePassword": {
+      "title": "Password",
+      "label": "Change password",
+      "description": "Password you use to log in.",
+      "dialogDescription": "Enter your current password and a new password.",
+      "currentPasswordLabel": "Current password",
+      "currentPasswordPlaceholder": "Current password",
+      "newPasswordLabel": "New password",
+      "newPasswordPlaceholder": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "save": "Save",
+      "saved": "Password updated.",
+      "errors": {
+        "mismatch": "New passwords do not match.",
+        "failed": "Unable to update password."
       }
     }
   },

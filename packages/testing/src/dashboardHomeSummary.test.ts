@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -386,5 +386,73 @@ describe("Dashboard home summary", () => {
         (item) => item.kind === "human_handoff" && item.body === "Need help 6 latest",
       ),
     ).toBe(true);
+  });
+
+  it("filters upcoming appointments by timestamp instead of lexical ISO ordering", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(
+      t,
+      "dashboard-home-upcoming-appointments",
+    );
+
+    await t.run(async (ctx) => {
+      const contactId = await insertContact(ctx, businessId, {
+        name: "Taylor Customer",
+        phone: "+14165550199",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jannie",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-25T13:00:00.000Z",
+        endsAt: "2026-03-25T13:30:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-03-25T10:00:00.000-04:00",
+        endsAt: "2026-03-25T10:30:00.000-04:00",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-25T13:30:00.000Z"));
+
+    try {
+      const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+        businessId,
+      });
+
+      expect(summary.upcoming).toHaveLength(1);
+      expect(summary.upcoming[0]?.startsAt).toBe("2026-03-25T10:00:00.000-04:00");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -397,7 +397,7 @@ export const getHomeSummary = query({
     const upcomingAppointments = appointments
       .filter(
         (appointment) =>
-          appointment.startsAt >= nowIso &&
+          Date.parse(appointment.startsAt) >= now.getTime() &&
           appointment.status !== "cancelled" &&
           appointment.status !== "canceled",
       )
