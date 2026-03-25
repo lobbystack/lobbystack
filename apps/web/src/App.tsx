@@ -151,20 +151,30 @@ function WorkspaceShell() {
             element={<AgentLayout {...(businessId ? { businessId } : {})} />}
             path="/agent/*"
           >
-            <Route
-              element={
-                businessId ? (
-                  <AgentBasicSettingsPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              index
-            />
-            <Route
-              element={
-                businessId ? (
-                  <AgentKnowledgePage businessId={businessId} section="knowledge" />
+          <Route
+            element={
+              businessId ? (
+                <AgentBasicSettingsPage businessId={businessId} />
+              ) : (
+                <Navigate replace to="/agent" />
+              )
+            }
+            index
+          />
+          <Route
+            element={
+              businessId ? (
+                <AgentBasicSettingsPage businessId={businessId} />
+              ) : (
+                <Navigate replace to="/agent" />
+              )
+            }
+            path="basic-settings"
+          />
+          <Route
+            element={
+              businessId ? (
+                <AgentKnowledgePage businessId={businessId} section="knowledge" />
                 ) : (
                   <Navigate replace to="/agent" />
                 )

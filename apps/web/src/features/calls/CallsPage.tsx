@@ -66,6 +66,8 @@ type VoiceFollowUpTaskRow = {
 
 type TranscriptSegment = Doc<"transcripts">;
 
+const CONVEX_ID_PARAM_PATTERN = /^[a-z0-9]{32}$/;
+
 function initials(value: string | null, fallback: string): string {
   if (!value) {
     return fallback.slice(0, 2).toUpperCase();
@@ -104,6 +106,10 @@ function isAgentSpeaker(value: string): boolean {
   return ["assistant", "agent", "receptionist", "system", "ai"].some((token) =>
     normalized.includes(token),
   );
+}
+
+function isConvexIdParam(value: string | null): value is string {
+  return value !== null && CONVEX_ID_PARAM_PATTERN.test(value);
 }
 
 function formatCallDispositionSummary(
@@ -216,13 +222,19 @@ export function CallsPage({ businessId }: CallsPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCallId = searchParams.get("callId");
   const requestedTaskId = searchParams.get("taskId");
+  const normalizedRequestedCallId = isConvexIdParam(requestedCallId)
+    ? (requestedCallId as Id<"calls">)
+    : null;
+  const normalizedRequestedTaskId = isConvexIdParam(requestedTaskId)
+    ? (requestedTaskId as Id<"inbox_items">)
+    : null;
   const calls = useQuery(
     api.voice.runtime.listRecentCalls,
     businessId
       ? {
           businessId,
           limit: 50,
-          ...(requestedCallId ? { selectedCallId: requestedCallId as Id<"calls"> } : {}),
+          ...(normalizedRequestedCallId ? { selectedCallId: normalizedRequestedCallId } : {}),
         }
       : "skip",
   );
@@ -240,16 +252,16 @@ export function CallsPage({ businessId }: CallsPageProps) {
   const [resolvedRows, setResolvedRows] = useState<Array<CallRow>>([]);
   const selectedCallDetail = useQuery(
     api.voice.runtime.getCallForDashboard,
-    businessId && requestedCallId
-      ? { businessId, callId: requestedCallId as Id<"calls"> }
+    businessId && normalizedRequestedCallId
+      ? { businessId, callId: normalizedRequestedCallId }
       : businessId && selectedCallId
         ? { businessId, callId: selectedCallId }
       : "skip",
   ) as CallRow | null | undefined;
   const requestedFollowUpTask = useQuery(
     api.voice.runtime.getVoiceFollowUpTaskForDashboard,
-    businessId && requestedTaskId
-      ? { businessId, inboxItemId: requestedTaskId as Id<"inbox_items"> }
+    businessId && normalizedRequestedTaskId
+      ? { businessId, inboxItemId: normalizedRequestedTaskId }
       : "skip",
   ) as VoiceFollowUpTaskRow | null | undefined;
 
@@ -257,6 +269,33 @@ export function CallsPage({ businessId }: CallsPageProps) {
     api.voice.runtime.getCallTranscript,
     businessId && selectedCallId ? { businessId, callId: selectedCallId } : "skip",
   ) as Array<TranscriptSegment> | undefined;
+
+  useEffect(() => {
+    if (
+      (requestedCallId !== null && normalizedRequestedCallId === null) ||
+      (requestedTaskId !== null && normalizedRequestedTaskId === null)
+    ) {
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (requestedCallId !== null && normalizedRequestedCallId === null) {
+            next.delete("callId");
+          }
+          if (requestedTaskId !== null && normalizedRequestedTaskId === null) {
+            next.delete("taskId");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [
+    normalizedRequestedCallId,
+    normalizedRequestedTaskId,
+    requestedCallId,
+    requestedTaskId,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     if (calls !== undefined) {
@@ -283,12 +322,12 @@ export function CallsPage({ businessId }: CallsPageProps) {
     });
   }, [rows, searchValue]);
 
-  const requestedCall = requestedCallId
-    ? rows.find((call) => String(call._id) === requestedCallId) ??
+  const requestedCall = normalizedRequestedCallId
+    ? rows.find((call) => String(call._id) === normalizedRequestedCallId) ??
       (selectedCallDetail === undefined ? undefined : selectedCallDetail)
     : null;
   const selectedCall =
-    requestedCallId !== null
+    normalizedRequestedCallId !== null
       ? requestedCall ?? null
       : filteredRows.find((call) => call._id === selectedCallId) ??
         rows.find((call) => call._id === selectedCallId) ??
@@ -296,7 +335,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
         null;
   const activeFollowUpTask =
     selectedCall?.followUpTask ??
-    (requestedCallId !== null && selectedCall === null ? requestedFollowUpTask ?? null : null);
+    (normalizedRequestedCallId !== null && selectedCall === null ? requestedFollowUpTask ?? null : null);
   const selectedCallFollowUpDetails = activeFollowUpTask
     ? parseFollowUpTaskBody(activeFollowUpTask.body)
     : null;
@@ -306,7 +345,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
 
   useEffect(() => {
     const nextSelectedCall =
-      requestedCallId !== null
+      normalizedRequestedCallId !== null
         ? requestedCall ?? null
         : filteredRows[0] ?? rows[0] ?? null;
 
@@ -314,7 +353,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
       setSelectedCallId(nextSelectedCall._id);
       setMobileSelectedCallId(nextSelectedCall._id);
     }
-  }, [filteredRows, requestedCallId, rows, selectedCallDetail, selectedCallId]);
+  }, [filteredRows, normalizedRequestedCallId, requestedCall, rows, selectedCallId]);
 
   useEffect(() => {
     if (selectedCallId) {
