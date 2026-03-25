@@ -72,10 +72,11 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setIsGreetingSaving(true);
     setGreetingStatus(null);
     try {
+      const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
         greeting,
-        transferNumber: persistedProfile.transferNumber ?? null,
+        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
@@ -94,7 +95,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
-        greeting: persistedProfile.greeting,
+        greeting,
         transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });
       setTransferStatus(t("agent:actions.saved"));
