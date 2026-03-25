@@ -19,15 +19,20 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
   }
 
   const header =
-    location.pathname === "/settings/integrations"
+    location.pathname === "/settings/appearance"
       ? {
-          title: t("sections.integrations"),
-          description: t("layout.integrationsDescription"),
-        }
-      : {
           title: t("appearance.title"),
           description: t("appearance.description"),
-        };
+        }
+      : location.pathname === "/settings/integrations"
+        ? {
+            title: t("sections.integrations"),
+            description: t("layout.integrationsDescription"),
+          }
+        : {
+            title: t("sections.business"),
+            description: t("layout.businessDescription"),
+          };
 
   return (
     <div className="flex flex-col gap-6">
