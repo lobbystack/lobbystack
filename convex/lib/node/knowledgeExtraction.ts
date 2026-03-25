@@ -1,5 +1,6 @@
 "use node";
 
+import { existsSync } from "node:fs";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 
@@ -34,9 +35,14 @@ export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
   "We couldn't OCR this PDF locally. Upload a searchable PDF or a clearer scan.";
 
 const KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE = 2;
-const TESSERACT_NODE_WORKER_PATH = fileURLToPath(
-  new URL("./tesseractNodeWorker.js", import.meta.url),
-);
+const TESSERACT_NODE_WORKER_PATH_CANDIDATES = [
+  fileURLToPath(new URL("./tesseractNodeWorker.js", import.meta.url)),
+  fileURLToPath(new URL("../node/tesseractNodeWorker.js", import.meta.url)),
+  fileURLToPath(new URL("../../lib/node/tesseractNodeWorker.js", import.meta.url)),
+];
+const TESSERACT_NODE_WORKER_PATH =
+  TESSERACT_NODE_WORKER_PATH_CANDIDATES.find((candidate) => existsSync(candidate)) ??
+  TESSERACT_NODE_WORKER_PATH_CANDIDATES[0]!;
 
 let pdfJsModulesPromise: Promise<{
   pdfjs: PdfJsModule;
