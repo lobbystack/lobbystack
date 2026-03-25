@@ -6,15 +6,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -206,27 +206,32 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
+      <Dialog open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        <DialogContent
           dir={dir}
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className={cn(
+            "top-0 h-full max-h-none w-(--sidebar-width) max-w-none translate-y-0 rounded-none bg-sidebar p-0 text-sidebar-foreground ring-0 [&>button]:hidden",
+            side === "right"
+              ? "right-0 left-auto translate-x-0 border-l"
+              : "left-0 translate-x-0 border-r"
+          )}
+          showCloseButton={false}
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
-          side={side}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Sidebar</DialogTitle>
+            <DialogDescription>Displays the mobile sidebar.</DialogDescription>
+          </DialogHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     )
   }
 

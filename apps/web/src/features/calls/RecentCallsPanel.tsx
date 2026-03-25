@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type RecentCallsPanelProps = {
   businessId: Id<"businesses"> | undefined;
@@ -40,7 +40,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
     props.businessId ? { businessId: props.businessId, limit: 12 } : "skip",
   );
   const [selectedCallId, setSelectedCallId] = useState<Id<"calls"> | undefined>(undefined);
-  const [transcriptSheetOpen, setTranscriptSheetOpen] = useState(false);
+  const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
 
   const transcript = useQuery(
     api.voice.runtime.getCallTranscript,
@@ -69,7 +69,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
 
   function openTranscript(callId: Id<"calls">) {
     setSelectedCallId(callId);
-    setTranscriptSheetOpen(true);
+    setTranscriptDialogOpen(true);
   }
 
   return (
@@ -153,11 +153,11 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
         </CardContent>
       </Card>
 
-      <Sheet onOpenChange={setTranscriptSheetOpen} open={transcriptSheetOpen}>
-        <SheetContent className="w-full sm:max-w-2xl" side="right">
-          <SheetHeader>
-            <SheetTitle>{t("calls:transcript.title")}</SheetTitle>
-            <SheetDescription>
+      <Dialog onOpenChange={setTranscriptDialogOpen} open={transcriptDialogOpen}>
+        <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("calls:transcript.title")}</DialogTitle>
+            <DialogDescription>
               {selectedCall
                 ? t("calls:transcript.descriptionWithDate", {
                     date: formatDateTime(selectedCall.startedAt, i18n.language, {
@@ -166,10 +166,10 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
                     }),
                   })
                 : t("calls:transcript.descriptionEmpty")}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 pb-6">
+          <div className="flex flex-col gap-4">
             {selectedCall ? (
               <div className="flex flex-wrap items-center gap-2">
                 {selectedCall.transcriptReady ? (
@@ -185,7 +185,7 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
               </div>
             ) : null}
 
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {transcriptSegments.map((segment) => (
                 <div
                   className="rounded-2xl border border-border/70 bg-muted/25 p-4"
@@ -206,8 +206,8 @@ export function RecentCallsPanel(props: RecentCallsPanelProps) {
               ) : null}
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
