@@ -342,8 +342,18 @@ export function CallsPage({ businessId }: CallsPageProps) {
   const activeFollowUpDisplayTitle = activeFollowUpTask
     ? getCallFollowUpDisplayTitle(activeFollowUpTask, t)
     : null;
+  const hasTaskOnlyRequest =
+    normalizedRequestedCallId === null && normalizedRequestedTaskId !== null;
 
   useEffect(() => {
+    if (hasTaskOnlyRequest) {
+      if (selectedCallId !== undefined || mobileSelectedCallId !== undefined) {
+        setSelectedCallId(undefined);
+        setMobileSelectedCallId(undefined);
+      }
+      return;
+    }
+
     const nextSelectedCall =
       normalizedRequestedCallId !== null
         ? requestedCall ?? null
@@ -353,7 +363,15 @@ export function CallsPage({ businessId }: CallsPageProps) {
       setSelectedCallId(nextSelectedCall._id);
       setMobileSelectedCallId(nextSelectedCall._id);
     }
-  }, [filteredRows, normalizedRequestedCallId, requestedCall, rows, selectedCallId]);
+  }, [
+    filteredRows,
+    hasTaskOnlyRequest,
+    mobileSelectedCallId,
+    normalizedRequestedCallId,
+    requestedCall,
+    rows,
+    selectedCallId,
+  ]);
 
   useEffect(() => {
     if (selectedCallId) {

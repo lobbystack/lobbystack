@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -43,15 +43,20 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const collapsibleItems = items.filter((item): item is NavCollapsibleItem => !isNavLinkItem(item));
   const initialOpen = collapsibleItems.find((item) => checkIsActive(href, item, true));
   const [openKey, setOpenKey] = useState<string | null>(
-    initialOpen ? `${initialOpen.title}-${initialOpen.items[0]?.url ?? title}` : null,
+    initialOpen ? getNavItemKey(initialOpen, title) : null,
   );
+
+  useEffect(() => {
+    const activeItem = collapsibleItems.find((item) => checkIsActive(href, item, true));
+    setOpenKey(activeItem ? getNavItemKey(activeItem, title) : null);
+  }, [collapsibleItems, href, title]);
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const key = `${item.title}-${"url" in item ? item.url : item.items[0]?.url ?? title}`;
+          const key = getNavItemKey(item, title);
 
           if (isNavLinkItem(item)) {
             return <SidebarMenuLink href={href} item={item} key={key} />;
@@ -78,6 +83,15 @@ export function NavGroup({ title, items }: NavGroupProps) {
 
 function isNavLinkItem(item: NavItem): item is NavLinkItem {
   return "url" in item;
+}
+
+function getNavItemKey(item: NavItem, fallback: string): string {
+  if (isNavLinkItem(item)) {
+    return `link:${item.url}`;
+  }
+
+  const itemUrls = item.items.map((subItem) => subItem.url).join("|");
+  return `group:${itemUrls || fallback}`;
 }
 
 function NavBadge({ children }: { children: ReactNode }) {
