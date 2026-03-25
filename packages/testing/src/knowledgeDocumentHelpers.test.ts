@@ -1,23 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 
-const { pdfDestroyMock, pdfGetTextMock, pdfSetWorkerMock } = vi.hoisted(() => ({
-  pdfDestroyMock: vi.fn(),
-  pdfGetTextMock: vi.fn(),
-  pdfSetWorkerMock: vi.fn(),
+const {
+  loadingTaskDestroyMock,
+  documentDestroyMock,
+  pageCleanupMock,
+  getTextContentMock,
+  getPageMock,
+  getDocumentMock,
+} = vi.hoisted(() => ({
+  loadingTaskDestroyMock: vi.fn(),
+  documentDestroyMock: vi.fn(),
+  pageCleanupMock: vi.fn(),
+  getTextContentMock: vi.fn(),
+  getPageMock: vi.fn(),
+  getDocumentMock: vi.fn(),
 }));
 
-vi.mock("pdf-parse", () => ({
-  PDFParse: class {
-    static setWorker = pdfSetWorkerMock;
+vi.mock("pdfjs-dist/legacy/build/pdf.worker.mjs", () => ({
+  WorkerMessageHandler: {},
+}));
 
-    async getText() {
-      return await pdfGetTextMock();
-    }
-
-    async destroy() {
-      await pdfDestroyMock();
-    }
+vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
+  VerbosityLevel: {
+    ERRORS: 0,
   },
+  getDocument: getDocumentMock,
 }));
 
 import {
@@ -47,8 +54,27 @@ describe("Knowledge document helpers", () => {
     expect(markdownText).toBe("# Title\n\nBody copy");
   });
 
-  it("destroys PDF parsers after extracting text", async () => {
-    pdfGetTextMock.mockResolvedValueOnce({ text: "Extracted PDF text" });
+  it("extracts PDF text and destroys PDF.js resources", async () => {
+    const page = {
+      getTextContent: getTextContentMock,
+      cleanup: pageCleanupMock,
+    };
+    const document = {
+      numPages: 1,
+      getPage: getPageMock,
+      destroy: documentDestroyMock,
+    };
+
+    getTextContentMock.mockResolvedValueOnce({
+      items: [
+        { str: "Extracted PDF text", hasEOL: false },
+      ],
+    });
+    getPageMock.mockResolvedValueOnce(page);
+    getDocumentMock.mockReturnValueOnce({
+      promise: Promise.resolve(document),
+      destroy: loadingTaskDestroyMock,
+    });
 
     const pdfText = await extractKnowledgeDocumentText({
       blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
@@ -56,10 +82,12 @@ describe("Knowledge document helpers", () => {
     });
 
     expect(pdfText).toBe("Extracted PDF text");
-    expect(pdfSetWorkerMock).toHaveBeenCalledTimes(1);
-    expect(pdfSetWorkerMock.mock.calls[0]?.[0]).toMatch(/^data:text\/javascript;base64,/);
-    expect(pdfGetTextMock).toHaveBeenCalledTimes(1);
-    expect(pdfDestroyMock).toHaveBeenCalledTimes(1);
+    expect(getDocumentMock).toHaveBeenCalledTimes(1);
+    expect(getPageMock).toHaveBeenCalledWith(1);
+    expect(getTextContentMock).toHaveBeenCalledTimes(1);
+    expect(pageCleanupMock).toHaveBeenCalledTimes(1);
+    expect(documentDestroyMock).toHaveBeenCalledTimes(1);
+    expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects empty or near-empty extracted output", () => {

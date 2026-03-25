@@ -1,15 +1,7 @@
 "use node";
 
-import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import mammoth from "mammoth";
-import type { PDFParse as PDFParseClass } from "pdf-parse";
-
-const require = createRequire(import.meta.url);
-
-let pdfParseModulePromise: Promise<{ PDFParse: typeof PDFParseClass }> | null = null;
-let pdfWorkerSourcePromise: Promise<string | null> | null = null;
-let pdfWorkerInstallPromise: Promise<void> | null = null;
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
   pdfjsWorker?: {
@@ -17,7 +9,7 @@ type PdfJsWorkerGlobal = typeof globalThis & {
   };
 };
 
-function ensurePdfParseGlobals(): void {
+async function ensurePdfParseGlobals(): Promise<void> {
   if (typeof globalThis.DOMMatrix === "undefined") {
     class MinimalDOMMatrix {
       multiplySelf(): this {
@@ -61,78 +53,63 @@ function ensurePdfParseGlobals(): void {
     class MinimalPath2D {}
     globalThis.Path2D = MinimalPath2D as unknown as typeof Path2D;
   }
-}
-
-async function loadPdfParseModule(): Promise<{ PDFParse: typeof PDFParseClass }> {
-  ensurePdfParseGlobals();
-  if (!pdfParseModulePromise) {
-    pdfParseModulePromise = (async () => {
-      const [pdfParseModule, pdfWorkerSource] = await Promise.all([
-        import("pdf-parse"),
-        ensurePdfWorkerInstalled(),
-      ]);
-
-      if (pdfWorkerSource) {
-        pdfParseModule.PDFParse.setWorker(pdfWorkerSource);
-      }
-
-      return pdfParseModule;
-    })();
-  }
-
-  return await pdfParseModulePromise;
-}
-
-async function loadPdfWorkerSource(): Promise<string | null> {
-  if (!pdfWorkerSourcePromise) {
-    pdfWorkerSourcePromise = (async () => {
-      try {
-        const workerModulePath = require.resolve("pdf-parse/worker");
-        const workerModuleSource = await readFile(workerModulePath, "utf8");
-        const workerSourceMatch = workerModuleSource.match(
-          /["'`](data:text\/javascript;base64,[^"'`]+)["'`]/,
-        );
-
-        return workerSourceMatch?.[1] ?? null;
-      } catch (error) {
-        console.warn("Unable to resolve pdf-parse worker source.", error);
-        return null;
-      }
-    })();
-  }
-
-  return await pdfWorkerSourcePromise;
-}
-
-async function ensurePdfWorkerInstalled(): Promise<string | null> {
-  const workerSource = await loadPdfWorkerSource();
-  if (!workerSource) {
-    return null;
-  }
 
   const globalWithPdfWorker = globalThis as PdfJsWorkerGlobal;
-
-  if (globalWithPdfWorker.pdfjsWorker?.WorkerMessageHandler) {
-    return workerSource;
+  if (!globalWithPdfWorker.pdfjsWorker?.WorkerMessageHandler) {
+    // @ts-expect-error pdfjs-dist does not publish typings for the worker bundle entrypoint.
+    const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+    globalWithPdfWorker.pdfjsWorker = {
+      WorkerMessageHandler: pdfjsWorker.WorkerMessageHandler,
+    };
   }
+}
 
-  if (!pdfWorkerInstallPromise) {
-    pdfWorkerInstallPromise = (async () => {
-      try {
-        const workerModule = await import(workerSource);
-        if (workerModule.WorkerMessageHandler) {
-          globalWithPdfWorker.pdfjsWorker = {
-            WorkerMessageHandler: workerModule.WorkerMessageHandler,
-          };
+async function extractPdfText(buffer: Buffer): Promise<string> {
+  await ensurePdfParseGlobals();
+
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    verbosity: pdfjs.VerbosityLevel.ERRORS,
+    useWorkerFetch: false,
+  });
+
+  try {
+    const document = await loadingTask.promise;
+
+    try {
+      const pages: string[] = [];
+
+      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+        const page = await document.getPage(pageNumber);
+
+        try {
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => {
+              if (!("str" in item)) {
+                return "";
+              }
+
+              return item.hasEOL ? `${item.str}\n` : item.str;
+            })
+            .join("")
+            .trim();
+
+          if (pageText.length > 0) {
+            pages.push(pageText);
+          }
+        } finally {
+          page.cleanup();
         }
-      } catch (error) {
-        console.warn("Unable to install pdf.js worker module.", error);
       }
-    })();
-  }
 
-  await pdfWorkerInstallPromise;
-  return workerSource;
+      return pages.join("\n\n");
+    } finally {
+      await document.destroy();
+    }
+  } finally {
+    await loadingTask.destroy();
+  }
 }
 
 type ExtractKnowledgeDocumentTextArgs = {
@@ -150,16 +127,8 @@ export async function extractKnowledgeDocumentText(
     case "text/markdown":
     case "text/x-markdown":
       return buffer.toString("utf-8");
-    case "application/pdf": {
-      const { PDFParse } = await loadPdfParseModule();
-      const parser = new PDFParse({ data: buffer });
-      try {
-        const result = await parser.getText();
-        return result.text ?? "";
-      } finally {
-        await parser.destroy();
-      }
-    }
+    case "application/pdf":
+      return await extractPdfText(buffer);
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
       const result = await mammoth.extractRawText({ buffer });
       return result.value ?? "";

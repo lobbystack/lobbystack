@@ -59,6 +59,9 @@ importers:
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
+      pdfjs-dist:
+        specifier: 5.4.296
+        version: 5.4.296
       sharp:
         specifier: ^0.34.4
         version: 0.34.5
