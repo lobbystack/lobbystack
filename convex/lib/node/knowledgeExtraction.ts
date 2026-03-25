@@ -1,9 +1,14 @@
 "use node";
 
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import mammoth from "mammoth";
 import type { PDFParse as PDFParseClass } from "pdf-parse";
 
+const require = createRequire(import.meta.url);
+
 let pdfParseModulePromise: Promise<{ PDFParse: typeof PDFParseClass }> | null = null;
+let pdfWorkerSourcePromise: Promise<string | null> | null = null;
 
 function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
@@ -54,10 +59,42 @@ function ensurePdfParseGlobals(): void {
 async function loadPdfParseModule(): Promise<{ PDFParse: typeof PDFParseClass }> {
   ensurePdfParseGlobals();
   if (!pdfParseModulePromise) {
-    pdfParseModulePromise = import("pdf-parse");
+    pdfParseModulePromise = (async () => {
+      const [pdfParseModule, pdfWorkerSource] = await Promise.all([
+        import("pdf-parse"),
+        loadPdfWorkerSource(),
+      ]);
+
+      if (pdfWorkerSource) {
+        pdfParseModule.PDFParse.setWorker(pdfWorkerSource);
+      }
+
+      return pdfParseModule;
+    })();
   }
 
   return await pdfParseModulePromise;
+}
+
+async function loadPdfWorkerSource(): Promise<string | null> {
+  if (!pdfWorkerSourcePromise) {
+    pdfWorkerSourcePromise = (async () => {
+      try {
+        const workerModulePath = require.resolve("pdf-parse/worker");
+        const workerModuleSource = await readFile(workerModulePath, "utf8");
+        const workerSourceMatch = workerModuleSource.match(
+          /["'`](data:text\/javascript;base64,[^"'`]+)["'`]/,
+        );
+
+        return workerSourceMatch?.[1] ?? null;
+      } catch (error) {
+        console.warn("Unable to resolve pdf-parse worker source.", error);
+        return null;
+      }
+    })();
+  }
+
+  return await pdfWorkerSourcePromise;
 }
 
 type ExtractKnowledgeDocumentTextArgs = {

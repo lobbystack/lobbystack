@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-const { pdfDestroyMock, pdfGetTextMock } = vi.hoisted(() => ({
+const { pdfDestroyMock, pdfGetTextMock, pdfSetWorkerMock } = vi.hoisted(() => ({
   pdfDestroyMock: vi.fn(),
   pdfGetTextMock: vi.fn(),
+  pdfSetWorkerMock: vi.fn(),
 }));
 
 vi.mock("pdf-parse", () => ({
   PDFParse: class {
+    static setWorker = pdfSetWorkerMock;
+
     async getText() {
       return await pdfGetTextMock();
     }
@@ -53,6 +56,8 @@ describe("Knowledge document helpers", () => {
     });
 
     expect(pdfText).toBe("Extracted PDF text");
+    expect(pdfSetWorkerMock).toHaveBeenCalledTimes(1);
+    expect(pdfSetWorkerMock.mock.calls[0]?.[0]).toMatch(/^data:text\/javascript;base64,/);
     expect(pdfGetTextMock).toHaveBeenCalledTimes(1);
     expect(pdfDestroyMock).toHaveBeenCalledTimes(1);
   });
