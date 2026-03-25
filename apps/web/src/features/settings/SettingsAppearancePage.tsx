@@ -7,6 +7,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useAppearancePreference } from "@/components/appearance-provider";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -128,10 +129,12 @@ export function SettingsAppearancePage({
       <div className="flex max-w-3xl flex-col gap-8">
         <FieldGroup>
           <Field>
-            <FieldLabel>{t("appearance.language.label")}</FieldLabel>
-            <FieldDescription>
-              {t("appearance.language.description")}
-            </FieldDescription>
+            <FieldContent>
+              <FieldLabel>{t("appearance.language.label")}</FieldLabel>
+              <FieldDescription>
+                {t("appearance.language.description")}
+              </FieldDescription>
+            </FieldContent>
             <NativeSelect
               aria-label={t("common:language.ariaLabel")}
               className="max-w-xs"
@@ -152,10 +155,12 @@ export function SettingsAppearancePage({
 
         <FieldGroup>
           <Field>
-            <FieldLabel>{t("appearance.timeFormat.label")}</FieldLabel>
-            <FieldDescription>
-              {t("appearance.timeFormat.description")}
-            </FieldDescription>
+            <FieldContent>
+              <FieldLabel>{t("appearance.timeFormat.label")}</FieldLabel>
+              <FieldDescription>
+                {t("appearance.timeFormat.description")}
+              </FieldDescription>
+            </FieldContent>
             <NativeSelect
               className="max-w-xs"
               onChange={(event) =>
@@ -175,10 +180,12 @@ export function SettingsAppearancePage({
 
         <FieldGroup>
           <Field>
-            <FieldLabel>{t("appearance.theme.label")}</FieldLabel>
-            <FieldDescription>
-              {t("appearance.theme.description")}
-            </FieldDescription>
+            <FieldContent>
+              <FieldLabel>{t("appearance.theme.label")}</FieldLabel>
+              <FieldDescription>
+                {t("appearance.theme.description")}
+              </FieldDescription>
+            </FieldContent>
             <div className="grid max-w-md gap-3 md:grid-cols-2">
               {themeChoices.map((choice) => (
                 <ThemePreviewCard

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -194,8 +195,10 @@ export function BookableTeamCard(props: BookableTeamCardProps) {
         <form className="flex flex-col gap-8" onSubmit={(event) => void handleStaffSubmit(event)}>
           <FieldGroup>
           <Field>
-            <FieldLabel>{t("settings:team.member")}</FieldLabel>
-            <FieldDescription>{t("settings:team.selectMember")}</FieldDescription>
+            <FieldContent>
+              <FieldLabel>{t("settings:team.member")}</FieldLabel>
+              <FieldDescription>{t("settings:team.selectMember")}</FieldDescription>
+            </FieldContent>
             <Select
               onValueChange={(value) => setSelectedStaffKey(value ?? NEW_STAFF_VALUE)}
               value={selectedStaffKey}

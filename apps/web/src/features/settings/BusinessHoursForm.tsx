@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -132,8 +133,10 @@ export function BusinessHoursForm(props: BusinessHoursFormProps) {
         <form className="flex flex-col gap-8" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
-              <FieldLabel>{t("hours.title")}</FieldLabel>
-              <FieldDescription>{t("hours.leaveBlank")}</FieldDescription>
+              <FieldContent>
+                <FieldLabel>{t("hours.title")}</FieldLabel>
+                <FieldDescription>{t("hours.leaveBlank")}</FieldDescription>
+              </FieldContent>
             </Field>
             {rows.map((row, index) => (
               <div

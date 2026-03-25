@@ -8,6 +8,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -15,13 +16,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { AgentSection } from "./sections";
 
 function parseTags(value: string): Array<string> {
@@ -41,7 +43,7 @@ export function AddKnowledgeSheet({
   const { t } = useTranslation(["agent", "knowledge"]);
   const upsertKnowledgeSnippet = useMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);
 
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
@@ -65,7 +67,7 @@ export function AddKnowledgeSheet({
         priority: 75,
         active: true,
       });
-      setIsSheetOpen(false);
+      setIsDialogOpen(false);
       setTitle("");
       setContent("");
       setTags("");
@@ -75,8 +77,8 @@ export function AddKnowledgeSheet({
   }
 
   return (
-    <Sheet onOpenChange={setIsSheetOpen} open={isSheetOpen}>
-      <SheetTrigger
+    <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
+      <DialogTrigger
         render={
           <Button>
             <Plus data-icon="inline-start" />
@@ -84,22 +86,24 @@ export function AddKnowledgeSheet({
           </Button>
         }
       />
-      <SheetContent className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>{t(`agent:sections.${section}.addKnowledge`)}</SheetTitle>
-          <SheetDescription>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t(`agent:sections.${section}.addKnowledge`)}</DialogTitle>
+          <DialogDescription>
             {t(`agent:sections.${section}.addKnowledgeDescription`)}
-          </SheetDescription>
-        </SheetHeader>
-        <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
+          </DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-6" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="knowledge-title">
-                {t(`agent:sections.${section}.fields.title.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`agent:sections.${section}.fields.title.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-title">
+                  {t(`agent:sections.${section}.fields.title.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`agent:sections.${section}.fields.title.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Input
                 id="knowledge-title"
                 placeholder={t(`agent:sections.${section}.fields.title.placeholder`)}
@@ -109,12 +113,14 @@ export function AddKnowledgeSheet({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="knowledge-content">
-                {t(`agent:sections.${section}.fields.content.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`agent:sections.${section}.fields.content.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-content">
+                  {t(`agent:sections.${section}.fields.content.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`agent:sections.${section}.fields.content.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Textarea
                 className="min-h-40"
                 id="knowledge-content"
@@ -125,12 +131,14 @@ export function AddKnowledgeSheet({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="knowledge-tags">
-                {t(`agent:sections.${section}.fields.tags.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`agent:sections.${section}.fields.tags.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-tags">
+                  {t(`agent:sections.${section}.fields.tags.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`agent:sections.${section}.fields.tags.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Input
                 id="knowledge-tags"
                 placeholder={t(`agent:sections.${section}.fields.tags.placeholder`)}
@@ -140,13 +148,13 @@ export function AddKnowledgeSheet({
             </Field>
           </FieldGroup>
 
-          <div className="mt-auto pt-6">
+          <DialogFooter>
             <Button className="w-full" disabled={isSaving} type="submit">
               {isSaving ? t("agent:actions.saving") : t("agent:actions.save")}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -23,12 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
@@ -468,21 +469,21 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         </ul>
       </div>
 
-      <Sheet onOpenChange={setGoogleSheetOpen} open={googleSheetOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl" side="right">
-          <SheetHeader className="border-b pb-5">
+      <Dialog onOpenChange={setGoogleSheetOpen} open={googleSheetOpen}>
+        <DialogContent className="max-h-[90vh] w-full overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="gap-0 border-b p-6 pb-5">
             <div className="flex items-start gap-4">
               <div className="flex size-11 shrink-0 items-center justify-center">
                 <GoogleCalendarLogo />
               </div>
               <div className="flex flex-col gap-1">
-                <SheetTitle>{t("integrations.google.sheetTitle")}</SheetTitle>
-                <SheetDescription>{t("integrations.google.sheetDescription")}</SheetDescription>
+                <DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle>
+                <DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription>
               </div>
             </div>
-          </SheetHeader>
+          </DialogHeader>
 
-          <div className="flex flex-col gap-6 p-6">
+          <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
             {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
             {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
 
@@ -498,25 +499,27 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
               <FieldGroup>
                 <Field>
-                  <FieldLabel>{t("integrations.google.staffLabel")}</FieldLabel>
-                  <FieldDescription>
-                    {t("integrations.google.selectStaff")}
-                  </FieldDescription>
-                <Select
-                  onValueChange={(value) => setSelectedStaffId(value ?? "")}
-                  value={selectedStaffId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t("integrations.google.selectStaff")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff.map((member) => (
-                      <SelectItem key={member._id} value={String(member._id)}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <FieldContent>
+                    <FieldLabel>{t("integrations.google.staffLabel")}</FieldLabel>
+                    <FieldDescription>
+                      {t("integrations.google.selectStaff")}
+                    </FieldDescription>
+                  </FieldContent>
+                  <Select
+                    onValueChange={(value) => setSelectedStaffId(value ?? "")}
+                    value={selectedStaffId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t("integrations.google.selectStaff")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staff.map((member) => (
+                        <SelectItem key={member._id} value={String(member._id)}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               </FieldGroup>
 
@@ -596,38 +599,40 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                   <FieldGroup>
                     <Field>
-                      <FieldLabel>{t("integrations.google.calendarLabel")}</FieldLabel>
-                      <FieldDescription>
-                        {selectedConnection.status === "connected"
-                          ? t("integrations.google.selectCalendar")
-                          : t("integrations.google.reconnect")}
-                      </FieldDescription>
-                    <Select
-                      disabled={isLoadingCalendars || calendarOptions.length === 0}
-                      onValueChange={(value) => setSelectedCalendarId(value ?? "")}
-                      value={selectedCalendarId}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue
-                          placeholder={
-                            isLoadingCalendars
-                              ? t("integrations.google.loadingCalendars")
-                              : t("integrations.google.selectCalendar")
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {calendarOptions.map((calendar) => (
-                          <SelectItem key={calendar.id} value={calendar.id}>
-                            {calendar.primary
-                              ? t("integrations.google.primaryCalendarLabel", {
-                                  summary: calendar.summary,
-                                })
-                              : calendar.summary}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <FieldContent>
+                        <FieldLabel>{t("integrations.google.calendarLabel")}</FieldLabel>
+                        <FieldDescription>
+                          {selectedConnection.status === "connected"
+                            ? t("integrations.google.selectCalendar")
+                            : t("integrations.google.reconnect")}
+                        </FieldDescription>
+                      </FieldContent>
+                      <Select
+                        disabled={isLoadingCalendars || calendarOptions.length === 0}
+                        onValueChange={(value) => setSelectedCalendarId(value ?? "")}
+                        value={selectedCalendarId}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              isLoadingCalendars
+                                ? t("integrations.google.loadingCalendars")
+                                : t("integrations.google.selectCalendar")
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {calendarOptions.map((calendar) => (
+                            <SelectItem key={calendar.id} value={calendar.id}>
+                              {calendar.primary
+                                ? t("integrations.google.primaryCalendarLabel", {
+                                    summary: calendar.summary,
+                                  })
+                                : calendar.summary}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </Field>
                   </FieldGroup>
 
@@ -741,8 +746,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               {t("integrations.providers.microsoft")}
             </p>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

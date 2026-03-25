@@ -35,6 +35,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
+import { PageHeader } from "@/components/page-header";
 import { Separator } from "@/components/ui/separator";
 import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
@@ -305,11 +306,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 py-2">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">{t("home.title")}</h1>
-        </div>
-      </div>
+      <PageHeader title={t("home.title")} />
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {metricCards.map((card) => {

@@ -29,6 +29,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -686,12 +687,15 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">{t("page.title")}</h1>
-              <MessagesSquare className="size-5" />
-            </div>
-          </div>
+          <PageHeader
+            className="py-0"
+            title={
+              <span className="flex items-center gap-2">
+                {t("page.title")}
+                <MessagesSquare className="size-5" />
+              </span>
+            }
+          />
           <label
             className={cn(
               "focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring",

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -77,8 +78,10 @@ export function BusinessSetupCard() {
           <FieldGroup>
             <div className="grid gap-4 md:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="setup-business-name">{t("setup.businessName")}</FieldLabel>
-                <FieldDescription>{t("setup.placeholders.businessName")}</FieldDescription>
+                <FieldContent>
+                  <FieldLabel htmlFor="setup-business-name">{t("setup.businessName")}</FieldLabel>
+                  <FieldDescription>{t("setup.placeholders.businessName")}</FieldDescription>
+                </FieldContent>
                 <Input
                   id="setup-business-name"
                   onChange={(event) => handleNameChange(event.target.value)}
@@ -87,8 +90,10 @@ export function BusinessSetupCard() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="setup-business-slug">{t("setup.slug")}</FieldLabel>
-                <FieldDescription>{t("setup.placeholders.slug")}</FieldDescription>
+                <FieldContent>
+                  <FieldLabel htmlFor="setup-business-slug">{t("setup.slug")}</FieldLabel>
+                  <FieldDescription>{t("setup.placeholders.slug")}</FieldDescription>
+                </FieldContent>
                 <Input
                   id="setup-business-slug"
                   onChange={(event) => setSlug(slugify(event.target.value))}
@@ -103,8 +108,10 @@ export function BusinessSetupCard() {
                 <Input id="setup-timezone" onChange={(event) => setTimezone(event.target.value)} value={timezone} />
               </Field>
               <Field>
-                <FieldLabel>{t("setup.businessType")}</FieldLabel>
-                <FieldDescription>{t("setup.selectBusinessType")}</FieldDescription>
+                <FieldContent>
+                  <FieldLabel>{t("setup.businessType")}</FieldLabel>
+                  <FieldDescription>{t("setup.selectBusinessType")}</FieldDescription>
+                </FieldContent>
                 <Select onValueChange={(value) => setBusinessType(value ?? "clinic")} value={businessType}>
                   <SelectTrigger>
                     <SelectValue placeholder={t("setup.selectBusinessType")} />

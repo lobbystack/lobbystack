@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -158,8 +159,10 @@ export function PhoneNumbersCard(props: PhoneNumbersCardProps) {
         <form className="flex flex-col gap-8" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
           <Field>
-            <FieldLabel>{t("settings:phoneRouting.managedNumber")}</FieldLabel>
-            <FieldDescription>{t("settings:phoneRouting.selectNumber")}</FieldDescription>
+            <FieldContent>
+              <FieldLabel>{t("settings:phoneRouting.managedNumber")}</FieldLabel>
+              <FieldDescription>{t("settings:phoneRouting.selectNumber")}</FieldDescription>
+            </FieldContent>
             <Select
               onValueChange={(value) => setSelectedPhoneNumberKey(value ?? NEW_PHONE_VALUE)}
               value={selectedPhoneNumberKey}

@@ -8,19 +8,22 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { AgentSection } from "./sections";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -85,7 +88,7 @@ export function UploadKnowledgeDocumentSheet({
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
   );
 
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
@@ -172,7 +175,7 @@ export function UploadKnowledgeDocumentSheet({
         tags: parseTags(tags),
       });
 
-      setIsSheetOpen(false);
+      setIsDialogOpen(false);
       resetState();
     } catch {
       setErrorMessage(t(`sections.${section}.uploadValidation.uploadFailed`));
@@ -182,16 +185,16 @@ export function UploadKnowledgeDocumentSheet({
   }
 
   return (
-    <Sheet
+    <Dialog
       onOpenChange={(open) => {
-        setIsSheetOpen(open);
+        setIsDialogOpen(open);
         if (!open) {
           resetState();
         }
       }}
-      open={isSheetOpen}
+      open={isDialogOpen}
     >
-      <SheetTrigger
+      <DialogTrigger
         render={
           <Button variant="secondary">
             <Upload data-icon="inline-start" />
@@ -199,22 +202,24 @@ export function UploadKnowledgeDocumentSheet({
           </Button>
         }
       />
-      <SheetContent className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>{t(`sections.${section}.uploadDocument`)}</SheetTitle>
-          <SheetDescription>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t(`sections.${section}.uploadDocument`)}</DialogTitle>
+          <DialogDescription>
             {t(`sections.${section}.uploadDocumentDescription`)}
-          </SheetDescription>
-        </SheetHeader>
-        <form className="flex h-full flex-col px-4 pb-4" onSubmit={(event) => void handleSubmit(event)}>
+          </DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-6" onSubmit={(event) => void handleSubmit(event)}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="knowledge-document-file">
-                {t(`sections.${section}.fields.file.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`sections.${section}.fields.file.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-document-file">
+                  {t(`sections.${section}.fields.file.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`sections.${section}.fields.file.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Input
                 accept={ACCEPTED_FILE_TYPES}
                 className="sr-only"
@@ -265,12 +270,14 @@ export function UploadKnowledgeDocumentSheet({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="knowledge-document-title">
-                {t(`sections.${section}.fields.title.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`sections.${section}.fields.title.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-document-title">
+                  {t(`sections.${section}.fields.title.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`sections.${section}.fields.title.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Input
                 id="knowledge-document-title"
                 placeholder={t(`sections.${section}.fields.title.placeholder`)}
@@ -280,12 +287,14 @@ export function UploadKnowledgeDocumentSheet({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="knowledge-document-tags">
-                {t(`sections.${section}.fields.tags.label`)}
-              </FieldLabel>
-              <FieldDescription>
-                {t(`sections.${section}.fields.tags.hint`)}
-              </FieldDescription>
+              <FieldContent>
+                <FieldLabel htmlFor="knowledge-document-tags">
+                  {t(`sections.${section}.fields.tags.label`)}
+                </FieldLabel>
+                <FieldDescription>
+                  {t(`sections.${section}.fields.tags.hint`)}
+                </FieldDescription>
+              </FieldContent>
               <Input
                 id="knowledge-document-tags"
                 placeholder={t(`sections.${section}.fields.tags.placeholder`)}
@@ -295,14 +304,15 @@ export function UploadKnowledgeDocumentSheet({
             </Field>
           </FieldGroup>
 
-          <div className="mt-auto flex flex-col gap-3 pt-6">
-            {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+          {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+
+          <DialogFooter>
             <Button className="w-full" disabled={isUploading} type="submit">
               {isUploading ? t("actions.saving") : t("actions.save")}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

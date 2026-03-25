@@ -7,6 +7,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -122,12 +123,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       <div className="flex flex-col gap-6">
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="agent-greeting">
-              {t("agent:fields.greeting.label")}
-            </FieldLabel>
-            <FieldDescription>
-              {t("agent:fields.greeting.hint")}
-            </FieldDescription>
+            <FieldContent>
+              <FieldLabel htmlFor="agent-greeting">
+                {t("agent:fields.greeting.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:fields.greeting.hint")}
+              </FieldDescription>
+            </FieldContent>
             <Input
               id="agent-greeting"
               placeholder={t("agent:fields.greeting.placeholder")}
@@ -148,12 +151,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="agent-transfer-number">
-              {t("agent:fields.transferNumber.label")}
-            </FieldLabel>
-            <FieldDescription>
-              {t("agent:fields.transferNumber.hint")}
-            </FieldDescription>
+            <FieldContent>
+              <FieldLabel htmlFor="agent-transfer-number">
+                {t("agent:fields.transferNumber.label")}
+              </FieldLabel>
+              <FieldDescription>
+                {t("agent:fields.transferNumber.hint")}
+              </FieldDescription>
+            </FieldContent>
             <div style={{ width: "13ch" }}>
               <Input
                 id="agent-transfer-number"

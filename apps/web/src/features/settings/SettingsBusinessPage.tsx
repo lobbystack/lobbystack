@@ -17,7 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import {
   Field,
+  FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -27,6 +29,7 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
 
@@ -144,10 +147,12 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
           <form className="flex flex-col gap-8" onSubmit={(event) => event.preventDefault()}>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="profile-username">Business name</FieldLabel>
-                <FieldDescription>
-                  This is the name shown across the dashboard and customer-facing business details.
-                </FieldDescription>
+                <FieldContent>
+                  <FieldLabel htmlFor="profile-username">Business name</FieldLabel>
+                  <FieldDescription>
+                    This is the name shown across the dashboard and customer-facing business details.
+                  </FieldDescription>
+                </FieldContent>
                 <Input
                   id="profile-username"
                   placeholder="Maple Family Clinic"
@@ -175,6 +180,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             </FieldGroup>
           </form>
 
+          <ItemGroup>
             <Item variant="outline">
               <ItemContent>
                 <ItemTitle>Email</ItemTitle>
@@ -229,7 +235,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                     </Field>
                   </FieldGroup>
 
-                  {emailError ? <p className="text-sm text-destructive">{emailError}</p> : null}
+                  {emailError ? <FieldError>{emailError}</FieldError> : null}
 
                   <DialogFooter>
                     <Button type="button" onClick={() => void handleEmailSave()}>
@@ -304,9 +310,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                     </Field>
                   </FieldGroup>
 
-                  {passwordError ? (
-                    <p className="text-sm text-destructive">{passwordError}</p>
-                  ) : null}
+                  {passwordError ? <FieldError>{passwordError}</FieldError> : null}
 
                   <DialogFooter>
                     <Button type="button" onClick={() => void handlePasswordSave()}>
@@ -317,6 +321,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               </Dialog>
             </ItemActions>
           </Item>
+          </ItemGroup>
         </div>
       </div>
     </div>
