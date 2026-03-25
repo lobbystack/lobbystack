@@ -9,7 +9,8 @@ const {
   secondPageRenderMock,
   getPageMock,
   getDocumentMock,
-  createCanvasMock,
+  makeMock,
+  encodePNGToStreamMock,
   createWorkerMock,
   setParametersMock,
   recognizeMock,
@@ -23,18 +24,20 @@ const {
   secondPageRenderMock: vi.fn(),
   getPageMock: vi.fn(),
   getDocumentMock: vi.fn(),
-  createCanvasMock: vi.fn(),
+  makeMock: vi.fn(),
+  encodePNGToStreamMock: vi.fn(),
   createWorkerMock: vi.fn(),
   setParametersMock: vi.fn(),
   recognizeMock: vi.fn(),
   terminateMock: vi.fn(),
 }));
 
-vi.mock("@napi-rs/canvas", async () => {
-  const actual = await vi.importActual<typeof import("@napi-rs/canvas")>("@napi-rs/canvas");
+vi.mock("pureimage", async () => {
+  const actual = await vi.importActual<typeof import("pureimage")>("pureimage");
   return {
     ...actual,
-    createCanvas: createCanvasMock,
+    make: makeMock,
+    encodePNGToStream: encodePNGToStreamMock,
   };
 });
 
@@ -70,11 +73,11 @@ function makeCanvas(bufferText: string) {
   return {
     width: 100,
     height: 120,
+    __buffer: Buffer.from(bufferText),
     getContext: vi.fn(() => ({
       fillStyle: "#ffffff",
       fillRect: vi.fn(),
     })),
-    toBuffer: vi.fn(() => Buffer.from(bufferText)),
   };
 }
 
@@ -83,6 +86,10 @@ describe("Knowledge document OCR", () => {
     vi.clearAllMocks();
     setParametersMock.mockResolvedValue(undefined);
     terminateMock.mockResolvedValue(undefined);
+    encodePNGToStreamMock.mockImplementation(async (bitmap, stream) => {
+      stream.write(bitmap.__buffer);
+      stream.end();
+    });
     createWorkerMock.mockResolvedValue({
       setParameters: setParametersMock,
       recognize: recognizeMock,
@@ -114,7 +121,7 @@ describe("Knowledge document OCR", () => {
       promise: Promise.resolve(document),
       destroy: loadingTaskDestroyMock,
     });
-    createCanvasMock
+    makeMock
       .mockReturnValueOnce(makeCanvas("page-one"))
       .mockReturnValueOnce(makeCanvas("page-two"));
     recognizeMock
@@ -188,7 +195,7 @@ describe("Knowledge document OCR", () => {
       promise: Promise.resolve(document),
       destroy: loadingTaskDestroyMock,
     });
-    createCanvasMock.mockReturnValueOnce(makeCanvas("page-one"));
+    makeMock.mockReturnValueOnce(makeCanvas("page-one"));
     recognizeMock.mockRejectedValueOnce(new Error("ocr failed"));
 
     await expect(

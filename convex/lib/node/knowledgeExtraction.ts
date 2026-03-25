@@ -1,12 +1,9 @@
 "use node";
 
-import {
-  DOMMatrix,
-  ImageData,
-  Path2D,
-  createCanvas,
-} from "@napi-rs/canvas";
+import { PassThrough } from "node:stream";
+
 import mammoth from "mammoth";
+import { encodePNGToStream, make } from "pureimage";
 import { OEM, PSM, createWorker } from "tesseract.js";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
@@ -21,6 +18,11 @@ type PdfJsWorkerModule = {
 };
 type PdfLoadingTask = ReturnType<PdfJsModule["getDocument"]>;
 type PdfDocument = Awaited<PdfLoadingTask["promise"]>;
+type PdfRenderBitmap = ReturnType<typeof make>;
+type PdfRenderContext = ReturnType<PdfRenderBitmap["getContext"]> & {
+  createImageData?: (width: number, height: number) => ImageData;
+  getContextAttributes?: () => { alpha: boolean };
+};
 
 export const KNOWLEDGE_DOCUMENT_OCR_MAX_PAGES = 10;
 export const KNOWLEDGE_DOCUMENT_OCR_LANGUAGES = ["eng", "fra"] as const;
@@ -39,15 +41,70 @@ let pdfJsModulesPromise: Promise<{
 
 function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
-    globalThis.DOMMatrix = DOMMatrix as unknown as typeof globalThis.DOMMatrix;
+    class MinimalDOMMatrix {
+      multiplySelf(): this {
+        return this;
+      }
+
+      preMultiplySelf(): this {
+        return this;
+      }
+
+      translateSelf(): this {
+        return this;
+      }
+
+      scaleSelf(): this {
+        return this;
+      }
+
+      rotateSelf(): this {
+        return this;
+      }
+
+      invertSelf(): this {
+        return this;
+      }
+
+      transformPoint<T>(point: T): T {
+        return point;
+      }
+    }
+
+    globalThis.DOMMatrix = MinimalDOMMatrix as unknown as typeof globalThis.DOMMatrix;
   }
 
   if (typeof globalThis.ImageData === "undefined") {
-    globalThis.ImageData = ImageData as unknown as typeof globalThis.ImageData;
+    class MinimalImageData {
+      colorSpace = "srgb" as const;
+      data: Uint8ClampedArray;
+      height: number;
+      width: number;
+
+      constructor(
+        dataOrWidth: Uint8ClampedArray | number,
+        widthOrHeight: number,
+        maybeHeight?: number,
+      ) {
+        if (typeof dataOrWidth === "number") {
+          this.width = dataOrWidth;
+          this.height = widthOrHeight;
+          this.data = new Uint8ClampedArray(this.width * this.height * 4);
+          return;
+        }
+
+        this.data = dataOrWidth;
+        this.width = widthOrHeight;
+        this.height = maybeHeight ?? 0;
+      }
+    }
+
+    globalThis.ImageData = MinimalImageData as unknown as typeof globalThis.ImageData;
   }
 
   if (typeof globalThis.Path2D === "undefined") {
-    globalThis.Path2D = Path2D as unknown as typeof globalThis.Path2D;
+    class MinimalPath2D {}
+    globalThis.Path2D = MinimalPath2D as unknown as typeof globalThis.Path2D;
   }
 }
 
@@ -139,6 +196,43 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   });
 }
 
+function createPdfRenderSurface(
+  width: number,
+  height: number,
+): {
+  canvas: PdfRenderBitmap;
+  canvasContext: PdfRenderContext;
+} {
+  const canvas = make(width, height);
+  const canvasContext = canvas.getContext("2d") as PdfRenderContext;
+
+  if (typeof canvasContext.createImageData !== "function") {
+    canvasContext.createImageData = (surfaceWidth: number, surfaceHeight: number) =>
+      new ImageData(surfaceWidth, surfaceHeight);
+  }
+
+  if (typeof canvasContext.getContextAttributes !== "function") {
+    canvasContext.getContextAttributes = () => ({ alpha: true });
+  }
+
+  return {
+    canvas,
+    canvasContext,
+  };
+}
+
+async function encodeBitmapToPngBuffer(bitmap: PdfRenderBitmap): Promise<Buffer> {
+  const stream = new PassThrough();
+  const chunks: Buffer[] = [];
+
+  stream.on("data", (chunk: Buffer | string) => {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  });
+
+  await encodePNGToStream(bitmap, stream);
+  return Buffer.concat(chunks);
+}
+
 type ExtractKnowledgeDocumentTextArgs = {
   blob: Blob;
   mimeType: string;
@@ -204,11 +298,10 @@ export async function extractPdfTextWithLocalOcr(
 
         try {
           const viewport = page.getViewport({ scale: KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE });
-          const canvas = createCanvas(
+          const { canvas, canvasContext } = createPdfRenderSurface(
             Math.max(1, Math.ceil(viewport.width)),
             Math.max(1, Math.ceil(viewport.height)),
           );
-          const canvasContext = canvas.getContext("2d");
           canvasContext.fillStyle = "#ffffff";
           canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -218,7 +311,7 @@ export async function extractPdfTextWithLocalOcr(
             viewport,
           }).promise;
 
-          const imageBuffer = canvas.toBuffer("image/png");
+          const imageBuffer = await encodeBitmapToPngBuffer(canvas);
           const result = await worker.recognize(imageBuffer);
           const pageText = result.data.text.trim();
 
