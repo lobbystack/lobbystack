@@ -127,13 +127,13 @@ export const getNotificationDeliveryContext = internalQuery({
 
     const locale =
       normalizeRuntimeLocale(contact.preferredLocale) ??
+      normalizeRuntimeLocale(business.defaultLocale) ??
       inferRuntimeLocaleFromBusinessContext({
         greeting: profile?.greeting,
         smsInstructions: profile?.smsInstructions,
         summary: profile?.summary,
         bookingPolicy: profile?.bookingPolicy,
       }) ??
-      normalizeRuntimeLocale(business.defaultLocale) ??
       "en";
     return {
       notificationId: notification._id,

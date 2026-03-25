@@ -3020,6 +3020,71 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("keeps the stored business locale for ambiguous replies on existing conversations", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, conversationId } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-ambiguous-existing-conversation-french-default",
+        name: "SMS Ambiguous Existing Conversation French Default",
+        smsNumber: "+14165550928",
+        defaultLocale: "fr",
+      });
+
+      const profile = await ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!profile) {
+        throw new Error("Expected receptionist profile to exist.");
+      }
+
+      await ctx.db.patch(profile._id, {
+        greeting: "Bonjour.",
+        summary: "French SMS scheduling.",
+        bookingPolicy: "Only confirm a booking after availability is checked.",
+        smsInstructions: "Keep replies short.",
+      });
+
+      const { conversationId } = await seedSmsConversation(ctx, {
+        businessId,
+        contactPhone: "+14165550988",
+      });
+
+      return { businessId, conversationId };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        defaultLocale: "fr",
+      });
+
+      const snapshot = await ctx.db
+        .query("business_context_snapshots")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!snapshot) {
+        throw new Error("Expected business context snapshot to exist.");
+      }
+
+      await ctx.db.patch(snapshot._id, {
+        defaultLocale: "fr",
+      });
+    });
+
+    await t.action(internal.ai.agents.runtime.generateSmsReply, {
+      businessId,
+      conversationId,
+      prompt: "Allo",
+    });
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db.get(conversationId);
+      expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
   it("replies in French on the first French booking message even for an English-default business", async () => {
     const t = createConvexHarness();
 

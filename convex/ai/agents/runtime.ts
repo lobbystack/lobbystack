@@ -3442,8 +3442,8 @@ async function generateGroundedReply(
     smsInstructions: snapshot.smsInstructions,
     bookingPolicy: snapshot.bookingPolicy,
   });
-  const storedBusinessLocale = normalizeRuntimeLocale(snapshot.defaultLocale) ?? "en";
-  const businessLocaleFallback = inferredBusinessLocale ?? storedBusinessLocale;
+  const storedBusinessLocale = normalizeRuntimeLocale(snapshot.defaultLocale);
+  const businessLocaleFallback = storedBusinessLocale ?? inferredBusinessLocale ?? "en";
   const localeHint = existingConversationLocale ?? contactPreferredLocale;
   const explicitLocale = detectExplicitRuntimeLocaleRequest(prompt);
   const classifiedLocale = explicitLocale ?? classifyRuntimeLocale(prompt);
