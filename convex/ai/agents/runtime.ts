@@ -3440,7 +3440,6 @@ async function generateGroundedReply(
   const inferredBusinessLocale = inferRuntimeLocaleFromBusinessContext({
     greeting: snapshot.greeting,
     smsInstructions: snapshot.smsInstructions,
-    summary: snapshot.summary,
     bookingPolicy: snapshot.bookingPolicy,
   });
   const storedBusinessLocale = normalizeRuntimeLocale(snapshot.defaultLocale) ?? "en";

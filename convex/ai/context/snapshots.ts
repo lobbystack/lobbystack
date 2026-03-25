@@ -11,6 +11,12 @@ import type { Doc, Id } from "../../_generated/dataModel";
 import { requireMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 import {
+  buildDefaultReceptionistSummary,
+  DEFAULT_RECEPTIONIST_BOOKING_POLICY,
+  DEFAULT_RECEPTIONIST_TONE,
+  DEFAULT_RECEPTIONIST_TRANSFER_MODE,
+} from "../../lib/receptionistProfileDefaults";
+import {
   inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
 } from "../../lib/runtimeLocale";
@@ -21,13 +27,11 @@ type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {
   businessId: Id<"businesses">;
   greeting: string;
-  tone: string;
-  summary: string;
-  bookingPolicy: string;
+  bookingPolicy?: string;
   voiceInstructions?: string;
   smsInstructions?: string;
-  transferMode: string;
-  transferNumber?: string;
+  transferMode?: string;
+  transferNumber?: string | null;
 };
 
 function buildKnowledgeDigest(
@@ -79,57 +83,63 @@ export const updateReceptionistProfile = mutation({
   args: {
     businessId: v.id("businesses"),
     greeting: v.string(),
-    tone: v.string(),
-    summary: v.string(),
-    bookingPolicy: v.string(),
+    bookingPolicy: v.optional(v.string()),
     voiceInstructions: v.optional(v.string()),
     smsInstructions: v.optional(v.string()),
-    transferMode: v.string(),
-    transferNumber: v.optional(v.string()),
+    transferMode: v.optional(v.string()),
+    transferNumber: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
     await requireMembership(ctx, args.businessId);
+    const [business, existing] = await Promise.all([
+      ctx.db.get(args.businessId),
+      ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .unique(),
+    ]);
+
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    const bookingPolicy =
+      args.bookingPolicy ?? existing?.bookingPolicy ?? DEFAULT_RECEPTIONIST_BOOKING_POLICY;
+    const voiceInstructions = args.voiceInstructions ?? existing?.voiceInstructions;
+    const smsInstructions = args.smsInstructions ?? existing?.smsInstructions;
+    const transferMode =
+      args.transferMode ?? existing?.transferMode ?? DEFAULT_RECEPTIONIST_TRANSFER_MODE;
+    const transferNumber =
+      args.transferNumber === null
+        ? undefined
+        : args.transferNumber !== undefined
+          ? args.transferNumber.trim() || undefined
+          : existing?.transferNumber;
+    const nextProfile = {
+      businessId: args.businessId,
+      greeting: args.greeting,
+      tone: DEFAULT_RECEPTIONIST_TONE,
+      summary: buildDefaultReceptionistSummary(business.name),
+      bookingPolicy,
+      ...(voiceInstructions !== undefined ? { voiceInstructions } : {}),
+      ...(smsInstructions !== undefined ? { smsInstructions } : {}),
+      transferMode,
+      ...(transferNumber !== undefined ? { transferNumber } : {}),
+    };
+
     const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
       greeting: args.greeting,
-      smsInstructions: args.smsInstructions,
-      summary: args.summary,
-      bookingPolicy: args.bookingPolicy,
+      smsInstructions,
+      bookingPolicy,
     });
-    if (inferredDefaultLocale) {
-      await ctx.db.patch(args.businessId, { defaultLocale: inferredDefaultLocale });
-    }
-    const existing = await ctx.db
-      .query("receptionist_profiles")
-      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
-      .unique();
+    await ctx.db.patch(args.businessId, {
+      defaultLocale: inferredDefaultLocale ?? "en",
+    });
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        greeting: args.greeting,
-        tone: args.tone,
-        summary: args.summary,
-        bookingPolicy: args.bookingPolicy,
-        voiceInstructions: args.voiceInstructions,
-        smsInstructions: args.smsInstructions,
-        transferMode: args.transferMode,
-        transferNumber: args.transferNumber,
-      });
+      await ctx.db.replace(existing._id, nextProfile);
     } else {
-      await ctx.db.insert("receptionist_profiles", {
-        businessId: args.businessId,
-        greeting: args.greeting,
-        tone: args.tone,
-        summary: args.summary,
-        bookingPolicy: args.bookingPolicy,
-        ...(args.voiceInstructions !== undefined
-          ? { voiceInstructions: args.voiceInstructions }
-          : {}),
-        ...(args.smsInstructions !== undefined
-          ? { smsInstructions: args.smsInstructions }
-          : {}),
-        transferMode: args.transferMode,
-        ...(args.transferNumber !== undefined ? { transferNumber: args.transferNumber } : {}),
-      });
+      await ctx.db.insert("receptionist_profiles", nextProfile);
     }
 
     await scheduleSnapshotRefresh(ctx, args.businessId);
@@ -199,7 +209,6 @@ export const refreshSnapshot = internalMutation({
     const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
       greeting: profile.greeting,
       smsInstructions: profile.smsInstructions,
-      summary: profile.summary,
       bookingPolicy: profile.bookingPolicy,
     });
     const snapshotDefaultLocale =

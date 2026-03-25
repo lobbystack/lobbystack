@@ -22,8 +22,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
   });
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const [greeting, setGreeting] = useState("");
-  const [tone, setTone] = useState("");
-  const [summary, setSummary] = useState("");
   const [bookingPolicy, setBookingPolicy] = useState("");
   const [voiceInstructions, setVoiceInstructions] = useState("");
   const [smsInstructions, setSmsInstructions] = useState("");
@@ -38,8 +36,6 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       return;
     }
     setGreeting(profile.greeting);
-    setTone(profile.tone);
-    setSummary(profile.summary);
     setBookingPolicy(profile.bookingPolicy);
     setVoiceInstructions(profile.voiceInstructions ?? "");
     setSmsInstructions(profile.smsInstructions ?? "");
@@ -55,13 +51,11 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       await saveProfile({
         businessId: props.businessId,
         greeting,
-        tone,
-        summary,
         bookingPolicy,
         ...(voiceInstructions.trim() ? { voiceInstructions: voiceInstructions.trim() } : {}),
         ...(smsInstructions.trim() ? { smsInstructions: smsInstructions.trim() } : {}),
         transferMode,
-        ...(transferNumber.trim() ? { transferNumber: transferNumber.trim() } : {}),
+        transferNumber: transferNumber.trim() || null,
       });
       setStatus(t("profile.saved"));
     } finally {
@@ -79,28 +73,11 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       </CardHeader>
       <CardContent>
         <form className="space-y-8" onSubmit={(event) => void handleSubmit(event)}>
-          <div className="grid gap-6 md:grid-cols-2">
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("profile.greeting")}</span>
-              <Input
-                value={greeting}
-                onChange={(event) => setGreeting(event.target.value)}
-              />
-            </label>
-            <label className="space-y-3">
-              <span className="text-xs font-medium text-muted-foreground">{t("profile.tone")}</span>
-              <Input
-                value={tone}
-                onChange={(event) => setTone(event.target.value)}
-              />
-            </label>
-          </div>
           <label className="space-y-3">
-            <span className="text-xs font-medium text-muted-foreground">{t("profile.businessSummary")}</span>
-            <Textarea
-              rows={3}
-              value={summary}
-              onChange={(event) => setSummary(event.target.value)}
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.greeting")}</span>
+            <Input
+              value={greeting}
+              onChange={(event) => setGreeting(event.target.value)}
             />
           </label>
           <label className="space-y-3">

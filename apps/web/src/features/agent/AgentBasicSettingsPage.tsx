@@ -70,19 +70,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       await saveProfile({
         businessId,
         greeting,
-        tone: configuration?.profile?.tone ?? "",
-        summary: configuration?.profile?.summary ?? "",
-        bookingPolicy: configuration?.profile?.bookingPolicy ?? "",
-        ...(configuration?.profile?.voiceInstructions !== undefined
-          ? { voiceInstructions: configuration.profile.voiceInstructions }
-          : {}),
-        ...(configuration?.profile?.smsInstructions !== undefined
-          ? { smsInstructions: configuration.profile.smsInstructions }
-          : {}),
-        transferMode: configuration?.profile?.transferMode ?? "on_request",
-        ...(transferNumber.trim().length > 0
-          ? { transferNumber: transferNumber.trim() }
-          : {}),
+        transferNumber: transferNumber.trim().length > 0 ? transferNumber.trim() : null,
       });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
@@ -98,19 +86,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       await saveProfile({
         businessId,
         greeting,
-        tone: configuration?.profile?.tone ?? "",
-        summary: configuration?.profile?.summary ?? "",
-        bookingPolicy: configuration?.profile?.bookingPolicy ?? "",
-        ...(configuration?.profile?.voiceInstructions !== undefined
-          ? { voiceInstructions: configuration.profile.voiceInstructions }
-          : {}),
-        ...(configuration?.profile?.smsInstructions !== undefined
-          ? { smsInstructions: configuration.profile.smsInstructions }
-          : {}),
-        transferMode: configuration?.profile?.transferMode ?? "on_request",
-        ...(trimmedTransferNumber.length > 0
-          ? { transferNumber: trimmedTransferNumber }
-          : {}),
+        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });
       setTransferStatus(t("agent:actions.saved"));
     } finally {

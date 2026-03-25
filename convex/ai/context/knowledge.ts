@@ -162,34 +162,43 @@ async function indexKnowledgeDocumentById(
     status: "indexing",
   });
 
-  const result = await rag.add(ctx, {
-    namespace: getKnowledgeNamespace(String(document.businessId)),
-    title: document.title,
-    text: document.textContent,
-    key: `document:${String(documentId)}`,
-    ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
-    filterValues: [
-      { name: "businessId", value: String(document.businessId) },
-      { name: "sourceType", value: document.sourceType },
-      {
-        name: "businessAndSource",
-        value: {
-          businessId: String(document.businessId),
-          sourceType: document.sourceType,
+  try {
+    const result = await rag.add(ctx, {
+      namespace: getKnowledgeNamespace(String(document.businessId)),
+      title: document.title,
+      text: document.textContent,
+      key: `document:${String(documentId)}`,
+      ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
+      filterValues: [
+        { name: "businessId", value: String(document.businessId) },
+        { name: "sourceType", value: document.sourceType },
+        {
+          name: "businessAndSource",
+          value: {
+            businessId: String(document.businessId),
+            sourceType: document.sourceType,
+          },
         },
-      },
-    ],
-  });
+      ],
+    });
 
-  await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
-    documentId,
-    status: result.status === "ready" ? "indexed" : "indexing",
-    indexedEntryId: String(result.entryId),
-    indexVersion: KNOWLEDGE_INDEX_VERSION,
-  });
-  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
-    businessId: document.businessId,
-  });
+    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+      documentId,
+      status: result.status === "ready" ? "indexed" : "indexing",
+      indexedEntryId: String(result.entryId),
+      indexVersion: KNOWLEDGE_INDEX_VERSION,
+    });
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: document.businessId,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to index this document.";
+    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+      documentId,
+      status: "error",
+      error: message,
+    });
+  }
   return null;
 }
 

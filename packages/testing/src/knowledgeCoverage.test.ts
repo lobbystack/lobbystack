@@ -1,8 +1,9 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import * as componentsModule from "../../../convex/lib/components";
 import { KNOWLEDGE_INDEX_VERSION } from "../../../convex/lib/components";
 import schema from "../../../convex/schema";
 
@@ -148,6 +149,52 @@ describe("Knowledge coverage", () => {
     });
 
     expect(metadata).toBeNull();
+  });
+
+  it("marks documents as failed when indexing throws", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { documentId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-index-failure",
+        name: "Knowledge Index Failure",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Index Failure",
+      });
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Broken document",
+        textContent: "This document should fail during indexing.",
+        status: "queued",
+        tags: [],
+        importance: 5,
+      });
+
+      return { documentId };
+    });
+
+    const ragAddSpy = vi
+      .spyOn(componentsModule.rag, "add")
+      .mockRejectedValueOnce(new Error("RAG unavailable"));
+
+    try {
+      await t.action(internal.ai.context.knowledge.indexKnowledgeDocument, {
+        documentId,
+      });
+    } finally {
+      ragAddSpy.mockRestore();
+    }
+
+    const indexedDocument = await t.run(async (ctx) => {
+      return await ctx.db.get(documentId);
+    });
+
+    expect(indexedDocument?.status).toBe("error");
+    expect(indexedDocument?.error).toBe("RAG unavailable");
   });
 
   it("keeps public knowledge retrieval isolated to the caller's business", async () => {

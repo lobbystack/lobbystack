@@ -49,6 +49,7 @@ import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
 import type * as lib_providers_embeddings from "../lib/providers/embeddings.js";
 import type * as lib_providers_nonRealtimeText from "../lib/providers/nonRealtimeText.js";
+import type * as lib_receptionistProfileDefaults from "../lib/receptionistProfileDefaults.js";
 import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
 import type * as lib_serviceNameGeneration from "../lib/serviceNameGeneration.js";
 import type * as lib_serviceNames from "../lib/serviceNames.js";
@@ -112,6 +113,7 @@ declare const fullApi: ApiFromModules<{
   "lib/providers/email": typeof lib_providers_email;
   "lib/providers/embeddings": typeof lib_providers_embeddings;
   "lib/providers/nonRealtimeText": typeof lib_providers_nonRealtimeText;
+  "lib/receptionistProfileDefaults": typeof lib_receptionistProfileDefaults;
   "lib/runtimeLocale": typeof lib_runtimeLocale;
   "lib/serviceNameGeneration": typeof lib_serviceNameGeneration;
   "lib/serviceNames": typeof lib_serviceNames;

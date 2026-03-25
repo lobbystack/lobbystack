@@ -4,6 +4,12 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
+import {
+  buildDefaultReceptionistSummary,
+  DEFAULT_RECEPTIONIST_BOOKING_POLICY,
+  DEFAULT_RECEPTIONIST_TONE,
+  DEFAULT_RECEPTIONIST_TRANSFER_MODE,
+} from "../lib/receptionistProfileDefaults";
 
 /**
  * Create the initial tenant and owner membership for the authenticated user.
@@ -46,14 +52,14 @@ export const bootstrapBusiness = mutation({
     await ctx.db.insert("receptionist_profiles", {
       businessId,
       greeting: `Thanks for calling ${args.name}.`,
-      tone: "warm and direct",
-      summary: `${args.name} uses AI Receptionist to handle calls and SMS.`,
-      bookingPolicy: "Only confirm a booking after availability is checked.",
+      tone: DEFAULT_RECEPTIONIST_TONE,
+      summary: buildDefaultReceptionistSummary(args.name),
+      bookingPolicy: DEFAULT_RECEPTIONIST_BOOKING_POLICY,
       voiceInstructions:
         "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
       smsInstructions:
         "Keep replies concise and friendly. Ask one follow-up question at a time.",
-      transferMode: "on_request",
+      transferMode: DEFAULT_RECEPTIONIST_TRANSFER_MODE,
     });
 
     await ctx.db.patch(user._id, { activeBusinessId: businessId });
