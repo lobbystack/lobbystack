@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -40,7 +40,10 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const href = location.pathname;
 
   // Derive which collapsible should be initially open based on current path
-  const collapsibleItems = items.filter((item): item is NavCollapsibleItem => !isNavLinkItem(item));
+  const collapsibleItems = useMemo(
+    () => items.filter((item): item is NavCollapsibleItem => !isNavLinkItem(item)),
+    [items],
+  );
   const initialOpen = collapsibleItems.find((item) => checkIsActive(href, item, true));
   const [openKey, setOpenKey] = useState<string | null>(
     initialOpen ? getNavItemKey(initialOpen, title) : null,
@@ -49,7 +52,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
   useEffect(() => {
     const activeItem = collapsibleItems.find((item) => checkIsActive(href, item, true));
     setOpenKey(activeItem ? getNavItemKey(activeItem, title) : null);
-  }, [collapsibleItems, href, title]);
+  }, [href, title, collapsibleItems]);
 
   return (
     <SidebarGroup>
