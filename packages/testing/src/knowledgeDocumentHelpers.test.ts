@@ -1,4 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const { pdfDestroyMock, pdfGetTextMock } = vi.hoisted(() => ({
+  pdfDestroyMock: vi.fn(),
+  pdfGetTextMock: vi.fn(),
+}));
+
+vi.mock("pdf-parse", () => ({
+  PDFParse: class {
+    async getText() {
+      return await pdfGetTextMock();
+    }
+
+    async destroy() {
+      await pdfDestroyMock();
+    }
+  },
+}));
 
 import {
   hasMeaningfulKnowledgeDocumentText,
@@ -25,6 +42,19 @@ describe("Knowledge document helpers", () => {
 
     expect(plainText).toBe("Hello from a text file");
     expect(markdownText).toBe("# Title\n\nBody copy");
+  });
+
+  it("destroys PDF parsers after extracting text", async () => {
+    pdfGetTextMock.mockResolvedValueOnce({ text: "Extracted PDF text" });
+
+    const pdfText = await extractKnowledgeDocumentText({
+      blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
+      mimeType: "application/pdf",
+    });
+
+    expect(pdfText).toBe("Extracted PDF text");
+    expect(pdfGetTextMock).toHaveBeenCalledTimes(1);
+    expect(pdfDestroyMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects empty or near-empty extracted output", () => {

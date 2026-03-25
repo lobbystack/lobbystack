@@ -3443,12 +3443,14 @@ async function generateGroundedReply(
     summary: snapshot.summary,
     bookingPolicy: snapshot.bookingPolicy,
   });
+  const storedBusinessLocale = normalizeRuntimeLocale(snapshot.defaultLocale) ?? "en";
+  const businessLocaleFallback = inferredBusinessLocale ?? storedBusinessLocale;
   const localeHint = existingConversationLocale ?? contactPreferredLocale;
   const explicitLocale = detectExplicitRuntimeLocaleRequest(prompt);
   const classifiedLocale = explicitLocale ?? classifyRuntimeLocale(prompt);
   const nextLocale =
     classifiedLocale === "unknown"
-      ? localeHint ?? inferredBusinessLocale ?? "en"
+      ? localeHint ?? businessLocaleFallback
       : classifiedLocale;
   const nextLocaleSource: RuntimeLocaleSource | null =
     explicitLocale !== null
@@ -3457,6 +3459,8 @@ async function generateGroundedReply(
         ? "detected_conversation"
       : contactPreferredLocale === nextLocale
           ? "contact_preference"
+      : classifiedLocale === "unknown" && localeHint === undefined
+          ? "business_default"
       : existingConversationLocale !== undefined &&
           localeContext.conversationLocaleSource !== undefined
             ? localeContext.conversationLocaleSource

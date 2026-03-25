@@ -2965,6 +2965,61 @@ describe("SMS scheduling flow", () => {
     });
   });
 
+  it("falls back to the stored business locale for ambiguous first SMS messages", async () => {
+    const t = createConvexHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const { businessId } = await seedSchedulableBusiness(ctx, {
+        slug: "sms-ambiguous-first-message-french-default",
+        name: "SMS Ambiguous First Message French Default",
+        smsNumber: "+14165550927",
+        defaultLocale: "fr",
+      });
+
+      const profile = await ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!profile) {
+        throw new Error("Expected receptionist profile to exist.");
+      }
+
+      await ctx.db.patch(profile._id, {
+        greeting: "Welcome.",
+        summary: "General help.",
+        bookingPolicy: "Confirm after checking.",
+        smsInstructions: "Keep replies short.",
+      });
+
+      return { businessId, smsNumber: "+14165550927" };
+    });
+    await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-ambiguous-first-message-french-default-1",
+      From: "+14165550989",
+      To: smsNumber,
+      Body: "Allo",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550989"),
+        )
+        .unique();
+      expect(contact?.preferredLocale).toBeUndefined();
+
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      expect(conversation?.locale).toBe("fr");
+      expect(conversation?.localeSource).toBe("business_default");
+    });
+  });
+
   it("replies in French on the first French booking message even for an English-default business", async () => {
     const t = createConvexHarness();
 

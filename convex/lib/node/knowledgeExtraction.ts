@@ -78,8 +78,12 @@ export async function extractKnowledgeDocumentText(
     case "application/pdf": {
       const { PDFParse } = await loadPdfParseModule();
       const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      return result.text ?? "";
+      try {
+        const result = await parser.getText();
+        return result.text ?? "";
+      } finally {
+        await parser.destroy();
+      }
     }
     case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
       const result = await mammoth.extractRawText({ buffer });
