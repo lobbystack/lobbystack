@@ -10,7 +10,53 @@ import {
   hasMeaningfulKnowledgeDocumentText,
   normalizeKnowledgeDocumentText,
 } from "../../lib/knowledgeDocuments";
-import { extractKnowledgeDocumentText } from "../../lib/node/knowledgeExtraction";
+import {
+  KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR,
+  KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR,
+  extractKnowledgeDocumentText,
+  extractPdfTextWithLocalOcr,
+} from "../../lib/node/knowledgeExtraction";
+
+const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
+  "We couldn't extract enough readable text from this file.";
+
+async function extractUploadedKnowledgeDocumentText(input: {
+  blob: Blob;
+  mimeType: string;
+}): Promise<string> {
+  const rawText = await extractKnowledgeDocumentText(input);
+  const normalizedText = normalizeKnowledgeDocumentText(rawText);
+
+  if (hasMeaningfulKnowledgeDocumentText(normalizedText)) {
+    return normalizedText;
+  }
+
+  if (input.mimeType !== "application/pdf") {
+    throw new Error(KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR);
+  }
+
+  try {
+    const ocrText = await extractPdfTextWithLocalOcr({
+      blob: input.blob,
+    });
+    const normalizedOcrText = normalizeKnowledgeDocumentText(ocrText);
+
+    if (!hasMeaningfulKnowledgeDocumentText(normalizedOcrText)) {
+      throw new Error(KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR);
+    }
+
+    return normalizedOcrText;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message !== KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR
+    ) {
+      throw error;
+    }
+
+    throw new Error(KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR);
+  }
+}
 
 async function prepareUploadedKnowledgeDocument(
   ctx: ActionCtx,
@@ -42,18 +88,7 @@ async function prepareUploadedKnowledgeDocument(
   const mimeType = document.mimeType ?? blob.type ?? "application/octet-stream";
 
   try {
-    const rawText = await extractKnowledgeDocumentText({ blob, mimeType });
-    const normalizedText = normalizeKnowledgeDocumentText(rawText);
-
-    if (!hasMeaningfulKnowledgeDocumentText(normalizedText)) {
-      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
-        documentId,
-        status: "error",
-        error:
-          "We couldn't extract enough readable text from this file. Image-only PDFs aren't supported yet.",
-      });
-      return null;
-    }
+    const normalizedText = await extractUploadedKnowledgeDocumentText({ blob, mimeType });
 
     const contentHash = createHash("sha256").update(normalizedText).digest("hex");
 
