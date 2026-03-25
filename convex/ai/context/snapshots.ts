@@ -19,6 +19,8 @@ import {
 import {
   inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
+  runtimeLocaleValidator,
+  type RuntimeLocale,
 } from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
 
@@ -26,6 +28,7 @@ type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {
   businessId: Id<"businesses">;
+  defaultLocale: RuntimeLocale;
   greeting: string;
   bookingPolicy?: string;
   voiceInstructions?: string;
@@ -82,6 +85,7 @@ export const getForDashboard = query({
 export const updateReceptionistProfile = mutation({
   args: {
     businessId: v.id("businesses"),
+    defaultLocale: runtimeLocaleValidator,
     greeting: v.string(),
     bookingPolicy: v.optional(v.string()),
     voiceInstructions: v.optional(v.string()),
@@ -101,6 +105,12 @@ export const updateReceptionistProfile = mutation({
 
     if (!business) {
       throw new Error("Business not found.");
+    }
+
+    if (business.defaultLocale !== args.defaultLocale) {
+      await ctx.db.patch(args.businessId, {
+        defaultLocale: args.defaultLocale,
+      });
     }
 
     const bookingPolicy =
@@ -126,18 +136,6 @@ export const updateReceptionistProfile = mutation({
       transferMode,
       ...(transferNumber !== undefined ? { transferNumber } : {}),
     };
-
-    const inferredDefaultLocale = inferRuntimeLocaleFromBusinessContext({
-      greeting: args.greeting,
-      smsInstructions: args.smsInstructions,
-      bookingPolicy: args.bookingPolicy,
-    });
-    const nextDefaultLocale = inferredDefaultLocale ?? business.defaultLocale ?? "en";
-    if (business.defaultLocale !== nextDefaultLocale) {
-      await ctx.db.patch(args.businessId, {
-        defaultLocale: nextDefaultLocale,
-      });
-    }
 
     if (existing) {
       await ctx.db.replace(existing._id, nextProfile);
@@ -215,11 +213,7 @@ export const refreshSnapshot = internalMutation({
       bookingPolicy: profile.bookingPolicy,
     });
     const snapshotDefaultLocale =
-      inferredDefaultLocale ?? resolveRuntimeLocale(business.defaultLocale);
-
-    if (inferredDefaultLocale && business.defaultLocale !== inferredDefaultLocale) {
-      await ctx.db.patch(args.businessId, { defaultLocale: inferredDefaultLocale });
-    }
+      resolveRuntimeLocale(business.defaultLocale, inferredDefaultLocale ?? "en");
 
     const activePhoneNumbers = phoneNumbers.filter((row) => row.status === "active");
     const primaryPhone =

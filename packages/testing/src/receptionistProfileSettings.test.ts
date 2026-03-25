@@ -62,7 +62,8 @@ describe("Receptionist profile settings", () => {
 
     await authed.mutation(api.ai.context.snapshots.updateReceptionistProfile, {
       businessId,
-      greeting: "Bonjour.",
+      defaultLocale: "fr",
+      greeting: "Hello.",
     });
 
     const result = await t.run(async (ctx) => {
@@ -77,7 +78,7 @@ describe("Receptionist profile settings", () => {
 
     expect(result.profile).toMatchObject({
       businessId: businessId as Id<"businesses">,
-      greeting: "Bonjour.",
+      greeting: "Hello.",
       tone: DEFAULT_RECEPTIONIST_TONE,
       summary: buildDefaultReceptionistSummary("Receptionist Profile Business"),
       bookingPolicy: "Only confirm a booking after availability is checked.",

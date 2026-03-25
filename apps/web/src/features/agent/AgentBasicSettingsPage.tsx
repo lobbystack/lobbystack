@@ -65,7 +65,8 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }, [greetingStatus, transferStatus]);
 
   async function saveGreeting(): Promise<void> {
-    if (!persistedProfile) {
+    const defaultLocale = configuration?.business?.defaultLocale;
+    if (!persistedProfile || !defaultLocale) {
       return;
     }
 
@@ -75,6 +76,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
+        defaultLocale,
         greeting,
         transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });
@@ -85,7 +87,8 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }
 
   async function saveTransferNumber(): Promise<void> {
-    if (!persistedProfile) {
+    const defaultLocale = configuration?.business?.defaultLocale;
+    if (!persistedProfile || !defaultLocale) {
       return;
     }
 
@@ -95,6 +98,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
+        defaultLocale,
         greeting,
         transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
       });

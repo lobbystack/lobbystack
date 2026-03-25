@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 
@@ -22,6 +23,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
   });
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const [greeting, setGreeting] = useState("");
+  const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [bookingPolicy, setBookingPolicy] = useState("");
   const [voiceInstructions, setVoiceInstructions] = useState("");
   const [smsInstructions, setSmsInstructions] = useState("");
@@ -36,6 +38,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       return;
     }
     setGreeting(profile.greeting);
+    setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setBookingPolicy(profile.bookingPolicy);
     setVoiceInstructions(profile.voiceInstructions ?? "");
     setSmsInstructions(profile.smsInstructions ?? "");
@@ -51,6 +54,7 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
       await saveProfile({
         businessId: props.businessId,
         greeting,
+        defaultLocale,
         bookingPolicy,
         ...(voiceInstructions.trim() ? { voiceInstructions: voiceInstructions.trim() } : {}),
         ...(smsInstructions.trim() ? { smsInstructions: smsInstructions.trim() } : {}),
@@ -79,6 +83,21 @@ export function BusinessProfileForm(props: BusinessProfileFormProps) {
               value={greeting}
               onChange={(event) => setGreeting(event.target.value)}
             />
+          </label>
+          <label className="space-y-3">
+            <span className="text-xs font-medium text-muted-foreground">{t("profile.defaultCustomerLanguage")}</span>
+            <Select
+              value={defaultLocale}
+              onValueChange={(value) => setDefaultLocale((value as RuntimeLocale | "") || "en")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("profile.selectDefaultLanguage")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t("common:language.english")}</SelectItem>
+                <SelectItem value="fr">{t("common:language.french")}</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           <label className="space-y-3">
             <span className="text-xs font-medium text-muted-foreground">{t("profile.bookingPolicy")}</span>
