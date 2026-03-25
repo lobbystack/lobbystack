@@ -44,6 +44,7 @@ import type * as lib_messageAttachmentUrls from "../lib/messageAttachmentUrls.js
 import type * as lib_messageAttachments from "../lib/messageAttachments.js";
 import type * as lib_node_imagePreviews from "../lib/node/imagePreviews.js";
 import type * as lib_node_knowledgeExtraction from "../lib/node/knowledgeExtraction.js";
+import type * as lib_node_tesseractNodeWorker from "../lib/node/tesseractNodeWorker.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
@@ -108,6 +109,7 @@ declare const fullApi: ApiFromModules<{
   "lib/messageAttachments": typeof lib_messageAttachments;
   "lib/node/imagePreviews": typeof lib_node_imagePreviews;
   "lib/node/knowledgeExtraction": typeof lib_node_knowledgeExtraction;
+  "lib/node/tesseractNodeWorker": typeof lib_node_tesseractNodeWorker;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;
   "lib/providers/email": typeof lib_providers_email;

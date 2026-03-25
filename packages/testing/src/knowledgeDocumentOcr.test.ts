@@ -136,6 +136,7 @@ describe("Knowledge document OCR", () => {
     expect(createWorkerMock).toHaveBeenCalledWith(["eng", "fra"], 1, {
       cacheMethod: "none",
       logger: expect.any(Function),
+      workerPath: expect.stringContaining("tesseractNodeWorker.js"),
     });
     expect(setParametersMock).toHaveBeenCalledWith({
       preserve_interword_spaces: "1",

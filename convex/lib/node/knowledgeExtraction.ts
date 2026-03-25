@@ -1,6 +1,7 @@
 "use node";
 
 import { PassThrough } from "node:stream";
+import { fileURLToPath } from "node:url";
 
 import mammoth from "mammoth";
 import { encodePNGToStream, make } from "pureimage";
@@ -33,6 +34,9 @@ export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
   "We couldn't OCR this PDF locally. Upload a searchable PDF or a clearer scan.";
 
 const KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE = 2;
+const TESSERACT_NODE_WORKER_PATH = fileURLToPath(
+  new URL("./tesseractNodeWorker.js", import.meta.url),
+);
 
 let pdfJsModulesPromise: Promise<{
   pdfjs: PdfJsModule;
@@ -283,6 +287,7 @@ export async function extractPdfTextWithLocalOcr(
       worker = await createWorker([...languages], OEM.LSTM_ONLY, {
         cacheMethod: "none",
         logger: () => undefined,
+        workerPath: TESSERACT_NODE_WORKER_PATH,
       });
 
       await worker.setParameters({
