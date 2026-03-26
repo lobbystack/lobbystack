@@ -373,6 +373,101 @@ describe("Knowledge document OCR", () => {
     });
   });
 
+  it("reruns a meaningful but suspicious link reference at high quality before accepting it", async () => {
+    const firstPage = {
+      getViewport: vi.fn(() => ({ width: 80, height: 90 })),
+      render: firstPageRenderMock,
+      cleanup: firstPageCleanupMock,
+    };
+    const document = {
+      numPages: 1,
+      getPage: getPageMock,
+      destroy: documentDestroyMock,
+    };
+
+    firstPageRenderMock.mockReturnValue({ promise: Promise.resolve() });
+    getPageMock.mockResolvedValue(firstPage);
+    getDocumentMock.mockReturnValueOnce({
+      promise: Promise.resolve(document),
+      destroy: loadingTaskDestroyMock,
+    });
+    makeMock
+      .mockReturnValueOnce(makeCanvas("page-one-fast"))
+      .mockReturnValueOnce(makeCanvas("page-one-hq"));
+    recognizeMock
+      .mockResolvedValueOnce({
+        data: {
+          text: "Veuillez remplir le formulaire disponible à la page : rugam ndre-r r",
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          text: "Veuillez remplir le formulaire disponible à la page : rugam ndre-r r",
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          text: "Veuillez remplir le formulaire disponible à la page : uqam.ca/admission",
+        },
+      });
+
+    const text = await extractPdfTextWithLocalOcr({
+      blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
+      languages: ["fra"],
+    });
+
+    expect(text).toBe(
+      "Veuillez remplir le formulaire disponible à la page : uqam.ca/admission",
+    );
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(1, { scale: 1.25 });
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 2 });
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      1,
+      {
+        cacheMethod: "none",
+        languages: ["fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      2,
+      {
+        cacheMethod: "none",
+        languages: ["fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      3,
+      {
+        cacheMethod: "none",
+        languages: ["fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(setParametersMock).toHaveBeenNthCalledWith(1, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+      user_defined_dpi: "90",
+    });
+    expect(setParametersMock).toHaveBeenNthCalledWith(2, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "6",
+      user_defined_dpi: "90",
+    });
+    expect(setParametersMock).toHaveBeenNthCalledWith(3, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+      user_defined_dpi: "144",
+    });
+  });
+
   it("rejects PDFs that exceed the OCR page cap", async () => {
     const document = {
       numPages: KNOWLEDGE_DOCUMENT_OCR_MAX_PAGES + 1,

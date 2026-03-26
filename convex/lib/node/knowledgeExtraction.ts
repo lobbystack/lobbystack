@@ -591,6 +591,51 @@ function getNormalizedOcrLength(text: string): number {
   return text.replace(/\s+/g, " ").trim().length;
 }
 
+function containsUrlOrEmailLikeText(text: string): boolean {
+  return (
+    /\bhttps?:\/\/\S+/iu.test(text) ||
+    /\bwww\.\S+/iu.test(text) ||
+    /\b[\w.-]+@[\w.-]+\.[A-Za-z]{2,}\b/u.test(text) ||
+    /\b[a-z0-9-]+\.(?:ca|com|org|net|edu|gov|qc\.ca)(?:\/\S*)?\b/iu.test(text)
+  );
+}
+
+function containsLinkCue(text: string): boolean {
+  return /\b(?:page|formulaire|lien|link|site web|website|courriel|email|url)\b/iu.test(
+    text,
+  );
+}
+
+function countSuspiciousShortTokenLines(text: string): number {
+  return text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => {
+      const tokens = line.split(/\s+/).filter(Boolean);
+      if (tokens.length < 3) {
+        return false;
+      }
+
+      const shortTokens = tokens.filter((token) => token.replace(/[^A-Za-z0-9]/g, "").length <= 2);
+      return shortTokens.length / tokens.length >= 0.5;
+    }).length;
+}
+
+function scoreOcrTextQuality(text: string): number {
+  const normalizedLength = getNormalizedOcrLength(text);
+  const urlBonus = containsUrlOrEmailLikeText(text) ? 100 : 0;
+  const suspiciousLinePenalty = countSuspiciousShortTokenLines(text) * 25;
+  const printableCharacters = (text.match(/[^\s]/g) ?? []).length;
+  const alphanumericCharacters = (text.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? []).length;
+  const symbolPenalty =
+    printableCharacters === 0
+      ? 0
+      : Math.round((1 - alphanumericCharacters / printableCharacters) * 20);
+
+  return normalizedLength + urlBonus - suspiciousLinePenalty - symbolPenalty;
+}
+
 function shouldRetryOcrWithAlternateSegmentation(text: string): boolean {
   const normalizedLength = getNormalizedOcrLength(text);
   if (normalizedLength === 0) {
@@ -618,10 +663,39 @@ function shouldEscalateToBilingualOcr(args: {
   return !hasMeaningfulKnowledgeDocumentText(args.candidateText);
 }
 
+function shouldEscalateToHighQualityRecovery(args: {
+  candidateText: string;
+  pageCount: number;
+}): boolean {
+  if (!hasMeaningfulKnowledgeDocumentText(args.candidateText)) {
+    return true;
+  }
+
+  if (!containsLinkCue(args.candidateText)) {
+    return false;
+  }
+
+  return (
+    args.pageCount <= 2 &&
+    (!containsUrlOrEmailLikeText(args.candidateText) ||
+      countSuspiciousShortTokenLines(args.candidateText) > 0)
+  );
+}
+
+function shouldRunAlternateSegmentationRecovery(args: {
+  candidateText: string;
+  pageCount: number;
+}): boolean {
+  return (
+    shouldRetryOcrWithAlternateSegmentation(args.candidateText) ||
+    shouldEscalateToHighQualityRecovery(args)
+  );
+}
+
 function choosePreferredOcrText(candidates: Array<string>): string {
   return candidates.reduce(
     (best, candidate) =>
-      getNormalizedOcrLength(candidate) > getNormalizedOcrLength(best)
+      scoreOcrTextQuality(candidate) > scoreOcrTextQuality(best)
         ? candidate
         : best,
     "",
@@ -745,13 +819,24 @@ export async function extractPdfTextWithLocalOcr(
         renderScale: fastRenderScale,
         range: [30, 60],
       });
-      if (hasMeaningfulKnowledgeDocumentText(primaryPassText)) {
+      if (
+        hasMeaningfulKnowledgeDocumentText(primaryPassText) &&
+        !shouldEscalateToHighQualityRecovery({
+          candidateText: primaryPassText,
+          pageCount: document.numPages,
+        })
+      ) {
         await emitProgress(100);
         return primaryPassText;
       }
 
       let bestText = primaryPassText;
-      if (shouldRetryOcrWithAlternateSegmentation(primaryPassText)) {
+      if (
+        shouldRunAlternateSegmentationRecovery({
+          candidateText: primaryPassText,
+          pageCount: document.numPages,
+        })
+      ) {
         const fastFallbackText = await runRecognitionPass({
           pageImages: fastPathImages,
           languages,
@@ -760,7 +845,13 @@ export async function extractPdfTextWithLocalOcr(
           range: [60, 75],
         });
         bestText = choosePreferredOcrText([bestText, fastFallbackText]);
-        if (hasMeaningfulKnowledgeDocumentText(bestText)) {
+        if (
+          hasMeaningfulKnowledgeDocumentText(bestText) &&
+          !shouldEscalateToHighQualityRecovery({
+            candidateText: bestText,
+            pageCount: document.numPages,
+          })
+        ) {
           await emitProgress(100);
           return bestText;
         }
@@ -795,12 +886,23 @@ export async function extractPdfTextWithLocalOcr(
         range: [85, 95],
       });
       bestText = choosePreferredOcrText([bestText, recoveryPrimaryText]);
-      if (hasMeaningfulKnowledgeDocumentText(bestText)) {
+      if (
+        hasMeaningfulKnowledgeDocumentText(bestText) &&
+        !shouldEscalateToHighQualityRecovery({
+          candidateText: bestText,
+          pageCount: document.numPages,
+        })
+      ) {
         await emitProgress(100);
         return bestText;
       }
 
-      if (shouldRetryOcrWithAlternateSegmentation(recoveryPrimaryText)) {
+      if (
+        shouldRunAlternateSegmentationRecovery({
+          candidateText: recoveryPrimaryText,
+          pageCount: document.numPages,
+        })
+      ) {
         const recoveryFallbackText = await runRecognitionPass({
           pageImages: highQualityImages,
           languages: recoveryLanguages,
