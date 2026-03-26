@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Textarea } from "@/components/ui/textarea";
 import type { AgentSection } from "./sections";
 
 type AgentKnowledgePageProps = {
@@ -214,19 +215,25 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
               </div>
             </div>
             <CollapsibleContent>
-              <div className="px-4 pb-4">
+              <div className="px-4 pb-5">
                 {"sourceType" in entry ? (
-                  <div className="rounded-xl bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-                    {entry.status === "error"
-                      ? entry.error ?? t(`agent:sections.${section}.previewError`)
-                      : entry.textContent?.trim()
-                        ? `${entry.textContent.trim().slice(0, 280)}${entry.textContent.trim().length > 280 ? "…" : ""}`
-                        : t(`agent:sections.${section}.previewPending`)}
-                  </div>
+                  <Textarea
+                    className="min-h-80 max-h-80 resize-none overflow-y-auto rounded-xl border-0 bg-muted/30 p-4 text-sm leading-relaxed text-foreground shadow-none focus-visible:ring-0"
+                    readOnly
+                    value={
+                      entry.status === "error"
+                        ? entry.error ?? t(`agent:sections.${section}.previewError`)
+                        : entry.textContent?.trim()
+                          ? entry.textContent.trim()
+                          : t(`agent:sections.${section}.previewPending`)
+                    }
+                  />
                 ) : (
-                  <div className="rounded-xl bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-                    {entry.content}
-                  </div>
+                  <Textarea
+                    className="min-h-80 max-h-80 resize-none overflow-y-auto rounded-xl border-0 bg-muted/30 p-4 text-sm leading-relaxed text-foreground shadow-none focus-visible:ring-0"
+                    readOnly
+                    value={entry.content}
+                  />
                 )}
               </div>
             </CollapsibleContent>
