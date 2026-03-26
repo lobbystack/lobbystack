@@ -33,6 +33,7 @@ import {
   resolveKnowledgeSection,
   type KnowledgeSection,
 } from "../../lib/knowledgeSections";
+import { normalizeRuntimeLocale } from "../../lib/runtimeLocale";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -402,6 +403,16 @@ export const getUploadedKnowledgeDocumentMetadata = internalQuery({
       contentType: metadata.contentType ?? "application/octet-stream",
       byteLength: metadata.size,
     };
+  },
+});
+
+export const getBusinessDefaultLocale = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
+    const business = await ctx.db.get(args.businessId);
+    return normalizeRuntimeLocale(business?.defaultLocale) ?? null;
   },
 });
 

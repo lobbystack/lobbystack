@@ -84,6 +84,15 @@ type CreateInProcessTesseractWorkerArgs = {
   oem: number;
 };
 
+const decodedLanguageDataCache = new Map<string, Uint8Array>();
+const cachedWorkerEntries = new Map<
+  string,
+  {
+    release: Promise<void>;
+    workerPromise: Promise<InProcessWorker>;
+  }
+>();
+
 async function loadBundledLanguageData(args: {
   languages: ReadonlyArray<string>;
   lstmOnly: boolean;
@@ -102,9 +111,11 @@ async function loadBundledLanguageData(args: {
           "Only bundled LSTM OCR language data is supported in this runtime.",
         );
       }
-      const data = new Uint8Array(
-        Buffer.from(trainedDataBase64, "base64"),
-      );
+      let data = decodedLanguageDataCache.get(language);
+      if (!data) {
+        data = new Uint8Array(Buffer.from(trainedDataBase64, "base64"));
+        decodedLanguageDataCache.set(language, data);
+      }
 
       return {
         code: language,
@@ -215,4 +226,63 @@ export async function createInProcessTesseractWorker(
       await runJob("terminate", {});
     },
   };
+}
+
+function getCachedWorkerKey(args: CreateInProcessTesseractWorkerArgs): string {
+  return `${args.oem}:${[...args.languages].join("+")}`;
+}
+
+export async function runWithCachedInProcessTesseractWorker<T>(
+  args: CreateInProcessTesseractWorkerArgs,
+  callback: (worker: InProcessWorker) => Promise<T>,
+): Promise<T> {
+  const key = getCachedWorkerKey(args);
+  let entry = cachedWorkerEntries.get(key);
+
+  if (!entry) {
+    entry = {
+      release: Promise.resolve(),
+      workerPromise: createInProcessTesseractWorker(args),
+    };
+    cachedWorkerEntries.set(key, entry);
+  }
+
+  const waitForTurn = entry.release.catch(() => undefined);
+  let releaseCurrentTurn!: () => void;
+  entry.release = new Promise<void>((resolve) => {
+    releaseCurrentTurn = resolve;
+  });
+
+  try {
+    await waitForTurn;
+    const worker = await entry.workerPromise;
+    return await callback(worker);
+  } catch (error) {
+    cachedWorkerEntries.delete(key);
+    try {
+      const worker = await entry.workerPromise;
+      await worker.terminate();
+    } catch {
+      // Ignore cleanup failures while tearing down a broken cached worker.
+    }
+    throw error;
+  } finally {
+    releaseCurrentTurn();
+  }
+}
+
+export async function clearCachedInProcessTesseractWorkers(): Promise<void> {
+  const workers = [...cachedWorkerEntries.values()];
+  cachedWorkerEntries.clear();
+
+  await Promise.all(
+    workers.map(async (entry) => {
+      try {
+        const worker = await entry.workerPromise;
+        await worker.terminate();
+      } catch {
+        // Ignore best-effort cleanup errors in tests.
+      }
+    }),
+  );
 }

@@ -6,7 +6,7 @@ import mammoth from "mammoth";
 import { encodePNGToStream, make } from "pureimage";
 
 import { hasMeaningfulKnowledgeDocumentText } from "../knowledgeDocuments";
-import { createInProcessTesseractWorker } from "./tesseractInProcessWorker";
+import { runWithCachedInProcessTesseractWorker } from "./tesseractInProcessWorker";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
   pdfjsWorker?: {
@@ -58,7 +58,9 @@ export const KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR =
 export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
   "We couldn't OCR this PDF locally. Upload a searchable PDF or a clearer scan.";
 
-const KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE = 2;
+const KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE = 2;
+const KNOWLEDGE_DOCUMENT_OCR_SINGLE_PAGE_FAST_RENDER_SCALE = 1.25;
+const KNOWLEDGE_DOCUMENT_OCR_MULTI_PAGE_FAST_RENDER_SCALE = 1.5;
 const TESSERACT_OEM_LSTM_ONLY = 1;
 const TESSERACT_PSM_AUTO = "3";
 const TESSERACT_PSM_SINGLE_BLOCK = "6";
@@ -567,6 +569,65 @@ type ExtractPdfTextWithLocalOcrArgs = {
   onProgress?: (progressPercent: number) => Promise<void>;
 };
 
+function getOcrDpiForRenderScale(scale: number): string {
+  return String(Math.max(90, Math.round(72 * scale)));
+}
+
+function getPreferredFastOcrRenderScale(pageCount: number): number {
+  return pageCount <= 1
+    ? KNOWLEDGE_DOCUMENT_OCR_SINGLE_PAGE_FAST_RENDER_SCALE
+    : KNOWLEDGE_DOCUMENT_OCR_MULTI_PAGE_FAST_RENDER_SCALE;
+}
+
+function countTextWords(text: string): number {
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean).length;
+}
+
+function getNormalizedOcrLength(text: string): number {
+  return text.replace(/\s+/g, " ").trim().length;
+}
+
+function shouldRetryOcrWithAlternateSegmentation(text: string): boolean {
+  const normalizedLength = getNormalizedOcrLength(text);
+  if (normalizedLength === 0) {
+    return true;
+  }
+
+  const alphanumericCharacters = (text.match(/[A-Za-z0-9\u00C0-\u017F]/g) ?? []).length;
+  const printableCharacters = (text.match(/[^\s]/g) ?? []).length;
+  const symbolRatio =
+    printableCharacters === 0
+      ? 1
+      : 1 - alphanumericCharacters / printableCharacters;
+
+  return normalizedLength < 24 || countTextWords(text) < 4 || symbolRatio > 0.4;
+}
+
+function shouldEscalateToBilingualOcr(args: {
+  primaryLanguages: ReadonlyArray<string>;
+  candidateText: string;
+}): boolean {
+  if (args.primaryLanguages.length > 1) {
+    return false;
+  }
+
+  return !hasMeaningfulKnowledgeDocumentText(args.candidateText);
+}
+
+function choosePreferredOcrText(candidates: Array<string>): string {
+  return candidates.reduce(
+    (best, candidate) =>
+      getNormalizedOcrLength(candidate) > getNormalizedOcrLength(best)
+        ? candidate
+        : best,
+    "",
+  );
+}
+
 export async function extractKnowledgeDocumentText(
   args: ExtractKnowledgeDocumentTextArgs,
 ): Promise<string> {
@@ -603,85 +664,156 @@ export async function extractPdfTextWithLocalOcr(
       throw new Error(KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR);
     }
 
-    let worker: Awaited<ReturnType<typeof createInProcessTesseractWorker>> | null = null;
-
     try {
-      worker = await createInProcessTesseractWorker({
-        cacheMethod: "none",
-        languages,
-        logger: () => undefined,
-        oem: TESSERACT_OEM_LSTM_ONLY,
-      });
-      const activeWorker = worker;
-      await emitProgress(10);
-
-      const pageImages: Buffer[] = [];
       const pageCount = Math.max(document.numPages, 1);
+      const renderPagesAtScale = async (scale: number, range: [number, number]) => {
+        const pageImages: Buffer[] = [];
 
-      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-        const page = await document.getPage(pageNumber);
+        for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+          const page = await document.getPage(pageNumber);
 
-        try {
-          const viewport = page.getViewport({ scale: KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE });
-          const { canvas, canvasContext } = createPdfRenderSurface(
-            Math.max(1, Math.ceil(viewport.width)),
-            Math.max(1, Math.ceil(viewport.height)),
-          );
-          canvasContext.fillStyle = "#ffffff";
-          canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+          try {
+            const viewport = page.getViewport({ scale });
+            const { canvas, canvasContext } = createPdfRenderSurface(
+              Math.max(1, Math.ceil(viewport.width)),
+              Math.max(1, Math.ceil(viewport.height)),
+            );
+            canvasContext.fillStyle = "#ffffff";
+            canvasContext.fillRect(0, 0, canvas.width, canvas.height);
 
-          await page.render({
-            canvas: canvas as unknown as HTMLCanvasElement,
-            canvasContext: canvasContext as unknown as CanvasRenderingContext2D,
-            viewport,
-          }).promise;
+            await page.render({
+              canvas: canvas as unknown as HTMLCanvasElement,
+              canvasContext: canvasContext as unknown as CanvasRenderingContext2D,
+              viewport,
+            }).promise;
 
-          pageImages.push(await encodeBitmapToPngBuffer(canvas));
-          await emitProgress(10 + (pageNumber / pageCount) * 25);
-        } finally {
-          page.cleanup();
-        }
-      }
-
-      const runRecognitionPass = async (pagesegMode: string, range: [number, number]) => {
-        await activeWorker.setParameters({
-          preserve_interword_spaces: "1",
-          tessedit_pageseg_mode: pagesegMode,
-          user_defined_dpi: "144",
-        });
-
-        const pages: string[] = [];
-        for (const [index, imageBuffer] of pageImages.entries()) {
-          const result = await activeWorker.recognize(imageBuffer);
-          const pageText = result.data.text.trim();
-          if (pageText.length > 0) {
-            pages.push(pageText);
+            pageImages.push(await encodeBitmapToPngBuffer(canvas));
+            const [start, end] = range;
+            await emitProgress(start + (pageNumber / pageCount) * (end - start));
+          } finally {
+            page.cleanup();
           }
-          const [start, end] = range;
-          await emitProgress(start + ((index + 1) / pageCount) * (end - start));
         }
-        return pages.join("\n\n");
+
+        return pageImages;
       };
 
-      const primaryPassText = await runRecognitionPass(TESSERACT_PSM_AUTO, [35, 70]);
+      const runRecognitionPass = async (input: {
+        pageImages: Array<Buffer>;
+        languages: ReadonlyArray<string>;
+        pagesegMode: string;
+        renderScale: number;
+        range: [number, number];
+      }) => {
+        return await runWithCachedInProcessTesseractWorker(
+          {
+            cacheMethod: "none",
+            languages: input.languages,
+            logger: () => undefined,
+            oem: TESSERACT_OEM_LSTM_ONLY,
+          },
+          async (worker) => {
+            await worker.setParameters({
+              preserve_interword_spaces: "1",
+              tessedit_pageseg_mode: input.pagesegMode,
+              user_defined_dpi: getOcrDpiForRenderScale(input.renderScale),
+            });
+
+            const pages: string[] = [];
+            for (const [index, imageBuffer] of input.pageImages.entries()) {
+              const result = await worker.recognize(imageBuffer);
+              const pageText = result.data.text.trim();
+              if (pageText.length > 0) {
+                pages.push(pageText);
+              }
+              const [start, end] = input.range;
+              await emitProgress(start + ((index + 1) / pageCount) * (end - start));
+            }
+
+            return pages.join("\n\n");
+          },
+        );
+      };
+
+      await emitProgress(10);
+      const fastRenderScale = getPreferredFastOcrRenderScale(document.numPages);
+      const fastPathImages = await renderPagesAtScale(fastRenderScale, [10, 30]);
+      const primaryPassText = await runRecognitionPass({
+        pageImages: fastPathImages,
+        languages,
+        pagesegMode: TESSERACT_PSM_AUTO,
+        renderScale: fastRenderScale,
+        range: [30, 60],
+      });
       if (hasMeaningfulKnowledgeDocumentText(primaryPassText)) {
         await emitProgress(100);
         return primaryPassText;
       }
 
-      const fallbackPassText = await runRecognitionPass(TESSERACT_PSM_SINGLE_BLOCK, [70, 100]);
-      if (hasMeaningfulKnowledgeDocumentText(fallbackPassText)) {
-        console.info("Local PDF OCR succeeded after fallback page segmentation", {
-          fallbackPagesegMode: TESSERACT_PSM_SINGLE_BLOCK,
-          primaryLength: primaryPassText.replace(/\s+/g, " ").trim().length,
-          fallbackLength: fallbackPassText.replace(/\s+/g, " ").trim().length,
+      let bestText = primaryPassText;
+      if (shouldRetryOcrWithAlternateSegmentation(primaryPassText)) {
+        const fastFallbackText = await runRecognitionPass({
+          pageImages: fastPathImages,
+          languages,
+          pagesegMode: TESSERACT_PSM_SINGLE_BLOCK,
+          renderScale: fastRenderScale,
+          range: [60, 75],
         });
-        await emitProgress(100);
-        return fallbackPassText;
+        bestText = choosePreferredOcrText([bestText, fastFallbackText]);
+        if (hasMeaningfulKnowledgeDocumentText(bestText)) {
+          await emitProgress(100);
+          return bestText;
+        }
+      } else {
+        await emitProgress(75);
       }
 
-      await emitProgress(100);
-      return fallbackPassText;
+      const recoveryLanguages = shouldEscalateToBilingualOcr({
+        primaryLanguages: languages,
+        candidateText: bestText,
+      })
+        ? KNOWLEDGE_DOCUMENT_OCR_LANGUAGES
+        : languages;
+
+      if (
+        recoveryLanguages.length === languages.length &&
+        fastRenderScale >= KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE
+      ) {
+        await emitProgress(100);
+        return bestText;
+      }
+
+      const highQualityImages = await renderPagesAtScale(
+        KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+        [75, 85],
+      );
+      const recoveryPrimaryText = await runRecognitionPass({
+        pageImages: highQualityImages,
+        languages: recoveryLanguages,
+        pagesegMode: TESSERACT_PSM_AUTO,
+        renderScale: KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+        range: [85, 95],
+      });
+      bestText = choosePreferredOcrText([bestText, recoveryPrimaryText]);
+      if (hasMeaningfulKnowledgeDocumentText(bestText)) {
+        await emitProgress(100);
+        return bestText;
+      }
+
+      if (shouldRetryOcrWithAlternateSegmentation(recoveryPrimaryText)) {
+        const recoveryFallbackText = await runRecognitionPass({
+          pageImages: highQualityImages,
+          languages: recoveryLanguages,
+          pagesegMode: TESSERACT_PSM_SINGLE_BLOCK,
+          renderScale: KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+          range: [95, 100],
+        });
+        bestText = choosePreferredOcrText([bestText, recoveryFallbackText]);
+      } else {
+        await emitProgress(100);
+      }
+
+      return bestText;
     } catch (error) {
       if (
         error instanceof Error &&
@@ -702,10 +834,6 @@ export async function extractPdfTextWithLocalOcr(
       });
 
       throw new Error(KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR);
-    } finally {
-      if (worker) {
-        await worker.terminate();
-      }
     }
   });
 }

@@ -10,7 +10,9 @@ import {
   hasMeaningfulKnowledgeDocumentText,
   normalizeKnowledgeDocumentText,
 } from "../../lib/knowledgeDocuments";
+import type { RuntimeLocale } from "../../lib/runtimeLocale";
 import {
+  KNOWLEDGE_DOCUMENT_OCR_LANGUAGES,
   KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR,
   KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR,
   extractKnowledgeDocumentText,
@@ -20,9 +22,24 @@ import {
 const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
 
+function getPreferredOcrLanguages(
+  locale: RuntimeLocale | null | undefined,
+): ReadonlyArray<string> {
+  if (locale === "fr") {
+    return ["fra"];
+  }
+
+  if (locale === "en") {
+    return ["eng"];
+  }
+
+  return KNOWLEDGE_DOCUMENT_OCR_LANGUAGES;
+}
+
 async function extractUploadedKnowledgeDocumentText(input: {
   blob: Blob;
   mimeType: string;
+  preferredOcrLocale?: RuntimeLocale | null;
   onProgress?: (progressPercent: number) => Promise<void>;
 }): Promise<string> {
   await input.onProgress?.(10);
@@ -41,6 +58,7 @@ async function extractUploadedKnowledgeDocumentText(input: {
   try {
     const ocrText = await extractPdfTextWithLocalOcr({
       blob: input.blob,
+      languages: getPreferredOcrLanguages(input.preferredOcrLocale),
       onProgress: async (ocrProgressPercent) => {
         await input.onProgress?.(Math.round(10 + ocrProgressPercent * 0.75));
       },
@@ -104,6 +122,12 @@ async function prepareUploadedKnowledgeDocument(
   }
 
   const mimeType = document.mimeType ?? blob.type ?? "application/octet-stream";
+  const preferredOcrLocale =
+    mimeType === "application/pdf"
+      ? await ctx.runQuery(internal.ai.context.knowledge.getBusinessDefaultLocale, {
+          businessId: document.businessId,
+        })
+      : null;
 
   try {
     await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
@@ -115,6 +139,7 @@ async function prepareUploadedKnowledgeDocument(
     const normalizedText = await extractUploadedKnowledgeDocumentText({
       blob,
       mimeType,
+      preferredOcrLocale,
       onProgress: async (progressPercent) => {
         await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
           documentId,

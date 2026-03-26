@@ -11,7 +11,7 @@ const {
   getDocumentMock,
   makeMock,
   encodePNGToStreamMock,
-  createInProcessTesseractWorkerMock,
+  runWithCachedInProcessTesseractWorkerMock,
   setParametersMock,
   recognizeMock,
   terminateMock,
@@ -26,7 +26,7 @@ const {
   getDocumentMock: vi.fn(),
   makeMock: vi.fn(),
   encodePNGToStreamMock: vi.fn(),
-  createInProcessTesseractWorkerMock: vi.fn(),
+  runWithCachedInProcessTesseractWorkerMock: vi.fn(),
   setParametersMock: vi.fn(),
   recognizeMock: vi.fn(),
   terminateMock: vi.fn(),
@@ -53,7 +53,7 @@ vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
 }));
 
 vi.mock("../../../convex/lib/node/tesseractInProcessWorker", () => ({
-  createInProcessTesseractWorker: createInProcessTesseractWorkerMock,
+  runWithCachedInProcessTesseractWorker: runWithCachedInProcessTesseractWorkerMock,
 }));
 
 import {
@@ -116,11 +116,14 @@ describe("Knowledge document OCR", () => {
       stream.write(bitmap.__buffer);
       stream.end();
     });
-    createInProcessTesseractWorkerMock.mockResolvedValue({
-      setParameters: setParametersMock,
-      recognize: recognizeMock,
-      terminate: terminateMock,
-    });
+    runWithCachedInProcessTesseractWorkerMock.mockImplementation(
+      async (_args, callback) =>
+        await callback({
+          setParameters: setParametersMock,
+          recognize: recognizeMock,
+          terminate: terminateMock,
+        }),
+    );
   });
 
   it("OCRs image-only PDFs page by page with a single worker", async () => {
@@ -186,23 +189,24 @@ describe("Knowledge document OCR", () => {
     if (!CanvasFactory) {
       throw new Error("Expected PDF.js CanvasFactory to be provided.");
     }
-    expect(createInProcessTesseractWorkerMock).toHaveBeenCalledWith({
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenCalledWith({
       cacheMethod: "none",
       languages: ["eng", "fra"],
       logger: expect.any(Function),
       oem: 1,
-    });
+    }, expect.any(Function));
     expect(setParametersMock).toHaveBeenCalledTimes(1);
     expect(setParametersMock).toHaveBeenCalledWith({
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
-      user_defined_dpi: "144",
+      user_defined_dpi: "108",
     });
+    expect(firstPage.getViewport).toHaveBeenCalledWith({ scale: 1.5 });
+    expect(secondPage.getViewport).toHaveBeenCalledWith({ scale: 1.5 });
     expect(getPageMock).toHaveBeenNthCalledWith(1, 1);
     expect(getPageMock).toHaveBeenNthCalledWith(2, 2);
     expect(recognizeMock).toHaveBeenNthCalledWith(1, Buffer.from("page-one"));
     expect(recognizeMock).toHaveBeenNthCalledWith(2, Buffer.from("page-two"));
-    expect(terminateMock).toHaveBeenCalledTimes(1);
     expect(firstPageCleanupMock).toHaveBeenCalledTimes(1);
     expect(secondPageCleanupMock).toHaveBeenCalledTimes(1);
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
@@ -275,17 +279,98 @@ describe("Knowledge document OCR", () => {
     expect(setParametersMock).toHaveBeenNthCalledWith(1, {
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
-      user_defined_dpi: "144",
+      user_defined_dpi: "90",
     });
     expect(setParametersMock).toHaveBeenNthCalledWith(2, {
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "6",
-      user_defined_dpi: "144",
+      user_defined_dpi: "90",
     });
     expect(recognizeMock).toHaveBeenCalledTimes(2);
     expect(recognizeMock).toHaveBeenNthCalledWith(1, Buffer.from("page-one"));
     expect(recognizeMock).toHaveBeenNthCalledWith(2, Buffer.from("page-one"));
-    expect(terminateMock).toHaveBeenCalledTimes(1);
+    expect(firstPage.getViewport).toHaveBeenCalledWith({ scale: 1.25 });
+  });
+
+  it("starts with a single locale-specific OCR language and escalates only if needed", async () => {
+    const firstPage = {
+      getViewport: vi.fn(() => ({ width: 80, height: 90 })),
+      render: firstPageRenderMock,
+      cleanup: firstPageCleanupMock,
+    };
+    const document = {
+      numPages: 1,
+      getPage: getPageMock,
+      destroy: documentDestroyMock,
+    };
+
+    firstPageRenderMock.mockReturnValue({ promise: Promise.resolve() });
+    getPageMock.mockResolvedValue(firstPage);
+    getDocumentMock.mockReturnValueOnce({
+      promise: Promise.resolve(document),
+      destroy: loadingTaskDestroyMock,
+    });
+    makeMock
+      .mockReturnValueOnce(makeCanvas("page-one-fast"))
+      .mockReturnValueOnce(makeCanvas("page-one-hq"));
+    recognizeMock
+      .mockResolvedValueOnce({ data: { text: " " } })
+      .mockResolvedValueOnce({ data: { text: " " } })
+      .mockResolvedValueOnce({ data: { text: "Texte lisible en francais" } });
+
+    const text = await extractPdfTextWithLocalOcr({
+      blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
+      languages: ["fra"],
+    });
+
+    expect(text).toBe("Texte lisible en francais");
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      1,
+      {
+        cacheMethod: "none",
+        languages: ["fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      2,
+      {
+        cacheMethod: "none",
+        languages: ["fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
+      3,
+      {
+        cacheMethod: "none",
+        languages: ["eng", "fra"],
+        logger: expect.any(Function),
+        oem: 1,
+      },
+      expect.any(Function),
+    );
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(1, { scale: 1.25 });
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 2 });
+    expect(setParametersMock).toHaveBeenNthCalledWith(1, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+      user_defined_dpi: "90",
+    });
+    expect(setParametersMock).toHaveBeenNthCalledWith(2, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "6",
+      user_defined_dpi: "90",
+    });
+    expect(setParametersMock).toHaveBeenNthCalledWith(3, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+      user_defined_dpi: "144",
+    });
   });
 
   it("rejects PDFs that exceed the OCR page cap", async () => {
@@ -306,7 +391,7 @@ describe("Knowledge document OCR", () => {
       }),
     ).rejects.toThrow(KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR);
 
-    expect(createInProcessTesseractWorkerMock).not.toHaveBeenCalled();
+    expect(runWithCachedInProcessTesseractWorkerMock).not.toHaveBeenCalled();
     expect(getPageMock).not.toHaveBeenCalled();
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
     expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
@@ -339,7 +424,6 @@ describe("Knowledge document OCR", () => {
       }),
     ).rejects.toThrow(KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR);
 
-    expect(terminateMock).toHaveBeenCalledTimes(1);
     expect(firstPageCleanupMock).toHaveBeenCalledTimes(1);
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
     expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);

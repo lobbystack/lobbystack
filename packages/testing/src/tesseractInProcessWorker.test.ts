@@ -27,10 +27,15 @@ vi.mock("../../../convex/lib/node/tesseract-core-lstm.wasm.js", () => ({
   default: vi.fn(async () => ({})),
 }));
 
-import { createInProcessTesseractWorker } from "../../../convex/lib/node/tesseractInProcessWorker";
+import {
+  clearCachedInProcessTesseractWorkers,
+  createInProcessTesseractWorker,
+  runWithCachedInProcessTesseractWorker,
+} from "../../../convex/lib/node/tesseractInProcessWorker";
 
 describe("createInProcessTesseractWorker", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await clearCachedInProcessTesseractWorkers();
     vi.clearAllMocks();
     dispatchHandlersMock.mockImplementation((packet, send) => {
       send({
@@ -41,6 +46,67 @@ describe("createInProcessTesseractWorker", () => {
         workerId: packet.workerId,
       });
     });
+  });
+
+  it("reuses decoded bundled language bytes across worker initialization", async () => {
+    await createInProcessTesseractWorker({
+      cacheMethod: "none",
+      languages: ["eng"],
+      oem: 1,
+    });
+    await createInProcessTesseractWorker({
+      cacheMethod: "none",
+      languages: ["eng"],
+      oem: 1,
+    });
+
+    const loadLanguageCalls = dispatchHandlersMock.mock.calls.filter(
+      ([packet]) => packet.action === "loadLanguage",
+    );
+    const firstPayload = loadLanguageCalls[0]?.[0]?.payload as
+      | { langs: Array<{ code: string; data: Uint8Array }> }
+      | undefined;
+    const secondPayload = loadLanguageCalls[1]?.[0]?.payload as
+      | { langs: Array<{ code: string; data: Uint8Array }> }
+      | undefined;
+
+    expect(firstPayload?.langs[0]?.data).toBe(secondPayload?.langs[0]?.data);
+  });
+
+  it("reuses a warm cached worker for the same OCR language set", async () => {
+    const seenWorkers: Array<unknown> = [];
+
+    await runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng"],
+        oem: 1,
+      },
+      async (worker) => {
+        seenWorkers.push(worker);
+        return null;
+      },
+    );
+
+    await runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng"],
+        oem: 1,
+      },
+      async (worker) => {
+        seenWorkers.push(worker);
+        return null;
+      },
+    );
+
+    expect(seenWorkers[0]).toBe(seenWorkers[1]);
+    expect(
+      dispatchHandlersMock.mock.calls.filter(([packet]) => packet.action === "load"),
+    ).toHaveLength(1);
+    expect(
+      dispatchHandlersMock.mock.calls.filter(([packet]) => packet.action === "initialize"),
+    ).toHaveLength(1);
   });
 
   it("loads OCR languages from bundled local assets instead of remote paths", async () => {
