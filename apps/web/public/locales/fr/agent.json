@@ -22,6 +22,7 @@
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
+        "analyzing": "Analyse en cours...",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
@@ -70,6 +71,7 @@
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
+        "analyzing": "Analyse en cours...",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
@@ -118,6 +120,7 @@
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
+        "analyzing": "Analyse en cours...",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",

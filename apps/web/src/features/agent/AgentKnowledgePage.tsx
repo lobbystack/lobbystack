@@ -13,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgentSection } from "./sections";
 
@@ -142,6 +143,25 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
+  function renderDocumentStatus(status: Doc<"knowledge_documents">["status"]) {
+    if (status === "queued") {
+      return (
+        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner className="size-4" />
+          <span>{t(`agent:sections.${section}.status.analyzing`)}</span>
+        </span>
+      );
+    }
+
+    return (
+      <Badge
+        variant={status === "error" ? "destructive" : status === "indexed" ? "secondary" : "outline"}
+      >
+        {getDocumentStatusLabel(status)}
+      </Badge>
+    );
+  }
+
   async function handleDelete(entry: KnowledgeEntry): Promise<void> {
     const entryId = String(entry._id);
     setDeletingEntryId(entryId);
@@ -188,11 +208,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   {"sourceType" in entry ? (
                     <>
                       <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                      <Badge
-                        variant={entry.status === "error" ? "destructive" : entry.status === "indexed" ? "secondary" : "outline"}
-                      >
-                        {getDocumentStatusLabel(entry.status)}
-                      </Badge>
+                      {renderDocumentStatus(entry.status)}
                       {entry.tags?.length && entry.tags[0] ? (
                         <Badge variant="secondary">{entry.tags[0]}</Badge>
                       ) : null}
