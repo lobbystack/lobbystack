@@ -27,6 +27,7 @@ type PdfRenderContext = ReturnType<PdfRenderBitmap["getContext"]> & {
 type BrowserInteropCanvasContext = {
   createImageData?: (width: number, height: number) => ImageData;
   getContextAttributes?: () => { alpha: boolean };
+  getTransform?: () => DOMMatrix;
   getImageData?: (
     sx: number,
     sy: number,
@@ -68,32 +69,162 @@ let pdfJsModulesPromise: Promise<{
 function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
     class MinimalDOMMatrix {
-      multiplySelf(): this {
+      a: number;
+      b: number;
+      c: number;
+      d: number;
+      e: number;
+      f: number;
+      is2D = true;
+      isIdentity = false;
+
+      constructor(
+        init?:
+          | number[]
+          | {
+              a?: number;
+              b?: number;
+              c?: number;
+              d?: number;
+              e?: number;
+              f?: number;
+            },
+      ) {
+        const values = Array.isArray(init)
+          ? init
+          : init && typeof init === "object"
+            ? [
+                init.a ?? 1,
+                init.b ?? 0,
+                init.c ?? 0,
+                init.d ?? 1,
+                init.e ?? 0,
+                init.f ?? 0,
+              ]
+            : [1, 0, 0, 1, 0, 0];
+
+        this.a = values[0] ?? 1;
+        this.b = values[1] ?? 0;
+        this.c = values[2] ?? 0;
+        this.d = values[3] ?? 1;
+        this.e = values[4] ?? 0;
+        this.f = values[5] ?? 0;
+        this.isIdentity =
+          this.a === 1 &&
+          this.b === 0 &&
+          this.c === 0 &&
+          this.d === 1 &&
+          this.e === 0 &&
+          this.f === 0;
+      }
+
+      private multiplyMatrices(
+        left: [number, number, number, number, number, number],
+        right: [number, number, number, number, number, number],
+      ): [number, number, number, number, number, number] {
+        return [
+          left[0] * right[0] + left[2] * right[1],
+          left[1] * right[0] + left[3] * right[1],
+          left[0] * right[2] + left[2] * right[3],
+          left[1] * right[2] + left[3] * right[3],
+          left[0] * right[4] + left[2] * right[5] + left[4],
+          left[1] * right[4] + left[3] * right[5] + left[5],
+        ];
+      }
+
+      private setFromArray(values: [number, number, number, number, number, number]): this {
+        this.a = values[0];
+        this.b = values[1];
+        this.c = values[2];
+        this.d = values[3];
+        this.e = values[4];
+        this.f = values[5];
+        this.isIdentity =
+          this.a === 1 &&
+          this.b === 0 &&
+          this.c === 0 &&
+          this.d === 1 &&
+          this.e === 0 &&
+          this.f === 0;
         return this;
       }
 
-      preMultiplySelf(): this {
-        return this;
+      private toArray(): [number, number, number, number, number, number] {
+        return [this.a, this.b, this.c, this.d, this.e, this.f];
       }
 
-      translateSelf(): this {
-        return this;
+      multiplySelf(other?: MinimalDOMMatrix): this {
+        if (!other) {
+          return this;
+        }
+
+        return this.setFromArray(
+          this.multiplyMatrices(this.toArray(), [
+            other.a,
+            other.b,
+            other.c,
+            other.d,
+            other.e,
+            other.f,
+          ]),
+        );
       }
 
-      scaleSelf(): this {
-        return this;
+      preMultiplySelf(other?: MinimalDOMMatrix): this {
+        if (!other) {
+          return this;
+        }
+
+        return this.setFromArray(
+          this.multiplyMatrices(
+            [other.a, other.b, other.c, other.d, other.e, other.f],
+            this.toArray(),
+          ),
+        );
       }
 
-      rotateSelf(): this {
-        return this;
+      translateSelf(tx = 0, ty = 0): this {
+        return this.multiplySelf(new MinimalDOMMatrix([1, 0, 0, 1, tx, ty]));
+      }
+
+      scaleSelf(scaleX = 1, scaleY = scaleX): this {
+        return this.multiplySelf(
+          new MinimalDOMMatrix([scaleX, 0, 0, scaleY, 0, 0]),
+        );
+      }
+
+      rotateSelf(angle = 0): this {
+        const radians = (angle * Math.PI) / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        return this.multiplySelf(
+          new MinimalDOMMatrix([cos, sin, -sin, cos, 0, 0]),
+        );
       }
 
       invertSelf(): this {
-        return this;
+        const determinant = this.a * this.d - this.b * this.c;
+        if (!Number.isFinite(determinant) || determinant === 0) {
+          return this.setFromArray([NaN, NaN, NaN, NaN, NaN, NaN]);
+        }
+
+        const inverseDeterminant = 1 / determinant;
+        return this.setFromArray([
+          this.d * inverseDeterminant,
+          -this.b * inverseDeterminant,
+          -this.c * inverseDeterminant,
+          this.a * inverseDeterminant,
+          (this.c * this.f - this.d * this.e) * inverseDeterminant,
+          (this.b * this.e - this.a * this.f) * inverseDeterminant,
+        ]);
       }
 
-      transformPoint<T>(point: T): T {
-        return point;
+      transformPoint<T extends { x: number; y: number }>(point: T): T {
+        return {
+          ...point,
+          x: point.x * this.a + point.y * this.c + this.e,
+          y: point.x * this.b + point.y * this.d + this.f,
+        };
       }
     }
 
@@ -242,6 +373,20 @@ function createPdfRenderSurface(
   if (typeof interopContext.getContextAttributes !== "function") {
     interopContext.getContextAttributes = () => ({ alpha: true });
   }
+
+  interopContext.getTransform = () => {
+    const transformState = (
+      canvasContext as unknown as {
+        _transform?: { getMatrix?: () => [number, number, number, number, number, number] };
+      }
+    )._transform;
+    const matrix =
+      typeof transformState?.getMatrix === "function"
+        ? transformState.getMatrix()
+        : [1, 0, 0, 1, 0, 0];
+
+    return new DOMMatrix(matrix);
+  };
 
   interopContext.getImageData = (
     sx: number,
