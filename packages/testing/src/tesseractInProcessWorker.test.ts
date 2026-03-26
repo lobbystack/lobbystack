@@ -3,15 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   dispatchHandlersMock,
   setAdapterMock,
-  readFileMock,
 } = vi.hoisted(() => ({
   dispatchHandlersMock: vi.fn(),
   setAdapterMock: vi.fn(),
-  readFileMock: vi.fn(),
-}));
-
-vi.mock("node:fs/promises", () => ({
-  readFile: readFileMock,
 }));
 
 vi.mock("tesseract.js/src/worker-script/index.js", () => ({
@@ -38,9 +32,6 @@ import { createInProcessTesseractWorker } from "../../../convex/lib/node/tessera
 describe("createInProcessTesseractWorker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    readFileMock.mockImplementation(async (filePath: string) => {
-      return Buffer.from(`file:${filePath}`);
-    });
     dispatchHandlersMock.mockImplementation((packet, send) => {
       send({
         action: packet.action,
@@ -59,13 +50,6 @@ describe("createInProcessTesseractWorker", () => {
       oem: 1,
     });
 
-    expect(readFileMock).toHaveBeenCalledWith(
-      expect.stringMatching(/convex\/lib\/node\/tessdata\/4\.0\.0_best_int\/eng\.traineddata\.gz$/),
-    );
-    expect(readFileMock).toHaveBeenCalledWith(
-      expect.stringMatching(/convex\/lib\/node\/tessdata\/4\.0\.0_best_int\/fra\.traineddata\.gz$/),
-    );
-
     const loadLanguageCall = dispatchHandlersMock.mock.calls.find(
       ([packet]) => packet.action === "loadLanguage",
     );
@@ -83,6 +67,8 @@ describe("createInProcessTesseractWorker", () => {
     expect(payload?.langs[1]).toMatchObject({ code: "fra" });
     expect(payload?.langs[0]?.data).toBeInstanceOf(Uint8Array);
     expect(payload?.langs[1]?.data).toBeInstanceOf(Uint8Array);
+    expect(payload?.langs[0]?.data.length).toBeGreaterThan(1_000_000);
+    expect(payload?.langs[1]?.data.length).toBeGreaterThan(100_000);
   });
 
   it("rejects unsupported bundled OCR languages", async () => {

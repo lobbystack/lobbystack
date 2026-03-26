@@ -1,8 +1,5 @@
 "use node";
 
-import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-
 // These are CommonJS-only internal Tesseract modules, but static imports make
 // Convex include them in the Node bundle.
 // @ts-expect-error no published typings for internal worker-script module
@@ -15,6 +12,8 @@ import cacheModule from "tesseract.js/src/worker-script/node/cache.js";
 // the wasm embedded instead of looking for a separate .wasm file at runtime.
 // @ts-ignore generated vendored file has no declaration
 import tesseractCoreLstmModule from "./tesseract-core-lstm.wasm.js";
+import { TESSDATA_ENG_GZ_BASE64 } from "./tessdataEng";
+import { TESSDATA_FRA_GZ_BASE64 } from "./tessdataFra";
 
 const tesseractWorkerScript = tesseractWorkerScriptModule as {
   dispatchHandlers: (
@@ -56,15 +55,10 @@ const gunzip = gunzipModule as (
   data: Uint8Array,
 ) => Uint8Array;
 const cache = cacheModule as Record<string, unknown>;
-const TESSERACT_LANGUAGE_FILES = {
-  eng: "eng.traineddata.gz",
-  fra: "fra.traineddata.gz",
+const TESSERACT_LANGUAGE_DATA = {
+  eng: TESSDATA_ENG_GZ_BASE64,
+  fra: TESSDATA_FRA_GZ_BASE64,
 } as const;
-const TESSERACT_TRAINED_DATA_DIRECTORY = join(
-  dirname(import.meta.url.replace(/^file:\/\//, "")),
-  "tessdata",
-  "4.0.0_best_int",
-);
 
 type InProcessJobResult<T> = {
   data: T;
@@ -96,11 +90,11 @@ async function loadBundledLanguageData(args: {
 }) {
   return await Promise.all(
     args.languages.map(async (language) => {
-      const trainedDataFile =
-        TESSERACT_LANGUAGE_FILES[
-          language as keyof typeof TESSERACT_LANGUAGE_FILES
+      const trainedDataBase64 =
+        TESSERACT_LANGUAGE_DATA[
+          language as keyof typeof TESSERACT_LANGUAGE_DATA
         ];
-      if (!trainedDataFile) {
+      if (!trainedDataBase64) {
         throw new Error(`Unsupported bundled OCR language: ${language}`);
       }
       if (!args.lstmOnly) {
@@ -108,11 +102,9 @@ async function loadBundledLanguageData(args: {
           "Only bundled LSTM OCR language data is supported in this runtime.",
         );
       }
-      const trainedDataPath = join(
-        TESSERACT_TRAINED_DATA_DIRECTORY,
-        trainedDataFile,
+      const data = new Uint8Array(
+        Buffer.from(trainedDataBase64, "base64"),
       );
-      const data = new Uint8Array(await readFile(trainedDataPath));
 
       return {
         code: language,
