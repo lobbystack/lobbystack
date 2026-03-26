@@ -65,6 +65,8 @@ let pdfJsModulesPromise: Promise<{
   pdfjs: PdfJsModule;
   pdfjsWorker: PdfJsWorkerModule;
 }> | null = null;
+const PDFJS_OPTIONAL_CANVAS_WARNING =
+  'Warning: Cannot load "@napi-rs/canvas" package:';
 
 function ensurePdfParseGlobals(): void {
   if (typeof globalThis.DOMMatrix === "undefined") {
@@ -273,7 +275,7 @@ async function loadPdfJsModules(): Promise<{
 
   if (!pdfJsModulesPromise) {
     pdfJsModulesPromise = (async () => {
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const pdfjs = await importPdfJsDisplayModule();
       // @ts-expect-error pdfjs-dist does not publish typings for the worker bundle entrypoint.
       const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
       return { pdfjs, pdfjsWorker };
@@ -281,6 +283,27 @@ async function loadPdfJsModules(): Promise<{
   }
 
   return await pdfJsModulesPromise;
+}
+
+async function importPdfJsDisplayModule(): Promise<PdfJsModule> {
+  const originalWarn = console.warn;
+
+  console.warn = (...args: unknown[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].includes(PDFJS_OPTIONAL_CANVAS_WARNING)
+    ) {
+      return;
+    }
+
+    originalWarn(...args);
+  };
+
+  try {
+    return await import("pdfjs-dist/legacy/build/pdf.mjs");
+  } finally {
+    console.warn = originalWarn;
+  }
 }
 
 async function ensurePdfJsWorkerInstalled(): Promise<PdfJsModule> {
