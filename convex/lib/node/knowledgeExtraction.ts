@@ -5,6 +5,7 @@ import { PassThrough } from "node:stream";
 import mammoth from "mammoth";
 import { encodePNGToStream, make } from "pureimage";
 
+import { hasMeaningfulKnowledgeDocumentText } from "../knowledgeDocuments";
 import { createInProcessTesseractWorker } from "./tesseractInProcessWorker";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
@@ -60,6 +61,7 @@ export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
 const KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE = 2;
 const TESSERACT_OEM_LSTM_ONLY = 1;
 const TESSERACT_PSM_AUTO = "3";
+const TESSERACT_PSM_SINGLE_BLOCK = "6";
 
 let pdfJsModulesPromise: Promise<{
   pdfjs: PdfJsModule;
@@ -606,14 +608,9 @@ export async function extractPdfTextWithLocalOcr(
         logger: () => undefined,
         oem: TESSERACT_OEM_LSTM_ONLY,
       });
+      const activeWorker = worker;
 
-      await worker.setParameters({
-        preserve_interword_spaces: "1",
-        tessedit_pageseg_mode: TESSERACT_PSM_AUTO,
-        user_defined_dpi: "144",
-      });
-
-      const pages: string[] = [];
+      const pageImages: Buffer[] = [];
 
       for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
         const page = await document.getPage(pageNumber);
@@ -633,19 +630,46 @@ export async function extractPdfTextWithLocalOcr(
             viewport,
           }).promise;
 
-          const imageBuffer = await encodeBitmapToPngBuffer(canvas);
-          const result = await worker.recognize(imageBuffer);
-          const pageText = result.data.text.trim();
-
-          if (pageText.length > 0) {
-            pages.push(pageText);
-          }
+          pageImages.push(await encodeBitmapToPngBuffer(canvas));
         } finally {
           page.cleanup();
         }
       }
 
-      return pages.join("\n\n");
+      const runRecognitionPass = async (pagesegMode: string) => {
+        await activeWorker.setParameters({
+          preserve_interword_spaces: "1",
+          tessedit_pageseg_mode: pagesegMode,
+          user_defined_dpi: "144",
+        });
+
+        const pages: string[] = [];
+        for (const imageBuffer of pageImages) {
+          const result = await activeWorker.recognize(imageBuffer);
+          const pageText = result.data.text.trim();
+          if (pageText.length > 0) {
+            pages.push(pageText);
+          }
+        }
+        return pages.join("\n\n");
+      };
+
+      const primaryPassText = await runRecognitionPass(TESSERACT_PSM_AUTO);
+      if (hasMeaningfulKnowledgeDocumentText(primaryPassText)) {
+        return primaryPassText;
+      }
+
+      const fallbackPassText = await runRecognitionPass(TESSERACT_PSM_SINGLE_BLOCK);
+      if (hasMeaningfulKnowledgeDocumentText(fallbackPassText)) {
+        console.info("Local PDF OCR succeeded after fallback page segmentation", {
+          fallbackPagesegMode: TESSERACT_PSM_SINGLE_BLOCK,
+          primaryLength: primaryPassText.replace(/\s+/g, " ").trim().length,
+          fallbackLength: fallbackPassText.replace(/\s+/g, " ").trim().length,
+        });
+        return fallbackPassText;
+      }
+
+      return fallbackPassText;
     } catch (error) {
       if (
         error instanceof Error &&

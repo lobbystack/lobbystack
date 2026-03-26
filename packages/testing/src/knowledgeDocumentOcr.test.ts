@@ -192,6 +192,7 @@ describe("Knowledge document OCR", () => {
       logger: expect.any(Function),
       oem: 1,
     });
+    expect(setParametersMock).toHaveBeenCalledTimes(1);
     expect(setParametersMock).toHaveBeenCalledWith({
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
@@ -241,6 +242,50 @@ describe("Knowledge document OCR", () => {
     canvasFactory.destroy(firstEntry);
     expect(firstEntry.canvas).toBeNull();
     expect(firstEntry.context).toBeNull();
+  });
+
+  it("retries OCR with single-block segmentation when the first pass is unreadable", async () => {
+    const firstPage = {
+      getViewport: vi.fn(() => ({ width: 80, height: 90 })),
+      render: firstPageRenderMock,
+      cleanup: firstPageCleanupMock,
+    };
+    const document = {
+      numPages: 1,
+      getPage: getPageMock,
+      destroy: documentDestroyMock,
+    };
+
+    firstPageRenderMock.mockReturnValueOnce({ promise: Promise.resolve() });
+    getPageMock.mockResolvedValueOnce(firstPage);
+    getDocumentMock.mockReturnValueOnce({
+      promise: Promise.resolve(document),
+      destroy: loadingTaskDestroyMock,
+    });
+    makeMock.mockReturnValueOnce(makeCanvas("page-one"));
+    recognizeMock
+      .mockResolvedValueOnce({ data: { text: " " } })
+      .mockResolvedValueOnce({ data: { text: "Readable fallback text" } });
+
+    const text = await extractPdfTextWithLocalOcr({
+      blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
+    });
+
+    expect(text).toBe("Readable fallback text");
+    expect(setParametersMock).toHaveBeenNthCalledWith(1, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "3",
+      user_defined_dpi: "144",
+    });
+    expect(setParametersMock).toHaveBeenNthCalledWith(2, {
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "6",
+      user_defined_dpi: "144",
+    });
+    expect(recognizeMock).toHaveBeenCalledTimes(2);
+    expect(recognizeMock).toHaveBeenNthCalledWith(1, Buffer.from("page-one"));
+    expect(recognizeMock).toHaveBeenNthCalledWith(2, Buffer.from("page-one"));
+    expect(terminateMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects PDFs that exceed the OCR page cap", async () => {
