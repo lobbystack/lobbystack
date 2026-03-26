@@ -1,12 +1,11 @@
 "use node";
 
-import { existsSync } from "node:fs";
 import { PassThrough } from "node:stream";
-import { fileURLToPath } from "node:url";
 
 import mammoth from "mammoth";
 import { encodePNGToStream, make } from "pureimage";
-import { OEM, PSM, createWorker } from "tesseract.js";
+
+import { createInProcessTesseractWorker } from "./tesseractInProcessWorker";
 
 type PdfJsWorkerGlobal = typeof globalThis & {
   pdfjsWorker?: {
@@ -35,14 +34,8 @@ export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
   "We couldn't OCR this PDF locally. Upload a searchable PDF or a clearer scan.";
 
 const KNOWLEDGE_DOCUMENT_OCR_RENDER_SCALE = 2;
-const TESSERACT_NODE_WORKER_PATH_CANDIDATES = [
-  fileURLToPath(new URL("./tesseractNodeWorker.js", import.meta.url)),
-  fileURLToPath(new URL("../node/tesseractNodeWorker.js", import.meta.url)),
-  fileURLToPath(new URL("../../lib/node/tesseractNodeWorker.js", import.meta.url)),
-];
-const TESSERACT_NODE_WORKER_PATH =
-  TESSERACT_NODE_WORKER_PATH_CANDIDATES.find((candidate) => existsSync(candidate)) ??
-  TESSERACT_NODE_WORKER_PATH_CANDIDATES[0]!;
+const TESSERACT_OEM_LSTM_ONLY = 1;
+const TESSERACT_PSM_AUTO = "3";
 
 let pdfJsModulesPromise: Promise<{
   pdfjs: PdfJsModule;
@@ -287,18 +280,19 @@ export async function extractPdfTextWithLocalOcr(
       throw new Error(KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR);
     }
 
-    let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+    let worker: Awaited<ReturnType<typeof createInProcessTesseractWorker>> | null = null;
 
     try {
-      worker = await createWorker([...languages], OEM.LSTM_ONLY, {
+      worker = await createInProcessTesseractWorker({
         cacheMethod: "none",
+        languages,
         logger: () => undefined,
-        workerPath: TESSERACT_NODE_WORKER_PATH,
+        oem: TESSERACT_OEM_LSTM_ONLY,
       });
 
       await worker.setParameters({
         preserve_interword_spaces: "1",
-        tessedit_pageseg_mode: PSM.AUTO,
+        tessedit_pageseg_mode: TESSERACT_PSM_AUTO,
         user_defined_dpi: "144",
       });
 

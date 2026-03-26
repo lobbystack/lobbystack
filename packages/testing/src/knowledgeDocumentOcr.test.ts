@@ -11,7 +11,7 @@ const {
   getDocumentMock,
   makeMock,
   encodePNGToStreamMock,
-  createWorkerMock,
+  createInProcessTesseractWorkerMock,
   setParametersMock,
   recognizeMock,
   terminateMock,
@@ -26,7 +26,7 @@ const {
   getDocumentMock: vi.fn(),
   makeMock: vi.fn(),
   encodePNGToStreamMock: vi.fn(),
-  createWorkerMock: vi.fn(),
+  createInProcessTesseractWorkerMock: vi.fn(),
   setParametersMock: vi.fn(),
   recognizeMock: vi.fn(),
   terminateMock: vi.fn(),
@@ -52,14 +52,8 @@ vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   getDocument: getDocumentMock,
 }));
 
-vi.mock("tesseract.js", () => ({
-  OEM: {
-    LSTM_ONLY: 1,
-  },
-  PSM: {
-    AUTO: "3",
-  },
-  createWorker: createWorkerMock,
+vi.mock("../../../convex/lib/node/tesseractInProcessWorker", () => ({
+  createInProcessTesseractWorker: createInProcessTesseractWorkerMock,
 }));
 
 import {
@@ -90,7 +84,7 @@ describe("Knowledge document OCR", () => {
       stream.write(bitmap.__buffer);
       stream.end();
     });
-    createWorkerMock.mockResolvedValue({
+    createInProcessTesseractWorkerMock.mockResolvedValue({
       setParameters: setParametersMock,
       recognize: recognizeMock,
       terminate: terminateMock,
@@ -133,10 +127,11 @@ describe("Knowledge document OCR", () => {
     });
 
     expect(text).toBe("Bonjour du scan\n\nHours are by appointment");
-    expect(createWorkerMock).toHaveBeenCalledWith(["eng", "fra"], 1, {
+    expect(createInProcessTesseractWorkerMock).toHaveBeenCalledWith({
       cacheMethod: "none",
+      languages: ["eng", "fra"],
       logger: expect.any(Function),
-      workerPath: expect.stringContaining("tesseractNodeWorker.js"),
+      oem: 1,
     });
     expect(setParametersMock).toHaveBeenCalledWith({
       preserve_interword_spaces: "1",
@@ -172,7 +167,7 @@ describe("Knowledge document OCR", () => {
       }),
     ).rejects.toThrow(KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR);
 
-    expect(createWorkerMock).not.toHaveBeenCalled();
+    expect(createInProcessTesseractWorkerMock).not.toHaveBeenCalled();
     expect(getPageMock).not.toHaveBeenCalled();
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
     expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
