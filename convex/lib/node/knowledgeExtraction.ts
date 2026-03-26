@@ -24,6 +24,10 @@ type PdfRenderContext = ReturnType<PdfRenderBitmap["getContext"]> & {
   createImageData?: (width: number, height: number) => ImageData;
   getContextAttributes?: () => { alpha: boolean };
 };
+type PdfJsCanvasEntry = {
+  canvas: PdfRenderBitmap | null;
+  context: PdfRenderContext | null;
+};
 
 export const KNOWLEDGE_DOCUMENT_OCR_MAX_PAGES = 10;
 export const KNOWLEDGE_DOCUMENT_OCR_LANGUAGES = ["eng", "fra"] as const;
@@ -149,6 +153,7 @@ async function withLoadedPdfDocument<T>(
   const pdfjs = await ensurePdfJsWorkerInstalled();
 
   const loadingTask = pdfjs.getDocument({
+    CanvasFactory: PureImageCanvasFactory,
     data: new Uint8Array(buffer),
     verbosity: pdfjs.VerbosityLevel.ERRORS,
     useWorkerFetch: false,
@@ -222,6 +227,37 @@ function createPdfRenderSurface(
     canvas,
     canvasContext,
   };
+}
+
+class PureImageCanvasFactory {
+  constructor(_options?: { enableHWA?: boolean; ownerDocument?: unknown }) {}
+
+  create(width: number, height: number): PdfJsCanvasEntry {
+    if (width <= 0 || height <= 0) {
+      throw new Error("Invalid canvas size");
+    }
+
+    const { canvas, canvasContext } = createPdfRenderSurface(width, height);
+    return {
+      canvas,
+      context: canvasContext,
+    };
+  }
+
+  reset(canvasAndContext: PdfJsCanvasEntry, width: number, height: number): void {
+    if (width <= 0 || height <= 0) {
+      throw new Error("Invalid canvas size");
+    }
+
+    const { canvas, canvasContext } = createPdfRenderSurface(width, height);
+    canvasAndContext.canvas = canvas;
+    canvasAndContext.context = canvasContext;
+  }
+
+  destroy(canvasAndContext: PdfJsCanvasEntry): void {
+    canvasAndContext.canvas = null;
+    canvasAndContext.context = null;
+  }
 }
 
 async function encodeBitmapToPngBuffer(bitmap: PdfRenderBitmap): Promise<Buffer> {
@@ -336,6 +372,17 @@ export async function extractPdfTextWithLocalOcr(
       ) {
         throw error;
       }
+
+      console.error("Local PDF OCR failed", {
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                name: error.name,
+                stack: error.stack,
+              }
+            : error,
+      });
 
       throw new Error(KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR);
     } finally {

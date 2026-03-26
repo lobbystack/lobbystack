@@ -117,7 +117,9 @@ describe("Knowledge document OCR", () => {
     });
     makeMock
       .mockReturnValueOnce(makeCanvas("page-one"))
-      .mockReturnValueOnce(makeCanvas("page-two"));
+      .mockReturnValueOnce(makeCanvas("page-two"))
+      .mockReturnValueOnce(makeCanvas("factory-create"))
+      .mockReturnValueOnce(makeCanvas("factory-reset"));
     recognizeMock
       .mockResolvedValueOnce({ data: { text: "Bonjour du scan" } })
       .mockResolvedValueOnce({ data: { text: "Hours are by appointment" } });
@@ -125,8 +127,33 @@ describe("Knowledge document OCR", () => {
     const text = await extractPdfTextWithLocalOcr({
       blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
     });
+    const loadingTaskArgs = getDocumentMock.mock.calls[0]?.[0];
+    const CanvasFactory = loadingTaskArgs?.CanvasFactory as
+      | (new (options?: { enableHWA?: boolean; ownerDocument?: unknown }) => {
+          create: (width: number, height: number) => {
+            canvas: ReturnType<typeof makeCanvas> | null;
+            context: ReturnType<ReturnType<typeof makeCanvas>["getContext"]> | null;
+          };
+          reset: (
+            entry: {
+              canvas: ReturnType<typeof makeCanvas> | null;
+              context: ReturnType<ReturnType<typeof makeCanvas>["getContext"]> | null;
+            },
+            width: number,
+            height: number,
+          ) => void;
+          destroy: (entry: {
+            canvas: ReturnType<typeof makeCanvas> | null;
+            context: ReturnType<ReturnType<typeof makeCanvas>["getContext"]> | null;
+          }) => void;
+        })
+      | undefined;
 
     expect(text).toBe("Bonjour du scan\n\nHours are by appointment");
+    expect(CanvasFactory).toEqual(expect.any(Function));
+    if (!CanvasFactory) {
+      throw new Error("Expected PDF.js CanvasFactory to be provided.");
+    }
     expect(createInProcessTesseractWorkerMock).toHaveBeenCalledWith({
       cacheMethod: "none",
       languages: ["eng", "fra"],
@@ -147,6 +174,18 @@ describe("Knowledge document OCR", () => {
     expect(secondPageCleanupMock).toHaveBeenCalledTimes(1);
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
     expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
+
+    expect(CanvasFactory).toBeDefined();
+    const canvasFactory = new CanvasFactory({ enableHWA: false });
+    const firstEntry = canvasFactory.create(40, 50);
+    expect(makeMock).toHaveBeenNthCalledWith(3, 40, 50);
+
+    canvasFactory.reset(firstEntry, 60, 70);
+    expect(makeMock).toHaveBeenNthCalledWith(4, 60, 70);
+
+    canvasFactory.destroy(firstEntry);
+    expect(firstEntry.canvas).toBeNull();
+    expect(firstEntry.context).toBeNull();
   });
 
   it("rejects PDFs that exceed the OCR page cap", async () => {

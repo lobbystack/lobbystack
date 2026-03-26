@@ -47,6 +47,17 @@ async function extractUploadedKnowledgeDocumentText(input: {
 
     return normalizedOcrText;
   } catch (error) {
+    console.error("Uploaded PDF OCR fallback failed", {
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : error,
+    });
+
     if (
       error instanceof Error &&
       error.message !== KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR
