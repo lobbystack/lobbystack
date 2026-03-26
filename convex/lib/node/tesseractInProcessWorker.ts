@@ -1,7 +1,6 @@
 "use node";
 
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 // These are CommonJS-only internal Tesseract modules, but static imports make
@@ -57,12 +56,15 @@ const gunzip = gunzipModule as (
   data: Uint8Array,
 ) => Uint8Array;
 const cache = cacheModule as Record<string, unknown>;
-const require = createRequire(import.meta.url);
-
-const TESSERACT_LANGUAGE_PACKAGES = {
-  eng: "@tesseract.js-data/eng",
-  fra: "@tesseract.js-data/fra",
+const TESSERACT_LANGUAGE_FILES = {
+  eng: "eng.traineddata.gz",
+  fra: "fra.traineddata.gz",
 } as const;
+const TESSERACT_TRAINED_DATA_DIRECTORY = join(
+  dirname(import.meta.url.replace(/^file:\/\//, "")),
+  "tessdata",
+  "4.0.0_best_int",
+);
 
 type InProcessJobResult<T> = {
   data: T;
@@ -94,21 +96,21 @@ async function loadBundledLanguageData(args: {
 }) {
   return await Promise.all(
     args.languages.map(async (language) => {
-      const packageName =
-        TESSERACT_LANGUAGE_PACKAGES[
-          language as keyof typeof TESSERACT_LANGUAGE_PACKAGES
+      const trainedDataFile =
+        TESSERACT_LANGUAGE_FILES[
+          language as keyof typeof TESSERACT_LANGUAGE_FILES
         ];
-      if (!packageName) {
+      if (!trainedDataFile) {
         throw new Error(`Unsupported bundled OCR language: ${language}`);
       }
-
-      const packageEntryPath = require.resolve(packageName);
-      const packageDirectory = dirname(packageEntryPath);
-      const versionDirectory = args.lstmOnly ? "4.0.0_best_int" : "4.0.0";
+      if (!args.lstmOnly) {
+        throw new Error(
+          "Only bundled LSTM OCR language data is supported in this runtime.",
+        );
+      }
       const trainedDataPath = join(
-        packageDirectory,
-        versionDirectory,
-        `${language}.traineddata.gz`,
+        TESSERACT_TRAINED_DATA_DIRECTORY,
+        trainedDataFile,
       );
       const data = new Uint8Array(await readFile(trainedDataPath));
 

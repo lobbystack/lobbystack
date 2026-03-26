@@ -4,22 +4,14 @@ const {
   dispatchHandlersMock,
   setAdapterMock,
   readFileMock,
-  requireResolveMock,
 } = vi.hoisted(() => ({
   dispatchHandlersMock: vi.fn(),
   setAdapterMock: vi.fn(),
   readFileMock: vi.fn(),
-  requireResolveMock: vi.fn(),
 }));
 
 vi.mock("node:fs/promises", () => ({
   readFile: readFileMock,
-}));
-
-vi.mock("node:module", () => ({
-  createRequire: () => ({
-    resolve: requireResolveMock,
-  }),
 }));
 
 vi.mock("tesseract.js/src/worker-script/index.js", () => ({
@@ -46,9 +38,6 @@ import { createInProcessTesseractWorker } from "../../../convex/lib/node/tessera
 describe("createInProcessTesseractWorker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requireResolveMock.mockImplementation((packageName: string) => {
-      return `/repo/node_modules/${packageName}/index.js`;
-    });
     readFileMock.mockImplementation(async (filePath: string) => {
       return Buffer.from(`file:${filePath}`);
     });
@@ -71,10 +60,10 @@ describe("createInProcessTesseractWorker", () => {
     });
 
     expect(readFileMock).toHaveBeenCalledWith(
-      "/repo/node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz",
+      expect.stringMatching(/convex\/lib\/node\/tessdata\/4\.0\.0_best_int\/eng\.traineddata\.gz$/),
     );
     expect(readFileMock).toHaveBeenCalledWith(
-      "/repo/node_modules/@tesseract.js-data/fra/4.0.0_best_int/fra.traineddata.gz",
+      expect.stringMatching(/convex\/lib\/node\/tessdata\/4\.0\.0_best_int\/fra\.traineddata\.gz$/),
     );
 
     const loadLanguageCall = dispatchHandlersMock.mock.calls.find(
@@ -103,5 +92,16 @@ describe("createInProcessTesseractWorker", () => {
         oem: 1,
       }),
     ).rejects.toThrow("Unsupported bundled OCR language: spa");
+  });
+
+  it("rejects non-LSTM OCR mode because only bundled LSTM data is vendored", async () => {
+    await expect(
+      createInProcessTesseractWorker({
+        languages: ["eng"],
+        oem: 0,
+      }),
+    ).rejects.toThrow(
+      "Only bundled LSTM OCR language data is supported in this runtime.",
+    );
   });
 });
