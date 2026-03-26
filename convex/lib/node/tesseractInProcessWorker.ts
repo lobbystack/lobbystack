@@ -5,11 +5,13 @@
 // @ts-expect-error no published typings for internal worker-script module
 import tesseractWorkerScriptModule from "tesseract.js/src/worker-script/index.js";
 // @ts-expect-error no published typings for internal worker-script module
-import getCoreModule from "tesseract.js/src/worker-script/node/getCore.js";
-// @ts-expect-error no published typings for internal worker-script module
 import gunzipModule from "tesseract.js/src/worker-script/node/gunzip.js";
 // @ts-expect-error no published typings for internal worker-script module
 import cacheModule from "tesseract.js/src/worker-script/node/cache.js";
+// Vendored from tesseract.js-core so Convex can load a single JS bundle with
+// the wasm embedded instead of looking for a separate .wasm file at runtime.
+// @ts-ignore generated vendored file has no declaration
+import tesseractCoreLstmModule from "./tesseract-core-lstm.wasm.js";
 
 const tesseractWorkerScript = tesseractWorkerScriptModule as {
   dispatchHandlers: (
@@ -29,7 +31,20 @@ const tesseractWorkerScript = tesseractWorkerScriptModule as {
   ) => void;
   setAdapter: (adapter: Record<string, unknown>) => void;
 };
-const getCore = getCoreModule as (
+const tesseractCoreLstm = tesseractCoreLstmModule as (
+  moduleArgs?: Record<string, unknown>,
+) => Promise<unknown>;
+const getCore = (async (
+  oem: number,
+  corePath: unknown,
+  res: { progress: (update: { progress: number; status: string }) => void },
+) => {
+  void oem;
+  void corePath;
+  res.progress({ progress: 0, status: "loading tesseract core" });
+  res.progress({ progress: 1, status: "loading tesseract core" });
+  return tesseractCoreLstm;
+}) as (
   oem: number,
   corePath: unknown,
   res: { progress: (update: { progress: number; status: string }) => void },
