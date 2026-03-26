@@ -63,11 +63,26 @@ import {
   extractPdfTextWithLocalOcr,
 } from "../../../convex/lib/node/knowledgeExtraction";
 
+type CanvasContextWithPutImageData = {
+  putImageData?: (
+    imageData: ImageData,
+    dx: number,
+    dy: number,
+    dirtyX?: number,
+    dirtyY?: number,
+    dirtyWidth?: number,
+    dirtyHeight?: number,
+  ) => void;
+};
+
 function makeCanvas(bufferText: string) {
+  const data = new Uint8Array(100 * 120 * 4);
   return {
     width: 100,
     height: 120,
     __buffer: Buffer.from(bufferText),
+    data,
+    calculateIndex: vi.fn((x: number, y: number) => (100 * y + x) * 4),
     getContext: vi.fn(() => ({
       fillStyle: "#ffffff",
       fillRect: vi.fn(),
@@ -178,7 +193,19 @@ describe("Knowledge document OCR", () => {
     expect(CanvasFactory).toBeDefined();
     const canvasFactory = new CanvasFactory({ enableHWA: false });
     const firstEntry = canvasFactory.create(40, 50);
+    const firstContext = firstEntry.context as CanvasContextWithPutImageData | null;
     expect(makeMock).toHaveBeenNthCalledWith(3, 40, 50);
+    expect(firstContext?.putImageData).toEqual(expect.any(Function));
+
+    firstContext?.putImageData?.(
+      new ImageData(new Uint8ClampedArray([10, 20, 30, 255]), 1, 1),
+      2,
+      3,
+    );
+    expect(firstEntry.canvas?.calculateIndex).toHaveBeenCalledWith(2, 3);
+    expect(firstEntry.canvas?.data.slice(1208, 1212)).toEqual(
+      new Uint8Array([10, 20, 30, 255]),
+    );
 
     canvasFactory.reset(firstEntry, 60, 70);
     expect(makeMock).toHaveBeenNthCalledWith(4, 60, 70);
