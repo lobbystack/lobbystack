@@ -1,5 +1,9 @@
 "use node";
 
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+
 // These are CommonJS-only internal Tesseract modules, but static imports make
 // Convex include them in the Node bundle.
 // @ts-expect-error no published typings for internal worker-script module
@@ -53,6 +57,12 @@ const gunzip = gunzipModule as (
   data: Uint8Array,
 ) => Uint8Array;
 const cache = cacheModule as Record<string, unknown>;
+const require = createRequire(import.meta.url);
+
+const TESSERACT_LANGUAGE_PACKAGES = {
+  eng: "@tesseract.js-data/eng",
+  fra: "@tesseract.js-data/fra",
+} as const;
 
 type InProcessJobResult<T> = {
   data: T;
@@ -77,6 +87,38 @@ type CreateInProcessTesseractWorkerArgs = {
   logger?: (progress: unknown) => void;
   oem: number;
 };
+
+async function loadBundledLanguageData(args: {
+  languages: ReadonlyArray<string>;
+  lstmOnly: boolean;
+}) {
+  return await Promise.all(
+    args.languages.map(async (language) => {
+      const packageName =
+        TESSERACT_LANGUAGE_PACKAGES[
+          language as keyof typeof TESSERACT_LANGUAGE_PACKAGES
+        ];
+      if (!packageName) {
+        throw new Error(`Unsupported bundled OCR language: ${language}`);
+      }
+
+      const packageEntryPath = require.resolve(packageName);
+      const packageDirectory = dirname(packageEntryPath);
+      const versionDirectory = args.lstmOnly ? "4.0.0_best_int" : "4.0.0";
+      const trainedDataPath = join(
+        packageDirectory,
+        versionDirectory,
+        `${language}.traineddata.gz`,
+      );
+      const data = new Uint8Array(await readFile(trainedDataPath));
+
+      return {
+        code: language,
+        data,
+      };
+    }),
+  );
+}
 
 function createJobRunner(args: {
   logger: ((progress: unknown) => void) | undefined;
@@ -129,6 +171,10 @@ export async function createInProcessTesseractWorker(
     workerId,
   });
   const lstmOnly = args.oem === 1 || args.oem === 3;
+  const bundledLanguages = await loadBundledLanguageData({
+    languages: args.languages,
+    lstmOnly,
+  });
 
   tesseractWorkerScript.setAdapter({
     getCore,
@@ -145,12 +191,12 @@ export async function createInProcessTesseractWorker(
     },
   });
   await runJob("loadLanguage", {
-    langs: [...args.languages],
+    langs: bundledLanguages,
     options: {
       cacheMethod: args.cacheMethod ?? "none",
       dataPath: undefined,
       gzip: true,
-      langPath: undefined,
+      langPath: null,
       lstmOnly,
     },
   });
