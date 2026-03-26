@@ -218,7 +218,8 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
               <div className="px-4 pb-5">
                 {"sourceType" in entry ? (
                   <Textarea
-                    className="min-h-80 max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                    className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                    rows={8}
                     readOnly
                     value={
                       entry.status === "error"
@@ -230,7 +231,8 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   />
                 ) : (
                   <Textarea
-                    className="min-h-80 max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                    className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                    rows={8}
                     readOnly
                     value={entry.content}
                   />
