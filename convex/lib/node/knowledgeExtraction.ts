@@ -243,102 +243,98 @@ function createPdfRenderSurface(
     interopContext.getContextAttributes = () => ({ alpha: true });
   }
 
-  if (typeof interopContext.getImageData !== "function") {
-    interopContext.getImageData = (
-      sx: number,
-      sy: number,
-      sw: number,
-      sh: number,
-    ) => {
-      const safeWidth = Math.max(0, Math.floor(sw));
-      const safeHeight = Math.max(0, Math.floor(sh));
-      const imageData = new ImageData(safeWidth, safeHeight);
+  interopContext.getImageData = (
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+  ) => {
+    const safeWidth = Math.max(0, Math.floor(sw));
+    const safeHeight = Math.max(0, Math.floor(sh));
+    const imageData = new ImageData(safeWidth, safeHeight);
 
-      for (let y = 0; y < safeHeight; y += 1) {
-        for (let x = 0; x < safeWidth; x += 1) {
-          const sourceX = Math.floor(sx) + x;
-          const sourceY = Math.floor(sy) + y;
-          const targetIndex = (y * safeWidth + x) * 4;
+    for (let y = 0; y < safeHeight; y += 1) {
+      for (let x = 0; x < safeWidth; x += 1) {
+        const sourceX = Math.floor(sx) + x;
+        const sourceY = Math.floor(sy) + y;
+        const targetIndex = (y * safeWidth + x) * 4;
 
-          if (
-            sourceX < 0 ||
-            sourceY < 0 ||
-            sourceX >= canvas.width ||
-            sourceY >= canvas.height
-          ) {
-            imageData.data[targetIndex + 3] = 0;
-            continue;
-          }
-
-          const sourceIndex = Number(canvas.calculateIndex(sourceX, sourceY));
-          imageData.data[targetIndex] = canvas.data[sourceIndex] ?? 0;
-          imageData.data[targetIndex + 1] = canvas.data[sourceIndex + 1] ?? 0;
-          imageData.data[targetIndex + 2] = canvas.data[sourceIndex + 2] ?? 0;
-          imageData.data[targetIndex + 3] = canvas.data[sourceIndex + 3] ?? 0;
+        if (
+          sourceX < 0 ||
+          sourceY < 0 ||
+          sourceX >= canvas.width ||
+          sourceY >= canvas.height
+        ) {
+          imageData.data[targetIndex + 3] = 0;
+          continue;
         }
+
+        const sourceIndex = Number(canvas.calculateIndex(sourceX, sourceY));
+        imageData.data[targetIndex] = canvas.data[sourceIndex] ?? 0;
+        imageData.data[targetIndex + 1] = canvas.data[sourceIndex + 1] ?? 0;
+        imageData.data[targetIndex + 2] = canvas.data[sourceIndex + 2] ?? 0;
+        imageData.data[targetIndex + 3] = canvas.data[sourceIndex + 3] ?? 0;
       }
+    }
 
-      return imageData;
-    };
-  }
+    return imageData;
+  };
 
-  if (typeof interopContext.putImageData !== "function") {
-    interopContext.putImageData = (
-      imageData: ImageData,
-      dx: number,
-      dy: number,
-      dirtyX = 0,
-      dirtyY = 0,
-      dirtyWidth = imageData.width,
-      dirtyHeight = imageData.height,
-    ) => {
-      const startX = Math.max(
-        0,
-        Math.floor(typeof dirtyX === "number" ? dirtyX : 0),
-      );
-      const startY = Math.max(
-        0,
-        Math.floor(typeof dirtyY === "number" ? dirtyY : 0),
-      );
-      const copyWidth = Math.max(
-        0,
-        Math.floor(typeof dirtyWidth === "number" ? dirtyWidth : imageData.width),
-      );
-      const copyHeight = Math.max(
-        0,
-        Math.floor(typeof dirtyHeight === "number" ? dirtyHeight : imageData.height),
-      );
+  interopContext.putImageData = (
+    imageData: ImageData,
+    dx: number,
+    dy: number,
+    dirtyX = 0,
+    dirtyY = 0,
+    dirtyWidth = imageData.width,
+    dirtyHeight = imageData.height,
+  ) => {
+    const startX = Math.max(
+      0,
+      Math.floor(typeof dirtyX === "number" ? dirtyX : 0),
+    );
+    const startY = Math.max(
+      0,
+      Math.floor(typeof dirtyY === "number" ? dirtyY : 0),
+    );
+    const copyWidth = Math.max(
+      0,
+      Math.floor(typeof dirtyWidth === "number" ? dirtyWidth : imageData.width),
+    );
+    const copyHeight = Math.max(
+      0,
+      Math.floor(typeof dirtyHeight === "number" ? dirtyHeight : imageData.height),
+    );
 
-      for (let y = 0; y < copyHeight; y += 1) {
-        for (let x = 0; x < copyWidth; x += 1) {
-          const sourceX = startX + x;
-          const sourceY = startY + y;
-          const targetX = Math.floor(dx) + sourceX;
-          const targetY = Math.floor(dy) + sourceY;
+    for (let y = 0; y < copyHeight; y += 1) {
+      for (let x = 0; x < copyWidth; x += 1) {
+        const sourceX = startX + x;
+        const sourceY = startY + y;
+        const targetX = Math.floor(dx) + sourceX;
+        const targetY = Math.floor(dy) + sourceY;
 
-          if (
-            sourceX < 0 ||
-            sourceY < 0 ||
-            sourceX >= imageData.width ||
-            sourceY >= imageData.height ||
-            targetX < 0 ||
-            targetY < 0 ||
-            targetX >= canvas.width ||
-            targetY >= canvas.height
-          ) {
-            continue;
-          }
-
-          const sourceIndex = (sourceY * imageData.width + sourceX) * 4;
-          const targetIndex = Number(canvas.calculateIndex(targetX, targetY));
-          canvas.data[targetIndex] = imageData.data[sourceIndex] ?? 0;
-          canvas.data[targetIndex + 1] = imageData.data[sourceIndex + 1] ?? 0;
-          canvas.data[targetIndex + 2] = imageData.data[sourceIndex + 2] ?? 0;
-          canvas.data[targetIndex + 3] = imageData.data[sourceIndex + 3] ?? 0;
+        if (
+          sourceX < 0 ||
+          sourceY < 0 ||
+          sourceX >= imageData.width ||
+          sourceY >= imageData.height ||
+          targetX < 0 ||
+          targetY < 0 ||
+          targetX >= canvas.width ||
+          targetY >= canvas.height
+        ) {
+          continue;
         }
+
+        const sourceIndex = (sourceY * imageData.width + sourceX) * 4;
+        const targetIndex = Number(canvas.calculateIndex(targetX, targetY));
+        canvas.data[targetIndex] = imageData.data[sourceIndex] ?? 0;
+        canvas.data[targetIndex + 1] = imageData.data[sourceIndex + 1] ?? 0;
+        canvas.data[targetIndex + 2] = imageData.data[sourceIndex + 2] ?? 0;
+        canvas.data[targetIndex + 3] = imageData.data[sourceIndex + 3] ?? 0;
       }
-    };
-  }
+    }
+  };
 
   return {
     canvas,

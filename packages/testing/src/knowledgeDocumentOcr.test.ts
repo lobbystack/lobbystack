@@ -77,15 +77,20 @@ type CanvasContextWithPutImageData = {
 
 function makeCanvas(bufferText: string) {
   const data = new Uint8Array(100 * 120 * 4);
+  const existingGetImageData = vi.fn();
+  const existingPutImageData = vi.fn();
   return {
     width: 100,
     height: 120,
     __buffer: Buffer.from(bufferText),
+    __existingPutImageData: existingPutImageData,
     data,
     calculateIndex: vi.fn((x: number, y: number) => (100 * y + x) * 4),
     getContext: vi.fn(() => ({
       fillStyle: "#ffffff",
       fillRect: vi.fn(),
+      getImageData: existingGetImageData,
+      putImageData: existingPutImageData,
     })),
   };
 }
@@ -196,6 +201,9 @@ describe("Knowledge document OCR", () => {
     const firstContext = firstEntry.context as CanvasContextWithPutImageData | null;
     expect(makeMock).toHaveBeenNthCalledWith(3, 40, 50);
     expect(firstContext?.putImageData).toEqual(expect.any(Function));
+    expect(firstContext?.putImageData).not.toBe(
+      firstEntry.canvas?.__existingPutImageData,
+    );
 
     firstContext?.putImageData?.(
       new ImageData(new Uint8ClampedArray([10, 20, 30, 255]), 1, 1),
