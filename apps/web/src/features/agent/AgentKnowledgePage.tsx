@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgentSection } from "./sections";
 
@@ -143,21 +143,33 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
-  function renderDocumentStatus(status: Doc<"knowledge_documents">["status"]) {
-    if (status === "queued") {
+  function renderDocumentStatus(document: Doc<"knowledge_documents">) {
+    if (document.status === "queued" || document.status === "indexing") {
+      const progressValue = Math.max(
+        0,
+        Math.min(100, Math.round(document.processingProgress ?? (document.status === "indexing" ? 92 : 0))),
+      );
+      const label =
+        document.status === "queued"
+          ? t(`agent:sections.${section}.status.analyzing`)
+          : getDocumentStatusLabel(document.status);
+
       return (
-        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner className="size-4" />
-          <span>{t(`agent:sections.${section}.status.analyzing`)}</span>
+        <span className="inline-flex min-w-56 items-center gap-3 text-sm text-muted-foreground">
+          <span>{label}</span>
+          <Progress className="w-24" value={progressValue} />
+          <span className="min-w-10 text-right text-xs tabular-nums">
+            {progressValue}%
+          </span>
         </span>
       );
     }
 
     return (
       <Badge
-        variant={status === "error" ? "destructive" : status === "indexed" ? "secondary" : "outline"}
+        variant={document.status === "error" ? "destructive" : document.status === "indexed" ? "secondary" : "outline"}
       >
-        {getDocumentStatusLabel(status)}
+        {getDocumentStatusLabel(document.status)}
       </Badge>
     );
   }
@@ -208,7 +220,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   {"sourceType" in entry ? (
                     <>
                       <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                      {renderDocumentStatus(entry.status)}
+                      {renderDocumentStatus(entry)}
                       {entry.tags?.length && entry.tags[0] ? (
                         <Badge variant="secondary">{entry.tags[0]}</Badge>
                       ) : null}

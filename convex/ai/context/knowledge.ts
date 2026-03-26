@@ -66,6 +66,7 @@ type MarkDocumentIndexedArgs = {
   indexedEntryId?: string;
   indexVersion?: string;
   error?: string;
+  processingProgress?: number;
 };
 type MarkSnippetIndexedArgs = {
   snippetId: Id<"knowledge_snippets">;
@@ -153,13 +154,15 @@ async function indexKnowledgeDocumentById(
       documentId,
       status: "error",
       error: "No text content available for indexing.",
+      processingProgress: 0,
     });
     return null;
   }
 
-  await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+  await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
     documentId,
     status: "indexing",
+    processingProgress: 92,
   });
 
   try {
@@ -187,6 +190,7 @@ async function indexKnowledgeDocumentById(
       status: result.status === "ready" ? "indexed" : "indexing",
       indexedEntryId: String(result.entryId),
       indexVersion: KNOWLEDGE_INDEX_VERSION,
+      processingProgress: result.status === "ready" ? 100 : 96,
     });
     await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
@@ -197,6 +201,7 @@ async function indexKnowledgeDocumentById(
       documentId,
       status: "error",
       error: message,
+      processingProgress: 0,
     });
   }
   return null;
@@ -407,6 +412,7 @@ export const markDocumentIndexed = internalMutation({
     indexedEntryId: v.optional(v.string()),
     indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
+    processingProgress: v.optional(v.number()),
   },
   handler: async (ctx: MutationCtx, args: MarkDocumentIndexedArgs) => {
     await ctx.db.patch(args.documentId, {
@@ -414,7 +420,33 @@ export const markDocumentIndexed = internalMutation({
       indexedEntryId: args.indexedEntryId,
       indexVersion: args.indexVersion,
       error: args.error,
+      processingProgress: args.processingProgress,
       lastIndexedAt: new Date().toISOString(),
+    });
+    return null;
+  },
+});
+
+export const setDocumentProcessingProgress = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+    processingProgress: v.number(),
+    status: v.optional(v.string()),
+    error: v.optional(v.string()),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      documentId: Id<"knowledge_documents">;
+      processingProgress: number;
+      status?: string;
+      error?: string;
+    },
+  ) => {
+    await ctx.db.patch(args.documentId, {
+      ...(args.status !== undefined ? { status: args.status } : {}),
+      processingProgress: args.processingProgress,
+      ...(args.error !== undefined ? { error: args.error } : {}),
     });
     return null;
   },
@@ -451,6 +483,7 @@ export const storeKnowledgeDocumentExtraction = internalMutation({
       textContent: args.textContent,
       contentHash: args.contentHash,
       status: "queued",
+      processingProgress: 88,
       error: undefined,
     });
     return null;
@@ -558,6 +591,7 @@ export const createKnowledgeDocument = mutation({
       ...(args.mimeType !== undefined ? { mimeType: args.mimeType } : {}),
       ...(args.textContent !== undefined ? { textContent: args.textContent } : {}),
       status: "queued",
+      processingProgress: 0,
       tags: args.tags,
       importance: args.importance,
       ...(args.contentHash !== undefined ? { contentHash: args.contentHash } : {}),

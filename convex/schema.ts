@@ -198,6 +198,7 @@ export default defineSchema({
     mimeType: v.optional(v.string()),
     textContent: v.optional(v.string()),
     status: v.string(),
+    processingProgress: v.optional(v.number()),
     tags: v.array(v.string()),
     importance: v.number(),
     contentHash: v.optional(v.string()),

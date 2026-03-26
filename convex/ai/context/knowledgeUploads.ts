@@ -23,11 +23,14 @@ const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
 async function extractUploadedKnowledgeDocumentText(input: {
   blob: Blob;
   mimeType: string;
+  onProgress?: (progressPercent: number) => Promise<void>;
 }): Promise<string> {
+  await input.onProgress?.(10);
   const rawText = await extractKnowledgeDocumentText(input);
   const normalizedText = normalizeKnowledgeDocumentText(rawText);
 
   if (hasMeaningfulKnowledgeDocumentText(normalizedText)) {
+    await input.onProgress?.(85);
     return normalizedText;
   }
 
@@ -38,6 +41,9 @@ async function extractUploadedKnowledgeDocumentText(input: {
   try {
     const ocrText = await extractPdfTextWithLocalOcr({
       blob: input.blob,
+      onProgress: async (ocrProgressPercent) => {
+        await input.onProgress?.(Math.round(10 + ocrProgressPercent * 0.75));
+      },
     });
     const normalizedOcrText = normalizeKnowledgeDocumentText(ocrText);
 
@@ -45,6 +51,7 @@ async function extractUploadedKnowledgeDocumentText(input: {
       throw new Error(KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR);
     }
 
+    await input.onProgress?.(85);
     return normalizedOcrText;
   } catch (error) {
     console.error("Uploaded PDF OCR fallback failed", {
@@ -99,7 +106,23 @@ async function prepareUploadedKnowledgeDocument(
   const mimeType = document.mimeType ?? blob.type ?? "application/octet-stream";
 
   try {
-    const normalizedText = await extractUploadedKnowledgeDocumentText({ blob, mimeType });
+    await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
+      documentId,
+      status: "queued",
+      processingProgress: 5,
+    });
+
+    const normalizedText = await extractUploadedKnowledgeDocumentText({
+      blob,
+      mimeType,
+      onProgress: async (progressPercent) => {
+        await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
+          documentId,
+          status: "queued",
+          processingProgress: progressPercent,
+        });
+      },
+    });
 
     const contentHash = createHash("sha256").update(normalizedText).digest("hex");
 
@@ -118,6 +141,7 @@ async function prepareUploadedKnowledgeDocument(
       documentId,
       status: "error",
       error: message,
+      processingProgress: 0,
     });
   }
 
