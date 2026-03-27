@@ -34,6 +34,7 @@ import {
   resolveKnowledgeSection,
   type KnowledgeSection,
 } from "../../lib/knowledgeSections";
+import { normalizeRuntimeLocale } from "../../lib/runtimeLocale";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -67,6 +68,7 @@ type MarkDocumentIndexedArgs = {
   indexedEntryId?: string;
   indexVersion?: string;
   error?: string;
+  processingProgress?: number;
 };
 type MarkSnippetIndexedArgs = {
   snippetId: Id<"knowledge_snippets">;
@@ -88,12 +90,17 @@ type ListKnowledgeArgs = {
   businessId: Id<"businesses">;
   section?: KnowledgeSection;
 };
+type KnowledgeDocumentViewerContentArgs = {
+  businessId: Id<"businesses">;
+  documentId: Id<"knowledge_documents">;
+};
 type CreateKnowledgeDocumentArgs = {
   businessId: Id<"businesses">;
   section?: KnowledgeSection;
   sourceType: string;
   title: string;
   storageId?: Id<"_storage">;
+  extractedTextStorageId?: Id<"_storage">;
   mimeType?: string;
   textContent?: string;
   tags: Array<string>;
@@ -149,25 +156,43 @@ async function indexKnowledgeDocumentById(
     documentId,
   });
 
-  if (!document || !document.textContent) {
+  let indexableText: string | null = document?.textContent ?? null;
+  if (document?.extractedTextStorageId) {
+    const extractedTextBlob = await ctx.storage.get(document.extractedTextStorageId);
+    if (!extractedTextBlob) {
+      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+        documentId,
+        status: "error",
+        error: "Extracted document text could not be loaded.",
+        processingProgress: 0,
+      });
+      return null;
+    }
+
+    indexableText = await extractedTextBlob.text();
+  }
+
+  if (!document || !indexableText) {
     await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
       documentId,
       status: "error",
       error: "No text content available for indexing.",
+      processingProgress: 0,
     });
     return null;
   }
 
-  await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+  await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
     documentId,
     status: "indexing",
+    processingProgress: 92,
   });
 
   try {
     const result = await rag.add(ctx, {
       namespace: getKnowledgeNamespace(String(document.businessId)),
       title: document.title,
-      text: document.textContent,
+      text: indexableText,
       key: `document:${String(documentId)}`,
       ...(document.contentHash !== undefined ? { contentHash: document.contentHash } : {}),
       filterValues: [
@@ -188,6 +213,7 @@ async function indexKnowledgeDocumentById(
       status: result.status === "ready" ? "indexed" : "indexing",
       indexedEntryId: String(result.entryId),
       indexVersion: KNOWLEDGE_INDEX_VERSION,
+      processingProgress: result.status === "ready" ? 100 : 96,
     });
     await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
@@ -198,6 +224,7 @@ async function indexKnowledgeDocumentById(
       documentId,
       status: "error",
       error: message,
+      processingProgress: 0,
     });
   }
   return null;
@@ -371,6 +398,9 @@ async function deleteKnowledgeEntryById(
     if (document.storageId) {
       await ctx.storage.delete(document.storageId);
     }
+    if (document.extractedTextStorageId) {
+      await ctx.storage.delete(document.extractedTextStorageId);
+    }
 
     await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeDocumentRecord, {
       documentId: args.documentId,
@@ -436,6 +466,16 @@ export const getUploadedKnowledgeDocumentMetadata = internalQuery({
   },
 });
 
+export const getBusinessDefaultLocale = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: QueryCtx, args: BusinessIdArgs) => {
+    const business = await ctx.db.get(args.businessId);
+    return normalizeRuntimeLocale(business?.defaultLocale) ?? null;
+  },
+});
+
 export const markDocumentIndexed = internalMutation({
   args: {
     documentId: v.id("knowledge_documents"),
@@ -443,6 +483,7 @@ export const markDocumentIndexed = internalMutation({
     indexedEntryId: v.optional(v.string()),
     indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
+    processingProgress: v.optional(v.number()),
   },
   handler: async (ctx: MutationCtx, args: MarkDocumentIndexedArgs) => {
     await ctx.db.patch(args.documentId, {
@@ -450,7 +491,33 @@ export const markDocumentIndexed = internalMutation({
       indexedEntryId: args.indexedEntryId,
       indexVersion: args.indexVersion,
       error: args.error,
+      processingProgress: args.processingProgress,
       lastIndexedAt: new Date().toISOString(),
+    });
+    return null;
+  },
+});
+
+export const setDocumentProcessingProgress = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+    processingProgress: v.number(),
+    status: v.optional(v.string()),
+    error: v.optional(v.string()),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      documentId: Id<"knowledge_documents">;
+      processingProgress: number;
+      status?: string;
+      error?: string;
+    },
+  ) => {
+    await ctx.db.patch(args.documentId, {
+      ...(args.status !== undefined ? { status: args.status } : {}),
+      processingProgress: args.processingProgress,
+      ...(args.error !== undefined ? { error: args.error } : {}),
     });
     return null;
   },
@@ -472,6 +539,7 @@ export const storeKnowledgeDocumentExtraction = internalMutation({
     mimeType: v.string(),
     textContent: v.string(),
     contentHash: v.string(),
+    extractedTextStorageId: v.optional(v.id("_storage")),
   },
   handler: async (
     ctx: MutationCtx,
@@ -480,13 +548,16 @@ export const storeKnowledgeDocumentExtraction = internalMutation({
       mimeType: string;
       textContent: string;
       contentHash: string;
+      extractedTextStorageId?: Id<"_storage">;
     },
   ) => {
     await ctx.db.patch(args.documentId, {
       mimeType: args.mimeType,
       textContent: args.textContent,
       contentHash: args.contentHash,
+      extractedTextStorageId: args.extractedTextStorageId,
       status: "queued",
+      processingProgress: 88,
       error: undefined,
     });
     return null;
@@ -577,6 +648,7 @@ export const createKnowledgeDocument = mutation({
     sourceType: v.string(),
     title: v.string(),
     storageId: v.optional(v.id("_storage")),
+    extractedTextStorageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
     textContent: v.optional(v.string()),
     tags: v.array(v.string()),
@@ -591,9 +663,13 @@ export const createKnowledgeDocument = mutation({
       sourceType: args.sourceType,
       title: args.title,
       ...(args.storageId !== undefined ? { storageId: args.storageId } : {}),
+      ...(args.extractedTextStorageId !== undefined
+        ? { extractedTextStorageId: args.extractedTextStorageId }
+        : {}),
       ...(args.mimeType !== undefined ? { mimeType: args.mimeType } : {}),
       ...(args.textContent !== undefined ? { textContent: args.textContent } : {}),
       status: "queued",
+      processingProgress: 0,
       tags: args.tags,
       importance: args.importance,
       ...(args.contentHash !== undefined ? { contentHash: args.contentHash } : {}),
@@ -719,6 +795,30 @@ export const listKnowledge = query({
   },
 });
 
+export const getKnowledgeDocumentViewerContent = query({
+  args: {
+    businessId: v.id("businesses"),
+    documentId: v.id("knowledge_documents"),
+  },
+  handler: async (ctx: QueryCtx, args: KnowledgeDocumentViewerContentArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const document = await ctx.db.get(args.documentId);
+    if (!document || document.businessId !== args.businessId) {
+      throw new Error("Knowledge document not found.");
+    }
+
+    return {
+      textContent: document.textContent ?? "",
+      extractedTextUrl: document.extractedTextStorageId
+        ? await ctx.storage.getUrl(document.extractedTextStorageId)
+        : null,
+      error: document.error ?? null,
+      status: document.status,
+    };
+  },
+});
+
 export const searchKnowledgeInternal = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -834,7 +934,7 @@ export const getKnowledgeEntriesNeedingReindex = internalQuery({
       documentIds: documents
         .filter(
           (document) =>
-            !!document.textContent &&
+            (!!document.textContent || !!document.extractedTextStorageId) &&
             (!document.indexedEntryId ||
               document.status !== "indexed" ||
               document.indexVersion !== KNOWLEDGE_INDEX_VERSION),

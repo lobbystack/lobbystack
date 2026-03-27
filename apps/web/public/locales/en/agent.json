@@ -22,6 +22,7 @@
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
+        "analyzing": "Analyzing...",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
@@ -70,6 +71,7 @@
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
+        "analyzing": "Analyzing...",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
@@ -118,6 +120,7 @@
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
+        "analyzing": "Analyzing...",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
