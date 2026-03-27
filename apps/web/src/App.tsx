@@ -3,8 +3,6 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 
-import { demoSnapshot, type BusinessContextSnapshot } from "@ai-receptionist/shared";
-
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { LoadingScreen } from "@/components/loading-screen";
@@ -68,45 +66,6 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = businesses?.[0]?.business;
   const businessId = activeBusiness?._id;
-  const snapshot = useQuery(
-    api.ai.context.snapshots.getForDashboard,
-    businessId ? { businessId } : "skip",
-  );
-  const resolvedSnapshot: BusinessContextSnapshot =
-    snapshot == null
-      ? demoSnapshot
-      : {
-          ...demoSnapshot,
-          ...snapshot,
-          defaultLocale:
-            snapshot.defaultLocale === "en" || snapshot.defaultLocale === "fr"
-              ? snapshot.defaultLocale
-              : demoSnapshot.defaultLocale,
-          businessType:
-            snapshot.businessType === "clinic" ||
-            snapshot.businessType === "repair_shop" ||
-            snapshot.businessType === "salon" ||
-            snapshot.businessType === "service_company" ||
-            snapshot.businessType === "other"
-              ? snapshot.businessType
-              : demoSnapshot.businessType,
-          transferPolicy: {
-            ...demoSnapshot.transferPolicy,
-            ...(snapshot.transferPolicy ?? {}),
-            mode:
-              snapshot.transferPolicy?.mode === "never" ||
-              snapshot.transferPolicy?.mode === "always" ||
-              snapshot.transferPolicy?.mode === "on_request" ||
-              snapshot.transferPolicy?.mode === "on_urgent" ||
-              snapshot.transferPolicy?.mode === "during_business_hours"
-                ? snapshot.transferPolicy.mode
-                : demoSnapshot.transferPolicy.mode,
-          },
-          contactChannels: {
-            ...demoSnapshot.contactChannels,
-            ...(snapshot.contactChannels ?? {}),
-          },
-        };
 
   if (businesses === undefined) {
     return <LoadingScreen />;
@@ -130,10 +89,7 @@ function WorkspaceShell() {
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         <Routes>
-          <Route
-            element={<HomePage {...(businessId ? { businessId } : {})} snapshot={resolvedSnapshot} />}
-            path="/"
-          />
+          <Route element={<HomePage {...(businessId ? { businessId } : {})} />} path="/" />
           <Route element={<CallsPage {...(businessId ? { businessId } : {})} />} path="/calls" />
           <Route
             element={<MessagesPage {...(businessId ? { businessId } : {})} />}
