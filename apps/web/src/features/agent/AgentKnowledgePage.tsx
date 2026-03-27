@@ -196,9 +196,32 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
   const [viewerTextByDocumentId, setViewerTextByDocumentId] = useState<Record<string, string>>({});
+  const [viewerCacheKeyByDocumentId, setViewerCacheKeyByDocumentId] = useState<Record<string, string>>({});
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
   const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
+
+  function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
+    const documentId = String(document._id);
+    const cacheKey = getViewerCacheKey(document);
+    return viewerCacheKeyByDocumentId[documentId] === cacheKey
+      ? viewerTextByDocumentId[documentId]
+      : undefined;
+  }
+
+  function setLoadedViewerText(document: Doc<"knowledge_documents">, text: string): void {
+    const documentId = String(document._id);
+    const cacheKey = getViewerCacheKey(document);
+
+    setViewerTextByDocumentId((current) => ({
+      ...current,
+      [documentId]: text,
+    }));
+    setViewerCacheKeyByDocumentId((current) => ({
+      ...current,
+      [documentId]: cacheKey,
+    }));
+  }
 
   function getDocumentStatusLabel(status: Doc<"knowledge_documents">["status"]): string {
     switch (status) {
@@ -261,6 +284,14 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           delete next[entryId];
           return next;
         });
+        setViewerCacheKeyByDocumentId((current) => {
+          if (!(entryId in current)) {
+            return current;
+          }
+          const next = { ...current };
+          delete next[entryId];
+          return next;
+        });
         await deleteKnowledgeEntry({
           businessId,
           documentId: entry._id,
@@ -282,18 +313,16 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
   async function loadFullDocumentText(document: Doc<"knowledge_documents">): Promise<void> {
     const documentId = String(document._id);
+    const loadedViewerText = getLoadedViewerText(document);
     const cachedText = readCachedViewerText(getViewerCacheKey(document));
     if (
       !document.extractedTextStorageId ||
-      viewerTextByDocumentId[documentId] !== undefined ||
+      loadedViewerText !== undefined ||
       loadingViewerIds.includes(documentId) ||
       cachedText !== null
     ) {
-      if (cachedText !== null && viewerTextByDocumentId[documentId] === undefined) {
-        setViewerTextByDocumentId((current) => ({
-          ...current,
-          [documentId]: cachedText,
-        }));
+      if (cachedText !== null && loadedViewerText === undefined) {
+        setLoadedViewerText(document, cachedText);
       }
       return;
     }
@@ -318,10 +347,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
       if (!viewerContent.extractedTextUrl) {
         writeCachedViewerText(document, viewerContent.textContent);
-        setViewerTextByDocumentId((current) => ({
-          ...current,
-          [documentId]: viewerContent.textContent,
-        }));
+        setLoadedViewerText(document, viewerContent.textContent);
         return;
       }
 
@@ -332,17 +358,11 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
       const fullText = await response.text();
       writeCachedViewerText(document, fullText);
-      setViewerTextByDocumentId((current) => ({
-        ...current,
-        [documentId]: fullText,
-      }));
+      setLoadedViewerText(document, fullText);
     } catch (error) {
       if (fallbackText.trim()) {
         writeCachedViewerText(document, fallbackText);
-        setViewerTextByDocumentId((current) => ({
-          ...current,
-          [documentId]: fallbackText,
-        }));
+        setLoadedViewerText(document, fallbackText);
         return;
       }
       const message =
@@ -366,76 +386,83 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ) : null}
 
         {visibleEntries.map((entry) => (
-          <Collapsible
-            className="group rounded-2xl border border-border/70 bg-card shadow-sm"
-            key={entry._id}
-            onOpenChange={(open) => {
-              if (open && "sourceType" in entry) {
-                void loadFullDocumentText(entry);
-              }
-            }}
-          >
-            <div className="flex items-center gap-2 p-4">
-              <CollapsibleTrigger className="flex min-w-0 flex-1 items-center outline-none">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className="truncate font-semibold">{entry.title}</span>
-                  {"sourceType" in entry ? (
-                    <>
-                      <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                      {renderDocumentStatus(entry)}
-                      {entry.tags?.length && entry.tags[0] ? (
+          (() => {
+            const loadedViewerText =
+              "sourceType" in entry ? getLoadedViewerText(entry) : undefined;
+
+            return (
+              <Collapsible
+                className="group rounded-2xl border border-border/70 bg-card shadow-sm"
+                key={entry._id}
+                onOpenChange={(open) => {
+                  if (open && "sourceType" in entry) {
+                    void loadFullDocumentText(entry);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2 p-4">
+                  <CollapsibleTrigger className="flex min-w-0 flex-1 items-center outline-none">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="truncate font-semibold">{entry.title}</span>
+                      {"sourceType" in entry ? (
+                        <>
+                          <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
+                          {renderDocumentStatus(entry)}
+                          {entry.tags?.length && entry.tags[0] ? (
+                            <Badge variant="secondary">{entry.tags[0]}</Badge>
+                          ) : null}
+                        </>
+                      ) : entry.tags?.length && entry.tags[0] ? (
                         <Badge variant="secondary">{entry.tags[0]}</Badge>
                       ) : null}
-                    </>
-                  ) : entry.tags?.length && entry.tags[0] ? (
-                    <Badge variant="secondary">{entry.tags[0]}</Badge>
-                  ) : null}
+                    </div>
+                  </CollapsibleTrigger>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <InlineConfirmDeleteButton
+                      deleting={deletingEntryId === String(entry._id)}
+                      onConfirm={() => {
+                        void handleDelete(entry);
+                      }}
+                    />
+                    <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md p-1 outline-none">
+                      <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
+                    </CollapsibleTrigger>
+                  </div>
                 </div>
-              </CollapsibleTrigger>
-              <div className="flex shrink-0 items-center gap-2">
-                <InlineConfirmDeleteButton
-                  deleting={deletingEntryId === String(entry._id)}
-                  onConfirm={() => {
-                    void handleDelete(entry);
-                  }}
-                />
-                <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md p-1 outline-none">
-                  <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
-                </CollapsibleTrigger>
-              </div>
-            </div>
-            <CollapsibleContent>
-              <div className="px-4 pb-5">
-                {"sourceType" in entry ? (
-                  <Textarea
-                    className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                    rows={8}
-                    readOnly
-                    value={
-                      entry.status === "error"
-                        ? viewerErrorsByDocumentId[String(entry._id)] ??
-                          entry.error ??
-                          t(`agent:sections.${section}.previewError`)
-                        : (viewerTextByDocumentId[String(entry._id)] ?? "").trim()
-                          ? (viewerTextByDocumentId[String(entry._id)] ?? "").trim()
-                          : loadingViewerIds.includes(String(entry._id))
-                            ? t(`agent:sections.${section}.previewPending`)
-                        : entry.textContent?.trim()
-                          ? entry.textContent.trim()
-                          : t(`agent:sections.${section}.previewPending`)
-                    }
-                  />
-                ) : (
-                  <Textarea
-                    className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                    rows={8}
-                    readOnly
-                    value={entry.content}
-                  />
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+                <CollapsibleContent>
+                  <div className="px-4 pb-5">
+                    {"sourceType" in entry ? (
+                      <Textarea
+                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                        rows={8}
+                        readOnly
+                        value={
+                          entry.status === "error"
+                            ? viewerErrorsByDocumentId[String(entry._id)] ??
+                              entry.error ??
+                              t(`agent:sections.${section}.previewError`)
+                            : loadedViewerText?.trim()
+                              ? loadedViewerText.trim()
+                              : loadingViewerIds.includes(String(entry._id))
+                                ? t(`agent:sections.${section}.previewPending`)
+                                : entry.textContent?.trim()
+                                  ? entry.textContent.trim()
+                                  : t(`agent:sections.${section}.previewPending`)
+                        }
+                      />
+                    ) : (
+                      <Textarea
+                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                        rows={8}
+                        readOnly
+                        value={entry.content}
+                      />
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })()
         ))}
       </div>
     </div>
