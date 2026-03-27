@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
@@ -34,9 +34,10 @@ vi.mock("../../../convex/businesses/admin.ts", async () => {
 });
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
+type ConvexHarness = TestConvex<typeof schema>;
 
 async function seedBusinessOwner(
-  t: ReturnType<typeof convexTest>,
+  t: ConvexHarness,
   input?: { membershipStatus?: "active" | "inactive" },
 ) {
   const subject = "service-localization-owner";

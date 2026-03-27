@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../convex/_generated/api";
@@ -33,8 +33,10 @@ vi.mock("../../../convex/lib/components", async () => {
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
+type ConvexHarness = TestConvex<typeof schema>;
+type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
 
-async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: string) {
+async function seedBusinessMember(t: ConvexHarness, subject: string) {
   const { businessId } = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
       slug: `dashboard-outcome-${subject}`,
@@ -61,7 +63,7 @@ async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: str
   return { businessId, authed: t.withIdentity({ subject }) };
 }
 
-async function insertContactConversation(ctx: Parameters<Parameters<ReturnType<typeof convexTest>["run"]>[0]>[0], businessId: Id<"businesses">) {
+async function insertContactConversation(ctx: TestRunCtx, businessId: Id<"businesses">) {
   const contactId = await ctx.db.insert("contacts", {
     businessId,
     phone: "+14165550199",
@@ -78,7 +80,7 @@ async function insertContactConversation(ctx: Parameters<Parameters<ReturnType<t
 }
 
 async function seedVoiceBookableService(
-  ctx: Parameters<Parameters<ReturnType<typeof convexTest>["run"]>[0]>[0],
+  ctx: TestRunCtx,
   businessId: Id<"businesses">,
 ) {
   for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {

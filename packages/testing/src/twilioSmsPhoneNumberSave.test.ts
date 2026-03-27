@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
@@ -55,9 +55,10 @@ const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+type ConvexHarness = TestConvex<typeof schema>;
 
 async function seedBusinessOwner(
-  t: ReturnType<typeof convexTest>,
+  t: ConvexHarness,
   input?: { membershipStatus?: "active" | "inactive" },
 ) {
   const subject = "phone-number-owner";

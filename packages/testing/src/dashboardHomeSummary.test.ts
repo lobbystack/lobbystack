@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../../../convex/_generated/api";
@@ -13,8 +13,10 @@ declare global {
 
 const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const HOME_SUMMARY_LOCALE = "en" as const;
+type ConvexHarness = TestConvex<typeof schema>;
+type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
 
-async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: string) {
+async function seedBusinessMember(t: ConvexHarness, subject: string) {
   const { businessId, userId } = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
       slug: `dashboard-home-${subject}`,
@@ -42,7 +44,7 @@ async function seedBusinessMember(t: ReturnType<typeof convexTest>, subject: str
 }
 
 async function insertContact(
-  ctx: Parameters<Parameters<ReturnType<typeof convexTest>["run"]>[0]>[0],
+  ctx: TestRunCtx,
   businessId: Id<"businesses">,
   input: {
     name: string;

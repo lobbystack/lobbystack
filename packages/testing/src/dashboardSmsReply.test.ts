@@ -1,4 +1,4 @@
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,12 +38,12 @@ const convexModules = import.meta.glob("../../../convex/**/*.ts");
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
-
-type TestRunFunction = Parameters<ReturnType<typeof convexTest>["run"]>[0];
+type ConvexHarness = TestConvex<typeof schema>;
+type TestRunFunction = Parameters<ConvexHarness["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
 async function seedSmsConversation(
-  t: ReturnType<typeof convexTest>,
+  t: ConvexHarness,
   input: { subject: string; optedOut?: boolean },
 ) {
   const seeded = await t.run(async (ctx) => {
