@@ -9,8 +9,8 @@ declare global {
   }
 }
 
-const { searchKnowledgeInternalMock } = vi.hoisted(() => ({
-  searchKnowledgeInternalMock: vi.fn(),
+const { searchKnowledgeForVoiceInternalMock } = vi.hoisted(() => ({
+  searchKnowledgeForVoiceInternalMock: vi.fn(),
 }));
 
 vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
@@ -22,14 +22,14 @@ vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
 
   return {
     ...actual,
-    searchKnowledgeInternal: internalAction({
+    searchKnowledgeForVoiceInternal: internalAction({
       args: {
         businessId: v.id("businesses"),
         query: v.string(),
         limit: v.optional(v.number()),
       },
       handler: async (_ctx, args) => {
-        return await searchKnowledgeInternalMock(args);
+        return await searchKnowledgeForVoiceInternalMock(args);
       },
     }),
   };
@@ -92,13 +92,13 @@ describe("voice knowledge search route", () => {
 
     expect(response.status).toBe(401);
     expect(await response.text()).toBe("Unauthorized");
-    expect(searchKnowledgeInternalMock).not.toHaveBeenCalled();
+    expect(searchKnowledgeForVoiceInternalMock).not.toHaveBeenCalled();
   });
 
   it("routes voice knowledge searches through the internal RAG action with a fixed limit", async () => {
     const t = createConvexHarness();
     const businessId = await t.run(async (ctx) => await insertBusiness(ctx));
-    searchKnowledgeInternalMock.mockResolvedValue([
+    searchKnowledgeForVoiceInternalMock.mockResolvedValue([
       { title: "Policy", text: "Detailed policy text" },
     ]);
 
@@ -108,7 +108,7 @@ describe("voice knowledge search route", () => {
     expect(await response.json()).toEqual([
       { title: "Policy", text: "Detailed policy text" },
     ]);
-    expect(searchKnowledgeInternalMock).toHaveBeenCalledWith({
+    expect(searchKnowledgeForVoiceInternalMock).toHaveBeenCalledWith({
       businessId,
       query: "refund policy",
       limit: 4,

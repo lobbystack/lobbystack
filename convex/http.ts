@@ -910,7 +910,7 @@ http.route({
       return body.response;
     }
 
-    const result = await ctx.runAction(internal.ai.context.knowledge.searchKnowledgeInternal, {
+    const result = await ctx.runAction(internal.ai.context.knowledge.searchKnowledgeForVoiceInternal, {
       businessId: asId("businesses", body.data.businessId),
       query: body.data.query,
       limit: 4,

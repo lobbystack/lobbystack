@@ -263,6 +263,13 @@ async function searchKnowledge(
     await indexKnowledgeSnippetById(ctx, snippetId);
   }
 
+  return await searchIndexedKnowledge(ctx, args);
+}
+
+async function searchIndexedKnowledge(
+  ctx: ActionCtx,
+  args: SearchKnowledgeArgs,
+): Promise<KnowledgeSearchResult> {
   const { entries } = await rag.search(ctx, {
     namespace: getKnowledgeNamespace(String(args.businessId)),
     query: args.query,
@@ -691,6 +698,17 @@ export const searchKnowledgeInternal = internalAction({
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     return await searchKnowledge(ctx, args);
+  },
+});
+
+export const searchKnowledgeForVoiceInternal = internalAction({
+  args: {
+    businessId: v.id("businesses"),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
+    return await searchIndexedKnowledge(ctx, args);
   },
 });
 
