@@ -154,6 +154,7 @@ async function prepareUploadedKnowledgeDocument(
           businessId: document.businessId,
         })
       : null;
+  let extractedTextStorageId: Id<"_storage"> | undefined;
 
   try {
     await ctx.runMutation(internal.ai.context.knowledge.setDocumentProcessingProgress, {
@@ -176,7 +177,7 @@ async function prepareUploadedKnowledgeDocument(
     });
 
     const contentHash = createHash("sha256").update(normalizedText).digest("hex");
-    const extractedTextStorageId =
+    extractedTextStorageId =
       getConvexSize(normalizedText) > MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES
         ? await ctx.storage.store(
             new Blob([normalizedText], {
@@ -199,13 +200,22 @@ async function prepareUploadedKnowledgeDocument(
       documentId,
     });
   } catch (error) {
+    if (extractedTextStorageId) {
+      await ctx.storage.delete(extractedTextStorageId);
+    }
+
     const message = error instanceof Error ? error.message : "Failed to process this document.";
-    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+    const currentDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
       documentId,
-      status: "error",
-      error: message,
-      processingProgress: 0,
     });
+    if (currentDocument) {
+      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+        documentId,
+        status: "error",
+        error: message,
+        processingProgress: 0,
+      });
+    }
   }
 
   return null;

@@ -85,24 +85,31 @@ type CreateInProcessTesseractWorkerArgs = {
 };
 
 const decodedLanguageDataCache = new Map<string, Uint8Array>();
-const cachedWorkerEntries = new Map<
-  string,
-  {
-    invalidated: boolean;
-    pendingUsers: number;
-    release: Promise<void>;
-    terminationPromise?: Promise<void>;
-    workerPromise: Promise<InProcessWorker>;
-  }
->();
-
-async function terminateCachedWorkerEntry(entry: {
+type CachedWorkerEntry = {
   invalidated: boolean;
-  pendingUsers: number;
-  release: Promise<void>;
   terminationPromise?: Promise<void>;
   workerPromise: Promise<InProcessWorker>;
-}): Promise<void> {
+};
+const cachedWorkerEntries = new Map<
+  string,
+  CachedWorkerEntry
+>();
+let workerTurnRelease = Promise.resolve();
+
+function reserveGlobalWorkerTurn(): {
+  releaseCurrentTurn: () => void;
+  waitForTurn: Promise<void>;
+} {
+  const waitForTurn = workerTurnRelease.catch(() => undefined);
+  let releaseCurrentTurn!: () => void;
+  workerTurnRelease = new Promise<void>((resolve) => {
+    releaseCurrentTurn = resolve;
+  });
+
+  return { waitForTurn, releaseCurrentTurn };
+}
+
+async function terminateCachedWorkerEntry(entry: CachedWorkerEntry): Promise<void> {
   if (entry.terminationPromise) {
     await entry.terminationPromise;
     return;
@@ -264,43 +271,36 @@ export async function runWithCachedInProcessTesseractWorker<T>(
   callback: (worker: InProcessWorker) => Promise<T>,
 ): Promise<T> {
   const key = getCachedWorkerKey(args);
-  let entry = cachedWorkerEntries.get(key);
 
-  if (!entry) {
-    entry = {
-      invalidated: false,
-      pendingUsers: 0,
-      release: Promise.resolve(),
-      workerPromise: createInProcessTesseractWorker(args),
-    };
-    cachedWorkerEntries.set(key, entry);
-  }
+  while (true) {
+    let entry = cachedWorkerEntries.get(key);
 
-  entry.pendingUsers += 1;
-  const waitForTurn = entry.release.catch(() => undefined);
-  let releaseCurrentTurn!: () => void;
-  entry.release = new Promise<void>((resolve) => {
-    releaseCurrentTurn = resolve;
-  });
-
-  try {
-    await waitForTurn;
-    if (entry.invalidated) {
-      return await runWithCachedInProcessTesseractWorker(args, callback);
+    if (!entry) {
+      entry = {
+        invalidated: false,
+        workerPromise: createInProcessTesseractWorker(args),
+      };
+      cachedWorkerEntries.set(key, entry);
     }
-    const worker = await entry.workerPromise;
-    return await callback(worker);
-  } catch (error) {
-    entry.invalidated = true;
-    if (cachedWorkerEntries.get(key) === entry) {
-      cachedWorkerEntries.delete(key);
-    }
-    throw error;
-  } finally {
-    releaseCurrentTurn();
-    entry.pendingUsers -= 1;
-    if (entry.invalidated && entry.pendingUsers === 0) {
+
+    const { waitForTurn, releaseCurrentTurn } = reserveGlobalWorkerTurn();
+
+    try {
+      await waitForTurn;
+      if (entry.invalidated) {
+        continue;
+      }
+      const worker = await entry.workerPromise;
+      return await callback(worker);
+    } catch (error) {
+      entry.invalidated = true;
+      if (cachedWorkerEntries.get(key) === entry) {
+        cachedWorkerEntries.delete(key);
+      }
       await terminateCachedWorkerEntry(entry);
+      throw error;
+    } finally {
+      releaseCurrentTurn();
     }
   }
 }

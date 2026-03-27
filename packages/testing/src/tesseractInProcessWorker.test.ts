@@ -152,6 +152,51 @@ describe("createInProcessTesseractWorker", () => {
     ).toHaveLength(2);
   });
 
+  it("serializes shared OCR work across different language sets", async () => {
+    let releaseFirstRun!: () => void;
+    let markFirstRunStarted!: () => void;
+    let secondRunStarted = false;
+    const firstRunStarted = new Promise<void>((resolve) => {
+      markFirstRunStarted = resolve;
+    });
+
+    const firstRun = runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng"],
+        oem: 1,
+      },
+      async () => {
+        markFirstRunStarted();
+        await new Promise<void>((resolve) => {
+          releaseFirstRun = resolve;
+        });
+        return "first";
+      },
+    );
+
+    const secondRun = runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng", "fra"],
+        oem: 1,
+      },
+      async () => {
+        secondRunStarted = true;
+        return "second";
+      },
+    );
+
+    await firstRunStarted;
+    await Promise.resolve();
+    expect(secondRunStarted).toBe(false);
+
+    releaseFirstRun();
+
+    await expect(firstRun).resolves.toBe("first");
+    await expect(secondRun).resolves.toBe("second");
+  });
+
   it("loads OCR languages from bundled local assets instead of remote paths", async () => {
     await createInProcessTesseractWorker({
       cacheMethod: "none",

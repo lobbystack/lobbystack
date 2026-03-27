@@ -485,6 +485,71 @@ describe("Knowledge coverage", () => {
     });
   });
 
+  it("cleans up stored extracted text when document persistence fails after OCR", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const largeExtractedText = normalizeKnowledgeDocumentText("Large OCR text. ".repeat(40_000));
+
+    const { documentId, uploadStorageId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-orphaned-extracted-text",
+        name: "Knowledge Orphaned Extracted Text",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Orphaned Extracted Text",
+      });
+
+      const uploadStorageId = await ctx.storage.store(
+        new Blob(["%PDF-1.4"], {
+          type: "application/pdf",
+        }),
+      );
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Deleted while processing",
+        storageId: uploadStorageId,
+        mimeType: "application/pdf",
+        status: "queued",
+        tags: [],
+        importance: 5,
+      });
+
+      return { documentId, uploadStorageId };
+    });
+
+    extractKnowledgeDocumentTextMock.mockImplementationOnce(async () => {
+      await t.run(async (ctx) => {
+        await ctx.db.delete(documentId);
+      });
+      return largeExtractedText;
+    });
+
+    await t.action(internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument, {
+      documentId,
+    });
+
+    const { originalUpload, remainingStorageIds, storedDocument } = await t.run(async (ctx) => {
+      const originalUpload = await ctx.db.system.get("_storage", uploadStorageId);
+      const remainingStorageIds = (
+        await ctx.db.system.query("_storage").collect()
+      ).map((entry) => entry._id);
+      const storedDocument = await ctx.db.get(documentId);
+
+      return {
+        originalUpload,
+        remainingStorageIds,
+        storedDocument,
+      };
+    });
+
+    expect(storedDocument).toBeNull();
+    expect(originalUpload).not.toBeNull();
+    expect(remainingStorageIds).toEqual([uploadStorageId]);
+  });
+
   it("marks documents as failed when indexing throws", async () => {
     const t = convexTest(schema, convexModules);
 
