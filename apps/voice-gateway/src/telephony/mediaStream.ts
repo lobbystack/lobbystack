@@ -179,7 +179,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "searchKnowledge",
       description:
-        "Search the receptionist snapshot knowledge, including FAQs and the document digest, for a specific question.",
+        "Search indexed business knowledge and uploaded documents for a specific question. Falls back to snapshot summary knowledge when indexed retrieval has no matches or is unavailable.",
       parameters: {
         type: "object",
         properties: {

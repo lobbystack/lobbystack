@@ -5,6 +5,7 @@ import {
   bookVoiceAppointment,
   checkVoiceAvailability,
   findVoiceAvailability,
+  searchVoiceKnowledge,
   takeVoiceMessage,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
@@ -50,9 +51,17 @@ function buildServicesSummary(snapshot: BusinessContextSnapshot): string {
     .join("\n");
 }
 
-function searchSnapshotKnowledge(snapshot: BusinessContextSnapshot, query: string) {
+type VoiceKnowledgeMatch = {
+  title?: string;
+  text: string;
+};
+
+function findSnapshotFaqMatches(
+  snapshot: BusinessContextSnapshot,
+  query: string,
+): Array<VoiceKnowledgeMatch> {
   const comparable = normalizeComparable(query);
-  const faqMatches = snapshot.priorityFaqs
+  return snapshot.priorityFaqs
     .filter((faq) => {
       const haystack = normalizeComparable(`${faq.title} ${faq.content} ${faq.tags.join(" ")}`);
       return comparable
@@ -65,12 +74,28 @@ function searchSnapshotKnowledge(snapshot: BusinessContextSnapshot, query: strin
       title: faq.title,
       text: faq.content,
     }));
+}
 
-  return {
-    faqMatches,
-    knowledgeDigest:
-      snapshot.knowledgeDigest || "No long-form knowledge has been configured for this business.",
-  };
+function buildSnapshotFallbackMatches(
+  snapshot: BusinessContextSnapshot,
+  query: string,
+): Array<VoiceKnowledgeMatch> {
+  const faqMatches = findSnapshotFaqMatches(snapshot, query);
+  if (faqMatches.length > 0) {
+    return faqMatches;
+  }
+
+  const digest = snapshot.knowledgeDigest?.trim();
+  if (!digest) {
+    return [];
+  }
+
+  return [
+    {
+      title: "Knowledge digest",
+      text: digest,
+    },
+  ];
 }
 
 function isTransferAllowed(snapshot: BusinessContextSnapshot): boolean {
@@ -154,10 +179,62 @@ export async function executeVoiceTool(input: {
     }
     case "searchKnowledge": {
       const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
-      const searchResult = searchSnapshotKnowledge(input.snapshot, parsed.query);
-      return {
-        result: searchResult,
-      };
+      try {
+        const matches = await searchVoiceKnowledge({
+          businessId: input.businessId,
+          query: parsed.query,
+        });
+
+        if (matches.length > 0) {
+          return {
+            result: {
+              matches,
+              source: "rag",
+              fallbackUsed: false,
+            },
+          };
+        }
+
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        if (fallbackMatches.length > 0) {
+          return {
+            result: {
+              matches: fallbackMatches,
+              source: "snapshot_fallback",
+              fallbackUsed: true,
+              fallbackReason: "no_matches",
+            },
+          };
+        }
+
+        return {
+          result: {
+            matches: [],
+            source: "none",
+            fallbackUsed: false,
+          },
+        };
+      } catch {
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        if (fallbackMatches.length > 0) {
+          return {
+            result: {
+              matches: fallbackMatches,
+              source: "snapshot_fallback",
+              fallbackUsed: true,
+              fallbackReason: "rag_error",
+            },
+          };
+        }
+
+        return {
+          result: {
+            matches: [],
+            source: "none",
+            fallbackUsed: false,
+          },
+        };
+      }
     }
     case "checkAvailability": {
       const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
