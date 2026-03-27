@@ -355,7 +355,7 @@ describe("Knowledge document OCR", () => {
       expect.any(Function),
     );
     expect(firstPage.getViewport).toHaveBeenNthCalledWith(1, { scale: 1.25 });
-    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 2 });
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 1.75 });
     expect(setParametersMock).toHaveBeenNthCalledWith(1, {
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
@@ -369,7 +369,7 @@ describe("Knowledge document OCR", () => {
     expect(setParametersMock).toHaveBeenNthCalledWith(3, {
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
-      user_defined_dpi: "144",
+      user_defined_dpi: "126",
     });
   });
 
@@ -420,7 +420,7 @@ describe("Knowledge document OCR", () => {
       "Veuillez remplir le formulaire disponible à la page : uqam.ca/admission",
     );
     expect(firstPage.getViewport).toHaveBeenNthCalledWith(1, { scale: 1.25 });
-    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 2 });
+    expect(firstPage.getViewport).toHaveBeenNthCalledWith(2, { scale: 1.75 });
     expect(runWithCachedInProcessTesseractWorkerMock).toHaveBeenNthCalledWith(
       1,
       {
@@ -464,7 +464,7 @@ describe("Knowledge document OCR", () => {
     expect(setParametersMock).toHaveBeenNthCalledWith(3, {
       preserve_interword_spaces: "1",
       tessedit_pageseg_mode: "3",
-      user_defined_dpi: "144",
+      user_defined_dpi: "126",
     });
   });
 

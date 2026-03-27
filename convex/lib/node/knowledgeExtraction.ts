@@ -59,6 +59,7 @@ export const KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR =
   "We couldn't OCR this PDF locally. Upload a searchable PDF or a clearer scan.";
 
 const KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE = 2;
+const KNOWLEDGE_DOCUMENT_OCR_SINGLE_PAGE_HIGH_QUALITY_RENDER_SCALE = 1.75;
 const KNOWLEDGE_DOCUMENT_OCR_SINGLE_PAGE_FAST_RENDER_SCALE = 1.25;
 const KNOWLEDGE_DOCUMENT_OCR_MULTI_PAGE_FAST_RENDER_SCALE = 1.5;
 const TESSERACT_OEM_LSTM_ONLY = 1;
@@ -579,6 +580,12 @@ function getPreferredFastOcrRenderScale(pageCount: number): number {
     : KNOWLEDGE_DOCUMENT_OCR_MULTI_PAGE_FAST_RENDER_SCALE;
 }
 
+function getPreferredHighQualityOcrRenderScale(pageCount: number): number {
+  return pageCount <= 1
+    ? KNOWLEDGE_DOCUMENT_OCR_SINGLE_PAGE_HIGH_QUALITY_RENDER_SCALE
+    : KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE;
+}
+
 function countTextWords(text: string): number {
   return text
     .trim()
@@ -865,24 +872,26 @@ export async function extractPdfTextWithLocalOcr(
       })
         ? KNOWLEDGE_DOCUMENT_OCR_LANGUAGES
         : languages;
+      const highQualityRenderScale =
+        getPreferredHighQualityOcrRenderScale(document.numPages);
 
       if (
         recoveryLanguages.length === languages.length &&
-        fastRenderScale >= KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE
+        fastRenderScale >= highQualityRenderScale
       ) {
         await emitProgress(100);
         return bestText;
       }
 
       const highQualityImages = await renderPagesAtScale(
-        KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+        highQualityRenderScale,
         [75, 85],
       );
       const recoveryPrimaryText = await runRecognitionPass({
         pageImages: highQualityImages,
         languages: recoveryLanguages,
         pagesegMode: TESSERACT_PSM_AUTO,
-        renderScale: KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+        renderScale: highQualityRenderScale,
         range: [85, 95],
       });
       bestText = choosePreferredOcrText([bestText, recoveryPrimaryText]);
@@ -907,7 +916,7 @@ export async function extractPdfTextWithLocalOcr(
           pageImages: highQualityImages,
           languages: recoveryLanguages,
           pagesegMode: TESSERACT_PSM_SINGLE_BLOCK,
-          renderScale: KNOWLEDGE_DOCUMENT_OCR_HIGH_QUALITY_RENDER_SCALE,
+          renderScale: highQualityRenderScale,
           range: [95, 100],
         });
         bestText = choosePreferredOcrText([bestText, recoveryFallbackText]);
