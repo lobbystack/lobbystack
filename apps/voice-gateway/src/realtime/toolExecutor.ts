@@ -56,35 +56,9 @@ type VoiceKnowledgeMatch = {
   text: string;
 };
 
-function findSnapshotFaqMatches(
-  snapshot: BusinessContextSnapshot,
-  query: string,
-): Array<VoiceKnowledgeMatch> {
-  const comparable = normalizeComparable(query);
-  return snapshot.priorityFaqs
-    .filter((faq) => {
-      const haystack = normalizeComparable(`${faq.title} ${faq.content} ${faq.tags.join(" ")}`);
-      return comparable
-        .split(" ")
-        .filter(Boolean)
-        .every((term) => haystack.includes(term));
-    })
-    .slice(0, 4)
-    .map((faq) => ({
-      title: faq.title,
-      text: faq.content,
-    }));
-}
-
 function buildSnapshotFallbackMatches(
   snapshot: BusinessContextSnapshot,
-  query: string,
 ): Array<VoiceKnowledgeMatch> {
-  const faqMatches = findSnapshotFaqMatches(snapshot, query);
-  if (faqMatches.length > 0) {
-    return faqMatches;
-  }
-
   const digest = snapshot.knowledgeDigest?.trim();
   if (!digest) {
     return [];
@@ -195,7 +169,7 @@ export async function executeVoiceTool(input: {
           };
         }
 
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot);
         if (fallbackMatches.length > 0) {
           return {
             result: {
@@ -215,7 +189,7 @@ export async function executeVoiceTool(input: {
           },
         };
       } catch {
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot);
         if (fallbackMatches.length > 0) {
           return {
             result: {

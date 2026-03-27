@@ -81,16 +81,7 @@ describe("executeVoiceTool searchKnowledge", () => {
       rawArguments: JSON.stringify({ query: "parking" }),
       snapshot: {
         ...demoSnapshot,
-        knowledgeDigest: "",
-        priorityFaqs: [
-          {
-            id: "faq-1",
-            title: "Parking",
-            content: "Parking is available behind the building.",
-            tags: ["parking"],
-            priority: 1,
-          },
-        ],
+        knowledgeDigest: "Parking is available behind the building.",
       },
       businessId: "business_123",
       callerPhone: "+14165550000",
@@ -99,7 +90,7 @@ describe("executeVoiceTool searchKnowledge", () => {
     expect(result.result).toEqual({
       matches: [
         {
-          title: "Parking",
+          title: "Knowledge digest",
           text: "Parking is available behind the building.",
         },
       ],
