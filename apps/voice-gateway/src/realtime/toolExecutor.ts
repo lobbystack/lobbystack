@@ -59,16 +59,30 @@ type VoiceKnowledgeMatch = {
 function buildSnapshotFallbackMatches(
   snapshot: BusinessContextSnapshot,
 ): Array<VoiceKnowledgeMatch> {
-  const digest = snapshot.knowledgeDigest?.trim();
-  if (!digest) {
-    return [];
-  }
+  const snippetMatches = (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
+      const text = snippet.content.trim();
+      if (!text) {
+        return [];
+      }
 
+      return [
+        {
+          title: snippet.title,
+          text,
+        } satisfies VoiceKnowledgeMatch,
+      ];
+    });
+  const digest = snapshot.knowledgeDigest?.trim();
   return [
-    {
-      title: "Knowledge digest",
-      text: digest,
-    },
+    ...snippetMatches,
+    ...(digest
+      ? [
+          {
+            title: "Knowledge digest",
+            text: digest,
+          } satisfies VoiceKnowledgeMatch,
+        ]
+      : []),
   ];
 }
 

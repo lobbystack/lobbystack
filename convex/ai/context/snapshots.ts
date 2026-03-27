@@ -161,7 +161,7 @@ export const refreshSnapshot = internalMutation({
       throw new Error("Business not found.");
     }
 
-    const [profile, hours, closures, services, phoneNumbers, documents, existing] =
+    const [profile, hours, closures, services, phoneNumbers, snippets, documents, existing] =
       await Promise.all([
         ctx.db
           .query("receptionist_profiles")
@@ -186,6 +186,12 @@ export const refreshSnapshot = internalMutation({
         ctx.db
           .query("phone_numbers")
           .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+          .collect(),
+        ctx.db
+          .query("knowledge_snippets")
+          .withIndex("by_business_id_and_active", (q) =>
+            q.eq("businessId", args.businessId).eq("active", true),
+          )
           .collect(),
         ctx.db
           .query("knowledge_documents")
@@ -252,6 +258,13 @@ export const refreshSnapshot = internalMutation({
           durationMinutes: row.durationMinutes,
           ...(row.description !== undefined ? { description: row.description } : {}),
         })),
+      snippets: snippets.map((row) => ({
+        id: String(row._id),
+        title: row.title,
+        content: row.content,
+        tags: row.tags,
+        priority: row.priority,
+      })),
       transferPolicy: {
         mode: profile.transferMode as SnapshotBuilderInput["transferPolicy"]["mode"],
         ...(profile.transferNumber !== undefined

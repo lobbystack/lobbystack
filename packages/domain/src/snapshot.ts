@@ -2,6 +2,7 @@ import type {
   BusinessContextSnapshot,
   ClosureWindow,
   HoursWindow,
+  KnowledgeSnippet,
   ServiceSummary,
   TransferPolicy,
 } from "@ai-receptionist/shared";
@@ -24,6 +25,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
   phoneNumber?: string;
@@ -64,6 +66,10 @@ export function buildBusinessContextSnapshot(
     hours: input.hours,
     closures: input.closures,
     services: input.services,
+    knowledgeSnippets: input.snippets
+      .slice()
+      .sort((left, right) => right.priority - left.priority)
+      .slice(0, 8),
     contactChannels: {
       ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.smsNumber ? { smsNumber: input.smsNumber } : {}),

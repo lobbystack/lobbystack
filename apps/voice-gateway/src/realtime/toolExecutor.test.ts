@@ -54,6 +54,15 @@ describe("executeVoiceTool searchKnowledge", () => {
       rawArguments: JSON.stringify({ query: "Do I need an appointment?" }),
       snapshot: {
         ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-1",
+            title: "Appointments",
+            content: "Appointments are recommended before walking in.",
+            tags: [],
+            priority: 10,
+          },
+        ],
         knowledgeDigest: "Appointments are recommended before walking in.",
       },
       businessId: "business_123",
@@ -62,6 +71,10 @@ describe("executeVoiceTool searchKnowledge", () => {
 
     expect(result.result).toEqual({
       matches: [
+        {
+          title: "Appointments",
+          text: "Appointments are recommended before walking in.",
+        },
         {
           title: "Knowledge digest",
           text: "Appointments are recommended before walking in.",
@@ -81,6 +94,15 @@ describe("executeVoiceTool searchKnowledge", () => {
       rawArguments: JSON.stringify({ query: "parking" }),
       snapshot: {
         ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-1",
+            title: "Parking",
+            content: "Parking is available behind the building.",
+            tags: [],
+            priority: 10,
+          },
+        ],
         knowledgeDigest: "Parking is available behind the building.",
       },
       businessId: "business_123",
@@ -89,6 +111,10 @@ describe("executeVoiceTool searchKnowledge", () => {
 
     expect(result.result).toEqual({
       matches: [
+        {
+          title: "Parking",
+          text: "Parking is available behind the building.",
+        },
         {
           title: "Knowledge digest",
           text: "Parking is available behind the building.",
@@ -109,6 +135,7 @@ describe("executeVoiceTool searchKnowledge", () => {
       snapshot: {
         ...demoSnapshot,
         knowledgeDigest: "",
+        knowledgeSnippets: [],
       },
       businessId: "business_123",
       callerPhone: "+14165550000",

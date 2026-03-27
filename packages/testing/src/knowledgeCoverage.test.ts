@@ -603,8 +603,21 @@ describe("Knowledge coverage", () => {
     expect(initialSnapshot?.knowledgeDigest).toBe(
       "Services: Service overview and intake checklist.\nPolicies: Standard policy handbook.",
     );
+    expect(initialSnapshot?.knowledgeSnippets?.map((snippet) => snippet.title)).toEqual([
+      "Urgent guidance",
+      "Parking guidance",
+    ]);
+    expect(initialSnapshot?.knowledgeSnippets?.map((snippet) => snippet.content)).toEqual([
+      "Urgent calls should be transferred.",
+      "Parking is behind the building.",
+    ]);
     expect(initialSnapshot?.knowledgeDigest).not.toContain("Broken Draft");
     expect(initialSnapshot?.knowledgeDigest).not.toContain("Other Tenant Handbook");
+    expect(
+      initialSnapshot?.knowledgeSnippets?.some(
+        (snippet) => snippet.title === "Other Tenant Guidance",
+      ),
+    ).toBe(false);
 
     await t.run(async (ctx) => {
       await ctx.db.patch(firstDocumentId, {
@@ -637,6 +650,21 @@ describe("Knowledge coverage", () => {
     expect(refreshedSnapshot?.knowledgeDigest).toBe(
       "Policies: Updated policy handbook with after-hours guidance.\nServices: Service overview and intake checklist.",
     );
+    expect(
+      refreshedSnapshot?.knowledgeSnippets?.map((snippet) => ({
+        title: snippet.title,
+        content: snippet.content,
+      })),
+    ).toEqual([
+      {
+        title: "Parking guidance",
+        content: "Updated parking instructions for visitors.",
+      },
+      {
+        title: "Urgent guidance",
+        content: "Updated urgent guidance for after-hours callers.",
+      },
+    ]);
   });
 
   it("deletes uploaded documents and snippets only for the current business", async () => {
