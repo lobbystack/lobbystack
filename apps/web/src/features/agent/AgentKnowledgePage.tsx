@@ -308,11 +308,13 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       return next;
     });
 
+    let fallbackText = document.textContent ?? "";
     try {
       const viewerContent = await convex.query(api.ai.context.knowledge.getKnowledgeDocumentViewerContent, {
         businessId,
         documentId: document._id,
       });
+      fallbackText = viewerContent.textContent;
 
       if (!viewerContent.extractedTextUrl) {
         writeCachedViewerText(document, viewerContent.textContent);
@@ -335,6 +337,14 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         [documentId]: fullText,
       }));
     } catch (error) {
+      if (fallbackText.trim()) {
+        writeCachedViewerText(document, fallbackText);
+        setViewerTextByDocumentId((current) => ({
+          ...current,
+          [documentId]: fallbackText,
+        }));
+        return;
+      }
       const message =
         error instanceof Error ? error.message : t(`agent:sections.${section}.previewError`);
       setViewerErrorsByDocumentId((current) => ({

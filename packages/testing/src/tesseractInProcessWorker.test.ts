@@ -109,6 +109,49 @@ describe("createInProcessTesseractWorker", () => {
     ).toHaveLength(1);
   });
 
+  it("requeues queued OCR work onto a fresh worker after a prior shared run fails", async () => {
+    let rejectFirstRun!: (error: Error) => void;
+    let markFirstRunStarted!: () => void;
+    const firstRunStarted = new Promise<void>((resolve) => {
+      markFirstRunStarted = resolve;
+    });
+
+    const firstRun = runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng"],
+        oem: 1,
+      },
+      async () => {
+        markFirstRunStarted();
+        await new Promise<never>((_resolve, reject) => {
+          rejectFirstRun = reject;
+        });
+      },
+    );
+
+    const secondRun = runWithCachedInProcessTesseractWorker(
+      {
+        cacheMethod: "none",
+        languages: ["eng"],
+        oem: 1,
+      },
+      async () => "ok",
+    );
+
+    await firstRunStarted;
+    rejectFirstRun(new Error("boom"));
+
+    await expect(firstRun).rejects.toThrow("boom");
+    await expect(secondRun).resolves.toBe("ok");
+    expect(
+      dispatchHandlersMock.mock.calls.filter(([packet]) => packet.action === "load"),
+    ).toHaveLength(2);
+    expect(
+      dispatchHandlersMock.mock.calls.filter(([packet]) => packet.action === "initialize"),
+    ).toHaveLength(2);
+  });
+
   it("loads OCR languages from bundled local assets instead of remote paths", async () => {
     await createInProcessTesseractWorker({
       cacheMethod: "none",

@@ -88,10 +88,37 @@ const decodedLanguageDataCache = new Map<string, Uint8Array>();
 const cachedWorkerEntries = new Map<
   string,
   {
+    invalidated: boolean;
+    pendingUsers: number;
     release: Promise<void>;
+    terminationPromise?: Promise<void>;
     workerPromise: Promise<InProcessWorker>;
   }
 >();
+
+async function terminateCachedWorkerEntry(entry: {
+  invalidated: boolean;
+  pendingUsers: number;
+  release: Promise<void>;
+  terminationPromise?: Promise<void>;
+  workerPromise: Promise<InProcessWorker>;
+}): Promise<void> {
+  if (entry.terminationPromise) {
+    await entry.terminationPromise;
+    return;
+  }
+
+  entry.terminationPromise = (async () => {
+    try {
+      const worker = await entry.workerPromise;
+      await worker.terminate();
+    } catch {
+      // Ignore cleanup failures while tearing down a broken cached worker.
+    }
+  })();
+
+  await entry.terminationPromise;
+}
 
 async function loadBundledLanguageData(args: {
   languages: ReadonlyArray<string>;
@@ -241,12 +268,15 @@ export async function runWithCachedInProcessTesseractWorker<T>(
 
   if (!entry) {
     entry = {
+      invalidated: false,
+      pendingUsers: 0,
       release: Promise.resolve(),
       workerPromise: createInProcessTesseractWorker(args),
     };
     cachedWorkerEntries.set(key, entry);
   }
 
+  entry.pendingUsers += 1;
   const waitForTurn = entry.release.catch(() => undefined);
   let releaseCurrentTurn!: () => void;
   entry.release = new Promise<void>((resolve) => {
@@ -255,19 +285,23 @@ export async function runWithCachedInProcessTesseractWorker<T>(
 
   try {
     await waitForTurn;
+    if (entry.invalidated) {
+      return await runWithCachedInProcessTesseractWorker(args, callback);
+    }
     const worker = await entry.workerPromise;
     return await callback(worker);
   } catch (error) {
-    cachedWorkerEntries.delete(key);
-    try {
-      const worker = await entry.workerPromise;
-      await worker.terminate();
-    } catch {
-      // Ignore cleanup failures while tearing down a broken cached worker.
+    entry.invalidated = true;
+    if (cachedWorkerEntries.get(key) === entry) {
+      cachedWorkerEntries.delete(key);
     }
     throw error;
   } finally {
     releaseCurrentTurn();
+    entry.pendingUsers -= 1;
+    if (entry.invalidated && entry.pendingUsers === 0) {
+      await terminateCachedWorkerEntry(entry);
+    }
   }
 }
 
@@ -278,8 +312,7 @@ export async function clearCachedInProcessTesseractWorkers(): Promise<void> {
   await Promise.all(
     workers.map(async (entry) => {
       try {
-        const worker = await entry.workerPromise;
-        await worker.terminate();
+        await terminateCachedWorkerEntry(entry);
       } catch {
         // Ignore best-effort cleanup errors in tests.
       }
