@@ -30,6 +30,74 @@ type InlineConfirmDeleteButtonProps = {
   onConfirm: () => void;
 };
 
+const fullDocumentTextMemoryCache = new Map<string, string>();
+const VIEWER_TEXT_SESSION_STORAGE_PREFIX = "agent-knowledge-viewer-text:";
+const MAX_PERSISTED_VIEWER_TEXT_BYTES = 512 * 1024;
+
+function getViewerCachePrefix(documentId: string): string {
+  return `${VIEWER_TEXT_SESSION_STORAGE_PREFIX}${documentId}:`;
+}
+
+function getViewerCacheKey(document: Doc<"knowledge_documents">): string {
+  return `${getViewerCachePrefix(String(document._id))}${document.lastIndexedAt ?? "pending"}:${document.contentHash ?? "none"}`;
+}
+
+function clearViewerCacheForDocument(documentId: string): void {
+  const prefix = getViewerCachePrefix(documentId);
+
+  for (const key of fullDocumentTextMemoryCache.keys()) {
+    if (key.startsWith(prefix)) {
+      fullDocumentTextMemoryCache.delete(key);
+    }
+  }
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index);
+    if (key?.startsWith(prefix)) {
+      window.sessionStorage.removeItem(key);
+    }
+  }
+}
+
+function readCachedViewerText(cacheKey: string): string | null {
+  const inMemory = fullDocumentTextMemoryCache.get(cacheKey);
+  if (inMemory !== undefined) {
+    return inMemory;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const stored = window.sessionStorage.getItem(cacheKey);
+  if (stored !== null) {
+    fullDocumentTextMemoryCache.set(cacheKey, stored);
+  }
+  return stored;
+}
+
+function writeCachedViewerText(document: Doc<"knowledge_documents">, text: string): void {
+  const documentId = String(document._id);
+  const cacheKey = getViewerCacheKey(document);
+
+  clearViewerCacheForDocument(documentId);
+  fullDocumentTextMemoryCache.set(cacheKey, text);
+
+  if (typeof window === "undefined" || new Blob([text]).size > MAX_PERSISTED_VIEWER_TEXT_BYTES) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(cacheKey, text);
+  } catch {
+    // Ignore browser storage quota failures and keep the in-memory cache.
+  }
+}
+
 function InlineConfirmDeleteButton({
   deleting,
   disabled = false,
@@ -184,6 +252,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     setOptimisticDeletedIds((current) => [...current, entryId]);
     try {
       if ("sourceType" in entry) {
+        clearViewerCacheForDocument(entryId);
+        setViewerTextByDocumentId((current) => {
+          if (!(entryId in current)) {
+            return current;
+          }
+          const next = { ...current };
+          delete next[entryId];
+          return next;
+        });
         await deleteKnowledgeEntry({
           businessId,
           documentId: entry._id,
@@ -205,11 +282,19 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
   async function loadFullDocumentText(document: Doc<"knowledge_documents">): Promise<void> {
     const documentId = String(document._id);
+    const cachedText = readCachedViewerText(getViewerCacheKey(document));
     if (
       !document.extractedTextStorageId ||
       viewerTextByDocumentId[documentId] !== undefined ||
-      loadingViewerIds.includes(documentId)
+      loadingViewerIds.includes(documentId) ||
+      cachedText !== null
     ) {
+      if (cachedText !== null && viewerTextByDocumentId[documentId] === undefined) {
+        setViewerTextByDocumentId((current) => ({
+          ...current,
+          [documentId]: cachedText,
+        }));
+      }
       return;
     }
 
@@ -230,6 +315,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       });
 
       if (!viewerContent.extractedTextUrl) {
+        writeCachedViewerText(document, viewerContent.textContent);
         setViewerTextByDocumentId((current) => ({
           ...current,
           [documentId]: viewerContent.textContent,
@@ -243,6 +329,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       }
 
       const fullText = await response.text();
+      writeCachedViewerText(document, fullText);
       setViewerTextByDocumentId((current) => ({
         ...current,
         [documentId]: fullText,
