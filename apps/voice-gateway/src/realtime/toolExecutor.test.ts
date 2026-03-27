@@ -147,4 +147,52 @@ describe("executeVoiceTool searchKnowledge", () => {
       fallbackUsed: false,
     });
   });
+
+  it("filters unrelated snapshot fallback matches by the caller query", async () => {
+    searchVoiceKnowledgeMock.mockResolvedValue([]);
+
+    const result = await executeVoiceTool({
+      toolName: "searchKnowledge",
+      rawArguments: JSON.stringify({ query: "refund policy" }),
+      snapshot: {
+        ...demoSnapshot,
+        knowledgeSnippets: [
+          {
+            id: "snippet-1",
+            title: "Parking",
+            content: "Parking is available behind the building.",
+            tags: [],
+            priority: 10,
+          },
+          {
+            id: "snippet-2",
+            title: "Refund policy",
+            content: "Refunds are only available within 30 days of purchase.",
+            tags: [],
+            priority: 9,
+          },
+        ],
+        knowledgeDigest:
+          "Parking is behind the building. Refunds are only available within 30 days of purchase.",
+      },
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result.result).toEqual({
+      matches: [
+        {
+          title: "Refund policy",
+          text: "Refunds are only available within 30 days of purchase.",
+        },
+        {
+          title: "Knowledge digest",
+          text: "Parking is behind the building. Refunds are only available within 30 days of purchase.",
+        },
+      ],
+      source: "snapshot_fallback",
+      fallbackUsed: true,
+      fallbackReason: "no_matches",
+    });
+  });
 });

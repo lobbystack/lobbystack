@@ -56,26 +56,48 @@ type VoiceKnowledgeMatch = {
   text: string;
 };
 
+function matchesKnowledgeQuery(value: string, query: string): boolean {
+  const normalizedValue = normalizeComparable(value);
+  const normalizedQuery = normalizeComparable(query);
+
+  if (!normalizedValue || !normalizedQuery) {
+    return false;
+  }
+
+  if (normalizedValue.includes(normalizedQuery)) {
+    return true;
+  }
+
+  const queryTokens = normalizedQuery
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+
+  return queryTokens.some((token) => normalizedValue.includes(token));
+}
+
 function buildSnapshotFallbackMatches(
   snapshot: BusinessContextSnapshot,
+  query: string,
 ): Array<VoiceKnowledgeMatch> {
   const snippetMatches = (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
-      const text = snippet.content.trim();
-      if (!text) {
-        return [];
-      }
+    const text = snippet.content.trim();
+    const comparableSnippet = [snippet.title, text].filter(Boolean).join(" ");
+    if (!text || !matchesKnowledgeQuery(comparableSnippet, query)) {
+      return [];
+    }
 
-      return [
-        {
-          title: snippet.title,
-          text,
-        } satisfies VoiceKnowledgeMatch,
-      ];
-    });
+    return [
+      {
+        title: snippet.title,
+        text,
+      } satisfies VoiceKnowledgeMatch,
+    ];
+  });
   const digest = snapshot.knowledgeDigest?.trim();
   return [
     ...snippetMatches,
-    ...(digest
+    ...(digest && matchesKnowledgeQuery(digest, query)
       ? [
           {
             title: "Knowledge digest",
@@ -183,7 +205,7 @@ export async function executeVoiceTool(input: {
           };
         }
 
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot);
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
         if (fallbackMatches.length > 0) {
           return {
             result: {
@@ -203,7 +225,7 @@ export async function executeVoiceTool(input: {
           },
         };
       } catch {
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot);
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
         if (fallbackMatches.length > 0) {
           return {
             result: {
