@@ -207,7 +207,6 @@ export default defineSchema({
     indexedEntryId: v.optional(v.string()),
     indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
-    processingProgress: v.optional(v.number()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_source_type", ["businessId", "sourceType"]),
