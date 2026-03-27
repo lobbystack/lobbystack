@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildBusinessContextSnapshot } from "./snapshot";
 
 describe("buildBusinessContextSnapshot", () => {
-  it("sorts FAQs by priority and includes the knowledge digest", () => {
+  it("includes the knowledge digest, prioritized snippets, and contact channels", () => {
     const snapshot = buildBusinessContextSnapshot({
       businessId: "biz-1",
       version: "v1",
@@ -21,8 +21,8 @@ describe("buildBusinessContextSnapshot", () => {
       closures: [],
       services: [{ id: "svc-1", name: "Checkup", durationMinutes: 30 }],
       snippets: [
-        { id: "faq-1", title: "Parking", content: "Rear lot", tags: [], priority: 2 },
-        { id: "faq-2", title: "Masks", content: "Optional", tags: [], priority: 10 },
+        { id: "snippet-1", title: "Parking", content: "Rear lot", tags: [], priority: 2 },
+        { id: "snippet-2", title: "Masks", content: "Optional", tags: [], priority: 10 },
       ],
       transferPolicy: { mode: "on_urgent", transferNumber: "+14165551234" },
       phoneNumber: "+14165550000",
@@ -30,7 +30,10 @@ describe("buildBusinessContextSnapshot", () => {
     });
 
     expect(snapshot.knowledgeDigest).toBe("Parking is behind the building.");
-    expect(snapshot.priorityFaqs.map((faq) => faq.id)).toEqual(["faq-2", "faq-1"]);
+    expect(snapshot.knowledgeSnippets?.map((snippet) => snippet.id)).toEqual([
+      "snippet-2",
+      "snippet-1",
+    ]);
     expect(snapshot.contactChannels.phoneNumber).toBe("+14165550000");
   });
 });

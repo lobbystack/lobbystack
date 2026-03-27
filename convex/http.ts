@@ -122,6 +122,11 @@ const takeMessageSchema = z.object({
   callbackWindow: z.string().min(1).optional(),
 });
 
+const searchKnowledgeSchema = z.object({
+  businessId: z.string().min(1),
+  query: z.string().min(1),
+});
+
 const googleCalendarCallbackQuerySchema = z.object({
   code: z.string().min(1).optional(),
   state: z.string().min(1).optional(),
@@ -885,6 +890,30 @@ http.route({
         : {}),
       ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
       contactPhone: body.data.contactPhone,
+    });
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/search-knowledge",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, searchKnowledgeSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runAction(internal.ai.context.knowledge.searchKnowledgeForVoiceInternal, {
+      businessId: asId("businesses", body.data.businessId),
+      query: body.data.query,
+      limit: 4,
     });
 
     return Response.json(result);

@@ -5,6 +5,7 @@ import {
   bookVoiceAppointment,
   checkVoiceAvailability,
   findVoiceAvailability,
+  searchVoiceKnowledge,
   takeVoiceMessage,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
@@ -50,27 +51,61 @@ function buildServicesSummary(snapshot: BusinessContextSnapshot): string {
     .join("\n");
 }
 
-function searchSnapshotKnowledge(snapshot: BusinessContextSnapshot, query: string) {
-  const comparable = normalizeComparable(query);
-  const faqMatches = snapshot.priorityFaqs
-    .filter((faq) => {
-      const haystack = normalizeComparable(`${faq.title} ${faq.content} ${faq.tags.join(" ")}`);
-      return comparable
-        .split(" ")
-        .filter(Boolean)
-        .every((term) => haystack.includes(term));
-    })
-    .slice(0, 4)
-    .map((faq) => ({
-      title: faq.title,
-      text: faq.content,
-    }));
+type VoiceKnowledgeMatch = {
+  title?: string;
+  text: string;
+};
 
-  return {
-    faqMatches,
-    knowledgeDigest:
-      snapshot.knowledgeDigest || "No long-form knowledge has been configured for this business.",
-  };
+function matchesKnowledgeQuery(value: string, query: string): boolean {
+  const normalizedValue = normalizeComparable(value);
+  const normalizedQuery = normalizeComparable(query);
+
+  if (!normalizedValue || !normalizedQuery) {
+    return false;
+  }
+
+  if (normalizedValue.includes(normalizedQuery)) {
+    return true;
+  }
+
+  const queryTokens = normalizedQuery
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+
+  return queryTokens.some((token) => normalizedValue.includes(token));
+}
+
+function buildSnapshotFallbackMatches(
+  snapshot: BusinessContextSnapshot,
+  query: string,
+): Array<VoiceKnowledgeMatch> {
+  const snippetMatches = (snapshot.knowledgeSnippets ?? []).flatMap((snippet) => {
+    const text = snippet.content.trim();
+    const comparableSnippet = [snippet.title, text].filter(Boolean).join(" ");
+    if (!text || !matchesKnowledgeQuery(comparableSnippet, query)) {
+      return [];
+    }
+
+    return [
+      {
+        title: snippet.title,
+        text,
+      } satisfies VoiceKnowledgeMatch,
+    ];
+  });
+  const digest = snapshot.knowledgeDigest?.trim();
+  return [
+    ...snippetMatches,
+    ...(digest && matchesKnowledgeQuery(digest, query)
+      ? [
+          {
+            title: "Knowledge digest",
+            text: digest,
+          } satisfies VoiceKnowledgeMatch,
+        ]
+      : []),
+  ];
 }
 
 function isTransferAllowed(snapshot: BusinessContextSnapshot): boolean {
@@ -154,10 +189,62 @@ export async function executeVoiceTool(input: {
     }
     case "searchKnowledge": {
       const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
-      const searchResult = searchSnapshotKnowledge(input.snapshot, parsed.query);
-      return {
-        result: searchResult,
-      };
+      try {
+        const matches = await searchVoiceKnowledge({
+          businessId: input.businessId,
+          query: parsed.query,
+        });
+
+        if (matches.length > 0) {
+          return {
+            result: {
+              matches,
+              source: "rag",
+              fallbackUsed: false,
+            },
+          };
+        }
+
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        if (fallbackMatches.length > 0) {
+          return {
+            result: {
+              matches: fallbackMatches,
+              source: "snapshot_fallback",
+              fallbackUsed: true,
+              fallbackReason: "no_matches",
+            },
+          };
+        }
+
+        return {
+          result: {
+            matches: [],
+            source: "none",
+            fallbackUsed: false,
+          },
+        };
+      } catch {
+        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+        if (fallbackMatches.length > 0) {
+          return {
+            result: {
+              matches: fallbackMatches,
+              source: "snapshot_fallback",
+              fallbackUsed: true,
+              fallbackReason: "rag_error",
+            },
+          };
+        }
+
+        return {
+          result: {
+            matches: [],
+            source: "none",
+            fallbackUsed: false,
+          },
+        };
+      }
     }
     case "checkAvailability": {
       const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));

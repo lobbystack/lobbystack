@@ -50,7 +50,6 @@ const snapshot: BusinessContextSnapshot = {
   hours: [],
   closures: [],
   services: [],
-  priorityFaqs: [],
   contactChannels: {
     phoneNumber: "+14165550000",
   },

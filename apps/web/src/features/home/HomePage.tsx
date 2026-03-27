@@ -11,8 +11,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
-
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,7 +35,6 @@ import {
 } from "@/components/ui/item";
 import { PageHeader } from "@/components/page-header";
 import { Separator } from "@/components/ui/separator";
-import { BusinessSnapshotCard } from "@/features/settings/BusinessSnapshotCard";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import {
   getFollowUpDisplayTitle,
@@ -48,7 +45,6 @@ import { formatDateTime, resolveLocale } from "@/lib/locale";
 
 type HomePageProps = {
   businessId?: Id<"businesses">;
-  snapshot: BusinessContextSnapshot;
 };
 
 type HomeSummary = {
@@ -257,7 +253,7 @@ function getActionDisplayTitle(
   });
 }
 
-export function HomePage({ businessId, snapshot }: HomePageProps) {
+export function HomePage({ businessId }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const summary = useQuery(
@@ -277,10 +273,7 @@ export function HomePage({ businessId, snapshot }: HomePageProps) {
 
   if (!businessId) {
     return (
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-        <BusinessSetupCard />
-        <BusinessSnapshotCard snapshot={snapshot} />
-      </div>
+      <BusinessSetupCard />
     );
   }
 

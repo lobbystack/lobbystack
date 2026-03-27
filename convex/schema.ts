@@ -247,7 +247,7 @@ export default defineSchema({
     hours: v.array(hoursWindowValidator),
     closures: v.array(closureWindowValidator),
     services: v.array(serviceSummaryValidator),
-    priorityFaqs: v.array(snippetValidator),
+    knowledgeSnippets: v.optional(v.array(snippetValidator)),
     contactChannels: v.object({
       phoneNumber: v.optional(v.string()),
       smsNumber: v.optional(v.string()),

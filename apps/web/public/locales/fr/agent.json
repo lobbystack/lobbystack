@@ -15,7 +15,7 @@
       "listTitle": "Base de connaissances",
       "addKnowledge": "Ajouter",
       "uploadDocument": "Téléverser un document",
-      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des FAQ ou toute autre information que votre réceptionniste devrait connaître.",
+      "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des politiques ou toute autre information que votre réceptionniste devrait connaître.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",

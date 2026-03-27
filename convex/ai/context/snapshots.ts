@@ -277,7 +277,10 @@ export const refreshSnapshot = internalMutation({
     const { businessId: _unusedBusinessId, ...snapshot } = snapshotPayload;
 
     if (existing) {
-      await ctx.db.patch(existing._id, snapshot);
+      await ctx.db.replace(existing._id, {
+        businessId: args.businessId,
+        ...snapshot,
+      });
       return existing._id;
     }
     return await ctx.db.insert("business_context_snapshots", {

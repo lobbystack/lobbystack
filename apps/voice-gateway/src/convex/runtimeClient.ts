@@ -43,6 +43,11 @@ type TakeMessageResponse = {
   inboxItemId: string;
 };
 
+type SearchVoiceKnowledgeResponse = Array<{
+  title?: string;
+  text: string;
+}>;
+
 function getRuntimeBaseUrl(): string {
   return loadVoiceGatewayEnv(process.env).CONVEX_SITE_URL;
 }
@@ -198,4 +203,11 @@ export async function takeVoiceMessage(input: {
   callbackWindow?: string;
 }): Promise<TakeMessageResponse> {
   return await postJson<TakeMessageResponse>("/voice/tool/take-message", input);
+}
+
+export async function searchVoiceKnowledge(input: {
+  businessId: string;
+  query: string;
+}): Promise<SearchVoiceKnowledgeResponse> {
+  return await postJson<SearchVoiceKnowledgeResponse>("/voice/tool/search-knowledge", input);
 }

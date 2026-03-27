@@ -5,23 +5,18 @@ export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): strin
     .map((service) => `${service.name} (${service.durationMinutes} min)`)
     .join(", ");
 
-  const faqs = snapshot.priorityFaqs
-    .map((faq) => `- ${faq.title}: ${faq.content}`)
-    .join("\n");
-
   return [
     snapshot.voiceInstructions,
     "Start in the language implied by the configured greeting.",
     "Adapt to the caller's language as soon as the caller clearly establishes one.",
     "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
+    "For detailed questions about business policies, uploaded documents, or long-form knowledge, use the searchKnowledge tool instead of relying only on the summary.",
     `Greeting: ${snapshot.greeting}`,
     `Business summary: ${snapshot.summary}`,
     `Booking policy: ${snapshot.bookingPolicy}`,
     `Knowledge digest: ${snapshot.knowledgeDigest || "No long-form knowledge configured yet."}`,
     `Available services: ${services || "No services configured."}`,
     `Transfer mode: ${snapshot.transferPolicy.mode}`,
-    "Priority FAQs:",
-    faqs || "- No FAQs configured.",
   ].join("\n");
 }
 

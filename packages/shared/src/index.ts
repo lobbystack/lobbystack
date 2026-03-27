@@ -21,7 +21,6 @@ export type BusinessRole =
   | "viewer";
 
 export type ChannelKind = "sms" | "voice" | "dashboard";
-export type KnowledgeSourceType = "upload" | "faq" | "generated_snapshot";
 export type DocumentMimeType =
   | "application/pdf"
   | "text/plain"
@@ -82,7 +81,7 @@ export type BusinessContextSnapshot = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
-  priorityFaqs: Array<KnowledgeSnippet>;
+  knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {
     phoneNumber?: string;
     smsNumber?: string;
@@ -157,9 +156,9 @@ export const demoSnapshot: BusinessContextSnapshot = {
     { id: "svc-checkup", name: "General Checkup", durationMinutes: 30 },
     { id: "svc-vaccine", name: "Vaccination Visit", durationMinutes: 15 },
   ],
-  priorityFaqs: [
+  knowledgeSnippets: [
     {
-      id: "faq-1",
+      id: "snippet-1",
       title: "Parking",
       content: "Parking is available behind the building.",
       tags: ["parking"],

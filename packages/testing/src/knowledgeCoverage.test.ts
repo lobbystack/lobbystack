@@ -632,9 +632,9 @@ describe("Knowledge coverage", () => {
         });
         const businessASnippetId = await ctx.db.insert("knowledge_snippets", {
           businessId: businessAId,
-          title: "Business A FAQ",
+          title: "Business A snippet",
           content: "Only business A should see this snippet.",
-          tags: ["faq"],
+          tags: ["snippet"],
           priority: 10,
           active: true,
         });
@@ -650,9 +650,9 @@ describe("Knowledge coverage", () => {
         });
         await ctx.db.insert("knowledge_snippets", {
           businessId: businessBId,
-          title: "Business B FAQ",
+          title: "Business B snippet",
           content: "Business B private snippet.",
-          tags: ["faq"],
+          tags: ["snippet"],
           priority: 12,
           active: true,
         });
@@ -947,7 +947,7 @@ describe("Knowledge coverage", () => {
 
       const firstSnippetId = await ctx.db.insert("knowledge_snippets", {
         businessId,
-        title: "Urgent FAQ",
+        title: "Urgent guidance",
         content: "Urgent calls should be transferred.",
         tags: ["urgent"],
         priority: 20,
@@ -955,7 +955,7 @@ describe("Knowledge coverage", () => {
       });
       const secondSnippetId = await ctx.db.insert("knowledge_snippets", {
         businessId,
-        title: "Parking FAQ",
+        title: "Parking guidance",
         content: "Parking is behind the building.",
         tags: ["parking"],
         priority: 10,
@@ -963,16 +963,16 @@ describe("Knowledge coverage", () => {
       });
       await ctx.db.insert("knowledge_snippets", {
         businessId,
-        title: "Inactive FAQ",
-        content: "This inactive FAQ should be ignored.",
+        title: "Inactive guidance",
+        content: "This inactive guidance should be ignored.",
         tags: ["inactive"],
         priority: 100,
         active: false,
       });
       await ctx.db.insert("knowledge_snippets", {
         businessId: otherBusinessId,
-        title: "Other Tenant FAQ",
-        content: "Other tenant FAQ.",
+        title: "Other Tenant Guidance",
+        content: "Other tenant guidance.",
         tags: ["other"],
         priority: 80,
         active: true,
@@ -1002,19 +1002,21 @@ describe("Knowledge coverage", () => {
     expect(initialSnapshot?.knowledgeDigest).toBe(
       "Services: Service overview and intake checklist.\nPolicies: Standard policy handbook.",
     );
-    expect(initialSnapshot?.priorityFaqs.map((snippet) => snippet.title)).toEqual([
-      "Urgent FAQ",
-      "Parking FAQ",
+    expect(initialSnapshot?.knowledgeSnippets?.map((snippet) => snippet.title)).toEqual([
+      "Urgent guidance",
+      "Parking guidance",
     ]);
-    expect(initialSnapshot?.priorityFaqs.map((snippet) => snippet.content)).toEqual([
+    expect(initialSnapshot?.knowledgeSnippets?.map((snippet) => snippet.content)).toEqual([
       "Urgent calls should be transferred.",
       "Parking is behind the building.",
     ]);
     expect(initialSnapshot?.knowledgeDigest).not.toContain("Broken Draft");
     expect(initialSnapshot?.knowledgeDigest).not.toContain("Other Tenant Handbook");
-    expect(initialSnapshot?.priorityFaqs.some((snippet) => snippet.title === "Other Tenant FAQ")).toBe(
-      false,
-    );
+    expect(
+      initialSnapshot?.knowledgeSnippets?.some(
+        (snippet) => snippet.title === "Other Tenant Guidance",
+      ),
+    ).toBe(false);
 
     await t.run(async (ctx) => {
       await ctx.db.patch(firstDocumentId, {
@@ -1048,17 +1050,17 @@ describe("Knowledge coverage", () => {
       "Policies: Updated policy handbook with after-hours guidance.\nServices: Service overview and intake checklist.",
     );
     expect(
-      refreshedSnapshot?.priorityFaqs.map((snippet) => ({
+      refreshedSnapshot?.knowledgeSnippets?.map((snippet) => ({
         title: snippet.title,
         content: snippet.content,
       })),
     ).toEqual([
       {
-        title: "Parking FAQ",
+        title: "Parking guidance",
         content: "Updated parking instructions for visitors.",
       },
       {
-        title: "Urgent FAQ",
+        title: "Urgent guidance",
         content: "Updated urgent guidance for after-hours callers.",
       },
     ]);

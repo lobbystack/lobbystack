@@ -100,7 +100,7 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
     hours: input.hours,
     closures: input.closures,
     services: input.services,
-    priorityFaqs: input.snippets
+    knowledgeSnippets: input.snippets
       .slice()
       .sort((left, right) => right.priority - left.priority)
       .slice(0, 8),

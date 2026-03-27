@@ -19,7 +19,12 @@ describe("buildVoiceSystemPrompt", () => {
     expect(prompt).toContain(
       "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
     );
+    expect(prompt).toContain(
+      "For detailed questions about business policies, uploaded documents, or long-form knowledge, use the searchKnowledge tool instead of relying only on the summary.",
+    );
+    expect(prompt).toContain("Knowledge digest:");
     expect(prompt).not.toContain("Default conversation language:");
     expect(prompt).not.toContain("Speak in French unless the caller clearly asks to switch languages.");
+    expect(prompt).not.toContain("Priority FAQs:");
   });
 });
