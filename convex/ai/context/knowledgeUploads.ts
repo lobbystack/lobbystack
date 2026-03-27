@@ -1,7 +1,7 @@
 "use node";
 
 import { createHash } from "node:crypto";
-import { v } from "convex/values";
+import { getConvexSize, v } from "convex/values";
 
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
@@ -21,6 +21,8 @@ import {
 
 const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
+const MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES = 256 * 1024;
+const TRUNCATED_TEXT_SUFFIX = "\n\n...";
 
 function getPreferredOcrLanguages(
   locale: RuntimeLocale | null | undefined,
@@ -34,6 +36,30 @@ function getPreferredOcrLanguages(
   }
 
   return KNOWLEDGE_DOCUMENT_OCR_LANGUAGES;
+}
+
+function buildKnowledgeDocumentPreviewText(text: string): string {
+  if (getConvexSize(text) <= MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES) {
+    return text;
+  }
+
+  let low = 0;
+  let high = text.length;
+  let best = TRUNCATED_TEXT_SUFFIX.trim();
+
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidate = `${text.slice(0, middle).trimEnd()}${TRUNCATED_TEXT_SUFFIX}`;
+
+    if (getConvexSize(candidate) <= MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES) {
+      best = candidate;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+
+  return best;
 }
 
 async function extractUploadedKnowledgeDocumentText(input: {
@@ -150,12 +176,24 @@ async function prepareUploadedKnowledgeDocument(
     });
 
     const contentHash = createHash("sha256").update(normalizedText).digest("hex");
+    const extractedTextStorageId =
+      getConvexSize(normalizedText) > MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES
+        ? await ctx.storage.store(
+            new Blob([normalizedText], {
+              type: "text/plain;charset=utf-8",
+            }),
+          )
+        : undefined;
+    const previewText = extractedTextStorageId
+      ? buildKnowledgeDocumentPreviewText(normalizedText)
+      : normalizedText;
 
     await ctx.runMutation(internal.ai.context.knowledge.storeKnowledgeDocumentExtraction, {
       documentId,
       mimeType,
-      textContent: normalizedText,
+      textContent: previewText,
       contentHash,
+      ...(extractedTextStorageId !== undefined ? { extractedTextStorageId } : {}),
     });
     await ctx.runAction(internal.ai.context.knowledge.indexKnowledgeDocument, {
       documentId,

@@ -195,6 +195,7 @@ export default defineSchema({
     sourceType: v.string(),
     title: v.string(),
     storageId: v.optional(v.id("_storage")),
+    extractedTextStorageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
     textContent: v.optional(v.string()),
     status: v.string(),

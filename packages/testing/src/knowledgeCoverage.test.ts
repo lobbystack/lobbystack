@@ -22,6 +22,7 @@ import { api, internal } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import * as componentsModule from "../../../convex/lib/components";
 import { KNOWLEDGE_INDEX_VERSION } from "../../../convex/lib/components";
+import { normalizeKnowledgeDocumentText } from "../../../convex/lib/knowledgeDocuments";
 import schema from "../../../convex/schema";
 import {
   KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR,
@@ -306,6 +307,88 @@ describe("Knowledge coverage", () => {
       status: "indexed",
       indexedEntryId: "entry-native",
     });
+  });
+
+  it("stores oversized extracted text in file storage while keeping an inline preview", async () => {
+    const t = convexTest(schema, convexModules);
+    const largeExtractedText = normalizeKnowledgeDocumentText(
+      ("Very large searchable text for indexing.\n").repeat(90_000),
+    );
+
+    const { documentId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-large-text-storage",
+        name: "Knowledge Large Text Storage",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Large Text Storage",
+      });
+
+      const storageId = await ctx.storage.store(
+        new Blob(["%PDF-1.4"], {
+          type: "application/pdf",
+        }),
+      );
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Large searchable guide",
+        storageId,
+        mimeType: "application/pdf",
+        status: "queued",
+        tags: [],
+        importance: 5,
+      });
+
+      return { documentId };
+    });
+
+    extractKnowledgeDocumentTextMock.mockResolvedValueOnce(largeExtractedText);
+
+    const ragAddSpy = vi.spyOn(componentsModule.rag, "add").mockResolvedValueOnce({
+      status: "ready",
+      entryId: "entry-large-text" as never,
+    } as unknown as RagAddResult);
+
+    try {
+      await t.action(internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument, {
+        documentId,
+      });
+      expect(ragAddSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          text: largeExtractedText,
+        }),
+      );
+    } finally {
+      ragAddSpy.mockRestore();
+    }
+
+    const { storedDocument, storedExtractedText } = await t.run(async (ctx) => {
+      const storedDocument = await ctx.db.get(documentId);
+      const storedExtractedText =
+        storedDocument?.extractedTextStorageId !== undefined
+          ? await ctx.storage.get(storedDocument.extractedTextStorageId)
+          : null;
+      return {
+        storedDocument,
+        storedExtractedText: storedExtractedText ? await storedExtractedText.text() : null,
+      };
+    });
+
+    expect(extractKnowledgeDocumentTextMock).toHaveBeenCalledTimes(1);
+    expect(extractPdfTextWithLocalOcrMock).not.toHaveBeenCalled();
+    expect(storedDocument).toMatchObject({
+      status: "indexed",
+      indexedEntryId: "entry-large-text",
+      mimeType: "application/pdf",
+    });
+    expect(storedDocument?.extractedTextStorageId).toEqual(expect.any(String));
+    expect(storedDocument?.textContent).toEqual(expect.any(String));
+    expect(storedDocument!.textContent!.length).toBeLessThan(largeExtractedText.length);
+    expect(storedExtractedText).toBe(largeExtractedText);
   });
 
   it("marks oversized OCR PDFs as document errors", async () => {
