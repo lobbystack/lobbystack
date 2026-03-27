@@ -89,6 +89,10 @@ type ListKnowledgeArgs = {
   businessId: Id<"businesses">;
   section?: KnowledgeSection;
 };
+type KnowledgeDocumentViewerContentArgs = {
+  businessId: Id<"businesses">;
+  documentId: Id<"knowledge_documents">;
+};
 type CreateKnowledgeDocumentArgs = {
   businessId: Id<"businesses">;
   section?: KnowledgeSection;
@@ -751,6 +755,30 @@ export const listKnowledge = query({
       snippets: snippets.filter(
         (snippet) => resolveKnowledgeSection(snippet.section) === args.section,
       ),
+    };
+  },
+});
+
+export const getKnowledgeDocumentViewerContent = query({
+  args: {
+    businessId: v.id("businesses"),
+    documentId: v.id("knowledge_documents"),
+  },
+  handler: async (ctx: QueryCtx, args: KnowledgeDocumentViewerContentArgs) => {
+    await requireMembership(ctx, args.businessId);
+
+    const document = await ctx.db.get(args.documentId);
+    if (!document || document.businessId !== args.businessId) {
+      throw new Error("Knowledge document not found.");
+    }
+
+    return {
+      textContent: document.textContent ?? "",
+      extractedTextUrl: document.extractedTextStorageId
+        ? await ctx.storage.getUrl(document.extractedTextStorageId)
+        : null,
+      error: document.error ?? null,
+      status: document.status,
     };
   },
 });

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useConvex, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Trash2 } from "lucide-react";
@@ -116,6 +116,7 @@ function InlineConfirmDeleteButton({
 
 export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePageProps) {
   const { t } = useTranslation(["agent", "knowledge"]);
+  const convex = useConvex();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
   const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
     businessId,
@@ -126,6 +127,9 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
+  const [viewerTextByDocumentId, setViewerTextByDocumentId] = useState<Record<string, string>>({});
+  const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
+  const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
   const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
 
   function getDocumentStatusLabel(status: Doc<"knowledge_documents">["status"]): string {
@@ -199,6 +203,62 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
+  async function loadFullDocumentText(document: Doc<"knowledge_documents">): Promise<void> {
+    const documentId = String(document._id);
+    if (
+      !document.extractedTextStorageId ||
+      viewerTextByDocumentId[documentId] !== undefined ||
+      loadingViewerIds.includes(documentId)
+    ) {
+      return;
+    }
+
+    setLoadingViewerIds((current) => [...current, documentId]);
+    setViewerErrorsByDocumentId((current) => {
+      if (!(documentId in current)) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[documentId];
+      return next;
+    });
+
+    try {
+      const viewerContent = await convex.query(api.ai.context.knowledge.getKnowledgeDocumentViewerContent, {
+        businessId,
+        documentId: document._id,
+      });
+
+      if (!viewerContent.extractedTextUrl) {
+        setViewerTextByDocumentId((current) => ({
+          ...current,
+          [documentId]: viewerContent.textContent,
+        }));
+        return;
+      }
+
+      const response = await fetch(viewerContent.extractedTextUrl);
+      if (!response.ok) {
+        throw new Error("Failed to load full document text.");
+      }
+
+      const fullText = await response.text();
+      setViewerTextByDocumentId((current) => ({
+        ...current,
+        [documentId]: fullText,
+      }));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t(`agent:sections.${section}.previewError`);
+      setViewerErrorsByDocumentId((current) => ({
+        ...current,
+        [documentId]: message,
+      }));
+    } finally {
+      setLoadingViewerIds((current) => current.filter((id) => id !== documentId));
+    }
+  }
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-4">
@@ -212,11 +272,16 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           <Collapsible
             className="group rounded-2xl border border-border/70 bg-card shadow-sm"
             key={entry._id}
+            onOpenChange={(open) => {
+              if (open && "sourceType" in entry) {
+                void loadFullDocumentText(entry);
+              }
+            }}
           >
             <div className="flex items-center gap-2 p-4">
-              <CollapsibleTrigger className="flex flex-1 items-center outline-none">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold">{entry.title}</span>
+              <CollapsibleTrigger className="flex min-w-0 flex-1 items-center outline-none">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="truncate font-semibold">{entry.title}</span>
                   {"sourceType" in entry ? (
                     <>
                       <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
@@ -251,7 +316,13 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                     readOnly
                     value={
                       entry.status === "error"
-                        ? entry.error ?? t(`agent:sections.${section}.previewError`)
+                        ? viewerErrorsByDocumentId[String(entry._id)] ??
+                          entry.error ??
+                          t(`agent:sections.${section}.previewError`)
+                        : (viewerTextByDocumentId[String(entry._id)] ?? "").trim()
+                          ? (viewerTextByDocumentId[String(entry._id)] ?? "").trim()
+                          : loadingViewerIds.includes(String(entry._id))
+                            ? t(`agent:sections.${section}.previewPending`)
                         : entry.textContent?.trim()
                           ? entry.textContent.trim()
                           : t(`agent:sections.${section}.previewPending`)
