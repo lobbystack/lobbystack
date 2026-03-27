@@ -222,12 +222,12 @@ async function indexKnowledgeSnippetById(
     contentHash: `${snippet._creationTime}:${snippet.priority}:${snippet.active}`,
     filterValues: [
       { name: "businessId", value: String(snippet.businessId) },
-      { name: "sourceType", value: "faq" },
+      { name: "sourceType", value: "snippet" },
       {
         name: "businessAndSource",
         value: {
           businessId: String(snippet.businessId),
-          sourceType: "faq",
+          sourceType: "snippet",
         },
       },
     ],

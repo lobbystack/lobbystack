@@ -21,7 +21,6 @@ export type BusinessRole =
   | "viewer";
 
 export type ChannelKind = "sms" | "voice" | "dashboard";
-export type KnowledgeSourceType = "upload" | "faq" | "generated_snapshot";
 export type DocumentMimeType =
   | "application/pdf"
   | "text/plain"

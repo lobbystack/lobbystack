@@ -16,14 +16,6 @@ const serviceSummaryValidator = v.object({
   description: v.optional(v.string()),
 });
 
-const snippetValidator = v.object({
-  id: v.string(),
-  title: v.string(),
-  content: v.string(),
-  tags: v.array(v.string()),
-  priority: v.number(),
-});
-
 const hoursWindowValidator = v.object({
   dayOfWeek: v.number(),
   openMinutes: v.number(),
@@ -246,7 +238,6 @@ export default defineSchema({
     hours: v.array(hoursWindowValidator),
     closures: v.array(closureWindowValidator),
     services: v.array(serviceSummaryValidator),
-    priorityFaqs: v.optional(v.array(snippetValidator)),
     contactChannels: v.object({
       phoneNumber: v.optional(v.string()),
       smsNumber: v.optional(v.string()),

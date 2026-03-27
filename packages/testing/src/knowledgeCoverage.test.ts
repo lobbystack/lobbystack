@@ -235,7 +235,7 @@ describe("Knowledge coverage", () => {
           businessId: businessAId,
           title: "Business A snippet",
           content: "Only business A should see this snippet.",
-          tags: ["faq"],
+          tags: ["snippet"],
           priority: 10,
           active: true,
         });
@@ -253,7 +253,7 @@ describe("Knowledge coverage", () => {
           businessId: businessBId,
           title: "Business B snippet",
           content: "Business B private snippet.",
-          tags: ["faq"],
+          tags: ["snippet"],
           priority: 12,
           active: true,
         });
