@@ -56,7 +56,9 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
         actions={
           !isBasicSettingsRoute ? (
             <>
-              <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
+              {section === "knowledge" ? (
+                <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
+              ) : null}
               <AddKnowledgeSheet businessId={businessId} section={section} />
             </>
           ) : undefined
