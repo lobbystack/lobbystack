@@ -1,31 +1,22 @@
 {
   "header": {
     "title": "Knowledge",
-    "description": "Manage FAQs, documents, and preview conversations."
+    "description": "Manage knowledge, documents, and preview conversations."
   },
   "manager": {
     "title": "Knowledge Base",
-    "description": "Add FAQs and documents the receptionist can use across preview, SMS, and the voice snapshot refresh.",
+    "description": "Add knowledge and documents the receptionist can use across preview, SMS, and the voice snapshot refresh.",
     "items": "{{count}} items",
-    "faqSnippet": "FAQ snippet",
     "manualDocument": "Manual document",
     "placeholders": {
-      "faqTitle": "Do you take same-day appointments?",
-      "faqContent": "Yes, if there is open capacity. The receptionist should check availability before confirming.",
       "documentTitle": "Clinic Policies",
       "documentBody": "Patients should arrive 10 minutes early. Bring photo ID and insurance information when applicable."
     },
-    "faqTagsPlaceholder": "faq,booking",
     "documentTagsPlaceholder": "policy,intake",
-    "saveFaq": "Add FAQ",
-    "savingFaq": "Saving...",
     "saveDocument": "Add document",
     "savingDocument": "Queue document...",
-    "currentFaqs": "Current FAQs",
     "currentDocuments": "Current documents",
-    "savedFaq": "Saved FAQ snippet.",
     "queuedDocument": "Queued document for indexing.",
-    "noFaqs": "No FAQ snippets yet.",
     "noDocuments": "No documents yet."
   },
   "preview": {

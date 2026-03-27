@@ -27,14 +27,6 @@ type ServiceSummary = {
   description?: string;
 };
 
-type KnowledgeSnippet = {
-  id: string;
-  title: string;
-  content: string;
-  tags: Array<string>;
-  priority: number;
-};
-
 type TransferPolicy = {
   mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
   transferNumber?: string;
@@ -58,7 +50,6 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
-  snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
   phoneNumber?: string;
@@ -100,10 +91,6 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
     hours: input.hours,
     closures: input.closures,
     services: input.services,
-    priorityFaqs: input.snippets
-      .slice()
-      .sort((left, right) => right.priority - left.priority)
-      .slice(0, 8),
     contactChannels: {
       ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.smsNumber ? { smsNumber: input.smsNumber } : {}),

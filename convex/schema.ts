@@ -205,6 +205,7 @@ export default defineSchema({
     indexedEntryId: v.optional(v.string()),
     indexVersion: v.optional(v.string()),
     error: v.optional(v.string()),
+    processingProgress: v.optional(v.number()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_source_type", ["businessId", "sourceType"]),
@@ -245,7 +246,7 @@ export default defineSchema({
     hours: v.array(hoursWindowValidator),
     closures: v.array(closureWindowValidator),
     services: v.array(serviceSummaryValidator),
-    priorityFaqs: v.array(snippetValidator),
+    priorityFaqs: v.optional(v.array(snippetValidator)),
     contactChannels: v.object({
       phoneNumber: v.optional(v.string()),
       smsNumber: v.optional(v.string()),

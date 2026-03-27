@@ -291,7 +291,7 @@
     "transferPolicy": "Transfer policy",
     "services": "Services in snapshot",
     "knowledgeDigest": "Knowledge digest",
-    "emptyDigest": "No generated digest yet. Add FAQs or documents to enrich the receptionist."
+      "emptyDigest": "No generated digest yet. Add knowledge or documents to enrich the receptionist."
   },
   "nextSteps": {
     "title": "What to do next",

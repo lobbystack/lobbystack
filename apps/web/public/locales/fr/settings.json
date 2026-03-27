@@ -291,7 +291,7 @@
     "transferPolicy": "Politique de transfert",
     "services": "Services dans l'instantané",
     "knowledgeDigest": "Résumé des connaissances",
-    "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des FAQ ou des documents pour enrichir la réceptionniste."
+      "emptyDigest": "Aucun résumé généré pour le moment. Ajoutez des connaissances ou des documents pour enrichir la réceptionniste."
   },
   "nextSteps": {
     "title": "Prochaines étapes",

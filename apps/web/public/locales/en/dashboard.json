@@ -156,7 +156,7 @@
     },
     "knowledge": {
       "title": "Knowledge items",
-      "footer": "FAQs and documents strengthen preview and SMS responses."
+      "footer": "Knowledge and documents strengthen preview and SMS responses."
     },
     "snapshot": "Snapshot {{version}}"
   },
@@ -164,7 +164,7 @@
     "title": "Quick actions",
     "description": "Keep {{businessName}} ready for calls, SMS, and booking workflows.",
     "configureProfile": "Configure receptionist profile",
-    "addKnowledge": "Add FAQs and documents",
+    "addKnowledge": "Add knowledge and documents",
     "reviewInbox": "Review call inbox",
     "readiness": "Setup readiness",
     "servicesConfigured": "{{count}} services configured",

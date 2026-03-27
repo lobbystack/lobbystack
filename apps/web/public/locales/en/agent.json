@@ -15,7 +15,7 @@
       "listTitle": "Knowledge Base",
       "addKnowledge": "Add Knowledge",
       "uploadDocument": "Upload Document",
-      "addKnowledgeDescription": "Add opening hours, pricing, FAQs, or any other information your receptionist should know.",
+      "addKnowledgeDescription": "Add opening hours, pricing, policies, or any other information your receptionist should know.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
       "emptyState": "No knowledge added yet.",

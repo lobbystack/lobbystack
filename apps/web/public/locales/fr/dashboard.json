@@ -156,7 +156,7 @@
     },
     "knowledge": {
       "title": "Éléments de connaissance",
-      "footer": "Les FAQ et documents renforcent les réponses d'aperçu et par SMS."
+      "footer": "Les connaissances et documents renforcent les réponses d'aperçu et par SMS."
     },
     "snapshot": "Instantané {{version}}"
   },
@@ -164,7 +164,7 @@
     "title": "Actions rapides",
     "description": "Gardez {{businessName}} prêt pour les appels, les SMS et les flux de réservation.",
     "configureProfile": "Configurer le profil de la réceptionniste",
-    "addKnowledge": "Ajouter des FAQ et des documents",
+    "addKnowledge": "Ajouter des connaissances et des documents",
     "reviewInbox": "Consulter la boîte d'appels",
     "readiness": "État de préparation",
     "servicesConfigured": "{{count}} services configurés",

@@ -109,7 +109,6 @@ describe("executeVoiceTool searchKnowledge", () => {
       snapshot: {
         ...demoSnapshot,
         knowledgeDigest: "",
-        priorityFaqs: [],
       },
       businessId: "business_123",
       callerPhone: "+14165550000",

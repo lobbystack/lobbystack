@@ -82,7 +82,6 @@ export type BusinessContextSnapshot = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
-  priorityFaqs: Array<KnowledgeSnippet>;
   contactChannels: {
     phoneNumber?: string;
     smsNumber?: string;
@@ -156,15 +155,6 @@ export const demoSnapshot: BusinessContextSnapshot = {
   services: [
     { id: "svc-checkup", name: "General Checkup", durationMinutes: 30 },
     { id: "svc-vaccine", name: "Vaccination Visit", durationMinutes: 15 },
-  ],
-  priorityFaqs: [
-    {
-      id: "faq-1",
-      title: "Parking",
-      content: "Parking is available behind the building.",
-      tags: ["parking"],
-      priority: 10,
-    },
   ],
   contactChannels: {
     phoneNumber: "+14165550000",
