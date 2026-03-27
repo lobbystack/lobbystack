@@ -18,6 +18,7 @@ import { requireIdentity, requireMembership } from "../../lib/auth";
 import {
   bulkWorkpool,
   getKnowledgeNamespace,
+  highPriorityWorkpool,
   KNOWLEDGE_INDEX_VERSION,
   rag,
   receptionistAgent,
@@ -280,6 +281,34 @@ async function searchIndexedKnowledge(
     ...(entry.title !== undefined ? { title: entry.title } : {}),
     text: entry.text,
   }));
+}
+
+async function enqueueStaleKnowledgeReindex(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const staleEntries: KnowledgeReindexState = await ctx.runQuery(
+    internal.ai.context.knowledge.getKnowledgeEntriesNeedingReindex,
+    {
+      businessId,
+    },
+  );
+
+  if (staleEntries.documentIds.length > 0) {
+    await highPriorityWorkpool.enqueueActionBatch(
+      ctx,
+      internal.ai.context.knowledge.indexKnowledgeDocument,
+      staleEntries.documentIds.map((documentId) => ({ documentId })),
+    );
+  }
+
+  if (staleEntries.snippetIds.length > 0) {
+    await highPriorityWorkpool.enqueueActionBatch(
+      ctx,
+      internal.ai.context.knowledge.indexKnowledgeSnippet,
+      staleEntries.snippetIds.map((snippetId) => ({ snippetId })),
+    );
+  }
 }
 
 async function generatePreviewAnswer(
@@ -708,6 +737,7 @@ export const searchKnowledgeForVoiceInternal = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
+    await enqueueStaleKnowledgeReindex(ctx, args.businessId);
     return await searchIndexedKnowledge(ctx, args);
   },
 });
