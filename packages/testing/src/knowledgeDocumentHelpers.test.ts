@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   loadingTaskDestroyMock,
@@ -34,6 +34,10 @@ import {
 import { extractKnowledgeDocumentText } from "../../../convex/lib/node/knowledgeExtraction";
 
 describe("Knowledge document helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("normalizes repeated blank lines and trims surrounding whitespace", () => {
     expect(
       normalizeKnowledgeDocumentText("  First line\r\n\r\n\r\nSecond line\r\n"),
@@ -85,6 +89,37 @@ describe("Knowledge document helpers", () => {
     expect(getDocumentMock).toHaveBeenCalledTimes(1);
     expect(getPageMock).toHaveBeenCalledWith(1);
     expect(getTextContentMock).toHaveBeenCalledTimes(1);
+    expect(pageCleanupMock).toHaveBeenCalledTimes(1);
+    expect(documentDestroyMock).toHaveBeenCalledTimes(1);
+    expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns an empty string when a PDF has no extractable text layer", async () => {
+    const page = {
+      getTextContent: getTextContentMock,
+      cleanup: pageCleanupMock,
+    };
+    const document = {
+      numPages: 1,
+      getPage: getPageMock,
+      destroy: documentDestroyMock,
+    };
+
+    getTextContentMock.mockResolvedValueOnce({
+      items: [],
+    });
+    getPageMock.mockResolvedValueOnce(page);
+    getDocumentMock.mockReturnValueOnce({
+      promise: Promise.resolve(document),
+      destroy: loadingTaskDestroyMock,
+    });
+
+    const pdfText = await extractKnowledgeDocumentText({
+      blob: new Blob(["%PDF-1.4"], { type: "application/pdf" }),
+      mimeType: "application/pdf",
+    });
+
+    expect(pdfText).toBe("");
     expect(pageCleanupMock).toHaveBeenCalledTimes(1);
     expect(documentDestroyMock).toHaveBeenCalledTimes(1);
     expect(loadingTaskDestroyMock).toHaveBeenCalledTimes(1);
