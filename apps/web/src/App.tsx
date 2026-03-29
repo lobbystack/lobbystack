@@ -30,6 +30,7 @@ import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
+import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -59,16 +60,48 @@ function PublicOnly(props: { children: ReactNode }) {
   return props.children;
 }
 
+function selectActiveBusiness(
+  currentUser: { activeBusinessId?: Id<"businesses"> } | undefined | null,
+  businesses:
+    | Array<{
+        business: {
+          _id: Id<"businesses">;
+          onboardingStage?: string;
+          name: string;
+          slug: string;
+        };
+      }>
+    | undefined,
+) {
+  const activeBusinessId = currentUser?.activeBusinessId;
+  if (!businesses || businesses.length === 0) {
+    return null;
+  }
+
+  return (
+    businesses.find((entry) => entry.business._id === activeBusinessId)?.business ??
+    businesses[0]?.business ??
+    null
+  );
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  const activeBusiness = businesses?.[0]?.business;
+  const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
 
-  if (businesses === undefined) {
+  if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
+  }
+
+  if (
+    activeBusiness?.onboardingStage === "phone_number" &&
+    location.pathname !== "/onboarding/number"
+  ) {
+    return <Navigate replace to="/onboarding/number" />;
   }
 
   const usesFixedMain =
@@ -202,6 +235,33 @@ function WorkspaceShell() {
   );
 }
 
+function OnboardingNumberRoute() {
+  const { signOut } = useAuthActions();
+  const currentUser = useQuery(api.users.current, {});
+  const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
+  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+
+  if (businesses === undefined || currentUser === undefined) {
+    return <LoadingScreen />;
+  }
+
+  if (!activeBusiness) {
+    return <Navigate replace to="/" />;
+  }
+
+  if (activeBusiness.onboardingStage !== "phone_number") {
+    return <Navigate replace to="/" />;
+  }
+
+  return (
+    <OnboardingNumberPage
+      businessId={activeBusiness._id}
+      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
+      onSignOut={() => void signOut()}
+    />
+  );
+}
+
 export default function App() {
   return (
     <TooltipProvider>
@@ -232,6 +292,14 @@ export default function App() {
             path="/forgot-password"
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingNumberRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/number"
+          />
           <Route
             element={
               <RequireAuth>

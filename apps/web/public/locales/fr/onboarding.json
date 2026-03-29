@@ -1,0 +1,38 @@
+{
+  "number": {
+    "title": "Voici votre nouveau numéro",
+    "description": "Nous avons choisi un numéro local Twilio selon votre zone probable d'activité. Vous pouvez le conserver ou en choisir un autre.",
+    "detectedLocation": "Suggestion pour {{city}}, {{region}}",
+    "detectedCountry": "Suggestion pour {{country}}",
+    "continue": "Continuer",
+    "continuing": "Attribution du numéro...",
+    "pickDifferent": "Choisir un autre numéro",
+    "loading": "Recherche d'un numéro local...",
+    "loadFailed": "Impossible de charger une suggestion pour le moment.",
+    "claimFailed": "Impossible d'attribuer ce numéro. Veuillez réessayer.",
+    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste mise à jour.",
+    "skipHint": "Vous pourrez toujours le modifier plus tard dans vos paramètres Twilio.",
+    "pickerTitle": "Choisir un autre numéro",
+    "pickerDescription": "Recherchez des numéros locaux ou sans frais avant d'en attribuer un.",
+    "tabs": {
+      "city": "Par ville",
+      "areaCode": "Par indicatif",
+      "tollFree": "Sans frais"
+    },
+    "fields": {
+      "city": "Ville",
+      "areaCode": "Indicatif"
+    },
+    "placeholders": {
+      "city": "Entrez un nom de ville",
+      "areaCode": "418"
+    },
+    "search": "Rechercher",
+    "searching": "Recherche...",
+    "empty": "Aucun numéro ne correspond à cette recherche.",
+    "select": "Choisir",
+    "selected": "Choisi",
+    "backToSuggested": "Retour à la suggestion",
+    "signedInAs": "Connecté comme {{email}}"
+  }
+}

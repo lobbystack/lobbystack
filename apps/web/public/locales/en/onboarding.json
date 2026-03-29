@@ -1,0 +1,38 @@
+{
+  "number": {
+    "title": "Say hello to your new number",
+    "description": "We picked a local Twilio number based on where you're likely operating. You can keep it or choose a different one.",
+    "detectedLocation": "Suggested for {{city}}, {{region}}",
+    "detectedCountry": "Suggested for {{country}}",
+    "continue": "Continue",
+    "continuing": "Claiming number...",
+    "pickDifferent": "Pick a different number",
+    "loading": "Finding a local number...",
+    "loadFailed": "We couldn't load a suggested number right now.",
+    "claimFailed": "We couldn't provision that number. Please try again.",
+    "unavailable": "That number was just taken. Pick another one from the refreshed list.",
+    "skipHint": "You can always change this later from your Twilio number settings.",
+    "pickerTitle": "Pick a different number",
+    "pickerDescription": "Search local or toll-free numbers before you claim one.",
+    "tabs": {
+      "city": "By city",
+      "areaCode": "By area code",
+      "tollFree": "Toll-free"
+    },
+    "fields": {
+      "city": "City",
+      "areaCode": "Area code"
+    },
+    "placeholders": {
+      "city": "Enter a city name",
+      "areaCode": "418"
+    },
+    "search": "Search",
+    "searching": "Searching...",
+    "empty": "No numbers matched that search.",
+    "select": "Select",
+    "selected": "Selected",
+    "backToSuggested": "Back to suggested number",
+    "signedInAs": "Signed in as {{email}}"
+  }
+}

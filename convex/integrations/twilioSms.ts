@@ -6,31 +6,16 @@ import twilio from "twilio";
 import type { Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
 import {
+  buildTwilioBasicAuthHeader,
+  getTwilioClient,
+  requireTwilioCredentials,
+} from "../lib/node/twilioClient";
+import {
   canDeliverAsMms,
   inferFileNameFromContentType,
   normalizeAttachmentFileName,
 } from "../lib/messageAttachments";
 import { generateImagePreview } from "../lib/node/imagePreviews";
-
-function requireTwilioCredentials(): { accountSid: string; authToken: string } {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (!accountSid || !authToken) {
-    throw new Error("Twilio credentials are required for SMS delivery.");
-  }
-
-  return { accountSid, authToken };
-}
-
-function getTwilioClient() {
-  const { accountSid, authToken } = requireTwilioCredentials();
-  return twilio(accountSid, authToken);
-}
-
-function buildBasicAuthHeader(): string {
-  const { accountSid, authToken } = requireTwilioCredentials();
-  return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
-}
 
 function extractAttachmentFileName(input: {
   contentDisposition: string | null;
@@ -114,18 +99,38 @@ export const sendMessage = internalAction({
 export const registerIncomingWebhook = internalAction({
   args: {
     phoneNumberSid: v.string(),
-    webhookUrl: v.string(),
+    smsWebhookUrl: v.optional(v.string()),
+    voiceWebhookUrl: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
     const client = getTwilioClient();
     const phoneNumber = await client.incomingPhoneNumbers(args.phoneNumberSid).update({
-      smsUrl: args.webhookUrl,
-      smsMethod: "POST",
+      ...(args.smsWebhookUrl
+        ? {
+            smsUrl: args.smsWebhookUrl,
+            smsMethod: "POST",
+          }
+        : {}),
+      ...(args.voiceWebhookUrl
+        ? {
+            voiceUrl: args.voiceWebhookUrl,
+            voiceMethod: "POST",
+          }
+        : {}),
     });
 
     return {
       phoneNumberSid: phoneNumber.sid,
-      smsWebhookTargetUrl: phoneNumber.smsUrl ?? args.webhookUrl,
+      ...(args.smsWebhookUrl
+        ? {
+            smsWebhookTargetUrl: phoneNumber.smsUrl ?? args.smsWebhookUrl,
+          }
+        : {}),
+      ...(args.voiceWebhookUrl
+        ? {
+            voiceWebhookTargetUrl: phoneNumber.voiceUrl ?? args.voiceWebhookUrl,
+          }
+        : {}),
     };
   },
 });
@@ -140,7 +145,7 @@ export const ingestInboundMedia = internalAction({
     ),
   },
   handler: async (ctx, args) => {
-    const authHeader = buildBasicAuthHeader();
+    const authHeader = buildTwilioBasicAuthHeader();
 
     return await Promise.all(
       args.media.map(async (attachment, index) => {

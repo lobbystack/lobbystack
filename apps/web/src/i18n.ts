@@ -22,6 +22,7 @@ void i18n
       "auth",
       "nav",
       "dashboard",
+      "onboarding",
       "settings",
       "knowledge",
       "inbox",

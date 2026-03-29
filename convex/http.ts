@@ -8,6 +8,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
+import { inferOnboardingLocationContext } from "./lib/onboardingLocation";
 
 const http = httpRouter();
 
@@ -140,6 +141,10 @@ const messageAttachmentDownloadQuerySchema = z.object({
 
 const callRecordingDownloadQuerySchema = z.object({
   token: z.string().min(1),
+});
+
+const onboardingLocationQuerySchema = z.object({
+  timezone: z.string().min(1).optional(),
 });
 
 function badRequest(message: string): Response {
@@ -893,6 +898,23 @@ http.route({
     });
 
     return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/onboarding/location",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const query = parseSearchParams(new URL(request.url), onboardingLocationQuerySchema);
+    if (!query.ok) {
+      return query.response;
+    }
+
+    const context = await inferOnboardingLocationContext({
+      request,
+      ...(query.data.timezone ? { timezoneHint: query.data.timezone } : {}),
+    });
+    return Response.json(context);
   }),
 });
 

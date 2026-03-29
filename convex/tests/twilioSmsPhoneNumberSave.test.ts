@@ -15,7 +15,12 @@ vi.mock("twilio", () => {
   const twilioFactory = Object.assign(
     vi.fn(() => ({
       incomingPhoneNumbers: (phoneNumberSid: string) => ({
-        update: (args: { smsMethod: string; smsUrl: string }) =>
+        update: (args: {
+          smsMethod?: string;
+          smsUrl?: string;
+          voiceMethod?: string;
+          voiceUrl?: string;
+        }) =>
           updateIncomingPhoneNumberMock({
             phoneNumberSid,
             args,
@@ -48,6 +53,7 @@ vi.mock("../businesses/admin.ts", async () => {
 
 const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
+const originalVoiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 type ConvexHarness = TestConvex<typeof schema>;
@@ -87,6 +93,7 @@ async function seedBusinessOwner(
 describe("Twilio SMS phone-number save flow", () => {
   beforeEach(() => {
     process.env.CONVEX_SITE_URL = "https://example.convex.site";
+    process.env.VOICE_GATEWAY_BASE_URL = "https://voice.example.com";
     process.env.TWILIO_ACCOUNT_SID = "ACtestaccountsid";
     process.env.TWILIO_AUTH_TOKEN = "test-auth-token";
 
@@ -98,10 +105,16 @@ describe("Twilio SMS phone-number save flow", () => {
         args,
       }: {
         phoneNumberSid: string;
-        args: { smsMethod: string; smsUrl: string };
+        args: {
+          smsMethod?: string;
+          smsUrl?: string;
+          voiceMethod?: string;
+          voiceUrl?: string;
+        };
       }) => ({
         sid: phoneNumberSid,
         smsUrl: args.smsUrl,
+        voiceUrl: args.voiceUrl,
       }),
     );
   });
@@ -121,6 +134,7 @@ describe("Twilio SMS phone-number save flow", () => {
     });
 
     expect(result).toMatchObject({
+      voiceWebhookStatus: "synced",
       smsWebhookStatus: "synced",
     });
     expect(updateIncomingPhoneNumberMock).toHaveBeenCalledWith({
@@ -128,6 +142,8 @@ describe("Twilio SMS phone-number save flow", () => {
       args: {
         smsMethod: "POST",
         smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        voiceMethod: "POST",
+        voiceUrl: "https://voice.example.com/twilio/voice/inbound",
       },
     });
 
@@ -136,12 +152,14 @@ describe("Twilio SMS phone-number save flow", () => {
     });
     expect(configuration.phoneNumbers[0]).toMatchObject({
       e164: "+14165550120",
+      voiceWebhookStatus: "synced",
+      voiceWebhookTargetUrl: "https://voice.example.com/twilio/voice/inbound",
       smsWebhookStatus: "synced",
       smsWebhookTargetUrl: "https://example.convex.site/twilio/sms/inbound",
     });
   });
 
-  it("skips webhook registration when the number is not eligible for SMS sync", async () => {
+  it("skips webhook registration when the number is not eligible for any webhook sync", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
@@ -157,7 +175,7 @@ describe("Twilio SMS phone-number save flow", () => {
       businessId,
       e164: "+14165550122",
       twilioPhoneSid: "PN-disabled",
-      voiceEnabled: true,
+      voiceEnabled: false,
       smsEnabled: false,
       status: "active",
     });
@@ -165,13 +183,16 @@ describe("Twilio SMS phone-number save flow", () => {
       businessId,
       e164: "+14165550123",
       twilioPhoneSid: "PN-inactive",
-      voiceEnabled: true,
+      voiceEnabled: false,
       smsEnabled: true,
       status: "inactive",
     });
 
+    expect(withoutSid.voiceWebhookStatus).toBe("not_configured");
     expect(withoutSid.smsWebhookStatus).toBe("not_configured");
+    expect(smsDisabled.voiceWebhookStatus).toBe("not_configured");
     expect(smsDisabled.smsWebhookStatus).toBe("not_configured");
+    expect(inactive.voiceWebhookStatus).toBe("not_configured");
     expect(inactive.smsWebhookStatus).toBe("not_configured");
     expect(updateIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
@@ -200,6 +221,7 @@ describe("Twilio SMS phone-number save flow", () => {
       status: "active",
     });
 
+    expect(cleared.voiceWebhookStatus).toBe("not_configured");
     expect(cleared.smsWebhookStatus).toBe("not_configured");
 
     const configuration = await authed.query(api.businesses.catalog.getBusinessConfiguration, {
@@ -207,6 +229,7 @@ describe("Twilio SMS phone-number save flow", () => {
     });
     expect(configuration.phoneNumbers[0]).toMatchObject({
       e164: "+14165550129",
+      voiceWebhookStatus: "not_configured",
       smsWebhookStatus: "not_configured",
     });
     expect(configuration.phoneNumbers[0]?.twilioPhoneSid).toBeUndefined();
@@ -228,6 +251,8 @@ describe("Twilio SMS phone-number save flow", () => {
     });
 
     expect(result).toMatchObject({
+      voiceWebhookStatus: "failed",
+      voiceWebhookLastError: "Twilio rejected the webhook",
       smsWebhookStatus: "failed",
       smsWebhookLastError: "Twilio rejected the webhook",
     });
@@ -237,6 +262,8 @@ describe("Twilio SMS phone-number save flow", () => {
     });
     expect(configuration.phoneNumbers[0]).toMatchObject({
       e164: "+14165550124",
+      voiceWebhookStatus: "failed",
+      voiceWebhookLastError: "Twilio rejected the webhook",
       smsWebhookStatus: "failed",
       smsWebhookLastError: "Twilio rejected the webhook",
     });
@@ -274,19 +301,26 @@ describe("Twilio SMS phone-number save flow", () => {
         args,
       }: {
         phoneNumberSid: string;
-        args: { smsMethod: string; smsUrl: string };
+        args: {
+          smsMethod?: string;
+          smsUrl?: string;
+          voiceMethod?: string;
+          voiceUrl?: string;
+        };
       }) => ({
         sid: phoneNumberSid,
         smsUrl: args.smsUrl,
+        voiceUrl: args.voiceUrl,
       }),
     );
 
-    const resynced = await t.action(internal.businesses.catalog.syncPhoneNumberSmsWebhook, {
+    const resynced = await t.action(internal.businesses.catalog.syncPhoneNumberWebhooks, {
       phoneNumberId: failed.phoneNumberId as Id<"phone_numbers">,
     });
 
     expect(resynced).toMatchObject({
       phoneNumberId: failed.phoneNumberId,
+      voiceWebhookStatus: "synced",
       smsWebhookStatus: "synced",
     });
   });

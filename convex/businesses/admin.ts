@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
@@ -37,6 +37,7 @@ export const bootstrapBusiness = mutation({
       name: args.name,
       timezone: args.timezone,
       defaultLocale: "en",
+      onboardingStage: "phone_number",
       businessType: args.businessType,
       deploymentMode: "development",
       status: "active",
@@ -71,6 +72,28 @@ export const bootstrapBusiness = mutation({
     );
 
     return { businessId };
+  },
+});
+
+export const getBusinessById = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.businessId);
+  },
+});
+
+export const setOnboardingStage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    onboardingStage: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.businessId, {
+      onboardingStage: args.onboardingStage,
+    });
+    return args.onboardingStage;
   },
 });
 
