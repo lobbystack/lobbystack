@@ -14,7 +14,6 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@ai-receptionist/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
-      "@ai-receptionist/testing": path.resolve(__dirname, "../../packages/testing/src/index.ts"),
     },
   },
   server: {
