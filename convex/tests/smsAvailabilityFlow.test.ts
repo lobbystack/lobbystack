@@ -1,15 +1,10 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const {
   generateTextMock,
@@ -44,9 +39,9 @@ vi.mock("twilio", () => {
   };
 });
 
-vi.mock("../../../convex/lib/components", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
-    "../../../convex/lib/components",
+vi.mock("../lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../lib/components")>(
+    "../lib/components",
   );
 
   return {
@@ -62,11 +57,11 @@ vi.mock("../../../convex/lib/components", async () => {
   };
 });
 
-vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/ai/context/knowledge")>(
-    "../../../convex/ai/context/knowledge.ts",
+vi.mock("../ai/context/knowledge.ts", async () => {
+  const actual = await vi.importActual<typeof import("../ai/context/knowledge")>(
+    "../ai/context/knowledge.ts",
   );
-  const { internalAction } = await import("../../../convex/_generated/server");
+  const { internalAction } = await import("../_generated/server");
   const { v } = await import("convex/values");
 
   return {
@@ -84,14 +79,14 @@ vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
   };
 });
 
-vi.mock("../../../convex/lib/serviceNameGeneration.ts", () => ({
+vi.mock("../lib/serviceNameGeneration.ts", () => ({
   generateMissingLocalizedServiceNames: generateMissingLocalizedServiceNamesMock,
 }));
 
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;

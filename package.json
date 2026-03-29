@@ -59,9 +59,11 @@
     "dev:web": "pnpm --filter @ai-receptionist/web dev",
     "dev:voice": "pnpm --filter @ai-receptionist/voice-gateway dev",
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && pnpm typecheck:convex",
+    "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
+    "test": "pnpm -r test && pnpm test:convex",
+    "test:convex": "vitest run --config convex/vitest.config.ts",
     "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "devDependencies": {
@@ -70,6 +72,7 @@
     "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
     "convex-test": "^0.0.44",
+    "lucia": "^3.2.2",
     "playwright": "^1.58.2",
     "tsx": "^4.20.3",
     "typescript": "^5.8.2",

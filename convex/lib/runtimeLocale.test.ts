@@ -6,7 +6,7 @@ import {
   detectExplicitRuntimeLocaleRequest,
   inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
-} from "../../../convex/lib/runtimeLocale";
+} from "./runtimeLocale";
 
 describe("runtime locale detection", () => {
   it("classifies clearly French text as French", () => {

@@ -30,8 +30,8 @@ vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
 import {
   hasMeaningfulKnowledgeDocumentText,
   normalizeKnowledgeDocumentText,
-} from "../../../convex/lib/knowledgeDocuments";
-import { extractKnowledgeDocumentText } from "../../../convex/lib/node/knowledgeExtraction";
+} from "./knowledgeDocuments";
+import { extractKnowledgeDocumentText } from "./node/knowledgeExtraction";
 
 describe("Knowledge document helpers", () => {
   beforeEach(() => {

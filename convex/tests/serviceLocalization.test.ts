@@ -1,15 +1,10 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { api } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { generateMissingLocalizedServiceNamesMock, scheduleSnapshotRefreshMock } = vi.hoisted(
   () => ({
@@ -18,13 +13,13 @@ const { generateMissingLocalizedServiceNamesMock, scheduleSnapshotRefreshMock } 
   }),
 );
 
-vi.mock("../../../convex/lib/serviceNameGeneration.ts", () => ({
+vi.mock("../lib/serviceNameGeneration.ts", () => ({
   generateMissingLocalizedServiceNames: generateMissingLocalizedServiceNamesMock,
 }));
 
-vi.mock("../../../convex/businesses/admin.ts", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/businesses/admin")>(
-    "../../../convex/businesses/admin.ts",
+vi.mock("../businesses/admin.ts", async () => {
+  const actual = await vi.importActual<typeof import("../businesses/admin")>(
+    "../businesses/admin.ts",
   );
 
   return {
@@ -33,7 +28,7 @@ vi.mock("../../../convex/businesses/admin.ts", async () => {
   };
 });
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 type ConvexHarness = TestConvex<typeof schema>;
 
 async function seedBusinessOwner(

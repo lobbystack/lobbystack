@@ -1,21 +1,16 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 import {
   buildDefaultReceptionistSummary,
   DEFAULT_RECEPTIONIST_TONE,
-} from "../../../convex/lib/receptionistProfileDefaults";
-import schema from "../../../convex/schema";
+} from "../lib/receptionistProfileDefaults";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
-
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 async function seedBusinessMember(subject: string) {
   const t = convexTest(schema, convexModules);

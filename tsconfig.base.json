@@ -22,8 +22,7 @@
       "@ai-receptionist/domain": ["packages/domain/src"],
       "@ai-receptionist/providers": ["packages/providers/src"],
       "@ai-receptionist/shared": ["packages/shared/src"],
-      "@ai-receptionist/telemetry": ["packages/telemetry/src"],
-      "@ai-receptionist/testing": ["packages/testing/src"]
+      "@ai-receptionist/telemetry": ["packages/telemetry/src"]
     }
   }
 }

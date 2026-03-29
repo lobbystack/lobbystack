@@ -1,16 +1,11 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../../convex/integrations/calendar";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../integrations/calendar";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { workflowStartMock, runtimeCronsGetMock, runtimeCronsRegisterMock } = vi.hoisted(() => ({
   workflowStartMock: vi.fn(),
@@ -18,9 +13,9 @@ const { workflowStartMock, runtimeCronsGetMock, runtimeCronsRegisterMock } = vi.
   runtimeCronsRegisterMock: vi.fn(),
 }));
 
-vi.mock("../../../convex/lib/components", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
-    "../../../convex/lib/components",
+vi.mock("../lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../lib/components")>(
+    "../lib/components",
   );
 
   return {
@@ -39,7 +34,7 @@ vi.mock("../../../convex/lib/components", async () => {
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 type MockGoogleEvent = {
   id: string;

@@ -1,25 +1,19 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../../../convex/_generated/api";
-import { internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import { SMS_SESSION_INACTIVITY_MS } from "../../../convex/conversations/sessions";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { SMS_SESSION_INACTIVITY_MS } from "../conversations/sessions";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { workflowStartMock } = vi.hoisted(() => ({
   workflowStartMock: vi.fn(),
 }));
 
-vi.mock("../../../convex/lib/components", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
-    "../../../convex/lib/components",
+vi.mock("../lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../lib/components")>(
+    "../lib/components",
   );
 
   return {
@@ -31,7 +25,7 @@ vi.mock("../../../convex/lib/components", async () => {
   };
 });
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 type ConvexHarness = TestConvex<typeof schema>;
 type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];

@@ -93,6 +93,9 @@ importers:
       convex-test:
         specifier: ^0.0.44
         version: 0.0.44(convex@1.34.1(react@19.2.4))
+      lucia:
+        specifier: ^3.2.2
+        version: 3.2.2
       playwright:
         specifier: ^1.58.2
         version: 1.58.2
@@ -320,16 +323,6 @@ importers:
       '@ai-receptionist/shared':
         specifier: workspace:*
         version: link:../shared
-
-  packages/testing:
-    dependencies:
-      '@ai-receptionist/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
-      lucia:
-        specifier: ^3.2.2
-        version: 3.2.2
 
 packages:
 

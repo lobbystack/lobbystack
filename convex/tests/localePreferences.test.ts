@@ -1,16 +1,11 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 
-import { api } from "../../../convex/_generated/api";
-import schema from "../../../convex/schema";
+import { api } from "../_generated/api";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
-
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 describe("Locale preferences", () => {
   it("lets an authenticated user read and update their preferred locale", async () => {

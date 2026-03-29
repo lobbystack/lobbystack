@@ -6,9 +6,9 @@ const { extractKnowledgeDocumentTextMock, extractPdfTextWithLocalOcrMock } = vi.
   extractPdfTextWithLocalOcrMock: vi.fn(),
 }));
 
-vi.mock("../../../convex/lib/node/knowledgeExtraction", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/node/knowledgeExtraction")>(
-    "../../../convex/lib/node/knowledgeExtraction",
+vi.mock("../lib/node/knowledgeExtraction", async () => {
+  const actual = await vi.importActual<typeof import("../lib/node/knowledgeExtraction")>(
+    "../lib/node/knowledgeExtraction",
   );
 
   return {
@@ -18,22 +18,17 @@ vi.mock("../../../convex/lib/node/knowledgeExtraction", async () => {
   };
 });
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import * as componentsModule from "../../../convex/lib/components";
-import { KNOWLEDGE_INDEX_VERSION } from "../../../convex/lib/components";
-import { normalizeKnowledgeDocumentText } from "../../../convex/lib/knowledgeDocuments";
-import schema from "../../../convex/schema";
+import { api, internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
+import * as componentsModule from "../lib/components";
+import { KNOWLEDGE_INDEX_VERSION } from "../lib/components";
+import { normalizeKnowledgeDocumentText } from "../lib/knowledgeDocuments";
+import schema from "../schema";
+import { modules } from "../test.setup";
 import {
   KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR,
   KNOWLEDGE_DOCUMENT_OCR_UNREADABLE_ERROR,
-} from "../../../convex/lib/node/knowledgeExtraction";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+} from "../lib/node/knowledgeExtraction";
 
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
@@ -43,7 +38,7 @@ type KnowledgeListResult = {
 };
 type SnapshotResult = Doc<"business_context_snapshots"> | null;
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 type RagAddResult = Awaited<ReturnType<typeof componentsModule.rag.add>>;
 
 async function insertBusiness(

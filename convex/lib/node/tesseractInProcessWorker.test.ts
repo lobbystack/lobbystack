@@ -23,7 +23,7 @@ vi.mock("tesseract.js/src/worker-script/node/cache.js", () => ({
   default: {},
 }));
 
-vi.mock("../../../convex/lib/node/tesseract-core-lstm.wasm.js", () => ({
+vi.mock("./tesseract-core-lstm.wasm.js", () => ({
   default: vi.fn(async () => ({})),
 }));
 
@@ -31,7 +31,7 @@ import {
   clearCachedInProcessTesseractWorkers,
   createInProcessTesseractWorker,
   runWithCachedInProcessTesseractWorker,
-} from "../../../convex/lib/node/tesseractInProcessWorker";
+} from "./tesseractInProcessWorker";
 
 describe("createInProcessTesseractWorker", () => {
   beforeEach(async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validatePasswordRequirements } from "../../../convex/lib/passwordPolicy";
+import { validatePasswordRequirements } from "./passwordPolicy";
 
 describe("validatePasswordRequirements", () => {
   it("rejects passwords shorter than twelve characters", () => {

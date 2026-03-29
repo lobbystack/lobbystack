@@ -19,13 +19,9 @@ describe("Convex provider adapters", () => {
       DEFAULT_EMBEDDING_MODEL_ID,
       EMBEDDING_DIMENSION,
       getEmbeddingConfig,
-    } = await import("../../../convex/lib/providers/embeddings");
-    const { DEFAULT_NON_REALTIME_TEXT_MODEL_ID } = await import(
-      "../../../convex/lib/providers/nonRealtimeText"
-    );
-    const { getKnowledgeNamespace, KNOWLEDGE_INDEX_VERSION } = await import(
-      "../../../convex/lib/components"
-    );
+    } = await import("./embeddings");
+    const { DEFAULT_NON_REALTIME_TEXT_MODEL_ID } = await import("./nonRealtimeText");
+    const { getKnowledgeNamespace, KNOWLEDGE_INDEX_VERSION } = await import("../components");
 
     expect(DEFAULT_NON_REALTIME_TEXT_MODEL_ID).toBe(
       "gemini-3.1-flash-lite-preview",
@@ -45,9 +41,7 @@ describe("Convex provider adapters", () => {
   it("rejects embedding model overrides without a registered dimension", async () => {
     vi.stubEnv("GEMINI_EMBEDDING_MODEL", "custom-embedding-model");
 
-    const { getEmbeddingConfig } = await import(
-      "../../../convex/lib/providers/embeddings"
-    );
+    const { getEmbeddingConfig } = await import("./embeddings");
 
     expect(() => getEmbeddingConfig()).toThrow(
       'Unsupported GEMINI_EMBEDDING_MODEL "custom-embedding-model"',

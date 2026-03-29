@@ -2,16 +2,11 @@ import { convexTest, type TestConvex } from "convex-test";
 import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import { MAX_SMS_ATTACHMENT_UPLOAD_BYTES } from "../../../convex/lib/messageAttachments";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { MAX_SMS_ATTACHMENT_UPLOAD_BYTES } from "../lib/messageAttachments";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { sendTwilioMessageMock } = vi.hoisted(() => ({
   sendTwilioMessageMock: vi.fn(),
@@ -34,7 +29,7 @@ vi.mock("twilio", () => {
   };
 });
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;

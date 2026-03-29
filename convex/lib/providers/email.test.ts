@@ -12,7 +12,7 @@ describe("transactional email provider", () => {
   });
 
   it("renders the password reset template with the requested variables", async () => {
-    const { renderTransactionalEmail } = await import("../../../convex/lib/providers/email");
+    const { renderTransactionalEmail } = await import("./email");
 
     const email = renderTransactionalEmail({
       template: "password_reset",
@@ -31,7 +31,7 @@ describe("transactional email provider", () => {
   });
 
   it("renders the email confirmation template with the requested link", async () => {
-    const { renderTransactionalEmail } = await import("../../../convex/lib/providers/email");
+    const { renderTransactionalEmail } = await import("./email");
 
     const email = renderTransactionalEmail({
       template: "verify_email",
@@ -55,7 +55,7 @@ describe("transactional email provider", () => {
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
     vi.stubEnv("RESEND_API_KEY", "re_test_123");
 
-    const { getTransactionalEmailConfig } = await import("../../../convex/lib/providers/email");
+    const { getTransactionalEmailConfig } = await import("./email");
 
     expect(getTransactionalEmailConfig()).toEqual({
       fromAddress: "noreply@example.com",
@@ -70,7 +70,7 @@ describe("transactional email provider", () => {
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
     vi.stubEnv("RESEND_API_KEY", "re_test_123");
 
-    const { getTransactionalEmailConfig } = await import("../../../convex/lib/providers/email");
+    const { getTransactionalEmailConfig } = await import("./email");
 
     expect(getTransactionalEmailConfig()).toEqual({
       fromAddress: "noreply@example.com",
@@ -85,7 +85,7 @@ describe("transactional email provider", () => {
     vi.stubEnv("DEPLOYMENT_MODE", "cloud");
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");
 
-    const { getTransactionalEmailConfig } = await import("../../../convex/lib/providers/email");
+    const { getTransactionalEmailConfig } = await import("./email");
 
     expect(() => getTransactionalEmailConfig()).toThrow(
       "RESEND_API_KEY is required to send email outside development.",

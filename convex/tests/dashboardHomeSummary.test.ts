@@ -1,17 +1,12 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import schema from "../../../convex/schema";
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
-
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const HOME_SUMMARY_LOCALE = "en" as const;
 type ConvexHarness = TestConvex<typeof schema>;
 type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];

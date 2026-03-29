@@ -1,23 +1,18 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { searchKnowledgeForVoiceInternalMock } = vi.hoisted(() => ({
   searchKnowledgeForVoiceInternalMock: vi.fn(),
 }));
 
-vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/ai/context/knowledge")>(
-    "../../../convex/ai/context/knowledge.ts",
+vi.mock("../ai/context/knowledge.ts", async () => {
+  const actual = await vi.importActual<typeof import("../ai/context/knowledge")>(
+    "../ai/context/knowledge.ts",
   );
-  const { internalAction } = await import("../../../convex/_generated/server");
+  const { internalAction } = await import("../_generated/server");
   const { v } = await import("convex/values");
 
   return {
@@ -38,7 +33,7 @@ vi.mock("../../../convex/ai/context/knowledge.ts", async () => {
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const originalInternalServiceToken = process.env.INTERNAL_SERVICE_TOKEN;
 
 function createConvexHarness(): TestConvex<typeof schema> {

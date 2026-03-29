@@ -56,11 +56,11 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Name tests `*.test.ts` or `*.test.tsx` and keep them close to the code they cover.
 - Prioritize coverage for booking logic, snapshot generation, authz helpers, webhook handling, and telemetry redaction.
 - For Convex behavior, follow the official Convex testing guidance and prefer `convex-test` with the real schema over ad hoc mocked `ctx.db` chains.
-- Put Convex-backed regression tests in `packages/testing/src/` unless they are pure helper tests that naturally belong next to a package module.
-- Use the `edge-runtime` Vitest environment for `convex-test`, and pass an explicit module map such as `import.meta.glob("../../../convex/**/*.ts")` when creating the test harness in this repo.
+- Put Convex-backed regression tests in `convex/tests/`. Keep pure helper tests next to the `convex/` module they cover.
+- Use the `edge-runtime` Vitest environment for `convex-test`, and import the shared module map from `convex/test.setup.ts` when creating the test harness in this repo.
 - Default Convex harness pattern in this repo:
-  - `const convexModules = import.meta.glob("../../../convex/**/*.ts")`
-  - `const t = convexTest(schema, convexModules)`
+  - `import { modules } from "../test.setup"`
+  - `const t = convexTest(schema, modules)`
   - use `await t.run(async (ctx) => ...)` for deterministic fixture setup and direct DB assertions
   - use `t.query(...)`, `t.mutation(...)`, and `t.action(...)` with generated `api` / `internal` references instead of calling handlers directly
   - use `t.withIdentity({ subject: ... })` when testing membership, auth, or other identity-sensitive behavior

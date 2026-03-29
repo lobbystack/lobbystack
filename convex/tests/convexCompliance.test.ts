@@ -1,21 +1,16 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 
-import schema from "../../../convex/schema";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 import {
   getOpenConversationForContact,
   reassignPreviewSessions,
   replaceBusinessStaffServiceAssignments,
-} from "../../../convex/lib/indexedQueries";
+} from "../lib/indexedQueries";
 
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
-
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 describe("Convex indexed query helpers", () => {
   it("reuses an open SMS conversation via the compound conversation index", async () => {

@@ -1,23 +1,18 @@
 import { convexTest } from "convex-test";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { internal } from "../../../convex/_generated/api";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { internal } from "../_generated/api";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const { enqueueActionBatchMock, ragSearchMock } = vi.hoisted(() => ({
   enqueueActionBatchMock: vi.fn(),
   ragSearchMock: vi.fn(),
 }));
 
-vi.mock("../../../convex/lib/components", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
-    "../../../convex/lib/components",
+vi.mock("../lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../lib/components")>(
+    "../lib/components",
   );
 
   return {
@@ -33,7 +28,7 @@ vi.mock("../../../convex/lib/components", async () => {
   };
 });
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 describe("voice knowledge search background reindex", () => {
   beforeEach(() => {

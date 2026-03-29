@@ -52,7 +52,7 @@ vi.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   getDocument: getDocumentMock,
 }));
 
-vi.mock("../../../convex/lib/node/tesseractInProcessWorker", () => ({
+vi.mock("./tesseractInProcessWorker", () => ({
   runWithCachedInProcessTesseractWorker: runWithCachedInProcessTesseractWorkerMock,
 }));
 
@@ -61,7 +61,7 @@ import {
   KNOWLEDGE_DOCUMENT_OCR_PAGE_LIMIT_ERROR,
   KNOWLEDGE_DOCUMENT_OCR_PROCESSING_ERROR,
   extractPdfTextWithLocalOcr,
-} from "../../../convex/lib/node/knowledgeExtraction";
+} from "./knowledgeExtraction";
 
 type CanvasContextWithPutImageData = {
   getTransform?: () => {

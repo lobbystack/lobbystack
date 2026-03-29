@@ -2,17 +2,12 @@ import { convexTest } from "convex-test";
 import { Scrypt } from "lucia";
 import { describe, expect, it } from "vitest";
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import schema from "../../../convex/schema";
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
-
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 
 describe("account credential settings", () => {
   it("returns the password credential email as the current email", async () => {

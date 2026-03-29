@@ -2,15 +2,10 @@ import { convexTest, type TestConvex } from "convex-test";
 import { Jimp, JimpMime } from "jimp";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api, internal } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
-import schema from "../../../convex/schema";
-
-declare global {
-  interface ImportMeta {
-    glob(pattern: string): Record<string, () => Promise<unknown>>;
-  }
-}
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import schema from "../schema";
+import { modules } from "../test.setup";
 
 const {
   generateSmsReplyMock,
@@ -41,11 +36,11 @@ vi.mock("twilio", () => {
   };
 });
 
-vi.mock("../../../convex/ai/agents/runtime.ts", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/ai/agents/runtime")>(
-    "../../../convex/ai/agents/runtime.ts"
+vi.mock("../ai/agents/runtime.ts", async () => {
+  const actual = await vi.importActual<typeof import("../ai/agents/runtime")>(
+    "../ai/agents/runtime.ts"
   );
-  const { internalAction } = await import("../../../convex/_generated/server");
+  const { internalAction } = await import("../_generated/server");
   const { v } = await import("convex/values");
 
   return {
@@ -63,9 +58,9 @@ vi.mock("../../../convex/ai/agents/runtime.ts", async () => {
   };
 });
 
-vi.mock("../../../convex/lib/components", async () => {
-  const actual = await vi.importActual<typeof import("../../../convex/lib/components")>(
-    "../../../convex/lib/components",
+vi.mock("../lib/components", async () => {
+  const actual = await vi.importActual<typeof import("../lib/components")>(
+    "../lib/components",
   );
 
   return {
@@ -79,7 +74,7 @@ vi.mock("../../../convex/lib/components", async () => {
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
-const convexModules = import.meta.glob("../../../convex/**/*.ts");
+const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
