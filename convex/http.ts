@@ -147,6 +147,12 @@ const onboardingLocationQuerySchema = z.object({
   timezone: z.string().min(1).optional(),
 });
 
+const publicCorsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 function badRequest(message: string): Response {
   return new Response(message, { status: 400 });
 }
@@ -903,18 +909,34 @@ http.route({
 
 http.route({
   path: "/onboarding/location",
+  method: "OPTIONS",
+  handler: httpAction(async () => {
+    return new Response(null, {
+      status: 204,
+      headers: publicCorsHeaders,
+    });
+  }),
+});
+
+http.route({
+  path: "/onboarding/location",
   method: "GET",
   handler: httpAction(async (_ctx, request) => {
     const query = parseSearchParams(new URL(request.url), onboardingLocationQuerySchema);
     if (!query.ok) {
-      return query.response;
+      return new Response(query.response.body, {
+        status: query.response.status,
+        headers: publicCorsHeaders,
+      });
     }
 
     const context = await inferOnboardingLocationContext({
       request,
       ...(query.data.timezone ? { timezoneHint: query.data.timezone } : {}),
     });
-    return Response.json(context);
+    return Response.json(context, {
+      headers: publicCorsHeaders,
+    });
   }),
 });
 
