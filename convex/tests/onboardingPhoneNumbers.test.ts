@@ -1,8 +1,10 @@
+import { v } from "convex/values";
 import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
+import { internalMutation } from "../_generated/server";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -12,12 +14,14 @@ const {
   listLocalNumbersMock,
   listTollFreeNumbersMock,
   scheduleSnapshotRefreshMock,
+  setOnboardingStageFailureMessageMock,
 } = vi.hoisted(() => ({
   createIncomingPhoneNumberMock: vi.fn(),
   removeIncomingPhoneNumberMock: vi.fn(),
   listLocalNumbersMock: vi.fn(),
   listTollFreeNumbersMock: vi.fn(),
   scheduleSnapshotRefreshMock: vi.fn(),
+  setOnboardingStageFailureMessageMock: vi.fn<() => string | null>(),
 }));
 
 vi.mock("twilio", () => {
@@ -64,6 +68,23 @@ vi.mock("../businesses/admin.ts", async () => {
   return {
     ...actual,
     scheduleSnapshotRefresh: scheduleSnapshotRefreshMock,
+    setOnboardingStage: internalMutation({
+      args: {
+        businessId: v.id("businesses"),
+        onboardingStage: v.string(),
+      },
+      handler: async (ctx, args) => {
+        const failureMessage = setOnboardingStageFailureMessageMock();
+        if (failureMessage) {
+          throw new Error(failureMessage);
+        }
+
+        await ctx.db.patch(args.businessId, {
+          onboardingStage: args.onboardingStage,
+        });
+        return args.onboardingStage;
+      },
+    }),
   };
 });
 
@@ -157,6 +178,7 @@ describe("onboarding phone-number actions", () => {
     listLocalNumbersMock.mockResolvedValue([]);
     listTollFreeNumbersMock.mockResolvedValue([]);
     removeIncomingPhoneNumberMock.mockResolvedValue(true);
+    setOnboardingStageFailureMessageMock.mockReturnValue(null);
     createIncomingPhoneNumberMock.mockResolvedValue({
       sid: "PN-default",
       smsUrl: "https://example.convex.site/twilio/sms/inbound",
@@ -556,6 +578,45 @@ describe("onboarding phone-number actions", () => {
     });
     expect(removeIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
+  });
+
+  it("rolls back the saved phone row if a later onboarding step fails", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-post-save-failure",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+    setOnboardingStageFailureMessageMock.mockReturnValueOnce(
+      "Failed to complete onboarding after the number was saved.",
+    );
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "Failed to complete onboarding after the number was saved.",
+    });
+    expect(removeIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
 
   it("surfaces non-availability provisioning errors even when the refreshed list changes", async () => {

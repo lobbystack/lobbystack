@@ -509,6 +509,7 @@ export const claimOnboardingNumber = action({
     const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
     const client = getTwilioClient();
     let purchased: PurchasedIncomingNumber | null = null;
+    let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
 
     try {
       purchased = await client.incomingPhoneNumbers.create({
@@ -531,6 +532,7 @@ export const claimOnboardingNumber = action({
           status: "active",
         },
       );
+      savedPhoneNumberId = saved.phoneNumberId;
 
       const now = new Date().toISOString();
       await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
@@ -554,6 +556,18 @@ export const claimOnboardingNumber = action({
       };
     } catch (error) {
       let cleanupError: Error | null = null;
+      if (savedPhoneNumberId) {
+        try {
+          await ctx.runMutation(internal.businesses.catalog.deletePhoneNumberInternal, {
+            phoneNumberId: savedPhoneNumberId,
+          });
+        } catch (rollbackError) {
+          cleanupError =
+            rollbackError instanceof Error
+              ? rollbackError
+              : new Error("Automatic rollback of the local phone number record failed.");
+        }
+      }
       if (purchased) {
         try {
           await client.incomingPhoneNumbers(purchased.sid).remove();

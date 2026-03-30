@@ -302,30 +302,24 @@ function OnboardingVerifyPhoneRoute() {
   );
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const [isSkippingVerification, setIsSkippingVerification] = useState(false);
-
-  if (businesses === undefined || currentUser === undefined) {
-    return <LoadingScreen />;
-  }
-
-  if (!activeBusiness) {
-    return <Navigate replace to="/" />;
-  }
-
-  const requiresPhoneVerification =
-    activeBusiness.onboardingStage === "verify_phone" ||
-    (activeBusiness.onboardingStage === "phone_number" && !currentUser?.phoneVerificationTime);
+  const [hasAttemptedAutoSkip, setHasAttemptedAutoSkip] = useState(false);
 
   useEffect(() => {
     if (
-      activeBusiness?.onboardingStage !== "verify_phone" ||
+      businesses === undefined ||
+      currentUser === undefined ||
+      !activeBusiness ||
+      activeBusiness.onboardingStage !== "verify_phone" ||
       !currentUser?.phoneVerificationTime ||
-      isSkippingVerification
+      isSkippingVerification ||
+      hasAttemptedAutoSkip
     ) {
       return;
     }
 
     let cancelled = false;
     setIsSkippingVerification(true);
+    setHasAttemptedAutoSkip(true);
 
     void reuseVerifiedPhoneForOnboarding({
       businessId: activeBusiness._id,
@@ -345,15 +339,29 @@ function OnboardingVerifyPhoneRoute() {
       cancelled = true;
     };
   }, [
-    activeBusiness?._id,
-    activeBusiness?.onboardingStage,
-    currentUser?.phoneVerificationTime,
+    activeBusiness,
+    businesses,
+    currentUser,
+    hasAttemptedAutoSkip,
     isSkippingVerification,
     navigate,
     reuseVerifiedPhoneForOnboarding,
   ]);
 
+  if (businesses === undefined || currentUser === undefined) {
+    return <LoadingScreen />;
+  }
+
+  if (!activeBusiness) {
+    return <Navigate replace to="/" />;
+  }
+
+  const requiresPhoneVerification =
+    activeBusiness.onboardingStage === "verify_phone" ||
+    (activeBusiness.onboardingStage === "phone_number" && !currentUser?.phoneVerificationTime);
+
   if (
+    isSkippingVerification &&
     activeBusiness.onboardingStage === "verify_phone" &&
     currentUser?.phoneVerificationTime
   ) {

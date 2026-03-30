@@ -940,6 +940,22 @@ export const getPhoneNumberById = internalQuery({
   },
 });
 
+export const deletePhoneNumberInternal = internalMutation({
+  args: {
+    phoneNumberId: v.id("phone_numbers"),
+  },
+  handler: async (ctx, args) => {
+    const phoneNumber = await ctx.db.get(args.phoneNumberId);
+    if (!phoneNumber) {
+      return null;
+    }
+
+    await ctx.db.delete(args.phoneNumberId);
+    await scheduleSnapshotRefresh(ctx, phoneNumber.businessId);
+    return args.phoneNumberId;
+  },
+});
+
 export const upsertPhoneNumberInternal = internalMutation({
   args: phoneNumberSaveArgs,
   handler: async (ctx, args) => {
