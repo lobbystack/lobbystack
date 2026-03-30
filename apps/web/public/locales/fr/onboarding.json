@@ -8,6 +8,8 @@
     "continuing": "Attribution du numéro...",
     "pickDifferent": "Choisir un autre numéro",
     "loading": "Recherche d'un numéro local...",
+    "noSuggestionTitle": "Nous n'avons pas encore pu proposer un numéro avec confiance.",
+    "noSuggestionDescription": "Recherchez par ville, indicatif ou sans frais pour choisir le meilleur numéro pour votre entreprise.",
     "loadFailed": "Impossible de charger une suggestion pour le moment.",
     "claimFailed": "Impossible d'attribuer ce numéro. Veuillez réessayer.",
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste mise à jour.",

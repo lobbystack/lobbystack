@@ -103,12 +103,7 @@ type ClaimResult =
 
 async function loadOnboardingLocationContext(): Promise<NumberSuggestionContext> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const baseUrl = import.meta.env.VITE_CONVEX_SITE_URL;
-  if (!baseUrl) {
-    throw new Error("VITE_CONVEX_SITE_URL is required for onboarding.");
-  }
-
-  const url = new URL("/onboarding/location", baseUrl);
+  const url = new URL("/onboarding/location", window.location.origin);
   if (timezone) {
     url.searchParams.set("timezone", timezone);
   }
@@ -375,6 +370,30 @@ export function OnboardingNumberPage({
                       {t("number.pickDifferent")}
                     </Button>
                   </div>
+                </div>
+              ) : null}
+
+              {!isLoadingSuggestion && !selectedNumber && !loadError ? (
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-6 text-center">
+                    <div className="text-lg font-medium text-white">
+                      {t("number.noSuggestionTitle")}
+                    </div>
+                    <div className="mt-2 text-sm leading-6 text-zinc-400">
+                      {t("number.noSuggestionDescription")}
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10"
+                    onClick={() => {
+                      setPickerOpen(true);
+                      void runSearch(activeTab);
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("number.pickDifferent")}
+                  </Button>
                 </div>
               ) : null}
 

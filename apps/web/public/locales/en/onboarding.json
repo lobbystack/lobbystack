@@ -8,6 +8,8 @@
     "continuing": "Claiming number...",
     "pickDifferent": "Pick a different number",
     "loading": "Finding a local number...",
+    "noSuggestionTitle": "We couldn't confidently auto-pick a number yet.",
+    "noSuggestionDescription": "Search by city, area code, or toll-free to choose the best number for your business.",
     "loadFailed": "We couldn't load a suggested number right now.",
     "claimFailed": "We couldn't provision that number. Please try again.",
     "unavailable": "That number was just taken. Pick another one from the refreshed list.",
