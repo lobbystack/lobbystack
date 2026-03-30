@@ -10,6 +10,18 @@ type CloudflareGeoHeaders = {
   longitude?: number;
 };
 
+type RequestWithCf = Request & {
+  cf?: {
+    city?: string | null;
+    regionCode?: string | null;
+    country?: string | null;
+    postalCode?: string | null;
+    timezone?: string | null;
+    latitude?: string | null;
+    longitude?: string | null;
+  };
+};
+
 function parseOptionalNumber(value: string | null): number | undefined {
   if (!value) {
     return undefined;
@@ -20,13 +32,31 @@ function parseOptionalNumber(value: string | null): number | undefined {
 }
 
 function extractCloudflareGeoHeaders(request: Request): CloudflareGeoHeaders | null {
-  const countryCode = request.headers.get("cf-ipcountry")?.trim() || undefined;
-  const regionCode = request.headers.get("cf-region-code")?.trim() || undefined;
-  const city = request.headers.get("cf-ipcity")?.trim() || undefined;
-  const postalCode = request.headers.get("cf-postal-code")?.trim() || undefined;
-  const timezone = request.headers.get("cf-timezone")?.trim() || undefined;
-  const latitude = parseOptionalNumber(request.headers.get("cf-iplatitude"));
-  const longitude = parseOptionalNumber(request.headers.get("cf-iplongitude"));
+  const requestWithCf = request as RequestWithCf;
+  const countryCode =
+    request.headers.get("cf-ipcountry")?.trim() ||
+    requestWithCf.cf?.country?.trim() ||
+    undefined;
+  const regionCode =
+    request.headers.get("cf-region-code")?.trim() ||
+    requestWithCf.cf?.regionCode?.trim() ||
+    undefined;
+  const city =
+    request.headers.get("cf-ipcity")?.trim() || requestWithCf.cf?.city?.trim() || undefined;
+  const postalCode =
+    request.headers.get("cf-postal-code")?.trim() ||
+    requestWithCf.cf?.postalCode?.trim() ||
+    undefined;
+  const timezone =
+    request.headers.get("cf-timezone")?.trim() ||
+    requestWithCf.cf?.timezone?.trim() ||
+    undefined;
+  const latitude =
+    parseOptionalNumber(request.headers.get("cf-iplatitude")) ??
+    parseOptionalNumber(requestWithCf.cf?.latitude ?? null);
+  const longitude =
+    parseOptionalNumber(request.headers.get("cf-iplongitude")) ??
+    parseOptionalNumber(requestWithCf.cf?.longitude ?? null);
 
   if (
     !countryCode &&
