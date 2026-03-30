@@ -43,6 +43,8 @@ type CheckPhoneVerificationResult =
       message: string;
     };
 
+const VERIFICATION_RESEND_COOLDOWN_MS = 30_000;
+
 function normalizeLineType(lineType: string | null | undefined): string | undefined {
   const normalized = lineType?.trim().toLowerCase();
   return normalized ? normalized : undefined;
@@ -122,6 +124,24 @@ export const startPhoneVerification = action({
         throw new Error("Enter a real mobile number that can receive SMS verification.");
       }
 
+      const latestAttempt = await ctx.runQuery(
+        internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
+        {
+          businessId: args.businessId,
+          userId: user._id,
+        },
+      );
+      const now = Date.now();
+
+      if (
+        latestAttempt &&
+        latestAttempt.phoneE164 === lookup.phoneNumber &&
+        latestAttempt.status !== "approved" &&
+        now - latestAttempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS
+      ) {
+        throw new Error("We just sent a verification code. Please wait a moment before retrying.");
+      }
+
       const verification: TwilioVerificationResult = await client.verify.v2
         .services(verifyServiceSid)
         .verifications.create({
@@ -129,7 +149,6 @@ export const startPhoneVerification = action({
           channel: "sms",
         });
 
-      const now = Date.now();
       await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
         businessId: args.businessId,
         userId: user._id,

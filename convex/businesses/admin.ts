@@ -97,6 +97,52 @@ export const setOnboardingStage = internalMutation({
   },
 });
 
+export const beginOnboardingNumberClaim = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.onboardingStage === "phone_number_claiming") {
+      throw new Error("A phone-number claim is already in progress for this business.");
+    }
+
+    if (business.onboardingStage !== "phone_number") {
+      throw new Error("Phone-number onboarding has already been completed for this business.");
+    }
+
+    await ctx.db.patch(args.businessId, {
+      onboardingStage: "phone_number_claiming",
+    });
+
+    return "phone_number_claiming";
+  },
+});
+
+export const releaseOnboardingNumberClaim = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.onboardingStage === "phone_number_claiming") {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "phone_number",
+      });
+    }
+
+    return "phone_number";
+  },
+});
+
 export const listForCurrentUser = query({
   args: {},
   handler: async (ctx) => {

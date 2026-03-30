@@ -174,8 +174,40 @@ describe("onboarding phone-number actions", () => {
     process.env.TWILIO_AUTH_TOKEN = "test-auth-token";
 
     vi.clearAllMocks();
+    createIncomingPhoneNumberMock.mockReset();
+    removeIncomingPhoneNumberMock.mockReset();
+    listLocalNumbersMock.mockReset();
+    listTollFreeNumbersMock.mockReset();
+    scheduleSnapshotRefreshMock.mockReset();
+    setOnboardingStageFailureMessageMock.mockReset();
     scheduleSnapshotRefreshMock.mockResolvedValue(null);
-    listLocalNumbersMock.mockResolvedValue([]);
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+          inLocality?: string;
+        };
+      }) => {
+        if (args.areaCode === 418) {
+          return [
+            {
+              phoneNumber: "+14185550123",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
     listTollFreeNumbersMock.mockResolvedValue([]);
     removeIncomingPhoneNumberMock.mockResolvedValue(true);
     setOnboardingStageFailureMessageMock.mockReturnValue(null);
@@ -456,6 +488,63 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("rejects claims for numbers outside the current selection results", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+        };
+      }) => {
+        if (args.areaCode === 418) {
+          return [
+            {
+              phoneNumber: "+14185550123",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+12125550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "US",
+        areaCode: "212",
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: "unavailable",
+      message: "The selected phone number is no longer available.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
   it("rejects claims once onboarding is no longer on the phone-number step", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -474,18 +563,55 @@ describe("onboarding phone-number actions", () => {
       });
     });
 
-    await expect(
-      authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-        businessId,
-        e164: "+14185550123",
-        selectionContext: {
-          mode: "area_code",
-          countryCode: "CA",
-          areaCode: "418",
-        },
-      }),
-    ).rejects.toThrow("Phone-number onboarding has already been completed for this business.");
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
 
+    expect(result).toEqual({
+      status: "failed",
+      message: "Phone-number onboarding has already been completed for this business.",
+    });
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a second claim while another claim is already in progress", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "phone_number_claiming",
+      });
+    });
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "A phone-number claim is already in progress for this business.",
+    });
     expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
@@ -502,6 +628,7 @@ describe("onboarding phone-number actions", () => {
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockRejectedValueOnce(new Error("Number already taken"));
+    let areaCodeSearchCount = 0;
     listLocalNumbersMock.mockImplementation(
       async ({
         args,
@@ -515,14 +642,24 @@ describe("onboarding phone-number actions", () => {
         };
       }) => {
         if (args.areaCode === 418) {
-          return [
-            {
-              phoneNumber: "+14185550999",
-              locality: "Quebec City",
-              region: "QC",
-              isoCountry: "CA",
-            },
-          ];
+          areaCodeSearchCount += 1;
+          return areaCodeSearchCount === 1
+            ? [
+                {
+                  phoneNumber: "+14185550123",
+                  locality: "Quebec City",
+                  region: "QC",
+                  isoCountry: "CA",
+                },
+              ]
+            : [
+                {
+                  phoneNumber: "+14185550999",
+                  locality: "Quebec City",
+                  region: "QC",
+                  isoCountry: "CA",
+                },
+              ];
         }
 
         return [];
@@ -644,6 +781,10 @@ describe("onboarding phone-number actions", () => {
       message: "Failed to complete onboarding after the number was saved.",
     });
     expect(removeIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("phone_number");
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
 
@@ -662,6 +803,7 @@ describe("onboarding phone-number actions", () => {
     createIncomingPhoneNumberMock.mockRejectedValueOnce(
       new Error("VOICE_GATEWAY_BASE_URL is required for Twilio voice webhook configuration."),
     );
+    let areaCodeSearchCount = 0;
     listLocalNumbersMock.mockImplementation(
       async ({
         args,
@@ -675,14 +817,24 @@ describe("onboarding phone-number actions", () => {
         };
       }) => {
         if (args.areaCode === 418) {
-          return [
-            {
-              phoneNumber: "+14185550999",
-              locality: "Quebec City",
-              region: "QC",
-              isoCountry: "CA",
-            },
-          ];
+          areaCodeSearchCount += 1;
+          return areaCodeSearchCount === 1
+            ? [
+                {
+                  phoneNumber: "+14185550123",
+                  locality: "Quebec City",
+                  region: "QC",
+                  isoCountry: "CA",
+                },
+              ]
+            : [
+                {
+                  phoneNumber: "+14185550999",
+                  locality: "Quebec City",
+                  region: "QC",
+                  isoCountry: "CA",
+                },
+              ];
         }
 
         return [];

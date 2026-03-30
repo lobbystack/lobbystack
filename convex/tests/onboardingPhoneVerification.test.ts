@@ -106,6 +106,9 @@ describe("onboarding phone verification actions", () => {
     process.env.TWILIO_VERIFY_SERVICE_SID = "VA123";
 
     vi.clearAllMocks();
+    lookupFetchMock.mockReset();
+    verificationCreateMock.mockReset();
+    verificationCheckCreateMock.mockReset();
     lookupFetchMock.mockResolvedValue({
       phoneNumber: "+15817484609",
       countryCode: "CA",
@@ -161,6 +164,26 @@ describe("onboarding phone verification actions", () => {
       status: "pending",
       lineType: "mobile",
     });
+  });
+
+  it("throttles rapid resend attempts for the same verified phone", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+15817484609",
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId,
+        phoneE164: "+15817484609",
+      }),
+    ).rejects.toThrow("We just sent a verification code. Please wait a moment before retrying.");
+
+    expect(verificationCreateMock).toHaveBeenCalledTimes(1);
   });
 
   it("marks the user phone verified and advances onboarding after a valid code", async () => {

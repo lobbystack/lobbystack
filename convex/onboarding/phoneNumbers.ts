@@ -359,6 +359,46 @@ async function getNumbersForSelectionContext(
     .filter((number): number is AvailableNumberSummary => number !== null);
 }
 
+function buildNormalizedSelectionContext(input: {
+  requestedSelectionContext: NumberSelectionContext;
+  fallbackContext: NumberSuggestionContext;
+}): NumberSelectionContext {
+  const { requestedSelectionContext, fallbackContext } = input;
+  const requestedCity = requestedSelectionContext.city?.trim();
+  const requestedAreaCode = requestedSelectionContext.areaCode?.trim();
+  const shouldKeepSuggestedRegion =
+    requestedSelectionContext.mode !== "city" ||
+    !requestedCity ||
+    (fallbackContext.city !== undefined &&
+      normalizeComparableLocation(requestedCity) ===
+        normalizeComparableLocation(fallbackContext.city));
+
+  if (requestedSelectionContext.mode === "city") {
+    return buildCitySelectionContext({
+      countryCode: fallbackContext.countryCode,
+      city: requestedCity || fallbackContext.city || "",
+      ...(shouldKeepSuggestedRegion && fallbackContext.regionCode
+        ? { regionCode: fallbackContext.regionCode }
+        : {}),
+    });
+  }
+
+  if (requestedSelectionContext.mode === "area_code") {
+    return buildAreaCodeSelectionContext({
+      countryCode: fallbackContext.countryCode,
+      areaCode: requestedAreaCode || "",
+    });
+  }
+
+  if (requestedSelectionContext.mode === "toll_free") {
+    return buildTollFreeSelectionContext({
+      countryCode: fallbackContext.countryCode,
+    });
+  }
+
+  return buildSuggestedSelectionContext(fallbackContext);
+}
+
 async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses">): Promise<void> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -454,32 +494,15 @@ export const searchAvailableNumbers = action({
     await assertOnboardingAccess(ctx, args.businessId);
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
     const limit = args.limit ?? 10;
-    const requestedCity = args.city?.trim();
-    const shouldKeepSuggestedRegion =
-      !requestedCity ||
-      (context.city !== undefined &&
-        normalizeComparableLocation(requestedCity) ===
-          normalizeComparableLocation(context.city));
-
-    const selectionContext =
-      args.mode === "city"
-        ? buildCitySelectionContext({
-            countryCode: context.countryCode,
-            city: requestedCity || context.city || "",
-            ...(shouldKeepSuggestedRegion && context.regionCode
-              ? { regionCode: context.regionCode }
-              : {}),
-          })
-        : args.mode === "area_code"
-          ? buildAreaCodeSelectionContext({
-              countryCode: context.countryCode,
-              areaCode: args.areaCode?.trim() || "",
-            })
-          : args.mode === "toll_free"
-            ? buildTollFreeSelectionContext({
-                countryCode: context.countryCode,
-              })
-            : buildSuggestedSelectionContext(context);
+    const selectionContext = buildNormalizedSelectionContext({
+      requestedSelectionContext: {
+        mode: args.mode,
+        countryCode: context.countryCode,
+        ...(args.city !== undefined ? { city: args.city } : {}),
+        ...(args.areaCode !== undefined ? { areaCode: args.areaCode } : {}),
+      },
+      fallbackContext: context,
+    });
 
     const numbers = await getNumbersForSelectionContext(selectionContext, context, limit);
     return {
@@ -499,27 +522,34 @@ export const claimOnboardingNumber = action({
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
     const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
-
-    const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
-      businessId: args.businessId,
+    const selectionContext = buildNormalizedSelectionContext({
+      requestedSelectionContext: args.selectionContext,
+      fallbackContext: context,
     });
-    if (!business) {
-      throw new Error("Business not found.");
-    }
-    if (business.onboardingStage !== "phone_number") {
-      throw new Error("Phone-number onboarding has already been completed for this business.");
-    }
 
     const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
     const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
     const client = getTwilioClient();
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
+    let claimLocked = false;
+    let selectedNumber: AvailableNumberSummary | null = null;
 
     try {
+      await ctx.runMutation(internal.businesses.admin.beginOnboardingNumberClaim, {
+        businessId: args.businessId,
+      });
+      claimLocked = true;
+
+      const selectableNumbers = await getNumbersForSelectionContext(selectionContext, context, 20);
+      selectedNumber = selectableNumbers.find((number) => number.e164 === args.e164) ?? null;
+      if (!selectedNumber) {
+        throw new Error("The selected phone number is no longer available.");
+      }
+
       purchased = await client.incomingPhoneNumbers.create({
         friendlyName: `business:${String(args.businessId)}`,
-        phoneNumber: args.e164,
+        phoneNumber: selectedNumber.e164,
         smsMethod: "POST",
         smsUrl: smsWebhookUrl,
         voiceMethod: "POST",
@@ -530,7 +560,7 @@ export const claimOnboardingNumber = action({
         internal.businesses.catalog.upsertPhoneNumberInternal,
         {
           businessId: args.businessId,
-          e164: args.e164,
+          e164: selectedNumber.e164,
           twilioPhoneSid: purchased.sid,
           voiceEnabled: true,
           smsEnabled: true,
@@ -557,7 +587,7 @@ export const claimOnboardingNumber = action({
       return {
         status: "claimed" as const,
         phoneNumberId: saved.phoneNumberId,
-        e164: args.e164,
+        e164: selectedNumber.e164,
       };
     } catch (error) {
       let cleanupError: Error | null = null;
@@ -573,6 +603,18 @@ export const claimOnboardingNumber = action({
               : new Error("Automatic rollback of the local phone number record failed.");
         }
       }
+      if (claimLocked) {
+        try {
+          await ctx.runMutation(internal.businesses.admin.releaseOnboardingNumberClaim, {
+            businessId: args.businessId,
+          });
+        } catch (releaseClaimError) {
+          cleanupError =
+            releaseClaimError instanceof Error
+              ? releaseClaimError
+              : new Error("Automatic release of the onboarding claim lock failed.");
+        }
+      }
       if (purchased) {
         try {
           await client.incomingPhoneNumbers(purchased.sid).remove();
@@ -585,7 +627,7 @@ export const claimOnboardingNumber = action({
       }
 
       const alternatives = await getNumbersForSelectionContext(
-        args.selectionContext,
+        selectionContext,
         context,
         10,
       );
