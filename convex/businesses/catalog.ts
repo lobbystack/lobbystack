@@ -642,12 +642,23 @@ export const assertCatalogWriteAccess = internalQuery({
   args: {
     businessId: v.id("businesses"),
     authSubject: v.string(),
+    authUserId: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_auth_subject", (q) => q.eq("authSubject", args.authSubject))
-      .unique();
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    userId: Id<"users">;
+  }> => {
+    const userId: Id<"users"> | null = await ctx.runQuery(
+      internal.users.resolveAuthenticatedUserForBusiness,
+      {
+        businessId: args.businessId,
+        authSubject: args.authSubject,
+        ...(args.authUserId ? { authUserId: args.authUserId } : {}),
+      },
+    );
+    const user = userId ? await ctx.db.get(userId) : null;
     if (!user) {
       throw new Error("User profile not initialized.");
     }
@@ -732,10 +743,12 @@ export const upsertService = action({
     if (!identity) {
       throw new Error("Authentication required.");
     }
+    const authUserId = await getAuthUserId(ctx);
 
     await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
       businessId: args.businessId,
       authSubject: identity.subject,
+      ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
 
     const normalizedLocalizedNames = normalizeLocalizedServiceNames(args.localizedNames);
@@ -1184,10 +1197,12 @@ export const savePhoneNumber = action({
     if (!identity) {
       throw new Error("Authentication required.");
     }
+    const authUserId = await getAuthUserId(ctx);
 
     await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
       businessId: args.businessId,
       authSubject: identity.subject,
+      ...(authUserId ? { authUserId: String(authUserId) } : {}),
     });
 
     const result = await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, args);

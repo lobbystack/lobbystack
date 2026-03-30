@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action, type ActionCtx } from "../_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   type AvailableNumberSummary,
   availableNumberSummaryValidator,
@@ -331,10 +332,12 @@ async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses
   if (!identity) {
     throw new Error("Authentication required.");
   }
+  const authUserId = await getAuthUserId(ctx);
 
   await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
     businessId,
     authSubject: identity.subject,
+    ...(authUserId ? { authUserId: String(authUserId) } : {}),
   });
 }
 
