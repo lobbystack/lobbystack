@@ -87,20 +87,6 @@ function selectActiveBusiness(
   );
 }
 
-function resolveEffectiveOnboardingStage(
-  currentUser: { phoneVerificationTime?: number | null } | undefined | null,
-  activeBusiness: { onboardingStage?: string | null } | undefined | null,
-) {
-  if (
-    activeBusiness?.onboardingStage === "verify_phone" &&
-    currentUser?.phoneVerificationTime
-  ) {
-    return "phone_number";
-  }
-
-  return activeBusiness?.onboardingStage ?? null;
-}
-
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -108,26 +94,25 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
-  const effectiveOnboardingStage = resolveEffectiveOnboardingStage(currentUser, activeBusiness);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
   }
 
   if (
-    effectiveOnboardingStage === "phone_number" &&
+    activeBusiness?.onboardingStage === "phone_number" &&
     !currentUser?.phoneVerificationTime &&
     location.pathname !== "/onboarding/verify-phone"
   ) {
     return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
-  if (effectiveOnboardingStage === "verify_phone") {
+  if (activeBusiness?.onboardingStage === "verify_phone") {
     if (location.pathname !== "/onboarding/verify-phone") {
       return <Navigate replace to="/onboarding/verify-phone" />;
     }
   } else if (
-    effectiveOnboardingStage === "phone_number" &&
+    activeBusiness?.onboardingStage === "phone_number" &&
     location.pathname !== "/onboarding/number"
   ) {
     return <Navigate replace to="/onboarding/number" />;
@@ -269,7 +254,6 @@ function OnboardingNumberRoute() {
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
-  const effectiveOnboardingStage = resolveEffectiveOnboardingStage(currentUser, activeBusiness);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
@@ -279,7 +263,7 @@ function OnboardingNumberRoute() {
     return <Navigate replace to="/" />;
   }
 
-  if (effectiveOnboardingStage !== "phone_number") {
+  if (activeBusiness.onboardingStage !== "phone_number") {
     return <Navigate replace to="/" />;
   }
 

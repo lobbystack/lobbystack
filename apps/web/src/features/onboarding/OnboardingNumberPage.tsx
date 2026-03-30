@@ -192,6 +192,12 @@ export function OnboardingNumberPage({
   }, [businessId, getInitialNumberSuggestion, t]);
 
   async function runSearch(tab: "city" | "area_code" | "toll_free"): Promise<void> {
+    if (tab === "area_code" && areaCodeQuery.trim().length === 0) {
+      setClaimError(t("number.areaCodeRequired"));
+      setPickerNumbers([]);
+      return;
+    }
+
     setIsSearching(true);
     setClaimError(null);
 

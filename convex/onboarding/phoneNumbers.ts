@@ -150,9 +150,14 @@ async function listLocalNumbersByAreaCode(input: {
   areaCode: string;
   limit: number;
 }): Promise<Array<TwilioAvailableNumber>> {
+  const normalizedAreaCode = input.areaCode.trim();
+  if (!/^\d+$/.test(normalizedAreaCode)) {
+    return [];
+  }
+
   const client = getTwilioClient();
   return await getTwilioLocalCollection(client, input.countryCode).list({
-    areaCode: Number.parseInt(input.areaCode, 10),
+    areaCode: Number.parseInt(normalizedAreaCode, 10),
     limit: input.limit,
     smsEnabled: true,
     voiceEnabled: true,

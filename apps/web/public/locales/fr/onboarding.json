@@ -58,6 +58,7 @@
     },
     "search": "Rechercher",
     "searching": "Recherche...",
+    "areaCodeRequired": "Entrez un indicatif avant de lancer la recherche.",
     "empty": "Aucun numéro ne correspond à cette recherche.",
     "select": "Choisir",
     "selected": "Choisi",

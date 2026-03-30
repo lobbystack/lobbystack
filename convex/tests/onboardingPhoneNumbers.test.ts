@@ -325,6 +325,34 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("returns an empty result for blank area-code searches without calling Twilio", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "area_code",
+      areaCode: "   ",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+    expect(result.selectionContext).toEqual({
+      mode: "area_code",
+      countryCode: "CA",
+      areaCode: "",
+    });
+    expect(result.numbers).toEqual([]);
+  });
+
   it("uses the verified phone area code instead of unrelated geo hints", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject, userId } = await seedBusinessOwner(t);
