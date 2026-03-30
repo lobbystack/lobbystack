@@ -2,7 +2,6 @@ import { v } from "convex/values";
 
 export const locationSourceValidator = v.union(
   v.literal("cloudflare"),
-  v.literal("ipinfo"),
   v.literal("timezone"),
   v.literal("default"),
 );
@@ -27,7 +26,7 @@ export type NumberSuggestionContext = {
   postalCode?: string;
   metroKey?: string;
   confidence: number;
-  source: "cloudflare" | "ipinfo" | "timezone" | "default";
+  source: "cloudflare" | "timezone" | "default";
   timezone?: string;
   latitude?: number;
   longitude?: number;

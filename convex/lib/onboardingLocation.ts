@@ -1,17 +1,5 @@
 import { resolveNumberSuggestionContext, type NumberSuggestionContext } from "./onboardingPhoneNumbers";
 
-type IpInfoGeoResponse = {
-  city?: string;
-  region?: string;
-  region_code?: string;
-  country?: string;
-  country_code?: string;
-  timezone?: string;
-  postal_code?: string;
-  latitude?: number;
-  longitude?: number;
-};
-
 type CloudflareGeoHeaders = {
   city?: string;
   regionCode?: string;
@@ -109,23 +97,6 @@ export function extractClientIpAddress(request: Request): string | null {
   return candidates.find(isPublicIpAddress) ?? null;
 }
 
-async function lookupIpInfoGeo(ipAddress: string): Promise<IpInfoGeoResponse | null> {
-  const token = process.env.IPINFO_TOKEN;
-  if (!token) {
-    return null;
-  }
-
-  const url = new URL(`https://api.ipinfo.io/lookup/${ipAddress}/geo`);
-  url.searchParams.set("token", token);
-
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    return null;
-  }
-
-  return (await response.json()) as IpInfoGeoResponse;
-}
-
 export async function inferOnboardingLocationContext(input: {
   request: Request;
   timezoneHint?: string;
@@ -139,29 +110,6 @@ export async function inferOnboardingLocationContext(input: {
         : {}),
       source: "cloudflare",
     });
-  }
-
-  const ipAddress = extractClientIpAddress(input.request);
-  if (ipAddress) {
-    try {
-      const geo = await lookupIpInfoGeo(ipAddress);
-      if (geo) {
-        return resolveNumberSuggestionContext({
-          ...(geo.country_code || geo.country ? { countryCode: geo.country_code ?? geo.country } : {}),
-          ...(geo.region_code || geo.region ? { regionCode: geo.region_code ?? geo.region } : {}),
-          ...(geo.city ? { city: geo.city } : {}),
-          ...(geo.postal_code ? { postalCode: geo.postal_code } : {}),
-          ...(geo.timezone || input.timezoneHint
-            ? { timezone: geo.timezone ?? input.timezoneHint }
-            : {}),
-          ...(geo.latitude !== undefined ? { latitude: geo.latitude } : {}),
-          ...(geo.longitude !== undefined ? { longitude: geo.longitude } : {}),
-          source: "ipinfo",
-        });
-      }
-    } catch {
-      // Fall through to timezone/default inference below.
-    }
   }
 
   return resolveNumberSuggestionContext({

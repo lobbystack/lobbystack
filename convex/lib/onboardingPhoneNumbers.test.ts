@@ -11,7 +11,7 @@ describe("onboarding phone-number suggestion context", () => {
       countryCode: "CA",
       regionCode: "QC",
       city: "Quebec City",
-      source: "ipinfo",
+      source: "cloudflare",
     });
 
     expect(context.metroKey).toBe("quebec_city");
@@ -24,7 +24,7 @@ describe("onboarding phone-number suggestion context", () => {
       countryCode: "CA",
       regionCode: "QC",
       city: "Saint-Nicolas",
-      source: "ipinfo",
+      source: "cloudflare",
     });
 
     expect(context.metroKey).toBe("quebec_city");
@@ -37,7 +37,7 @@ describe("onboarding phone-number suggestion context", () => {
       regionCode: "QC",
       latitude: 46.82,
       longitude: -71.22,
-      source: "ipinfo",
+      source: "cloudflare",
     });
 
     expect(context.metroKey).toBe("quebec_city");
@@ -46,11 +46,11 @@ describe("onboarding phone-number suggestion context", () => {
   });
 
   it("keeps geography-only ranking stable regardless of source", () => {
-    const ipinfoContext = resolveNumberSuggestionContext({
+    const cloudflareContext = resolveNumberSuggestionContext({
       countryCode: "CA",
       regionCode: "QC",
       city: "Longueuil",
-      source: "ipinfo",
+      source: "cloudflare",
     });
     const timezoneContext = resolveNumberSuggestionContext({
       countryCode: "CA",
@@ -60,7 +60,7 @@ describe("onboarding phone-number suggestion context", () => {
       timezone: "America/Toronto",
     });
 
-    expect(getMetroAreaCodePriority(ipinfoContext)).toEqual(["450", "579", "354"]);
+    expect(getMetroAreaCodePriority(cloudflareContext)).toEqual(["450", "579", "354"]);
     expect(getMetroAreaCodePriority(timezoneContext)).toEqual(["450", "579", "354"]);
   });
 });

@@ -2,17 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { extractClientIpAddress, inferOnboardingLocationContext } from "./onboardingLocation";
 
-const originalIpInfoToken = process.env.IPINFO_TOKEN;
-
 describe("onboarding location inference", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
-    delete process.env.IPINFO_TOKEN;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    process.env.IPINFO_TOKEN = originalIpInfoToken;
   });
 
   it("extracts the first public IP address from proxy headers", () => {
@@ -55,46 +51,6 @@ describe("onboarding location inference", () => {
     });
   });
 
-  it("uses ipinfo geo data when available", async () => {
-    process.env.IPINFO_TOKEN = "test-ipinfo-token";
-    const fetchMock = vi.fn(async () => {
-      return new Response(
-        JSON.stringify({
-          city: "Quebec City",
-          region_code: "QC",
-          country_code: "CA",
-          postal_code: "G1R",
-          timezone: "America/Toronto",
-          latitude: 46.8139,
-          longitude: -71.208,
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const context = await inferOnboardingLocationContext({
-      request: new Request("https://example.com/onboarding/location", {
-        headers: {
-          "x-forwarded-for": "203.0.113.18",
-        },
-      }),
-    });
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(context).toMatchObject({
-      countryCode: "CA",
-      regionCode: "QC",
-      city: "Quebec City",
-      postalCode: "G1R",
-      metroKey: "quebec_city",
-      source: "ipinfo",
-    });
-  });
-
   it("falls back to timezone inference when ip geolocation is unavailable", async () => {
     const context = await inferOnboardingLocationContext({
       request: new Request("https://example.com/onboarding/location"),
@@ -105,42 +61,6 @@ describe("onboarding location inference", () => {
       countryCode: "CA",
       source: "timezone",
       timezone: "America/Toronto",
-    });
-  });
-
-  it("prefers Cloudflare headers over ip geolocation fallback", async () => {
-    process.env.IPINFO_TOKEN = "test-ipinfo-token";
-    const fetchMock = vi.fn(async () => {
-      return new Response(
-        JSON.stringify({
-          city: "Toronto",
-          region_code: "ON",
-          country_code: "CA",
-        }),
-        {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        },
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const context = await inferOnboardingLocationContext({
-      request: new Request("https://example.com/onboarding/location", {
-        headers: {
-          "cf-ipcountry": "CA",
-          "cf-region-code": "QC",
-          "cf-ipcity": "Saint-Nicolas",
-          "x-forwarded-for": "203.0.113.18",
-        },
-      }),
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(context).toMatchObject({
-      city: "Saint-Nicolas",
-      regionCode: "QC",
-      source: "cloudflare",
     });
   });
 });

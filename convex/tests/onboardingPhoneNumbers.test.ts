@@ -78,7 +78,7 @@ const quebecCityContext = {
   city: "Quebec City",
   metroKey: "quebec_city",
   confidence: 0.95,
-  source: "ipinfo" as const,
+  source: "cloudflare" as const,
   timezone: "America/Toronto",
 };
 
