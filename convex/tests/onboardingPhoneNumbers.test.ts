@@ -8,11 +8,13 @@ import { modules } from "../test.setup";
 
 const {
   createIncomingPhoneNumberMock,
+  removeIncomingPhoneNumberMock,
   listLocalNumbersMock,
   listTollFreeNumbersMock,
   scheduleSnapshotRefreshMock,
 } = vi.hoisted(() => ({
   createIncomingPhoneNumberMock: vi.fn(),
+  removeIncomingPhoneNumberMock: vi.fn(),
   listLocalNumbersMock: vi.fn(),
   listTollFreeNumbersMock: vi.fn(),
   scheduleSnapshotRefreshMock: vi.fn(),
@@ -22,6 +24,7 @@ vi.mock("twilio", () => {
   const incomingPhoneNumbers = Object.assign(
     vi.fn(() => ({
       update: vi.fn(),
+      remove: removeIncomingPhoneNumberMock,
     })),
     {
       create: createIncomingPhoneNumberMock,
@@ -153,6 +156,7 @@ describe("onboarding phone-number actions", () => {
     scheduleSnapshotRefreshMock.mockResolvedValue(null);
     listLocalNumbersMock.mockResolvedValue([]);
     listTollFreeNumbersMock.mockResolvedValue([]);
+    removeIncomingPhoneNumberMock.mockResolvedValue(true);
     createIncomingPhoneNumberMock.mockResolvedValue({
       sid: "PN-default",
       smsUrl: "https://example.convex.site/twilio/sms/inbound",
@@ -269,6 +273,36 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("allows city searches outside the verified region when the user overrides the suggested city", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "city",
+      city: "Toronto",
+      limit: 5,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "CA",
+      args: {
+        inLocality: "Toronto",
+        limit: 5,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+  });
+
   it("uses the verified phone area code instead of unrelated geo hints", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -372,6 +406,39 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("rejects claims once onboarding is no longer on the phone-number step", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+        businessId,
+        e164: "+14185550123",
+        selectionContext: {
+          mode: "area_code",
+          countryCode: "CA",
+          areaCode: "418",
+        },
+      }),
+    ).rejects.toThrow("Phone-number onboarding has already been completed for this business.");
+
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+  });
+
   it("returns refreshed alternatives when the selected number is no longer available", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -440,6 +507,55 @@ describe("onboarding phone-number actions", () => {
     });
     expect(business?.onboardingStage).toBe("phone_number");
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
+  it("releases the purchased Twilio number if local persistence fails", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14185550123",
+        twilioPhoneSid: "PN-existing",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+        voiceWebhookStatus: "synced",
+        smsWebhookStatus: "synced",
+      });
+    });
+
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-needs-cleanup",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "The phone number +14185550123 is already mapped to a business.",
+    });
+    expect(removeIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
   });
 
   it("surfaces non-availability provisioning errors even when the refreshed list changes", async () => {

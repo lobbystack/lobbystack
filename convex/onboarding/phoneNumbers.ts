@@ -79,6 +79,10 @@ function isLikelyNumberUnavailableError(error: unknown): boolean {
   );
 }
 
+function normalizeComparableLocation(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
 function formatDisplayPhoneNumber(e164: string): string {
   const digits = e164.replace(/\D/g, "");
   if (digits.length === 11 && digits.startsWith("1")) {
@@ -445,13 +449,21 @@ export const searchAvailableNumbers = action({
     await assertOnboardingAccess(ctx, args.businessId);
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
     const limit = args.limit ?? 10;
+    const requestedCity = args.city?.trim();
+    const shouldKeepSuggestedRegion =
+      !requestedCity ||
+      (context.city !== undefined &&
+        normalizeComparableLocation(requestedCity) ===
+          normalizeComparableLocation(context.city));
 
     const selectionContext =
       args.mode === "city"
         ? buildCitySelectionContext({
             countryCode: context.countryCode,
-            city: args.city?.trim() || context.city || "",
-            ...(context.regionCode ? { regionCode: context.regionCode } : {}),
+            city: requestedCity || context.city || "",
+            ...(shouldKeepSuggestedRegion && context.regionCode
+              ? { regionCode: context.regionCode }
+              : {}),
           })
         : args.mode === "area_code"
           ? buildAreaCodeSelectionContext({
@@ -489,13 +501,17 @@ export const claimOnboardingNumber = action({
     if (!business) {
       throw new Error("Business not found.");
     }
+    if (business.onboardingStage !== "phone_number") {
+      throw new Error("Phone-number onboarding has already been completed for this business.");
+    }
 
     const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
     const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
     const client = getTwilioClient();
+    let purchased: PurchasedIncomingNumber | null = null;
 
     try {
-      const purchased: PurchasedIncomingNumber = await client.incomingPhoneNumbers.create({
+      purchased = await client.incomingPhoneNumbers.create({
         friendlyName: `business:${String(args.businessId)}`,
         phoneNumber: args.e164,
         smsMethod: "POST",
@@ -537,6 +553,18 @@ export const claimOnboardingNumber = action({
         e164: args.e164,
       };
     } catch (error) {
+      let cleanupError: Error | null = null;
+      if (purchased) {
+        try {
+          await client.incomingPhoneNumbers(purchased.sid).remove();
+        } catch (releaseError) {
+          cleanupError =
+            releaseError instanceof Error
+              ? releaseError
+              : new Error("Automatic cleanup of the purchased Twilio number failed.");
+        }
+      }
+
       const alternatives = await getNumbersForSelectionContext(
         args.selectionContext,
         context,
@@ -544,7 +572,7 @@ export const claimOnboardingNumber = action({
       );
       const selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
 
-      if (!selectedStillListed && isLikelyNumberUnavailableError(error)) {
+      if (!purchased && !selectedStillListed && isLikelyNumberUnavailableError(error)) {
         return {
           status: "unavailable" as const,
           message: "The selected phone number is no longer available.",
@@ -556,8 +584,12 @@ export const claimOnboardingNumber = action({
         status: "failed" as const,
         message:
           error instanceof Error
-            ? error.message
-            : "We couldn't provision the selected phone number.",
+            ? cleanupError
+              ? `${error.message} Automatic cleanup of the purchased Twilio number also failed.`
+              : error.message
+            : cleanupError
+              ? "We couldn't provision the selected phone number, and automatic Twilio cleanup also failed."
+              : "We couldn't provision the selected phone number.",
       };
     }
   },
