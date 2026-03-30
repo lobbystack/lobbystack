@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "deploy:cloudflare": "wrangler deploy",
-    "preview:cloudflare": "wrangler deploy --dry-run",
+    "preview:cloudflare": "wrangler versions upload",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"

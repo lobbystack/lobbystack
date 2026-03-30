@@ -5,17 +5,43 @@ This repo deploys the dashboard in `apps/web` to Cloudflare Workers Static Asset
 ## What Is Configured
 
 - Wrangler config: `apps/web/wrangler.jsonc`
-- Deploy command: `pnpm --filter @ai-receptionist/web build` then `wrangler deploy`
-- GitHub integration: pushes to `main` deploy automatically through `.github/workflows/ci.yml` after the validation job passes
+- Deploy script: `pnpm deploy:cloudflare`
+- Preview script: `pnpm preview:cloudflare`
+- GitHub integration target: Cloudflare Workers Builds
+- GitHub Actions role: `.github/workflows/ci.yml` validates the repo, but production deployment is handled by Cloudflare, not by GitHub Actions
 
-## Required GitHub Secrets
+## Cloudflare Workers Builds Setup
 
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
+1. In Cloudflare, go to `Workers & Pages`.
+2. Create a new Worker from `Import a repository`, or open the existing Worker named `ai-receptionist-web`.
+3. Connect the GitHub repository.
+4. Set the production branch to `main`.
+5. Set the root directory to `apps/web`.
+6. Set the build command to:
 
-The API token needs permission to deploy Workers for the target account.
+```bash
+pnpm install --frozen-lockfile=false && pnpm build
+```
 
-## Required GitHub Variables
+7. Set the deploy command to:
+
+```bash
+pnpm deploy:cloudflare
+```
+
+8. If you enable non-production branch builds, set the non-production deploy command to:
+
+```bash
+pnpm preview:cloudflare
+```
+
+Important:
+- The Worker name in Cloudflare must match `name` in `apps/web/wrangler.jsonc`.
+- Cloudflare’s docs note that this name match is required for repository-connected builds to succeed.
+
+## Required Cloudflare Build Variables
+
+Add these in the Worker’s `Settings > Build` configuration:
 
 - `VITE_CONVEX_URL`
 - `VITE_CONVEX_SITE_URL`
@@ -23,13 +49,16 @@ The API token needs permission to deploy Workers for the target account.
 Optional:
 
 - `VITE_APP_NAME`
+- `VITE_DEPLOYMENT_MODE=production`
+
+These are build-time variables for Vite, not runtime Worker secrets.
 
 ## First Production Deploy
 
-1. Add the GitHub secrets and variables above.
-2. Push the workflow to `main`.
-3. The `deploy_web_worker` job in CI will build `apps/web` and deploy the Worker named `ai-receptionist-web`.
-4. In Cloudflare, attach your production custom domain to that Worker if you do not want to use the default `workers.dev` hostname.
+1. Save the Workers Builds configuration above.
+2. Push to `main`.
+3. Cloudflare will build `apps/web` and deploy the Worker named `ai-receptionist-web`.
+4. Attach your production custom domain in Cloudflare if you do not want to use the default `workers.dev` hostname.
 
 ## Cloudflare Location Headers
 
