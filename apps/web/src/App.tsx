@@ -291,6 +291,7 @@ function OnboardingVerifyPhoneRoute() {
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const [isSkippingVerification, setIsSkippingVerification] = useState(false);
   const [hasAttemptedAutoSkip, setHasAttemptedAutoSkip] = useState(false);
+  const hasReusableVerifiedPhone = Boolean(currentUser?.phone && currentUser?.phoneVerificationTime);
 
   useEffect(() => {
     if (
@@ -298,7 +299,7 @@ function OnboardingVerifyPhoneRoute() {
       currentUser === undefined ||
       !activeBusiness ||
       activeBusiness.onboardingStage !== "verify_phone" ||
-      !currentUser?.phoneVerificationTime ||
+      !hasReusableVerifiedPhone ||
       isSkippingVerification ||
       hasAttemptedAutoSkip
     ) {
@@ -330,6 +331,7 @@ function OnboardingVerifyPhoneRoute() {
     activeBusiness,
     businesses,
     currentUser,
+    hasReusableVerifiedPhone,
     hasAttemptedAutoSkip,
     isSkippingVerification,
     navigate,
@@ -346,12 +348,12 @@ function OnboardingVerifyPhoneRoute() {
 
   const requiresPhoneVerification =
     activeBusiness.onboardingStage === "verify_phone" ||
-    (activeBusiness.onboardingStage === "phone_number" && !currentUser?.phoneVerificationTime);
+    (activeBusiness.onboardingStage === "phone_number" && !hasReusableVerifiedPhone);
 
   if (
     isSkippingVerification &&
     activeBusiness.onboardingStage === "verify_phone" &&
-    currentUser?.phoneVerificationTime
+    hasReusableVerifiedPhone
   ) {
     return <LoadingScreen />;
   }

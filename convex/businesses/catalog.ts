@@ -1193,8 +1193,6 @@ export const syncPhoneNumberWebhooks = internalAction({
       });
     }
 
-    const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
-    const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
     const shouldSyncVoice = shouldSyncVoiceWebhook({
       twilioPhoneSid: phoneNumber.twilioPhoneSid,
       voiceEnabled: phoneNumber.voiceEnabled,
@@ -1207,12 +1205,14 @@ export const syncPhoneNumberWebhooks = internalAction({
       smsEnabled: phoneNumber.smsEnabled,
       status: phoneNumber.status,
     });
+    const smsWebhookUrl = shouldSyncSms ? buildTwilioSmsInboundWebhookUrl() : null;
+    const voiceWebhookUrl = shouldSyncVoice ? buildTwilioVoiceInboundWebhookUrl() : null;
 
     try {
       const result = await ctx.runAction(internal.integrations.twilioSms.registerIncomingWebhook, {
         phoneNumberSid: phoneNumber.twilioPhoneSid!,
-        ...(shouldSyncSms ? { smsWebhookUrl } : {}),
-        ...(shouldSyncVoice ? { voiceWebhookUrl } : {}),
+        ...(shouldSyncSms && smsWebhookUrl ? { smsWebhookUrl } : {}),
+        ...(shouldSyncVoice && voiceWebhookUrl ? { voiceWebhookUrl } : {}),
       });
 
       return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
@@ -1220,7 +1220,7 @@ export const syncPhoneNumberWebhooks = internalAction({
         voiceWebhookStatus: shouldSyncVoice ? "synced" : "not_configured",
         ...(shouldSyncVoice
           ? {
-              voiceWebhookTargetUrl: result.voiceWebhookTargetUrl ?? voiceWebhookUrl,
+              voiceWebhookTargetUrl: result.voiceWebhookTargetUrl ?? voiceWebhookUrl!,
               voiceWebhookLastSyncedAt: new Date().toISOString(),
             }
           : {
@@ -1231,7 +1231,7 @@ export const syncPhoneNumberWebhooks = internalAction({
         smsWebhookStatus: shouldSyncSms ? "synced" : "not_configured",
         ...(shouldSyncSms
           ? {
-              smsWebhookTargetUrl: result.smsWebhookTargetUrl ?? smsWebhookUrl,
+              smsWebhookTargetUrl: result.smsWebhookTargetUrl ?? smsWebhookUrl!,
               smsWebhookLastSyncedAt: new Date().toISOString(),
             }
           : {
@@ -1246,7 +1246,7 @@ export const syncPhoneNumberWebhooks = internalAction({
         voiceWebhookStatus: shouldSyncVoice ? "failed" : "not_configured",
         ...(shouldSyncVoice
           ? {
-              voiceWebhookTargetUrl: voiceWebhookUrl,
+              voiceWebhookTargetUrl: voiceWebhookUrl!,
               voiceWebhookLastSyncedAt: new Date().toISOString(),
               voiceWebhookLastError:
                 error instanceof Error ? error.message : "Twilio voice webhook sync failed.",
@@ -1259,7 +1259,7 @@ export const syncPhoneNumberWebhooks = internalAction({
         smsWebhookStatus: shouldSyncSms ? "failed" : "not_configured",
         ...(shouldSyncSms
           ? {
-              smsWebhookTargetUrl: smsWebhookUrl,
+              smsWebhookTargetUrl: smsWebhookUrl!,
               smsWebhookLastSyncedAt: new Date().toISOString(),
               smsWebhookLastError:
                 error instanceof Error ? error.message : "Twilio SMS webhook sync failed.",

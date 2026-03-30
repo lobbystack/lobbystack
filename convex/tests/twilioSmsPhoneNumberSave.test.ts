@@ -298,6 +298,36 @@ describe("Twilio SMS phone-number save flow", () => {
     expect(configuration.phoneNumbers[0]?.voiceWebhookTargetUrl).toBeUndefined();
   });
 
+  it("does not require voice gateway config for active SMS-only numbers", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    delete process.env.VOICE_GATEWAY_BASE_URL;
+
+    const result = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      e164: "+14165550132",
+      twilioPhoneSid: "PN-sms-only",
+      voiceEnabled: false,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    expect(result).toMatchObject({
+      voiceWebhookStatus: "not_configured",
+      smsWebhookStatus: "synced",
+    });
+    expect(updateIncomingPhoneNumberMock).toHaveBeenCalledWith({
+      phoneNumberSid: "PN-sms-only",
+      args: {
+        smsMethod: "POST",
+        smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        voiceUrl: "",
+      },
+    });
+  });
+
   it("keeps the phone number saved and records a failed sync when Twilio registration fails", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);
