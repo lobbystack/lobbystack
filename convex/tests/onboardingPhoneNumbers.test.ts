@@ -235,6 +235,33 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("does not auto-suggest a random country-wide number when confidence is only timezone-based", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+12494687985",
+        locality: "Barrie",
+        region: "ON",
+        isoCountry: "CA",
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+      businessId,
+      context: {
+        countryCode: "CA",
+        confidence: 0.45,
+        source: "timezone",
+        timezone: "America/Toronto",
+      },
+    });
+
+    expect(result.suggestion).toBeNull();
+  });
+
   it("claims the selected number, persists it, and completes onboarding", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);

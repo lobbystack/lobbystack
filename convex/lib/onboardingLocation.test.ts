@@ -25,6 +25,36 @@ describe("onboarding location inference", () => {
     expect(extractClientIpAddress(request)).toBe("203.0.113.18");
   });
 
+  it("uses Cloudflare visitor location headers when available", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const context = await inferOnboardingLocationContext({
+      request: new Request("https://example.com/onboarding/location", {
+        headers: {
+          "cf-ipcountry": "CA",
+          "cf-region-code": "QC",
+          "cf-ipcity": "Saint-Nicolas",
+          "cf-postal-code": "G7A",
+          "cf-timezone": "America/Toronto",
+          "cf-iplatitude": "46.7098",
+          "cf-iplongitude": "-71.3720",
+          "x-forwarded-for": "203.0.113.18",
+        },
+      }),
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(context).toMatchObject({
+      countryCode: "CA",
+      regionCode: "QC",
+      city: "Saint-Nicolas",
+      postalCode: "G7A",
+      metroKey: "quebec_city",
+      source: "cloudflare",
+    });
+  });
+
   it("uses ipinfo geo data when available", async () => {
     process.env.IPINFO_TOKEN = "test-ipinfo-token";
     const fetchMock = vi.fn(async () => {
@@ -75,6 +105,42 @@ describe("onboarding location inference", () => {
       countryCode: "CA",
       source: "timezone",
       timezone: "America/Toronto",
+    });
+  });
+
+  it("prefers Cloudflare headers over ip geolocation fallback", async () => {
+    process.env.IPINFO_TOKEN = "test-ipinfo-token";
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          city: "Toronto",
+          region_code: "ON",
+          country_code: "CA",
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const context = await inferOnboardingLocationContext({
+      request: new Request("https://example.com/onboarding/location", {
+        headers: {
+          "cf-ipcountry": "CA",
+          "cf-region-code": "QC",
+          "cf-ipcity": "Saint-Nicolas",
+          "x-forwarded-for": "203.0.113.18",
+        },
+      }),
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(context).toMatchObject({
+      city: "Saint-Nicolas",
+      regionCode: "QC",
+      source: "cloudflare",
     });
   });
 });

@@ -19,6 +19,18 @@ describe("onboarding phone-number suggestion context", () => {
     expect(context.confidence).toBe(0.95);
   });
 
+  it("maps Saint-Nicolas to the Quebec City area-code cluster", () => {
+    const context = resolveNumberSuggestionContext({
+      countryCode: "CA",
+      regionCode: "QC",
+      city: "Saint-Nicolas",
+      source: "ipinfo",
+    });
+
+    expect(context.metroKey).toBe("quebec_city");
+    expect(getMetroAreaCodePriority(context)).toEqual(["418", "581", "367"]);
+  });
+
   it("falls back to the nearest metro when only coordinates are available", () => {
     const context = resolveNumberSuggestionContext({
       countryCode: "CA",

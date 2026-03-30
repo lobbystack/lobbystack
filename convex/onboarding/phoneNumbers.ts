@@ -229,7 +229,14 @@ async function getSuggestedNumbers(
     );
   }
 
-  if (collected.length < limit) {
+  const shouldUseCountryWideFallback =
+    Boolean(context.metroKey) ||
+    Boolean(context.regionCode) ||
+    Boolean(context.city) ||
+    Boolean(context.postalCode) ||
+    context.confidence >= 0.6;
+
+  if (collected.length < limit && shouldUseCountryWideFallback) {
     const selectionContext = buildSuggestedSelectionContext(context);
     const fallbackMatches = await listFallbackLocalNumbers({
       countryCode: context.countryCode,

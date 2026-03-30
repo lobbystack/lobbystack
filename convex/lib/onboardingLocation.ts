@@ -12,6 +12,57 @@ type IpInfoGeoResponse = {
   longitude?: number;
 };
 
+type CloudflareGeoHeaders = {
+  city?: string;
+  regionCode?: string;
+  countryCode?: string;
+  postalCode?: string;
+  timezone?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+function parseOptionalNumber(value: string | null): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function extractCloudflareGeoHeaders(request: Request): CloudflareGeoHeaders | null {
+  const countryCode = request.headers.get("cf-ipcountry")?.trim() || undefined;
+  const regionCode = request.headers.get("cf-region-code")?.trim() || undefined;
+  const city = request.headers.get("cf-ipcity")?.trim() || undefined;
+  const postalCode = request.headers.get("cf-postal-code")?.trim() || undefined;
+  const timezone = request.headers.get("cf-timezone")?.trim() || undefined;
+  const latitude = parseOptionalNumber(request.headers.get("cf-iplatitude"));
+  const longitude = parseOptionalNumber(request.headers.get("cf-iplongitude"));
+
+  if (
+    !countryCode &&
+    !regionCode &&
+    !city &&
+    !postalCode &&
+    timezone === undefined &&
+    latitude === undefined &&
+    longitude === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    ...(countryCode ? { countryCode } : {}),
+    ...(regionCode ? { regionCode } : {}),
+    ...(city ? { city } : {}),
+    ...(postalCode ? { postalCode } : {}),
+    ...(timezone ? { timezone } : {}),
+    ...(latitude !== undefined ? { latitude } : {}),
+    ...(longitude !== undefined ? { longitude } : {}),
+  };
+}
+
 function isPublicIpAddress(value: string): boolean {
   if (!value) {
     return false;
@@ -79,6 +130,17 @@ export async function inferOnboardingLocationContext(input: {
   request: Request;
   timezoneHint?: string;
 }): Promise<NumberSuggestionContext> {
+  const cloudflareGeo = extractCloudflareGeoHeaders(input.request);
+  if (cloudflareGeo) {
+    return resolveNumberSuggestionContext({
+      ...cloudflareGeo,
+      ...(cloudflareGeo.timezone || input.timezoneHint
+        ? { timezone: cloudflareGeo.timezone ?? input.timezoneHint }
+        : {}),
+      source: "cloudflare",
+    });
+  }
+
   const ipAddress = extractClientIpAddress(input.request);
   if (ipAddress) {
     try {

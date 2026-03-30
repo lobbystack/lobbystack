@@ -44,7 +44,7 @@ type NumberSuggestionContext = {
   postalCode?: string;
   metroKey?: string;
   confidence: number;
-  source: "ipinfo" | "timezone" | "default";
+  source: "cloudflare" | "ipinfo" | "timezone" | "default";
   timezone?: string;
   latitude?: number;
   longitude?: number;

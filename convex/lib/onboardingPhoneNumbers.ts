@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 export const locationSourceValidator = v.union(
+  v.literal("cloudflare"),
   v.literal("ipinfo"),
   v.literal("timezone"),
   v.literal("default"),
@@ -26,7 +27,7 @@ export type NumberSuggestionContext = {
   postalCode?: string;
   metroKey?: string;
   confidence: number;
-  source: "ipinfo" | "timezone" | "default";
+  source: "cloudflare" | "ipinfo" | "timezone" | "default";
   timezone?: string;
   latitude?: number;
   longitude?: number;
@@ -103,7 +104,16 @@ const canadianMetros: MetroDefinition[] = [
     areaCodes: ["418", "581", "367"],
     latitude: 46.8139,
     longitude: -71.208,
-    localityAliases: ["quebec city", "quebec", "levis", "sainte foy", "ste foy"],
+    localityAliases: [
+      "quebec city",
+      "quebec",
+      "levis",
+      "saint nicolas",
+      "st nicolas",
+      "saint nicolas de levis",
+      "sainte foy",
+      "ste foy",
+    ],
   },
   {
     key: "montreal",
@@ -363,7 +373,7 @@ export function resolveNumberSuggestionContext(input: {
   const source =
     input.source ??
     (input.countryCode || input.city || input.regionCode || input.postalCode
-      ? "ipinfo"
+      ? "cloudflare"
       : timezone
         ? "timezone"
         : "default");
