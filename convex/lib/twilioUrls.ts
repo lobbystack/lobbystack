@@ -9,21 +9,24 @@ function requireConvexSiteUrl(): string {
 
 function requireVoiceGatewayBaseUrl(): string {
   const voiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
-  if (voiceGatewayBaseUrl) {
-    return voiceGatewayBaseUrl;
+  if (!voiceGatewayBaseUrl) {
+    throw new Error(
+      "VOICE_GATEWAY_BASE_URL must be set to a public HTTPS voice gateway URL for Twilio voice webhook configuration.",
+    );
   }
 
-  const appBaseUrl = process.env.APP_BASE_URL ?? process.env.SITE_URL;
-  const isDevelopment =
-    process.env.DEPLOYMENT_MODE === "development" ||
-    process.env.NODE_ENV === "development" ||
-    appBaseUrl?.includes("localhost") ||
-    appBaseUrl?.includes("127.0.0.1");
-  if (isDevelopment) {
-    return "http://localhost:3001";
+  const parsedUrl = new URL(voiceGatewayBaseUrl);
+  const isLocalHostname =
+    parsedUrl.hostname === "localhost" ||
+    parsedUrl.hostname === "127.0.0.1" ||
+    parsedUrl.hostname === "::1";
+  if (parsedUrl.protocol !== "https:" || isLocalHostname) {
+    throw new Error(
+      "VOICE_GATEWAY_BASE_URL must be a public HTTPS voice gateway URL for Twilio voice webhook configuration.",
+    );
   }
 
-  throw new Error("VOICE_GATEWAY_BASE_URL is required for Twilio voice webhook configuration.");
+  return voiceGatewayBaseUrl;
 }
 
 export function buildTwilioSmsInboundWebhookUrl(): string {
