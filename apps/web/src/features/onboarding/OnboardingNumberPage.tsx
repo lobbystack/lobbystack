@@ -103,17 +103,26 @@ type ClaimResult =
 
 async function loadOnboardingLocationContext(): Promise<NumberSuggestionContext> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const url = new URL("/onboarding/location", window.location.origin);
+  const isLocalhost =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  const baseUrl = isLocalhost
+    ? import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin
+    : window.location.origin;
+  const url = new URL("/onboarding/location", baseUrl);
   if (timezone) {
     url.searchParams.set("timezone", timezone);
   }
 
-  const response = await fetch(url.toString());
-  if (!response.ok) {
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error("Failed to load onboarding location.");
+    }
+
+    return (await response.json()) as NumberSuggestionContext;
+  } catch {
     throw new Error("Failed to load onboarding location.");
   }
-
-  return (await response.json()) as NumberSuggestionContext;
 }
 
 function describeSuggestion(context: NumberSuggestionContext, t: ReturnType<typeof useTranslation<"onboarding">>["t"]): string {
