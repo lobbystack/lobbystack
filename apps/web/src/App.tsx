@@ -98,6 +98,14 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
+  if (
+    activeBusiness?.onboardingStage === "phone_number" &&
+    !currentUser?.phoneVerificationTime &&
+    location.pathname !== "/onboarding/verify-phone"
+  ) {
+    return <Navigate replace to="/onboarding/verify-phone" />;
+  }
+
   if (activeBusiness?.onboardingStage === "verify_phone") {
     if (location.pathname !== "/onboarding/verify-phone") {
       return <Navigate replace to="/onboarding/verify-phone" />;

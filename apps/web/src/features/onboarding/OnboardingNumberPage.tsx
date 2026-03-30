@@ -170,7 +170,13 @@ export function OnboardingNumberPage({
           return;
         }
 
-        setLoadError(error instanceof Error ? error.message : t("number.loadFailed"));
+        const message = error instanceof Error ? error.message : t("number.loadFailed");
+        if (message === "Verify your mobile number before choosing a business number.") {
+          void navigate("/onboarding/verify-phone");
+          return;
+        }
+
+        setLoadError(message);
       } finally {
         if (!cancelled) {
           setIsLoadingSuggestion(false);

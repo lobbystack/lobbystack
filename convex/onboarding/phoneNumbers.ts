@@ -36,6 +36,12 @@ type TwilioAvailableNumber = {
   capabilities?: Record<string, boolean>;
 };
 
+type TwilioLookupResult = {
+  countryCode: string;
+  phoneNumber: string;
+  valid: boolean;
+};
+
 type PurchasedIncomingNumber = {
   sid: string;
   smsUrl?: string | null;
@@ -364,18 +370,30 @@ async function resolveVerifiedSuggestionContext(
     },
   );
 
-  if (
-    !verificationAttempt ||
-    verificationAttempt.status !== "approved" ||
-    verificationAttempt.phoneE164 !== user.phone
-  ) {
-    throw new Error("Verify your mobile number before choosing a business number.");
-  }
+  let market: VerifiedPhoneMarket;
 
-  const market = resolveVerifiedPhoneMarket({
-    phoneE164: verificationAttempt.phoneE164,
-    countryCode: verificationAttempt.countryCode,
-  });
+  if (
+    verificationAttempt &&
+    verificationAttempt.status === "approved" &&
+    verificationAttempt.phoneE164 === user.phone
+  ) {
+    market = resolveVerifiedPhoneMarket({
+      phoneE164: verificationAttempt.phoneE164,
+      countryCode: verificationAttempt.countryCode,
+    });
+  } else {
+    const client = getTwilioClient();
+    const lookup: TwilioLookupResult = await client.lookups.v2.phoneNumbers(user.phone).fetch();
+
+    if (!lookup.valid) {
+      throw new Error("Verify your mobile number before choosing a business number.");
+    }
+
+    market = resolveVerifiedPhoneMarket({
+      phoneE164: lookup.phoneNumber,
+      countryCode: lookup.countryCode,
+    });
+  }
 
   return {
     market,
