@@ -67,6 +67,8 @@ import type * as lib_twilioUrls from "../lib/twilioUrls.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
 import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
+import type * as onboarding_phoneVerification from "../onboarding/phoneVerification.js";
+import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as users from "../users.js";
 import type * as users_preferences from "../users/preferences.js";
@@ -138,6 +140,8 @@ declare const fullApi: ApiFromModules<{
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "notifications/reminders": typeof notifications_reminders;
   "onboarding/phoneNumbers": typeof onboarding_phoneNumbers;
+  "onboarding/phoneVerification": typeof onboarding_phoneVerification;
+  "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
   "services/localizedNames": typeof services_localizedNames;
   users: typeof users;
   "users/preferences": typeof users_preferences;

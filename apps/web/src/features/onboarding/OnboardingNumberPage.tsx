@@ -37,17 +37,16 @@ type OnboardingNumberPageProps = {
   onSignOut: () => void;
 };
 
-type NumberSuggestionContext = {
+type VerifiedPhoneMarket = {
+  phoneE164: string;
   countryCode: string;
+  nationalDestinationCode?: string;
+  areaCode?: string;
   regionCode?: string;
   city?: string;
-  postalCode?: string;
   metroKey?: string;
   confidence: number;
-  source: "cloudflare" | "timezone" | "default";
-  timezone?: string;
-  latitude?: number;
-  longitude?: number;
+  source: "verified_phone" | "verified_phone_country";
 };
 
 type NumberSelectionContext = {
@@ -74,13 +73,13 @@ type AvailableNumberSummary = {
 };
 
 type InitialSuggestionResult = {
-  context: NumberSuggestionContext;
+  market: VerifiedPhoneMarket;
   suggestion: AvailableNumberSummary | null;
   alternatives: Array<AvailableNumberSummary>;
 };
 
 type SearchResult = {
-  context: NumberSuggestionContext;
+  market: VerifiedPhoneMarket;
   selectionContext: NumberSelectionContext;
   numbers: Array<AvailableNumberSummary>;
 };
@@ -101,40 +100,25 @@ type ClaimResult =
       message: string;
     };
 
-async function loadOnboardingLocationContext(): Promise<NumberSuggestionContext> {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const isLocalhost =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-  const baseUrl = isLocalhost
-    ? import.meta.env.VITE_CONVEX_SITE_URL || window.location.origin
-    : window.location.origin;
-  const url = new URL("/onboarding/location", baseUrl);
-  if (timezone) {
-    url.searchParams.set("timezone", timezone);
-  }
-
-  try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error("Failed to load onboarding location.");
-    }
-
-    return (await response.json()) as NumberSuggestionContext;
-  } catch {
-    throw new Error("Failed to load onboarding location.");
-  }
-}
-
-function describeSuggestion(context: NumberSuggestionContext, t: ReturnType<typeof useTranslation<"onboarding">>["t"]): string {
-  if (context.city && context.regionCode) {
-    return t("number.detectedLocation", {
-      city: context.city,
-      region: context.regionCode,
+function describeSuggestion(
+  market: VerifiedPhoneMarket,
+  t: ReturnType<typeof useTranslation<"onboarding">>["t"],
+): string {
+  if (market.city && market.regionCode) {
+    return t("number.detectedVerifiedLocation", {
+      city: market.city,
+      region: market.regionCode,
     });
   }
 
-  return t("number.detectedCountry", {
-    country: context.countryCode,
+  if (market.areaCode) {
+    return t("number.detectedVerifiedAreaCode", {
+      areaCode: market.areaCode,
+    });
+  }
+
+  return t("number.detectedVerifiedCountry", {
+    country: market.countryCode,
   });
 }
 
@@ -148,7 +132,7 @@ export function OnboardingNumberPage({
   const getInitialNumberSuggestion = useAction(api.onboarding.phoneNumbers.getInitialNumberSuggestion);
   const searchAvailableNumbers = useAction(api.onboarding.phoneNumbers.searchAvailableNumbers);
   const claimOnboardingNumber = useAction(api.onboarding.phoneNumbers.claimOnboardingNumber);
-  const [context, setContext] = useState<NumberSuggestionContext | null>(null);
+  const [market, setMarket] = useState<VerifiedPhoneMarket | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<AvailableNumberSummary | null>(null);
   const [pickerNumbers, setPickerNumbers] = useState<Array<AvailableNumberSummary>>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -169,21 +153,16 @@ export function OnboardingNumberPage({
       setLoadError(null);
 
       try {
-        const nextContext = await loadOnboardingLocationContext();
-        if (cancelled) {
-          return;
-        }
-
-        setContext(nextContext);
-        setCityQuery(nextContext.city ?? "");
         const result = (await getInitialNumberSuggestion({
           businessId,
-          context: nextContext,
         })) as InitialSuggestionResult;
         if (cancelled) {
           return;
         }
 
+        setMarket(result.market);
+        setCityQuery(result.market.city ?? "");
+        setAreaCodeQuery(result.market.areaCode ?? "");
         const suggestion = result.suggestion ?? result.alternatives[0] ?? null;
         setSelectedNumber(suggestion);
       } catch (error) {
@@ -207,22 +186,20 @@ export function OnboardingNumberPage({
   }, [businessId, getInitialNumberSuggestion, t]);
 
   async function runSearch(tab: "city" | "area_code" | "toll_free"): Promise<void> {
-    if (!context) {
-      return;
-    }
-
     setIsSearching(true);
     setClaimError(null);
+
     try {
       const result = (await searchAvailableNumbers({
         businessId,
-        context,
         mode: tab,
         ...(tab === "city" && cityQuery.trim() ? { city: cityQuery.trim() } : {}),
         ...(tab === "area_code" && areaCodeQuery.trim()
           ? { areaCode: areaCodeQuery.trim() }
           : {}),
       })) as SearchResult;
+
+      setMarket(result.market);
       setPickerNumbers(result.numbers);
     } catch (error) {
       setClaimError(error instanceof Error ? error.message : t("number.claimFailed"));
@@ -232,7 +209,7 @@ export function OnboardingNumberPage({
   }
 
   async function handleClaim(): Promise<void> {
-    if (!context || !selectedNumber) {
+    if (!selectedNumber) {
       return;
     }
 
@@ -241,7 +218,6 @@ export function OnboardingNumberPage({
     try {
       const result = (await claimOnboardingNumber({
         businessId,
-        context,
         e164: selectedNumber.e164,
         selectionContext: selectedNumber.selectionContext,
       })) as ClaimResult;
@@ -274,12 +250,12 @@ export function OnboardingNumberPage({
   }
 
   const suggestionLabel = useMemo(() => {
-    if (!context) {
+    if (!market) {
       return null;
     }
 
-    return describeSuggestion(context, t);
-  }, [context, t]);
+    return describeSuggestion(market, t);
+  }, [market, t]);
 
   return (
     <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(82,43,173,0.16),_transparent_36%),linear-gradient(180deg,_#120f1d_0%,_#09080d_100%)] text-white">
@@ -347,7 +323,9 @@ export function OnboardingNumberPage({
                     </div>
                     {selectedNumber.locality || selectedNumber.region ? (
                       <div className="mt-2 text-sm text-zinc-400">
-                        {[selectedNumber.locality, selectedNumber.region].filter(Boolean).join(", ")}
+                        {[selectedNumber.locality, selectedNumber.region]
+                          .filter(Boolean)
+                          .join(", ")}
                       </div>
                     ) : null}
                   </div>
@@ -502,7 +480,9 @@ export function OnboardingNumberPage({
 
             <div className="max-h-[26rem] overflow-y-auto rounded-2xl border border-white/10 bg-black/15">
               {pickerNumbers.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-zinc-400">{t("number.empty")}</div>
+                <div className="px-4 py-8 text-center text-sm text-zinc-400">
+                  {t("number.empty")}
+                </div>
               ) : (
                 <div className="divide-y divide-white/10">
                   {pickerNumbers.map((number) => {
@@ -520,7 +500,8 @@ export function OnboardingNumberPage({
                         <div className="space-y-1">
                           <div className="text-lg font-medium text-white">{number.display}</div>
                           <div className="text-sm text-zinc-400">
-                            {[number.locality, number.region].filter(Boolean).join(", ") || number.countryCode}
+                            {[number.locality, number.region].filter(Boolean).join(", ") ||
+                              number.countryCode}
                           </div>
                         </div>
                         <div className="shrink-0">

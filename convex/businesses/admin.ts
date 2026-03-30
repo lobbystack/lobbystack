@@ -37,7 +37,7 @@ export const bootstrapBusiness = mutation({
       name: args.name,
       timezone: args.timezone,
       defaultLocale: "en",
-      onboardingStage: "phone_number",
+      onboardingStage: "verify_phone",
       businessType: args.businessType,
       deploymentMode: "development",
       status: "active",

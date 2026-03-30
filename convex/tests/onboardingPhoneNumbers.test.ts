@@ -72,20 +72,10 @@ const originalVoiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
-const quebecCityContext = {
-  countryCode: "CA",
-  regionCode: "QC",
-  city: "Quebec City",
-  metroKey: "quebec_city",
-  confidence: 0.95,
-  source: "cloudflare" as const,
-  timezone: "America/Toronto",
-};
-
 async function seedBusinessOwner(t: ConvexHarness) {
   const subject = "onboarding-phone-owner";
 
-  const { businessId } = await t.run(async (ctx) => {
+  const { businessId, userId } = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
       slug: "onboarding-phone-number-business",
       name: "Onboarding Phone Number Business",
@@ -106,10 +96,38 @@ async function seedBusinessOwner(t: ConvexHarness) {
       status: "active",
     });
 
-    return { businessId };
+    return { businessId, userId };
   });
 
-  return { businessId, subject };
+  return { businessId, subject, userId };
+}
+
+async function seedVerifiedPhone(input: {
+  t: ConvexHarness;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  phoneE164: string;
+  countryCode: string;
+}) {
+  await input.t.run(async (ctx) => {
+    await ctx.db.patch(input.userId, {
+      phone: input.phoneE164,
+      phoneVerificationTime: Date.now(),
+    });
+    await ctx.db.insert("onboarding_phone_verifications", {
+      businessId: input.businessId,
+      userId: input.userId,
+      phoneE164: input.phoneE164,
+      countryCode: input.countryCode,
+      verificationSid: "VE-approved",
+      status: "approved",
+      startedAt: Date.now() - 1000,
+      updatedAt: Date.now() - 500,
+      expiresAt: Date.now() + 600000,
+      approvedAt: Date.now() - 500,
+      attemptCount: 1,
+    });
+  });
 }
 
 async function listBusinessPhoneNumbers(
@@ -144,7 +162,14 @@ describe("onboarding phone-number actions", () => {
 
   it("prefers the inferred metro area-code cluster for the first suggestion", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, subject } = await seedBusinessOwner(t);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
     listLocalNumbersMock.mockImplementation(
@@ -159,10 +184,10 @@ describe("onboarding phone-number actions", () => {
           voiceEnabled: boolean;
         };
       }) => {
-        if (args.areaCode === 418) {
+        if (args.areaCode === 581) {
           return [
             {
-              phoneNumber: "+14185550101",
+              phoneNumber: "+15815550101",
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
@@ -176,23 +201,26 @@ describe("onboarding phone-number actions", () => {
 
     const result = await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
       businessId,
-      context: quebecCityContext,
     });
 
     expect(listLocalNumbersMock).toHaveBeenNthCalledWith(1, {
       countryCode: "CA",
       args: {
-        areaCode: 418,
+        areaCode: 581,
         limit: 10,
         smsEnabled: true,
         voiceEnabled: true,
       },
     });
+    expect(result.market).toMatchObject({
+      areaCode: "581",
+      metroKey: "quebec_city",
+    });
     expect(result.suggestion).toMatchObject({
-      e164: "+14185550101",
+      e164: "+15815550101",
       selectionContext: {
         mode: "area_code",
-        areaCode: "418",
+        areaCode: "581",
         countryCode: "CA",
       },
     });
@@ -200,7 +228,14 @@ describe("onboarding phone-number actions", () => {
 
   it("searches toll-free inventory in the inferred country", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, subject } = await seedBusinessOwner(t);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
     listTollFreeNumbersMock.mockResolvedValue([
@@ -212,7 +247,6 @@ describe("onboarding phone-number actions", () => {
 
     const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
       businessId,
-      context: quebecCityContext,
       mode: "toll_free",
       limit: 5,
     });
@@ -235,36 +269,61 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
-  it("does not auto-suggest a random country-wide number when confidence is only timezone-based", async () => {
+  it("uses the verified phone area code instead of unrelated geo hints", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, subject } = await seedBusinessOwner(t);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
-    listLocalNumbersMock.mockResolvedValue([
-      {
-        phoneNumber: "+12494687985",
-        locality: "Barrie",
-        region: "ON",
-        isoCountry: "CA",
-      },
-    ]);
+    listLocalNumbersMock.mockImplementation(async ({ args }: { countryCode: string; args: { areaCode?: number } }) => {
+      if (args.areaCode === 581) {
+        return [
+          {
+            phoneNumber: "+15815550101",
+            locality: "Quebec City",
+            region: "QC",
+            isoCountry: "CA",
+          },
+        ];
+      }
+
+      if (args.areaCode === 437) {
+        return [
+          {
+            phoneNumber: "+14375250420",
+            locality: "Toronto",
+            region: "ON",
+            isoCountry: "CA",
+          },
+        ];
+      }
+
+      return [];
+    });
 
     const result = await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
       businessId,
-      context: {
-        countryCode: "CA",
-        confidence: 0.45,
-        source: "timezone",
-        timezone: "America/Toronto",
-      },
     });
 
-    expect(result.suggestion).toBeNull();
+    expect(result.suggestion?.e164).toBe("+15815550101");
   });
 
   it("claims the selected number, persists it, and completes onboarding", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, subject } = await seedBusinessOwner(t);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockResolvedValueOnce({
@@ -275,7 +334,6 @@ describe("onboarding phone-number actions", () => {
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,
-      context: quebecCityContext,
       e164: "+14185550123",
       selectionContext: {
         mode: "area_code",
@@ -316,7 +374,14 @@ describe("onboarding phone-number actions", () => {
 
   it("returns refreshed alternatives when the selected number is no longer available", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId, subject } = await seedBusinessOwner(t);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockRejectedValueOnce(new Error("Number already taken"));
@@ -349,7 +414,6 @@ describe("onboarding phone-number actions", () => {
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,
-      context: quebecCityContext,
       e164: "+14185550123",
       selectionContext: {
         mode: "area_code",

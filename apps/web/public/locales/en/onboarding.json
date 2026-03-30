@@ -1,13 +1,40 @@
 {
+  "verifyPhone": {
+    "title": "Verify you're real",
+    "description": "Enter your mobile number to receive an SMS verification code. We'll use the verified number to suggest your first business number.",
+    "verifyTitle": "Enter your verification code",
+    "verifyDescription": "We sent a code to {{phone}}. Once it's verified, we'll suggest a business number that matches your local market.",
+    "fields": {
+      "mobileNumber": "Mobile number",
+      "code": "Verification code"
+    },
+    "placeholders": {
+      "mobileNumber": "+1 581 748 4609",
+      "code": "123456"
+    },
+    "hint": "Use your personal mobile number in international format so we can match your first business number to the same local market.",
+    "sendCode": "Get code",
+    "sending": "Sending code...",
+    "verifyCode": "Verify code",
+    "verifying": "Verifying...",
+    "resendCode": "Resend code",
+    "resending": "Resending code...",
+    "useDifferentNumber": "Use a different number",
+    "codeSent": "We sent a verification code to {{phone}}.",
+    "sendFailed": "We couldn't send a verification code right now. Please try again.",
+    "verifyFailed": "We couldn't verify that code right now. Please try again.",
+    "signedInAs": "Signed in as {{email}}"
+  },
   "number": {
     "title": "Say hello to your new number",
-    "description": "We picked a local Twilio number based on where you're likely operating. You can keep it or choose a different one.",
-    "detectedLocation": "Suggested for {{city}}, {{region}}",
-    "detectedCountry": "Suggested for {{country}}",
+    "description": "We picked a local Twilio number using your verified mobile number as the primary signal. You can keep it or choose a different one.",
+    "detectedVerifiedLocation": "Suggested from your verified mobile in {{city}}, {{region}}",
+    "detectedVerifiedAreaCode": "Suggested from your verified {{areaCode}} mobile number",
+    "detectedVerifiedCountry": "Suggested from your verified mobile in {{country}}",
     "continue": "Continue",
     "continuing": "Claiming number...",
     "pickDifferent": "Pick a different number",
-    "loading": "Finding a local number...",
+    "loading": "Finding a matching local number...",
     "noSuggestionTitle": "We couldn't confidently auto-pick a number yet.",
     "noSuggestionDescription": "Search by city, area code, or toll-free to choose the best number for your business.",
     "loadFailed": "We couldn't load a suggested number right now.",

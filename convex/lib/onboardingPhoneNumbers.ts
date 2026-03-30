@@ -4,6 +4,7 @@ export const locationSourceValidator = v.union(
   v.literal("cloudflare"),
   v.literal("timezone"),
   v.literal("default"),
+  v.literal("verified_phone"),
 );
 
 export const numberSuggestionContextValidator = v.object({
@@ -12,6 +13,7 @@ export const numberSuggestionContextValidator = v.object({
   city: v.optional(v.string()),
   postalCode: v.optional(v.string()),
   metroKey: v.optional(v.string()),
+  preferredAreaCode: v.optional(v.string()),
   confidence: v.number(),
   source: locationSourceValidator,
   timezone: v.optional(v.string()),
@@ -25,11 +27,41 @@ export type NumberSuggestionContext = {
   city?: string;
   postalCode?: string;
   metroKey?: string;
+  preferredAreaCode?: string;
   confidence: number;
-  source: "cloudflare" | "timezone" | "default";
+  source: "cloudflare" | "timezone" | "default" | "verified_phone";
   timezone?: string;
   latitude?: number;
   longitude?: number;
+};
+
+export const verifiedPhoneMarketSourceValidator = v.union(
+  v.literal("verified_phone"),
+  v.literal("verified_phone_country"),
+);
+
+export const verifiedPhoneMarketValidator = v.object({
+  phoneE164: v.string(),
+  countryCode: v.string(),
+  nationalDestinationCode: v.optional(v.string()),
+  areaCode: v.optional(v.string()),
+  regionCode: v.optional(v.string()),
+  city: v.optional(v.string()),
+  metroKey: v.optional(v.string()),
+  confidence: v.number(),
+  source: verifiedPhoneMarketSourceValidator,
+});
+
+export type VerifiedPhoneMarket = {
+  phoneE164: string;
+  countryCode: string;
+  nationalDestinationCode?: string;
+  areaCode?: string;
+  regionCode?: string;
+  city?: string;
+  metroKey?: string;
+  confidence: number;
+  source: "verified_phone" | "verified_phone_country";
 };
 
 export const searchModeValidator = v.union(
@@ -90,6 +122,7 @@ type MetroDefinition = {
   countryCode: string;
   regionCode: string;
   areaCodes: string[];
+  primaryCity: string;
   latitude: number;
   longitude: number;
   localityAliases: string[];
@@ -101,6 +134,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "QC",
     areaCodes: ["418", "581", "367"],
+    primaryCity: "Quebec City",
     latitude: 46.8139,
     longitude: -71.208,
     localityAliases: [
@@ -119,6 +153,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "QC",
     areaCodes: ["514", "438", "263"],
+    primaryCity: "Montreal",
     latitude: 45.5019,
     longitude: -73.5674,
     localityAliases: ["montreal", "westmount", "verdun", "outremont", "saint laurent"],
@@ -128,6 +163,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "QC",
     areaCodes: ["450", "579", "354"],
+    primaryCity: "Longueuil",
     latitude: 45.5312,
     longitude: -73.5181,
     localityAliases: [
@@ -146,6 +182,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "QC",
     areaCodes: ["819", "873", "468"],
+    primaryCity: "Gatineau",
     latitude: 45.4042,
     longitude: -71.8929,
     localityAliases: ["gatineau", "sherbrooke", "trois rivieres", "drummondville"],
@@ -155,6 +192,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "ON",
     areaCodes: ["416", "647", "437"],
+    primaryCity: "Toronto",
     latitude: 43.6532,
     longitude: -79.3832,
     localityAliases: ["toronto", "north york", "scarborough", "etobicoke"],
@@ -164,6 +202,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "BC",
     areaCodes: ["604", "778", "236", "672"],
+    primaryCity: "Vancouver",
     latitude: 49.2827,
     longitude: -123.1207,
     localityAliases: ["vancouver", "burnaby", "surrey", "richmond", "new westminster"],
@@ -173,6 +212,7 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "AB",
     areaCodes: ["403", "587", "368", "825"],
+    primaryCity: "Calgary",
     latitude: 51.0447,
     longitude: -114.0719,
     localityAliases: ["calgary", "airdrie", "okotoks"],
@@ -182,19 +222,14 @@ const canadianMetros: MetroDefinition[] = [
     countryCode: "CA",
     regionCode: "NS",
     areaCodes: ["902", "782"],
+    primaryCity: "Halifax",
     latitude: 44.6488,
     longitude: -63.5752,
     localityAliases: ["halifax", "dartmouth", "bedford"],
   },
 ];
 
-const provinceDefaultMetroByRegionCode: Record<string, string> = {
-  AB: "calgary",
-  BC: "vancouver",
-  NS: "halifax",
-  ON: "toronto",
-  QC: "montreal",
-};
+const MAX_AUTO_SUGGEST_DISTANCE_KM = 120;
 
 function normalizeCityName(value: string | undefined | null): string | null {
   if (!value) {
@@ -247,6 +282,18 @@ function findMetroByKey(key: string | undefined): MetroDefinition | null {
   return canadianMetros.find((metro) => metro.key === key) ?? null;
 }
 
+function findMetroByAreaCode(countryCode: string, areaCode: string | undefined): MetroDefinition | null {
+  if (!areaCode) {
+    return null;
+  }
+
+  return (
+    canadianMetros.find(
+      (metro) => metro.countryCode === countryCode && metro.areaCodes.includes(areaCode),
+    ) ?? null
+  );
+}
+
 function resolveMetroByLocality(input: {
   city?: string;
   regionCode?: string;
@@ -295,7 +342,7 @@ function resolveNearestMetro(input: {
     return null;
   }
 
-  return candidates.reduce((best, candidate) => {
+  const nearest = candidates.reduce((best, candidate) => {
     const bestDistance = calculateDistanceKm(
       input.latitude!,
       input.longitude!,
@@ -310,6 +357,15 @@ function resolveNearestMetro(input: {
     );
     return candidateDistance < bestDistance ? candidate : best;
   });
+
+  const nearestDistance = calculateDistanceKm(
+    input.latitude,
+    input.longitude,
+    nearest.latitude,
+    nearest.longitude,
+  );
+
+  return nearestDistance <= MAX_AUTO_SUGGEST_DISTANCE_KM ? nearest : null;
 }
 
 function inferCountryCodeFromTimezone(timezone: string | undefined): string | undefined {
@@ -356,18 +412,17 @@ export function resolveNumberSuggestionContext(input: {
   const latitude = input.latitude ?? undefined;
   const longitude = input.longitude ?? undefined;
 
-  const metro =
-    resolveMetroByLocality({
-      ...(city ? { city } : {}),
-      ...(regionCode ? { regionCode } : {}),
-    }) ??
-    resolveNearestMetro({
-      countryCode,
-      ...(regionCode ? { regionCode } : {}),
-      ...(latitude !== undefined ? { latitude } : {}),
-      ...(longitude !== undefined ? { longitude } : {}),
-    }) ??
-    findMetroByKey(regionCode ? provinceDefaultMetroByRegionCode[regionCode] : undefined);
+  const localityMetro = resolveMetroByLocality({
+    ...(city ? { city } : {}),
+    ...(regionCode ? { regionCode } : {}),
+  });
+  const nearestMetro = resolveNearestMetro({
+    countryCode,
+    ...(regionCode ? { regionCode } : {}),
+    ...(latitude !== undefined ? { latitude } : {}),
+    ...(longitude !== undefined ? { longitude } : {}),
+  });
+  const metro = localityMetro ?? nearestMetro;
 
   const source =
     input.source ??
@@ -378,12 +433,16 @@ export function resolveNumberSuggestionContext(input: {
         : "default");
 
   let confidence = 0.35;
-  if (city) {
+  if (localityMetro && city) {
     confidence = 0.95;
-  } else if (latitude !== undefined && longitude !== undefined) {
+  } else if (nearestMetro && latitude !== undefined && longitude !== undefined) {
     confidence = 0.8;
+  } else if (postalCode && regionCode) {
+    confidence = 0.65;
   } else if (regionCode) {
-    confidence = 0.6;
+    confidence = 0.55;
+  } else if (city) {
+    confidence = 0.5;
   } else if (timezone) {
     confidence = 0.45;
   }
@@ -402,8 +461,94 @@ export function resolveNumberSuggestionContext(input: {
   };
 }
 
-export function getMetroAreaCodePriority(context: Pick<NumberSuggestionContext, "metroKey">): string[] {
-  return findMetroByKey(context.metroKey)?.areaCodes ?? [];
+function getNanpAreaCode(phoneE164: string, countryCode: string): string | undefined {
+  if (!["CA", "US"].includes(countryCode)) {
+    return undefined;
+  }
+
+  const digits = phoneE164.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return digits.slice(1, 4);
+  }
+
+  if (digits.length === 10) {
+    return digits.slice(0, 3);
+  }
+
+  return undefined;
+}
+
+export function resolveVerifiedPhoneMarket(input: {
+  phoneE164: string;
+  countryCode: string;
+}): VerifiedPhoneMarket {
+  const countryCode = input.countryCode.trim().toUpperCase();
+  const areaCode = getNanpAreaCode(input.phoneE164, countryCode);
+  const metro = findMetroByAreaCode(countryCode, areaCode);
+
+  if (metro) {
+    return {
+      phoneE164: input.phoneE164,
+      countryCode,
+      ...(areaCode ? { nationalDestinationCode: areaCode } : {}),
+      ...(areaCode ? { areaCode } : {}),
+      regionCode: metro.regionCode,
+      city: metro.primaryCity,
+      metroKey: metro.key,
+      confidence: 0.95,
+      source: "verified_phone",
+    };
+  }
+
+  if (areaCode) {
+    return {
+      phoneE164: input.phoneE164,
+      countryCode,
+      nationalDestinationCode: areaCode,
+      areaCode,
+      confidence: 0.9,
+      source: "verified_phone",
+    };
+  }
+
+  return {
+    phoneE164: input.phoneE164,
+    countryCode,
+    confidence: 0.75,
+    source: "verified_phone_country",
+  };
+}
+
+export function buildSuggestionContextFromVerifiedPhoneMarket(
+  market: VerifiedPhoneMarket,
+): NumberSuggestionContext {
+  return {
+    countryCode: market.countryCode,
+    ...(market.regionCode ? { regionCode: market.regionCode } : {}),
+    ...(market.city ? { city: market.city } : {}),
+    ...(market.metroKey ? { metroKey: market.metroKey } : {}),
+    ...(market.areaCode ? { preferredAreaCode: market.areaCode } : {}),
+    confidence: market.confidence,
+    source: "verified_phone",
+  };
+}
+
+export function getMetroAreaCodePriority(
+  context: Pick<NumberSuggestionContext, "metroKey" | "preferredAreaCode">,
+): string[] {
+  const areaCodes = findMetroByKey(context.metroKey)?.areaCodes ?? [];
+  if (!context.preferredAreaCode) {
+    return areaCodes;
+  }
+
+  if (areaCodes.length === 0) {
+    return [context.preferredAreaCode];
+  }
+
+  return [
+    context.preferredAreaCode,
+    ...areaCodes.filter((areaCode) => areaCode !== context.preferredAreaCode),
+  ];
 }
 
 export function buildSuggestedSelectionContext(
@@ -414,6 +559,7 @@ export function buildSuggestedSelectionContext(
     countryCode: context.countryCode,
     ...(context.regionCode ? { regionCode: context.regionCode } : {}),
     ...(context.city ? { city: context.city } : {}),
+    ...(context.preferredAreaCode ? { areaCode: context.preferredAreaCode } : {}),
     ...(context.metroKey ? { metroKey: context.metroKey } : {}),
   };
 }

@@ -182,6 +182,25 @@ export default defineSchema({
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
     .index("by_business_id", ["businessId"]),
 
+  onboarding_phone_verifications: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    phoneE164: v.string(),
+    countryCode: v.string(),
+    lineType: v.optional(v.string()),
+    verificationSid: v.string(),
+    status: v.string(),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+    approvedAt: v.optional(v.number()),
+    attemptCount: v.number(),
+    lastError: v.optional(v.string()),
+  })
+    .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_verification_sid", ["verificationSid"])
+    .index("by_phone_e164", ["phoneE164"]),
+
   receptionist_profiles: defineTable({
     businessId: v.id("businesses"),
     greeting: v.string(),

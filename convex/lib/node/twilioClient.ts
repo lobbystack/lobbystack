@@ -12,6 +12,15 @@ export function requireTwilioCredentials(): { accountSid: string; authToken: str
   return { accountSid, authToken };
 }
 
+export function requireTwilioVerifyServiceSid(): string {
+  const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+  if (!serviceSid) {
+    throw new Error("TWILIO_VERIFY_SERVICE_SID is required for onboarding phone verification.");
+  }
+
+  return serviceSid;
+}
+
 export function getTwilioClient() {
   const { accountSid, authToken } = requireTwilioCredentials();
   return twilio(accountSid, authToken);

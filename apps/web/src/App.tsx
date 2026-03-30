@@ -31,6 +31,7 @@ import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePa
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
+import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -97,7 +98,11 @@ function WorkspaceShell() {
     return <LoadingScreen />;
   }
 
-  if (
+  if (activeBusiness?.onboardingStage === "verify_phone") {
+    if (location.pathname !== "/onboarding/verify-phone") {
+      return <Navigate replace to="/onboarding/verify-phone" />;
+    }
+  } else if (
     activeBusiness?.onboardingStage === "phone_number" &&
     location.pathname !== "/onboarding/number"
   ) {
@@ -262,6 +267,34 @@ function OnboardingNumberRoute() {
   );
 }
 
+function OnboardingVerifyPhoneRoute() {
+  const { signOut } = useAuthActions();
+  const currentUser = useQuery(api.users.current, {});
+  const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
+  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+
+  if (businesses === undefined || currentUser === undefined) {
+    return <LoadingScreen />;
+  }
+
+  if (!activeBusiness) {
+    return <Navigate replace to="/" />;
+  }
+
+  if (activeBusiness.onboardingStage !== "verify_phone") {
+    return <Navigate replace to="/" />;
+  }
+
+  return (
+    <OnboardingVerifyPhonePage
+      businessId={activeBusiness._id}
+      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
+      {...(currentUser?.phone ? { currentUserPhone: currentUser.phone } : {})}
+      onSignOut={() => void signOut()}
+    />
+  );
+}
+
 export default function App() {
   return (
     <TooltipProvider>
@@ -292,6 +325,14 @@ export default function App() {
             path="/forgot-password"
           />
           <Route element={<ConfirmEmailChangePage />} path="/confirm-email-change" />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingVerifyPhoneRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/verify-phone"
+          />
           <Route
             element={
               <RequireAuth>

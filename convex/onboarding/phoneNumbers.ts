@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action, type ActionCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -11,14 +11,16 @@ import {
   availableNumberSummaryValidator,
   buildAreaCodeSelectionContext,
   buildCitySelectionContext,
+  buildSuggestionContextFromVerifiedPhoneMarket,
   buildSuggestedSelectionContext,
   buildTollFreeSelectionContext,
   getMetroAreaCodePriority,
   numberSelectionContextValidator,
-  numberSuggestionContextValidator,
   searchModeValidator,
   type NumberSelectionContext,
   type NumberSuggestionContext,
+  resolveVerifiedPhoneMarket,
+  type VerifiedPhoneMarket,
 } from "../lib/onboardingPhoneNumbers";
 import { getTwilioClient } from "../lib/node/twilioClient";
 import {
@@ -208,7 +210,11 @@ async function getSuggestedNumbers(
     }
   }
 
-  if (collected.length < limit && (context.city || context.regionCode || context.postalCode)) {
+  if (
+    collected.length < limit &&
+    (context.confidence >= 0.8 || Boolean(context.postalCode)) &&
+    (context.city || context.regionCode || context.postalCode)
+  ) {
     const selectionContext = buildSuggestedSelectionContext(context);
     const locationMatches = await listLocalNumbersByLocation({
       countryCode: context.countryCode,
@@ -231,11 +237,7 @@ async function getSuggestedNumbers(
   }
 
   const shouldUseCountryWideFallback =
-    Boolean(context.metroKey) ||
-    Boolean(context.regionCode) ||
-    Boolean(context.city) ||
-    Boolean(context.postalCode) ||
-    context.confidence >= 0.6;
+    Boolean(context.metroKey) || context.confidence >= 0.8 || context.source === "verified_phone";
 
   if (collected.length < limit && shouldUseCountryWideFallback) {
     const selectionContext = buildSuggestedSelectionContext(context);
@@ -341,17 +343,57 @@ async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses
   });
 }
 
+async function resolveVerifiedSuggestionContext(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<{ market: VerifiedPhoneMarket; context: NumberSuggestionContext }> {
+  const user = await ctx.runQuery(api.users.current, {});
+  if (!user) {
+    throw new Error("User profile not initialized.");
+  }
+
+  if (!user.phone || !user.phoneVerificationTime) {
+    throw new Error("Verify your mobile number before choosing a business number.");
+  }
+
+  const verificationAttempt = await ctx.runQuery(
+    internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
+    {
+      businessId,
+      userId: user._id,
+    },
+  );
+
+  if (
+    !verificationAttempt ||
+    verificationAttempt.status !== "approved" ||
+    verificationAttempt.phoneE164 !== user.phone
+  ) {
+    throw new Error("Verify your mobile number before choosing a business number.");
+  }
+
+  const market = resolveVerifiedPhoneMarket({
+    phoneE164: verificationAttempt.phoneE164,
+    countryCode: verificationAttempt.countryCode,
+  });
+
+  return {
+    market,
+    context: buildSuggestionContextFromVerifiedPhoneMarket(market),
+  };
+}
+
 export const getInitialNumberSuggestion = action({
   args: {
     businessId: v.id("businesses"),
-    context: numberSuggestionContextValidator,
   },
   handler: async (ctx, args) => {
     await assertOnboardingAccess(ctx, args.businessId);
-    const suggestions = await getSuggestedNumbers(args.context, 10);
+    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
+    const suggestions = await getSuggestedNumbers(context, 10);
 
     return {
-      context: args.context,
+      market,
       suggestion: suggestions[0] ?? null,
       alternatives: suggestions.slice(1),
     };
@@ -361,7 +403,6 @@ export const getInitialNumberSuggestion = action({
 export const searchAvailableNumbers = action({
   args: {
     businessId: v.id("businesses"),
-    context: numberSuggestionContextValidator,
     mode: searchModeValidator,
     city: v.optional(v.string()),
     areaCode: v.optional(v.string()),
@@ -369,29 +410,30 @@ export const searchAvailableNumbers = action({
   },
   handler: async (ctx, args) => {
     await assertOnboardingAccess(ctx, args.businessId);
+    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
     const limit = args.limit ?? 10;
 
     const selectionContext =
       args.mode === "city"
         ? buildCitySelectionContext({
-            countryCode: args.context.countryCode,
-            city: args.city?.trim() || args.context.city || "",
-            ...(args.context.regionCode ? { regionCode: args.context.regionCode } : {}),
+            countryCode: context.countryCode,
+            city: args.city?.trim() || context.city || "",
+            ...(context.regionCode ? { regionCode: context.regionCode } : {}),
           })
         : args.mode === "area_code"
           ? buildAreaCodeSelectionContext({
-              countryCode: args.context.countryCode,
+              countryCode: context.countryCode,
               areaCode: args.areaCode?.trim() || "",
             })
           : args.mode === "toll_free"
             ? buildTollFreeSelectionContext({
-                countryCode: args.context.countryCode,
+                countryCode: context.countryCode,
               })
-            : buildSuggestedSelectionContext(args.context);
+            : buildSuggestedSelectionContext(context);
 
-    const numbers = await getNumbersForSelectionContext(selectionContext, args.context, limit);
+    const numbers = await getNumbersForSelectionContext(selectionContext, context, limit);
     return {
-      context: args.context,
+      market,
       selectionContext,
       numbers,
     };
@@ -401,12 +443,12 @@ export const searchAvailableNumbers = action({
 export const claimOnboardingNumber = action({
   args: {
     businessId: v.id("businesses"),
-    context: numberSuggestionContextValidator,
     e164: v.string(),
     selectionContext: numberSelectionContextValidator,
   },
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
+    const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
 
     const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
       businessId: args.businessId,
@@ -464,7 +506,7 @@ export const claimOnboardingNumber = action({
     } catch (error) {
       const alternatives = await getNumbersForSelectionContext(
         args.selectionContext,
-        args.context,
+        context,
         10,
       );
       const selectedStillListed = alternatives.some((number) => number.e164 === args.e164);

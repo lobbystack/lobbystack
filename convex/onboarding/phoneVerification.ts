@@ -1,0 +1,219 @@
+"use node";
+
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+import type { Doc, Id } from "../_generated/dataModel";
+import { api, internal } from "../_generated/api";
+import { action, type ActionCtx } from "../_generated/server";
+import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
+
+type TwilioLookupResult = {
+  phoneNumber: string;
+  countryCode: string;
+  valid: boolean;
+  validationErrors?: string[];
+  lineTypeIntelligence?: {
+    type?: string | null;
+    errorCode?: number | null;
+  };
+};
+
+type TwilioVerificationResult = {
+  sid: string;
+  status: string;
+};
+
+type TwilioVerificationCheckResult = {
+  status: string;
+};
+
+type StartPhoneVerificationResult = {
+  status: "pending";
+  phoneE164: string;
+  countryCode: string;
+};
+
+type CheckPhoneVerificationResult =
+  | {
+      status: "approved";
+      phoneE164: string;
+    }
+  | {
+      status: "pending";
+      message: string;
+    };
+
+function normalizeLineType(lineType: string | null | undefined): string | undefined {
+  const normalized = lineType?.trim().toLowerCase();
+  return normalized ? normalized : undefined;
+}
+
+function buildVerificationErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return "We couldn't verify that mobile number right now.";
+}
+
+async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses">): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Authentication required.");
+  }
+  const authUserId = await getAuthUserId(ctx);
+
+  await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
+    businessId,
+    authSubject: identity.subject,
+    ...(authUserId ? { authUserId: String(authUserId) } : {}),
+  });
+}
+
+async function requireCurrentAuthenticatedUser(ctx: ActionCtx): Promise<Doc<"users">> {
+  const user = await ctx.runQuery(api.users.current, {});
+  if (!user) {
+    throw new Error("User profile not initialized.");
+  }
+
+  return user;
+}
+
+export const startPhoneVerification = action({
+  args: {
+    businessId: v.id("businesses"),
+    phoneE164: v.string(),
+  },
+  handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
+    await assertOnboardingAccess(ctx, args.businessId);
+    const user = await requireCurrentAuthenticatedUser(ctx);
+
+    try {
+      const client = getTwilioClient();
+      const verifyServiceSid = requireTwilioVerifyServiceSid();
+      const lookup: TwilioLookupResult = await client.lookups.v2
+        .phoneNumbers(args.phoneE164)
+        .fetch({
+          fields: "line_type_intelligence",
+        });
+
+      if (!lookup.valid) {
+        throw new Error("Enter a valid mobile number in international format.");
+      }
+
+      const lineType = normalizeLineType(lookup.lineTypeIntelligence?.type);
+      if (lineType && lineType !== "mobile") {
+        throw new Error("Enter a real mobile number that can receive SMS verification.");
+      }
+
+      const verification: TwilioVerificationResult = await client.verify.v2
+        .services(verifyServiceSid)
+        .verifications.create({
+          to: lookup.phoneNumber,
+          channel: "sms",
+        });
+
+      const now = Date.now();
+      await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
+        businessId: args.businessId,
+        userId: user._id,
+        phoneE164: lookup.phoneNumber,
+        countryCode: lookup.countryCode,
+        ...(lineType ? { lineType } : {}),
+        verificationSid: verification.sid,
+        status: verification.status,
+        startedAt: now,
+        updatedAt: now,
+        expiresAt: now + 10 * 60 * 1000,
+        attemptCount: 0,
+      });
+
+      return {
+        status: "pending" as const,
+        phoneE164: lookup.phoneNumber,
+        countryCode: lookup.countryCode,
+      };
+    } catch (error) {
+      throw new Error(buildVerificationErrorMessage(error));
+    }
+  },
+});
+
+export const checkPhoneVerification = action({
+  args: {
+    businessId: v.id("businesses"),
+    phoneE164: v.string(),
+    code: v.string(),
+  },
+  handler: async (ctx, args): Promise<CheckPhoneVerificationResult> => {
+    await assertOnboardingAccess(ctx, args.businessId);
+    const user = await requireCurrentAuthenticatedUser(ctx);
+    const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
+      internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
+      {
+        businessId: args.businessId,
+        userId: user._id,
+      },
+    );
+
+    if (!attempt || attempt.phoneE164 !== args.phoneE164) {
+      throw new Error("Start verification again before entering a code.");
+    }
+
+    if (attempt.status === "approved") {
+      return {
+        status: "approved" as const,
+        phoneE164: attempt.phoneE164,
+      };
+    }
+
+    try {
+      const client = getTwilioClient();
+      const verifyServiceSid = requireTwilioVerifyServiceSid();
+      const result: TwilioVerificationCheckResult = await client.verify.v2
+        .services(verifyServiceSid)
+        .verificationChecks.create({
+          verificationSid: attempt.verificationSid,
+          code: args.code.trim(),
+        });
+
+      const nextAttemptCount = attempt.attemptCount + 1;
+      const now = Date.now();
+
+      if (result.status === "approved") {
+        await ctx.runMutation(internal.onboarding.phoneVerificationState.markVerificationApproved, {
+          attemptId: attempt._id,
+          userId: user._id,
+          businessId: args.businessId,
+          phoneE164: attempt.phoneE164,
+          approvedAt: now,
+          attemptCount: nextAttemptCount,
+        });
+
+        return {
+          status: "approved" as const,
+          phoneE164: attempt.phoneE164,
+        };
+      }
+
+      const message = "That verification code is invalid or expired. Try requesting a new one.";
+      await ctx.runMutation(
+        internal.onboarding.phoneVerificationState.updateVerificationAttemptStatus,
+        {
+          attemptId: attempt._id,
+          status: result.status,
+          updatedAt: now,
+          attemptCount: nextAttemptCount,
+          lastError: message,
+        },
+      );
+
+      return {
+        status: "pending" as const,
+        message,
+      };
+    } catch (error) {
+      throw new Error(buildVerificationErrorMessage(error));
+    }
+  },
+});
