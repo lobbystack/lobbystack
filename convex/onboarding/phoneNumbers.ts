@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 
-import { api, internal } from "../_generated/api";
+import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action, type ActionCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -399,14 +399,17 @@ function buildNormalizedSelectionContext(input: {
   return buildSuggestedSelectionContext(fallbackContext);
 }
 
-async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses">): Promise<void> {
+async function assertOnboardingAccess(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<{ userId: Id<"users"> }> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("Authentication required.");
   }
   const authUserId = await getAuthUserId(ctx);
 
-  await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
+  return await ctx.runQuery(internal.businesses.catalog.assertCatalogWriteAccess, {
     businessId,
     authSubject: identity.subject,
     ...(authUserId ? { authUserId: String(authUserId) } : {}),
@@ -416,9 +419,22 @@ async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses
 async function resolveVerifiedSuggestionContext(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
+  userId: Id<"users">,
 ): Promise<{ market: VerifiedPhoneMarket; context: NumberSuggestionContext }> {
-  const user = await ctx.runQuery(api.users.current, {});
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Authentication required.");
+  }
+  const authUserId = await getAuthUserId(ctx);
+  const user = await ctx.runQuery(internal.users.getAuthenticatedUserForBusiness, {
+    businessId,
+    authSubject: identity.subject,
+    ...(authUserId ? { authUserId: String(authUserId) } : {}),
+  });
   if (!user) {
+    throw new Error("User profile not initialized.");
+  }
+  if (user._id !== userId) {
     throw new Error("User profile not initialized.");
   }
 
@@ -470,8 +486,8 @@ export const getInitialNumberSuggestion = action({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args) => {
-    await assertOnboardingAccess(ctx, args.businessId);
-    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
+    const { userId } = await assertOnboardingAccess(ctx, args.businessId);
+    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const suggestions = await getSuggestedNumbers(context, 10);
 
     return {
@@ -491,8 +507,8 @@ export const searchAvailableNumbers = action({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await assertOnboardingAccess(ctx, args.businessId);
-    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
+    const { userId } = await assertOnboardingAccess(ctx, args.businessId);
+    const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const limit = args.limit ?? 10;
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: {
@@ -520,8 +536,8 @@ export const claimOnboardingNumber = action({
     selectionContext: numberSelectionContextValidator,
   },
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
-    await assertOnboardingAccess(ctx, args.businessId);
-    const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId);
+    const { userId } = await assertOnboardingAccess(ctx, args.businessId);
+    const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: args.selectionContext,
       fallbackContext: context,

@@ -87,6 +87,41 @@ async function seedBusinessOwner(t: ConvexHarness) {
   return { businessId, subject, userId };
 }
 
+async function seedMigratedBusinessOwner(t: ConvexHarness) {
+  const { authUserId, legacyUserId, businessId, subject } = await t.run(async (ctx) => {
+    const authUserId: Id<"users"> = await ctx.db.insert("users", {
+      email: "auth-backed-owner@example.com",
+    });
+    const subject = `${String(authUserId)}|session-1`;
+    const legacyUserId: Id<"users"> = await ctx.db.insert("users", {
+      authSubject: subject,
+      email: "legacy-business-owner@example.com",
+      phone: "+15817484609",
+      phoneVerificationTime: Date.now() - 1000,
+    });
+    const businessId = await ctx.db.insert("businesses", {
+      slug: "onboarding-phone-verification-migrated-business",
+      name: "Onboarding Phone Verification Migrated Business",
+      timezone: "America/Toronto",
+      defaultLocale: "en",
+      onboardingStage: "verify_phone",
+      businessType: "clinic",
+      deploymentMode: "manual",
+      status: "active",
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId: legacyUserId,
+      role: "business_owner",
+      status: "active",
+    });
+
+    return { authUserId, legacyUserId, businessId, subject };
+  });
+
+  return { authUserId, legacyUserId, businessId, subject };
+}
+
 async function listVerificationAttempts(
   t: ConvexHarness,
   businessId: Id<"businesses">,
@@ -184,6 +219,37 @@ describe("onboarding phone verification actions", () => {
     ).rejects.toThrow("We just sent a verification code. Please wait a moment before retrying.");
 
     expect(verificationCreateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("stores verification attempts under the business-scoped legacy user for migrated accounts", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authUserId, legacyUserId, businessId, subject } = await seedMigratedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+1 (581) 748-4609",
+    });
+
+    expect(result).toEqual({
+      status: "pending",
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+
+    const [legacyAttempts, authAttempts] = await Promise.all([
+      t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
+        businessId,
+        userId: legacyUserId,
+      }),
+      t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
+        businessId,
+        userId: authUserId,
+      }),
+    ]);
+
+    expect(legacyAttempts?.userId).toBe(legacyUserId);
+    expect(authAttempts).toBeNull();
   });
 
   it("marks the user phone verified and advances onboarding after a valid code", async () => {

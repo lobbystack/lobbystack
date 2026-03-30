@@ -126,6 +126,39 @@ async function seedBusinessOwner(t: ConvexHarness) {
   return { businessId, subject, userId };
 }
 
+async function seedMigratedBusinessOwner(t: ConvexHarness) {
+  const { authUserId, legacyUserId, businessId, subject } = await t.run(async (ctx) => {
+    const authUserId: Id<"users"> = await ctx.db.insert("users", {
+      email: "auth-backed-owner@example.com",
+    });
+    const subject = `${String(authUserId)}|session-1`;
+    const legacyUserId: Id<"users"> = await ctx.db.insert("users", {
+      authSubject: subject,
+      email: "legacy-business-owner@example.com",
+    });
+    const businessId = await ctx.db.insert("businesses", {
+      slug: "onboarding-phone-number-migrated-business",
+      name: "Onboarding Phone Number Migrated Business",
+      timezone: "America/Toronto",
+      defaultLocale: "en",
+      onboardingStage: "phone_number",
+      businessType: "clinic",
+      deploymentMode: "manual",
+      status: "active",
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId: legacyUserId,
+      role: "business_owner",
+      status: "active",
+    });
+
+    return { authUserId, legacyUserId, businessId, subject };
+  });
+
+  return { authUserId, legacyUserId, businessId, subject };
+}
+
 async function seedVerifiedPhone(input: {
   t: ConvexHarness;
   businessId: Id<"businesses">;
@@ -282,6 +315,63 @@ describe("onboarding phone-number actions", () => {
         countryCode: "CA",
       },
     });
+  });
+
+  it("uses the business-scoped legacy user phone for migrated-account suggestions", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authUserId, legacyUserId, businessId, subject } = await seedMigratedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId: legacyUserId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+        };
+      }) => {
+        if (args.areaCode === 581) {
+          return [
+            {
+              phoneNumber: "+15815550101",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
+
+    const result = await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+      businessId,
+    });
+
+    expect(result.market).toMatchObject({
+      phoneE164: "+15817484609",
+      areaCode: "581",
+      metroKey: "quebec_city",
+    });
+    expect(result.suggestion?.e164).toBe("+15815550101");
+    expect(
+      await t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
+        businessId,
+        userId: authUserId,
+      }),
+    ).toBeNull();
   });
 
   it("searches toll-free inventory in the inferred country", async () => {

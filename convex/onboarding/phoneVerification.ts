@@ -3,7 +3,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
-import { api, internal } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { action, type ActionCtx } from "../_generated/server";
 import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
 
@@ -72,8 +72,21 @@ async function assertOnboardingAccess(ctx: ActionCtx, businessId: Id<"businesses
   });
 }
 
-async function requireCurrentAuthenticatedUser(ctx: ActionCtx): Promise<Doc<"users">> {
-  const user = await ctx.runQuery(api.users.current, {});
+async function requireBusinessScopedAuthenticatedUser(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<Doc<"users">> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Authentication required.");
+  }
+
+  const authUserId = await getAuthUserId(ctx);
+  const user = await ctx.runQuery(internal.users.getAuthenticatedUserForBusiness, {
+    businessId,
+    authSubject: identity.subject,
+    ...(authUserId ? { authUserId: String(authUserId) } : {}),
+  });
   if (!user) {
     throw new Error("User profile not initialized.");
   }
@@ -104,7 +117,7 @@ export const startPhoneVerification = action({
   handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
-    const user = await requireCurrentAuthenticatedUser(ctx);
+    const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
 
     try {
       const client = getTwilioClient();
@@ -181,7 +194,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
   handler: async (ctx, args) => {
     await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
-    const user = await requireCurrentAuthenticatedUser(ctx);
+    const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
 
     if (!user.phone || !user.phoneVerificationTime) {
       throw new Error("Verify your mobile number before continuing.");
@@ -208,7 +221,7 @@ export const checkPhoneVerification = action({
   handler: async (ctx, args): Promise<CheckPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
-    const user = await requireCurrentAuthenticatedUser(ctx);
+    const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
     const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
       internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
       {

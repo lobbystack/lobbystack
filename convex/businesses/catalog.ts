@@ -674,15 +674,11 @@ export const assertCatalogWriteAccess = internalQuery({
   ): Promise<{
     userId: Id<"users">;
   }> => {
-    const currentUser = await getCurrentUser(ctx);
-    const fallbackUserId: Id<"users"> | null =
-      currentUser?._id ??
-      (await ctx.runQuery(internal.users.resolveAuthenticatedUserForBusiness, {
-        businessId: args.businessId,
-        authSubject: args.authSubject,
-        ...(args.authUserId ? { authUserId: args.authUserId } : {}),
-      }));
-    const user = currentUser ?? (fallbackUserId ? await ctx.db.get(fallbackUserId) : null);
+    const user = await ctx.runQuery(internal.users.getAuthenticatedUserForBusiness, {
+      businessId: args.businessId,
+      authSubject: args.authSubject,
+      ...(args.authUserId ? { authUserId: args.authUserId } : {}),
+    });
     if (!user) {
       throw new Error("User profile not initialized.");
     }
