@@ -1158,6 +1158,28 @@ export const syncPhoneNumberWebhooks = internalAction({
         smsEnabled: phoneNumber.smsEnabled,
         status: phoneNumber.status,
       })) {
+      if (phoneNumber.twilioPhoneSid) {
+        try {
+          await ctx.runAction(internal.integrations.twilioSms.registerIncomingWebhook, {
+            phoneNumberSid: phoneNumber.twilioPhoneSid,
+          });
+        } catch (error) {
+          return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
+            phoneNumberId: args.phoneNumberId,
+            voiceWebhookStatus: "failed",
+            voiceWebhookTargetUrl: null,
+            voiceWebhookLastSyncedAt: null,
+            voiceWebhookLastError:
+              error instanceof Error ? error.message : "Twilio voice webhook clearing failed.",
+            smsWebhookStatus: "failed",
+            smsWebhookTargetUrl: null,
+            smsWebhookLastSyncedAt: null,
+            smsWebhookLastError:
+              error instanceof Error ? error.message : "Twilio SMS webhook clearing failed.",
+          });
+        }
+      }
+
       return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {
         phoneNumberId: args.phoneNumberId,
         voiceWebhookStatus: "not_configured",
@@ -1268,7 +1290,11 @@ export const savePhoneNumber = action({
     });
 
     const result = await ctx.runMutation(internal.businesses.catalog.upsertPhoneNumberInternal, args);
-    if (!result.shouldSyncWebhooks) {
+    const persistedPhoneNumber = await ctx.runQuery(internal.businesses.catalog.getPhoneNumberById, {
+      phoneNumberId: result.phoneNumberId,
+    });
+
+    if (!persistedPhoneNumber?.twilioPhoneSid) {
       return {
         phoneNumberId: result.phoneNumberId,
         voiceWebhookStatus: result.voiceWebhookStatus,

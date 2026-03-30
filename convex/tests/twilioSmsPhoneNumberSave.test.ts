@@ -159,7 +159,7 @@ describe("Twilio SMS phone-number save flow", () => {
     });
   });
 
-  it("skips webhook registration when the number is not eligible for any webhook sync", async () => {
+  it("clears provider webhooks when a Twilio-backed number becomes ineligible for sync", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
@@ -194,7 +194,21 @@ describe("Twilio SMS phone-number save flow", () => {
     expect(smsDisabled.smsWebhookStatus).toBe("not_configured");
     expect(inactive.voiceWebhookStatus).toBe("not_configured");
     expect(inactive.smsWebhookStatus).toBe("not_configured");
-    expect(updateIncomingPhoneNumberMock).not.toHaveBeenCalled();
+    expect(updateIncomingPhoneNumberMock).toHaveBeenCalledTimes(2);
+    expect(updateIncomingPhoneNumberMock).toHaveBeenNthCalledWith(1, {
+      phoneNumberSid: "PN-disabled",
+      args: {
+        smsUrl: "",
+        voiceUrl: "",
+      },
+    });
+    expect(updateIncomingPhoneNumberMock).toHaveBeenNthCalledWith(2, {
+      phoneNumberSid: "PN-inactive",
+      args: {
+        smsUrl: "",
+        voiceUrl: "",
+      },
+    });
   });
 
   it("lets operators clear a previously saved Twilio SID", async () => {

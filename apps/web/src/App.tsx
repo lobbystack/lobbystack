@@ -112,7 +112,8 @@ function WorkspaceShell() {
       return <Navigate replace to="/onboarding/verify-phone" />;
     }
   } else if (
-    activeBusiness?.onboardingStage === "phone_number" &&
+    (activeBusiness?.onboardingStage === "phone_number" ||
+      activeBusiness?.onboardingStage === "phone_number_claiming") &&
     location.pathname !== "/onboarding/number"
   ) {
     return <Navigate replace to="/onboarding/number" />;
@@ -263,7 +264,10 @@ function OnboardingNumberRoute() {
     return <Navigate replace to="/" />;
   }
 
-  if (activeBusiness.onboardingStage !== "phone_number") {
+  if (
+    activeBusiness.onboardingStage !== "phone_number" &&
+    activeBusiness.onboardingStage !== "phone_number_claiming"
+  ) {
     return <Navigate replace to="/" />;
   }
 
