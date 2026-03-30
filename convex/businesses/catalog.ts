@@ -23,7 +23,7 @@ import {
   getPasswordAccountForUser,
   resolveUserForPasswordCredentials,
 } from "../lib/accountCredentials";
-import { requireMembership } from "../lib/auth";
+import { getCurrentUser, requireMembership } from "../lib/auth";
 import {
   EMAIL_CHANGE_MAX_AGE_SECONDS,
   generateEmailChangeToken,
@@ -650,15 +650,15 @@ export const assertCatalogWriteAccess = internalQuery({
   ): Promise<{
     userId: Id<"users">;
   }> => {
-    const userId: Id<"users"> | null = await ctx.runQuery(
-      internal.users.resolveAuthenticatedUserForBusiness,
-      {
+    const currentUser = await getCurrentUser(ctx);
+    const fallbackUserId: Id<"users"> | null =
+      currentUser?._id ??
+      (await ctx.runQuery(internal.users.resolveAuthenticatedUserForBusiness, {
         businessId: args.businessId,
         authSubject: args.authSubject,
         ...(args.authUserId ? { authUserId: args.authUserId } : {}),
-      },
-    );
-    const user = userId ? await ctx.db.get(userId) : null;
+      }));
+    const user = currentUser ?? (fallbackUserId ? await ctx.db.get(fallbackUserId) : null);
     if (!user) {
       throw new Error("User profile not initialized.");
     }
