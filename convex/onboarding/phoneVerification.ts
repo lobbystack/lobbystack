@@ -79,6 +79,21 @@ async function requireCurrentAuthenticatedUser(ctx: ActionCtx): Promise<Doc<"use
   return user;
 }
 
+async function requireBusinessInPhoneVerificationStage(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+    businessId,
+  });
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+  if (business.onboardingStage !== "verify_phone") {
+    throw new Error("Phone verification is no longer available for this business.");
+  }
+}
+
 export const startPhoneVerification = action({
   args: {
     businessId: v.id("businesses"),
@@ -86,6 +101,7 @@ export const startPhoneVerification = action({
   },
   handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireCurrentAuthenticatedUser(ctx);
 
     try {
@@ -139,6 +155,31 @@ export const startPhoneVerification = action({
   },
 });
 
+export const reuseVerifiedPhoneForOnboarding = action({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
+    const user = await requireCurrentAuthenticatedUser(ctx);
+
+    if (!user.phone || !user.phoneVerificationTime) {
+      throw new Error("Verify your mobile number before continuing.");
+    }
+
+    await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
+      businessId: args.businessId,
+      onboardingStage: "phone_number",
+    });
+
+    return {
+      status: "approved" as const,
+      phoneE164: user.phone,
+    };
+  },
+});
+
 export const checkPhoneVerification = action({
   args: {
     businessId: v.id("businesses"),
@@ -147,6 +188,7 @@ export const checkPhoneVerification = action({
   },
   handler: async (ctx, args): Promise<CheckPhoneVerificationResult> => {
     await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireCurrentAuthenticatedUser(ctx);
     const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
       internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,

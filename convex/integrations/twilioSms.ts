@@ -110,13 +110,17 @@ export const registerIncomingWebhook = internalAction({
             smsUrl: args.smsWebhookUrl,
             smsMethod: "POST",
           }
-        : {}),
+        : {
+            smsUrl: "",
+          }),
       ...(args.voiceWebhookUrl
         ? {
             voiceUrl: args.voiceWebhookUrl,
             voiceMethod: "POST",
           }
-        : {}),
+        : {
+            voiceUrl: "",
+          }),
     });
 
     return {

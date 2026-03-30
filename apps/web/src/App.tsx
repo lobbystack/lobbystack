@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 
 import { api } from "../../../convex/_generated/api";
@@ -86,6 +87,20 @@ function selectActiveBusiness(
   );
 }
 
+function resolveEffectiveOnboardingStage(
+  currentUser: { phoneVerificationTime?: number | null } | undefined | null,
+  activeBusiness: { onboardingStage?: string | null } | undefined | null,
+) {
+  if (
+    activeBusiness?.onboardingStage === "verify_phone" &&
+    currentUser?.phoneVerificationTime
+  ) {
+    return "phone_number";
+  }
+
+  return activeBusiness?.onboardingStage ?? null;
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -93,25 +108,26 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
+  const effectiveOnboardingStage = resolveEffectiveOnboardingStage(currentUser, activeBusiness);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
   }
 
   if (
-    activeBusiness?.onboardingStage === "phone_number" &&
+    effectiveOnboardingStage === "phone_number" &&
     !currentUser?.phoneVerificationTime &&
     location.pathname !== "/onboarding/verify-phone"
   ) {
     return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
-  if (activeBusiness?.onboardingStage === "verify_phone") {
+  if (effectiveOnboardingStage === "verify_phone") {
     if (location.pathname !== "/onboarding/verify-phone") {
       return <Navigate replace to="/onboarding/verify-phone" />;
     }
   } else if (
-    activeBusiness?.onboardingStage === "phone_number" &&
+    effectiveOnboardingStage === "phone_number" &&
     location.pathname !== "/onboarding/number"
   ) {
     return <Navigate replace to="/onboarding/number" />;
@@ -253,6 +269,7 @@ function OnboardingNumberRoute() {
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const effectiveOnboardingStage = resolveEffectiveOnboardingStage(currentUser, activeBusiness);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
@@ -262,7 +279,7 @@ function OnboardingNumberRoute() {
     return <Navigate replace to="/" />;
   }
 
-  if (activeBusiness.onboardingStage !== "phone_number") {
+  if (effectiveOnboardingStage !== "phone_number") {
     return <Navigate replace to="/" />;
   }
 
@@ -277,9 +294,14 @@ function OnboardingNumberRoute() {
 
 function OnboardingVerifyPhoneRoute() {
   const { signOut } = useAuthActions();
+  const navigate = useNavigate();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
+  const reuseVerifiedPhoneForOnboarding = useAction(
+    api.onboarding.phoneVerification.reuseVerifiedPhoneForOnboarding,
+  );
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const [isSkippingVerification, setIsSkippingVerification] = useState(false);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
@@ -292,6 +314,51 @@ function OnboardingVerifyPhoneRoute() {
   const requiresPhoneVerification =
     activeBusiness.onboardingStage === "verify_phone" ||
     (activeBusiness.onboardingStage === "phone_number" && !currentUser?.phoneVerificationTime);
+
+  useEffect(() => {
+    if (
+      activeBusiness?.onboardingStage !== "verify_phone" ||
+      !currentUser?.phoneVerificationTime ||
+      isSkippingVerification
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsSkippingVerification(true);
+
+    void reuseVerifiedPhoneForOnboarding({
+      businessId: activeBusiness._id,
+    })
+      .then(() => {
+        if (!cancelled) {
+          navigate("/onboarding/number", { replace: true });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsSkippingVerification(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeBusiness?._id,
+    activeBusiness?.onboardingStage,
+    currentUser?.phoneVerificationTime,
+    isSkippingVerification,
+    navigate,
+    reuseVerifiedPhoneForOnboarding,
+  ]);
+
+  if (
+    activeBusiness.onboardingStage === "verify_phone" &&
+    currentUser?.phoneVerificationTime
+  ) {
+    return <LoadingScreen />;
+  }
 
   if (!requiresPhoneVerification) {
     return <Navigate replace to="/" />;

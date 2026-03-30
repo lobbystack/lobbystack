@@ -250,4 +250,78 @@ describe("onboarding phone verification actions", () => {
     });
     expect(business?.onboardingStage).toBe("verify_phone");
   });
+
+  it("refuses to start verification once the business leaves verify_phone", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "phone_number",
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId,
+        phoneE164: "+15817484609",
+      }),
+    ).rejects.toThrow("Phone verification is no longer available for this business.");
+  });
+
+  it("refuses to approve a code once the business leaves verify_phone", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+15817484609",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
+        businessId,
+        phoneE164: "+15817484609",
+        code: "123456",
+      }),
+    ).rejects.toThrow("Phone verification is no longer available for this business.");
+  });
+
+  it("lets already verified owners skip repeat verification for a new business", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userId, {
+        phone: "+15817484609",
+        phoneVerificationTime: 1_700_000_000_000,
+      });
+    });
+
+    const result = await authed.action(
+      api.onboarding.phoneVerification.reuseVerifiedPhoneForOnboarding,
+      {
+        businessId,
+      },
+    );
+
+    expect(result).toEqual({
+      status: "approved",
+      phoneE164: "+15817484609",
+    });
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("phone_number");
+  });
 });

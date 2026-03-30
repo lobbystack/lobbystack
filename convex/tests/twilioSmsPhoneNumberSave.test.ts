@@ -235,6 +235,55 @@ describe("Twilio SMS phone-number save flow", () => {
     expect(configuration.phoneNumbers[0]?.twilioPhoneSid).toBeUndefined();
   });
 
+  it("clears disabled webhook URLs both in Twilio and locally", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    const created = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      e164: "+14165550131",
+      twilioPhoneSid: "PN-clear-webhook",
+      voiceEnabled: true,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    updateIncomingPhoneNumberMock.mockClear();
+
+    const updated = await authed.action(api.businesses.catalog.savePhoneNumber, {
+      businessId,
+      phoneNumberId: created.phoneNumberId as Id<"phone_numbers">,
+      e164: "+14165550131",
+      twilioPhoneSid: "PN-clear-webhook",
+      voiceEnabled: false,
+      smsEnabled: true,
+      status: "active",
+    });
+
+    expect(updateIncomingPhoneNumberMock).toHaveBeenCalledWith({
+      phoneNumberSid: "PN-clear-webhook",
+      args: {
+        smsMethod: "POST",
+        smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        voiceUrl: "",
+      },
+    });
+    expect(updated.voiceWebhookStatus).toBe("not_configured");
+    expect(updated.smsWebhookStatus).toBe("synced");
+
+    const configuration = await authed.query(api.businesses.catalog.getBusinessConfiguration, {
+      businessId,
+    });
+    expect(configuration.phoneNumbers[0]).toMatchObject({
+      e164: "+14165550131",
+      voiceWebhookStatus: "not_configured",
+      smsWebhookStatus: "synced",
+      smsWebhookTargetUrl: "https://example.convex.site/twilio/sms/inbound",
+    });
+    expect(configuration.phoneNumbers[0]?.voiceWebhookTargetUrl).toBeUndefined();
+  });
+
   it("keeps the phone number saved and records a failed sync when Twilio registration fails", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject } = await seedBusinessOwner(t);
