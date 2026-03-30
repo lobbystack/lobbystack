@@ -289,7 +289,11 @@ function OnboardingVerifyPhoneRoute() {
     return <Navigate replace to="/" />;
   }
 
-  if (activeBusiness.onboardingStage !== "verify_phone") {
+  const requiresPhoneVerification =
+    activeBusiness.onboardingStage === "verify_phone" ||
+    (activeBusiness.onboardingStage === "phone_number" && !currentUser?.phoneVerificationTime);
+
+  if (!requiresPhoneVerification) {
     return <Navigate replace to="/" />;
   }
 
