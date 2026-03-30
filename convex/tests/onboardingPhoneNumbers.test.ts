@@ -441,4 +441,63 @@ describe("onboarding phone-number actions", () => {
     expect(business?.onboardingStage).toBe("phone_number");
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
+
+  it("surfaces non-availability provisioning errors even when the refreshed list changes", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    createIncomingPhoneNumberMock.mockRejectedValueOnce(
+      new Error("VOICE_GATEWAY_BASE_URL is required for Twilio voice webhook configuration."),
+    );
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+        };
+      }) => {
+        if (args.areaCode === 418) {
+          return [
+            {
+              phoneNumber: "+14185550999",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "VOICE_GATEWAY_BASE_URL is required for Twilio voice webhook configuration.",
+    });
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
 });

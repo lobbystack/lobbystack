@@ -64,6 +64,21 @@ type ClaimNumberResult =
       message: string;
     };
 
+function isLikelyNumberUnavailableError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("already taken") ||
+    message.includes("no longer available") ||
+    message.includes("not available") ||
+    message.includes("unavailable") ||
+    message.includes("not currently available")
+  );
+}
+
 function formatDisplayPhoneNumber(e164: string): string {
   const digits = e164.replace(/\D/g, "");
   if (digits.length === 11 && digits.startsWith("1")) {
@@ -529,7 +544,7 @@ export const claimOnboardingNumber = action({
       );
       const selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
 
-      if (!selectedStillListed) {
+      if (!selectedStillListed && isLikelyNumberUnavailableError(error)) {
         return {
           status: "unavailable" as const,
           message: "The selected phone number is no longer available.",
