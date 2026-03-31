@@ -25,6 +25,25 @@ export const getLatestVerificationAttempt = internalQuery({
   },
 });
 
+export const getLatestApprovedVerificationAttemptForPhone = internalQuery({
+  args: {
+    userId: v.id("users"),
+    phoneE164: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const attempts = await ctx.db
+      .query("onboarding_phone_verifications")
+      .withIndex("by_phone_e164", (q) => q.eq("phoneE164", args.phoneE164))
+      .collect();
+
+    return (
+      sortAttemptsDescending(attempts).find(
+        (attempt) => attempt.userId === args.userId && attempt.status === "approved",
+      ) ?? null
+    );
+  },
+});
+
 export const saveVerificationAttempt = internalMutation({
   args: {
     businessId: v.id("businesses"),

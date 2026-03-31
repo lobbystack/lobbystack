@@ -191,7 +191,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
   args: {
     businessId: v.id("businesses"),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ status: "approved"; phoneE164: string }> => {
     await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
@@ -199,6 +199,32 @@ export const reuseVerifiedPhoneForOnboarding = action({
     if (!user.phone || !user.phoneVerificationTime) {
       throw new Error("Verify your mobile number before continuing.");
     }
+
+    const latestApprovedAttempt = await ctx.runQuery(
+      internal.onboarding.phoneVerificationState.getLatestApprovedVerificationAttemptForPhone,
+      {
+        userId: user._id,
+        phoneE164: user.phone,
+      },
+    );
+    if (!latestApprovedAttempt || latestApprovedAttempt.phoneE164 !== user.phone) {
+      throw new Error("Verify your mobile number before continuing.");
+    }
+
+    await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
+      businessId: args.businessId,
+      userId: user._id,
+      phoneE164: user.phone,
+      countryCode: latestApprovedAttempt.countryCode,
+      ...(latestApprovedAttempt.lineType ? { lineType: latestApprovedAttempt.lineType } : {}),
+      verificationSid: `reused:${String(args.businessId)}:${latestApprovedAttempt._id}`,
+      status: "approved",
+      startedAt: user.phoneVerificationTime,
+      updatedAt: user.phoneVerificationTime,
+      expiresAt: user.phoneVerificationTime + 10 * 60 * 1000,
+      approvedAt: user.phoneVerificationTime,
+      attemptCount: 1,
+    });
 
     await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
       businessId: args.businessId,

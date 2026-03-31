@@ -416,6 +416,21 @@ async function assertOnboardingAccess(
   });
 }
 
+async function requireBusinessInPhoneNumberStage(
+  ctx: ActionCtx,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const business = await ctx.runQuery(internal.businesses.admin.getBusinessById, {
+    businessId,
+  });
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+  if (business.onboardingStage !== "phone_number") {
+    throw new Error("Phone-number onboarding is no longer available for this business.");
+  }
+}
+
 async function resolveVerifiedSuggestionContext(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -487,6 +502,7 @@ export const getInitialNumberSuggestion = action({
   },
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneNumberStage(ctx, args.businessId);
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const suggestions = await getSuggestedNumbers(context, 10);
 
@@ -508,6 +524,7 @@ export const searchAvailableNumbers = action({
   },
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneNumberStage(ctx, args.businessId);
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const limit = args.limit ?? 10;
     const selectionContext = buildNormalizedSelectionContext({

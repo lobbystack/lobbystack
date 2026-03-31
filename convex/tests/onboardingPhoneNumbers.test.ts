@@ -417,6 +417,60 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
+  it("refuses to suggest numbers once onboarding leaves the phone-number step", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "completed",
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Phone-number onboarding is no longer available for this business.");
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses inventory searches once onboarding leaves the phone-number step", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(businessId, {
+        onboardingStage: "phone_number_claiming",
+      });
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+        businessId,
+        mode: "city",
+        city: "Quebec City",
+      }),
+    ).rejects.toThrow("Phone-number onboarding is no longer available for this business.");
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+  });
+
   it("allows city searches outside the verified region when the user overrides the suggested city", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, subject, userId } = await seedBusinessOwner(t);

@@ -394,6 +394,28 @@ describe("onboarding phone verification actions", () => {
         phone: "+15817484609",
         phoneVerificationTime: 1_700_000_000_000,
       });
+      await ctx.db.insert("onboarding_phone_verifications", {
+        businessId: await ctx.db.insert("businesses", {
+          slug: "prior-verified-phone-business",
+          name: "Prior Verified Phone Business",
+          timezone: "America/Toronto",
+          defaultLocale: "en",
+          onboardingStage: "completed",
+          businessType: "clinic",
+          deploymentMode: "manual",
+          status: "active",
+        }),
+        userId,
+        phoneE164: "+15817484609",
+        countryCode: "CA",
+        verificationSid: "VE-prior-approved",
+        status: "approved",
+        startedAt: 1_700_000_000_000,
+        updatedAt: 1_700_000_000_000,
+        expiresAt: 1_700_000_600_000,
+        approvedAt: 1_700_000_000_000,
+        attemptCount: 1,
+      });
     });
 
     const result = await authed.action(
@@ -412,5 +434,15 @@ describe("onboarding phone verification actions", () => {
       businessId,
     });
     expect(business?.onboardingStage).toBe("phone_number");
+
+    const attempt = await t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
+      businessId,
+      userId,
+    });
+    expect(attempt).toMatchObject({
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+      status: "approved",
+    });
   });
 });
