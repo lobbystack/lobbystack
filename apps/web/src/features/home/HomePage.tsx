@@ -299,7 +299,7 @@ export function HomePage({ businessId }: HomePageProps) {
     : [];
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -604,6 +604,6 @@ export function HomePage({ businessId }: HomePageProps) {
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }
