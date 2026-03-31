@@ -27,6 +27,13 @@ import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
 } from "../lib/twilioUrls";
+import {
+  assertClaimAttemptAllowed,
+  assertInitialSuggestionAllowed,
+  assertInventorySearchAllowed,
+  normalizeInventorySearchLimit,
+  recordSuccessfulPurchaseLog,
+} from "./abuse";
 
 type TwilioAvailableNumber = {
   phoneNumber?: string | null;
@@ -503,6 +510,10 @@ export const getInitialNumberSuggestion = action({
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneNumberStage(ctx, args.businessId);
+    await assertInitialSuggestionAllowed(ctx, {
+      businessId: args.businessId,
+      userId,
+    });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
     const suggestions = await getSuggestedNumbers(context, 10);
 
@@ -525,8 +536,12 @@ export const searchAvailableNumbers = action({
   handler: async (ctx, args) => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneNumberStage(ctx, args.businessId);
+    await assertInventorySearchAllowed(ctx, {
+      businessId: args.businessId,
+      userId,
+    });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-    const limit = args.limit ?? 10;
+    const limit = normalizeInventorySearchLimit(args.limit);
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: {
         mode: args.mode,
@@ -554,17 +569,9 @@ export const claimOnboardingNumber = action({
   },
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
-    const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-    const selectionContext = buildNormalizedSelectionContext({
-      requestedSelectionContext: args.selectionContext,
-      fallbackContext: context,
-    });
-
-    const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
-    const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
-    const client = getTwilioClient();
     let purchased: PurchasedIncomingNumber | null = null;
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
+    let claimEventId: Id<"onboarding_number_claim_events"> | null = null;
     let claimLocked = false;
     let selectedNumber: AvailableNumberSummary | null = null;
 
@@ -573,6 +580,21 @@ export const claimOnboardingNumber = action({
         businessId: args.businessId,
       });
       claimLocked = true;
+
+      await assertClaimAttemptAllowed(ctx, {
+        businessId: args.businessId,
+        userId,
+      });
+
+      const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+      const selectionContext = buildNormalizedSelectionContext({
+        requestedSelectionContext: args.selectionContext,
+        fallbackContext: context,
+      });
+
+      const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
+      const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
+      const client = getTwilioClient();
 
       const selectableNumbers = await getNumbersForSelectionContext(selectionContext, context, 20);
       selectedNumber = selectableNumbers.find((number) => number.e164 === args.e164) ?? null;
@@ -612,9 +634,21 @@ export const claimOnboardingNumber = action({
         smsWebhookTargetUrl: purchased.smsUrl ?? smsWebhookUrl,
         smsWebhookLastSyncedAt: now,
       });
+      claimEventId = await ctx.runMutation(internal.onboarding.abuse.recordSuccessfulClaimEvent, {
+        businessId: args.businessId,
+        userId,
+        phoneNumberId: saved.phoneNumberId,
+        twilioPhoneSid: purchased.sid,
+        purchasedAt: Date.now(),
+      });
       await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
         businessId: args.businessId,
         onboardingStage: "completed",
+      });
+      recordSuccessfulPurchaseLog({
+        businessId: args.businessId,
+        userId,
+        phoneE164: selectedNumber.e164,
       });
 
       return {
@@ -624,6 +658,18 @@ export const claimOnboardingNumber = action({
       };
     } catch (error) {
       let cleanupError: Error | null = null;
+      if (claimEventId) {
+        try {
+          await ctx.runMutation(internal.onboarding.abuse.deleteSuccessfulClaimEvent, {
+            claimEventId,
+          });
+        } catch (rollbackError) {
+          cleanupError =
+            rollbackError instanceof Error
+              ? rollbackError
+              : new Error("Automatic rollback of the local claim event failed.");
+        }
+      }
       if (savedPhoneNumberId) {
         try {
           await ctx.runMutation(internal.businesses.catalog.deletePhoneNumberInternal, {
@@ -648,6 +694,7 @@ export const claimOnboardingNumber = action({
               : new Error("Automatic release of the onboarding claim lock failed.");
         }
       }
+      const client = getTwilioClient();
       if (purchased) {
         try {
           await client.incomingPhoneNumbers(purchased.sid).remove();
@@ -659,19 +706,29 @@ export const claimOnboardingNumber = action({
         }
       }
 
-      const alternatives = await getNumbersForSelectionContext(
-        selectionContext,
-        context,
-        10,
-      );
-      const selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
+      if (!purchased && isLikelyNumberUnavailableError(error)) {
+        let alternatives: Array<AvailableNumberSummary> = [];
+        let selectedStillListed = false;
+        try {
+          const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+          const selectionContext = buildNormalizedSelectionContext({
+            requestedSelectionContext: args.selectionContext,
+            fallbackContext: context,
+          });
+          alternatives = await getNumbersForSelectionContext(selectionContext, context, 10);
+          selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
+        } catch {
+          alternatives = [];
+          selectedStillListed = false;
+        }
 
-      if (!purchased && !selectedStillListed && isLikelyNumberUnavailableError(error)) {
-        return {
-          status: "unavailable" as const,
-          message: "The selected phone number is no longer available.",
-          alternatives,
-        };
+        if (!selectedStillListed) {
+          return {
+            status: "unavailable" as const,
+            message: "The selected phone number is no longer available.",
+            alternatives,
+          };
+        }
       }
 
       return {

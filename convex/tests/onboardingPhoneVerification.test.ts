@@ -1,3 +1,4 @@
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest, type TestConvex } from "convex-test";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,8 +22,8 @@ vi.mock("twilio", () => {
     vi.fn(() => ({
       lookups: {
         v2: {
-          phoneNumbers: () => ({
-            fetch: lookupFetchMock,
+          phoneNumbers: (phoneNumber: string) => ({
+            fetch: (args: unknown) => lookupFetchMock({ phoneNumber, args }),
           }),
         },
       },
@@ -56,6 +57,21 @@ const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalTwilioVerifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
 
+function createConvexHarness() {
+  const t = convexTest(schema, convexModules);
+  registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
+  return t;
+}
+
+function normalizeMockPhoneNumber(phoneNumber: string): string {
+  const digits = phoneNumber.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return phoneNumber.trim();
+}
+
 async function seedBusinessOwner(t: ConvexHarness) {
   const subject = "onboarding-phone-verify-owner";
 
@@ -85,6 +101,32 @@ async function seedBusinessOwner(t: ConvexHarness) {
   });
 
   return { businessId, subject, userId };
+}
+
+async function seedAdditionalBusinessForUser(input: {
+  t: ConvexHarness;
+  userId: Id<"users">;
+  slug: string;
+}): Promise<Id<"businesses">> {
+  return await input.t.run(async (ctx) => {
+    const businessId = await ctx.db.insert("businesses", {
+      slug: input.slug,
+      name: input.slug,
+      timezone: "America/Toronto",
+      defaultLocale: "en",
+      onboardingStage: "verify_phone",
+      businessType: "clinic",
+      deploymentMode: "manual",
+      status: "active",
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId: input.userId,
+      role: "business_owner",
+      status: "active",
+    });
+    return businessId;
+  });
 }
 
 async function seedMigratedBusinessOwner(t: ConvexHarness) {
@@ -144,14 +186,14 @@ describe("onboarding phone verification actions", () => {
     lookupFetchMock.mockReset();
     verificationCreateMock.mockReset();
     verificationCheckCreateMock.mockReset();
-    lookupFetchMock.mockResolvedValue({
-      phoneNumber: "+15817484609",
+    lookupFetchMock.mockImplementation(async ({ phoneNumber }: { phoneNumber: string }) => ({
+      phoneNumber: normalizeMockPhoneNumber(phoneNumber),
       countryCode: "CA",
       valid: true,
       lineTypeIntelligence: {
         type: "mobile",
       },
-    });
+    }));
     verificationCreateMock.mockResolvedValue({
       sid: "VE123",
       status: "pending",
@@ -168,7 +210,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("starts phone verification and stores the normalized verified-phone context", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -178,7 +220,10 @@ describe("onboarding phone verification actions", () => {
     });
 
     expect(lookupFetchMock).toHaveBeenCalledWith({
-      fields: "line_type_intelligence",
+      phoneNumber: "+1 (581) 748-4609",
+      args: {
+        fields: "line_type_intelligence",
+      },
     });
     expect(verificationCreateMock).toHaveBeenCalledWith({
       to: "+15817484609",
@@ -202,7 +247,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("throttles rapid resend attempts for the same verified phone", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -221,8 +266,104 @@ describe("onboarding phone verification actions", () => {
     expect(verificationCreateMock).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks repeated verification sends per user across different businesses", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const additionalBusinessIds = await Promise.all([
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-user-2",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-user-3",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-user-4",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-user-5",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-user-6",
+      }),
+    ]);
+    const authed = t.withIdentity({ subject });
+    const allBusinessIds = [businessId, ...additionalBusinessIds];
+
+    for (const [index, targetBusinessId] of allBusinessIds.slice(0, 5).entries()) {
+      await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId: targetBusinessId,
+        phoneE164: `+1416555000${index + 1}`,
+      });
+    }
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId: allBusinessIds[5],
+        phoneE164: "+14165550009",
+      }),
+    ).rejects.toThrow("Too many verification attempts. Try again later.");
+
+    expect(verificationCreateMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("blocks repeated verification sends to the same phone across new businesses", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const additionalBusinessIds = await Promise.all([
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-phone-2",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-phone-3",
+      }),
+      seedAdditionalBusinessForUser({
+        t,
+        userId,
+        slug: "verify-limit-phone-4",
+      }),
+    ]);
+    const authed = t.withIdentity({ subject });
+    const samePhone = "+15817484609";
+
+    await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: samePhone,
+    });
+    await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId: additionalBusinessIds[0],
+      phoneE164: samePhone,
+    });
+    await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId: additionalBusinessIds[1],
+      phoneE164: samePhone,
+    });
+
+    await expect(
+      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+        businessId: additionalBusinessIds[2],
+        phoneE164: samePhone,
+      }),
+    ).rejects.toThrow("Too many verification attempts. Try again later.");
+
+    expect(verificationCreateMock).toHaveBeenCalledTimes(3);
+  });
+
   it("stores verification attempts under the business-scoped legacy user for migrated accounts", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { authUserId, legacyUserId, businessId, subject } = await seedMigratedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -253,7 +394,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("marks the user phone verified and advances onboarding after a valid code", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -288,7 +429,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("rejects non-mobile numbers when lookup identifies them", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -310,7 +451,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("keeps onboarding on verify_phone when the submitted code is invalid", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -341,7 +482,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("refuses to start verification once the business leaves verify_phone", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -360,7 +501,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("refuses to approve a code once the business leaves verify_phone", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 
@@ -385,7 +526,7 @@ describe("onboarding phone verification actions", () => {
   });
 
   it("lets already verified owners skip repeat verification for a new business", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
 

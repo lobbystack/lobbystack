@@ -3,6 +3,7 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
+import { assertBootstrapAllowed } from "../onboarding/abuse";
 import { workflowManager } from "../lib/components";
 import {
   buildDefaultReceptionistSummary,
@@ -23,6 +24,7 @@ export const bootstrapBusiness = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ensureCurrentUser(ctx);
+    await assertBootstrapAllowed(ctx, user._id);
     const existing = await ctx.db
       .query("businesses")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))

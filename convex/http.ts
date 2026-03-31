@@ -8,7 +8,6 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
-import { inferOnboardingLocationContext } from "./lib/onboardingLocation";
 
 const http = httpRouter();
 
@@ -142,16 +141,6 @@ const messageAttachmentDownloadQuerySchema = z.object({
 const callRecordingDownloadQuerySchema = z.object({
   token: z.string().min(1),
 });
-
-const onboardingLocationQuerySchema = z.object({
-  timezone: z.string().min(1).optional(),
-});
-
-const publicCorsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
 
 function badRequest(message: string): Response {
   return new Response(message, { status: 400 });
@@ -904,39 +893,6 @@ http.route({
     });
 
     return Response.json(result);
-  }),
-});
-
-http.route({
-  path: "/onboarding/location",
-  method: "OPTIONS",
-  handler: httpAction(async () => {
-    return new Response(null, {
-      status: 204,
-      headers: publicCorsHeaders,
-    });
-  }),
-});
-
-http.route({
-  path: "/onboarding/location",
-  method: "GET",
-  handler: httpAction(async (_ctx, request) => {
-    const query = parseSearchParams(new URL(request.url), onboardingLocationQuerySchema);
-    if (!query.ok) {
-      return new Response(query.response.body, {
-        status: query.response.status,
-        headers: publicCorsHeaders,
-      });
-    }
-
-    const context = await inferOnboardingLocationContext({
-      request,
-      ...(query.data.timezone ? { timezoneHint: query.data.timezone } : {}),
-    });
-    return Response.json(context, {
-      headers: publicCorsHeaders,
-    });
   }),
 });
 

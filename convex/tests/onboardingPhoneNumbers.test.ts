@@ -1,3 +1,4 @@
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { v } from "convex/values";
 import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation } from "../_generated/server";
+import { onboardingRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -96,6 +98,12 @@ const originalVoiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 
+function createConvexHarness() {
+  const t = convexTest(schema, convexModules);
+  registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
+  return t;
+}
+
 async function seedBusinessOwner(t: ConvexHarness) {
   const subject = "onboarding-phone-owner";
 
@@ -124,6 +132,32 @@ async function seedBusinessOwner(t: ConvexHarness) {
   });
 
   return { businessId, subject, userId };
+}
+
+async function seedAdditionalBusinessForUser(input: {
+  t: ConvexHarness;
+  userId: Id<"users">;
+  slug: string;
+}): Promise<Id<"businesses">> {
+  return await input.t.run(async (ctx) => {
+    const businessId = await ctx.db.insert("businesses", {
+      slug: input.slug,
+      name: input.slug,
+      timezone: "America/Toronto",
+      defaultLocale: "en",
+      onboardingStage: "phone_number",
+      businessType: "clinic",
+      deploymentMode: "manual",
+      status: "active",
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId: input.userId,
+      role: "business_owner",
+      status: "active",
+    });
+    return businessId;
+  });
 }
 
 async function seedMigratedBusinessOwner(t: ConvexHarness) {
@@ -199,6 +233,18 @@ async function listBusinessPhoneNumbers(
   });
 }
 
+async function listClaimEventsForUser(
+  t: ConvexHarness,
+  userId: Id<"users">,
+): Promise<Array<Doc<"onboarding_number_claim_events">>> {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query("onboarding_number_claim_events")
+      .withIndex("by_user_id_and_purchased_at", (q) => q.eq("userId", userId))
+      .collect();
+  });
+}
+
 describe("onboarding phone-number actions", () => {
   beforeEach(() => {
     process.env.CONVEX_SITE_URL = "https://example.convex.site";
@@ -252,7 +298,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("prefers the inferred metro area-code cluster for the first suggestion", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -318,7 +364,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("uses the business-scoped legacy user phone for migrated-account suggestions", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { authUserId, legacyUserId, businessId, subject } = await seedMigratedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -375,7 +421,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("searches toll-free inventory in the inferred country", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -418,7 +464,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("refuses to suggest numbers once onboarding leaves the phone-number step", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -444,7 +490,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("refuses inventory searches once onboarding leaves the phone-number step", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -472,7 +518,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("allows city searches outside the verified region when the user overrides the suggested city", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -502,7 +548,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("returns an empty result for blank area-code searches without calling Twilio", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -529,8 +575,67 @@ describe("onboarding phone-number actions", () => {
     expect(result.numbers).toEqual([]);
   });
 
+  it("rate limits repeated initial suggestion lookups before another Twilio inventory call", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    for (let index = 0; index < 10; index += 1) {
+      await authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+        businessId,
+      });
+    }
+
+    const callsBeforeBlockedAttempt = listLocalNumbersMock.mock.calls.length;
+
+    await expect(
+      authed.action(api.onboarding.phoneNumbers.getInitialNumberSuggestion, {
+        businessId,
+      }),
+    ).rejects.toThrow("Too many number searches. Try again shortly.");
+
+    expect(listLocalNumbersMock).toHaveBeenCalledTimes(callsBeforeBlockedAttempt);
+  });
+
+  it("clamps search limits before forwarding them to Twilio", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "area_code",
+      areaCode: "418",
+      limit: 999,
+    });
+
+    expect(listLocalNumbersMock).toHaveBeenCalledWith({
+      countryCode: "CA",
+      args: {
+        areaCode: 418,
+        limit: 20,
+        smsEnabled: true,
+        voiceEnabled: true,
+      },
+    });
+  });
+
   it("uses the verified phone area code instead of unrelated geo hints", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -575,7 +680,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("claims the selected number, persists it, and completes onboarding", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -633,7 +738,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("rejects claims for numbers outside the current selection results", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -690,7 +795,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("rejects claims once onboarding is no longer on the phone-number step", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -725,7 +830,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("rejects a second claim while another claim is already in progress", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -759,8 +864,182 @@ describe("onboarding phone-number actions", () => {
     expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
+  it("rate limits repeated claim attempts before another Twilio purchase is made", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const additionalBusinessIds = await Promise.all([
+      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-2" }),
+      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-3" }),
+      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-4" }),
+    ]);
+    for (const targetBusinessId of [businessId, ...additionalBusinessIds]) {
+      await seedVerifiedPhone({
+        t,
+        businessId: targetBusinessId,
+        userId,
+        phoneE164: "+15817484609",
+        countryCode: "CA",
+      });
+    }
+    const authed = t.withIdentity({ subject });
+
+    createIncomingPhoneNumberMock.mockRejectedValue(new Error("Temporary Twilio failure."));
+
+    for (const targetBusinessId of [businessId, additionalBusinessIds[0], additionalBusinessIds[1]]) {
+      const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+        businessId: targetBusinessId,
+        e164: "+14185550123",
+        selectionContext: {
+          mode: "area_code",
+          countryCode: "CA",
+          areaCode: "418",
+        },
+      });
+
+      expect(result).toEqual({
+        status: "failed",
+        message: "Temporary Twilio failure.",
+      });
+    }
+
+    const blockedResult = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId: additionalBusinessIds[2],
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(blockedResult).toEqual({
+      status: "failed",
+      message:
+        "Number provisioning limit reached for now. Contact support if you need more businesses today.",
+    });
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("counts only successful purchases toward the durable claim quota", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    const additionalBusinessIds = await Promise.all([
+      seedAdditionalBusinessForUser({ t, userId, slug: "claim-quota-2" }),
+      seedAdditionalBusinessForUser({ t, userId, slug: "claim-quota-3" }),
+    ]);
+    for (const targetBusinessId of [businessId, ...additionalBusinessIds]) {
+      await seedVerifiedPhone({
+        t,
+        businessId: targetBusinessId,
+        userId,
+        phoneE164: "+15817484609",
+        countryCode: "CA",
+      });
+    }
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+          inLocality?: string;
+        };
+      }) => {
+        if (args.areaCode === 418) {
+          return [
+            {
+              phoneNumber: "+14185550123",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+        if (args.areaCode === 581) {
+          return [
+            {
+              phoneNumber: "+15815550123",
+              locality: "Quebec City",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+        if (args.areaCode === 819) {
+          return [
+            {
+              phoneNumber: "+18195550123",
+              locality: "Gatineau",
+              region: "QC",
+              isoCountry: "CA",
+            },
+          ];
+        }
+
+        return [];
+      },
+    );
+    createIncomingPhoneNumberMock
+      .mockResolvedValueOnce({
+        sid: "PN-success-1",
+        smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+      })
+      .mockResolvedValueOnce({
+        sid: "PN-success-2",
+        smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+      });
+
+    const firstClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+    expect(firstClaim.status).toBe("claimed");
+
+    const secondClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId: additionalBusinessIds[0],
+      e164: "+15815550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "581",
+      },
+    });
+    expect(secondClaim.status).toBe("claimed");
+
+    const blockedClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId: additionalBusinessIds[1],
+      e164: "+18195550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "819",
+      },
+    });
+
+    expect(blockedClaim).toEqual({
+      status: "failed",
+      message:
+        "Number provisioning limit reached for now. Contact support if you need more businesses today.",
+    });
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(2);
+    expect(await listClaimEventsForUser(t, userId)).toHaveLength(2);
+  });
+
   it("returns refreshed alternatives when the selected number is no longer available", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -841,7 +1120,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("releases the purchased Twilio number if local persistence fails", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -890,7 +1169,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("rolls back the saved phone row if a later onboarding step fails", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,
@@ -933,7 +1212,7 @@ describe("onboarding phone-number actions", () => {
   });
 
   it("surfaces non-availability provisioning errors even when the refreshed list changes", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
       t,

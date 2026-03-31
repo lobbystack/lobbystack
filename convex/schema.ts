@@ -201,6 +201,16 @@ export default defineSchema({
     .index("by_verification_sid", ["verificationSid"])
     .index("by_phone_e164", ["phoneE164"]),
 
+  onboarding_number_claim_events: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+    purchasedAt: v.number(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_user_id_and_purchased_at", ["userId", "purchasedAt"]),
+
   receptionist_profiles: defineTable({
     businessId: v.id("businesses"),
     greeting: v.string(),

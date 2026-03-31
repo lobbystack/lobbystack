@@ -6,6 +6,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { action, type ActionCtx } from "../_generated/server";
 import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
+import { assertVerificationSendAllowed } from "./abuse";
 
 type TwilioLookupResult = {
   phoneNumber: string;
@@ -118,6 +119,11 @@ export const startPhoneVerification = action({
     await assertOnboardingAccess(ctx, args.businessId);
     await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
     const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    await assertVerificationSendAllowed(ctx, {
+      businessId: args.businessId,
+      userId: user._id,
+      phoneE164: args.phoneE164,
+    });
 
     try {
       const client = getTwilioClient();
