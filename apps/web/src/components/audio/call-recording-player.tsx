@@ -71,7 +71,6 @@ export function CallRecordingPlayer({
 
     const audio = new Audio();
     audio.preload = "none";
-    audio.crossOrigin = "anonymous";
     audio.src = src;
     audioRef.current = audio;
 
