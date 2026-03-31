@@ -102,6 +102,7 @@ export default defineSchema({
     name: v.string(),
     timezone: v.string(),
     defaultLocale: v.optional(runtimeLocaleValidator),
+    onboardingStage: v.optional(v.string()),
     businessType: v.string(),
     deploymentMode: v.string(),
     status: v.string(),
@@ -168,6 +169,10 @@ export default defineSchema({
     voiceEnabled: v.boolean(),
     smsEnabled: v.boolean(),
     status: v.string(),
+    voiceWebhookStatus: v.optional(v.string()),
+    voiceWebhookTargetUrl: v.optional(v.string()),
+    voiceWebhookLastSyncedAt: v.optional(v.string()),
+    voiceWebhookLastError: v.optional(v.string()),
     smsWebhookStatus: v.optional(v.string()),
     smsWebhookTargetUrl: v.optional(v.string()),
     smsWebhookLastSyncedAt: v.optional(v.string()),
@@ -176,6 +181,35 @@ export default defineSchema({
     .index("by_e164", ["e164"])
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
     .index("by_business_id", ["businessId"]),
+
+  onboarding_phone_verifications: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    phoneE164: v.string(),
+    countryCode: v.string(),
+    lineType: v.optional(v.string()),
+    verificationSid: v.string(),
+    status: v.string(),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+    approvedAt: v.optional(v.number()),
+    attemptCount: v.number(),
+    lastError: v.optional(v.string()),
+  })
+    .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_verification_sid", ["verificationSid"])
+    .index("by_phone_e164", ["phoneE164"]),
+
+  onboarding_number_claim_events: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    phoneNumberId: v.id("phone_numbers"),
+    twilioPhoneSid: v.string(),
+    purchasedAt: v.number(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_user_id_and_purchased_at", ["userId", "purchasedAt"]),
 
   receptionist_profiles: defineTable({
     businessId: v.id("businesses"),

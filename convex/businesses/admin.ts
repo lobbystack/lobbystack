@@ -1,8 +1,9 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
+import { assertBootstrapAllowed } from "../onboarding/abuse";
 import { workflowManager } from "../lib/components";
 import {
   buildDefaultReceptionistSummary,
@@ -23,6 +24,7 @@ export const bootstrapBusiness = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ensureCurrentUser(ctx);
+    await assertBootstrapAllowed(ctx, user._id);
     const existing = await ctx.db
       .query("businesses")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -37,6 +39,7 @@ export const bootstrapBusiness = mutation({
       name: args.name,
       timezone: args.timezone,
       defaultLocale: "en",
+      onboardingStage: user.phoneVerificationTime ? "phone_number" : "verify_phone",
       businessType: args.businessType,
       deploymentMode: "development",
       status: "active",
@@ -71,6 +74,74 @@ export const bootstrapBusiness = mutation({
     );
 
     return { businessId };
+  },
+});
+
+export const getBusinessById = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.businessId);
+  },
+});
+
+export const setOnboardingStage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    onboardingStage: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.businessId, {
+      onboardingStage: args.onboardingStage,
+    });
+    return args.onboardingStage;
+  },
+});
+
+export const beginOnboardingNumberClaim = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.onboardingStage === "phone_number_claiming") {
+      throw new Error("A phone-number claim is already in progress for this business.");
+    }
+
+    if (business.onboardingStage !== "phone_number") {
+      throw new Error("Phone-number onboarding has already been completed for this business.");
+    }
+
+    await ctx.db.patch(args.businessId, {
+      onboardingStage: "phone_number_claiming",
+    });
+
+    return "phone_number_claiming";
+  },
+});
+
+export const releaseOnboardingNumberClaim = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    if (business.onboardingStage === "phone_number_claiming") {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "phone_number",
+      });
+    }
+
+    return "phone_number";
   },
 });
 

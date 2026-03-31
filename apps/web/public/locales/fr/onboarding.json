@@ -1,0 +1,68 @@
+{
+  "verifyPhone": {
+    "title": "Vérifiez votre identité",
+    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour suggérer votre premier numéro d'entreprise.",
+    "verifyTitle": "Entrez votre code de vérification",
+    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, nous vous proposerons un numéro d'entreprise correspondant à votre marché local.",
+    "fields": {
+      "mobileNumber": "Numéro mobile",
+      "code": "Code de vérification"
+    },
+    "placeholders": {
+      "mobileNumber": "+1 581 748 4609",
+      "code": "123456"
+    },
+    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions suggérer un premier numéro d'entreprise dans le même marché local.",
+    "sendCode": "Obtenir le code",
+    "sending": "Envoi du code...",
+    "verifyCode": "Vérifier le code",
+    "verifying": "Vérification...",
+    "resendCode": "Renvoyer le code",
+    "resending": "Nouvel envoi du code...",
+    "useDifferentNumber": "Utiliser un autre numéro",
+    "codeSent": "Nous avons envoyé un code de vérification à {{phone}}.",
+    "sendFailed": "Impossible d'envoyer un code de vérification pour le moment. Veuillez réessayer.",
+    "verifyFailed": "Impossible de vérifier ce code pour le moment. Veuillez réessayer.",
+    "signedInAs": "Connecté comme {{email}}"
+  },
+  "number": {
+    "title": "Voici votre nouveau numéro",
+    "description": "Nous avons choisi un numéro local Twilio en utilisant votre numéro mobile vérifié comme signal principal. Vous pouvez le conserver ou en choisir un autre.",
+    "detectedVerifiedLocation": "Suggestion à partir de votre mobile vérifié à {{city}}, {{region}}",
+    "detectedVerifiedAreaCode": "Suggestion à partir de votre mobile vérifié en {{areaCode}}",
+    "detectedVerifiedCountry": "Suggestion à partir de votre mobile vérifié en {{country}}",
+    "continue": "Continuer",
+    "continuing": "Attribution du numéro...",
+    "pickDifferent": "Choisir un autre numéro",
+    "loading": "Recherche d'un numéro local correspondant...",
+    "noSuggestionTitle": "Nous n'avons pas encore pu proposer un numéro avec confiance.",
+    "noSuggestionDescription": "Recherchez par ville, indicatif ou sans frais pour choisir le meilleur numéro pour votre entreprise.",
+    "loadFailed": "Impossible de charger une suggestion pour le moment.",
+    "claimFailed": "Impossible d'attribuer ce numéro. Veuillez réessayer.",
+    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste mise à jour.",
+    "skipHint": "Vous pourrez toujours le modifier plus tard dans vos paramètres Twilio.",
+    "pickerTitle": "Choisir un autre numéro",
+    "pickerDescription": "Recherchez des numéros locaux ou sans frais avant d'en attribuer un.",
+    "tabs": {
+      "city": "Par ville",
+      "areaCode": "Par indicatif",
+      "tollFree": "Sans frais"
+    },
+    "fields": {
+      "city": "Ville",
+      "areaCode": "Indicatif"
+    },
+    "placeholders": {
+      "city": "Entrez un nom de ville",
+      "areaCode": "418"
+    },
+    "search": "Rechercher",
+    "searching": "Recherche...",
+    "areaCodeRequired": "Entrez un indicatif avant de lancer la recherche.",
+    "empty": "Aucun numéro ne correspond à cette recherche.",
+    "select": "Choisir",
+    "selected": "Choisi",
+    "backToSuggested": "Retour à la suggestion",
+    "signedInAs": "Connecté comme {{email}}"
+  }
+}

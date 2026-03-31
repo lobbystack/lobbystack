@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function slugify(value: string): string {
 
 export function BusinessSetupCard() {
   const { t } = useTranslation("dashboard");
+  const navigate = useNavigate();
   const bootstrapBusiness = useMutation(api.businesses.admin.bootstrapBusiness);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -59,7 +61,7 @@ export function BusinessSetupCard() {
 
     try {
       await bootstrapBusiness({ name, slug, timezone, businessType });
-      setStatus(t("setup.created"));
+      void navigate("/onboarding/verify-phone");
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : t("setup.failed"));
     } finally {

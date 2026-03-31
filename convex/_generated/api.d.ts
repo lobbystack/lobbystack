@@ -47,6 +47,9 @@ import type * as lib_node_knowledgeExtraction from "../lib/node/knowledgeExtract
 import type * as lib_node_tessdataEng from "../lib/node/tessdataEng.js";
 import type * as lib_node_tessdataFra from "../lib/node/tessdataFra.js";
 import type * as lib_node_tesseractInProcessWorker from "../lib/node/tesseractInProcessWorker.js";
+import type * as lib_node_twilioClient from "../lib/node/twilioClient.js";
+import type * as lib_onboardingLocation from "../lib/onboardingLocation.js";
+import type * as lib_onboardingPhoneNumbers from "../lib/onboardingPhoneNumbers.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
@@ -63,6 +66,10 @@ import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
 import type * as lib_twilioUrls from "../lib/twilioUrls.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
+import type * as onboarding_abuse from "../onboarding/abuse.js";
+import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
+import type * as onboarding_phoneVerification from "../onboarding/phoneVerification.js";
+import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as users from "../users.js";
 import type * as users_preferences from "../users/preferences.js";
@@ -114,6 +121,9 @@ declare const fullApi: ApiFromModules<{
   "lib/node/tessdataEng": typeof lib_node_tessdataEng;
   "lib/node/tessdataFra": typeof lib_node_tessdataFra;
   "lib/node/tesseractInProcessWorker": typeof lib_node_tesseractInProcessWorker;
+  "lib/node/twilioClient": typeof lib_node_twilioClient;
+  "lib/onboardingLocation": typeof lib_onboardingLocation;
+  "lib/onboardingPhoneNumbers": typeof lib_onboardingPhoneNumbers;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;
   "lib/providers/email": typeof lib_providers_email;
@@ -130,6 +140,10 @@ declare const fullApi: ApiFromModules<{
   "lib/twilioUrls": typeof lib_twilioUrls;
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "notifications/reminders": typeof notifications_reminders;
+  "onboarding/abuse": typeof onboarding_abuse;
+  "onboarding/phoneNumbers": typeof onboarding_phoneNumbers;
+  "onboarding/phoneVerification": typeof onboarding_phoneVerification;
+  "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
   "services/localizedNames": typeof services_localizedNames;
   users: typeof users;
   "users/preferences": typeof users_preferences;
@@ -3413,6 +3427,140 @@ export declare const components: {
           }>;
         }
       >;
+    };
+  };
+  rateLimiter: {
+    lib: {
+      checkRateLimit: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      clearAll: FunctionReference<
+        "mutation",
+        "internal",
+        { before?: number },
+        null
+      >;
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
+      getValue: FunctionReference<
+        "query",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          key?: string;
+          name: string;
+          sampleShards?: number;
+        },
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          shard: number;
+          ts: number;
+          value: number;
+        }
+      >;
+      rateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          config:
+            | {
+                capacity?: number;
+                kind: "token bucket";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: null;
+              }
+            | {
+                capacity?: number;
+                kind: "fixed window";
+                maxReserved?: number;
+                period: number;
+                rate: number;
+                shards?: number;
+                start?: number;
+              };
+          count?: number;
+          key?: string;
+          name: string;
+          reserve?: boolean;
+          throws?: boolean;
+        },
+        { ok: true; retryAfter?: number } | { ok: false; retryAfter: number }
+      >;
+      resetRateLimit: FunctionReference<
+        "mutation",
+        "internal",
+        { key?: string; name: string },
+        null
+      >;
+    };
+    time: {
+      getServerTime: FunctionReference<"mutation", "internal", {}, number>;
     };
   };
   resend: {

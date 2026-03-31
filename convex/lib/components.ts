@@ -3,6 +3,7 @@ import { Agent } from "@convex-dev/agent";
 import { Crons } from "@convex-dev/crons";
 import { PersistentTextStreaming } from "@convex-dev/persistent-text-streaming";
 import { RAG } from "@convex-dev/rag";
+import { DAY, HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { WorkflowManager } from "@convex-dev/workflow";
 import { Workpool } from "@convex-dev/workpool";
 
@@ -62,3 +63,41 @@ export const bulkWorkpool = new Workpool(components.bulkWorkpool, {
 export const retrier = new ActionRetrier(components.actionRetrier);
 
 export const runtimeCrons = new Crons(components.crons);
+
+export const onboardingRateLimiter = new RateLimiter(components.rateLimiter, {
+  onboardingBusinessBootstrapPerHour: {
+    kind: "fixed window",
+    rate: 3,
+    period: HOUR,
+  },
+  onboardingBusinessBootstrapPerDay: {
+    kind: "fixed window",
+    rate: 10,
+    period: DAY,
+  },
+  onboardingVerificationSendPerUserPerHour: {
+    kind: "fixed window",
+    rate: 5,
+    period: HOUR,
+  },
+  onboardingVerificationSendPerPhonePerHour: {
+    kind: "fixed window",
+    rate: 3,
+    period: HOUR,
+  },
+  onboardingInventorySearchPerTenMinutes: {
+    kind: "fixed window",
+    rate: 20,
+    period: 10 * MINUTE,
+  },
+  onboardingInitialSuggestionPerTenMinutes: {
+    kind: "fixed window",
+    rate: 10,
+    period: 10 * MINUTE,
+  },
+  onboardingClaimAttemptPerHour: {
+    kind: "fixed window",
+    rate: 3,
+    period: HOUR,
+  },
+});

@@ -1,7 +1,7 @@
 import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 
 export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): string {
-  const services = snapshot.services
+  const services = (Array.isArray(snapshot.services) ? snapshot.services : [])
     .map((service) => `${service.name} (${service.durationMinutes} min)`)
     .join(", ");
 

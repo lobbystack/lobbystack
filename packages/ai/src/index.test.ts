@@ -27,4 +27,13 @@ describe("buildVoiceSystemPrompt", () => {
     expect(prompt).not.toContain("Speak in French unless the caller clearly asks to switch languages.");
     expect(prompt).not.toContain("Priority FAQs:");
   });
+
+  it("tolerates snapshots without a services array", () => {
+    const prompt = buildVoiceSystemPrompt({
+      ...demoSnapshot,
+      services: undefined as never,
+    });
+
+    expect(prompt).toContain("Available services: No services configured.");
+  });
 });
