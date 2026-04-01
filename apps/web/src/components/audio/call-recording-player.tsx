@@ -13,12 +13,14 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
 type CallRecordingPlayerProps = {
+  autoPlay?: boolean;
   className?: string;
   downloadLabel: string;
   initialDurationSeconds?: number;
   pauseLabel: string;
   playLabel: string;
   src: string;
+  variant?: "default" | "hidden";
 };
 
 function formatDuration(seconds: number): string {
@@ -40,12 +42,14 @@ function normalizeDurationSeconds(seconds: number): number {
 }
 
 export function CallRecordingPlayer({
+  autoPlay,
   className,
   downloadLabel,
   initialDurationSeconds = 0,
   pauseLabel,
   playLabel,
   src,
+  variant = "default",
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -156,6 +160,12 @@ export function CallRecordingPlayer({
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
 
+    if (autoPlay) {
+      void audio.play().catch(() => {
+        setIsPlaying(false);
+      });
+    }
+
     return () => {
       audio.pause();
       audio.removeEventListener("loadedmetadata", updateDuration);
@@ -170,8 +180,9 @@ export function CallRecordingPlayer({
       audioContextRef.current = null;
       void audioContext?.close();
     };
-  }, [initialDurationSeconds, src]);
+  }, [initialDurationSeconds, src, autoPlay]);
 
+  // We explicitly expose togglePlayback for external control if needed.
   async function togglePlayback() {
     const audio = audioRef.current;
     if (!audio) {
@@ -233,6 +244,10 @@ export function CallRecordingPlayer({
 
     return Math.max(0, Math.ceil(remainingSeconds));
   }, [currentTime, duration]);
+
+  if (variant === "hidden") {
+    return null;
+  }
 
   return (
     <div

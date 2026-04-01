@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -174,6 +175,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
   );
   const [searchValue, setSearchValue] = useState("");
   const [activeRecordingCallId, setActiveRecordingCallId] = useState<Id<"calls"> | null>(null);
+  const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -263,9 +265,11 @@ export function CallsPage({ businessId }: CallsPageProps) {
           return (
             <Button
               aria-label={isActive ? t("actions.pause") : t("actions.play")}
-              onClick={() =>
-                setActiveRecordingCallId((current) => (current === call._id ? null : call._id))
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setActiveRecordingCallId((current) => (current === call._id ? null : call._id));
+              }}
               size="icon-sm"
               title={isActive ? t("actions.pause") : t("actions.play")}
               variant="ghost"
@@ -346,37 +350,20 @@ export function CallsPage({ businessId }: CallsPageProps) {
       </div>
 
       {activeRecordingCall?.recordingUrl ? (
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <div className="flex flex-col gap-1 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">
-                {activeRecordingCall.contactName ?? t("table.unknownCaller")}
-              </p>
-              <p className="truncate text-sm text-muted-foreground">
-                {activeRecordingCall.contactPhone ?? t("table.noNumber")}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {formatDateTime(activeRecordingCall.startedAt, i18n.language, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </p>
-          </div>
-          <CallRecordingPlayer
-            className="px-4 py-3"
-            downloadLabel={t("actions.download")}
-            initialDurationSeconds={
-              activeRecordingCall.recordingDurationMs
-                ? activeRecordingCall.recordingDurationMs / 1000
-                : (activeRecordingCall.providerCallDurationSeconds ?? 0)
-            }
-            key={String(activeRecordingCall._id)}
-            pauseLabel={t("actions.pause")}
-            playLabel={t("actions.play")}
-            src={activeRecordingCall.recordingUrl}
-          />
-        </div>
+        <CallRecordingPlayer
+          autoPlay
+          downloadLabel={t("actions.download")}
+          initialDurationSeconds={
+            activeRecordingCall.recordingDurationMs
+              ? activeRecordingCall.recordingDurationMs / 1000
+              : (activeRecordingCall.providerCallDurationSeconds ?? 0)
+          }
+          key={String(activeRecordingCall._id)}
+          pauseLabel={t("actions.pause")}
+          playLabel={t("actions.play")}
+          src={activeRecordingCall.recordingUrl}
+          variant="hidden"
+        />
       ) : null}
 
       <div className="overflow-hidden rounded-lg border bg-card">
@@ -410,7 +397,12 @@ export function CallsPage({ businessId }: CallsPageProps) {
               const isActive = row.original._id === activeRecordingCallId;
 
               return (
-                <TableRow className="h-12" data-state={isActive ? "selected" : undefined} key={row.id}>
+                <TableRow
+                  className="h-12 cursor-pointer"
+                  data-state={isActive ? "selected" : undefined}
+                  key={row.id}
+                  onClick={() => navigate(`/calls/${row.original._id}`)}
+                >
                   {row.getVisibleCells().map((cell) => {
                     const className =
                       cell.column.id === "purpose"

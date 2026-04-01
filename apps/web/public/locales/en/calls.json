@@ -101,5 +101,59 @@
     "none": "Caller asked questions, but no final outcome was captured yet.",
     "genericService": "an appointment",
     "unspecifiedTime": "an unspecified time"
+  },
+  "detail": {
+    "backToList": "Calls",
+    "callLabel": "Call",
+    "unknownCaller": "Unknown caller",
+    "noNumber": "No number",
+    "metadata": {
+      "from": "FROM",
+      "duration": "DURATION",
+      "started": "STARTED",
+      "id": "ID"
+    },
+    "status": {
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "unknown": "Unknown"
+    },
+    "events": {
+      "received": "Received",
+      "connected": "Connected",
+      "transferred": "Transferred",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "tabs": {
+      "transcript": "Transcript",
+      "recording": "Recording",
+      "details": "Details"
+    },
+    "transcript": {
+      "caller": "Caller",
+      "assistant": "Assistant",
+      "empty": "No transcript segments are available for this call yet."
+    },
+    "recording": {
+      "unavailable": "No recording is available for this call.",
+      "pending": "The recording is still being processed."
+    },
+    "details": {
+      "outcomeTitle": "Outcome",
+      "followUpTitle": "Follow-up task",
+      "callInfoTitle": "Call information",
+      "twilioCallSid": "Twilio Call SID",
+      "gatewaySession": "Gateway session",
+      "disposition": "Disposition",
+      "providerStatus": "Provider status",
+      "noDisposition": "None",
+      "noFollowUp": "No follow-up task for this call.",
+      "markDone": "Mark done",
+      "markingDone": "Marking…"
+    },
+    "notFound": "Call not found.",
+    "notFoundDescription": "This call doesn't exist or you don't have access to it."
   }
 }
