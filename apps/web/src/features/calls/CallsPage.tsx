@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type CallsPageProps = {
   businessId?: Id<"businesses">;
@@ -221,7 +222,10 @@ export function CallsPage({ businessId }: CallsPageProps) {
         accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
         id: "number",
         header: () => t("table.number"),
-        cell: ({ row }) => row.original.contactPhone ?? t("table.noNumber"),
+        cell: ({ row }) =>
+          row.original.contactPhone
+            ? formatPhoneNumberDisplay(row.original.contactPhone, i18n.language)
+            : t("table.noNumber"),
       },
       {
         accessorFn: (call) => formatCallPurpose(call, i18n.language, t),

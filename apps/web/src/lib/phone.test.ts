@@ -1,0 +1,38 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  formatPhoneNumberDisplay,
+  getDefaultPhoneCountry,
+  normalizePhoneNumber,
+} from "@/lib/phone";
+
+describe("phone helpers", () => {
+  it("maps locale defaults to the expected countries", () => {
+    expect(getDefaultPhoneCountry("en-CA")).toBe("CA");
+    expect(getDefaultPhoneCountry("fr-CA")).toBe("CA");
+    expect(getDefaultPhoneCountry("en-US")).toBe("US");
+    expect(getDefaultPhoneCountry("fr")).toBe("US");
+  });
+
+  it("normalizes valid phone numbers to E.164", () => {
+    expect(
+      normalizePhoneNumber("(514) 555-0123", { defaultCountry: "CA" }),
+    ).toBe("+15145550123");
+    expect(
+      normalizePhoneNumber("+33 6 12 34 56 78", { defaultCountry: "FR" }),
+    ).toBe("+33612345678");
+  });
+
+  it("returns undefined for invalid phone input", () => {
+    expect(normalizePhoneNumber("123", { defaultCountry: "US" })).toBeUndefined();
+  });
+
+  it("formats matching-country numbers nationally and other numbers internationally", () => {
+    expect(formatPhoneNumberDisplay("+15145550123", "en-CA")).toBe("(514) 555-0123");
+    expect(formatPhoneNumberDisplay("+15145550123", "en-US")).toBe("+1 514 555 0123");
+  });
+
+  it("falls back to the raw value when parsing fails", () => {
+    expect(formatPhoneNumberDisplay("not a phone", "en-US")).toBe("not a phone");
+  });
+});

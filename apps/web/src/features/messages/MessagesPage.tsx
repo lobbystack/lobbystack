@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 type MessagesPageProps = {
@@ -738,7 +739,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
                         <span className="block min-w-0 truncate font-semibold">
                           {conversation.contactName ??
-                            conversation.contactPhone ??
+                            (conversation.contactPhone
+                              ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
+                              : null) ??
                             t("page.unknownCaller")}
                         </span>
                         <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
@@ -797,11 +800,15 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     <div className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold lg:text-base">
                         {thread.contact?.name ??
-                          thread.contact?.phone ??
+                          (thread.contact?.phone
+                            ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
+                            : null) ??
                           t("page.unknownCaller")}
                       </span>
                       <span className="block max-w-48 line-clamp-1 text-xs text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
-                        {thread.contact?.phone ??
+                        {(thread.contact?.phone
+                          ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
+                          : null) ??
                           thread.contact?.email ??
                           t("page.noChannel")}
                       </span>

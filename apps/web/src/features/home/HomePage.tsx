@@ -42,6 +42,7 @@ import {
   parseFollowUpTaskBody,
 } from "@/lib/follow-up-task";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type HomePageProps = {
   businessId?: Id<"businesses">;
@@ -582,7 +583,9 @@ export function HomePage({ businessId }: HomePageProps) {
                           {call.contactName ?? t("home.recentCalls.unknownCaller")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {call.contactPhone ??
+                          {(call.contactPhone
+                            ? formatPhoneNumberDisplay(call.contactPhone, i18n.language)
+                            : null) ??
                             formatDateTime(call.startedAt, i18n.language, {
                               dateStyle: "medium",
                               timeStyle: "short",

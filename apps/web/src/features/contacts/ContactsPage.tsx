@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type ContactsPageProps = {
   businessId?: Id<"businesses">;
@@ -78,8 +79,8 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "channels",
         header: () => t("table.channels"),
         cell: ({ row }) => (
-          <div className="flex flex-wrap items-center gap-2">
-            <span>{row.original.phone}</span>
+            <div className="flex flex-wrap items-center gap-2">
+            <span>{formatPhoneNumberDisplay(row.original.phone, i18n.language)}</span>
             {row.original.email ? <Badge variant="outline">{row.original.email}</Badge> : null}
           </div>
         ),

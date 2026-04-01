@@ -22,6 +22,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type OnboardingVerifyPhonePageProps = {
   businessId: Id<"businesses">;
@@ -52,11 +54,11 @@ export function OnboardingVerifyPhonePage({
   currentUserPhone,
   onSignOut,
 }: OnboardingVerifyPhonePageProps) {
-  const { t } = useTranslation("onboarding");
+  const { i18n, t } = useTranslation("onboarding");
   const navigate = useNavigate();
   const startPhoneVerification = useAction(api.onboarding.phoneVerification.startPhoneVerification);
   const checkPhoneVerification = useAction(api.onboarding.phoneVerification.checkPhoneVerification);
-  const [phoneInput, setPhoneInput] = useState(currentUserPhone ?? "");
+  const [phoneInput, setPhoneInput] = useState<string | undefined>(currentUserPhone ?? undefined);
   const [verificationPhone, setVerificationPhone] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -67,19 +69,27 @@ export function OnboardingVerifyPhonePage({
   const isVerifyStep = verificationPhone !== null;
 
   async function handleSendCode(): Promise<void> {
+    if (!phoneInput) {
+      return;
+    }
+
     setIsSendingCode(true);
     setError(null);
     setStatusMessage(null);
 
     try {
-      const result = (await startPhoneVerification({
+        const result = (await startPhoneVerification({
         businessId,
-        phoneE164: phoneInput.trim(),
+        phoneE164: phoneInput,
       })) as StartVerificationResult;
 
       setPhoneInput(result.phoneE164);
       setVerificationPhone(result.phoneE164);
-      setStatusMessage(t("verifyPhone.codeSent", { phone: result.phoneE164 }));
+      setStatusMessage(
+        t("verifyPhone.codeSent", {
+          phone: formatPhoneNumberDisplay(result.phoneE164, i18n.language),
+        }),
+      );
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -163,7 +173,12 @@ export function OnboardingVerifyPhonePage({
               </CardTitle>
               <CardDescription className="max-w-md text-base leading-7 text-zinc-300">
                 {isVerifyStep
-                  ? t("verifyPhone.verifyDescription", { phone: verificationPhone ?? phoneInput })
+                  ? t("verifyPhone.verifyDescription", {
+                      phone: formatPhoneNumberDisplay(
+                        verificationPhone ?? phoneInput,
+                        i18n.language,
+                      ),
+                    })
                   : t("verifyPhone.description")}
               </CardDescription>
             </CardHeader>
@@ -174,10 +189,10 @@ export function OnboardingVerifyPhonePage({
                     <FieldLabel htmlFor="onboarding-phone">
                       {t("verifyPhone.fields.mobileNumber")}
                     </FieldLabel>
-                    <Input
+                    <PhoneInput
                       id="onboarding-phone"
-                      inputMode="tel"
-                      onChange={(event) => setPhoneInput(event.target.value)}
+                      locale={i18n.language}
+                      onChange={setPhoneInput}
                       placeholder={t("verifyPhone.placeholders.mobileNumber")}
                       value={phoneInput}
                     />
@@ -217,7 +232,7 @@ export function OnboardingVerifyPhonePage({
                 {!isVerifyStep ? (
                   <Button
                     className="h-12 bg-violet-500 text-base font-medium text-white hover:bg-violet-400"
-                    disabled={isSendingCode || phoneInput.trim().length === 0}
+                    disabled={isSendingCode || !phoneInput}
                     onClick={() => void handleSendCode()}
                     type="button"
                   >

@@ -32,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type CallDetailPageProps = {
   businessId?: Id<"businesses">;
@@ -599,7 +600,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     call.contactName
   ) : call.contactPhone ? (
     <span className="flex items-baseline gap-2">
-      {call.contactPhone}
+      {formatPhoneNumberDisplay(call.contactPhone, locale)}
       <span className="text-base font-medium text-muted-foreground">
         ({t("detail.unknownCaller")})
       </span>
@@ -607,7 +608,9 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
   ) : (
     t("detail.unknownCaller")
   );
-  const callerPhone = call.contactPhone || t("detail.noNumber");
+  const callerPhone = call.contactPhone
+    ? formatPhoneNumberDisplay(call.contactPhone, locale)
+    : t("detail.noNumber");
 
   const durationSeconds =
     call.recordingDurationMs !== undefined

@@ -14,6 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 type AgentBasicSettingsPageProps = {
@@ -21,7 +22,7 @@ type AgentBasicSettingsPageProps = {
 };
 
 export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
-  const { t } = useTranslation(["agent", "common"]);
+  const { i18n, t } = useTranslation(["agent", "common"]);
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
     businessId,
   });
@@ -226,13 +227,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 {t("agent:fields.transferNumber.hint")}
               </FieldDescription>
             </FieldContent>
-            <div style={{ width: "13ch" }}>
-              <Input
+            <div className="w-full max-w-sm">
+              <PhoneInput
                 id="agent-transfer-number"
+                locale={i18n.language}
                 placeholder={t("agent:fields.transferNumber.placeholder")}
-                value={transferNumber}
-                onChange={(event) => {
-                  setTransferNumber(event.target.value);
+                value={transferNumber || undefined}
+                onChange={(nextValue) => {
+                  setTransferNumber(nextValue ?? "");
                   setTransferStatus(null);
                 }}
               />
