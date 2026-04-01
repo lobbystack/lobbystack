@@ -2,20 +2,9 @@ import * as React from "react";
 import PhoneNumberInput from "react-phone-number-input/input";
 import type { Country } from "react-phone-number-input/input";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import {
-  getDefaultPhoneCountry,
-  getPhoneCountryOptions,
-  getPhoneLabels,
-  inferPhoneCountry,
-} from "@/lib/phone";
+import { inputClassName } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { getDefaultPhoneCountry } from "@/lib/phone";
 
 type PhoneInputProps = Omit<
   React.ComponentProps<"input">,
@@ -28,7 +17,13 @@ type PhoneInputProps = Omit<
 };
 
 const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  (props, ref) => <Input ref={ref} {...props} />,
+  ({ className, ...props }, ref) => (
+    <input
+      ref={ref}
+      className={cn(inputClassName, className)}
+      {...props}
+    />
+  ),
 );
 
 PhoneNumberTextInput.displayName = "PhoneNumberTextInput";
@@ -42,57 +37,13 @@ export function PhoneInput({
   ...props
 }: PhoneInputProps) {
   const resolvedDefaultCountry = defaultCountry ?? getDefaultPhoneCountry(locale);
-  const labels = React.useMemo(() => getPhoneLabels(locale), [locale]);
-  const countryOptions = React.useMemo(() => getPhoneCountryOptions(locale), [locale]);
-  const [selectedCountry, setSelectedCountry] = React.useState<Country>(
-    inferPhoneCountry(value, resolvedDefaultCountry) ?? resolvedDefaultCountry,
-  );
-
-  React.useEffect(() => {
-    const inferredCountry = inferPhoneCountry(value, undefined);
-    if (inferredCountry) {
-      setSelectedCountry(inferredCountry);
-    }
-  }, [value]);
-
-  React.useEffect(() => {
-    if (!value) {
-      setSelectedCountry(resolvedDefaultCountry);
-    }
-  }, [resolvedDefaultCountry, value]);
 
   return (
-    <div className="flex w-full items-center gap-2">
-      <Select
-        disabled={disabled}
-        onValueChange={(nextValue) => setSelectedCountry(nextValue as Country)}
-        value={selectedCountry}
-      >
-        <SelectTrigger
-          aria-label={labels.country ?? "Country"}
-          className="w-24 shrink-0"
-        >
-          <SelectValue>
-            {selectedCountry
-              ? `${selectedCountry} ${
-                  countryOptions.find((option) => option.code === selectedCountry)?.callingCode ?? ""
-                }`
-              : labels.ZZ ?? "International"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="start">
-          {countryOptions.map((countryOption) => (
-            <SelectItem key={countryOption.code} value={countryOption.code}>
-              {countryOption.label} ({countryOption.callingCode})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
+    <div className="w-full">
       <PhoneNumberInput
         {...props}
         autoComplete={props.autoComplete ?? "tel"}
-        defaultCountry={selectedCountry}
+        defaultCountry={resolvedDefaultCountry as Country}
         disabled={disabled}
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}

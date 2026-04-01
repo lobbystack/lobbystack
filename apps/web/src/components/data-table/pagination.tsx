@@ -80,6 +80,7 @@ export function DataTablePagination<TData>({
             className="size-8 p-0 @max-md/content:hidden"
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.setPageIndex(0)}
+            type="button"
             variant="outline"
           >
             <span className="sr-only">{labels.firstPage}</span>
@@ -89,6 +90,7 @@ export function DataTablePagination<TData>({
             className="size-8 p-0"
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
+            type="button"
             variant="outline"
           >
             <span className="sr-only">{labels.previousPage}</span>
@@ -103,6 +105,7 @@ export function DataTablePagination<TData>({
                 <Button
                   className="h-8 min-w-8 px-2"
                   onClick={() => table.setPageIndex(pageNumber - 1)}
+                  type="button"
                   variant={currentPage === pageNumber ? "default" : "outline"}
                 >
                   <span className="sr-only">{labels.goToPage(pageNumber)}</span>
@@ -116,6 +119,7 @@ export function DataTablePagination<TData>({
             className="size-8 p-0"
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}
+            type="button"
             variant="outline"
           >
             <span className="sr-only">{labels.nextPage}</span>
@@ -125,6 +129,7 @@ export function DataTablePagination<TData>({
             className="size-8 p-0 @max-md/content:hidden"
             disabled={!table.getCanNextPage()}
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            type="button"
             variant="outline"
           >
             <span className="sr-only">{labels.lastPage}</span>

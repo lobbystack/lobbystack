@@ -39,13 +39,10 @@ describe("PhoneInput", () => {
     expect(screen.getByTestId("phone-value").textContent).toBe("+12133734253");
   });
 
-  it("updates parsing behavior when the selected country changes", async () => {
+  it("uses the configured default country for parsing", async () => {
     const user = userEvent.setup();
 
-    render(<PhoneInputHarness />);
-
-    await user.click(screen.getByRole("combobox", { name: "Phone number country" }));
-    await user.click(screen.getByText("France (+33)"));
+    render(<PhoneInputHarness defaultCountry="FR" locale="fr-CA" />);
     await user.type(screen.getByRole("textbox", { name: "Phone" }), "612345678");
 
     expect(screen.getByTestId("phone-value").textContent).toBe("+33612345678");
@@ -61,5 +58,20 @@ describe("PhoneInput", () => {
     await user.clear(input);
 
     expect(screen.getByTestId("phone-value").textContent).toBe("");
+  });
+
+  it("allows deleting partial input without re-inserting the country code", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness defaultCountry="US" locale="en-US" />);
+
+    const input = screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement;
+    await user.type(input, "231232");
+    expect(input.value).toBe("(231) 232");
+
+    await user.keyboard("[Backspace]");
+
+    expect(input.value).toBe("(231) 23");
+    expect(input.value).not.toBe("(231) 232-1");
   });
 });
