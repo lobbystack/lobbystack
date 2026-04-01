@@ -349,22 +349,20 @@ export function CallsPage({ businessId }: CallsPageProps) {
         />
       </div>
 
-      {activeRecordingCall?.recordingUrl ? (
-        <CallRecordingPlayer
-          autoPlay
-          downloadLabel={t("actions.download")}
-          initialDurationSeconds={
-            activeRecordingCall.recordingDurationMs
-              ? activeRecordingCall.recordingDurationMs / 1000
-              : (activeRecordingCall.providerCallDurationSeconds ?? 0)
-          }
-          key={String(activeRecordingCall._id)}
-          pauseLabel={t("actions.pause")}
-          playLabel={t("actions.play")}
-          src={activeRecordingCall.recordingUrl}
-          variant="hidden"
-        />
-      ) : null}
+      <CallRecordingPlayer
+        autoPlay
+        downloadLabel={t("actions.download")}
+        initialDurationSeconds={
+          activeRecordingCall?.recordingDurationMs
+            ? activeRecordingCall.recordingDurationMs / 1000
+            : (activeRecordingCall?.providerCallDurationSeconds ?? 0)
+        }
+        onEnded={() => setActiveRecordingCallId(null)}
+        pauseLabel={t("actions.pause")}
+        playLabel={t("actions.play")}
+        src={activeRecordingCall?.recordingUrl ?? null}
+        variant="hidden"
+      />
 
       <div className="overflow-hidden rounded-lg border bg-card">
         <Table>

@@ -17,9 +17,10 @@ type CallRecordingPlayerProps = {
   className?: string;
   downloadLabel: string;
   initialDurationSeconds?: number;
+  onEnded?: () => void;
   pauseLabel: string;
   playLabel: string;
-  src: string;
+  src?: string | null;
   variant?: "default" | "hidden";
 };
 
@@ -46,12 +47,15 @@ export function CallRecordingPlayer({
   className,
   downloadLabel,
   initialDurationSeconds = 0,
+  onEnded,
   pauseLabel,
   playLabel,
   src,
   variant = "default",
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const onEndedRef = useRef(onEnded);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [bufferedTime, setBufferedTime] = useState(0);
@@ -59,15 +63,62 @@ export function CallRecordingPlayer({
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  useEffect(() => {
     setCurrentTime(0);
     setBufferedTime(0);
     setDuration(normalizeDurationSeconds(initialDurationSeconds));
     setIsPlaying(false);
 
+    if (!src) {
+      audioRef.current = null;
+      return;
+    }
+
     const audio = new Audio();
     audio.preload = "none";
+    audio.crossOrigin = "anonymous";
     audio.src = src;
     audioRef.current = audio;
+
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextCtor) {
+      try {
+        const audioContext = new AudioContextCtor();
+        const source = audioContext.createMediaElementSource(audio);
+        const splitter = audioContext.createChannelSplitter(2);
+        const merger = audioContext.createChannelMerger(2);
+        const leftToLeft = audioContext.createGain();
+        const rightToLeft = audioContext.createGain();
+        const leftToRight = audioContext.createGain();
+        const rightToRight = audioContext.createGain();
+
+        leftToLeft.gain.value = 0.5;
+        rightToLeft.gain.value = 0.5;
+        leftToRight.gain.value = 0.5;
+        rightToRight.gain.value = 0.5;
+
+        source.connect(splitter);
+        splitter.connect(leftToLeft, 0);
+        splitter.connect(rightToLeft, 1);
+        splitter.connect(leftToRight, 0);
+        splitter.connect(rightToRight, 1);
+
+        leftToLeft.connect(merger, 0, 0);
+        rightToLeft.connect(merger, 0, 0);
+        leftToRight.connect(merger, 0, 1);
+        rightToRight.connect(merger, 0, 1);
+        merger.connect(audioContext.destination);
+
+        audioContextRef.current = audioContext;
+      } catch {
+        audioContextRef.current = null;
+      }
+    }
 
     function updateBufferedTime() {
       const currentAudio = audioRef.current;
@@ -112,6 +163,7 @@ export function CallRecordingPlayer({
         const endedAt = normalizeDurationSeconds(audio.duration || 0);
         return endedAt > 0 ? endedAt : currentDuration;
       });
+      onEndedRef.current?.();
     }
 
     audio.addEventListener("loadedmetadata", updateDuration);
@@ -124,9 +176,16 @@ export function CallRecordingPlayer({
 
     if (autoPlay) {
       audio.currentTime = 0;
-      void audio.play().catch(() => {
-        setIsPlaying(false);
-      });
+      void (async () => {
+        try {
+          if (audioContextRef.current?.state === "suspended") {
+            await audioContextRef.current.resume();
+          }
+          await audio.play();
+        } catch {
+          setIsPlaying(false);
+        }
+      })();
     }
 
     return () => {
@@ -139,6 +198,9 @@ export function CallRecordingPlayer({
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       audioRef.current = null;
+      const audioContext = audioContextRef.current;
+      audioContextRef.current = null;
+      void audioContext?.close();
     };
   }, [initialDurationSeconds, src, autoPlay]);
 
@@ -155,6 +217,9 @@ export function CallRecordingPlayer({
         if (exactDuration > 0 && audio.currentTime >= exactDuration - 0.05) {
           audio.currentTime = 0;
           setCurrentTime(0);
+        }
+        if (audioContextRef.current?.state === "suspended") {
+          await audioContextRef.current.resume();
         }
         await audio.play();
       } catch {
@@ -175,7 +240,7 @@ export function CallRecordingPlayer({
 
     try {
       const link = document.createElement("a");
-      link.href = src;
+      link.href = src ?? "";
       link.download = "";
       link.rel = "noopener noreferrer";
       link.target = "_blank";
