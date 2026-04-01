@@ -65,7 +65,7 @@ function ThemePreviewCard({
       >
         <div
           className={cn(
-            "rounded-lg border p-2 shadow-sm transition-colors",
+            "rounded-lg border p-2 transition-colors",
             shellClassName,
             active && "shadow-primary/10",
           )}

@@ -14,5 +14,14 @@
     "calls": "{{count}} appels",
     "unknownContact": "Contact inconnu",
     "empty": "Aucun contact ne correspond à la recherche."
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Aller a la premiere page",
+    "previousPage": "Aller a la page precedente",
+    "nextPage": "Aller a la page suivante",
+    "lastPage": "Aller a la derniere page",
+    "goToPage": "Aller a la page {{page}}"
   }
 }

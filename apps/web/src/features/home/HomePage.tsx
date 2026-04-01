@@ -342,7 +342,7 @@ export function HomePage({ businessId }: HomePageProps) {
               </Badge>
             </div>
             {summary && summary.actionRequired.length > 0 ? (
-                <Card className="border-border/70 shadow-sm">
+                <Card className="border-border/70">
                   <CardContent>
                     <ItemGroup>
                       {summary.actionRequired.map((item, index) => (
@@ -458,7 +458,7 @@ export function HomePage({ businessId }: HomePageProps) {
               </Badge>
             </div>
             {summary && summary.upcoming.length > 0 ? (
-              <Card className="border-border/70 shadow-sm">
+              <Card className="border-border/70">
                 <CardContent className="flex flex-col gap-4">
                   {summary.upcoming.map((appointment, index) => (
                     <motion.div

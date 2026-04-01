@@ -1,10 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type PaginationState,
+} from "@tanstack/react-table";
 import { useQuery } from "convex/react";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { DataTablePagination } from "@/components/data-table/pagination";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +50,10 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     businessId ? { businessId } : "skip",
   ) as Array<ContactRow> | undefined;
   const [searchValue, setSearchValue] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const rows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -49,6 +62,86 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
       return query.length === 0 || haystack.includes(query);
     });
   }, [contacts, searchValue]);
+
+  const columns = useMemo<Array<ColumnDef<ContactRow>>>(
+    () => [
+      {
+        accessorFn: (contact) => contact.name ?? t("table.unknownContact"),
+        id: "contact",
+        header: () => t("table.contact"),
+        cell: ({ row }) => (
+          <span className="font-semibold">{row.original.name ?? t("table.unknownContact")}</span>
+        ),
+      },
+      {
+        accessorFn: (contact) => [contact.phone, contact.email].filter(Boolean).join(" "),
+        id: "channels",
+        header: () => t("table.channels"),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <span>{row.original.phone}</span>
+            {row.original.email ? <Badge variant="outline">{row.original.email}</Badge> : null}
+          </div>
+        ),
+      },
+      {
+        accessorFn: (contact) => `${contact.messageCount} ${contact.callCount}`,
+        id: "activity",
+        header: () => t("table.activity"),
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Badge variant="secondary">{t("table.messages", { count: row.original.messageCount })}</Badge>
+            <Badge variant="secondary">{t("table.calls", { count: row.original.callCount })}</Badge>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "appointmentCount",
+        id: "appointments",
+        header: () => t("table.appointments"),
+      },
+      {
+        accessorFn: (contact) =>
+          formatDateTime(contact.lastInteractionAt, i18n.language, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        id: "lastInteraction",
+        header: () => t("table.lastInteraction"),
+        cell: ({ row }) =>
+          formatDateTime(row.original.lastInteractionAt, i18n.language, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+      },
+    ],
+    [i18n.language, t],
+  );
+
+  const table = useReactTable({
+    columns,
+    data: rows,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      pagination,
+    },
+  });
+
+  useEffect(() => {
+    setPagination((current) => {
+      const pageCount = Math.max(1, Math.ceil(rows.length / current.pageSize));
+      if (current.pageIndex <= pageCount - 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        pageIndex: pageCount - 1,
+      };
+    });
+  }, [rows.length]);
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -68,48 +161,32 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{t("table.contact")}</TableHead>
-              <TableHead>{t("table.channels")}</TableHead>
-              <TableHead>{t("table.activity")}</TableHead>
-              <TableHead>{t("table.appointments")}</TableHead>
-              <TableHead>{t("table.lastInteraction")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((contact: ContactRow) => (
-              <TableRow key={String(contact.id)}>
-                <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold">{contact.name ?? t("table.unknownContact")}</span>
-                    <span className="text-xs text-muted-foreground">{contact.phone}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{contact.phone}</Badge>
-                    {contact.email ? <Badge variant="outline">{contact.email}</Badge> : null}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <Badge variant="secondary">{t("table.messages", { count: contact.messageCount })}</Badge>
-                    <Badge variant="secondary">{t("table.calls", { count: contact.callCount })}</Badge>
-                  </div>
-                </TableCell>
-                <TableCell>{contact.appointmentCount}</TableCell>
-                <TableCell>
-                  {formatDateTime(contact.lastInteractionAt, i18n.language, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </TableCell>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
-            {rows.length === 0 ? (
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow className="h-12" key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+            {table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
                   {t("table.empty")}
@@ -119,6 +196,18 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
           </TableBody>
         </Table>
       </div>
+      <DataTablePagination
+        labels={{
+          rowsPerPage: t("pagination.rowsPerPage"),
+          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+          firstPage: t("pagination.firstPage"),
+          previousPage: t("pagination.previousPage"),
+          nextPage: t("pagination.nextPage"),
+          lastPage: t("pagination.lastPage"),
+          goToPage: (page) => t("pagination.goToPage", { page }),
+        }}
+        table={table}
+      />
     </div>
   );
 }

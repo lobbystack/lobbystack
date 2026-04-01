@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type PaginationState,
+} from "@tanstack/react-table";
 import { useQuery } from "convex/react";
 import type { TFunction } from "i18next";
-import { Pause, Phone, Play, Search } from "lucide-react";
+import { Pause, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
+import { DataTablePagination } from "@/components/data-table/pagination";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Button } from "@/components/ui/button";
@@ -165,6 +174,10 @@ export function CallsPage({ businessId }: CallsPageProps) {
   );
   const [searchValue, setSearchValue] = useState("");
   const [activeRecordingCallId, setActiveRecordingCallId] = useState<Id<"calls"> | null>(null);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const rows = calls ?? [];
   const filteredRows = useMemo(() => {
@@ -190,11 +203,115 @@ export function CallsPage({ businessId }: CallsPageProps) {
     [activeRecordingCallId, rows],
   );
 
+  const columns = useMemo<Array<ColumnDef<CallRow>>>(
+    () => [
+      {
+        accessorFn: (call) => call.contactName ?? t("table.unknownCaller"),
+        id: "caller",
+        header: () => t("table.caller"),
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.contactName ?? t("table.unknownCaller")}
+          </span>
+        ),
+      },
+      {
+        accessorFn: (call) => call.contactPhone ?? t("table.noNumber"),
+        id: "number",
+        header: () => t("table.number"),
+        cell: ({ row }) => row.original.contactPhone ?? t("table.noNumber"),
+      },
+      {
+        accessorFn: (call) => formatCallPurpose(call, i18n.language, t),
+        id: "purpose",
+        header: () => t("table.purpose"),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatCallPurpose(row.original, i18n.language, t)}
+          </span>
+        ),
+      },
+      {
+        accessorFn: (call) =>
+          formatDateTime(call.startedAt, i18n.language, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        id: "time",
+        header: () => <span className="block text-right">{t("table.time")}</span>,
+        cell: ({ row }) => (
+          <span className="block text-right">
+            {formatDateTime(row.original.startedAt, i18n.language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "play",
+        header: () => null,
+        cell: ({ row }) => {
+          const call = row.original;
+          const hasRecording = Boolean(call.recordingUrl);
+          const isActive = call._id === activeRecordingCallId;
+
+          if (!hasRecording) {
+            return <span className="text-sm text-muted-foreground">{t("actions.audioPending")}</span>;
+          }
+
+          return (
+            <Button
+              aria-label={isActive ? t("actions.pause") : t("actions.play")}
+              onClick={() =>
+                setActiveRecordingCallId((current) => (current === call._id ? null : call._id))
+              }
+              size="icon-sm"
+              title={isActive ? t("actions.pause") : t("actions.play")}
+              variant="ghost"
+            >
+              {isActive ? <Pause className="size-4" /> : <Play className="size-4" />}
+            </Button>
+          );
+        },
+        meta: {
+          className: "w-12 text-right",
+        },
+      },
+    ],
+    [activeRecordingCallId, i18n.language, t],
+  );
+
+  const table = useReactTable({
+    columns,
+    data: filteredRows,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      pagination,
+    },
+  });
+
   useEffect(() => {
     if (activeRecordingCallId && !rows.some((call) => call._id === activeRecordingCallId)) {
       setActiveRecordingCallId(null);
     }
   }, [activeRecordingCallId, rows]);
+
+  useEffect(() => {
+    setPagination((current) => {
+      const pageCount = Math.max(1, Math.ceil(filteredRows.length / current.pageSize));
+      if (current.pageIndex <= pageCount - 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        pageIndex: pageCount - 1,
+      };
+    });
+  }, [filteredRows.length]);
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -215,12 +332,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </div>
         }
         description={t("page.description")}
-        title={
-          <span className="flex min-w-0 items-center gap-2">
-            {t("page.title")}
-            <Phone className="size-5" />
-          </span>
-        }
+        title={t("page.title")}
       />
 
       <div className="relative max-w-sm">
@@ -234,7 +346,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
       </div>
 
       {activeRecordingCall?.recordingUrl ? (
-        <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-lg border bg-card">
           <div className="flex flex-col gap-1 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
@@ -267,59 +379,58 @@ export function CallsPage({ businessId }: CallsPageProps) {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{t("table.caller")}</TableHead>
-              <TableHead>{t("table.number")}</TableHead>
-              <TableHead className="min-w-80">{t("table.purpose")}</TableHead>
-              <TableHead>{t("table.time")}</TableHead>
-              <TableHead>{t("table.play")}</TableHead>
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const className =
+                    header.column.id === "purpose"
+                      ? "min-w-80"
+                      : header.column.columnDef.meta &&
+                          typeof header.column.columnDef.meta === "object" &&
+                          "className" in header.column.columnDef.meta
+                        ? String(header.column.columnDef.meta.className)
+                        : undefined;
+
+                  return (
+                    <TableHead className={className} key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
-            {filteredRows.map((call) => {
-              const hasRecording = Boolean(call.recordingUrl);
-              const isActive = call._id === activeRecordingCallId;
+            {table.getRowModel().rows.map((row) => {
+              const isActive = row.original._id === activeRecordingCallId;
 
               return (
-                <TableRow data-state={isActive ? "selected" : undefined} key={String(call._id)}>
-                  <TableCell className="font-medium">
-                    {call.contactName ?? t("table.unknownCaller")}
-                  </TableCell>
-                  <TableCell>{call.contactPhone ?? t("table.noNumber")}</TableCell>
-                  <TableCell className="max-w-0 whitespace-normal text-sm text-muted-foreground">
-                    {formatCallPurpose(call, i18n.language, t)}
-                  </TableCell>
-                  <TableCell>
-                    {formatDateTime(call.startedAt, i18n.language, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {hasRecording ? (
-                      <Button
-                        onClick={() =>
-                          setActiveRecordingCallId((current) => (current === call._id ? null : call._id))
-                        }
-                        size="sm"
-                        variant={isActive ? "secondary" : "outline"}
-                      >
-                        {isActive ? <Pause className="size-4" /> : <Play className="size-4" />}
-                        {isActive ? t("actions.pause") : t("actions.play")}
-                      </Button>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {t("actions.audioPending")}
-                      </span>
-                    )}
-                  </TableCell>
+                <TableRow className="h-12" data-state={isActive ? "selected" : undefined} key={row.id}>
+                  {row.getVisibleCells().map((cell) => {
+                    const className =
+                      cell.column.id === "purpose"
+                        ? "max-w-0 whitespace-normal"
+                        : cell.column.columnDef.meta &&
+                            typeof cell.column.columnDef.meta === "object" &&
+                            "className" in cell.column.columnDef.meta
+                          ? String(cell.column.columnDef.meta.className)
+                          : undefined;
+
+                    return (
+                      <TableCell className={className} key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })}
-            {filteredRows.length === 0 ? (
+            {table.getRowModel().rows.length === 0 ? (
               <TableRow>
                 <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
                   {t("table.empty")}
@@ -329,6 +440,18 @@ export function CallsPage({ businessId }: CallsPageProps) {
           </TableBody>
         </Table>
       </div>
+      <DataTablePagination
+        labels={{
+          rowsPerPage: t("pagination.rowsPerPage"),
+          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+          firstPage: t("pagination.firstPage"),
+          previousPage: t("pagination.previousPage"),
+          nextPage: t("pagination.nextPage"),
+          lastPage: t("pagination.lastPage"),
+          goToPage: (page) => t("pagination.goToPage", { page }),
+        }}
+        table={table}
+      />
     </div>
   );
 }

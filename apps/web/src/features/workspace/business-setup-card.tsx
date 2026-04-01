@@ -70,7 +70,7 @@ export function BusinessSetupCard() {
   }
 
   return (
-    <Card className="border border-border/70 bg-card/90 shadow-sm">
+    <Card className="border border-border/70 bg-card/90">
       <CardHeader>
         <CardTitle>{t("setup.title")}</CardTitle>
         <CardDescription>{t("setup.description")}</CardDescription>

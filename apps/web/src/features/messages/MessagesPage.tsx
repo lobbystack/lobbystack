@@ -16,7 +16,6 @@ import {
   FileText,
   Globe,
   MessageCircle,
-  MessagesSquare,
   Power,
   Plus,
   Search as SearchIcon,
@@ -271,7 +270,7 @@ function MessageAttachmentPreview({
 
   return (
     <a
-      className="flex items-center gap-2 rounded-md border border-border/70 bg-background/90 px-3 py-2 text-sm shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+      className="flex items-center gap-2 rounded-md border border-border/70 bg-background/90 px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
       href={attachment.downloadUrl ?? undefined}
       rel="noreferrer"
       target="_blank"
@@ -686,15 +685,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       />
 
       <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
-        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 shadow-md sm:static sm:z-auto sm:mx-0 sm:p-0 sm:shadow-none">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 sm:static sm:z-auto sm:mx-0 sm:p-0">
           <PageHeader
             className="py-0"
-            title={
-              <span className="flex items-center gap-2">
-                {t("page.title")}
-                <MessagesSquare className="size-5" />
-              </span>
-            }
+            title={t("page.title")}
           />
           <label
             className={cn(
@@ -774,13 +768,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div
         className={cn(
-          "absolute inset-0 start-full z-50 hidden min-w-0 w-full flex-1 flex-col border bg-background shadow-xs sm:static sm:z-auto sm:flex sm:rounded-md",
+          "absolute inset-0 start-full z-50 hidden min-w-0 w-full flex-1 flex-col border bg-background sm:static sm:z-auto sm:flex sm:rounded-md",
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
         {thread ? (
           <>
-            <div className="min-w-0 flex-none bg-card shadow-lg sm:rounded-t-md">
+            <div className="min-w-0 flex-none bg-card sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="flex min-w-0 flex-1 gap-3">
                   <Button
@@ -856,7 +850,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           return (
                             <div
                               className={cn(
-                                "max-w-72 px-3 py-2 wrap-break-word shadow-lg",
+                                "max-w-72 px-3 py-2 wrap-break-word",
                                 isFailedOutboundMessage
                                   ? "self-end rounded-[16px_16px_0_16px] border border-destructive/40 bg-destructive/10 text-foreground"
                                   : item.direction === "outbound"
@@ -942,7 +936,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="flex flex-wrap gap-2">
                     {stagedAttachments.map((attachment) => (
                       <div
-                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2 shadow-xs"
+                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2"
                         key={String(attachment.id)}
                       >
                         {attachment.kind === "image" && attachment.previewUrl ? (

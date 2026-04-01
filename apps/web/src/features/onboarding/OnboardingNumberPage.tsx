@@ -323,7 +323,7 @@ export function OnboardingNumberPage({
                       <span>{suggestionLabel}</span>
                     </div>
                   ) : null}
-                  <div className="rounded-3xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+                  <div className="rounded-3xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center">
                     <div className="mb-2 flex items-center justify-center gap-2 text-zinc-400">
                       <Phone className="size-4" />
                       <span className="text-sm uppercase tracking-[0.24em]">
