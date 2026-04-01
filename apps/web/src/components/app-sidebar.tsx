@@ -1,6 +1,5 @@
 import * as React from "react";
 import {
-  MessageSquareMore,
   Phone,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -30,6 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 import { UserIcon } from "@/components/ui/user";
 import { UsersIcon } from "@/components/ui/users";
+import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
   businessName: string;
@@ -40,28 +40,53 @@ type AppSidebarProps = {
   operatorName?: string;
 };
 
-function createSidebarIcon<T extends { size?: number; className?: string }>(
-  Icon: React.ComponentType<T>,
+function createAnimatedSidebarIcon(
+  Icon: React.ComponentType<any>,
 ) {
-  return function SidebarIcon(props: React.ComponentPropsWithoutRef<"div">) {
-    return <Icon size={18} {...(props as T)} />;
+  return function SidebarIcon({ hovered, className }: SidebarIconProps) {
+    const iconRef = React.useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+
+    React.useEffect(() => {
+      if (hovered) {
+        iconRef.current?.startAnimation();
+      } else {
+        iconRef.current?.stopAnimation();
+      }
+    }, [hovered]);
+
+    return (
+      <Icon
+        ref={iconRef}
+        size={18}
+        {...(className ? { className } : {})}
+      />
+    );
   };
 }
 
-const AnimatedHomeIcon = createSidebarIcon(HomeIcon);
-const AnimatedMessagesIcon = createSidebarIcon(MessageSquareMoreIcon);
-const AnimatedContactsIcon = createSidebarIcon(UsersIcon);
-const AnimatedAnalyticsIcon = createSidebarIcon(ChartColumnIncreasingIcon);
-const AnimatedAgentIcon = createSidebarIcon(BotIcon);
-const AnimatedBasicSettingsIcon = createSidebarIcon(ClipboardCheckIcon);
-const AnimatedKnowledgeIcon = createSidebarIcon(BookTextIcon);
-const AnimatedServicesIcon = createSidebarIcon(BoxIcon);
-const AnimatedRulesIcon = createSidebarIcon(FileTextIcon);
-const AnimatedSettingsIcon = createSidebarIcon(SettingsIcon);
-const AnimatedBusinessIcon = createSidebarIcon(UserIcon);
-const AnimatedAppearanceIcon = createSidebarIcon(SlidersHorizontalIcon);
-const AnimatedIntegrationsIcon = createSidebarIcon(LinkIcon);
-const AnimatedTeamLogo = createSidebarIcon(IdCardIcon);
+function createStaticSidebarIcon(
+  Icon: React.ComponentType<any>,
+) {
+  return function SidebarIcon({ className }: SidebarIconProps) {
+    return <Icon size={18} {...(className ? { className } : {})} />;
+  };
+}
+
+const AnimatedHomeIcon = createAnimatedSidebarIcon(HomeIcon);
+const AnimatedMessagesIcon = createAnimatedSidebarIcon(MessageSquareMoreIcon);
+const AnimatedContactsIcon = createAnimatedSidebarIcon(UsersIcon);
+const AnimatedAnalyticsIcon = createAnimatedSidebarIcon(ChartColumnIncreasingIcon);
+const AnimatedAgentIcon = createAnimatedSidebarIcon(BotIcon);
+const AnimatedBasicSettingsIcon = createAnimatedSidebarIcon(ClipboardCheckIcon);
+const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
+const AnimatedServicesIcon = createAnimatedSidebarIcon(BoxIcon);
+const AnimatedRulesIcon = createAnimatedSidebarIcon(FileTextIcon);
+const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
+const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
+const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
+const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
+const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
+const StaticPhoneIcon = createStaticSidebarIcon(Phone);
 
 export function AppSidebar({
   businessName,
@@ -90,7 +115,7 @@ export function AppSidebar({
           title: t("nav:sidebar.general"),
           items: [
             { title: t("nav:items.home"), url: "/", icon: AnimatedHomeIcon },
-            { title: t("nav:items.calls"), url: "/calls", icon: Phone },
+            { title: t("nav:items.calls"), url: "/calls", icon: StaticPhoneIcon },
             { title: t("nav:items.messages"), url: "/messages", icon: AnimatedMessagesIcon },
             { title: t("nav:items.contacts"), url: "/contacts", icon: AnimatedContactsIcon },
           ],

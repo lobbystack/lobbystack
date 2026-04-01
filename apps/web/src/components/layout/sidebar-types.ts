@@ -12,10 +12,15 @@ type Team = {
   plan?: string;
 };
 
+type SidebarIconProps = {
+  hovered?: boolean;
+  className?: string;
+};
+
 type BaseNavItem = {
   title: string;
   badge?: string;
-  icon?: React.ElementType;
+  icon?: React.ComponentType<SidebarIconProps>;
 };
 
 type NavLinkItem = BaseNavItem & {
@@ -49,4 +54,5 @@ export type {
   NavLinkItem,
   User,
   Team,
+  SidebarIconProps,
 };
