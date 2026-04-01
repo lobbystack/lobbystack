@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Appels",
-    "description": "Consultez les appels récents, les transcriptions et l'audio enregistré.",
+    "description": "Consultez les appels récents et écoutez l'audio enregistré.",
     "emptyPreview": "Pas encore de transcription.",
     "selectCall": "Sélectionnez un appel pour afficher la transcription.",
     "yesterday": "Hier",
@@ -13,13 +13,18 @@
     "allStatuses": "Tous"
   },
   "table": {
-    "startedAt": "Début",
     "caller": "Appelant",
+    "number": "Numéro",
+    "purpose": "Objet",
+    "time": "Heure",
+    "play": "Lecture",
+    "startedAt": "Début",
     "status": "Statut",
     "disposition": "Résultat",
     "transcript": "Transcription",
     "audio": "Audio",
     "unknownCaller": "Appelant inconnu",
+    "noNumber": "Aucun numéro",
     "noDisposition": "Non défini",
     "empty": "Aucun appel ne correspond aux filtres."
   },
