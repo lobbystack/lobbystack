@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  captureOutboundAudio,
   acknowledgeOutboundPlaybackMark,
   clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
-  queueOutboundPlaybackMark,
+  queuePendingOutboundPlaybackGroup,
   type OutboundPlaybackTracker,
 } from "./outboundPlayback";
 
@@ -13,7 +14,10 @@ function buildTracker(): OutboundPlaybackTracker {
     outboundAudio: [],
     outboundCursorMs: 0,
     outboundQueuedCursorMs: 0,
-    pendingOutboundPlaybackMarks: [],
+    activeAssistantResponseId: null,
+    pendingOutboundAudio: [],
+    pendingOutboundStartMs: null,
+    pendingOutboundPlaybackGroups: [],
   };
 }
 
@@ -26,11 +30,12 @@ describe("outbound playback tracker", () => {
   it("commits audio only after the matching Twilio mark arrives", () => {
     const tracker = buildTracker();
 
-    queueOutboundPlaybackMark(tracker, {
+    captureOutboundAudio(tracker, {
       elapsedMs: 0,
-      markName: "audio-1",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
     });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
 
     expect(tracker.outboundAudio).toHaveLength(0);
     expect(acknowledgeOutboundPlaybackMark(tracker, "audio-1")).toBe(true);
@@ -43,32 +48,35 @@ describe("outbound playback tracker", () => {
   it("drops queued audio when playback is cleared", () => {
     const tracker = buildTracker();
 
-    queueOutboundPlaybackMark(tracker, {
+    captureOutboundAudio(tracker, {
       elapsedMs: 0,
-      markName: "audio-1",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
     });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
     clearPendingOutboundPlayback(tracker, 500);
 
     expect(acknowledgeOutboundPlaybackMark(tracker, "audio-1")).toBe(false);
     expect(tracker.outboundAudio).toHaveLength(0);
-    expect(tracker.pendingOutboundPlaybackMarks).toHaveLength(0);
+    expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(0);
     expect(tracker.outboundQueuedCursorMs).toBe(500);
   });
 
   it("keeps real-time gaps between later chunks", () => {
     const tracker = buildTracker();
 
-    queueOutboundPlaybackMark(tracker, {
+    captureOutboundAudio(tracker, {
       elapsedMs: 0,
-      markName: "audio-1",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
     });
-    queueOutboundPlaybackMark(tracker, {
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+    captureOutboundAudio(tracker, {
       elapsedMs: 5000,
-      markName: "audio-2",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-2",
     });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-2");
 
     acknowledgeOutboundPlaybackMark(tracker, "audio-1");
     acknowledgeOutboundPlaybackMark(tracker, "audio-2");
@@ -80,21 +88,23 @@ describe("outbound playback tracker", () => {
   it("flushes only chunks that should already have played by teardown time", () => {
     const tracker = buildTracker();
 
-    queueOutboundPlaybackMark(tracker, {
+    captureOutboundAudio(tracker, {
       elapsedMs: 0,
-      markName: "audio-1",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
     });
-    queueOutboundPlaybackMark(tracker, {
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+    captureOutboundAudio(tracker, {
       elapsedMs: 1000,
-      markName: "audio-2",
       payload: payloadWithDurationMs(1000),
+      responseId: "response-2",
     });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-2");
 
     flushElapsedOutboundPlayback(tracker, 1500);
 
     expect(tracker.outboundAudio).toHaveLength(1);
-    expect(tracker.pendingOutboundPlaybackMarks).toHaveLength(1);
-    expect(tracker.pendingOutboundPlaybackMarks[0]?.markName).toBe("audio-2");
+    expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(1);
+    expect(tracker.pendingOutboundPlaybackGroups[0]?.markName).toBe("audio-2");
   });
 });

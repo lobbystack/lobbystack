@@ -24,10 +24,11 @@ import {
   buildToolFailureRecoveryInstructions,
 } from "./failureRecovery";
 import {
+  captureOutboundAudio,
   acknowledgeOutboundPlaybackMark,
   clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
-  queueOutboundPlaybackMark,
+  queuePendingOutboundPlaybackGroup,
 } from "./outboundPlayback";
 import {
   buildMediaStreamValidationUrls,
@@ -128,11 +129,13 @@ type ActiveVoiceSession = {
   outboundAudio: Array<TimedAudioChunk>;
   outboundCursorMs: number;
   outboundQueuedCursorMs: number;
-  pendingOutboundPlaybackMarks: Array<{
+  activeAssistantResponseId: string | null;
+  pendingOutboundAudio: Array<string>;
+  pendingOutboundStartMs: number | null;
+  pendingOutboundPlaybackGroups: Array<{
     markName: string;
-    offsetMs: number;
     endOffsetMs: number;
-    payload: string;
+    chunks: Array<TimedAudioChunk>;
   }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
@@ -868,7 +871,6 @@ function handleOpenAiMessage(
     case "response.audio.delta":
     case "response.output_audio.delta": {
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
-        const markName = `audio-${crypto.randomUUID()}`;
         twilioSocket.send(
           JSON.stringify({
             event: "media",
@@ -878,19 +880,10 @@ function handleOpenAiMessage(
             },
           }),
         );
-        twilioSocket.send(
-          JSON.stringify({
-            event: "mark",
-            streamSid: session.streamSid,
-            mark: {
-              name: markName,
-            },
-          }),
-        );
-        queueOutboundPlaybackMark(session, {
+        captureOutboundAudio(session, {
           elapsedMs: Date.now() - session.startedAtMs,
-          markName,
           payload: payload.delta,
+          ...(payload.response_id ? { responseId: payload.response_id } : {}),
         });
       }
       return;
@@ -908,8 +901,28 @@ function handleOpenAiMessage(
       return;
     }
     case "response.audio.done":
-    case "response.output_audio.done":
+    case "response.output_audio.done": {
+      if (!session.streamSid || twilioSocket.readyState !== WebSocket.OPEN) {
+        return;
+      }
+
+      const markName = `audio-response-${crypto.randomUUID()}`;
+      const queued = queuePendingOutboundPlaybackGroup(session, markName);
+      if (!queued) {
+        return;
+      }
+
+      twilioSocket.send(
+        JSON.stringify({
+          event: "mark",
+          streamSid: session.streamSid,
+          mark: {
+            name: markName,
+          },
+        }),
+      );
       return;
+    }
     case "response.output_audio_transcript.delta":
     case "response.output_text.delta":
       return;
@@ -1117,7 +1130,10 @@ export async function handleMediaStreamConnection(
     outboundAudio: [],
     outboundCursorMs: 0,
     outboundQueuedCursorMs: 0,
-    pendingOutboundPlaybackMarks: [],
+    activeAssistantResponseId: null,
+    pendingOutboundAudio: [],
+    pendingOutboundStartMs: null,
+    pendingOutboundPlaybackGroups: [],
     pendingInboundAudio: [],
     pendingTasks: new Set(),
   };

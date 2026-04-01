@@ -1,17 +1,19 @@
 import type { TimedAudioChunk } from "../audio/wav";
 
-type PendingOutboundPlaybackMark = {
+type PendingOutboundPlaybackGroup = {
   markName: string;
-  offsetMs: number;
+  chunks: Array<TimedAudioChunk>;
   endOffsetMs: number;
-  payload: string;
 };
 
 export type OutboundPlaybackTracker = {
   outboundAudio: Array<TimedAudioChunk>;
   outboundCursorMs: number;
   outboundQueuedCursorMs: number;
-  pendingOutboundPlaybackMarks: Array<PendingOutboundPlaybackMark>;
+  activeAssistantResponseId: string | null;
+  pendingOutboundAudio: Array<string>;
+  pendingOutboundStartMs: number | null;
+  pendingOutboundPlaybackGroups: Array<PendingOutboundPlaybackGroup>;
 };
 
 function estimatePayloadDurationMs(payload: string, sampleRate = 8000): number {
@@ -19,58 +21,111 @@ function estimatePayloadDurationMs(payload: string, sampleRate = 8000): number {
   return (sampleCount / sampleRate) * 1000;
 }
 
-function commitPlayedChunk(
+function buildPendingOutboundChunks(
   tracker: OutboundPlaybackTracker,
-  chunk: PendingOutboundPlaybackMark,
-): void {
-  tracker.outboundAudio.push({
-    offsetMs: chunk.offsetMs,
-    payload: chunk.payload,
-  });
-  tracker.outboundCursorMs = Math.max(tracker.outboundCursorMs, chunk.endOffsetMs);
+): {
+  chunks: Array<TimedAudioChunk>;
+  endOffsetMs: number;
+} | null {
+  if (tracker.pendingOutboundAudio.length === 0) {
+    return null;
+  }
+
+  let cursorMs = tracker.pendingOutboundStartMs ?? tracker.outboundQueuedCursorMs;
+  const chunks: Array<TimedAudioChunk> = [];
+  for (const payload of tracker.pendingOutboundAudio) {
+    chunks.push({
+      offsetMs: cursorMs,
+      payload,
+    });
+    cursorMs += estimatePayloadDurationMs(payload);
+  }
+
+  return {
+    chunks,
+    endOffsetMs: cursorMs,
+  };
 }
 
-export function queueOutboundPlaybackMark(
+function clearPendingCurrentResponse(tracker: OutboundPlaybackTracker): void {
+  tracker.activeAssistantResponseId = null;
+  tracker.pendingOutboundAudio = [];
+  tracker.pendingOutboundStartMs = null;
+}
+
+function commitPlayedGroup(
+  tracker: OutboundPlaybackTracker,
+  group: PendingOutboundPlaybackGroup,
+): void {
+  tracker.outboundAudio.push(...group.chunks);
+  tracker.outboundCursorMs = Math.max(tracker.outboundCursorMs, group.endOffsetMs);
+}
+
+export function captureOutboundAudio(
   tracker: OutboundPlaybackTracker,
   input: {
     elapsedMs: number;
-    markName: string;
     payload: string;
+    responseId?: string;
   },
 ): void {
-  const offsetMs = Math.max(
-    tracker.outboundCursorMs,
-    tracker.outboundQueuedCursorMs,
-    input.elapsedMs,
-  );
-  const endOffsetMs = offsetMs + estimatePayloadDurationMs(input.payload);
+  if (input.responseId && input.responseId !== tracker.activeAssistantResponseId) {
+    clearPendingCurrentResponse(tracker);
+    tracker.activeAssistantResponseId = input.responseId;
+    tracker.pendingOutboundStartMs = Math.max(
+      tracker.outboundCursorMs,
+      tracker.outboundQueuedCursorMs,
+      input.elapsedMs,
+    );
+  } else if (!tracker.activeAssistantResponseId) {
+    tracker.activeAssistantResponseId = input.responseId ?? crypto.randomUUID();
+    tracker.pendingOutboundStartMs = Math.max(
+      tracker.outboundCursorMs,
+      tracker.outboundQueuedCursorMs,
+      input.elapsedMs,
+    );
+  }
 
-  tracker.pendingOutboundPlaybackMarks.push({
-    markName: input.markName,
-    offsetMs,
-    endOffsetMs,
-    payload: input.payload,
+  tracker.pendingOutboundAudio.push(input.payload);
+}
+
+export function queuePendingOutboundPlaybackGroup(
+  tracker: OutboundPlaybackTracker,
+  markName: string,
+): boolean {
+  const pendingGroup = buildPendingOutboundChunks(tracker);
+  if (!pendingGroup) {
+    clearPendingCurrentResponse(tracker);
+    return false;
+  }
+
+  tracker.pendingOutboundPlaybackGroups.push({
+    markName,
+    chunks: pendingGroup.chunks,
+    endOffsetMs: pendingGroup.endOffsetMs,
   });
-  tracker.outboundQueuedCursorMs = endOffsetMs;
+  tracker.outboundQueuedCursorMs = pendingGroup.endOffsetMs;
+  clearPendingCurrentResponse(tracker);
+  return true;
 }
 
 export function acknowledgeOutboundPlaybackMark(
   tracker: OutboundPlaybackTracker,
   markName: string,
 ): boolean {
-  const pendingIndex = tracker.pendingOutboundPlaybackMarks.findIndex(
-    (mark) => mark.markName === markName,
+  const pendingIndex = tracker.pendingOutboundPlaybackGroups.findIndex(
+    (group) => group.markName === markName,
   );
   if (pendingIndex === -1) {
     return false;
   }
 
-  const [playedChunk] = tracker.pendingOutboundPlaybackMarks.splice(pendingIndex, 1);
-  if (!playedChunk) {
+  const [playedGroup] = tracker.pendingOutboundPlaybackGroups.splice(pendingIndex, 1);
+  if (!playedGroup) {
     return false;
   }
 
-  commitPlayedChunk(tracker, playedChunk);
+  commitPlayedGroup(tracker, playedGroup);
   return true;
 }
 
@@ -78,7 +133,8 @@ export function clearPendingOutboundPlayback(
   tracker: OutboundPlaybackTracker,
   elapsedMs: number,
 ): void {
-  tracker.pendingOutboundPlaybackMarks = [];
+  clearPendingCurrentResponse(tracker);
+  tracker.pendingOutboundPlaybackGroups = [];
   tracker.outboundQueuedCursorMs = Math.max(tracker.outboundCursorMs, elapsedMs);
 }
 
@@ -86,20 +142,20 @@ export function flushElapsedOutboundPlayback(
   tracker: OutboundPlaybackTracker,
   elapsedMs: number,
 ): void {
-  const remainingMarks: Array<PendingOutboundPlaybackMark> = [];
+  const remainingGroups: Array<PendingOutboundPlaybackGroup> = [];
 
-  for (const pendingMark of tracker.pendingOutboundPlaybackMarks) {
-    if (pendingMark.endOffsetMs <= elapsedMs) {
-      commitPlayedChunk(tracker, pendingMark);
+  for (const pendingGroup of tracker.pendingOutboundPlaybackGroups) {
+    if (pendingGroup.endOffsetMs <= elapsedMs) {
+      commitPlayedGroup(tracker, pendingGroup);
       continue;
     }
 
-    remainingMarks.push(pendingMark);
+    remainingGroups.push(pendingGroup);
   }
 
-  tracker.pendingOutboundPlaybackMarks = remainingMarks;
+  tracker.pendingOutboundPlaybackGroups = remainingGroups;
   tracker.outboundQueuedCursorMs = Math.max(
     tracker.outboundCursorMs,
-    tracker.pendingOutboundPlaybackMarks.at(-1)?.endOffsetMs ?? tracker.outboundQueuedCursorMs,
+    tracker.pendingOutboundPlaybackGroups.at(-1)?.endOffsetMs ?? tracker.outboundQueuedCursorMs,
   );
 }
