@@ -115,13 +115,21 @@ export function CallRecordingPlayer({
     }
 
     function updateDuration() {
-      setDuration((currentDuration) =>
-        Math.max(currentDuration, normalizeDurationSeconds(audio.duration || 0))
-      );
+      const nextDuration = normalizeDurationSeconds(audio.duration || 0);
+      if (nextDuration > 0) {
+        setDuration(nextDuration);
+      }
     }
 
     function updateCurrentTime() {
-      setCurrentTime(audio.currentTime);
+      setCurrentTime(() => {
+        const exactDuration = normalizeDurationSeconds(audio.duration || 0);
+        if (exactDuration > 0 && audio.currentTime >= exactDuration - 0.05) {
+          return exactDuration;
+        }
+
+        return audio.currentTime;
+      });
     }
 
     function handlePlay() {
@@ -134,7 +142,10 @@ export function CallRecordingPlayer({
 
     function handleEnded() {
       setIsPlaying(false);
-      setCurrentTime(audio.duration || 0);
+      setCurrentTime((currentDuration) => {
+        const endedAt = normalizeDurationSeconds(audio.duration || 0);
+        return endedAt > 0 ? endedAt : currentDuration;
+      });
     }
 
     audio.addEventListener("loadedmetadata", updateDuration);
@@ -207,7 +218,7 @@ export function CallRecordingPlayer({
     if (duration <= 0) {
       return 0;
     }
-    return (currentTime / duration) * 100;
+    return Math.min(100, (currentTime / duration) * 100);
   }, [currentTime, duration]);
 
   const displayedRemainingSeconds = useMemo(() => {
@@ -215,7 +226,12 @@ export function CallRecordingPlayer({
       return 0;
     }
 
-    return Math.max(0, Math.ceil(duration - currentTime));
+    const remainingSeconds = duration - currentTime;
+    if (remainingSeconds <= 0.05) {
+      return 0;
+    }
+
+    return Math.max(0, Math.ceil(remainingSeconds));
   }, [currentTime, duration]);
 
   return (
@@ -242,7 +258,8 @@ export function CallRecordingPlayer({
           max={100}
           min={0}
           onValueChange={(value) => {
-            if (typeof value !== "number" || duration <= 0) {
+            const nextValue = Array.isArray(value) ? value[0] : value;
+            if (typeof nextValue !== "number" || duration <= 0) {
               return;
             }
 
@@ -251,11 +268,11 @@ export function CallRecordingPlayer({
               return;
             }
 
-            const nextTime = (value / 100) * duration;
+            const nextTime = (nextValue / 100) * duration;
             audio.currentTime = nextTime;
             setCurrentTime(nextTime);
           }}
-          value={progress}
+          value={[progress]}
         />
 
         <time className="min-w-10 text-right text-sm tabular-nums text-muted-foreground">
