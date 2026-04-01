@@ -36,7 +36,7 @@ function normalizeDurationSeconds(seconds: number): number {
     return 0;
   }
 
-  return Math.ceil(seconds);
+  return seconds;
 }
 
 export function CallRecordingPlayer({
