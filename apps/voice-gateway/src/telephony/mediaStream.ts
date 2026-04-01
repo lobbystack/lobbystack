@@ -122,6 +122,8 @@ type ActiveVoiceSession = {
   outboundAudio: Array<TimedAudioChunk>;
   outboundCursorMs: number;
   activeAssistantResponseId: string | null;
+  pendingOutboundAudio: Array<string>;
+  pendingOutboundStartMs: number | null;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
 };
@@ -308,16 +310,43 @@ function captureOutboundAudio(
   const currentOffsetMs = Date.now() - session.startedAtMs;
   if (responseId && responseId !== session.activeAssistantResponseId) {
     session.activeAssistantResponseId = responseId;
-    session.outboundCursorMs = Math.max(session.outboundCursorMs, currentOffsetMs);
+    session.pendingOutboundAudio = [];
+    session.pendingOutboundStartMs = Math.max(session.outboundCursorMs, currentOffsetMs);
   } else if (!session.activeAssistantResponseId) {
-    session.outboundCursorMs = Math.max(session.outboundCursorMs, currentOffsetMs);
+    session.activeAssistantResponseId = responseId ?? crypto.randomUUID();
+    session.pendingOutboundAudio = [];
+    session.pendingOutboundStartMs = Math.max(session.outboundCursorMs, currentOffsetMs);
   }
 
-  session.outboundAudio.push({
-    offsetMs: session.outboundCursorMs,
-    payload,
-  });
-  session.outboundCursorMs += estimatePayloadDurationMs(payload);
+  session.pendingOutboundAudio.push(payload);
+}
+
+function commitPendingOutboundAudio(session: ActiveVoiceSession): void {
+  if (session.pendingOutboundAudio.length === 0) {
+    session.pendingOutboundStartMs = null;
+    session.activeAssistantResponseId = null;
+    return;
+  }
+
+  let cursorMs = session.pendingOutboundStartMs ?? session.outboundCursorMs;
+  for (const payload of session.pendingOutboundAudio) {
+    session.outboundAudio.push({
+      offsetMs: cursorMs,
+      payload,
+    });
+    cursorMs += estimatePayloadDurationMs(payload);
+  }
+
+  session.outboundCursorMs = cursorMs;
+  session.pendingOutboundAudio = [];
+  session.pendingOutboundStartMs = null;
+  session.activeAssistantResponseId = null;
+}
+
+function discardPendingOutboundAudio(session: ActiveVoiceSession): void {
+  session.pendingOutboundAudio = [];
+  session.pendingOutboundStartMs = null;
+  session.activeAssistantResponseId = null;
 }
 
 function clearPendingTransferPlaybackWait(
@@ -347,6 +376,7 @@ function cancelAssistantAudio(
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
+  discardPendingOutboundAudio(session);
   postRealtimeEvent(openAiSocket, { type: "response.cancel" });
   if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
     clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
@@ -895,6 +925,7 @@ function handleOpenAiMessage(
     }
     case "response.audio.done":
     case "response.output_audio.done": {
+      commitPendingOutboundAudio(session);
       return;
     }
     case "response.output_audio_transcript.delta":
@@ -1101,6 +1132,8 @@ export async function handleMediaStreamConnection(
     outboundAudio: [],
     outboundCursorMs: 0,
     activeAssistantResponseId: null,
+    pendingOutboundAudio: [],
+    pendingOutboundStartMs: null,
     pendingInboundAudio: [],
     pendingTasks: new Set(),
   };
