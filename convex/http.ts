@@ -403,6 +403,8 @@ async function handleCallRecordingDownload(
   const baseHeaders = new Headers();
   baseHeaders.set("Content-Type", token.contentType);
   baseHeaders.set("Accept-Ranges", "bytes");
+  baseHeaders.set("Access-Control-Allow-Origin", "*");
+  baseHeaders.set("Access-Control-Expose-Headers", "Accept-Ranges, Content-Length, Content-Range");
   baseHeaders.set("Content-Disposition", `inline; filename="${token.fileName}"`);
   baseHeaders.set(
     "Cache-Control",

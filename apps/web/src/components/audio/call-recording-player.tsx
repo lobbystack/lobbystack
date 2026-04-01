@@ -39,14 +39,6 @@ function normalizeDurationSeconds(seconds: number): number {
   return Math.ceil(seconds);
 }
 
-function canUseWebAudioRouting(src: string): boolean {
-  try {
-    return new URL(src, window.location.href).origin === window.location.origin;
-  } catch {
-    return false;
-  }
-}
-
 export function CallRecordingPlayer({
   className,
   downloadLabel,
@@ -71,13 +63,14 @@ export function CallRecordingPlayer({
 
     const audio = new Audio();
     audio.preload = "none";
+    audio.crossOrigin = "anonymous";
     audio.src = src;
     audioRef.current = audio;
 
     const AudioContextCtor =
       window.AudioContext ||
       (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextCtor && canUseWebAudioRouting(src)) {
+    if (AudioContextCtor) {
       try {
         const audioContext = new AudioContextCtor();
         const source = audioContext.createMediaElementSource(audio);
