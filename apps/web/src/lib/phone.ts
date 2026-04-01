@@ -88,6 +88,25 @@ export function formatPhoneNumberDisplay(
   return parsed.formatInternational();
 }
 
+export function getPhonePlaceholder(
+  locale?: string | null,
+  options?: {
+    defaultCountry?: CountryCode | null;
+  },
+): string {
+  const defaultCountry = options?.defaultCountry ?? getDefaultPhoneCountry(locale);
+
+  switch (defaultCountry) {
+    case "CA":
+    case "US":
+      return "(555) 123-4567";
+    case "FR":
+      return "06 12 34 56 78";
+    default:
+      return "555 123 4567";
+  }
+}
+
 export function inferPhoneCountry(
   value: string | null | undefined,
   defaultCountry?: CountryCode | null,

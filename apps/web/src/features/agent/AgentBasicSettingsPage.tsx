@@ -231,7 +231,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               <PhoneInput
                 id="agent-transfer-number"
                 locale={i18n.language}
-                placeholder={t("agent:fields.transferNumber.placeholder")}
                 value={transferNumber || undefined}
                 onChange={(nextValue) => {
                   setTransferNumber(nextValue ?? "");

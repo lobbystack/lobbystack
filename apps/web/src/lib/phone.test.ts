@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatPhoneNumberDisplay,
   getDefaultPhoneCountry,
+  getPhonePlaceholder,
   normalizePhoneNumber,
 } from "@/lib/phone";
 
@@ -30,6 +31,12 @@ describe("phone helpers", () => {
   it("formats matching-country numbers nationally and other numbers internationally", () => {
     expect(formatPhoneNumberDisplay("+15145550123", "en-CA")).toBe("(514) 555-0123");
     expect(formatPhoneNumberDisplay("+15145550123", "en-US")).toBe("+1 514 555 0123");
+  });
+
+  it("uses a national-style placeholder for the default country", () => {
+    expect(getPhonePlaceholder("en-US")).toBe("(555) 123-4567");
+    expect(getPhonePlaceholder("fr-CA")).toBe("(555) 123-4567");
+    expect(getPhonePlaceholder("fr-FR", { defaultCountry: "FR" })).toBe("06 12 34 56 78");
   });
 
   it("falls back to the raw value when parsing fails", () => {

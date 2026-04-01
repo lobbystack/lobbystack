@@ -193,7 +193,6 @@ export function OnboardingVerifyPhonePage({
                       id="onboarding-phone"
                       locale={i18n.language}
                       onChange={setPhoneInput}
-                      placeholder={t("verifyPhone.placeholders.mobileNumber")}
                       value={phoneInput}
                     />
                     <FieldDescription className="text-zinc-400">

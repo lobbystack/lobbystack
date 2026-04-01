@@ -4,7 +4,7 @@ import type { Country } from "react-phone-number-input/input";
 
 import { inputClassName } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { getDefaultPhoneCountry } from "@/lib/phone";
+import { getDefaultPhoneCountry, getPhonePlaceholder } from "@/lib/phone";
 
 type PhoneInputProps = Omit<
   React.ComponentProps<"input">,
@@ -37,6 +37,9 @@ export function PhoneInput({
   ...props
 }: PhoneInputProps) {
   const resolvedDefaultCountry = defaultCountry ?? getDefaultPhoneCountry(locale);
+  const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
+    defaultCountry: resolvedDefaultCountry,
+  });
 
   return (
     <div className="w-full">
@@ -48,6 +51,7 @@ export function PhoneInput({
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}
         onChange={(nextValue) => onChange?.(nextValue)}
+        placeholder={resolvedPlaceholder}
         type={props.type ?? "tel"}
         {...(value !== undefined ? { value } : {})}
       />
