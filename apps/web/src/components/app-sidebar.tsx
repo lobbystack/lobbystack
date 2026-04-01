@@ -1,19 +1,7 @@
 import * as React from "react";
 import {
-  Bot,
-  BriefcaseBusiness,
-  ChartColumnIncreasing,
-  ContactRound,
-  House,
-  Link2,
   MessageSquareMore,
   Phone,
-  Settings,
-  SlidersHorizontal,
-  ListChecks,
-  ScrollText,
-  UserRound,
-  BookOpenText,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +9,18 @@ import { NavGroup } from "@/components/layout/nav-group";
 import { NavUser } from "@/components/layout/nav-user";
 import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
+import { BookTextIcon } from "@/components/ui/book-text";
+import { BotIcon } from "@/components/ui/bot";
+import { BoxIcon } from "@/components/ui/box";
+import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
+import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
+import { FileTextIcon } from "@/components/ui/file-text";
+import { HomeIcon } from "@/components/ui/home";
+import { IdCardIcon } from "@/components/ui/id-card";
+import { LinkIcon } from "@/components/ui/link";
+import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
+import { SettingsIcon } from "@/components/ui/settings";
+import { SlidersHorizontalIcon } from "@/components/ui/sliders-horizontal";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,8 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { UserIcon } from "@/components/ui/user";
+import { UsersIcon } from "@/components/ui/users";
 
 type AppSidebarProps = {
   businessName: string;
@@ -37,6 +39,29 @@ type AppSidebarProps = {
   operatorEmail?: string;
   operatorName?: string;
 };
+
+function createSidebarIcon<T extends { size?: number; className?: string }>(
+  Icon: React.ComponentType<T>,
+) {
+  return function SidebarIcon(props: React.ComponentPropsWithoutRef<"div">) {
+    return <Icon size={18} {...(props as T)} />;
+  };
+}
+
+const AnimatedHomeIcon = createSidebarIcon(HomeIcon);
+const AnimatedMessagesIcon = createSidebarIcon(MessageSquareMoreIcon);
+const AnimatedContactsIcon = createSidebarIcon(UsersIcon);
+const AnimatedAnalyticsIcon = createSidebarIcon(ChartColumnIncreasingIcon);
+const AnimatedAgentIcon = createSidebarIcon(BotIcon);
+const AnimatedBasicSettingsIcon = createSidebarIcon(ClipboardCheckIcon);
+const AnimatedKnowledgeIcon = createSidebarIcon(BookTextIcon);
+const AnimatedServicesIcon = createSidebarIcon(BoxIcon);
+const AnimatedRulesIcon = createSidebarIcon(FileTextIcon);
+const AnimatedSettingsIcon = createSidebarIcon(SettingsIcon);
+const AnimatedBusinessIcon = createSidebarIcon(UserIcon);
+const AnimatedAppearanceIcon = createSidebarIcon(SlidersHorizontalIcon);
+const AnimatedIntegrationsIcon = createSidebarIcon(LinkIcon);
+const AnimatedTeamLogo = createSidebarIcon(IdCardIcon);
 
 export function AppSidebar({
   businessName,
@@ -57,67 +82,67 @@ export function AppSidebar({
       teams: [
         {
           name: businessName,
-          logo: BriefcaseBusiness,
+          logo: AnimatedTeamLogo,
         },
       ],
       navGroups: [
         {
           title: t("nav:sidebar.general"),
           items: [
-            { title: t("nav:items.home"), url: "/", icon: House },
+            { title: t("nav:items.home"), url: "/", icon: AnimatedHomeIcon },
             { title: t("nav:items.calls"), url: "/calls", icon: Phone },
-            { title: t("nav:items.messages"), url: "/messages", icon: MessageSquareMore },
-            { title: t("nav:items.contacts"), url: "/contacts", icon: ContactRound },
+            { title: t("nav:items.messages"), url: "/messages", icon: AnimatedMessagesIcon },
+            { title: t("nav:items.contacts"), url: "/contacts", icon: AnimatedContactsIcon },
           ],
         },
         {
           title: t("nav:sidebar.other"),
           items: [
-            { title: t("nav:items.analytics"), url: "/analytics", icon: ChartColumnIncreasing },
+            { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
             {
               title: t("nav:items.agent"),
-              icon: Bot,
+              icon: AnimatedAgentIcon,
               items: [
                 {
                   title: t("agent:sections.basicSettings.title"),
                   url: "/agent",
-                  icon: ListChecks,
+                  icon: AnimatedBasicSettingsIcon,
                 },
                 {
                   title: t("agent:sections.knowledge.title"),
                   url: "/agent/knowledge",
-                  icon: BookOpenText,
+                  icon: AnimatedKnowledgeIcon,
                 },
                 {
                   title: t("agent:sections.services.title"),
                   url: "/agent/services",
-                  icon: BriefcaseBusiness,
+                  icon: AnimatedServicesIcon,
                 },
                 {
                   title: t("agent:sections.rules.title"),
                   url: "/agent/rules",
-                  icon: ScrollText,
+                  icon: AnimatedRulesIcon,
                 },
               ],
             },
             {
               title: t("nav:items.settings"),
-              icon: Settings,
+              icon: AnimatedSettingsIcon,
               items: [
                 {
                   title: t("settings:sections.business"),
                   url: "/settings",
-                  icon: UserRound,
+                  icon: AnimatedBusinessIcon,
                 },
                 {
                   title: t("settings:sections.appearance"),
                   url: "/settings/appearance",
-                  icon: SlidersHorizontal,
+                  icon: AnimatedAppearanceIcon,
                 },
                 {
                   title: t("settings:sections.integrations"),
                   url: "/settings/integrations",
-                  icon: Link2,
+                  icon: AnimatedIntegrationsIcon,
                 },
               ],
             },
