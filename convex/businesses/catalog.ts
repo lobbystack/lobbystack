@@ -42,6 +42,7 @@ import {
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
+  buildTwilioVoiceStatusCallbackUrl,
 } from "../lib/twilioUrls";
 import { scheduleSnapshotRefresh } from "./admin";
 
@@ -1203,12 +1204,14 @@ export const syncPhoneNumberWebhooks = internalAction({
     });
     const smsWebhookUrl = shouldSyncSms ? buildTwilioSmsInboundWebhookUrl() : null;
     const voiceWebhookUrl = shouldSyncVoice ? buildTwilioVoiceInboundWebhookUrl() : null;
+    const voiceStatusCallbackUrl = shouldSyncVoice ? buildTwilioVoiceStatusCallbackUrl() : null;
 
     try {
       const result = await ctx.runAction(internal.integrations.twilioSms.registerIncomingWebhook, {
         phoneNumberSid: phoneNumber.twilioPhoneSid!,
         ...(shouldSyncSms && smsWebhookUrl ? { smsWebhookUrl } : {}),
         ...(shouldSyncVoice && voiceWebhookUrl ? { voiceWebhookUrl } : {}),
+        ...(shouldSyncVoice && voiceStatusCallbackUrl ? { voiceStatusCallbackUrl } : {}),
       });
 
       return await ctx.runMutation(internal.businesses.catalog.recordPhoneNumberWebhookSync, {

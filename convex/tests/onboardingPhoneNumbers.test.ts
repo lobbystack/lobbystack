@@ -712,6 +712,8 @@ describe("onboarding phone-number actions", () => {
       phoneNumber: "+14185550123",
       smsMethod: "POST",
       smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      statusCallback: "https://voice.example.com/twilio/voice/call-status",
+      statusCallbackMethod: "POST",
       voiceMethod: "POST",
       voiceUrl: "https://voice.example.com/twilio/voice/inbound",
     });

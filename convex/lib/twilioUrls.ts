@@ -40,3 +40,7 @@ export function buildTwilioSmsStatusCallbackUrl(): string {
 export function buildTwilioVoiceInboundWebhookUrl(): string {
   return new URL("/twilio/voice/inbound", requireVoiceGatewayBaseUrl()).toString();
 }
+
+export function buildTwilioVoiceStatusCallbackUrl(): string {
+  return new URL("/twilio/voice/call-status", requireVoiceGatewayBaseUrl()).toString();
+}

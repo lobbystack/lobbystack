@@ -18,6 +18,8 @@ vi.mock("twilio", () => {
         update: (args: {
           smsMethod?: string;
           smsUrl?: string;
+          statusCallback?: string;
+          statusCallbackMethod?: string;
           voiceMethod?: string;
           voiceUrl?: string;
         }) =>
@@ -108,6 +110,8 @@ describe("Twilio SMS phone-number save flow", () => {
         args: {
           smsMethod?: string;
           smsUrl?: string;
+          statusCallback?: string;
+          statusCallbackMethod?: string;
           voiceMethod?: string;
           voiceUrl?: string;
         };
@@ -142,6 +146,8 @@ describe("Twilio SMS phone-number save flow", () => {
       args: {
         smsMethod: "POST",
         smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        statusCallback: "https://voice.example.com/twilio/voice/call-status",
+        statusCallbackMethod: "POST",
         voiceMethod: "POST",
         voiceUrl: "https://voice.example.com/twilio/voice/inbound",
       },
@@ -199,6 +205,7 @@ describe("Twilio SMS phone-number save flow", () => {
       phoneNumberSid: "PN-disabled",
       args: {
         smsUrl: "",
+        statusCallback: "",
         voiceUrl: "",
       },
     });
@@ -206,6 +213,7 @@ describe("Twilio SMS phone-number save flow", () => {
       phoneNumberSid: "PN-inactive",
       args: {
         smsUrl: "",
+        statusCallback: "",
         voiceUrl: "",
       },
     });
@@ -280,6 +288,7 @@ describe("Twilio SMS phone-number save flow", () => {
       args: {
         smsMethod: "POST",
         smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        statusCallback: "",
         voiceUrl: "",
       },
     });
@@ -323,6 +332,7 @@ describe("Twilio SMS phone-number save flow", () => {
       args: {
         smsMethod: "POST",
         smsUrl: "https://example.convex.site/twilio/sms/inbound",
+        statusCallback: "",
         voiceUrl: "",
       },
     });
@@ -397,6 +407,8 @@ describe("Twilio SMS phone-number save flow", () => {
         args: {
           smsMethod?: string;
           smsUrl?: string;
+          statusCallback?: string;
+          statusCallbackMethod?: string;
           voiceMethod?: string;
           voiceUrl?: string;
         };
