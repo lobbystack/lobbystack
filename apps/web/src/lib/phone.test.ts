@@ -12,7 +12,8 @@ describe("phone helpers", () => {
     expect(getDefaultPhoneCountry("en-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("fr-CA")).toBe("CA");
     expect(getDefaultPhoneCountry("en-US")).toBe("US");
-    expect(getDefaultPhoneCountry("fr")).toBe("US");
+    expect(getDefaultPhoneCountry("en")).toBe("US");
+    expect(getDefaultPhoneCountry("fr")).toBe("FR");
   });
 
   it("normalizes valid phone numbers to E.164", () => {
@@ -21,6 +22,9 @@ describe("phone helpers", () => {
     ).toBe("+15145550123");
     expect(
       normalizePhoneNumber("+33 6 12 34 56 78", { defaultCountry: "FR" }),
+    ).toBe("+33612345678");
+    expect(
+      normalizePhoneNumber("06 12 34 56 78", { defaultCountry: getDefaultPhoneCountry("fr") }),
     ).toBe("+33612345678");
   });
 

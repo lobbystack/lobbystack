@@ -82,7 +82,7 @@ function formatDuration(seconds: number | undefined): string {
   return `${remainingSeconds}s`;
 }
 
-function resolveCallStatus(
+export function resolveCallStatus(
   call: CallRow,
 ): "in_progress" | "completed" | "failed" {
   if (call.status === "in_progress") {
@@ -92,6 +92,11 @@ function resolveCallStatus(
   const disposition = call.disposition?.trim().toLowerCase() ?? "";
   if (
     disposition.includes("failed") ||
+    disposition.includes("busy") ||
+    disposition.includes("canceled") ||
+    disposition.includes("cancelled") ||
+    disposition.includes("no_answer") ||
+    disposition.includes("missed") ||
     disposition.includes("stream_start_failed") ||
     disposition.includes("openai_handshake_failed")
   ) {

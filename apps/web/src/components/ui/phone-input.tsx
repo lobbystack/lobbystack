@@ -13,14 +13,23 @@ type PhoneInputProps = Omit<
   defaultCountry?: Country;
   locale?: string | null;
   onChange?: (value?: string) => void;
+  onRawValueChange?: (value: string) => void;
   value?: string | undefined;
 };
 
-const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, ...props }, ref) => (
+type PhoneNumberTextInputProps = React.ComponentProps<"input"> & {
+  onRawValueChange?: (value: string) => void;
+};
+
+const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextInputProps>(
+  ({ className, onChange, onRawValueChange, ...props }, ref) => (
     <input
       ref={ref}
       className={cn(inputClassName, className)}
+      onChange={(event) => {
+        onRawValueChange?.(event.target.value);
+        onChange?.(event);
+      }}
       {...props}
     />
   ),
@@ -33,6 +42,7 @@ export function PhoneInput({
   disabled,
   locale,
   onChange,
+  onRawValueChange,
   value,
   ...props
 }: PhoneInputProps) {
@@ -51,6 +61,7 @@ export function PhoneInput({
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}
         onChange={(nextValue) => onChange?.(nextValue)}
+        onRawValueChange={onRawValueChange}
         placeholder={resolvedPlaceholder}
         type={props.type ?? "tel"}
         {...(value !== undefined ? { value } : {})}

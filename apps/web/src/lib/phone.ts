@@ -24,11 +24,15 @@ function normalizePhoneText(value: string | null | undefined): string {
 export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
   const normalized = normalizePhoneText(locale).toLowerCase();
 
+  if (normalized === "fr" || normalized.startsWith("fr-fr")) {
+    return "FR";
+  }
+
   if (normalized.startsWith("en-ca") || normalized.startsWith("fr-ca")) {
     return "CA";
   }
 
-  if (normalized.startsWith("en-us")) {
+  if (normalized === "en" || normalized.startsWith("en-us")) {
     return "US";
   }
 

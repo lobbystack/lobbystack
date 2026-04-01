@@ -21,6 +21,28 @@ type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
 };
 
+export function resolveTransferNumberForSave({
+  persistedTransferNumber,
+  rawInputValue,
+  validTransferNumber,
+}: {
+  persistedTransferNumber?: string | null | undefined;
+  rawInputValue: string;
+  validTransferNumber: string;
+}): string | null {
+  const trimmedVisibleTransferNumber = rawInputValue.trim();
+  if (trimmedVisibleTransferNumber.length === 0) {
+    return null;
+  }
+
+  const trimmedTransferNumber = validTransferNumber.trim();
+  if (trimmedTransferNumber.length > 0) {
+    return trimmedTransferNumber;
+  }
+
+  return persistedTransferNumber ?? null;
+}
+
 export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
   const { i18n, t } = useTranslation(["agent", "common"]);
   const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
@@ -32,6 +54,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const [greeting, setGreeting] = useState("");
   const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [transferNumber, setTransferNumber] = useState("");
+  const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
   const [greetingStatus, setGreetingStatus] = useState<string | null>(null);
   const [localeStatus, setLocaleStatus] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
@@ -47,6 +70,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setGreeting(profile.greeting);
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setTransferNumber(profile.transferNumber ?? "");
+    setTransferNumberInputValue(profile.transferNumber ?? "");
   }, [configuration]);
 
   useEffect(() => {
@@ -85,12 +109,15 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setIsGreetingSaving(true);
     setGreetingStatus(null);
     try {
-      const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
+        transferNumber: resolveTransferNumberForSave({
+          persistedTransferNumber: persistedProfile?.transferNumber,
+          rawInputValue: transferNumberInputValue,
+          validTransferNumber: transferNumber,
+        }),
       });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
@@ -106,12 +133,15 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setIsLocaleSaving(true);
     setLocaleStatus(null);
     try {
-      const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
+        transferNumber: resolveTransferNumberForSave({
+          persistedTransferNumber: persistedProfile?.transferNumber,
+          rawInputValue: transferNumberInputValue,
+          validTransferNumber: transferNumber,
+        }),
       });
       setLocaleStatus(t("agent:actions.saved"));
     } finally {
@@ -127,12 +157,15 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setIsTransferSaving(true);
     setTransferStatus(null);
     try {
-      const trimmedTransferNumber = transferNumber.trim();
       await saveProfile({
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: trimmedTransferNumber.length > 0 ? trimmedTransferNumber : null,
+        transferNumber: resolveTransferNumberForSave({
+          persistedTransferNumber: persistedProfile?.transferNumber,
+          rawInputValue: transferNumberInputValue,
+          validTransferNumber: transferNumber,
+        }),
       });
       setTransferStatus(t("agent:actions.saved"));
     } finally {
@@ -231,6 +264,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               <PhoneInput
                 id="agent-transfer-number"
                 locale={i18n.language}
+                onRawValueChange={(nextRawValue) => {
+                  setTransferNumberInputValue(nextRawValue);
+                  setTransferStatus(null);
+                }}
                 value={transferNumber || undefined}
                 onChange={(nextValue) => {
                   setTransferNumber(nextValue ?? "");
