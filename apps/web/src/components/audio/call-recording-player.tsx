@@ -52,7 +52,6 @@ export function CallRecordingPlayer({
   variant = "default",
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [bufferedTime, setBufferedTime] = useState(0);
@@ -67,45 +66,8 @@ export function CallRecordingPlayer({
 
     const audio = new Audio();
     audio.preload = "none";
-    audio.crossOrigin = "anonymous";
     audio.src = src;
     audioRef.current = audio;
-
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextCtor) {
-      try {
-        const audioContext = new AudioContextCtor();
-        const source = audioContext.createMediaElementSource(audio);
-        const splitter = audioContext.createChannelSplitter(2);
-        const merger = audioContext.createChannelMerger(2);
-        const inboundToLeft = audioContext.createGain();
-        const inboundToRight = audioContext.createGain();
-        const outboundToLeft = audioContext.createGain();
-        const outboundToRight = audioContext.createGain();
-
-        inboundToLeft.gain.value = 0.5;
-        inboundToRight.gain.value = 0.5;
-        outboundToLeft.gain.value = 0.5;
-        outboundToRight.gain.value = 0.5;
-
-        source.connect(splitter);
-        splitter.connect(inboundToLeft, 0);
-        splitter.connect(inboundToRight, 0);
-        splitter.connect(outboundToLeft, 1);
-        splitter.connect(outboundToRight, 1);
-        inboundToLeft.connect(merger, 0, 0);
-        outboundToLeft.connect(merger, 0, 0);
-        inboundToRight.connect(merger, 0, 1);
-        outboundToRight.connect(merger, 0, 1);
-        merger.connect(audioContext.destination);
-
-        audioContextRef.current = audioContext;
-      } catch {
-        audioContextRef.current = null;
-      }
-    }
 
     function updateBufferedTime() {
       const currentAudio = audioRef.current;
@@ -161,6 +123,7 @@ export function CallRecordingPlayer({
     audio.addEventListener("ended", handleEnded);
 
     if (autoPlay) {
+      audio.currentTime = 0;
       void audio.play().catch(() => {
         setIsPlaying(false);
       });
@@ -176,9 +139,6 @@ export function CallRecordingPlayer({
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       audioRef.current = null;
-      const audioContext = audioContextRef.current;
-      audioContextRef.current = null;
-      void audioContext?.close();
     };
   }, [initialDurationSeconds, src, autoPlay]);
 
@@ -191,8 +151,10 @@ export function CallRecordingPlayer({
 
     if (audio.paused) {
       try {
-        if (audioContextRef.current?.state === "suspended") {
-          await audioContextRef.current.resume();
+        const exactDuration = normalizeDurationSeconds(audio.duration || duration);
+        if (exactDuration > 0 && audio.currentTime >= exactDuration - 0.05) {
+          audio.currentTime = 0;
+          setCurrentTime(0);
         }
         await audio.play();
       } catch {
