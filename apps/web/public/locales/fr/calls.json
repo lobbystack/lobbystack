@@ -111,9 +111,9 @@
     "unknownCaller": "Appelant inconnu",
     "noNumber": "Aucun numéro",
     "metadata": {
-      "from": "DE",
-      "duration": "DURÉE",
-      "started": "DÉBUT",
+      "from": "De",
+      "duration": "Durée",
+      "started": "Début",
       "id": "ID"
     },
     "status": {

@@ -39,9 +39,9 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
               />
             }
           >
-            <Avatar size="sm">
+            <Avatar className="shadow-xs" size="sm">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="bg-sidebar">{emailInitial}</AvatarFallback>
+              <AvatarFallback>{emailInitial}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-start text-sm leading-tight">
               <span className="truncate text-sm">{user.email}</span>
@@ -56,9 +56,9 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
           >
             <div className="px-2 py-2 text-start text-sm">
               <div className="flex items-center gap-2">
-                <Avatar size="sm">
+                <Avatar className="shadow-xs" size="sm">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-sidebar">{emailInitial}</AvatarFallback>
+                  <AvatarFallback>{emailInitial}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-start text-sm leading-tight">
                   <span className="truncate text-sm">{user.email}</span>

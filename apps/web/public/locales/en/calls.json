@@ -108,9 +108,9 @@
     "unknownCaller": "Unknown caller",
     "noNumber": "No number",
     "metadata": {
-      "from": "FROM",
-      "duration": "DURATION",
-      "started": "STARTED",
+      "from": "From",
+      "duration": "Duration",
+      "started": "Started",
       "id": "ID"
     },
     "status": {

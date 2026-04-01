@@ -749,7 +749,7 @@ function MetadataField({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-xs font-semibold tracking-wider text-muted-foreground">
         {label}
       </span>
       <div className="flex items-center gap-1.5">
