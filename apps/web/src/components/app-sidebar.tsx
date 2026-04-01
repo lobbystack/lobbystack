@@ -13,7 +13,6 @@ import {
   ListChecks,
   ScrollText,
   UserRound,
-  Workflow,
   BookOpenText,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -75,7 +74,6 @@ export function AppSidebar({
           title: t("nav:sidebar.other"),
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: ChartColumnIncreasing },
-            { title: t("nav:items.automations"), url: "/automations", icon: Workflow },
             {
               title: t("nav:items.agent"),
               icon: Bot,

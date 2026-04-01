@@ -16,7 +16,6 @@ import {
   LoginPage,
   SignupPage,
 } from "@/features/auth/AuthPages";
-import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { AgentLayout } from "@/features/agent/AgentLayout";
 import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
@@ -142,10 +141,6 @@ function WorkspaceShell() {
           <Route
             element={<MessagesPage {...(businessId ? { businessId } : {})} />}
             path="/messages"
-          />
-          <Route
-            element={<AutomationsPage {...(businessId ? { businessId } : {})} />}
-            path="/automations"
           />
           <Route
             element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
