@@ -492,15 +492,26 @@ async function finalizeCall(
     if (session.callId) {
       const durationMs = Math.max(0, Date.now() - session.startedAtMs);
       if (session.inboundAudio.length > 0 || session.outboundAudio.length > 0) {
-        const recording = buildStereoCallRecording({
-          inboundChunks: session.inboundAudio,
-          outboundChunks: session.outboundAudio,
-        });
-        await uploadVoiceRecording({
-          callId: session.callId,
-          durationMs,
-          audio: recording,
-        });
+        try {
+          const recording = buildStereoCallRecording({
+            inboundChunks: session.inboundAudio,
+            outboundChunks: session.outboundAudio,
+          });
+          await uploadVoiceRecording({
+            callId: session.callId,
+            durationMs,
+            audio: recording,
+          });
+        } catch (error) {
+          server.log.error(
+            {
+              err: error,
+              callId: session.callId,
+              callSid: session.callSid,
+            },
+            "Failed to upload voice recording during call finalization",
+          );
+        }
       }
 
       await completeVoiceCall({
