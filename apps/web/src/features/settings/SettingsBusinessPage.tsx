@@ -54,6 +54,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isBusinessNameDialogOpen, setIsBusinessNameDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
@@ -88,6 +89,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
         name: businessName,
       });
       setBusinessNameStatus(t("account.businessName.saved"));
+      setIsBusinessNameDialogOpen(false);
     } finally {
       setIsSavingBusinessName(false);
     }
@@ -142,38 +144,63 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     <div className="flex flex-1 flex-col">
       <div className="w-full max-w-xl">
         <ItemGroup spacing="section">
-          <Item className="items-start" variant="outline">
-            <ItemContent className="gap-4">
-              <div className="flex flex-col gap-1">
-                <ItemTitle>{t("account.businessName.label")}</ItemTitle>
-                <ItemDescription>{t("account.businessName.description")}</ItemDescription>
-              </div>
-              <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
-                <Input
-                  id="profile-username"
-                  placeholder={t("account.businessName.placeholder")}
-                  value={businessName}
-                  onChange={(event) => {
-                    setBusinessName(event.target.value);
-                    setBusinessNameStatus(null);
-                  }}
-                />
-                <div className="flex items-center gap-3">
-                  <Button
-                    disabled={isSavingBusinessName}
-                    type="button"
-                    onClick={() => void handleBusinessNameSave()}
-                  >
-                    {isSavingBusinessName
-                      ? t("account.businessName.saving")
-                      : t("account.businessName.save")}
-                  </Button>
-                  {businessNameStatus ? (
-                    <span className="text-sm text-muted-foreground">{businessNameStatus}</span>
-                  ) : null}
-                </div>
-              </form>
+          <Item variant="outline">
+            <ItemContent>
+              <ItemTitle>{t("account.businessName.label")}</ItemTitle>
+              <ItemDescription>{t("account.businessName.description")}</ItemDescription>
+              <p className="text-sm text-foreground">{businessName}</p>
+              {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
+            <ItemActions>
+              <Dialog
+                onOpenChange={(open) => {
+                  setIsBusinessNameDialogOpen(open);
+                  if (open) {
+                    setBusinessName(configuration?.business?.name ?? businessName);
+                  }
+                }}
+                open={isBusinessNameDialogOpen}
+              >
+                <DialogTrigger render={<Button variant="outline" />}>
+                  {t("account.actions.change")}
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{t("account.businessName.label")}</DialogTitle>
+                    <DialogDescription>{t("account.businessName.description")}</DialogDescription>
+                  </DialogHeader>
+
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="profile-username">
+                        {t("account.businessName.label")}
+                      </FieldLabel>
+                      <Input
+                        id="profile-username"
+                        placeholder={t("account.businessName.placeholder")}
+                        value={businessName}
+                        onChange={(event) => {
+                          setBusinessName(event.target.value);
+                          setBusinessNameStatus(null);
+                        }}
+                      />
+                    </Field>
+                  </FieldGroup>
+
+                  <DialogFooter>
+                    <Button
+                      disabled={isSavingBusinessName}
+                      type="button"
+                      onClick={() => void handleBusinessNameSave()}
+                    >
+                      {isSavingBusinessName
+                        ? t("account.businessName.saving")
+                        : t("account.businessName.save")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </ItemActions>
           </Item>
 
           <ItemGroup spacing="section">
