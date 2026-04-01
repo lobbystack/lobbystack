@@ -1,7 +1,4 @@
 import * as React from "react";
-import {
-  Phone,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { NavGroup } from "@/components/layout/nav-group";
@@ -18,6 +15,7 @@ import { HomeIcon } from "@/components/ui/home";
 import { IdCardIcon } from "@/components/ui/id-card";
 import { LinkIcon } from "@/components/ui/link";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
+import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
 import { SettingsIcon } from "@/components/ui/settings";
 import { SlidersHorizontalIcon } from "@/components/ui/sliders-horizontal";
 import {
@@ -86,7 +84,7 @@ const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
 const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
 const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
-const StaticPhoneIcon = createStaticSidebarIcon(Phone);
+const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
 export function AppSidebar({
   businessName,
@@ -115,7 +113,7 @@ export function AppSidebar({
           title: t("nav:sidebar.general"),
           items: [
             { title: t("nav:items.home"), url: "/", icon: AnimatedHomeIcon },
-            { title: t("nav:items.calls"), url: "/calls", icon: StaticPhoneIcon },
+            { title: t("nav:items.calls"), url: "/calls", icon: AnimatedCallsIcon },
             { title: t("nav:items.messages"), url: "/messages", icon: AnimatedMessagesIcon },
             { title: t("nav:items.contacts"), url: "/contacts", icon: AnimatedContactsIcon },
           ],
