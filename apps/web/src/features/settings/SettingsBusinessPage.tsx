@@ -17,8 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   Field,
-  FieldContent,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -143,14 +141,14 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="w-full max-w-xl">
-        <div className="flex flex-col gap-8">
-          <form className="flex flex-col gap-8" onSubmit={(event) => event.preventDefault()}>
-            <FieldGroup>
-              <Field>
-                <FieldContent>
-                  <FieldLabel htmlFor="profile-username">{t("account.businessName.label")}</FieldLabel>
-                  <FieldDescription>{t("account.businessName.description")}</FieldDescription>
-                </FieldContent>
+        <ItemGroup spacing="section">
+          <Item className="items-start" variant="outline">
+            <ItemContent className="gap-4">
+              <div className="flex flex-col gap-1">
+                <ItemTitle>{t("account.businessName.label")}</ItemTitle>
+                <ItemDescription>{t("account.businessName.description")}</ItemDescription>
+              </div>
+              <form className="flex flex-col gap-4" onSubmit={(event) => event.preventDefault()}>
                 <Input
                   id="profile-username"
                   placeholder={t("account.businessName.placeholder")}
@@ -174,9 +172,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                     <span className="text-sm text-muted-foreground">{businessNameStatus}</span>
                   ) : null}
                 </div>
-              </Field>
-            </FieldGroup>
-          </form>
+              </form>
+            </ItemContent>
+          </Item>
 
           <ItemGroup spacing="section">
             <Item variant="outline">
@@ -316,7 +314,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               </ItemActions>
             </Item>
           </ItemGroup>
-        </div>
+        </ItemGroup>
       </div>
     </div>
   );
