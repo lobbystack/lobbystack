@@ -28,9 +28,11 @@ describe("phone helpers", () => {
     expect(normalizePhoneNumber("123", { defaultCountry: "US" })).toBeUndefined();
   });
 
-  it("formats matching-country numbers nationally and other numbers internationally", () => {
+  it("formats North American numbers nationally and other numbers internationally", () => {
     expect(formatPhoneNumberDisplay("+15145550123", "en-CA")).toBe("(514) 555-0123");
-    expect(formatPhoneNumberDisplay("+15145550123", "en-US")).toBe("+1 514 555 0123");
+    expect(formatPhoneNumberDisplay("+15145550123", "en-US")).toBe("(514) 555-0123");
+    expect(formatPhoneNumberDisplay("+12133734253", "en-CA")).toBe("(213) 373-4253");
+    expect(formatPhoneNumberDisplay("+33612345678", "en-US")).toBe("+33 6 12 34 56 78");
   });
 
   it("uses a national-style placeholder for the default country", () => {

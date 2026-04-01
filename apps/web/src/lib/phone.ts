@@ -15,6 +15,7 @@ const PHONE_LABELS_BY_LOCALE: Record<"en" | "fr", Labels> = {
   en: enLabels,
   fr: frLabels,
 };
+const NORTH_AMERICAN_PHONE_COUNTRIES = new Set<CountryCode>(["US", "CA"]);
 
 function normalizePhoneText(value: string | null | undefined): string {
   return value?.trim() ?? "";
@@ -81,7 +82,12 @@ export function formatPhoneNumberDisplay(
     return normalizedValue;
   }
 
-  if (parsed.country && parsed.country === defaultCountry) {
+  if (
+    parsed.country &&
+    (parsed.country === defaultCountry ||
+      (NORTH_AMERICAN_PHONE_COUNTRIES.has(parsed.country) &&
+        NORTH_AMERICAN_PHONE_COUNTRIES.has(defaultCountry)))
+  ) {
     return parsed.formatNational();
   }
 
