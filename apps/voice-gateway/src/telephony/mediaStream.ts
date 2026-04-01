@@ -487,6 +487,7 @@ async function finalizeCall(
   try {
     await Promise.allSettled(Array.from(session.pendingTasks));
     const finalDisposition = session.finalDispositionOverride ?? disposition;
+    commitPendingOutboundAudio(session);
 
     if (session.callId) {
       const durationMs = Math.max(0, Date.now() - session.startedAtMs);
