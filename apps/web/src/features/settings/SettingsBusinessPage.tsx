@@ -178,7 +178,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             </FieldGroup>
           </form>
 
-          <ItemGroup>
+          <ItemGroup spacing="section">
             <Item variant="outline">
               <ItemContent>
                 <ItemTitle>{t("account.changeEmail.title")}</ItemTitle>
