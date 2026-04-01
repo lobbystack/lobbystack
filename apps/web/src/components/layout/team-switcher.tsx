@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Plus } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -26,10 +27,19 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
       <SidebarMenuItem>
         <SidebarMenuButton
           size="lg"
-          className="rounded-xl bg-sidebar-accent/40 text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground"
         >
-          <div className="grid flex-1 text-start text-sm leading-tight">
-            <span className="truncate font-semibold">{activeBusiness.name}</span>
+          <Avatar>
+            <AvatarFallback>
+              {activeBusiness.name
+                .split(/\s+/)
+                .map((part) => part[0]?.toUpperCase() ?? "")
+                .join("")
+                .slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="grid flex-1 text-start leading-tight">
+            <span className="truncate text-base font-semibold">{activeBusiness.name}</span>
             {activeBusiness.plan ? (
               <span className="truncate text-xs">{activeBusiness.plan}</span>
             ) : null}

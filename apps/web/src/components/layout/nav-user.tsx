@@ -25,6 +25,7 @@ type NavUserProps = {
 
 export function NavUser({ onSignOut, user }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
 
   return (
     <SidebarMenu>
@@ -38,19 +39,12 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
               />
             }
           >
-            <Avatar className="h-8 w-8 rounded-lg">
+            <Avatar size="sm">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg">
-                {user.name
-                  .split(/\s+/)
-                  .map((part) => part[0]?.toUpperCase() ?? "")
-                  .join("")
-                  .slice(0, 2)}
-              </AvatarFallback>
+              <AvatarFallback className="bg-sidebar">{emailInitial}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-start text-sm leading-tight">
-              <span className="truncate font-semibold">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
+              <span className="truncate text-sm">{user.email}</span>
             </div>
             <ChevronsUpDown className="ms-auto size-4" />
           </DropdownMenuTrigger>
@@ -62,19 +56,12 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
           >
             <div className="px-2 py-2 text-start text-sm">
               <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar size="sm">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">
-                    {user.name
-                      .split(/\s+/)
-                      .map((part) => part[0]?.toUpperCase() ?? "")
-                      .join("")
-                      .slice(0, 2)}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-sidebar">{emailInitial}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-start text-sm leading-tight">
-                  <span className="truncate font-semibold">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-sm">{user.email}</span>
                 </div>
               </div>
             </div>

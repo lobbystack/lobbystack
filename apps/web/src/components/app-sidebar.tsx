@@ -56,8 +56,8 @@ export function AppSidebar({
       },
       teams: [
         {
-          name: t("common:appName"),
-          logo: Bot,
+          name: businessName,
+          logo: BriefcaseBusiness,
         },
       ],
       navGroups: [
