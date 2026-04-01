@@ -79,11 +79,10 @@ const PhoneAnimatedIcon = forwardRef<PhoneAnimatedIconHandle, PhoneAnimatedIconP
                 scale: 1,
               },
               animate: {
-                rotate: [0, -12, 10, -8, 6, 0],
-                scale: [1, 1.05, 1],
+                rotate: 0,
+                scale: 1,
                 transition: {
-                  duration: 0.65,
-                  ease: "easeInOut",
+                  duration: 0.2,
                 },
               },
             }}
