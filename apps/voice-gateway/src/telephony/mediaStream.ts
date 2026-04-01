@@ -24,6 +24,12 @@ import {
   buildToolFailureRecoveryInstructions,
 } from "./failureRecovery";
 import {
+  acknowledgeOutboundPlaybackMark,
+  clearPendingOutboundPlayback,
+  flushElapsedOutboundPlayback,
+  queueOutboundPlaybackMark,
+} from "./outboundPlayback";
+import {
   buildMediaStreamValidationUrls,
   validateMediaStreamSignature,
 } from "./twilioRequest";
@@ -121,9 +127,13 @@ type ActiveVoiceSession = {
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
   outboundCursorMs: number;
-  activeAssistantResponseId: string | null;
-  pendingOutboundAudio: Array<string>;
-  pendingOutboundStartMs: number | null;
+  outboundQueuedCursorMs: number;
+  pendingOutboundPlaybackMarks: Array<{
+    markName: string;
+    offsetMs: number;
+    endOffsetMs: number;
+    payload: string;
+  }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
 };
@@ -297,58 +307,6 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   }
 }
 
-function estimatePayloadDurationMs(payload: string, sampleRate = 8000): number {
-  const sampleCount = Buffer.from(payload, "base64").length;
-  return (sampleCount / sampleRate) * 1000;
-}
-
-function captureOutboundAudio(
-  session: ActiveVoiceSession,
-  payload: string,
-  responseId?: string,
-): void {
-  const currentOffsetMs = Date.now() - session.startedAtMs;
-  if (responseId && responseId !== session.activeAssistantResponseId) {
-    session.activeAssistantResponseId = responseId;
-    session.pendingOutboundAudio = [];
-    session.pendingOutboundStartMs = Math.max(session.outboundCursorMs, currentOffsetMs);
-  } else if (!session.activeAssistantResponseId) {
-    session.activeAssistantResponseId = responseId ?? crypto.randomUUID();
-    session.pendingOutboundAudio = [];
-    session.pendingOutboundStartMs = Math.max(session.outboundCursorMs, currentOffsetMs);
-  }
-
-  session.pendingOutboundAudio.push(payload);
-}
-
-function commitPendingOutboundAudio(session: ActiveVoiceSession): void {
-  if (session.pendingOutboundAudio.length === 0) {
-    session.pendingOutboundStartMs = null;
-    session.activeAssistantResponseId = null;
-    return;
-  }
-
-  let cursorMs = session.pendingOutboundStartMs ?? session.outboundCursorMs;
-  for (const payload of session.pendingOutboundAudio) {
-    session.outboundAudio.push({
-      offsetMs: cursorMs,
-      payload,
-    });
-    cursorMs += estimatePayloadDurationMs(payload);
-  }
-
-  session.outboundCursorMs = cursorMs;
-  session.pendingOutboundAudio = [];
-  session.pendingOutboundStartMs = null;
-  session.activeAssistantResponseId = null;
-}
-
-function discardPendingOutboundAudio(session: ActiveVoiceSession): void {
-  session.pendingOutboundAudio = [];
-  session.pendingOutboundStartMs = null;
-  session.activeAssistantResponseId = null;
-}
-
 function clearPendingTransferPlaybackWait(
   server: FastifyInstance,
   session: ActiveVoiceSession,
@@ -376,7 +334,7 @@ function cancelAssistantAudio(
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
-  discardPendingOutboundAudio(session);
+  clearPendingOutboundPlayback(session, Date.now() - session.startedAtMs);
   postRealtimeEvent(openAiSocket, { type: "response.cancel" });
   if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
     clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
@@ -487,7 +445,7 @@ async function finalizeCall(
   try {
     await Promise.allSettled(Array.from(session.pendingTasks));
     const finalDisposition = session.finalDispositionOverride ?? disposition;
-    commitPendingOutboundAudio(session);
+    flushElapsedOutboundPlayback(session, Date.now() - session.startedAtMs);
 
     if (session.callId) {
       const durationMs = Math.max(0, Date.now() - session.startedAtMs);
@@ -910,6 +868,7 @@ function handleOpenAiMessage(
     case "response.audio.delta":
     case "response.output_audio.delta": {
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+        const markName = `audio-${crypto.randomUUID()}`;
         twilioSocket.send(
           JSON.stringify({
             event: "media",
@@ -919,7 +878,20 @@ function handleOpenAiMessage(
             },
           }),
         );
-        captureOutboundAudio(session, payload.delta, payload.response_id);
+        twilioSocket.send(
+          JSON.stringify({
+            event: "mark",
+            streamSid: session.streamSid,
+            mark: {
+              name: markName,
+            },
+          }),
+        );
+        queueOutboundPlaybackMark(session, {
+          elapsedMs: Date.now() - session.startedAtMs,
+          markName,
+          payload: payload.delta,
+        });
       }
       return;
     }
@@ -936,10 +908,8 @@ function handleOpenAiMessage(
       return;
     }
     case "response.audio.done":
-    case "response.output_audio.done": {
-      commitPendingOutboundAudio(session);
+    case "response.output_audio.done":
       return;
-    }
     case "response.output_audio_transcript.delta":
     case "response.output_text.delta":
       return;
@@ -954,7 +924,6 @@ function handleOpenAiMessage(
     }
     case "response.audio_transcript.done":
     case "response.output_audio_transcript.done": {
-      session.activeAssistantResponseId = null;
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -1059,6 +1028,10 @@ export async function handleMediaStreamConnection(
           session.pendingTransferMarkName = null;
           const transferTask = performTransfer(server, session);
           trackTask(session, transferTask);
+          return;
+        }
+        if (payload.mark?.name) {
+          acknowledgeOutboundPlaybackMark(session, payload.mark.name);
         }
         return;
       }
@@ -1143,9 +1116,8 @@ export async function handleMediaStreamConnection(
     inboundAudio: [],
     outboundAudio: [],
     outboundCursorMs: 0,
-    activeAssistantResponseId: null,
-    pendingOutboundAudio: [],
-    pendingOutboundStartMs: null,
+    outboundQueuedCursorMs: 0,
+    pendingOutboundPlaybackMarks: [],
     pendingInboundAudio: [],
     pendingTasks: new Set(),
   };
