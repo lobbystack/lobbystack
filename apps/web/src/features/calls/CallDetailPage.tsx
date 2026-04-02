@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -566,6 +567,10 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 1500);
     });
+  }
+
+  if (!businessId) {
+    return <BusinessSetupCard />;
   }
 
   // Loading state
