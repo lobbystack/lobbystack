@@ -56,6 +56,9 @@ export function CallRecordingPlayer({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const onEndedRef = useRef(onEnded);
   const processedUrlRef = useRef<string | null>(null);
+  const preparingPlaybackSrcRef = useRef<Promise<string | null> | null>(null);
+  const preparedForSrcRef = useRef<string | null>(null);
+  const playOnLoadRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [bufferedTime, setBufferedTime] = useState(0);
@@ -68,30 +71,40 @@ export function CallRecordingPlayer({
   }, [onEnded]);
 
   useEffect(() => {
-    let canceled = false;
-
     if (processedUrlRef.current) {
       URL.revokeObjectURL(processedUrlRef.current);
       processedUrlRef.current = null;
     }
-
-    if (!src) {
-      setPlaybackSrc(null);
-      return;
-    }
-
+    preparingPlaybackSrcRef.current = null;
+    preparedForSrcRef.current = null;
+    playOnLoadRef.current = false;
     setPlaybackSrc(null);
+  }, [src]);
 
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-    if (!AudioContextCtor) {
-      setPlaybackSrc(src);
-      return;
+  async function ensurePlaybackSource(): Promise<string | null> {
+    if (!src) {
+      return null;
     }
 
-    void (async () => {
+    if (preparedForSrcRef.current === src && playbackSrc) {
+      return playbackSrc;
+    }
+
+    if (preparingPlaybackSrcRef.current) {
+      return await preparingPlaybackSrcRef.current;
+    }
+
+    const promise = (async () => {
+      const AudioContextCtor =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (!AudioContextCtor) {
+        preparedForSrcRef.current = src;
+        setPlaybackSrc(src);
+        return src;
+      }
+
       try {
         const response = await fetch(src, { mode: "cors" });
         if (!response.ok) {
@@ -105,10 +118,9 @@ export function CallRecordingPlayer({
           const audioBuffer = await decodeContext.decodeAudioData(inputBuffer.slice(0));
 
           if (audioBuffer.numberOfChannels < 2) {
-            if (!canceled) {
-              setPlaybackSrc(src);
-            }
-            return;
+            preparedForSrcRef.current = src;
+            setPlaybackSrc(src);
+            return src;
           }
 
           const left = audioBuffer.getChannelData(0);
@@ -130,31 +142,37 @@ export function CallRecordingPlayer({
             new Blob([wavBytes], { type: "audio/wav" }),
           );
 
-          if (canceled) {
-            URL.revokeObjectURL(nextPlaybackUrl);
-            return;
+          if (processedUrlRef.current) {
+            URL.revokeObjectURL(processedUrlRef.current);
           }
-
           processedUrlRef.current = nextPlaybackUrl;
+          preparedForSrcRef.current = src;
           setPlaybackSrc(nextPlaybackUrl);
+          return nextPlaybackUrl;
         } finally {
           void decodeContext.close();
         }
       } catch {
-        if (!canceled) {
-          setPlaybackSrc(src);
-        }
+        preparedForSrcRef.current = src;
+        setPlaybackSrc(src);
+        return src;
+      } finally {
+        preparingPlaybackSrcRef.current = null;
       }
     })();
 
-    return () => {
-      canceled = true;
-      if (processedUrlRef.current) {
-        URL.revokeObjectURL(processedUrlRef.current);
-        processedUrlRef.current = null;
-      }
-    };
-  }, [src]);
+    preparingPlaybackSrcRef.current = promise;
+    return await promise;
+  }
+
+  useEffect(() => {
+    if (!autoPlay || !src || playbackSrc) {
+      return;
+    }
+
+    playOnLoadRef.current = true;
+    void ensurePlaybackSource();
+  }, [autoPlay, playbackSrc, src]);
 
   useEffect(() => {
     setCurrentTime(0);
@@ -226,7 +244,8 @@ export function CallRecordingPlayer({
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("ended", handleEnded);
 
-    if (autoPlay) {
+    if (autoPlay || playOnLoadRef.current) {
+      playOnLoadRef.current = false;
       audio.currentTime = 0;
       void (async () => {
         try {
@@ -254,6 +273,12 @@ export function CallRecordingPlayer({
   async function togglePlayback() {
     const audio = audioRef.current;
     if (!audio) {
+      if (!src) {
+        return;
+      }
+
+      playOnLoadRef.current = true;
+      await ensurePlaybackSource();
       return;
     }
 
