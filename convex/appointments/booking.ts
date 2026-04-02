@@ -196,101 +196,152 @@ async function bookAppointmentWithSource(
     sourceChannel: string;
   },
 ): Promise<{ appointmentId: Id<"appointments">; contactId: Id<"contacts"> }> {
-  const availability = await ctx.runQuery(
-    internal.appointments.booking.checkAvailabilityForBusiness,
-    {
-      businessId: args.businessId,
-      serviceId: args.serviceId,
-      startsAt: args.startsAt,
-      timezone: args.timezone,
-      ...(args.preferredStaffId !== undefined
-        ? { preferredStaffId: args.preferredStaffId }
-        : {}),
-    },
-  );
-
-  if (availability.length === 0) {
-    throw new Error("No availability for the requested time.");
-  }
-
-  let contact = await ctx.db
-    .query("contacts")
-    .withIndex("by_business_id_and_phone", (q) =>
-      q.eq("businessId", args.businessId).eq("phone", args.contactPhone),
-    )
-    .unique();
-
-  if (!contact) {
-    const contactId = await ctx.db.insert("contacts", {
-      businessId: args.businessId,
-      phone: args.contactPhone,
-      ...(args.contactName !== undefined ? { name: args.contactName } : {}),
-    });
-    contact = await ctx.db.get(contactId);
-  }
-
-  if (!contact) {
-    throw new Error("Failed to create contact.");
-  }
-
-  const selected = availability[0];
-  if (!selected) {
-    throw new Error("No availability for the requested time.");
-  }
-  const calendarState: {
-    hasConnectedCalendar: boolean;
-    selectedConnectionId?: Id<"calendar_connections">;
-    selectedCalendarId?: string;
-  } = await ctx.runQuery(
-    internal.integrations.calendar.getStaffCalendarConnectionState,
-    {
-      businessId: args.businessId,
-      staffId: selected.staffId as Id<"staff">,
-    },
-  );
-  const appointmentId = await ctx.db.insert("appointments", {
-    businessId: args.businessId,
-    contactId: contact._id,
-    staffId: selected.staffId as Id<"staff">,
-    serviceId: args.serviceId,
-    startsAt: selected.startsAt,
-    endsAt: selected.endsAt,
-    timezone: args.timezone,
-    status: "confirmed",
-    sourceChannel: args.sourceChannel,
-    calendarSyncState: calendarState.hasConnectedCalendar ? "pending" : "not_required",
-  });
-
-  await workflowManager.start(
-    ctx,
-    internal.ai.workflows.runtime.afterAppointmentBookedWorkflow,
-    { appointmentId },
-  );
-  await workflowManager.start(
-    ctx,
-    internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
-    { appointmentId },
-  );
-
-  await enqueuePostHogOutboxRecord(
-    ctx,
-    serializePostHogEvent({
-      eventName: "appointment.booked",
-      businessId: args.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
-      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
-      appointmentId: String(appointmentId),
-      channel: args.sourceChannel,
-      properties: {
-        serviceId: String(args.serviceId),
-        staffId: String(selected.staffId),
-        startsAt: selected.startsAt,
-        sourceChannel: args.sourceChannel,
+  try {
+    const availability = await ctx.runQuery(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId: args.businessId,
+        serviceId: args.serviceId,
+        startsAt: args.startsAt,
+        timezone: args.timezone,
+        ...(args.preferredStaffId !== undefined
+          ? { preferredStaffId: args.preferredStaffId }
+          : {}),
       },
-    }),
-  );
+    );
 
-  return { appointmentId, contactId: contact._id };
+    if (availability.length === 0) {
+      throw new Error("No availability for the requested time.");
+    }
+
+    let contact = await ctx.db
+      .query("contacts")
+      .withIndex("by_business_id_and_phone", (q) =>
+        q.eq("businessId", args.businessId).eq("phone", args.contactPhone),
+      )
+      .unique();
+
+    if (!contact) {
+      const contactId = await ctx.db.insert("contacts", {
+        businessId: args.businessId,
+        phone: args.contactPhone,
+        ...(args.contactName !== undefined ? { name: args.contactName } : {}),
+      });
+      contact = await ctx.db.get(contactId);
+    }
+
+    if (!contact) {
+      throw new Error("Failed to create contact.");
+    }
+
+    const selected = availability[0];
+    if (!selected) {
+      throw new Error("No availability for the requested time.");
+    }
+    const calendarState: {
+      hasConnectedCalendar: boolean;
+      selectedConnectionId?: Id<"calendar_connections">;
+      selectedCalendarId?: string;
+    } = await ctx.runQuery(
+      internal.integrations.calendar.getStaffCalendarConnectionState,
+      {
+        businessId: args.businessId,
+        staffId: selected.staffId as Id<"staff">,
+      },
+    );
+    const appointmentId = await ctx.db.insert("appointments", {
+      businessId: args.businessId,
+      contactId: contact._id,
+      staffId: selected.staffId as Id<"staff">,
+      serviceId: args.serviceId,
+      startsAt: selected.startsAt,
+      endsAt: selected.endsAt,
+      timezone: args.timezone,
+      status: "confirmed",
+      sourceChannel: args.sourceChannel,
+      calendarSyncState: calendarState.hasConnectedCalendar ? "pending" : "not_required",
+    });
+
+    await workflowManager.start(
+      ctx,
+      internal.ai.workflows.runtime.afterAppointmentBookedWorkflow,
+      { appointmentId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          workflowName: "afterAppointmentBookedWorkflow",
+        },
+      }),
+    );
+    await workflowManager.start(
+      ctx,
+      internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
+      { appointmentId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          workflowName: "appointmentCalendarSyncWorkflow",
+        },
+      }),
+    );
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "appointment.booked",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          serviceId: String(args.serviceId),
+          staffId: String(selected.staffId),
+          startsAt: selected.startsAt,
+          sourceChannel: args.sourceChannel,
+        },
+      }),
+    );
+
+    return { appointmentId, contactId: contact._id };
+  } catch (error) {
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "appointment.booking_failed",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        channel: args.sourceChannel,
+        properties: {
+          serviceId: String(args.serviceId),
+          startsAt: args.startsAt,
+          sourceChannel: args.sourceChannel,
+          ...(args.preferredStaffId !== undefined
+            ? { preferredStaffId: String(args.preferredStaffId) }
+            : {}),
+          reason: error instanceof Error ? error.message : "Unknown booking failure",
+        },
+      }),
+    );
+    throw error;
+  }
 }
 
 export const checkAvailabilityForBusiness = internalQuery({

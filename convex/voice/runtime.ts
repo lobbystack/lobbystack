@@ -597,6 +597,27 @@ export const setTransferState = internalMutation({
         },
       }),
     );
+    if (args.transferState === "requested" || args.transferState === "completed") {
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName:
+            args.transferState === "requested"
+              ? "voice.transfer_requested"
+              : "voice.transfer_completed",
+          businessId: call.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+          ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+          callId: String(args.callId),
+          channel: "voice",
+          provider: "twilio",
+          properties: {
+            transferState: args.transferState,
+          },
+        }),
+      );
+    }
     return null;
   },
 });

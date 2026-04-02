@@ -12,6 +12,10 @@ export const WEB_EVENT_NAMES = [
   "web.page.analytics_viewed",
   "web.page.agent_viewed",
   "web.page.settings_viewed",
+  "web.contacts.contact_opened",
+  "web.messages.thread_opened",
+  "web.messages.reply_sent",
+  "web.agent.settings_saved",
   "web.onboarding.verify_phone_started",
   "web.onboarding.verify_phone_completed",
   "web.onboarding.number_claim_started",
@@ -22,6 +26,7 @@ export const WEB_EVENT_NAMES = [
   "web.integration.calendar_connect_started",
   "web.integration.calendar_connect_completed",
   "web.integration.calendar_connect_failed",
+  "web.integration.calendar_disconnect_completed",
   "web.voice.follow_up_completed",
 ] as const;
 
@@ -29,6 +34,8 @@ export const VOICE_EVENT_NAMES = [
   "voice.call_started",
   "voice.call_completed",
   "voice.transfer_state_changed",
+  "voice.transfer_requested",
+  "voice.transfer_completed",
   "voice.snapshot_loaded",
   "voice.tool_invoked",
 ] as const;
@@ -38,10 +45,12 @@ export const SMS_EVENT_NAMES = [
   "sms.reply_generated",
   "sms.delivery_accepted",
   "sms.delivery_failed",
+  "sms.automation_paused",
 ] as const;
 
 export const APPOINTMENT_EVENT_NAMES = [
   "appointment.booked",
+  "appointment.booking_failed",
   "appointment.confirmation_notification_failed",
 ] as const;
 

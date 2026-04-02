@@ -3,6 +3,11 @@ import { internalMutation } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../integrations/calendar";
 import { workflowManager, runtimeCrons } from "../../lib/components";
+import { enqueuePostHogOutboxRecord, serializePostHogEvent } from "../../telemetry/posthog";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../../telemetry/shared";
 
 export const refreshBusinessContextSnapshotWorkflow = workflowManager.define({
   args: {
@@ -55,6 +60,18 @@ export const kickoffSnapshotRefresh = internalMutation({
       ctx,
       internal.ai.workflows.runtime.refreshBusinessContextSnapshotWorkflow,
       { businessId: args.businessId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        properties: {
+          workflowName: "refreshBusinessContextSnapshotWorkflow",
+        },
+      }),
     );
     return null;
   },

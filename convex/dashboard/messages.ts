@@ -28,6 +28,14 @@ import {
   resolveAttachmentDeliveryModes,
 } from "../lib/messageAttachments";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 
 type MessageMediaRecord = NonNullable<Doc<"messages">["media"]>[number];
 type ConversationOutcome =
@@ -564,6 +572,20 @@ export const setConversationAutomationState = internalMutation({
         automationPausedAt: new Date().toISOString(),
         automationPausedByUserId: args.actorUserId,
       });
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName: "sms.automation_paused",
+          businessId: args.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+          conversationId: String(args.conversationId),
+          channel: "sms",
+          properties: {
+            automationState: "human_handoff",
+          },
+        }),
+      );
       return null;
     }
 

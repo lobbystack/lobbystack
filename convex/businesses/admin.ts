@@ -6,6 +6,14 @@ import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/aut
 import { assertBootstrapAllowed } from "../onboarding/abuse";
 import { workflowManager } from "../lib/components";
 import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
+import {
   buildDefaultReceptionistSummary,
   DEFAULT_RECEPTIONIST_BOOKING_POLICY,
   DEFAULT_RECEPTIONIST_TONE,
@@ -71,6 +79,18 @@ export const bootstrapBusiness = mutation({
       ctx,
       internal.ai.workflows.runtime.refreshBusinessContextSnapshotWorkflow,
       { businessId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(businessId)),
+        properties: {
+          workflowName: "refreshBusinessContextSnapshotWorkflow",
+        },
+      }),
     );
 
     return { businessId };

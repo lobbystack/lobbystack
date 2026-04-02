@@ -149,6 +149,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     businessId,
   }) as Array<CalendarConnectionListItem> | undefined;
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
+  const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
   const selectGoogleCalendar = useAction(api.integrations.calendar.selectGoogleCalendar);
 
@@ -400,6 +401,34 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       );
     } finally {
       setIsLoadingCalendars(false);
+    }
+  }
+
+  async function handleDisconnectGoogle(): Promise<void> {
+    if (!selectedStaffId || !selectedConnection) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    try {
+      await disconnectGoogleCalendar({
+        businessId,
+        staffId: selectedStaffId as Id<"staff">,
+      });
+      captureAnalyticsEvent("web.integration.calendar_disconnect_completed", {
+        businessId: String(businessId),
+        provider: "google",
+        staffId: selectedStaffId,
+      });
+      setCalendarOptions([]);
+      setSelectedCalendarId("");
+      setStatusMessage(t("integrations.google.disconnectedSuccess"));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : t("integrations.google.disconnectFailed"),
+      );
     }
   }
 
@@ -681,6 +710,14 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     >
                       <RefreshCcw className="size-4" />
                       {t("integrations.google.refreshCalendars")}
+                    </Button>
+                    <Button
+                      disabled={!selectedConnection}
+                      onClick={() => void handleDisconnectGoogle()}
+                      type="button"
+                      variant="outline"
+                    >
+                      {t("integrations.google.disconnect")}
                     </Button>
                   </div>
 

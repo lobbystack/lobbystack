@@ -693,6 +693,36 @@ export const updateCalendarConnectionSelection = internalMutation({
   },
 });
 
+export const disconnectCalendarConnection = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Calendar connection not found.");
+    }
+
+    const {
+      encryptedAccessToken: _encryptedAccessToken,
+      encryptedRefreshToken: _encryptedRefreshToken,
+      tokenExpiresAt: _tokenExpiresAt,
+      syncCursor: _syncCursor,
+      syncWindowStartsAt: _syncWindowStartsAt,
+      selectedCalendarId: _selectedCalendarId,
+      selectedCalendarSummary: _selectedCalendarSummary,
+      lastSyncError: _lastSyncError,
+      ...rest
+    } = connection;
+
+    await ctx.db.replace(args.connectionId, {
+      ...rest,
+      status: "disconnected",
+    });
+    return null;
+  },
+});
+
 export const recordCalendarConnectionSyncAttempt = internalMutation({
   args: {
     connectionId: v.id("calendar_connections"),
@@ -941,6 +971,19 @@ export const upsertCalendarConnection = mutation({
       ctx,
       internal.ai.workflows.runtime.refreshBusinessContextSnapshotWorkflow,
       { businessId: args.businessId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        provider: "google",
+        properties: {
+          workflowName: "refreshBusinessContextSnapshotWorkflow",
+        },
+      }),
     );
     return { connectionId };
   },
@@ -1950,6 +1993,42 @@ export const selectGoogleCalendar = action({
       selectedCalendarId: selected.id,
       selectedCalendarSummary: selected.summary,
     };
+  },
+});
+
+export const disconnectGoogleCalendar = action({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<null> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const accessContext: CalendarAccessContext = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionAccessContext,
+      {
+        businessId: args.businessId,
+        staffId: args.staffId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
+    if (!accessContext.existingConnectionId) {
+      throw new Error("Google Calendar is not connected for this team member.");
+    }
+
+    await ctx.runMutation(
+      internal.integrations.calendar.disconnectCalendarConnection,
+      {
+        connectionId: accessContext.existingConnectionId,
+      },
+    );
+    await ctx.runMutation(internal.ai.workflows.runtime.kickoffSnapshotRefresh, {
+      businessId: args.businessId,
+    });
+
+    return null;
   },
 });
 

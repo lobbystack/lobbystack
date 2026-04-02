@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
@@ -51,6 +52,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     businessId ? { businessId } : "skip",
   ) as Array<ContactRow> | undefined;
   const [searchValue, setSearchValue] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState<Id<"contacts"> | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -179,7 +181,24 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.map((row) => (
-              <TableRow className="h-12" key={row.id}>
+              <TableRow
+                className="h-12 cursor-pointer data-[state=selected]:bg-muted/40"
+                data-state={selectedContactId === row.original.id ? "selected" : undefined}
+                key={row.id}
+                onClick={() => {
+                  if (selectedContactId === row.original.id) {
+                    return;
+                  }
+                  setSelectedContactId(row.original.id);
+                  captureAnalyticsEvent("web.contacts.contact_opened", {
+                    businessId: businessId ? String(businessId) : undefined,
+                    contactId: String(row.original.id),
+                    messageCount: row.original.messageCount,
+                    callCount: row.original.callCount,
+                    appointmentCount: row.original.appointmentCount,
+                  });
+                }}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
