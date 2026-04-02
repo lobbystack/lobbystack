@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Calls",
-    "description": "Review recent calls, browse transcripts, and listen to recorded audio.",
+    "description": "Review recent calls and listen to recorded audio.",
     "emptyPreview": "No transcript yet.",
     "selectCall": "Select a call to review the transcript.",
     "yesterday": "Yesterday",
@@ -13,13 +13,18 @@
     "allStatuses": "All"
   },
   "table": {
-    "startedAt": "Started",
     "caller": "Caller",
+    "number": "Number",
+    "purpose": "Purpose",
+    "time": "Time",
+    "play": "Play",
+    "startedAt": "Started",
     "status": "Status",
     "disposition": "Disposition",
     "transcript": "Transcript",
     "audio": "Audio",
     "unknownCaller": "Unknown caller",
+    "noNumber": "No number",
     "noDisposition": "Not set",
     "empty": "No calls match the current filters."
   },
@@ -96,5 +101,59 @@
     "none": "Caller asked questions, but no final outcome was captured yet.",
     "genericService": "an appointment",
     "unspecifiedTime": "an unspecified time"
+  },
+  "detail": {
+    "backToList": "Calls",
+    "callLabel": "Call",
+    "unknownCaller": "Unknown caller",
+    "noNumber": "No number",
+    "metadata": {
+      "from": "From",
+      "duration": "Duration",
+      "started": "Started",
+      "id": "ID"
+    },
+    "status": {
+      "in_progress": "In progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "unknown": "Unknown"
+    },
+    "events": {
+      "received": "Received",
+      "connected": "Connected",
+      "transferred": "Transferred",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "tabs": {
+      "transcript": "Transcript",
+      "recording": "Recording",
+      "details": "Details"
+    },
+    "transcript": {
+      "caller": "Caller",
+      "assistant": "Assistant",
+      "empty": "No transcript segments are available for this call yet."
+    },
+    "recording": {
+      "unavailable": "No recording is available for this call.",
+      "pending": "The recording is still being processed."
+    },
+    "details": {
+      "outcomeTitle": "Outcome",
+      "followUpTitle": "Follow-up task",
+      "callInfoTitle": "Call information",
+      "twilioCallSid": "Twilio Call SID",
+      "gatewaySession": "Gateway session",
+      "disposition": "Disposition",
+      "providerStatus": "Provider status",
+      "noDisposition": "None",
+      "noFollowUp": "No follow-up task for this call.",
+      "markDone": "Mark done",
+      "markingDone": "Marking…"
+    },
+    "notFound": "Call not found.",
+    "notFoundDescription": "This call doesn't exist or you don't have access to it."
   }
 }

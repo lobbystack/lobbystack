@@ -30,7 +30,6 @@ void i18n
       "messages",
       "contacts",
       "agent",
-      "automations",
     ],
     interpolation: {
       escapeValue: false,

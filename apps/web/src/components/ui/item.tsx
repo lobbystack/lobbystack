@@ -6,15 +6,28 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 
-function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
+const itemGroupVariants = cva("group/item-group flex w-full flex-col", {
+  variants: {
+    spacing: {
+      compact: "gap-4 has-data-[size=sm]:gap-2.5 has-data-[size=xs]:gap-2",
+      section: "gap-8",
+    },
+  },
+  defaultVariants: {
+    spacing: "compact",
+  },
+})
+
+function ItemGroup({
+  className,
+  spacing = "compact",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof itemGroupVariants>) {
   return (
     <div
       role="list"
       data-slot="item-group"
-      className={cn(
-        "group/item-group flex w-full flex-col gap-4 has-data-[size=sm]:gap-2.5 has-data-[size=xs]:gap-2",
-        className
-      )}
+      className={cn(itemGroupVariants({ spacing }), className)}
       {...props}
     />
   )

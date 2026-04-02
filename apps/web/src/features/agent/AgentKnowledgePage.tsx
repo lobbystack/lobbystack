@@ -392,7 +392,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
             return (
               <Collapsible
-                className="group rounded-2xl border border-border/70 bg-card shadow-sm"
+                className="group rounded-2xl border border-border/70 bg-card"
                 key={entry._id}
                 onOpenChange={(open) => {
                   if (open && "sourceType" in entry) {

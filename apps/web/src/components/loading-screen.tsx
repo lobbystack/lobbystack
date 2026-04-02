@@ -5,7 +5,7 @@ export function LoadingScreen() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/20 px-6">
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-border/70 bg-card/90 p-8 text-center shadow-sm">
+      <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-border/70 bg-card/90 p-8 text-center">
         <p className="text-sm font-medium text-muted-foreground">
           {t("appName")}
         </p>

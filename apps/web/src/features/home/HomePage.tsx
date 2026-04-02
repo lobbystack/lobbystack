@@ -42,6 +42,7 @@ import {
   parseFollowUpTaskBody,
 } from "@/lib/follow-up-task";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type HomePageProps = {
   businessId?: Id<"businesses">;
@@ -70,7 +71,6 @@ type HomeSummary = {
     title: string;
     body: string;
     createdAt: string;
-    taskId?: string;
     callId?: Id<"calls">;
     conversationId?: Id<"conversations">;
   }>;
@@ -299,7 +299,7 @@ export function HomePage({ businessId }: HomePageProps) {
     : [];
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -342,7 +342,7 @@ export function HomePage({ businessId }: HomePageProps) {
               </Badge>
             </div>
             {summary && summary.actionRequired.length > 0 ? (
-                <Card className="border-border/70 shadow-sm">
+                <Card className="border-border/70">
                   <CardContent>
                     <ItemGroup>
                       {summary.actionRequired.map((item, index) => (
@@ -358,8 +358,7 @@ export function HomePage({ businessId }: HomePageProps) {
                             const destination =
                               item.kind === "voice_message" && item.callId
                                 ? {
-                                    pathname: "/calls",
-                                    search: `?callId=${encodeURIComponent(String(item.callId))}${item.taskId ? `&taskId=${encodeURIComponent(item.taskId)}` : ""}`,
+                                    pathname: `/calls/${encodeURIComponent(String(item.callId))}`,
                                   }
                                 : item.conversationId
                                   ? {
@@ -458,7 +457,7 @@ export function HomePage({ businessId }: HomePageProps) {
               </Badge>
             </div>
             {summary && summary.upcoming.length > 0 ? (
-              <Card className="border-border/70 shadow-sm">
+              <Card className="border-border/70">
                 <CardContent className="flex flex-col gap-4">
                   {summary.upcoming.map((appointment, index) => (
                     <motion.div
@@ -582,7 +581,9 @@ export function HomePage({ businessId }: HomePageProps) {
                           {call.contactName ?? t("home.recentCalls.unknownCaller")}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {call.contactPhone ??
+                          {(call.contactPhone
+                            ? formatPhoneNumberDisplay(call.contactPhone, i18n.language)
+                            : null) ??
                             formatDateTime(call.startedAt, i18n.language, {
                               dateStyle: "medium",
                               timeStyle: "short",
@@ -604,6 +605,6 @@ export function HomePage({ businessId }: HomePageProps) {
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }

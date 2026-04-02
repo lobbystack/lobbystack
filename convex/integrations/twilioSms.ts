@@ -101,10 +101,11 @@ export const registerIncomingWebhook = internalAction({
     phoneNumberSid: v.string(),
     smsWebhookUrl: v.optional(v.string()),
     voiceWebhookUrl: v.optional(v.string()),
+    voiceStatusCallbackUrl: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
     const client = getTwilioClient();
-    const phoneNumber = await client.incomingPhoneNumbers(args.phoneNumberSid).update({
+    const phoneNumberUpdate = {
       ...(args.smsWebhookUrl
         ? {
             smsUrl: args.smsWebhookUrl,
@@ -117,11 +118,21 @@ export const registerIncomingWebhook = internalAction({
         ? {
             voiceUrl: args.voiceWebhookUrl,
             voiceMethod: "POST",
+            ...(args.voiceStatusCallbackUrl
+              ? {
+                  statusCallback: args.voiceStatusCallbackUrl,
+                  statusCallbackMethod: "POST",
+                }
+              : {}),
           }
         : {
+            statusCallback: "",
             voiceUrl: "",
           }),
-    });
+    };
+    const phoneNumber = await client
+      .incomingPhoneNumbers(args.phoneNumberSid)
+      .update(phoneNumberUpdate);
 
     return {
       phoneNumberSid: phoneNumber.sid,

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAction } from "convex/react";
+import type { CountryCode } from "libphonenumber-js/min";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, LogOut, MapPin, Phone, Search, Sparkles } from "lucide-react";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
@@ -323,7 +325,7 @@ export function OnboardingNumberPage({
                       <span>{suggestionLabel}</span>
                     </div>
                   ) : null}
-                  <div className="rounded-3xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+                  <div className="rounded-3xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center">
                     <div className="mb-2 flex items-center justify-center gap-2 text-zinc-400">
                       <Phone className="size-4" />
                       <span className="text-sm uppercase tracking-[0.24em]">
@@ -331,7 +333,9 @@ export function OnboardingNumberPage({
                       </span>
                     </div>
                     <div className="text-4xl font-semibold tracking-tight text-violet-300">
-                      {selectedNumber.display}
+                      {formatPhoneNumberDisplay(selectedNumber.e164, undefined, {
+                        defaultCountry: selectedNumber.countryCode as CountryCode,
+                      })}
                     </div>
                     {selectedNumber.locality || selectedNumber.region ? (
                       <div className="mt-2 text-sm text-zinc-400">
@@ -510,7 +514,11 @@ export function OnboardingNumberPage({
                         type="button"
                       >
                         <div className="space-y-1">
-                          <div className="text-lg font-medium text-white">{number.display}</div>
+                          <div className="text-lg font-medium text-white">
+                            {formatPhoneNumberDisplay(number.e164, undefined, {
+                              defaultCountry: number.countryCode as CountryCode,
+                            })}
+                          </div>
                           <div className="text-sm text-zinc-400">
                             {[number.locality, number.region].filter(Boolean).join(", ") ||
                               number.countryCode}

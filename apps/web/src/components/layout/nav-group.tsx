@@ -103,16 +103,19 @@ function NavBadge({ children }: { children: ReactNode }) {
 
 function SidebarMenuLink({ item, href }: { item: NavLinkItem; href: string }) {
   const { setOpenMobile } = useSidebar();
+  const [hovered, setHovered] = useState(false);
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={checkIsActive(href, item)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         render={<NavLink to={item.url} />}
         tooltip={item.title}
         onClick={() => setOpenMobile(false)}
       >
-        {item.icon ? <item.icon /> : null}
+        {item.icon ? <item.icon hovered={hovered} /> : null}
         <span>{item.title}</span>
         {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
       </SidebarMenuButton>
@@ -132,12 +135,22 @@ function SidebarMenuCollapsible({
   onToggle: (open: boolean) => void;
 }) {
   const { setOpenMobile } = useSidebar();
+  const [hovered, setHovered] = useState(false);
+  const [hoveredSubItemKey, setHoveredSubItemKey] = useState<string | null>(null);
 
   return (
     <SidebarMenuItem>
       <Collapsible className="group/collapsible" open={isOpen} onOpenChange={onToggle}>
-        <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
-            {item.icon ? <item.icon /> : null}
+        <CollapsibleTrigger
+          render={
+            <SidebarMenuButton
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
+              tooltip={item.title}
+            />
+          }
+        >
+            {item.icon ? <item.icon hovered={hovered} /> : null}
             <span>{item.title}</span>
             {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
             <ChevronRight
@@ -153,10 +166,14 @@ function SidebarMenuCollapsible({
               <SidebarMenuSubItem key={subItem.title}>
                 <SidebarMenuSubButton
                   isActive={checkIsActive(href, subItem)}
+                  onMouseEnter={() => setHoveredSubItemKey(getNavItemKey(subItem, item.title))}
+                  onMouseLeave={() => setHoveredSubItemKey(null)}
                   onClick={() => setOpenMobile(false)}
                   render={<NavLink to={subItem.url} />}
                 >
-                  {subItem.icon ? <subItem.icon /> : null}
+                  {subItem.icon ? (
+                    <subItem.icon hovered={hoveredSubItemKey === getNavItemKey(subItem, item.title)} />
+                  ) : null}
                   <span>{subItem.title}</span>
                   {subItem.badge ? <NavBadge>{subItem.badge}</NavBadge> : null}
                 </SidebarMenuSubButton>
@@ -176,6 +193,9 @@ function SidebarMenuCollapsedDropdown({
   item: NavCollapsibleItem;
   href: string;
 }) {
+  const [hovered, setHovered] = useState(false);
+  const [hoveredSubItemKey, setHoveredSubItemKey] = useState<string | null>(null);
+
   return (
     <SidebarMenuItem>
       <DropdownMenu>
@@ -183,11 +203,13 @@ function SidebarMenuCollapsedDropdown({
           render={
             <SidebarMenuButton
               isActive={checkIsActive(href, item)}
+              onMouseEnter={() => setHovered(true)}
+              onMouseLeave={() => setHovered(false)}
               tooltip={item.title}
             />
           }
         >
-          {item.icon ? <item.icon /> : null}
+          {item.icon ? <item.icon hovered={hovered} /> : null}
           <span>{item.title}</span>
           {item.badge ? <NavBadge>{item.badge}</NavBadge> : null}
           <ChevronRight className="ms-auto transition-transform duration-200" />
@@ -201,9 +223,13 @@ function SidebarMenuCollapsedDropdown({
             <DropdownMenuItem
               className={checkIsActive(href, sub) ? "bg-secondary" : ""}
               key={`${sub.title}-${sub.url}`}
+              onMouseEnter={() => setHoveredSubItemKey(getNavItemKey(sub, item.title))}
+              onMouseLeave={() => setHoveredSubItemKey(null)}
               render={<NavLink to={sub.url} />}
             >
-              {sub.icon ? <sub.icon /> : null}
+              {sub.icon ? (
+                <sub.icon hovered={hoveredSubItemKey === getNavItemKey(sub, item.title)} />
+              ) : null}
               <span className="max-w-52 text-wrap">{sub.title}</span>
               {sub.badge ? <span className="ms-auto text-xs">{sub.badge}</span> : null}
             </DropdownMenuItem>

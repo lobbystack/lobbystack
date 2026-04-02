@@ -26,6 +26,7 @@ import { getTwilioClient } from "../lib/node/twilioClient";
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
+  buildTwilioVoiceStatusCallbackUrl,
 } from "../lib/twilioUrls";
 import {
   assertClaimAttemptAllowed,
@@ -594,6 +595,7 @@ export const claimOnboardingNumber = action({
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
+      const voiceStatusCallbackUrl = buildTwilioVoiceStatusCallbackUrl();
       const client = getTwilioClient();
 
       const selectableNumbers = await getNumbersForSelectionContext(selectionContext, context, 20);
@@ -607,6 +609,8 @@ export const claimOnboardingNumber = action({
         phoneNumber: selectedNumber.e164,
         smsMethod: "POST",
         smsUrl: smsWebhookUrl,
+        statusCallback: voiceStatusCallbackUrl,
+        statusCallbackMethod: "POST",
         voiceMethod: "POST",
         voiceUrl: voiceWebhookUrl,
       });

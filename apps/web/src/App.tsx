@@ -16,13 +16,13 @@ import {
   LoginPage,
   SignupPage,
 } from "@/features/auth/AuthPages";
-import { AutomationsPage } from "@/features/automations/AutomationsPage";
 import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { AgentLayout } from "@/features/agent/AgentLayout";
 import { AgentBasicSettingsPage } from "@/features/agent/AgentBasicSettingsPage";
 import { AgentKnowledgePage } from "@/features/agent/AgentKnowledgePage";
 import { AgentRulesPage } from "@/features/agent/AgentRulesPage";
 import { AgentServicesPage } from "@/features/agent/AgentServicesPage";
+import { CallDetailPage } from "@/features/calls/CallDetailPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
 import { HomePage } from "@/features/home/HomePage";
@@ -140,12 +140,12 @@ function WorkspaceShell() {
           <Route element={<HomePage {...(businessId ? { businessId } : {})} />} path="/" />
           <Route element={<CallsPage {...(businessId ? { businessId } : {})} />} path="/calls" />
           <Route
-            element={<MessagesPage {...(businessId ? { businessId } : {})} />}
-            path="/messages"
+            element={<CallDetailPage {...(businessId ? { businessId } : {})} />}
+            path="/calls/:callId"
           />
           <Route
-            element={<AutomationsPage {...(businessId ? { businessId } : {})} />}
-            path="/automations"
+            element={<MessagesPage {...(businessId ? { businessId } : {})} />}
+            path="/messages"
           />
           <Route
             element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}

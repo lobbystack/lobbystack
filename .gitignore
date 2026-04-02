@@ -13,3 +13,4 @@ node_modules
 apps/web/dist
 *.tsbuildinfo
 references/shadcn-admin
+.agents

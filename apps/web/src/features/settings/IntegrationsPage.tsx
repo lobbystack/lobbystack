@@ -393,7 +393,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
 
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <li className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+          <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center">
                 <GoogleCalendarLogo />
@@ -438,7 +438,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
             </div>
           </li>
 
-          <li className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+          <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
                 <MicrosoftCalendarLogo />
