@@ -54,17 +54,107 @@ export function CallRecordingPlayer({
   variant = "default",
 }: CallRecordingPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const onEndedRef = useRef(onEnded);
+  const processedUrlRef = useRef<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [bufferedTime, setBufferedTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [playbackSrc, setPlaybackSrc] = useState<string | null>(src ?? null);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
   }, [onEnded]);
+
+  useEffect(() => {
+    let canceled = false;
+
+    if (processedUrlRef.current) {
+      URL.revokeObjectURL(processedUrlRef.current);
+      processedUrlRef.current = null;
+    }
+
+    if (!src) {
+      setPlaybackSrc(null);
+      return;
+    }
+
+    setPlaybackSrc(null);
+
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      setPlaybackSrc(src);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await fetch(src, { mode: "cors" });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch recording: ${response.status}`);
+        }
+
+        const inputBuffer = await response.arrayBuffer();
+        const decodeContext = new AudioContextCtor();
+
+        try {
+          const audioBuffer = await decodeContext.decodeAudioData(inputBuffer.slice(0));
+
+          if (audioBuffer.numberOfChannels < 2) {
+            if (!canceled) {
+              setPlaybackSrc(src);
+            }
+            return;
+          }
+
+          const left = audioBuffer.getChannelData(0);
+          const right = audioBuffer.getChannelData(1);
+          const mixedLeft = new Float32Array(audioBuffer.length);
+          const mixedRight = new Float32Array(audioBuffer.length);
+
+          for (let index = 0; index < audioBuffer.length; index += 1) {
+            const sample = ((left[index] ?? 0) + (right[index] ?? 0)) * 0.5;
+            mixedLeft[index] = sample;
+            mixedRight[index] = sample;
+          }
+
+          const wavBytes = encodeAudioBufferAsWav({
+            channels: [mixedLeft, mixedRight],
+            sampleRate: audioBuffer.sampleRate,
+          });
+          const nextPlaybackUrl = URL.createObjectURL(
+            new Blob([wavBytes], { type: "audio/wav" }),
+          );
+
+          if (canceled) {
+            URL.revokeObjectURL(nextPlaybackUrl);
+            return;
+          }
+
+          processedUrlRef.current = nextPlaybackUrl;
+          setPlaybackSrc(nextPlaybackUrl);
+        } finally {
+          void decodeContext.close();
+        }
+      } catch {
+        if (!canceled) {
+          setPlaybackSrc(src);
+        }
+      }
+    })();
+
+    return () => {
+      canceled = true;
+      if (processedUrlRef.current) {
+        URL.revokeObjectURL(processedUrlRef.current);
+        processedUrlRef.current = null;
+      }
+    };
+  }, [src]);
 
   useEffect(() => {
     setCurrentTime(0);
@@ -72,53 +162,15 @@ export function CallRecordingPlayer({
     setDuration(normalizeDurationSeconds(initialDurationSeconds));
     setIsPlaying(false);
 
-    if (!src) {
+    if (!playbackSrc) {
       audioRef.current = null;
       return;
     }
 
     const audio = new Audio();
-    audio.preload = "none";
-    audio.crossOrigin = "anonymous";
-    audio.src = src;
+    audio.preload = "auto";
+    audio.src = playbackSrc;
     audioRef.current = audio;
-
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextCtor) {
-      try {
-        const audioContext = new AudioContextCtor();
-        const source = audioContext.createMediaElementSource(audio);
-        const splitter = audioContext.createChannelSplitter(2);
-        const merger = audioContext.createChannelMerger(2);
-        const leftToLeft = audioContext.createGain();
-        const rightToLeft = audioContext.createGain();
-        const leftToRight = audioContext.createGain();
-        const rightToRight = audioContext.createGain();
-
-        leftToLeft.gain.value = 0.5;
-        rightToLeft.gain.value = 0.5;
-        leftToRight.gain.value = 0.5;
-        rightToRight.gain.value = 0.5;
-
-        source.connect(splitter);
-        splitter.connect(leftToLeft, 0);
-        splitter.connect(rightToLeft, 1);
-        splitter.connect(leftToRight, 0);
-        splitter.connect(rightToRight, 1);
-
-        leftToLeft.connect(merger, 0, 0);
-        rightToLeft.connect(merger, 0, 0);
-        leftToRight.connect(merger, 0, 1);
-        rightToRight.connect(merger, 0, 1);
-        merger.connect(audioContext.destination);
-
-        audioContextRef.current = audioContext;
-      } catch {
-        audioContextRef.current = null;
-      }
-    }
 
     function updateBufferedTime() {
       const currentAudio = audioRef.current;
@@ -178,9 +230,6 @@ export function CallRecordingPlayer({
       audio.currentTime = 0;
       void (async () => {
         try {
-          if (audioContextRef.current?.state === "suspended") {
-            await audioContextRef.current.resume();
-          }
           await audio.play();
         } catch {
           setIsPlaying(false);
@@ -198,11 +247,8 @@ export function CallRecordingPlayer({
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       audioRef.current = null;
-      const audioContext = audioContextRef.current;
-      audioContextRef.current = null;
-      void audioContext?.close();
     };
-  }, [initialDurationSeconds, src, autoPlay]);
+  }, [initialDurationSeconds, playbackSrc, autoPlay]);
 
   // We explicitly expose togglePlayback for external control if needed.
   async function togglePlayback() {
@@ -217,9 +263,6 @@ export function CallRecordingPlayer({
         if (exactDuration > 0 && audio.currentTime >= exactDuration - 0.05) {
           audio.currentTime = 0;
           setCurrentTime(0);
-        }
-        if (audioContextRef.current?.state === "suspended") {
-          await audioContextRef.current.resume();
         }
         await audio.play();
       } catch {
@@ -335,4 +378,52 @@ export function CallRecordingPlayer({
       </div>
     </div>
   );
+}
+
+function encodeAudioBufferAsWav(input: {
+  channels: Array<Float32Array>;
+  sampleRate: number;
+}): ArrayBuffer {
+  const channels = input.channels;
+  const channelCount = channels.length;
+  const frameCount = channels[0]?.length ?? 0;
+  const bytesPerSample = 2;
+  const blockAlign = channelCount * bytesPerSample;
+  const byteRate = input.sampleRate * blockAlign;
+  const dataByteLength = frameCount * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataByteLength);
+  const view = new DataView(buffer);
+
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataByteLength, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channelCount, true);
+  view.setUint32(24, input.sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataByteLength, true);
+
+  let offset = 44;
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+    for (let channelIndex = 0; channelIndex < channelCount; channelIndex += 1) {
+      const sample = channels[channelIndex]?.[frameIndex] ?? 0;
+      const clamped = Math.max(-1, Math.min(1, sample));
+      const pcm = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+      view.setInt16(offset, pcm, true);
+      offset += bytesPerSample;
+    }
+  }
+
+  return buffer;
+}
+
+function writeAscii(view: DataView, offset: number, value: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    view.setUint8(offset + index, value.charCodeAt(index));
+  }
 }
