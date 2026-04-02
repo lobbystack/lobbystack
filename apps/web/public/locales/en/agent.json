@@ -171,7 +171,10 @@
     "transferNumber": {
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",
-      "hint": "The phone number your receptionist should use when handing a caller off to a human."
+      "hint": "The phone number your receptionist should use when handing a caller off to a human.",
+      "errors": {
+        "invalid": "Enter a complete valid transfer number before saving."
+      }
     }
   },
   "actions": {

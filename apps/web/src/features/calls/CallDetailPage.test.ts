@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { callReachedConnectedStep, resolveCallStatus } from "@/features/calls/CallDetailPage";
 
 describe("resolveCallStatus", () => {
+  it("treats open calls as still live", () => {
+    expect(resolveCallStatus({ status: "open", disposition: undefined } as never)).toBe("in_progress");
+  });
+
   it("treats busy, canceled, and no-answer dispositions as failed terminal outcomes", () => {
     expect(resolveCallStatus({ status: "completed", disposition: "call_busy" } as never)).toBe("failed");
     expect(resolveCallStatus({ status: "completed", disposition: "call_canceled" } as never)).toBe("failed");
@@ -15,6 +19,10 @@ describe("resolveCallStatus", () => {
 });
 
 describe("callReachedConnectedStep", () => {
+  it("does not mark open calls as connected yet", () => {
+    expect(callReachedConnectedStep({ status: "open", disposition: undefined } as never)).toBe(false);
+  });
+
   it("does not mark unanswered terminal calls as connected", () => {
     expect(callReachedConnectedStep({ status: "completed", disposition: "call_busy" } as never)).toBe(false);
     expect(callReachedConnectedStep({ status: "completed", disposition: "call_canceled" } as never)).toBe(false);

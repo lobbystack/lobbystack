@@ -86,7 +86,7 @@ function formatDuration(seconds: number | undefined): string {
 export function resolveCallStatus(
   call: CallRow,
 ): "in_progress" | "completed" | "failed" {
-  if (call.status === "in_progress") {
+  if (call.status === "in_progress" || call.status === "open") {
     return "in_progress";
   }
 
@@ -110,6 +110,10 @@ export function resolveCallStatus(
 export function callReachedConnectedStep(call: CallRow): boolean {
   if (call.status === "in_progress") {
     return true;
+  }
+
+  if (call.status === "open") {
+    return false;
   }
 
   const disposition = call.disposition?.trim().toLowerCase() ?? "";

@@ -22,25 +22,28 @@ type AgentBasicSettingsPageProps = {
 };
 
 export function resolveTransferNumberForSave({
-  persistedTransferNumber,
   rawInputValue,
   validTransferNumber,
 }: {
-  persistedTransferNumber?: string | null | undefined;
   rawInputValue: string;
   validTransferNumber: string;
-}): string | null {
+}):
+  | { ok: true; value: string | null }
+  | { ok: false; errorKey: "agent:fields.transferNumber.errors.invalid" } {
   const trimmedVisibleTransferNumber = rawInputValue.trim();
   if (trimmedVisibleTransferNumber.length === 0) {
-    return null;
+    return { ok: true, value: null };
   }
 
   const trimmedTransferNumber = validTransferNumber.trim();
   if (trimmedTransferNumber.length > 0) {
-    return trimmedTransferNumber;
+    return { ok: true, value: trimmedTransferNumber };
   }
 
-  return persistedTransferNumber ?? null;
+  return {
+    ok: false,
+    errorKey: "agent:fields.transferNumber.errors.invalid",
+  };
 }
 
 export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
@@ -61,6 +64,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
+  const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
 
   useEffect(() => {
     const profile = configuration?.profile;
@@ -91,6 +95,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     if (transferStatus) {
       timeouts.push(window.setTimeout(() => {
         setTransferStatus(null);
+        setTransferStatusTone("success");
       }, 3000));
     }
 
@@ -106,6 +111,16 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       return;
     }
 
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
     setIsGreetingSaving(true);
     setGreetingStatus(null);
     try {
@@ -113,11 +128,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: resolveTransferNumberForSave({
-          persistedTransferNumber: persistedProfile?.transferNumber,
-          rawInputValue: transferNumberInputValue,
-          validTransferNumber: transferNumber,
-        }),
+        transferNumber: transferNumberResolution.value,
       });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
@@ -130,6 +141,16 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       return;
     }
 
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
     setIsLocaleSaving(true);
     setLocaleStatus(null);
     try {
@@ -137,11 +158,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: resolveTransferNumberForSave({
-          persistedTransferNumber: persistedProfile?.transferNumber,
-          rawInputValue: transferNumberInputValue,
-          validTransferNumber: transferNumber,
-        }),
+        transferNumber: transferNumberResolution.value,
       });
       setLocaleStatus(t("agent:actions.saved"));
     } finally {
@@ -154,6 +171,16 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       return;
     }
 
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
     setIsTransferSaving(true);
     setTransferStatus(null);
     try {
@@ -161,13 +188,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         businessId,
         defaultLocale,
         greeting,
-        transferNumber: resolveTransferNumberForSave({
-          persistedTransferNumber: persistedProfile?.transferNumber,
-          rawInputValue: transferNumberInputValue,
-          validTransferNumber: transferNumber,
-        }),
+        transferNumber: transferNumberResolution.value,
       });
       setTransferStatus(t("agent:actions.saved"));
+      setTransferStatusTone("success");
     } finally {
       setIsTransferSaving(false);
     }
@@ -267,11 +291,13 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 onRawValueChange={(nextRawValue) => {
                   setTransferNumberInputValue(nextRawValue);
                   setTransferStatus(null);
+                  setTransferStatusTone("success");
                 }}
                 value={transferNumber || undefined}
                 onChange={(nextValue) => {
                   setTransferNumber(nextValue ?? "");
                   setTransferStatus(null);
+                  setTransferStatusTone("success");
                 }}
               />
             </div>
@@ -284,7 +310,15 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
               </Button>
               {transferStatus ? (
-                <span className="text-sm text-muted-foreground">{transferStatus}</span>
+                <span
+                  className={
+                    transferStatusTone === "error"
+                      ? "text-sm text-destructive"
+                      : "text-sm text-muted-foreground"
+                  }
+                >
+                  {transferStatus}
+                </span>
               ) : null}
             </div>
           </Field>
