@@ -102,7 +102,9 @@ export function captureAnalyticsEvent(
     return;
   }
 
-  posthog.capture(name, coerceProperties(properties));
+  posthog.capture(name, coerceProperties(properties), {
+    send_instantly: true,
+  });
 }
 
 function resolvePageEvent(pathname: string): TelemetryEventName | null {
