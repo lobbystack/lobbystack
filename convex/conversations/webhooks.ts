@@ -393,54 +393,19 @@ export const ingestInboundSms = internalMutation({
       channel: args.channel,
     });
 
-    const conversationId =
-      conversation?._id ??
-      (await ctx.db.insert("conversations", {
+    const { conversationId }: { conversationId: Id<"conversations"> } = await ctx.runMutation(
+      internal.conversations.webhooks.storeInboundMessage,
+      {
         businessId: args.businessId,
         contactId,
         channel: args.channel,
-        status: "open",
-        automationState: "ai_active",
-      }));
-
-    const messageId = await ctx.db.insert("messages", {
-      businessId: args.businessId,
-      conversationId,
-      direction: "inbound",
-      channel: args.channel,
-      ...(args.providerMessageSid !== undefined
-        ? { providerMessageSid: args.providerMessageSid }
-        : {}),
-      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
-      body: args.body,
-      status: "received",
-      aiGenerated: false,
-    });
-
-    await ensureSessionForStoredMessage(ctx, {
-      businessId: args.businessId,
-      conversationId,
-      channel: args.channel,
-      messageId,
-    });
-
-    if (
-      args.media?.some(
-        (attachment) =>
-          ((attachment.storageId &&
-            !attachment.url &&
-            attachment.fileName &&
-            attachment.contentType) ||
-            (attachment.previewStorageId &&
-              !attachment.previewUrl &&
-              attachment.previewFileName &&
-              attachment.previewContentType)),
-      )
-    ) {
-      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
-        messageId,
-      });
-    }
+        body: args.body,
+        ...(args.providerMessageSid !== undefined
+          ? { providerMessageSid: args.providerMessageSid }
+          : {}),
+        ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
+      },
+    );
 
     if (args.idempotencyKeyId) {
       await ctx.db.patch(args.idempotencyKeyId, {
@@ -589,6 +554,7 @@ export const storeInboundMessage = internalMutation({
         contactId: args.contactId,
         channel: args.channel,
         status: "open",
+        automationState: "ai_active",
       }));
 
     const messageId = await ctx.db.insert("messages", {
