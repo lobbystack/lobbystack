@@ -25,6 +25,7 @@ const PAGE_EVENT_BY_PATH = new Map<string, TelemetryEventName>([
   ["/", "web.page.home_viewed"],
   ["/calls", "web.page.calls_viewed"],
   ["/messages", "web.page.messages_viewed"],
+  ["/contacts", "web.page.contacts_viewed"],
   ["/analytics", "web.page.analytics_viewed"],
 ]);
 

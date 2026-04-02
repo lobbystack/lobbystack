@@ -8,6 +8,7 @@ export const WEB_EVENT_NAMES = [
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
   "web.page.messages_viewed",
+  "web.page.contacts_viewed",
   "web.page.analytics_viewed",
   "web.page.agent_viewed",
   "web.page.settings_viewed",
