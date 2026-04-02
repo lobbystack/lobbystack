@@ -7,7 +7,7 @@ import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BotIcon } from "@/components/ui/bot";
-import { BoxIcon } from "@/components/ui/box";
+import { BlocksIcon } from "@/components/ui/blocks";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { FileTextIcon } from "@/components/ui/file-text";
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/sidebar";
 import { UserIcon } from "@/components/ui/user";
 import { UsersIcon } from "@/components/ui/users";
+import { WorkflowIcon } from "@/components/ui/workflow";
+import { cn } from "@/lib/utils";
 import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
@@ -55,8 +57,8 @@ function createAnimatedSidebarIcon(
     return (
       <Icon
         ref={iconRef}
-        size={18}
-        {...(className ? { className } : {})}
+        className={cn("size-4 shrink-0 [&_svg]:size-4", className)}
+        size={16}
       />
     );
   };
@@ -66,7 +68,7 @@ function createStaticSidebarIcon(
   Icon: React.ComponentType<any>,
 ) {
   return function SidebarIcon({ className }: SidebarIconProps) {
-    return <Icon size={18} {...(className ? { className } : {})} />;
+    return <Icon className={cn("size-4 shrink-0 [&_svg]:size-4", className)} size={16} />;
   };
 }
 
@@ -77,8 +79,8 @@ const AnimatedAnalyticsIcon = createAnimatedSidebarIcon(ChartColumnIncreasingIco
 const AnimatedAgentIcon = createAnimatedSidebarIcon(BotIcon);
 const AnimatedBasicSettingsIcon = createAnimatedSidebarIcon(ClipboardCheckIcon);
 const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
-const AnimatedServicesIcon = createAnimatedSidebarIcon(BoxIcon);
-const AnimatedRulesIcon = createAnimatedSidebarIcon(FileTextIcon);
+const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
+const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
 const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
 const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
 const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
