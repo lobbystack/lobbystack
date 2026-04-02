@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import type { TelemetryEvent } from "./index";
 import {
   createTelemetryFacade,
+  getTelemetryRequiredProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
   redactAiTraceProperties,
   redactOtelAttributes,
+  validateTelemetryEvent,
 } from "./index";
 
 class MemorySink {
@@ -84,5 +86,48 @@ describe("telemetry redaction", () => {
       "system:business:biz_123",
     );
     expect(getPostHogBusinessGroupKey("biz_123")).toBe("business:biz_123");
+  });
+
+  it("documents required properties for meaningful product events", () => {
+    expect(getTelemetryRequiredProperties("web.messages.reply_sent")).toEqual([
+      "businessId",
+      "deploymentMode",
+      "conversationId",
+      "channel",
+    ]);
+    expect(getTelemetryRequiredProperties("appointment.booked")).toEqual([
+      "businessId",
+      "deploymentMode",
+      "appointmentId",
+      "channel",
+      "serviceId",
+      "sourceChannel",
+    ]);
+  });
+
+  it("validates required telemetry properties across top-level context and event props", () => {
+    const valid = validateTelemetryEvent({
+      name: "appointment.booked",
+      deploymentMode: "cloud",
+      businessId: "biz-1",
+      appointmentId: "apt-1",
+      channel: "sms",
+      properties: {
+        serviceId: "svc-1",
+        sourceChannel: "sms",
+      },
+    });
+
+    const invalid = validateTelemetryEvent({
+      name: "web.messages.thread_opened",
+      deploymentMode: "cloud",
+      properties: {
+        businessId: "biz-1",
+      },
+    });
+
+    expect(valid).toEqual({ ok: true, missing: [] });
+    expect(invalid.ok).toBe(false);
+    expect(invalid.missing).toEqual(["conversationId", "channel"]);
   });
 });

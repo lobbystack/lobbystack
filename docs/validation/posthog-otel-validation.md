@@ -15,6 +15,7 @@ Validate that:
 
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
+- `VITE_POSTHOG_UI_HOST`
 
 ### Convex / voice gateway
 
@@ -33,9 +34,17 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 4. Verify these events in PostHog:
    - `web.auth.login_succeeded`
    - `web.page.*`
+   - `web.contacts.contact_opened`
+   - `web.messages.thread_opened`
+   - `web.messages.reply_sent`
+   - `web.agent.settings_saved`
    - `web.onboarding.*`
    - `web.knowledge.upload_*`
    - `web.integration.calendar_connect_*`
+5. Confirm session replay still appears for the session.
+6. In Safari, validate again with:
+   - the first-party ingestion path enabled
+   - content blockers disabled and then re-enabled if you are testing the proxy hardening
 
 ## Convex validation
 
@@ -46,14 +55,20 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 5. Verify these domain events in PostHog:
    - `voice.call_started`
    - `voice.call_completed`
+   - `voice.transfer_requested`
+   - `voice.transfer_completed`
    - `sms.inbound_received`
    - `sms.reply_generated`
    - `sms.delivery_accepted`
+   - `sms.automation_paused`
    - `appointment.booked`
+   - `appointment.booking_failed`
    - `integration.calendar_connected`
    - `integration.calendar_sync_failed`
    - `knowledge.document_indexed`
    - `knowledge.search_executed`
+   - `workflow.started`
+   - `workflow.failed`
 
 ## Voice gateway validation
 
@@ -86,6 +101,67 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - customer name
    - customer phone number
 
+## KPI dashboard validation
+
+Validate these hosted dashboards:
+
+- `AI Receptionist - Product KPIs`
+- `AI Receptionist - Operator Workflow`
+- `AI Receptionist - Messaging`
+- `AI Receptionist - Voice & Booking Outcomes`
+- `AI Receptionist - Analytics Health`
+
+Each dashboard should have at least one saved insight behind it and should load without ad hoc query edits.
+
+Validate these saved insights:
+
+- `KPI - Onboarding Activation Funnel`
+- `KPI - SMS Adoption Funnel`
+- `KPI - Voice Booking Funnel`
+- `KPI - Booking Success vs Failure`
+- `KPI - Calendar Integration Health`
+- `KPI - Workflow Health`
+- `KPI - Meaningful Usage by Business`
+- `KPI - Analytics Critical Event Volume`
+
+Validate group analytics behavior:
+
+- events with `businessId` should also resolve under the `business` PostHog group
+- `KPI - Meaningful Usage by Business` should show grouped usage by `businessId`
+- onboarding and booking insights should remain sliceable at the business level
+
+Validate the first meaningful usage action:
+
+- `Meaningful First Usage` should match at least one of:
+  - `web.messages.thread_opened`
+  - `web.messages.reply_sent`
+  - `web.contacts.contact_opened`
+  - `web.agent.settings_saved`
+- the onboarding KPI funnel should include the action as its final step
+
+## Analytics health validation
+
+Validate the analytics health dashboard covers:
+
+- `web.auth.login_succeeded` volume
+- `sms.inbound_received` volume
+- `voice.call_started` volume
+- `appointment.booked` volume
+- failure events via `Telemetry - Delivery and Workflow Failures`
+- workflow starts versus failures
+- calendar connections versus sync failures
+
+Alert policies should be configured manually in PostHog or the owning incident tool for:
+
+- sudden drop in `web.auth.login_succeeded`
+- sudden drop in `sms.inbound_received`
+- sudden drop in `voice.call_started`
+- sudden drop in `appointment.booked`
+- spike in `appointment.booking_failed`
+- spike in `workflow.failed`
+- spike in `integration.calendar_sync_failed`
+- backlog growth in `telemetry_outbox`
+
 ## Outbox validation
 
 1. Query the `telemetry_outbox` table after emitting domain events.
@@ -98,7 +174,7 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 These checks were completed in code during implementation:
 
 - `pnpm --filter @ai-receptionist/telemetry test`
-- `pnpm exec convex codegen`
-- `pnpm typecheck`
+- `pnpm --filter @ai-receptionist/web typecheck`
+- `pnpm typecheck:convex`
 
 Provider validation in real PostHog and Grafana Cloud still requires live credentials and runtime traffic.

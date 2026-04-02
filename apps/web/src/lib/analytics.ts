@@ -3,6 +3,7 @@ import posthog from "posthog-js";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForOperator,
+  validateTelemetryEvent,
   type TelemetryProperties,
   type TelemetryEventName,
 } from "@ai-receptionist/telemetry";
@@ -15,6 +16,8 @@ type IdentifyOperatorArgs = {
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
 const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST;
+const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST;
+const DEPLOYMENT_MODE = import.meta.env.VITE_DEPLOYMENT_MODE ?? "development";
 
 let hasInitialized = false;
 let lastPageEventKey: string | null = null;
@@ -40,6 +43,7 @@ export function initializeAnalytics(): void {
 
   posthog.init(POSTHOG_KEY!, {
     api_host: POSTHOG_HOST,
+    ...(POSTHOG_UI_HOST ? { ui_host: POSTHOG_UI_HOST } : {}),
     autocapture: false,
     capture_pageview: false,
     disable_session_recording: false,
@@ -61,22 +65,52 @@ export function initializeAnalytics(): void {
 
 function coerceProperties(
   properties?: TelemetryProperties,
-): Record<string, string | number | boolean | null | Array<string | number | boolean | null>> {
+): Record<
+  string,
+  | string
+  | number
+  | boolean
+  | null
+  | Array<string | number | boolean | null>
+  | { business: string }
+> {
   if (!properties) {
     return {};
   }
 
-  const entries = Object.entries(properties).flatMap(([key, value]) => {
-    if (value === undefined || typeof value === "object" && value !== null && !Array.isArray(value)) {
-      return [];
-    }
-    if (Array.isArray(value)) {
-      return [[key, value]];
-    }
-    return [[key, value]];
-  });
+  const coerced: Record<
+    string,
+    | string
+    | number
+    | boolean
+    | null
+    | Array<string | number | boolean | null>
+    | { business: string }
+  > = {};
 
-  return Object.fromEntries(entries);
+  for (const [key, value] of Object.entries(properties)) {
+    if (
+      key === "$groups" &&
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value) &&
+      typeof value.business === "string"
+    ) {
+      coerced[key] = { business: value.business };
+      continue;
+    }
+
+    if (
+      value === undefined ||
+      (typeof value === "object" && value !== null && !Array.isArray(value))
+    ) {
+      continue;
+    }
+
+    coerced[key] = value;
+  }
+
+  return coerced;
 }
 
 export function identifyOperator(args: IdentifyOperatorArgs): void {
@@ -98,6 +132,7 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
     if (identifiedBusinessId !== groupKey) {
       posthog.group("business", groupKey, {
         businessId: args.businessId,
+        deploymentMode: args.deploymentMode,
       });
       identifiedBusinessId = groupKey;
     }
@@ -112,7 +147,58 @@ export function captureAnalyticsEvent(
     return;
   }
 
-  posthog.capture(name, coerceProperties(properties), {
+  const nextProperties: TelemetryProperties = {
+    ...properties,
+    deploymentMode: DEPLOYMENT_MODE,
+  };
+
+  if (name.startsWith("web.") && typeof window !== "undefined" && !nextProperties.pathname) {
+    nextProperties.pathname = window.location.pathname;
+  }
+
+  if (properties?.businessId && typeof properties.businessId === "string") {
+    nextProperties.$groups = {
+      business: getPostHogBusinessGroupKey(properties.businessId),
+    };
+  }
+
+  const validation = validateTelemetryEvent({
+    name,
+    deploymentMode: DEPLOYMENT_MODE,
+    ...(typeof nextProperties.businessId === "string"
+      ? { businessId: nextProperties.businessId }
+      : {}),
+    ...(typeof nextProperties.conversationId === "string"
+      ? { conversationId: nextProperties.conversationId }
+      : {}),
+    ...(typeof nextProperties.callId === "string"
+      ? { callId: nextProperties.callId }
+      : {}),
+    ...(typeof nextProperties.messageId === "string"
+      ? { messageId: nextProperties.messageId }
+      : {}),
+    ...(typeof nextProperties.appointmentId === "string"
+      ? { appointmentId: nextProperties.appointmentId }
+      : {}),
+    ...(typeof nextProperties.channel === "string"
+      ? { channel: nextProperties.channel }
+      : {}),
+    ...(typeof nextProperties.provider === "string"
+      ? { provider: nextProperties.provider }
+      : {}),
+    ...(typeof nextProperties.model === "string"
+      ? { model: nextProperties.model }
+      : {}),
+    properties: nextProperties,
+  });
+  if (!validation.ok && import.meta.env.DEV) {
+    console.warn(
+      `[analytics] Missing required properties for ${name}: ${validation.missing.join(", ")}`,
+      nextProperties,
+    );
+  }
+
+  posthog.capture(name, coerceProperties(nextProperties), {
     send_instantly: true,
   });
 }

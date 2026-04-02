@@ -1135,6 +1135,7 @@ export const setAppointmentCalendarSyncState = internalMutation({
           distinctId: getPostHogDistinctIdForBusinessSystem(String(appointment.businessId)),
           groupKey: getPostHogBusinessGroupKey(String(appointment.businessId)),
           appointmentId: String(args.appointmentId),
+          provider: "google",
           properties: {
             calendarSyncState: args.calendarSyncState,
             error: args.calendarLastSyncError,

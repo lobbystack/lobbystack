@@ -4,6 +4,10 @@ import {
   type TelemetryProperties,
 } from "./shared";
 import { v } from "convex/values";
+import {
+  isTelemetryEventName,
+  validateTelemetryEvent,
+} from "../../packages/telemetry/src/index";
 
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -70,6 +74,29 @@ export function serializePostHogEvent(
   input: EnqueuePostHogEventInput,
 ): SerializedOutboxEvent {
   const properties = redactTelemetryProperties(input.properties ?? {});
+  const deploymentMode = process.env.DEPLOYMENT_MODE ?? "development";
+
+  if (isTelemetryEventName(input.eventName)) {
+    const validation = validateTelemetryEvent({
+      name: input.eventName,
+      deploymentMode,
+      ...(input.businessId !== undefined ? { businessId: String(input.businessId) } : {}),
+      ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
+      ...(input.callId !== undefined ? { callId: input.callId } : {}),
+      ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+      ...(input.appointmentId !== undefined ? { appointmentId: input.appointmentId } : {}),
+      ...(input.channel !== undefined ? { channel: input.channel } : {}),
+      ...(input.provider !== undefined ? { provider: input.provider } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}),
+      properties,
+    });
+
+    if (!validation.ok && deploymentMode !== "cloud") {
+      console.warn(
+        `[telemetry] Missing required properties for ${input.eventName}: ${validation.missing.join(", ")}`,
+      );
+    }
+  }
 
   return {
     eventName: input.eventName,
@@ -90,7 +117,7 @@ export function serializePostHogEvent(
       ...(input.channel !== undefined ? { channel: input.channel } : {}),
       ...(input.provider !== undefined ? { provider: input.provider } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
-      deploymentMode: process.env.DEPLOYMENT_MODE ?? "development",
+      deploymentMode,
     }),
   };
 }

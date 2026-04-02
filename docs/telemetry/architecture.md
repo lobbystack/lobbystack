@@ -47,10 +47,27 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 
 - `autocapture: false`
 - `capture_pageview: false`
-- `disable_session_recording: true`
+- session replay enabled with masked inputs and block selectors
+- `ui_host = https://us.posthog.com` when using a first-party ingestion proxy
 
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
 Operator actions are captured from feature entry points such as auth, onboarding, calendar setup, knowledge uploads, and follow-up completion.
+
+Browser events automatically include:
+
+- `deploymentMode`
+- `pathname` for `web.*` events unless a more specific path is already set
+- `$groups.business` when a `businessId` is present
+
+### First-party browser ingestion
+
+`apps/web/worker/index.ts` now proxies PostHog ingestion through a first-party path:
+
+- browser `api_host = /ingest/posthog`
+- worker proxy target defaults to `https://us.i.posthog.com`
+- browser `ui_host` still points to `https://us.posthog.com`
+
+This keeps session replay support intact while reducing Safari and ad-blocker drop-off.
 
 ### `convex`
 
@@ -68,16 +85,23 @@ Key properties of the outbox:
 - `voice.call_started`
 - `voice.call_completed`
 - `voice.transfer_state_changed`
+- `voice.transfer_requested`
+- `voice.transfer_completed`
 - `sms.inbound_received`
 - `sms.reply_generated`
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
+- `sms.automation_paused`
 - `appointment.booked`
+- `appointment.booking_failed`
+- `appointment.confirmation_notification_failed`
 - `integration.calendar_connected`
 - `integration.calendar_sync_failed`
 - `knowledge.document_indexed`
 - `knowledge.search_executed`
 - `business.snapshot_refreshed`
+- `workflow.started`
+- `workflow.failed`
 
 ## OpenTelemetry
 
@@ -138,6 +162,7 @@ Only redacted metadata is sent, such as:
 
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
+- `VITE_POSTHOG_UI_HOST`
 
 ### Server and voice gateway
 
@@ -148,3 +173,17 @@ Only redacted metadata is sent, such as:
 - `OTEL_TRACE_SAMPLE_RATIO`
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
+
+## Product analytics phase 2 assets
+
+PostHog now includes these KPI-era assets:
+
+- action: `Meaningful First Usage`
+- dashboards:
+  - `AI Receptionist - Product KPIs`
+  - `AI Receptionist - Operator Workflow`
+  - `AI Receptionist - Messaging`
+  - `AI Receptionist - Voice & Booking Outcomes`
+  - `AI Receptionist - Analytics Health`
+
+The original `AI Receptionist Telemetry v1` dashboard remains available as a raw telemetry surface while the KPI dashboards become the operational default.

@@ -3,6 +3,9 @@
   "name": "ai-receptionist",
   "compatibility_date": "2026-03-30",
   "main": "./worker/index.ts",
+  "vars": {
+    "POSTHOG_PROXY_TARGET": "https://us.i.posthog.com"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

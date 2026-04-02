@@ -52,7 +52,8 @@ const clientEnvSchema = z.object({
   VITE_APP_NAME: z.string().default("AI Receptionist"),
   VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   VITE_POSTHOG_KEY: z.string().optional(),
-  VITE_POSTHOG_HOST: z.string().url().optional(),
+  VITE_POSTHOG_HOST: z.string().min(1).optional(),
+  VITE_POSTHOG_UI_HOST: z.string().url().optional(),
 });
 
 const voiceGatewayEnvSchema = z.object({
