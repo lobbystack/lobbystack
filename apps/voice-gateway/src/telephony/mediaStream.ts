@@ -858,6 +858,29 @@ function handleOpenAiMessage(
   session: ActiveVoiceSession,
   rawMessage: WebSocket.RawData,
 ): void {
+  const queuePendingPlaybackMark = (): boolean => {
+    if (!session.streamSid || twilioSocket.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+
+    const markName = `audio-response-${crypto.randomUUID()}`;
+    const queued = queuePendingOutboundPlaybackGroup(session, markName);
+    if (!queued) {
+      return false;
+    }
+
+    twilioSocket.send(
+      JSON.stringify({
+        event: "mark",
+        streamSid: session.streamSid,
+        mark: {
+          name: markName,
+        },
+      }),
+    );
+    return true;
+  };
+
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
 
   if (
@@ -871,6 +894,15 @@ function handleOpenAiMessage(
     case "response.audio.delta":
     case "response.output_audio.delta": {
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+        if (
+          payload.response_id &&
+          session.activeAssistantResponseId &&
+          payload.response_id !== session.activeAssistantResponseId &&
+          session.pendingOutboundAudio.length > 0
+        ) {
+          queuePendingPlaybackMark();
+        }
+
         twilioSocket.send(
           JSON.stringify({
             event: "media",
@@ -902,25 +934,7 @@ function handleOpenAiMessage(
     }
     case "response.audio.done":
     case "response.output_audio.done": {
-      if (!session.streamSid || twilioSocket.readyState !== WebSocket.OPEN) {
-        return;
-      }
-
-      const markName = `audio-response-${crypto.randomUUID()}`;
-      const queued = queuePendingOutboundPlaybackGroup(session, markName);
-      if (!queued) {
-        return;
-      }
-
-      twilioSocket.send(
-        JSON.stringify({
-          event: "mark",
-          streamSid: session.streamSid,
-          mark: {
-            name: markName,
-          },
-        }),
-      );
+      queuePendingPlaybackMark();
       return;
     }
     case "response.output_audio_transcript.delta":
@@ -949,6 +963,14 @@ function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      if (
+        payload.response?.id &&
+        payload.response.id === session.activeAssistantResponseId &&
+        session.pendingOutboundAudio.length > 0
+      ) {
+        queuePendingPlaybackMark();
+      }
+
       if (
         payload.response?.status === "completed" &&
         session.pendingTransferDestination &&
