@@ -107,6 +107,25 @@ export function resolveCallStatus(
   return "completed";
 }
 
+export function callReachedConnectedStep(call: CallRow): boolean {
+  if (call.status === "in_progress") {
+    return true;
+  }
+
+  const disposition = call.disposition?.trim().toLowerCase() ?? "";
+  if (
+    disposition.includes("busy") ||
+    disposition.includes("canceled") ||
+    disposition.includes("cancelled") ||
+    disposition.includes("no_answer") ||
+    disposition.includes("missed")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function statusBadgeVariant(
   status: "in_progress" | "completed" | "failed",
 ): "default" | "secondary" | "destructive" {
@@ -132,6 +151,7 @@ type CallEvent = {
 function buildCallEvents(call: CallRow): CallEvent[] {
   const events: CallEvent[] = [];
   const status = resolveCallStatus(call);
+  const reachedConnectedStep = callReachedConnectedStep(call);
 
   events.push({
     key: "received",
@@ -145,8 +165,8 @@ function buildCallEvents(call: CallRow): CallEvent[] {
   events.push({
     key: "connected",
     labelKey: "detail.events.connected",
-    timestamp: call.startedAt,
-    reached: true,
+    timestamp: reachedConnectedStep ? call.startedAt : null,
+    reached: reachedConnectedStep,
     isFinal: false,
     failed: false,
   });

@@ -45,7 +45,7 @@ describe("outbound playback tracker", () => {
     });
   });
 
-  it("drops queued audio when playback is cleared", () => {
+  it("drops only the unheard queued audio when playback is cleared", () => {
     const tracker = buildTracker();
 
     captureOutboundAudio(tracker, {
@@ -57,9 +57,28 @@ describe("outbound playback tracker", () => {
     clearPendingOutboundPlayback(tracker, 500);
 
     expect(acknowledgeOutboundPlaybackMark(tracker, "audio-1")).toBe(false);
-    expect(tracker.outboundAudio).toHaveLength(0);
+    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(Buffer.from(tracker.outboundAudio[0]?.payload ?? "", "base64")).toHaveLength(4000);
     expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(0);
     expect(tracker.outboundQueuedCursorMs).toBe(500);
+  });
+
+  it("preserves the elapsed portion of interrupted playback when clearing", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+    });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+
+    clearPendingOutboundPlayback(tracker, 500);
+
+    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(tracker.outboundAudio[0]?.offsetMs).toBe(0);
+    expect(Buffer.from(tracker.outboundAudio[0]?.payload ?? "", "base64")).toHaveLength(4000);
+    expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(0);
   });
 
   it("keeps real-time gaps between later chunks", () => {
@@ -85,7 +104,7 @@ describe("outbound playback tracker", () => {
     expect(tracker.outboundAudio[1]?.offsetMs).toBe(5000);
   });
 
-  it("flushes only chunks that should already have played by teardown time", () => {
+  it("flushes only the elapsed portion of pending groups by teardown time", () => {
     const tracker = buildTracker();
 
     captureOutboundAudio(tracker, {
@@ -103,8 +122,32 @@ describe("outbound playback tracker", () => {
 
     flushElapsedOutboundPlayback(tracker, 1500);
 
-    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(tracker.outboundAudio).toHaveLength(2);
+    expect(tracker.outboundAudio[0]?.offsetMs).toBe(0);
+    expect(tracker.outboundAudio[1]?.offsetMs).toBe(1000);
+    expect(Buffer.from(tracker.outboundAudio[1]?.payload ?? "", "base64")).toHaveLength(4000);
     expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(1);
     expect(tracker.pendingOutboundPlaybackGroups[0]?.markName).toBe("audio-2");
+    expect(tracker.pendingOutboundPlaybackGroups[0]?.chunks[0]?.offsetMs).toBe(1500);
+  });
+
+  it("keeps the elapsed portion of a partially played group during teardown flush", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+    });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+
+    flushElapsedOutboundPlayback(tracker, 500);
+
+    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(Buffer.from(tracker.outboundAudio[0]?.payload ?? "", "base64")).toHaveLength(4000);
+    expect(tracker.pendingOutboundPlaybackGroups).toHaveLength(1);
+    expect(Buffer.from(tracker.pendingOutboundPlaybackGroups[0]?.chunks[0]?.payload ?? "", "base64"))
+      .toHaveLength(4000);
+    expect(tracker.pendingOutboundPlaybackGroups[0]?.chunks[0]?.offsetMs).toBe(500);
   });
 });

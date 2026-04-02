@@ -71,7 +71,6 @@ type HomeSummary = {
     title: string;
     body: string;
     createdAt: string;
-    taskId?: string;
     callId?: Id<"calls">;
     conversationId?: Id<"conversations">;
   }>;
@@ -359,8 +358,7 @@ export function HomePage({ businessId }: HomePageProps) {
                             const destination =
                               item.kind === "voice_message" && item.callId
                                 ? {
-                                    pathname: "/calls",
-                                    search: `?callId=${encodeURIComponent(String(item.callId))}${item.taskId ? `&taskId=${encodeURIComponent(item.taskId)}` : ""}`,
+                                    pathname: `/calls/${encodeURIComponent(String(item.callId))}`,
                                   }
                                 : item.conversationId
                                   ? {
