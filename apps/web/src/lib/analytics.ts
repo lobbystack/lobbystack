@@ -42,12 +42,21 @@ export function initializeAnalytics(): void {
     api_host: POSTHOG_HOST,
     autocapture: false,
     capture_pageview: false,
-    disable_session_recording: true,
+    disable_session_recording: false,
     persistence: "localStorage+cookie",
     person_profiles: "identified_only",
+    session_recording: {
+      maskAllInputs: true,
+      maskTextSelector: ".ph-mask, [data-ph-mask-text]",
+      blockSelector: ".ph-no-capture, [data-ph-no-capture]",
+    },
   });
 
   hasInitialized = true;
+
+  if (!posthog.sessionRecordingStarted()) {
+    posthog.startSessionRecording();
+  }
 }
 
 function coerceProperties(
