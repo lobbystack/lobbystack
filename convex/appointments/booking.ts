@@ -1,3 +1,7 @@
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import { v } from "convex/values";
 import { DateTime } from "luxon";
 import {
@@ -13,6 +17,10 @@ import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
 import { computeAvailability } from "../lib/availability";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 
 const SLOT_INTERVAL_MINUTES = 15;
 const DEFAULT_SLOT_LIMIT = 6;
@@ -262,6 +270,24 @@ async function bookAppointmentWithSource(
     ctx,
     internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
     { appointmentId },
+  );
+
+  await enqueuePostHogOutboxRecord(
+    ctx,
+    serializePostHogEvent({
+      eventName: "appointment.booked",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      appointmentId: String(appointmentId),
+      channel: args.sourceChannel,
+      properties: {
+        serviceId: String(args.serviceId),
+        staffId: String(selected.staffId),
+        startsAt: selected.startsAt,
+        sourceChannel: args.sourceChannel,
+      },
+    }),
   );
 
   return { appointmentId, contactId: contact._id };

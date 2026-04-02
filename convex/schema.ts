@@ -610,6 +610,22 @@ export default defineSchema({
     .index("by_business_id_and_event_type", ["businessId", "eventType"])
     .index("by_actor_user_id_and_event_type", ["actorUserId", "eventType"]),
 
+  telemetry_outbox: defineTable({
+    destination: v.string(),
+    status: v.string(),
+    availableAt: v.string(),
+    attemptCount: v.number(),
+    eventName: v.string(),
+    distinctId: v.string(),
+    businessId: v.optional(v.id("businesses")),
+    groupKey: v.optional(v.string()),
+    payloadJson: v.string(),
+    lastError: v.optional(v.string()),
+  })
+    .index("by_status_and_available_at", ["status", "availableAt"])
+    .index("by_destination_and_status", ["destination", "status"])
+    .index("by_business_id_and_status", ["businessId", "status"]),
+
   workflow_jobs: defineTable({
     businessId: v.optional(v.id("businesses")),
     kind: v.string(),

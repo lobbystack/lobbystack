@@ -8,6 +8,7 @@ import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
+import { recordTwilioInvalidSignature } from "../observability/otel";
 import { createSnapshotCache } from "../sessions/snapshotCache";
 
 export function createServer(): ReturnType<typeof Fastify> {
@@ -41,6 +42,9 @@ export function createServer(): ReturnType<typeof Fastify> {
       path: pathname,
     });
     if (!hasValidTwilioSignature) {
+      recordTwilioInvalidSignature({
+        "ai_receptionist.path": pathname,
+      });
       server.log.warn(
         {
           path: pathname,

@@ -31,6 +31,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -457,6 +458,11 @@ function DetailsTab({
     setIsMarkingDone(true);
     try {
       await completeFollowUp({ businessId, inboxItemId });
+      captureAnalyticsEvent("web.voice.follow_up_completed", {
+        businessId: String(businessId),
+        inboxItemId: String(inboxItemId),
+        callId: String(call._id),
+      });
     } finally {
       setIsMarkingDone(false);
     }

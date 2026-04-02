@@ -2,6 +2,11 @@ import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 import { z } from "zod";
 
 import {
+  recordToolExecutionFailure,
+  recordToolExecutionLatency,
+  startActiveSpan,
+} from "../observability/otel";
+import {
   bookVoiceAppointment,
   checkVoiceAvailability,
   findVoiceAvailability,
@@ -168,200 +173,223 @@ export async function executeVoiceTool(input: {
   conversationId?: string;
   callerPhone: string;
 }): Promise<ExecutedToolResult> {
-  switch (input.toolName) {
-    case "getBusinessHours": {
-      return {
-        result: {
-          timezone: input.snapshot.timezone,
-          summary: buildHoursSummary(input.snapshot),
-          closures: input.snapshot.closures,
-        },
-      };
-    }
-    case "getBusinessServices": {
-      return {
-        result: {
-          summary: buildServicesSummary(input.snapshot),
-          services: input.snapshot.services,
-          count: input.snapshot.services.length,
-        },
-      };
-    }
-    case "searchKnowledge": {
-      const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+  const startedAt = Date.now();
+  const attributes = {
+    "ai_receptionist.business_id": input.businessId,
+    ...(input.callId ? { "ai_receptionist.call_id": input.callId } : {}),
+    ...(input.conversationId
+      ? { "ai_receptionist.conversation_id": input.conversationId }
+      : {}),
+    "ai_receptionist.tool_name": input.toolName,
+  };
+
+  return await startActiveSpan(
+    `voice.tool.${input.toolName}`,
+    attributes,
+    async () => {
       try {
-        const matches = await searchVoiceKnowledge({
-          businessId: input.businessId,
-          query: parsed.query,
-        });
+        switch (input.toolName) {
+          case "getBusinessHours": {
+            return {
+              result: {
+                timezone: input.snapshot.timezone,
+                summary: buildHoursSummary(input.snapshot),
+                closures: input.snapshot.closures,
+              },
+            };
+          }
+          case "getBusinessServices": {
+            return {
+              result: {
+                summary: buildServicesSummary(input.snapshot),
+                services: input.snapshot.services,
+                count: input.snapshot.services.length,
+              },
+            };
+          }
+          case "searchKnowledge": {
+            const parsed = searchKnowledgeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const matches = await searchVoiceKnowledge({
+                businessId: input.businessId,
+                query: parsed.query,
+              });
 
-        if (matches.length > 0) {
-          return {
-            result: {
-              matches,
-              source: "rag",
-              fallbackUsed: false,
-            },
-          };
+              if (matches.length > 0) {
+                return {
+                  result: {
+                    matches,
+                    source: "rag",
+                    fallbackUsed: false,
+                  },
+                };
+              }
+
+              const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+              if (fallbackMatches.length > 0) {
+                return {
+                  result: {
+                    matches: fallbackMatches,
+                    source: "snapshot_fallback",
+                    fallbackUsed: true,
+                    fallbackReason: "no_matches",
+                  },
+                };
+              }
+
+              return {
+                result: {
+                  matches: [],
+                  source: "none",
+                  fallbackUsed: false,
+                },
+              };
+            } catch {
+              const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
+              if (fallbackMatches.length > 0) {
+                return {
+                  result: {
+                    matches: fallbackMatches,
+                    source: "snapshot_fallback",
+                    fallbackUsed: true,
+                    fallbackReason: "rag_error",
+                  },
+                };
+              }
+
+              return {
+                result: {
+                  matches: [],
+                  source: "none",
+                  fallbackUsed: false,
+                },
+              };
+            }
+          }
+          case "checkAvailability": {
+            const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
+            const result = await checkVoiceAvailability({
+              businessId: input.businessId,
+              serviceName: parsed.serviceName,
+              startsAt: parsed.startsAt,
+              timezone: parsed.timezone ?? input.snapshot.timezone,
+              ...(parsed.preferredStaffId !== undefined
+                ? { preferredStaffId: parsed.preferredStaffId }
+                : {}),
+            });
+            return {
+              result,
+            };
+          }
+          case "findAvailability": {
+            const parsed = findAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
+            const result = await findVoiceAvailability({
+              businessId: input.businessId,
+              serviceName: parsed.serviceName,
+              date: parsed.date,
+              timezone: parsed.timezone ?? input.snapshot.timezone,
+              ...(parsed.preferredStaffId !== undefined
+                ? { preferredStaffId: parsed.preferredStaffId }
+                : {}),
+              ...(parsed.preferredHour24 !== undefined
+                ? { preferredHour24: parsed.preferredHour24 }
+                : {}),
+              ...(parsed.preferredMinute !== undefined
+                ? { preferredMinute: parsed.preferredMinute }
+                : {}),
+              ...(parsed.limit !== undefined ? { limit: parsed.limit } : {}),
+            });
+            return {
+              result,
+            };
+          }
+          case "bookAppointment": {
+            const parsed = bookAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            const result = await bookVoiceAppointment({
+              businessId: input.businessId,
+              serviceName: parsed.serviceName,
+              startsAt: parsed.startsAt,
+              timezone: parsed.timezone ?? input.snapshot.timezone,
+              ...(parsed.preferredStaffId !== undefined
+                ? { preferredStaffId: parsed.preferredStaffId }
+                : {}),
+              ...(input.conversationId !== undefined
+                ? { conversationId: input.conversationId }
+                : {}),
+              ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
+              contactPhone: parsed.contactPhone ?? input.callerPhone,
+            });
+            return {
+              result,
+            };
+          }
+          case "transferCall": {
+            const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            if (!isTransferAllowed(input.snapshot) || !input.snapshot.transferPolicy.transferNumber) {
+              return {
+                result: {
+                  ok: false,
+                  reason:
+                    "Transfers are not enabled for this business or no transfer number is configured.",
+                },
+              };
+            }
+
+            if (input.callId) {
+              await updateVoiceTransferState({
+                callId: input.callId,
+                transferState: "requested",
+              });
+            }
+
+            return {
+              result: {
+                ok: true,
+                destination: input.snapshot.transferPolicy.transferNumber,
+                reason: parsed.reason ?? "Caller requested a human handoff.",
+              },
+              pendingTransferDestination: input.snapshot.transferPolicy.transferNumber,
+            };
+          }
+          case "takeMessage": {
+            const parsed = takeMessageSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            if (!input.callId) {
+              throw new Error("Call has not been initialized yet.");
+            }
+
+            const result = await takeVoiceMessage({
+              businessId: input.businessId,
+              callId: input.callId,
+              ...(input.conversationId !== undefined
+                ? { conversationId: input.conversationId }
+                : {}),
+              ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
+              callbackPhone: parsed.callbackPhone ?? input.callerPhone,
+              message: parsed.message,
+              ...(parsed.urgency !== undefined ? { urgency: parsed.urgency } : {}),
+              ...(parsed.callbackWindow !== undefined
+                ? { callbackWindow: parsed.callbackWindow }
+                : {}),
+            });
+            return {
+              result,
+            };
+          }
+          default: {
+            return {
+              result: {
+                ok: false,
+                reason: `Unsupported tool: ${input.toolName}`,
+              },
+            };
+          }
         }
-
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
-        if (fallbackMatches.length > 0) {
-          return {
-            result: {
-              matches: fallbackMatches,
-              source: "snapshot_fallback",
-              fallbackUsed: true,
-              fallbackReason: "no_matches",
-            },
-          };
-        }
-
-        return {
-          result: {
-            matches: [],
-            source: "none",
-            fallbackUsed: false,
-          },
-        };
-      } catch {
-        const fallbackMatches = buildSnapshotFallbackMatches(input.snapshot, parsed.query);
-        if (fallbackMatches.length > 0) {
-          return {
-            result: {
-              matches: fallbackMatches,
-              source: "snapshot_fallback",
-              fallbackUsed: true,
-              fallbackReason: "rag_error",
-            },
-          };
-        }
-
-        return {
-          result: {
-            matches: [],
-            source: "none",
-            fallbackUsed: false,
-          },
-        };
+      } catch (error) {
+        recordToolExecutionFailure(attributes);
+        throw error;
+      } finally {
+        recordToolExecutionLatency(Date.now() - startedAt, attributes);
       }
-    }
-    case "checkAvailability": {
-      const parsed = checkAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
-      const result = await checkVoiceAvailability({
-        businessId: input.businessId,
-        serviceName: parsed.serviceName,
-        startsAt: parsed.startsAt,
-        timezone: parsed.timezone ?? input.snapshot.timezone,
-        ...(parsed.preferredStaffId !== undefined
-          ? { preferredStaffId: parsed.preferredStaffId }
-          : {}),
-      });
-      return {
-        result,
-      };
-    }
-    case "findAvailability": {
-      const parsed = findAvailabilitySchema.parse(JSON.parse(input.rawArguments || "{}"));
-      const result = await findVoiceAvailability({
-        businessId: input.businessId,
-        serviceName: parsed.serviceName,
-        date: parsed.date,
-        timezone: parsed.timezone ?? input.snapshot.timezone,
-        ...(parsed.preferredStaffId !== undefined
-          ? { preferredStaffId: parsed.preferredStaffId }
-          : {}),
-        ...(parsed.preferredHour24 !== undefined
-          ? { preferredHour24: parsed.preferredHour24 }
-          : {}),
-        ...(parsed.preferredMinute !== undefined
-          ? { preferredMinute: parsed.preferredMinute }
-          : {}),
-        ...(parsed.limit !== undefined ? { limit: parsed.limit } : {}),
-      });
-      return {
-        result,
-      };
-    }
-    case "bookAppointment": {
-      const parsed = bookAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
-      const result = await bookVoiceAppointment({
-        businessId: input.businessId,
-        serviceName: parsed.serviceName,
-        startsAt: parsed.startsAt,
-        timezone: parsed.timezone ?? input.snapshot.timezone,
-        ...(parsed.preferredStaffId !== undefined
-          ? { preferredStaffId: parsed.preferredStaffId }
-          : {}),
-        ...(input.conversationId !== undefined
-          ? { conversationId: input.conversationId }
-          : {}),
-        ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
-        contactPhone: parsed.contactPhone ?? input.callerPhone,
-      });
-      return {
-        result,
-      };
-    }
-    case "transferCall": {
-      const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
-      if (!isTransferAllowed(input.snapshot) || !input.snapshot.transferPolicy.transferNumber) {
-        return {
-          result: {
-            ok: false,
-            reason:
-              "Transfers are not enabled for this business or no transfer number is configured.",
-          },
-        };
-      }
-
-      if (input.callId) {
-        await updateVoiceTransferState({
-          callId: input.callId,
-          transferState: "requested",
-        });
-      }
-
-      return {
-        result: {
-          ok: true,
-          destination: input.snapshot.transferPolicy.transferNumber,
-          reason: parsed.reason ?? "Caller requested a human handoff.",
-        },
-        pendingTransferDestination: input.snapshot.transferPolicy.transferNumber,
-      };
-    }
-    case "takeMessage": {
-      const parsed = takeMessageSchema.parse(JSON.parse(input.rawArguments || "{}"));
-      if (!input.callId) {
-        throw new Error("Call has not been initialized yet.");
-      }
-
-      const result = await takeVoiceMessage({
-        businessId: input.businessId,
-        callId: input.callId,
-        ...(input.conversationId !== undefined
-          ? { conversationId: input.conversationId }
-          : {}),
-        ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
-        callbackPhone: parsed.callbackPhone ?? input.callerPhone,
-        message: parsed.message,
-        ...(parsed.urgency !== undefined ? { urgency: parsed.urgency } : {}),
-        ...(parsed.callbackWindow !== undefined
-          ? { callbackWindow: parsed.callbackWindow }
-          : {}),
-      });
-      return {
-        result,
-      };
-    }
-    default: {
-      return {
-        result: {
-          ok: false,
-          reason: `Unsupported tool: ${input.toolName}`,
-        },
-      };
-    }
-  }
+    },
+  );
 }

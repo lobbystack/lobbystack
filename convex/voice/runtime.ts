@@ -2,7 +2,15 @@ import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
 } from "../lib/voiceCallStatus";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import { v } from "convex/values";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 
 import { internal } from "../_generated/api";
 import {
@@ -492,6 +500,24 @@ export const startCall = internalMutation({
       startedAt: Date.parse(args.startedAt),
     });
 
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.call_started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        conversationId: String(conversationId),
+        callId: String(callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          status: "in_progress",
+          gatewaySessionId: args.gatewaySessionId,
+        },
+      }),
+    );
+
     return {
       callId,
       conversationId,
@@ -546,9 +572,31 @@ export const setTransferState = internalMutation({
     transferState: v.string(),
   },
   handler: async (ctx: MutationCtx, args: SetTransferStateArgs) => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
     await ctx.db.patch(args.callId, {
       transferState: args.transferState,
     });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.transfer_state_changed",
+        businessId: call.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+        ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+        callId: String(args.callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          transferState: args.transferState,
+        },
+      }),
+    );
     return null;
   },
 });
@@ -713,6 +761,24 @@ export const completeCall = internalMutation({
       callId: args.callId,
       endedAt: Date.parse(args.endedAt),
     });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.call_completed",
+        businessId: call.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+        ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+        callId: String(args.callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          status: args.status,
+          disposition,
+        },
+      }),
+    );
 
     return null;
   },

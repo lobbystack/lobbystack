@@ -1,3 +1,7 @@
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../../telemetry/shared";
 import { v } from "convex/values";
 import {
   internalMutation,
@@ -23,6 +27,10 @@ import {
   type RuntimeLocale,
 } from "../../lib/runtimeLocale";
 import { buildBusinessContextSnapshot } from "../../lib/snapshot";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../../telemetry/posthog";
 
 type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
@@ -281,11 +289,38 @@ export const refreshSnapshot = internalMutation({
         businessId: args.businessId,
         ...snapshot,
       });
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName: "business.snapshot_refreshed",
+          businessId: args.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+          properties: {
+            serviceCount: snapshot.services.length,
+            snippetCount: snapshot.knowledgeSnippets.length,
+          },
+        }),
+      );
       return existing._id;
     }
-    return await ctx.db.insert("business_context_snapshots", {
+    const snapshotId = await ctx.db.insert("business_context_snapshots", {
       businessId: args.businessId,
       ...snapshot,
     });
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "business.snapshot_refreshed",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        properties: {
+          serviceCount: snapshot.services.length,
+          snippetCount: snapshot.knowledgeSnippets.length,
+        },
+      }),
+    );
+    return snapshotId;
   },
 });

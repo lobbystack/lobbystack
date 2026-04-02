@@ -14,6 +14,20 @@ import {
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
+import {
+  addActiveCalls,
+  recordMediaStreamDisconnect,
+  recordOpenAiRealtimeError,
+  recordOpenAiTurnLatency,
+  recordSnapshotCacheHit,
+  recordSnapshotCacheMiss,
+  recordTwilioInvalidSignature,
+} from "../observability/otel";
+import {
+  captureAiGeneration,
+  captureAiSpan,
+  captureAiTraceStarted,
+} from "../observability/posthog";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import {
   endLiveCallWithMessage,
@@ -145,6 +159,9 @@ type ActiveVoiceSession = {
   }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
+  aiTraceId: string;
+  assistantResponseRequestedAtMs: number | null;
+  activeCallCounted: boolean;
 };
 
 type MediaStreamRequestContext = {
@@ -462,6 +479,13 @@ async function finalizeCall(
     return;
   }
   session.finalized = true;
+  if (session.activeCallCounted) {
+    addActiveCalls(-1, {
+      ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+      ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+    });
+    session.activeCallCounted = false;
+  }
 
   try {
     await Promise.allSettled(Array.from(session.pendingTasks));
@@ -748,6 +772,16 @@ async function configureOpenAiSession(
   });
 
   session.openAiReady = true;
+  if (session.businessId) {
+    captureAiTraceStarted({
+      businessId: session.businessId,
+      traceId: session.aiTraceId,
+      ...(session.callId ? { callId: session.callId } : {}),
+      ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+      model: runtimeConfig.OPENAI_REALTIME_MODEL,
+      provider: "openai",
+    });
+  }
   for (const payload of session.pendingInboundAudio) {
     postRealtimeEvent(openAiSocket, {
       type: "input_audio_buffer.append",
@@ -756,6 +790,7 @@ async function configureOpenAiSession(
   }
   session.pendingInboundAudio = [];
 
+  session.assistantResponseRequestedAtMs = Date.now();
   postRealtimeEvent(openAiSocket, {
     type: "response.create",
     response: {
@@ -808,6 +843,9 @@ async function handleToolCall(
     arguments: string;
   },
 ): Promise<void> {
+  const startedAt = Date.now();
+  const runtimeConfig = loadVoiceGatewayEnv(process.env);
+
   try {
     if (!session.snapshot || !session.businessId) {
       throw new Error("Voice session has not been initialized.");
@@ -829,6 +867,21 @@ async function handleToolCall(
       session.pendingTransferDestination = result.pendingTransferDestination;
     }
 
+    captureAiSpan({
+      businessId: session.businessId,
+      traceId: session.aiTraceId,
+      ...(session.callId ? { callId: session.callId } : {}),
+      ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+      model: runtimeConfig.OPENAI_REALTIME_MODEL,
+      provider: "openai",
+      spanName: `tool_call:${message.name}`,
+      latencyMs: Date.now() - startedAt,
+      properties: {
+        toolName: message.name,
+        succeeded: true,
+      },
+    });
+
     postRealtimeEvent(openAiSocket, {
       type: "conversation.item.create",
       item: {
@@ -837,11 +890,30 @@ async function handleToolCall(
         output: JSON.stringify(result.result),
       },
     });
+    session.assistantResponseRequestedAtMs = Date.now();
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
     });
   } catch (error) {
     server.log.error(error);
+    if (session.businessId) {
+      captureAiSpan({
+        businessId: session.businessId,
+        traceId: session.aiTraceId,
+        ...(session.callId ? { callId: session.callId } : {}),
+        ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+        model: runtimeConfig.OPENAI_REALTIME_MODEL,
+        provider: "openai",
+        spanName: `tool_call:${message.name}`,
+        latencyMs: Date.now() - startedAt,
+        isError: true,
+        error: error instanceof Error ? error.message : "Unknown tool error",
+        properties: {
+          toolName: message.name,
+          succeeded: false,
+        },
+      });
+    }
     const transferAvailable =
       session.snapshot?.transferPolicy.mode !== "never" &&
       Boolean(session.snapshot?.transferPolicy.transferNumber);
@@ -857,6 +929,7 @@ async function handleToolCall(
         }),
       },
     });
+    session.assistantResponseRequestedAtMs = Date.now();
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
       response: {
@@ -985,6 +1058,39 @@ function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      const latencyMs =
+        session.assistantResponseRequestedAtMs !== null
+          ? Date.now() - session.assistantResponseRequestedAtMs
+          : undefined;
+
+      if (latencyMs !== undefined) {
+        recordOpenAiTurnLatency(latencyMs, {
+          ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+          ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+          "ai_receptionist.provider": "openai",
+        });
+      }
+
+      if (session.businessId) {
+        captureAiGeneration({
+          businessId: session.businessId,
+          traceId: session.aiTraceId,
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+          model: loadVoiceGatewayEnv(process.env).OPENAI_REALTIME_MODEL,
+          provider: "openai",
+          ...(latencyMs !== undefined ? { latencyMs } : {}),
+          isError:
+            payload.response?.status !== undefined &&
+            payload.response.status !== "completed",
+          ...(payload.response?.status && payload.response.status !== "completed"
+            ? { error: payload.response.status }
+            : {}),
+          transferInvoked: Boolean(session.pendingTransferDestination),
+        });
+      }
+      session.assistantResponseRequestedAtMs = null;
+
       if (
         payload.response?.id &&
         payload.response.id === session.activeAssistantResponseId &&
@@ -1126,6 +1232,10 @@ export async function handleMediaStreamConnection(
   });
 
   twilioSocket.on("close", () => {
+    recordMediaStreamDisconnect({
+      ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+      ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+    });
     server.log.info(
       {
         callSid: session.callSid,
@@ -1182,6 +1292,9 @@ export async function handleMediaStreamConnection(
     pendingOutboundPlaybackGroups: [],
     pendingInboundAudio: [],
     pendingTasks: new Set(),
+    aiTraceId: crypto.randomUUID(),
+    assistantResponseRequestedAtMs: null,
+    activeCallCounted: false,
   };
 
   const runtimeConfig = server.runtimeConfig;
@@ -1200,6 +1313,9 @@ export async function handleMediaStreamConnection(
     });
 
     if (!hasValidTwilioSignature) {
+      recordTwilioInvalidSignature({
+        "ai_receptionist.path": "/media-stream",
+      });
       server.log.warn(
         { validationUrls },
         "Rejected Twilio Media Stream websocket with invalid signature",
@@ -1239,16 +1355,29 @@ export async function handleMediaStreamConnection(
     let snapshot =
       session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
     if (!snapshot) {
+      recordSnapshotCacheMiss({
+        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+      });
       if (!session.to) {
         throw new Error("Twilio stream start did not include the called phone number.");
       }
       snapshot = await fetchSnapshotForPhoneNumber(session.to);
       server.snapshotCache.set(snapshot.businessId, snapshot);
       session.businessId = snapshot.businessId;
+    } else {
+      recordSnapshotCacheHit({
+        "ai_receptionist.business_id": snapshot.businessId,
+      });
     }
 
     session.snapshot = snapshot;
     await initializeCallRecord(server, session);
+    if (!session.activeCallCounted) {
+      addActiveCalls(1, {
+        "ai_receptionist.business_id": session.businessId ?? snapshot.businessId,
+      });
+      session.activeCallCounted = true;
+    }
 
     openAiSocket = new WebSocket(
       `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
@@ -1278,6 +1407,10 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("error", (error: Error) => {
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+        ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+      });
       server.log.error(
         {
           callSid: session.callSid,
@@ -1294,6 +1427,10 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("unexpected-response", (_request, response) => {
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+        ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+      });
       server.log.error(
         {
           callSid: session.callSid,
@@ -1321,6 +1458,10 @@ export async function handleMediaStreamConnection(
         "OpenAI Realtime websocket closed",
       );
       if (!session.finalized) {
+        recordOpenAiRealtimeError({
+          ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+          ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+        });
         const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
           disposition: "openai_socket_closed",
         });

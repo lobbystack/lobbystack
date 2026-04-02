@@ -1,3 +1,7 @@
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import { v } from "convex/values";
 import {
   type ActionCtx,
@@ -18,6 +22,10 @@ import {
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 import { ensureSessionForStoredMessage } from "./sessions";
 
 function asConversationId(value: string): Id<"conversations"> {
@@ -622,6 +630,24 @@ export const storeInboundMessage = internalMutation({
       });
     }
 
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "sms.inbound_received",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        conversationId: String(conversationId),
+        messageId: String(messageId),
+        channel: args.channel,
+        provider: "twilio",
+        properties: {
+          hasMedia: Boolean(args.media?.length),
+          mediaCount: args.media?.length ?? 0,
+        },
+      }),
+    );
+
     return { conversationId };
   },
 });
@@ -692,6 +718,28 @@ export const storeOutboundMessage = internalMutation({
       });
     }
 
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "sms.reply_generated",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        conversationId: String(args.conversationId),
+        messageId: String(messageId),
+        ...(args.appointmentId !== undefined
+          ? { appointmentId: String(args.appointmentId) }
+          : {}),
+        channel: args.channel,
+        provider: "twilio",
+        properties: {
+          aiGenerated: args.aiGenerated ?? true,
+          hasMedia: Boolean(args.media?.length),
+          mediaCount: args.media?.length ?? 0,
+        },
+      }),
+    );
+
     return messageId;
   },
 });
@@ -704,12 +752,38 @@ export const markOutboundMessageAccepted = internalMutation({
     providerUpdatedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: MarkOutboundMessageAcceptedArgs) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found.");
+    }
+
     await ctx.db.patch(args.messageId, {
       providerMessageSid: args.providerMessageSid,
       status: mapTwilioStatusToMessageStatus(args.providerStatus),
       providerStatus: args.providerStatus,
       providerUpdatedAt: args.providerUpdatedAt,
     });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "sms.delivery_accepted",
+        businessId: message.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(message.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(message.businessId)),
+        conversationId: String(message.conversationId),
+        messageId: String(args.messageId),
+        ...(message.appointmentId !== undefined
+          ? { appointmentId: String(message.appointmentId) }
+          : {}),
+        channel: message.channel,
+        provider: "twilio",
+        properties: {
+          providerMessageSid: args.providerMessageSid,
+          providerStatus: args.providerStatus,
+        },
+      }),
+    );
     return null;
   },
 });
@@ -721,11 +795,36 @@ export const markOutboundMessageSendFailed = internalMutation({
     providerStatus: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args: MarkOutboundMessageSendFailedArgs) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Message not found.");
+    }
+
     await ctx.db.patch(args.messageId, {
       status: "failed",
       providerStatus: args.providerStatus ?? "failed",
       providerUpdatedAt: args.providerUpdatedAt,
     });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "sms.delivery_failed",
+        businessId: message.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(message.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(message.businessId)),
+        conversationId: String(message.conversationId),
+        messageId: String(args.messageId),
+        ...(message.appointmentId !== undefined
+          ? { appointmentId: String(message.appointmentId) }
+          : {}),
+        channel: message.channel,
+        provider: "twilio",
+        properties: {
+          providerStatus: args.providerStatus ?? "failed",
+        },
+      }),
+    );
     return null;
   },
 });

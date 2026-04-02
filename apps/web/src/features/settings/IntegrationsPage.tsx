@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
@@ -227,9 +228,17 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     }
 
     if (status === "success") {
+      captureAnalyticsEvent("web.integration.calendar_connect_completed", {
+        businessId: String(businessId),
+        provider: "google",
+      });
       setStatusMessage(message ?? t("integrations.google.connectedSuccess"));
       setErrorMessage(null);
     } else {
+      captureAnalyticsEvent("web.integration.calendar_connect_failed", {
+        businessId: String(businessId),
+        provider: "google",
+      });
       setErrorMessage(message ?? t("integrations.google.connectFailed"));
       setStatusMessage(null);
     }
@@ -239,7 +248,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     nextParams.delete("status");
     nextParams.delete("message");
     setSearchParams(nextParams, { replace: true });
-  }, [searchParams, setSearchParams, t]);
+  }, [businessId, searchParams, setSearchParams, t]);
 
   useEffect(() => {
     async function loadCalendars() {
@@ -313,12 +322,20 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     setStatusMessage(null);
 
     try {
+      captureAnalyticsEvent("web.integration.calendar_connect_started", {
+        businessId: String(businessId),
+        provider: "google",
+      });
       const result = await connectGoogle({
         businessId,
         staffId: selectedStaffId as Id<"staff">,
       });
       window.location.assign(result.authorizationUrl);
     } catch (error) {
+      captureAnalyticsEvent("web.integration.calendar_connect_failed", {
+        businessId: String(businessId),
+        provider: "google",
+      });
       setErrorMessage(
         error instanceof Error ? error.message : t("integrations.google.connectFailed"),
       );

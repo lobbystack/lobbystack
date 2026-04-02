@@ -11,6 +11,7 @@ import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 
@@ -109,10 +110,12 @@ export function LoginPage() {
 
       if (result.signingIn) {
         setStatusMessage(t("status.signedInFinishing"));
+        captureAnalyticsEvent("web.auth.login_succeeded");
         return;
       }
 
       setStatusMessage(t("status.signInCompleted"));
+      captureAnalyticsEvent("web.auth.login_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signIn", t));
     } finally {
@@ -165,10 +168,12 @@ export function SignupPage() {
 
       if (result.signingIn) {
         setStatusMessage(t("status.accountCreatedFinishing"));
+        captureAnalyticsEvent("web.auth.signup_succeeded");
         return;
       }
 
       setStatusMessage(t("status.accountCreatedFinalizing"));
+      captureAnalyticsEvent("web.auth.signup_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signUp", t));
     } finally {

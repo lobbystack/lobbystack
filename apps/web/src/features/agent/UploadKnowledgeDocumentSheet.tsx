@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import type { AgentSection } from "./sections";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -150,6 +151,11 @@ export function UploadKnowledgeDocumentSheet({
 
     setIsUploading(true);
     setErrorMessage(null);
+    captureAnalyticsEvent("web.knowledge.upload_started", {
+      businessId: String(businessId),
+      section,
+      contentType,
+    });
 
     try {
       const uploadUrl = await generateUploadUrl({ businessId });
@@ -173,6 +179,11 @@ export function UploadKnowledgeDocumentSheet({
         fileName: selectedFile.name,
         title: title.trim(),
         tags: parseTags(tags),
+      });
+      captureAnalyticsEvent("web.knowledge.upload_completed", {
+        businessId: String(businessId),
+        section,
+        contentType,
       });
 
       setIsDialogOpen(false);

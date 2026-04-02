@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
+import {
   action,
   internalAction,
   internalMutation,
@@ -14,6 +18,10 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 
 export const CALENDAR_RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
 const CALENDAR_SYNC_RETRY_DELAY_MS = CALENDAR_RECONCILIATION_INTERVAL_MS;
@@ -1074,6 +1082,24 @@ export const setAppointmentCalendarSyncState = internalMutation({
     }
 
     await ctx.db.replace(args.appointmentId, next);
+
+    if (args.calendarSyncState === "failed") {
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName: "integration.calendar_sync_failed",
+          businessId: appointment.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(appointment.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(appointment.businessId)),
+          appointmentId: String(args.appointmentId),
+          properties: {
+            calendarSyncState: args.calendarSyncState,
+            error: args.calendarLastSyncError,
+          },
+        }),
+      );
+    }
+
     return null;
   },
 });
@@ -1904,6 +1930,20 @@ export const selectGoogleCalendar = action({
         connectionId: accessContext.existingConnectionId,
         fullSync: true,
       },
+    );
+    await ctx.runMutation(
+      internal.telemetry.posthog.enqueueEvent,
+      serializePostHogEvent({
+        eventName: "integration.calendar_connected",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        provider: "google",
+        properties: {
+          staffId: String(args.staffId),
+          selectedCalendarId: selected.id,
+        },
+      }),
     );
 
     return {

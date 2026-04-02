@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type OnboardingVerifyPhonePageProps = {
@@ -85,6 +86,10 @@ export function OnboardingVerifyPhonePage({
 
       setPhoneInput(result.phoneE164);
       setVerificationPhone(result.phoneE164);
+      captureAnalyticsEvent("web.onboarding.verify_phone_started", {
+        businessId: String(businessId),
+        countryCode: result.countryCode,
+      });
       setStatusMessage(
         t("verifyPhone.codeSent", {
           phone: formatPhoneNumberDisplay(result.phoneE164, i18n.language),
@@ -117,6 +122,9 @@ export function OnboardingVerifyPhonePage({
       })) as CheckVerificationResult;
 
       if (result.status === "approved") {
+        captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
+          businessId: String(businessId),
+        });
         void navigate("/onboarding/number");
         return;
       }

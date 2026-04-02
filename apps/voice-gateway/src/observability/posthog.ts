@@ -1,0 +1,131 @@
+import { PostHog } from "posthog-node";
+
+import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+  redactAiTraceProperties,
+  type TelemetryProperties,
+} from "@ai-receptionist/telemetry";
+
+type AiTraceCommon = {
+  businessId: string;
+  traceId: string;
+  callId?: string;
+  conversationId?: string;
+  model: string;
+  provider: string;
+};
+
+let client: PostHog | null | undefined;
+
+function getClient(): PostHog | null {
+  if (client !== undefined) {
+    return client;
+  }
+
+  const env = loadVoiceGatewayEnv(process.env);
+  if (!env.POSTHOG_KEY || !env.POSTHOG_HOST) {
+    client = null;
+    return client;
+  }
+
+  client = new PostHog(env.POSTHOG_KEY, {
+    host: env.POSTHOG_HOST,
+    flushAt: 1,
+    flushInterval: 0,
+  });
+  return client;
+}
+
+function buildBaseProperties(input: AiTraceCommon): Record<string, unknown> {
+  return {
+    $ai_trace_id: input.traceId,
+    $ai_model: input.model,
+    $ai_provider: input.provider,
+    ...(input.callId ? { callId: input.callId } : {}),
+    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    $groups: {
+      business: getPostHogBusinessGroupKey(input.businessId),
+    },
+  };
+}
+
+function capture(
+  event: string,
+  businessId: string,
+  properties: Record<string, unknown>,
+): void {
+  const activeClient = getClient();
+  if (!activeClient) {
+    return;
+  }
+
+  activeClient.capture({
+    distinctId: getPostHogDistinctIdForBusinessSystem(businessId),
+    event,
+    properties,
+  });
+}
+
+export function captureAiTraceStarted(input: AiTraceCommon): void {
+  capture("$ai_trace", input.businessId, buildBaseProperties(input));
+}
+
+export function captureAiGeneration(
+  input: AiTraceCommon & {
+    latencyMs?: number;
+    isError?: boolean;
+    error?: string;
+    toolNames?: string[];
+    transferInvoked?: boolean;
+    bookingAttempted?: boolean;
+    bookingSucceeded?: boolean;
+    fallbackReason?: string;
+    properties?: TelemetryProperties;
+  },
+): void {
+  capture("$ai_generation", input.businessId, {
+    ...buildBaseProperties(input),
+    ...(input.latencyMs !== undefined ? { $ai_latency: input.latencyMs } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
+    ...(input.transferInvoked !== undefined
+      ? { transferInvoked: input.transferInvoked }
+      : {}),
+    ...(input.bookingAttempted !== undefined
+      ? { bookingAttempted: input.bookingAttempted }
+      : {}),
+    ...(input.bookingSucceeded !== undefined
+      ? { bookingSucceeded: input.bookingSucceeded }
+      : {}),
+    ...(input.fallbackReason ? { fallbackReason: input.fallbackReason } : {}),
+    ...redactAiTraceProperties(input.properties ?? {}),
+  });
+}
+
+export function captureAiSpan(
+  input: AiTraceCommon & {
+    spanName: string;
+    latencyMs?: number;
+    isError?: boolean;
+    error?: string;
+    properties?: TelemetryProperties;
+  },
+): void {
+  capture("$ai_span", input.businessId, {
+    ...buildBaseProperties(input),
+    $ai_span_name: input.spanName,
+    ...(input.latencyMs !== undefined ? { $ai_latency: input.latencyMs } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...redactAiTraceProperties(input.properties ?? {}),
+  });
+}
+
+export async function shutdownPostHog(): Promise<void> {
+  if (client) {
+    await client.shutdown();
+  }
+}

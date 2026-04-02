@@ -9,9 +9,12 @@ import "./styles/index.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { LocaleProvider } from "@/components/locale-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { initializeAnalytics } from "@/lib/analytics";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
 const convex = new ConvexReactClient(convexUrl);
+
+initializeAnalytics();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -33,6 +33,11 @@ import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
+import {
+  captureAnalyticsEvent,
+  identifyOperator,
+  trackPageView,
+} from "@/lib/analytics";
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -94,6 +99,38 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
+  const previousBusinessIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser?._id) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(currentUser._id),
+      ...(businessId ? { businessId: String(businessId) } : {}),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [businessId, currentUser?._id]);
+
+  useEffect(() => {
+    trackPageView(location.pathname, businessId ? String(businessId) : undefined);
+  }, [businessId, location.pathname]);
+
+  useEffect(() => {
+    const nextBusinessId = businessId ? String(businessId) : null;
+    const previousBusinessId = previousBusinessIdRef.current;
+    previousBusinessIdRef.current = nextBusinessId;
+
+    if (!previousBusinessId || !nextBusinessId || previousBusinessId === nextBusinessId) {
+      return;
+    }
+
+    captureAnalyticsEvent("web.workspace.business_switched", {
+      businessId: nextBusinessId,
+      previousBusinessId,
+    });
+  }, [businessId]);
 
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
@@ -256,6 +293,18 @@ function OnboardingNumberRoute() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
 
+  useEffect(() => {
+    if (!currentUser?._id || !activeBusiness?._id) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(currentUser._id),
+      businessId: String(activeBusiness._id),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [activeBusiness?._id, currentUser?._id]);
+
   if (businesses === undefined || currentUser === undefined) {
     return <LoadingScreen />;
   }
@@ -292,6 +341,18 @@ function OnboardingVerifyPhoneRoute() {
   const [isSkippingVerification, setIsSkippingVerification] = useState(false);
   const [hasAttemptedAutoSkip, setHasAttemptedAutoSkip] = useState(false);
   const hasReusableVerifiedPhone = Boolean(currentUser?.phone && currentUser?.phoneVerificationTime);
+
+  useEffect(() => {
+    if (!currentUser?._id || !activeBusiness?._id) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(currentUser._id),
+      businessId: String(activeBusiness._id),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [activeBusiness?._id, currentUser?._id]);
 
   useEffect(() => {
     if (
