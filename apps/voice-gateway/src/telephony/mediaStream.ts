@@ -28,6 +28,7 @@ import {
   acknowledgeOutboundPlaybackMark,
   clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
+  getInterruptedAssistantPlayback,
   queuePendingOutboundPlaybackGroup,
 } from "./outboundPlayback";
 import {
@@ -130,12 +131,17 @@ type ActiveVoiceSession = {
   outboundCursorMs: number;
   outboundQueuedCursorMs: number;
   activeAssistantResponseId: string | null;
+  activeAssistantItemId: string | null;
+  activeAssistantContentIndex: number;
   pendingOutboundAudio: Array<string>;
   pendingOutboundStartMs: number | null;
   pendingOutboundPlaybackGroups: Array<{
     markName: string;
     endOffsetMs: number;
     chunks: Array<TimedAudioChunk>;
+    itemId: string | null;
+    contentIndex: number;
+    itemStartOffsetMs: number;
   }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
@@ -337,8 +343,11 @@ function cancelAssistantAudio(
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
 ): void {
-  clearPendingOutboundPlayback(session, Date.now() - session.startedAtMs);
-  postRealtimeEvent(openAiSocket, { type: "response.cancel" });
+  const elapsedMs = Date.now() - session.startedAtMs;
+  const interruptedPlayback = getInterruptedAssistantPlayback(session, elapsedMs);
+
+  clearPendingOutboundPlayback(session, elapsedMs);
+
   if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
     clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
     twilioSocket.send(
@@ -347,6 +356,15 @@ function cancelAssistantAudio(
         streamSid: session.streamSid,
       }),
     );
+  }
+
+  if (interruptedPlayback) {
+    postRealtimeEvent(openAiSocket, {
+      type: "conversation.item.truncate",
+      item_id: interruptedPlayback.itemId,
+      content_index: interruptedPlayback.contentIndex,
+      audio_end_ms: interruptedPlayback.audioEndMs,
+    });
   }
 }
 
@@ -916,6 +934,10 @@ function handleOpenAiMessage(
           elapsedMs: Date.now() - session.startedAtMs,
           payload: payload.delta,
           ...(payload.response_id ? { responseId: payload.response_id } : {}),
+          ...(payload.item_id ? { itemId: payload.item_id } : {}),
+          ...(payload.content_index !== undefined
+            ? { contentIndex: payload.content_index }
+            : {}),
         });
       }
       return;
@@ -1153,6 +1175,8 @@ export async function handleMediaStreamConnection(
     outboundCursorMs: 0,
     outboundQueuedCursorMs: 0,
     activeAssistantResponseId: null,
+    activeAssistantItemId: null,
+    activeAssistantContentIndex: 0,
     pendingOutboundAudio: [],
     pendingOutboundStartMs: null,
     pendingOutboundPlaybackGroups: [],

@@ -4,6 +4,9 @@ type PendingOutboundPlaybackGroup = {
   markName: string;
   chunks: Array<TimedAudioChunk>;
   endOffsetMs: number;
+  itemId: string | null;
+  contentIndex: number;
+  itemStartOffsetMs: number;
 };
 
 export type OutboundPlaybackTracker = {
@@ -11,6 +14,8 @@ export type OutboundPlaybackTracker = {
   outboundCursorMs: number;
   outboundQueuedCursorMs: number;
   activeAssistantResponseId: string | null;
+  activeAssistantItemId: string | null;
+  activeAssistantContentIndex: number;
   pendingOutboundAudio: Array<string>;
   pendingOutboundStartMs: number | null;
   pendingOutboundPlaybackGroups: Array<PendingOutboundPlaybackGroup>;
@@ -59,6 +64,11 @@ function slicePayloadByDuration(
 function buildPlaybackGroup(
   markName: string,
   chunks: Array<TimedAudioChunk>,
+  input?: {
+    itemId?: string | null;
+    contentIndex?: number;
+    itemStartOffsetMs?: number | null;
+  },
 ): PendingOutboundPlaybackGroup | null {
   if (chunks.length === 0) {
     return null;
@@ -73,6 +83,9 @@ function buildPlaybackGroup(
     markName,
     chunks,
     endOffsetMs: lastChunk.offsetMs + estimatePayloadDurationMs(lastChunk.payload),
+    itemId: input?.itemId ?? null,
+    contentIndex: input?.contentIndex ?? 0,
+    itemStartOffsetMs: input?.itemStartOffsetMs ?? chunks[0]?.offsetMs ?? 0,
   };
 }
 
@@ -121,8 +134,16 @@ function splitPlaybackGroupAtElapsed(
   }
 
   return {
-    playedGroup: buildPlaybackGroup(group.markName, playedChunks),
-    remainingGroup: buildPlaybackGroup(group.markName, remainingChunks),
+    playedGroup: buildPlaybackGroup(group.markName, playedChunks, {
+      itemId: group.itemId,
+      contentIndex: group.contentIndex,
+      itemStartOffsetMs: group.itemStartOffsetMs,
+    }),
+    remainingGroup: buildPlaybackGroup(group.markName, remainingChunks, {
+      itemId: group.itemId,
+      contentIndex: group.contentIndex,
+      itemStartOffsetMs: group.itemStartOffsetMs,
+    }),
   };
 }
 
@@ -131,6 +152,9 @@ function buildPendingOutboundChunks(
 ): {
   chunks: Array<TimedAudioChunk>;
   endOffsetMs: number;
+  itemId: string | null;
+  contentIndex: number;
+  itemStartOffsetMs: number;
 } | null {
   if (tracker.pendingOutboundAudio.length === 0) {
     return null;
@@ -149,11 +173,17 @@ function buildPendingOutboundChunks(
   return {
     chunks,
     endOffsetMs: cursorMs,
+    itemId: tracker.activeAssistantItemId,
+    contentIndex: tracker.activeAssistantContentIndex,
+    itemStartOffsetMs:
+      tracker.pendingOutboundStartMs ?? tracker.outboundQueuedCursorMs,
   };
 }
 
 function clearPendingCurrentResponse(tracker: OutboundPlaybackTracker): void {
   tracker.activeAssistantResponseId = null;
+  tracker.activeAssistantItemId = null;
+  tracker.activeAssistantContentIndex = 0;
   tracker.pendingOutboundAudio = [];
   tracker.pendingOutboundStartMs = null;
 }
@@ -172,11 +202,15 @@ export function captureOutboundAudio(
     elapsedMs: number;
     payload: string;
     responseId?: string;
+    itemId?: string;
+    contentIndex?: number;
   },
 ): void {
   if (input.responseId && input.responseId !== tracker.activeAssistantResponseId) {
     clearPendingCurrentResponse(tracker);
     tracker.activeAssistantResponseId = input.responseId;
+    tracker.activeAssistantItemId = input.itemId ?? null;
+    tracker.activeAssistantContentIndex = input.contentIndex ?? 0;
     tracker.pendingOutboundStartMs = Math.max(
       tracker.outboundCursorMs,
       tracker.outboundQueuedCursorMs,
@@ -184,11 +218,20 @@ export function captureOutboundAudio(
     );
   } else if (!tracker.activeAssistantResponseId) {
     tracker.activeAssistantResponseId = input.responseId ?? crypto.randomUUID();
+    tracker.activeAssistantItemId = input.itemId ?? null;
+    tracker.activeAssistantContentIndex = input.contentIndex ?? 0;
     tracker.pendingOutboundStartMs = Math.max(
       tracker.outboundCursorMs,
       tracker.outboundQueuedCursorMs,
       input.elapsedMs,
     );
+  } else {
+    if (input.itemId) {
+      tracker.activeAssistantItemId = input.itemId;
+    }
+    if (input.contentIndex !== undefined) {
+      tracker.activeAssistantContentIndex = input.contentIndex;
+    }
   }
 
   tracker.pendingOutboundAudio.push(input.payload);
@@ -208,6 +251,9 @@ export function queuePendingOutboundPlaybackGroup(
     markName,
     chunks: pendingGroup.chunks,
     endOffsetMs: pendingGroup.endOffsetMs,
+    itemId: pendingGroup.itemId,
+    contentIndex: pendingGroup.contentIndex,
+    itemStartOffsetMs: pendingGroup.itemStartOffsetMs,
   });
   tracker.outboundQueuedCursorMs = pendingGroup.endOffsetMs;
   clearPendingCurrentResponse(tracker);
@@ -238,8 +284,6 @@ export function clearPendingOutboundPlayback(
   tracker: OutboundPlaybackTracker,
   elapsedMs: number,
 ): void {
-  clearPendingCurrentResponse(tracker);
-
   for (const pendingGroup of tracker.pendingOutboundPlaybackGroups) {
     const { playedGroup } = splitPlaybackGroupAtElapsed(pendingGroup, elapsedMs);
     if (playedGroup) {
@@ -247,6 +291,27 @@ export function clearPendingOutboundPlayback(
     }
   }
 
+  const pendingCurrentGroup = buildPlaybackGroup(
+    "__active__",
+    buildPendingOutboundChunks(tracker)?.chunks ?? [],
+    {
+      itemId: tracker.activeAssistantItemId,
+      contentIndex: tracker.activeAssistantContentIndex,
+      itemStartOffsetMs:
+        tracker.pendingOutboundStartMs ?? tracker.outboundQueuedCursorMs,
+    },
+  );
+  if (pendingCurrentGroup) {
+    const { playedGroup } = splitPlaybackGroupAtElapsed(
+      pendingCurrentGroup,
+      elapsedMs,
+    );
+    if (playedGroup) {
+      commitPlayedGroup(tracker, playedGroup);
+    }
+  }
+
+  clearPendingCurrentResponse(tracker);
   tracker.pendingOutboundPlaybackGroups = [];
   tracker.outboundQueuedCursorMs = Math.max(tracker.outboundCursorMs, elapsedMs);
 }
@@ -280,4 +345,82 @@ export function flushElapsedOutboundPlayback(
     tracker.outboundCursorMs,
     tracker.pendingOutboundPlaybackGroups.at(-1)?.endOffsetMs ?? tracker.outboundQueuedCursorMs,
   );
+
+  const pendingCurrentGroup = buildPlaybackGroup(
+    "__active__",
+    buildPendingOutboundChunks(tracker)?.chunks ?? [],
+    {
+      itemId: tracker.activeAssistantItemId,
+      contentIndex: tracker.activeAssistantContentIndex,
+      itemStartOffsetMs:
+        tracker.pendingOutboundStartMs ?? tracker.outboundQueuedCursorMs,
+    },
+  );
+  if (pendingCurrentGroup) {
+    const { playedGroup } = splitPlaybackGroupAtElapsed(
+      pendingCurrentGroup,
+      elapsedMs,
+    );
+    if (playedGroup) {
+      commitPlayedGroup(tracker, playedGroup);
+    }
+  }
+
+  clearPendingCurrentResponse(tracker);
+}
+
+export function getInterruptedAssistantPlayback(
+  tracker: OutboundPlaybackTracker,
+  elapsedMs: number,
+): {
+  itemId: string;
+  contentIndex: number;
+  audioEndMs: number;
+} | null {
+  const pendingCurrent = buildPendingOutboundChunks(tracker);
+  const pendingSegments: Array<PendingOutboundPlaybackGroup> = [
+    ...tracker.pendingOutboundPlaybackGroups,
+  ];
+
+  if (pendingCurrent) {
+    const currentGroup = buildPlaybackGroup("__active__", pendingCurrent.chunks, {
+      itemId: pendingCurrent.itemId,
+      contentIndex: pendingCurrent.contentIndex,
+      itemStartOffsetMs: pendingCurrent.itemStartOffsetMs,
+    });
+    if (currentGroup) {
+      pendingSegments.push(currentGroup);
+    }
+  }
+
+  if (pendingSegments.length === 0) {
+    return null;
+  }
+
+  pendingSegments.sort((left, right) => left.itemStartOffsetMs - right.itemStartOffsetMs);
+
+  let activeSegment: PendingOutboundPlaybackGroup | null = null;
+  for (const segment of pendingSegments) {
+    if (elapsedMs < segment.itemStartOffsetMs) {
+      break;
+    }
+
+    activeSegment = segment;
+    if (elapsedMs < segment.endOffsetMs) {
+      break;
+    }
+  }
+
+  if (!activeSegment?.itemId) {
+    return null;
+  }
+
+  return {
+    itemId: activeSegment.itemId,
+    contentIndex: activeSegment.contentIndex,
+    audioEndMs: Math.max(
+      0,
+      Math.min(elapsedMs, activeSegment.endOffsetMs) - activeSegment.itemStartOffsetMs,
+    ),
+  };
 }

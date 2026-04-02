@@ -5,6 +5,7 @@ import {
   acknowledgeOutboundPlaybackMark,
   clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
+  getInterruptedAssistantPlayback,
   queuePendingOutboundPlaybackGroup,
   type OutboundPlaybackTracker,
 } from "./outboundPlayback";
@@ -15,6 +16,8 @@ function buildTracker(): OutboundPlaybackTracker {
     outboundCursorMs: 0,
     outboundQueuedCursorMs: 0,
     activeAssistantResponseId: null,
+    activeAssistantItemId: null,
+    activeAssistantContentIndex: 0,
     pendingOutboundAudio: [],
     pendingOutboundStartMs: null,
     pendingOutboundPlaybackGroups: [],
@@ -34,6 +37,7 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
 
@@ -52,6 +56,7 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
     clearPendingOutboundPlayback(tracker, 500);
@@ -70,6 +75,7 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
 
@@ -88,12 +94,14 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
     captureOutboundAudio(tracker, {
       elapsedMs: 5000,
       payload: payloadWithDurationMs(1000),
       responseId: "response-2",
+      itemId: "item-2",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-2");
 
@@ -111,12 +119,14 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
     captureOutboundAudio(tracker, {
       elapsedMs: 1000,
       payload: payloadWithDurationMs(1000),
       responseId: "response-2",
+      itemId: "item-2",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-2");
 
@@ -138,6 +148,7 @@ describe("outbound playback tracker", () => {
       elapsedMs: 0,
       payload: payloadWithDurationMs(1000),
       responseId: "response-1",
+      itemId: "item-1",
     });
     queuePendingOutboundPlaybackGroup(tracker, "audio-1");
 
@@ -149,5 +160,81 @@ describe("outbound playback tracker", () => {
     expect(Buffer.from(tracker.pendingOutboundPlaybackGroups[0]?.chunks[0]?.payload ?? "", "base64"))
       .toHaveLength(4000);
     expect(tracker.pendingOutboundPlaybackGroups[0]?.chunks[0]?.offsetMs).toBe(500);
+  });
+
+  it("preserves the elapsed portion of the active unqueued response when clearing", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+      itemId: "item-1",
+    });
+
+    clearPendingOutboundPlayback(tracker, 500);
+
+    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(Buffer.from(tracker.outboundAudio[0]?.payload ?? "", "base64")).toHaveLength(4000);
+    expect(tracker.pendingOutboundAudio).toHaveLength(0);
+  });
+
+  it("preserves the elapsed portion of the active unqueued response during teardown flush", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+      itemId: "item-1",
+    });
+
+    flushElapsedOutboundPlayback(tracker, 500);
+
+    expect(tracker.outboundAudio).toHaveLength(1);
+    expect(Buffer.from(tracker.outboundAudio[0]?.payload ?? "", "base64")).toHaveLength(4000);
+    expect(tracker.pendingOutboundAudio).toHaveLength(0);
+  });
+
+  it("reports the interrupted assistant item and played duration", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+      itemId: "item-1",
+      contentIndex: 0,
+    });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+
+    const interrupted = getInterruptedAssistantPlayback(tracker, 500);
+
+    expect(interrupted).toEqual({
+      itemId: "item-1",
+      contentIndex: 0,
+      audioEndMs: 500,
+    });
+  });
+
+  it("caps interrupted playback duration at the item end", () => {
+    const tracker = buildTracker();
+
+    captureOutboundAudio(tracker, {
+      elapsedMs: 0,
+      payload: payloadWithDurationMs(1000),
+      responseId: "response-1",
+      itemId: "item-1",
+      contentIndex: 0,
+    });
+    queuePendingOutboundPlaybackGroup(tracker, "audio-1");
+
+    const interrupted = getInterruptedAssistantPlayback(tracker, 1500);
+
+    expect(interrupted).toEqual({
+      itemId: "item-1",
+      contentIndex: 0,
+      audioEndMs: 1000,
+    });
   });
 });
