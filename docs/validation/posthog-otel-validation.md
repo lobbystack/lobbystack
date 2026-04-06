@@ -32,6 +32,8 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 2. Visit `/`, `/calls`, `/messages`, `/analytics`, `/agent`, and `/settings`.
 3. Complete one onboarding step, one knowledge upload, and one calendar connect flow.
 4. Verify these events in PostHog:
+   - `$pageview`
+   - `$pageleave`
    - `web.auth.login_succeeded`
    - `web.page.*`
    - `web.contacts.contact_opened`
@@ -42,7 +44,8 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - `web.knowledge.upload_*`
    - `web.integration.calendar_connect_*`
 5. Confirm session replay still appears for the session.
-6. In Safari, validate again with:
+6. Confirm the PostHog `Web analytics` product now shows route traffic for the tested pages.
+7. In Safari, validate again with:
    - the managed reverse proxy host `https://t.nontia.com` enabled as `VITE_POSTHOG_HOST`
    - content blockers disabled and then re-enabled if you are testing the proxy hardening
 

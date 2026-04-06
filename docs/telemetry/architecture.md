@@ -46,13 +46,19 @@ Audit data remains first-party only in `convex.audit_logs`.
 The web app initializes PostHog in `apps/web/src/main.tsx` with:
 
 - `autocapture: false`
-- `capture_pageview: false`
+- `capture_pageview: "history_change"` for SPA Web Analytics support
+- `capture_pageleave: "if_capture_pageview"` for Web Analytics lifecycle coverage
 - session replay enabled with masked inputs and block selectors
 - `api_host = https://t.nontia.com` when using the managed reverse proxy
 - `ui_host = https://us.posthog.com` so replay and insight links still resolve to PostHog Cloud
 
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
 Operator actions are captured from feature entry points such as auth, onboarding, calendar setup, knowledge uploads, and follow-up completion.
+
+This means the app now emits both:
+
+- PostHog-native `$pageview` and `$pageleave` events for the built-in Web Analytics product
+- custom `web.page.*` events for product analytics dashboards
 
 Browser events automatically include:
 
