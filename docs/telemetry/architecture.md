@@ -48,6 +48,7 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 - `autocapture: false`
 - `capture_pageview: "history_change"` for SPA Web Analytics support
 - `capture_pageleave: "if_capture_pageview"` for Web Analytics lifecycle coverage
+- browser exception autocapture for unhandled errors and unhandled rejections
 - session replay enabled with masked inputs and block selectors
 - `api_host = https://t.nontia.com` when using the managed reverse proxy
 - `ui_host = https://us.posthog.com` so replay and insight links still resolve to PostHog Cloud
@@ -65,6 +66,8 @@ Browser events automatically include:
 - `deploymentMode`
 - `pathname` for `web.*` events unless a more specific path is already set
 - `$groups.business` when a `businessId` is present
+
+The browser also exposes a `captureAnalyticsException(...)` helper for explicit technical failures in high-signal flows such as calendar connection or knowledge document upload. This is reserved for unexpected implementation or provider errors, not for expected validation or business-rule failures.
 
 ### Managed reverse proxy browser ingestion
 
@@ -163,6 +166,15 @@ Only redacted metadata is sent, such as:
 - tool names
 - transfer invocation state
 
+### Error tracking
+
+PostHog Error Tracking is enabled in both runtimes:
+
+- `apps/web` captures unhandled browser errors and unhandled promise rejections automatically, plus a few explicit technical exceptions through `captureAnalyticsException(...)`
+- `apps/voice-gateway` enables Node exception autocapture and uses `capturePostHogException(...)` for startup, request, and selected provider/runtime recovery failures
+
+Explicit exception capture should remain limited to technical failures where stack traces and runtime context materially help debugging. Business outcome failures such as `appointment.booking_failed` or `workflow.failed` should continue to be tracked as product/domain events instead of exceptions.
+
 ## Environment variables
 
 ### Browser
@@ -180,6 +192,8 @@ Only redacted metadata is sent, such as:
 - `OTEL_TRACE_SAMPLE_RATIO`
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
+
+Readable browser stack traces in hosted PostHog still depend on source map upload and retention in the deployment pipeline. Until that is wired, browser error tracking should still be considered useful for volume and basic context, but not yet ideal for full stack-trace debugging.
 
 ## Product analytics phase 2 assets
 

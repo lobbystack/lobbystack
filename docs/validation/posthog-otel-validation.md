@@ -48,6 +48,10 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 7. In Safari, validate again with:
    - the managed reverse proxy host `https://t.nontia.com` enabled as `VITE_POSTHOG_HOST`
    - content blockers disabled and then re-enabled if you are testing the proxy hardening
+8. Validate browser error tracking:
+   - trigger one unhandled error in the browser console and confirm it appears in PostHog Error Tracking
+   - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
+   - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
 
 If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POSTHOG_HOST` to `https://us.i.posthog.com` and keep `VITE_POSTHOG_UI_HOST=https://us.posthog.com`.
 
@@ -85,6 +89,9 @@ If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POST
    - OpenAI turn latency
    - tool execution latency
    - media stream disconnects
+4. Validate PostHog error tracking for the gateway:
+   - confirm a startup or request-path failure appears in PostHog Error Tracking with `runtime = voice-gateway`
+   - confirm a provider recovery failure or call record initialization failure appears with `channel = voice` and `provider = twilio`
 
 ## AI trace validation
 
@@ -183,3 +190,5 @@ These checks were completed in code during implementation:
 - `pnpm typecheck:convex`
 
 Provider validation in real PostHog and Grafana Cloud still requires live credentials and runtime traffic.
+
+Browser source maps are not yet uploaded as part of this validation flow, so browser errors may appear with limited stack-trace fidelity until deployment source map handling is added.

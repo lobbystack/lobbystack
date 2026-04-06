@@ -27,6 +27,7 @@ import {
   captureAiGeneration,
   captureAiSpan,
   captureAiTraceStarted,
+  capturePostHogException,
 } from "../observability/posthog";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import {
@@ -638,6 +639,19 @@ async function recoverFromProviderFailure(
       },
       error instanceof Error ? error.message : "Provider recovery failed",
     );
+    capturePostHogException(error, {
+      ...(session.businessId ? { businessId: session.businessId } : {}),
+      properties: {
+        operation: "provider_failure_recovery",
+        disposition: input.disposition,
+        channel: "voice",
+        provider: "twilio",
+        ...(session.callSid ? { callSid: session.callSid } : {}),
+        ...(session.streamSid ? { streamSid: session.streamSid } : {}),
+        ...(session.callId ? { callId: session.callId } : {}),
+        ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+      },
+    });
 
     // Let the recovery task settle before finalization waits on pending tasks.
     queueMicrotask(() => {
@@ -830,6 +844,16 @@ async function initializeCallRecord(
     session.conversationId = result.conversationId ?? null;
   } catch (error) {
     server.log.error(error);
+    capturePostHogException(error, {
+      businessId: session.businessId,
+      properties: {
+        operation: "initialize_call_record",
+        channel: "voice",
+        provider: "twilio",
+        callSid: session.callSid,
+        ...(session.gatewaySessionId ? { gatewaySessionId: session.gatewaySessionId } : {}),
+      },
+    });
   }
 }
 

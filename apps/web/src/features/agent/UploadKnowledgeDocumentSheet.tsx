@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { captureAnalyticsEvent } from "@/lib/analytics";
+import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics";
 import type { AgentSection } from "./sections";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -188,7 +188,13 @@ export function UploadKnowledgeDocumentSheet({
 
       setIsDialogOpen(false);
       resetState();
-    } catch {
+    } catch (error) {
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        section,
+        contentType,
+        operation: "knowledge_document_upload",
+      });
       setErrorMessage(t(`sections.${section}.uploadValidation.uploadFailed`));
     } finally {
       setIsUploading(false);

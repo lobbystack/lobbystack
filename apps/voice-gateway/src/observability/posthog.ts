@@ -5,6 +5,7 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   redactAiTraceProperties,
+  redactTelemetryProperties,
   type TelemetryProperties,
 } from "@ai-receptionist/telemetry";
 
@@ -34,6 +35,7 @@ function getClient(): PostHog | null {
     host: env.POSTHOG_HOST,
     flushAt: 1,
     flushInterval: 0,
+    enableExceptionAutocapture: true,
   });
   return client;
 }
@@ -128,4 +130,42 @@ export async function shutdownPostHog(): Promise<void> {
   if (client) {
     await client.shutdown();
   }
+}
+
+export function capturePostHogException(
+  error: unknown,
+  input?: {
+    businessId?: string;
+    distinctId?: string;
+    properties?: TelemetryProperties;
+  },
+): void {
+  const activeClient = getClient();
+  if (!activeClient) {
+    return;
+  }
+
+  const env = loadVoiceGatewayEnv(process.env);
+  const additionalProperties: Record<string, unknown> = {
+    ...redactTelemetryProperties({
+      ...input?.properties,
+      deploymentMode: env.DEPLOYMENT_MODE,
+      runtime: "voice-gateway",
+    }),
+  };
+
+  if (input?.businessId) {
+    additionalProperties.$groups = {
+      business: getPostHogBusinessGroupKey(input.businessId),
+    };
+  }
+
+  activeClient.captureException(
+    error,
+    input?.distinctId ??
+      (input?.businessId
+        ? getPostHogDistinctIdForBusinessSystem(input.businessId)
+        : undefined),
+    additionalProperties,
+  );
 }

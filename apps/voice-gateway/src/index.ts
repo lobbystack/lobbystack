@@ -7,7 +7,7 @@ import {
   shutdownObservability,
   startObservability,
 } from "./observability/otel";
-import { shutdownPostHog } from "./observability/posthog";
+import { capturePostHogException, shutdownPostHog } from "./observability/posthog";
 
 for (const envPath of [
   resolve(process.cwd(), "../../.env"),
@@ -46,6 +46,11 @@ async function main(): Promise<void> {
   } catch (error: unknown) {
     const unknownError = error instanceof Error ? error : new Error(String(error));
     server.log.error(unknownError);
+    capturePostHogException(unknownError, {
+      properties: {
+        operation: "voice_gateway_startup",
+      },
+    });
     await shutdown();
     process.exitCode = 1;
   }

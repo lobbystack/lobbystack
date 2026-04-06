@@ -3,6 +3,7 @@ import posthog from "posthog-js";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForOperator,
+  redactTelemetryProperties,
   validateTelemetryEvent,
   type TelemetryProperties,
   type TelemetryEventName,
@@ -65,6 +66,11 @@ export function initializeAnalytics(): void {
     autocapture: false,
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
+    capture_exceptions: {
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+      capture_console_errors: false,
+    },
     disable_session_recording: false,
     persistence: "localStorage+cookie",
     person_profiles: "identified_only",
@@ -220,6 +226,32 @@ export function captureAnalyticsEvent(
   posthog.capture(name, coerceProperties(nextProperties), {
     send_instantly: true,
   });
+}
+
+export function captureAnalyticsException(
+  error: unknown,
+  properties?: TelemetryProperties,
+): void {
+  if (!isAnalyticsEnabled()) {
+    return;
+  }
+
+  const nextProperties: TelemetryProperties = redactTelemetryProperties({
+    ...properties,
+    deploymentMode: DEPLOYMENT_MODE,
+    runtime: "web",
+    ...(typeof window !== "undefined" && !properties?.pathname
+      ? { pathname: window.location.pathname }
+      : {}),
+  });
+
+  if (properties?.businessId && typeof properties.businessId === "string") {
+    nextProperties.$groups = {
+      business: getPostHogBusinessGroupKey(properties.businessId),
+    };
+  }
+
+  posthog.captureException(error, coerceProperties(nextProperties));
 }
 
 function resolvePageEvent(pathname: string): TelemetryEventName | null {

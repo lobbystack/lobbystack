@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { captureAnalyticsEvent } from "@/lib/analytics";
+import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics";
 
 type IntegrationsPageProps = {
   businessId: Id<"businesses">;
@@ -283,6 +283,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           calendars[0];
         setSelectedCalendarId(selected?.id ?? "");
       } catch (error) {
+        captureAnalyticsException(error, {
+          businessId: String(businessId),
+          provider: "google",
+          operation: "list_calendars",
+        });
         setErrorMessage(
           error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
         );
@@ -337,6 +342,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         businessId: String(businessId),
         provider: "google",
       });
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        provider: "google",
+        operation: "connect_calendar",
+        staffId: selectedStaffId,
+      });
       setErrorMessage(
         error instanceof Error ? error.message : t("integrations.google.connectFailed"),
       );
@@ -366,6 +377,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       });
       setStatusMessage(t("integrations.google.calendarSaved"));
     } catch (error) {
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        provider: "google",
+        operation: "save_selected_calendar",
+        staffId: selectedStaffId,
+      });
       setErrorMessage(
         error instanceof Error ? error.message : t("integrations.google.calendarSaveFailed"),
       );
@@ -396,6 +413,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         calendars[0];
       setSelectedCalendarId(selected?.id ?? "");
     } catch (error) {
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        provider: "google",
+        operation: "refresh_calendars",
+        staffId: String(connectionStaffId),
+      });
       setErrorMessage(
         error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
       );
@@ -426,6 +449,12 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       setSelectedCalendarId("");
       setStatusMessage(t("integrations.google.disconnectedSuccess"));
     } catch (error) {
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        provider: "google",
+        operation: "disconnect_calendar",
+        staffId: selectedStaffId,
+      });
       setErrorMessage(
         error instanceof Error ? error.message : t("integrations.google.disconnectFailed"),
       );
