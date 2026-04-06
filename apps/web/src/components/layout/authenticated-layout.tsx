@@ -7,7 +7,6 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AuthenticatedLayoutProps = {
   businessName: string;
-  businessSlug?: string;
   children: ReactNode;
   onSignOut: () => void;
   operatorAvatar?: string;
@@ -29,7 +28,6 @@ function getSidebarDefaultOpen(): boolean {
 
 export function AuthenticatedLayout({
   businessName,
-  businessSlug,
   children,
   onSignOut,
   operatorAvatar,
@@ -49,7 +47,6 @@ export function AuthenticatedLayout({
     >
       <AppSidebar
         businessName={businessName}
-        businessSlug={businessSlug}
         onSignOut={onSignOut}
         {...(operatorAvatar ? { operatorAvatar } : {})}
         {...(operatorEmail ? { operatorEmail } : {})}

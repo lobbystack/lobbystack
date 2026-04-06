@@ -162,7 +162,6 @@ function WorkspaceShell() {
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
-      {...(activeBusiness?.slug ? { businessSlug: activeBusiness.slug } : {})}
       onSignOut={() => void signOut()}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
