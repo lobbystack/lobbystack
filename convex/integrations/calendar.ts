@@ -1044,6 +1044,30 @@ export const getAppointmentCalendarSyncContext = internalQuery({
   },
 });
 
+export const listAppointmentsForCalendarConnectionReset = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args): Promise<Array<Id<"appointments">>> => {
+    const appointments = await ctx.db
+      .query("appointments")
+      .withIndex("by_staff_id_and_starts_at", (q) => q.eq("staffId", args.staffId))
+      .collect();
+
+    return appointments
+      .filter(
+        (appointment) =>
+          appointment.businessId === args.businessId &&
+          (appointment.calendarSyncState === "pending" ||
+            appointment.calendarSyncState === "syncing" ||
+            appointment.calendarSyncState === "failed" ||
+            appointment.calendarSyncState === "drifted"),
+      )
+      .map((appointment) => appointment._id);
+  },
+});
+
 export const listAppointmentsForCalendarReconciliation = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -2036,6 +2060,21 @@ export const disconnectGoogleCalendar = action({
         connectionId: accessContext.existingConnectionId,
       },
     );
+    const appointmentsToReevaluate = await ctx.runQuery(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionReset,
+      {
+        businessId: args.businessId,
+        staffId: args.staffId,
+      },
+    );
+    for (const appointmentId of appointmentsToReevaluate) {
+      await ctx.runAction(
+        internal.integrations.calendar.syncAppointmentToExternalCalendars,
+        {
+          appointmentId,
+        },
+      );
+    }
     await ctx.runMutation(internal.ai.workflows.runtime.kickoffSnapshotRefresh, {
       businessId: args.businessId,
     });

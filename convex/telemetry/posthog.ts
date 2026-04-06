@@ -53,6 +53,7 @@ type FlushResult = {
 
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
+const CLAIM_LEASE_MS = 60_000;
 
 function buildCaptureUrl(host: string): string {
   return new URL("/i/v0/e/", host).toString();
@@ -159,12 +160,13 @@ export const enqueueEvent = internalMutation({
   },
 });
 
-export const listDueEvents = internalQuery({
+export const claimDueEvents = internalMutation({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const nowIso = new Date().toISOString();
+    const leaseUntilIso = new Date(Date.now() + CLAIM_LEASE_MS).toISOString();
     const limit = Math.max(1, Math.min(args.limit ?? MAX_BATCH_SIZE, MAX_BATCH_SIZE));
     const rows = await ctx.db
       .query("telemetry_outbox")
@@ -173,7 +175,18 @@ export const listDueEvents = internalQuery({
       )
       .take(limit);
 
-    return rows.filter((row) => row.destination === TELEMETRY_DESTINATION);
+    const claimedRows = [];
+    for (const row of rows) {
+      if (row.destination !== TELEMETRY_DESTINATION) {
+        continue;
+      }
+      await ctx.db.patch(row._id, {
+        availableAt: leaseUntilIso,
+      });
+      claimedRows.push(row);
+    }
+
+    return claimedRows;
   },
 });
 
@@ -230,7 +243,7 @@ export const flushDueEvents = internalAction({
       };
     }
 
-    const dueEvents = await ctx.runQuery(internal.telemetry.posthog.listDueEvents, {
+    const dueEvents = await ctx.runMutation(internal.telemetry.posthog.claimDueEvents, {
       limit: MAX_BATCH_SIZE,
     });
 

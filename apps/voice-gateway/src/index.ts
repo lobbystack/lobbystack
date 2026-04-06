@@ -2,12 +2,10 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 
-import { createServer } from "./http/server";
 import {
   shutdownObservability,
   startObservability,
 } from "./observability/otel";
-import { capturePostHogException, shutdownPostHog } from "./observability/posthog";
 
 for (const envPath of [
   resolve(process.cwd(), "../../.env"),
@@ -22,6 +20,11 @@ for (const envPath of [
 
 async function main(): Promise<void> {
   await startObservability();
+  const [{ createServer }, { capturePostHogException, shutdownPostHog }] =
+    await Promise.all([
+      import("./http/server"),
+      import("./observability/posthog"),
+    ]);
 
   const server = createServer();
   const port = Number(process.env.PORT ?? 3001);
@@ -56,4 +59,9 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+void main().catch(async (error: unknown) => {
+  const unknownError = error instanceof Error ? error : new Error(String(error));
+  console.error(unknownError);
+  await shutdownObservability().catch(() => undefined);
+  process.exitCode = 1;
+});

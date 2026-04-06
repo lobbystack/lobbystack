@@ -68,6 +68,15 @@ function buildExporterOptions(
   return headers ? { url: endpoint, headers } : { url: endpoint };
 }
 
+function configureTraceSampling(sampleRatio: number): void {
+  if (process.env.OTEL_TRACES_SAMPLER || process.env.OTEL_TRACES_SAMPLER_ARG) {
+    return;
+  }
+
+  process.env.OTEL_TRACES_SAMPLER = "parentbased_traceidratio";
+  process.env.OTEL_TRACES_SAMPLER_ARG = String(sampleRatio);
+}
+
 export const tracer = trace.getTracer("ai-receptionist.voice-gateway");
 export const meter = metrics.getMeter("ai-receptionist.voice-gateway");
 
@@ -140,6 +149,8 @@ export async function startObservability(): Promise<void> {
   if (!exporterConfig) {
     return;
   }
+
+  configureTraceSampling(exporterConfig.sampleRatio);
 
   sdk = new NodeSDK({
     resource: resourceFromAttributes({
