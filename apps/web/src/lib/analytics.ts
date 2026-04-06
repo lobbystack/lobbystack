@@ -66,11 +66,7 @@ export function initializeAnalytics(): void {
     autocapture: false,
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
-    capture_exceptions: {
-      capture_unhandled_errors: true,
-      capture_unhandled_rejections: true,
-      capture_console_errors: false,
-    },
+    capture_exceptions: true,
     disable_session_recording: false,
     persistence: "localStorage+cookie",
     person_profiles: "identified_only",
@@ -82,6 +78,12 @@ export function initializeAnalytics(): void {
   });
 
   hasInitialized = true;
+
+  posthog.startExceptionAutocapture({
+    capture_unhandled_errors: true,
+    capture_unhandled_rejections: true,
+    capture_console_errors: false,
+  });
 
   if (!posthog.sessionRecordingStarted()) {
     posthog.startSessionRecording();
