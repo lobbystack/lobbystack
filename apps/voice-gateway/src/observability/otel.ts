@@ -19,6 +19,114 @@ import { redactOtelAttributes } from "@ai-receptionist/telemetry";
 
 let sdk: NodeSDK | null = null;
 
+const OTEL_FALLBACK_EXACT_REDACTION_KEYS = new Set([
+  "body",
+  "content",
+  "message",
+  "messages",
+  "name",
+  "phone",
+  "prompt",
+  "prompts",
+  "recordingUrl",
+  "recording_url",
+  "smsBody",
+  "sms_body",
+  "text",
+  "toolArguments",
+  "tool_arguments",
+  "transcript",
+  "utterance",
+  "utterances",
+]);
+
+const OTEL_FALLBACK_PARTIAL_REDACTION_KEYWORDS = [
+  "address",
+  "body",
+  "caller",
+  "contact",
+  "customer",
+  "email",
+  "message",
+  "name",
+  "note",
+  "phone",
+  "prompt",
+  "recording",
+  "sms",
+  "text",
+  "toolarg",
+  "tool_input",
+  "transcript",
+  "utterance",
+];
+
+const OTEL_FALLBACK_SAFE_KEY_PATTERNS = ["toolname", "providername", "modelname"];
+
+function normalizeFallbackKey(key: string): string {
+  return key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+function shouldFallbackRedactKey(key: string): boolean {
+  const normalizedKey = normalizeFallbackKey(key);
+  if (
+    OTEL_FALLBACK_SAFE_KEY_PATTERNS.some((pattern) =>
+      normalizedKey.includes(pattern),
+    )
+  ) {
+    return false;
+  }
+  if (
+    OTEL_FALLBACK_EXACT_REDACTION_KEYS.has(key) ||
+    OTEL_FALLBACK_EXACT_REDACTION_KEYS.has(normalizedKey)
+  ) {
+    return true;
+  }
+  return OTEL_FALLBACK_PARTIAL_REDACTION_KEYWORDS.some((keyword) =>
+    normalizedKey.includes(keyword),
+  );
+}
+
+function maskFallbackString(value: string): string {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length >= 4) {
+    return `***${digits.slice(-4)}`;
+  }
+  if (value.length > 8) {
+    return `${value.slice(0, 2)}***${value.slice(-2)}`;
+  }
+  return "[redacted]";
+}
+
+function fallbackRedactOtelAttributes(
+  attributes: Record<string, string | number | boolean | undefined>,
+): Record<string, string | number | boolean | undefined> {
+  const sanitized: Record<string, string | number | boolean | undefined> = {};
+
+  for (const [key, value] of Object.entries(attributes)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (shouldFallbackRedactKey(key)) {
+      sanitized[key] =
+        typeof value === "string" && key.toLowerCase().includes("phone")
+          ? maskFallbackString(value)
+          : "[redacted]";
+      continue;
+    }
+
+    if (typeof value === "string" && key.toLowerCase().includes("phone")) {
+      sanitized[key] = maskFallbackString(value);
+      continue;
+    }
+
+    sanitized[key] = value;
+  }
+
+  return sanitized;
+}
+
 function parseOtlpHeaders(
   headerString: string | undefined,
 ): Record<string, string> | undefined {
@@ -193,7 +301,16 @@ export function sanitizeAttributes(attributes?: Attributes): Attributes | undefi
   if (!attributes) {
     return undefined;
   }
-  return redactOtelAttributes(attributes as Record<string, string | number | boolean | undefined>);
+
+  try {
+    return redactOtelAttributes(
+      attributes as Record<string, string | number | boolean | undefined>,
+    );
+  } catch {
+    return fallbackRedactOtelAttributes(
+      attributes as Record<string, string | number | boolean | undefined>,
+    );
+  }
 }
 
 export async function startActiveSpan<T>(

@@ -526,6 +526,46 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("recomputes synced appointment sync state after disconnecting a calendar", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-synced-appointment-business",
+        name: "Disconnect Calendar Synced Appointment Business",
+      });
+    });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    const syncResult = await t.action(
+      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      {
+        appointmentId,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      ok: true,
+      status: "synced",
+    });
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+      staffId,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+
+      expect(appointment?.calendarSyncState).toBe("not_required");
+      expect(appointment?.calendarLastSyncError).toBeUndefined();
+      expect(appointment?.calendarReconcileAfter).toBeUndefined();
+    });
+  });
+
   it("records sync failures and schedules reconciliation", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {

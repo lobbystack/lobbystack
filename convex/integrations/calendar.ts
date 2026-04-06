@@ -1062,7 +1062,9 @@ export const listAppointmentsForCalendarConnectionReset = internalQuery({
           (appointment.calendarSyncState === "pending" ||
             appointment.calendarSyncState === "syncing" ||
             appointment.calendarSyncState === "failed" ||
-            appointment.calendarSyncState === "drifted"),
+            appointment.calendarSyncState === "drifted" ||
+            appointment.calendarSyncState === "synced" ||
+            appointment.calendarSyncState === "synced_mock"),
       )
       .map((appointment) => appointment._id);
   },
