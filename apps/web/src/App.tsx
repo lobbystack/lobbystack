@@ -114,6 +114,10 @@ function WorkspaceShell() {
   }, [businessId, currentUser?._id]);
 
   useEffect(() => {
+    if (!businessId) {
+      return;
+    }
+
     trackPageView(location.pathname, businessId ? String(businessId) : undefined);
   }, [businessId, location.pathname]);
 

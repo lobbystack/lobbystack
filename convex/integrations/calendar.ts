@@ -703,6 +703,17 @@ export const disconnectCalendarConnection = internalMutation({
       throw new Error("Calendar connection not found.");
     }
 
+    const busyBlocks = await ctx.db
+      .query("calendar_busy_blocks")
+      .withIndex("by_connection_id_and_starts_at", (q) =>
+        q.eq("connectionId", args.connectionId),
+      )
+      .collect();
+
+    for (const block of busyBlocks) {
+      await ctx.db.delete(block._id);
+    }
+
     const {
       encryptedAccessToken: _encryptedAccessToken,
       encryptedRefreshToken: _encryptedRefreshToken,

@@ -16,6 +16,10 @@ Validate that:
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
 - `VITE_POSTHOG_UI_HOST`
+- `POSTHOG_CLI_API_KEY`
+- `POSTHOG_CLI_PROJECT_ID`
+- `POSTHOG_CLI_HOST` if you are not on the US PostHog Cloud host
+- `POSTHOG_RELEASE_NAME` and `POSTHOG_RELEASE_VERSION` if you want to override the default release metadata
 
 ### Convex / voice gateway
 
@@ -52,6 +56,10 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - trigger one unhandled error in the browser console and confirm it appears in PostHog Error Tracking
    - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
    - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
+9. Validate browser source maps:
+   - deploy with `pnpm --filter @ai-receptionist/web deploy:cloudflare` or `preview:cloudflare`
+   - confirm the built JavaScript served in production includes injected `//# chunkId=...` comments
+   - confirm the matching release exists in PostHog symbol sets and browser stack traces resolve to source files instead of minified bundles
 
 If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POSTHOG_HOST` to `https://us.i.posthog.com` and keep `VITE_POSTHOG_UI_HOST=https://us.posthog.com`.
 
@@ -191,4 +199,4 @@ These checks were completed in code during implementation:
 
 Provider validation in real PostHog and Grafana Cloud still requires live credentials and runtime traffic.
 
-Browser source maps are not yet uploaded as part of this validation flow, so browser errors may appear with limited stack-trace fidelity until deployment source map handling is added.
+Browser source maps are now uploaded through the web deploy pipeline. If stack traces show minified bundles again, first verify that `pnpm posthog:sourcemaps` ran with valid CLI credentials and that Cloudflare served the injected assets from that same build output.

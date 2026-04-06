@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
-    "deploy:cloudflare": "wrangler deploy",
-    "preview:cloudflare": "wrangler versions upload",
+    "posthog:sourcemaps": "node ./scripts/upload-posthog-sourcemaps.mjs",
+    "deploy:cloudflare": "pnpm build && pnpm posthog:sourcemaps && wrangler deploy",
+    "preview:cloudflare": "pnpm build && pnpm posthog:sourcemaps && wrangler versions upload",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
@@ -55,6 +56,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@posthog/cli": "^0.7.5",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.0.10",

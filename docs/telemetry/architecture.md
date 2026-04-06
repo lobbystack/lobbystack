@@ -69,6 +69,13 @@ Browser events automatically include:
 
 The browser also exposes a `captureAnalyticsException(...)` helper for explicit technical failures in high-signal flows such as calendar connection or knowledge document upload. This is reserved for unexpected implementation or provider errors, not for expected validation or business-rule failures.
 
+Production browser deploys now follow PostHog's required source map flow:
+
+- `vite build` emits source maps
+- `apps/web/scripts/upload-posthog-sourcemaps.mjs` runs `posthog-cli sourcemap inject`
+- the same script uploads the injected assets to PostHog with a stable release name and commit-based release version
+- `wrangler deploy` serves the already-injected assets from `dist/`
+
 ### Managed reverse proxy browser ingestion
 
 Browser analytics should use PostHog's managed reverse proxy directly:
@@ -182,6 +189,11 @@ Explicit exception capture should remain limited to technical failures where sta
 - `VITE_POSTHOG_KEY`
 - `VITE_POSTHOG_HOST`
 - `VITE_POSTHOG_UI_HOST`
+- `POSTHOG_CLI_API_KEY`
+- `POSTHOG_CLI_PROJECT_ID`
+- `POSTHOG_CLI_HOST`
+- `POSTHOG_RELEASE_NAME`
+- `POSTHOG_RELEASE_VERSION`
 
 ### Server and voice gateway
 
@@ -193,7 +205,7 @@ Explicit exception capture should remain limited to technical failures where sta
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
 
-Readable browser stack traces in hosted PostHog still depend on source map upload and retention in the deployment pipeline. Until that is wired, browser error tracking should still be considered useful for volume and basic context, but not yet ideal for full stack-trace debugging.
+Readable browser stack traces in hosted PostHog now depend on the deploy path continuing to run `pnpm posthog:sourcemaps` before Cloudflare publish. If that step is skipped, browser errors will regress back to minified stack traces even though exception capture itself still works.
 
 ## Product analytics phase 2 assets
 

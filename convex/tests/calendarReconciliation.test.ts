@@ -419,6 +419,77 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("removes stale busy blocks when a calendar connection is disconnected", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-busy-blocks-business",
+        name: "Disconnect Calendar Busy Blocks Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.mutation(internal.integrations.calendar.applyCalendarBusyBlockChanges, {
+      connectionId,
+      fullSync: true,
+      syncedAt: "2026-03-17T12:00:00.000Z",
+      busyBlocks: [
+        {
+          startsAt: "2026-03-17T14:00:00.000-04:00",
+          endsAt: "2026-03-17T14:30:00.000-04:00",
+          externalEventId: "busy-1",
+          sourceCalendarId: "primary-calendar",
+        },
+      ],
+      removedExternalEventIds: [],
+    });
+
+    const blockedAvailability = await t.query(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000-04:00",
+        timezone: "America/Toronto",
+      },
+    );
+
+    expect(blockedAvailability).toHaveLength(0);
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+      staffId,
+    });
+
+    const availableAfterDisconnect = await t.query(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000-04:00",
+        timezone: "America/Toronto",
+      },
+    );
+
+    expect(availableAfterDisconnect).toHaveLength(1);
+
+    await t.run(async (ctx) => {
+      const busyBlocks = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_starts_at", (q) =>
+          q.eq("connectionId", connectionId),
+        )
+        .collect();
+      const connection = await ctx.db.get(connectionId);
+
+      expect(busyBlocks).toHaveLength(0);
+      expect(connection?.status).toBe("disconnected");
+    });
+  });
+
   it("records sync failures and schedules reconciliation", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
