@@ -140,6 +140,46 @@ function coerceProperties(
   return coerced;
 }
 
+function normalizeException(error: unknown): {
+  type: string;
+  value: string;
+  stack?: string;
+} {
+  if (error instanceof Error) {
+    const normalized: {
+      type: string;
+      value: string;
+      stack?: string;
+    } = {
+      type: error.name || "Error",
+      value: error.message || "Unknown error",
+    };
+    if (error.stack) {
+      normalized.stack = error.stack;
+    }
+    return normalized;
+  }
+
+  if (typeof error === "string") {
+    return {
+      type: "Error",
+      value: error,
+    };
+  }
+
+  try {
+    return {
+      type: "Error",
+      value: JSON.stringify(error),
+    };
+  } catch {
+    return {
+      type: "Error",
+      value: "Unknown error",
+    };
+  }
+}
+
 export function identifyOperator(args: IdentifyOperatorArgs): void {
   if (!isAnalyticsEnabled()) {
     return;
@@ -252,8 +292,16 @@ export function captureAnalyticsException(
       business: getPostHogBusinessGroupKey(properties.businessId),
     };
   }
+  const normalized = normalizeException(error);
 
-  posthog.captureException(error, coerceProperties(nextProperties));
+  const errorToCapture =
+    error instanceof Error
+      ? error
+      : new Error(normalized.value, {
+          ...(normalized.stack ? { cause: normalized.stack } : {}),
+        });
+
+  posthog.captureException(errorToCapture, coerceProperties(nextProperties));
 }
 
 function resolvePageEvent(pathname: string): TelemetryEventName | null {
