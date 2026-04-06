@@ -43,8 +43,10 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - `web.integration.calendar_connect_*`
 5. Confirm session replay still appears for the session.
 6. In Safari, validate again with:
-   - the first-party ingestion path enabled
+   - the managed reverse proxy host `https://t.nontia.com` enabled as `VITE_POSTHOG_HOST`
    - content blockers disabled and then re-enabled if you are testing the proxy hardening
+
+If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POSTHOG_HOST` to `https://us.i.posthog.com` and keep `VITE_POSTHOG_UI_HOST=https://us.posthog.com`.
 
 ## Convex validation
 

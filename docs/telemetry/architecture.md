@@ -48,7 +48,8 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 - `autocapture: false`
 - `capture_pageview: false`
 - session replay enabled with masked inputs and block selectors
-- `ui_host = https://us.posthog.com` when using a first-party ingestion proxy
+- `api_host = https://t.nontia.com` when using the managed reverse proxy
+- `ui_host = https://us.posthog.com` so replay and insight links still resolve to PostHog Cloud
 
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
 Operator actions are captured from feature entry points such as auth, onboarding, calendar setup, knowledge uploads, and follow-up completion.
@@ -59,15 +60,15 @@ Browser events automatically include:
 - `pathname` for `web.*` events unless a more specific path is already set
 - `$groups.business` when a `businessId` is present
 
-### First-party browser ingestion
+### Managed reverse proxy browser ingestion
 
-`apps/web/worker/index.ts` now proxies PostHog ingestion through a first-party path:
+Browser analytics should use PostHog's managed reverse proxy directly:
 
-- browser `api_host = /ingest/posthog`
-- worker proxy target defaults to `https://us.i.posthog.com`
-- browser `ui_host` still points to `https://us.posthog.com`
+- browser `api_host = https://t.nontia.com`
+- browser `ui_host = https://us.posthog.com`
+- the old worker proxy path `/ingest/posthog` is treated as a legacy value and mapped to `https://t.nontia.com` in the web client for a safe rollout
 
-This keeps session replay support intact while reducing Safari and ad-blocker drop-off.
+This keeps session replay support intact while reducing Safari and ad-blocker drop-off without requiring a custom Worker relay.
 
 ### `convex`
 

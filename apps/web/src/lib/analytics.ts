@@ -15,9 +15,25 @@ type IdentifyOperatorArgs = {
 };
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST;
-const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST;
 const DEPLOYMENT_MODE = import.meta.env.VITE_DEPLOYMENT_MODE ?? "development";
+const LEGACY_WORKER_PROXY_HOST = "/ingest/posthog";
+const MANAGED_POSTHOG_PROXY_HOST = "https://t.nontia.com";
+
+function resolvePostHogHost(rawHost?: string): string | undefined {
+  const host = rawHost?.trim();
+  if (!host) {
+    return undefined;
+  }
+
+  if (host === LEGACY_WORKER_PROXY_HOST) {
+    return MANAGED_POSTHOG_PROXY_HOST;
+  }
+
+  return host;
+}
+
+const POSTHOG_HOST = resolvePostHogHost(import.meta.env.VITE_POSTHOG_HOST);
+const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST ?? "https://us.posthog.com";
 
 let hasInitialized = false;
 let lastPageEventKey: string | null = null;
@@ -41,8 +57,10 @@ export function initializeAnalytics(): void {
     return;
   }
 
+  const posthogHost = POSTHOG_HOST!;
+
   posthog.init(POSTHOG_KEY!, {
-    api_host: POSTHOG_HOST,
+    api_host: posthogHost,
     ...(POSTHOG_UI_HOST ? { ui_host: POSTHOG_UI_HOST } : {}),
     autocapture: false,
     capture_pageview: false,
