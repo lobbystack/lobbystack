@@ -41,7 +41,7 @@ describe("telemetry redaction", () => {
     expect(sink.events[0]?.properties.customerPhone).toBe("***0000");
     expect(sink.events[0]?.properties.body).toBe("[redacted]");
     expect(sink.events[0]?.properties.transcript).toBe("[redacted]");
-    expect(sink.events[0]?.properties.internalToken).toBe("secret");
+    expect(sink.events[0]?.properties.internalToken).toBe("[redacted]");
     expect(sink.events[0]?.properties.harmless).toBe("ok");
   });
 
@@ -64,6 +64,20 @@ describe("telemetry redaction", () => {
     expect(properties.toolArguments).toBe("[redacted]");
     expect(properties.tokenCount).toBe(42);
     expect(properties.tools).toEqual(["checkAvailability", "bookAppointment"]);
+  });
+
+  it("keeps token usage metrics while redacting credential-like token fields", () => {
+    const properties = redactAiTraceProperties({
+      access_token: "secret-access-token",
+      refreshToken: "secret-refresh-token",
+      totalTokens: 120,
+      inputTokens: 55,
+    });
+
+    expect(properties.access_token).toBe("[redacted]");
+    expect(properties.refreshToken).toBe("[redacted]");
+    expect(properties.totalTokens).toBe(120);
+    expect(properties.inputTokens).toBe(55);
   });
 
   it("preserves workflowName while still redacting sensitive name fields", () => {

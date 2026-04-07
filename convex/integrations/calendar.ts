@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   getPostHogBusinessGroupKey,
@@ -28,6 +29,7 @@ export const CALENDAR_RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
 const CALENDAR_SYNC_RETRY_DELAY_MS = CALENDAR_RECONCILIATION_INTERVAL_MS;
 const CALENDAR_SYNC_PENDING_TIMEOUT_MS = 15 * 60 * 1000;
 const CALENDAR_SYNC_SYNCING_TIMEOUT_MS = 15 * 60 * 1000;
+const CALENDAR_DISCONNECT_BATCH_SIZE = 50;
 
 const calendarSyncStateValidator = v.union(
   v.literal("not_required"),
@@ -118,10 +120,23 @@ const CALENDAR_INTEGRATION_ADMIN_ROLES = new Set([
   "owner",
 ]);
 
+const CALENDAR_CONNECTION_RESET_STATES = new Set<CalendarSyncState>([
+  "pending",
+  "syncing",
+  "failed",
+  "drifted",
+  "synced",
+  "synced_mock",
+]);
+
 function requireCalendarIntegrationAdminRole(role: string): void {
   if (!CALENDAR_INTEGRATION_ADMIN_ROLES.has(role)) {
     throw new Error("Calendar integrations require admin access.");
   }
+}
+
+function isCalendarConnectionResetState(state: CalendarSyncState): boolean {
+  return CALENDAR_CONNECTION_RESET_STATES.has(state);
 }
 
 type GoogleCalendarOption = {
@@ -1045,29 +1060,129 @@ export const getAppointmentCalendarSyncContext = internalQuery({
   },
 });
 
-export const listAppointmentsForCalendarConnectionReset = internalQuery({
+export const listAppointmentsForCalendarConnectionResetPage = internalQuery({
   args: {
     businessId: v.id("businesses"),
     staffId: v.id("staff"),
+    paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, args): Promise<Array<Id<"appointments">>> => {
-    const appointments = await ctx.db
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    appointmentIds: Array<Id<"appointments">>;
+    continueCursor: string | null;
+    isDone: boolean;
+  }> => {
+    const page = await ctx.db
       .query("appointments")
       .withIndex("by_staff_id_and_starts_at", (q) => q.eq("staffId", args.staffId))
-      .collect();
+      .paginate(args.paginationOpts);
 
-    return appointments
-      .filter(
+    return {
+      appointmentIds: page.page.filter(
         (appointment) =>
           appointment.businessId === args.businessId &&
-          (appointment.calendarSyncState === "pending" ||
-            appointment.calendarSyncState === "syncing" ||
-            appointment.calendarSyncState === "failed" ||
-            appointment.calendarSyncState === "drifted" ||
-            appointment.calendarSyncState === "synced" ||
-            appointment.calendarSyncState === "synced_mock"),
+          isCalendarConnectionResetState(appointment.calendarSyncState),
       )
-      .map((appointment) => appointment._id);
+      .map((appointment) => appointment._id),
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
+  },
+});
+
+export const processGoogleCalendarDisconnectBatch = internalAction({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+    connectionId: v.id("calendar_connections"),
+    phase: v.union(v.literal("delete"), v.literal("reevaluate")),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<null> => {
+    const page: {
+      appointmentIds: Array<Id<"appointments">>;
+      continueCursor: string | null;
+      isDone: boolean;
+    } = await ctx.runQuery(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionResetPage,
+      {
+        businessId: args.businessId,
+        staffId: args.staffId,
+        paginationOpts: {
+          numItems: CALENDAR_DISCONNECT_BATCH_SIZE,
+          cursor: args.cursor ?? null,
+        },
+      },
+    );
+
+    for (const appointmentId of page.appointmentIds) {
+      if (args.phase === "delete") {
+        await ctx.runAction(
+          internal.integrations.googleCalendar.deleteAppointmentEventForDisconnect,
+          {
+            appointmentId,
+          },
+        );
+        continue;
+      }
+
+      await ctx.runAction(internal.integrations.calendar.syncAppointmentToExternalCalendars, {
+        appointmentId,
+      });
+    }
+
+    if (!page.isDone) {
+      await ctx.runMutation(
+        internal.integrations.calendar.scheduleGoogleCalendarDisconnectBatch,
+        {
+          ...args,
+          cursor: page.continueCursor,
+        },
+      );
+      return null;
+    }
+
+    if (args.phase === "delete") {
+      await ctx.runMutation(internal.integrations.calendar.disconnectCalendarConnection, {
+        connectionId: args.connectionId,
+      });
+      await ctx.runAction(
+        internal.integrations.calendar.processGoogleCalendarDisconnectBatch,
+        {
+          businessId: args.businessId,
+          staffId: args.staffId,
+          connectionId: args.connectionId,
+          phase: "reevaluate",
+          cursor: null,
+        },
+      );
+      return null;
+    }
+
+    await ctx.runMutation(internal.ai.workflows.runtime.kickoffSnapshotRefresh, {
+      businessId: args.businessId,
+    });
+    return null;
+  },
+});
+
+export const scheduleGoogleCalendarDisconnectBatch = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+    connectionId: v.id("calendar_connections"),
+    phase: v.union(v.literal("delete"), v.literal("reevaluate")),
+    cursor: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<null> => {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.integrations.calendar.processGoogleCalendarDisconnectBatch,
+      args,
+    );
+    return null;
   },
 });
 
@@ -2055,38 +2170,16 @@ export const disconnectGoogleCalendar = action({
       throw new Error("Google Calendar is not connected for this team member.");
     }
 
-    const appointmentsToReevaluate = await ctx.runQuery(
-      internal.integrations.calendar.listAppointmentsForCalendarConnectionReset,
+    await ctx.runAction(
+      internal.integrations.calendar.processGoogleCalendarDisconnectBatch,
       {
         businessId: args.businessId,
         staffId: args.staffId,
-      },
-    );
-    for (const appointmentId of appointmentsToReevaluate) {
-      await ctx.runAction(
-        internal.integrations.googleCalendar.deleteAppointmentEventForDisconnect,
-        {
-          appointmentId,
-        },
-      );
-    }
-    await ctx.runMutation(
-      internal.integrations.calendar.disconnectCalendarConnection,
-      {
         connectionId: accessContext.existingConnectionId,
+        phase: "delete",
+        cursor: null,
       },
     );
-    for (const appointmentId of appointmentsToReevaluate) {
-      await ctx.runAction(
-        internal.integrations.calendar.syncAppointmentToExternalCalendars,
-        {
-          appointmentId,
-        },
-      );
-    }
-    await ctx.runMutation(internal.ai.workflows.runtime.kickoffSnapshotRefresh, {
-      businessId: args.businessId,
-    });
 
     return null;
   },

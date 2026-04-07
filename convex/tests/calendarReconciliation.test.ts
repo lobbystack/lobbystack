@@ -567,6 +567,70 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("pages calendar disconnect reset candidates instead of collecting them all at once", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-paged-reset-business",
+        name: "Disconnect Calendar Paged Reset Business",
+      });
+    });
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 55; index += 1) {
+        const startsAt = new Date(Date.UTC(2026, 2, 17 + index, 18, 0, 0));
+        const endsAt = new Date(Date.UTC(2026, 2, 17 + index, 18, 30, 0));
+        const contactId = await ctx.db.insert("contacts", {
+          businessId,
+          phone: `+1416555${String(index).padStart(4, "0")}`,
+        });
+        await ctx.db.insert("appointments", {
+          businessId,
+          contactId,
+          staffId,
+          serviceId,
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          timezone: "America/Toronto",
+          status: "confirmed",
+          sourceChannel: "dashboard",
+          calendarSyncState: "synced",
+        });
+      }
+    });
+
+    const firstPage = await t.query(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionResetPage,
+      {
+        businessId,
+        staffId,
+        paginationOpts: {
+          numItems: 50,
+          cursor: null,
+        },
+      },
+    );
+
+    expect(firstPage.appointmentIds).toHaveLength(50);
+    expect(firstPage.isDone).toBe(false);
+    expect(firstPage.continueCursor).toBeTruthy();
+
+    const secondPage = await t.query(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionResetPage,
+      {
+        businessId,
+        staffId,
+        paginationOpts: {
+          numItems: 50,
+          cursor: firstPage.continueCursor,
+        },
+      },
+    );
+
+    expect(secondPage.appointmentIds).toHaveLength(5);
+    expect(secondPage.isDone).toBe(true);
+  });
+
   it("removes mirrored Google events before disconnecting the calendar", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {

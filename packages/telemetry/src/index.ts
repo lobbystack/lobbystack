@@ -412,6 +412,7 @@ const PARTIAL_REDACTION_KEYWORDS = [
   "recording",
   "sms",
   "text",
+  "token",
   "toolarg",
   "tool_input",
   "transcript",
@@ -419,6 +420,14 @@ const PARTIAL_REDACTION_KEYWORDS = [
 ];
 
 const SAFE_KEY_PATTERNS = [
+  "cachedtokens",
+  "completiontokens",
+  "inputtokens",
+  "outputtokens",
+  "prompttokens",
+  "reasoningtokens",
+  "tokencount",
+  "totaltokens",
   "toolname",
   "providername",
   "modelname",
