@@ -1369,6 +1369,7 @@ export const syncAppointmentToExternalCalendars = internalAction({
           calendarSyncState: "not_required",
           clearCalendarLastSyncError: true,
           clearCalendarReconcileAfter: true,
+          clearCalendarExternalEventId: true,
         },
       );
       await ctx.runMutation(

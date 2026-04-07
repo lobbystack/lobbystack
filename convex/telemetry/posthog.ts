@@ -77,6 +77,7 @@ export function serializePostHogEvent(
 ): SerializedOutboxEvent {
   const properties = redactTelemetryProperties(input.properties ?? {});
   const deploymentMode = process.env.DEPLOYMENT_MODE ?? "development";
+  const occurredAt = new Date().toISOString();
 
   if (isTelemetryEventName(input.eventName)) {
     const validation = validateTelemetryEvent({
@@ -106,6 +107,7 @@ export function serializePostHogEvent(
     ...(input.businessId !== undefined ? { businessId: input.businessId } : {}),
     ...(input.groupKey !== undefined ? { groupKey: input.groupKey } : {}),
     payloadJson: JSON.stringify({
+      occurredAt,
       properties,
       ...(input.businessId !== undefined ? { businessId: String(input.businessId) } : {}),
       ...(input.conversationId !== undefined
@@ -268,6 +270,7 @@ export const flushDueEvents = internalAction({
     for (const event of dueEvents) {
       try {
         const payload = JSON.parse(event.payloadJson) as {
+          occurredAt?: string;
           deploymentMode?: string;
           businessId?: string;
           conversationId?: string;
@@ -289,6 +292,9 @@ export const flushDueEvents = internalAction({
             api_key: posthogKey,
             event: event.eventName,
             distinct_id: event.distinctId,
+            ...(payload.occurredAt !== undefined
+              ? { timestamp: payload.occurredAt }
+              : {}),
             properties: {
               ...payload.properties,
               ...(payload.deploymentMode !== undefined

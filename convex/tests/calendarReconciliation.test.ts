@@ -523,6 +523,7 @@ describe("calendar reconciliation backend", () => {
       expect(appointment?.calendarSyncState).toBe("not_required");
       expect(appointment?.calendarLastSyncError).toBeUndefined();
       expect(appointment?.calendarReconcileAfter).toBeUndefined();
+      expect(appointment?.calendarExternalEventId).toBeUndefined();
     });
   });
 

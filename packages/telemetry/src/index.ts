@@ -415,7 +415,12 @@ const PARTIAL_REDACTION_KEYWORDS = [
   "utterance",
 ];
 
-const SAFE_KEY_PATTERNS = ["toolname", "providername", "modelname"];
+const SAFE_KEY_PATTERNS = [
+  "toolname",
+  "providername",
+  "modelname",
+  "workflowname",
+];
 
 function normalizeKey(key: string): string {
   return key.replace(/[^a-z0-9]/gi, "").toLowerCase();

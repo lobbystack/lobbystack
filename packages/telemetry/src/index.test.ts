@@ -66,6 +66,16 @@ describe("telemetry redaction", () => {
     expect(properties.tools).toEqual(["checkAvailability", "bookAppointment"]);
   });
 
+  it("preserves workflowName while still redacting sensitive name fields", () => {
+    const properties = redactAiTraceProperties({
+      workflowName: "appointmentCalendarSyncWorkflow",
+      customerName: "Jane Doe",
+    });
+
+    expect(properties.workflowName).toBe("appointmentCalendarSyncWorkflow");
+    expect(properties.customerName).toBe("[redacted]");
+  });
+
   it("redacts OTEL attributes that might contain customer data", () => {
     const attributes = redactOtelAttributes({
       "ai_receptionist.customer_phone": "+14165550000",

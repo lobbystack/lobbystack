@@ -87,9 +87,11 @@ export function captureAiGeneration(
     properties?: TelemetryProperties;
   },
 ): void {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
   capture("$ai_generation", input.businessId, {
     ...buildBaseProperties(input),
-    ...(input.latencyMs !== undefined ? { $ai_latency: input.latencyMs } : {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
     ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
     ...(input.error ? { $ai_error: input.error } : {}),
     ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
@@ -116,10 +118,12 @@ export function captureAiSpan(
     properties?: TelemetryProperties;
   },
 ): void {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
   capture("$ai_span", input.businessId, {
     ...buildBaseProperties(input),
     $ai_span_name: input.spanName,
-    ...(input.latencyMs !== undefined ? { $ai_latency: input.latencyMs } : {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
     ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
     ...(input.error ? { $ai_error: input.error } : {}),
     ...redactAiTraceProperties(input.properties ?? {}),
