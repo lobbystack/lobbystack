@@ -40,7 +40,7 @@ import {
 } from "../../lib/knowledgeSections";
 import { normalizeRuntimeLocale } from "../../lib/runtimeLocale";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
-import { serializePostHogEvent } from "../../telemetry/posthog";
+import { enqueuePostHogEventBestEffort } from "../../telemetry/posthog";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
 type PreviewKnowledgeAnswer = { text: string; threadId: string };
@@ -221,20 +221,17 @@ async function indexKnowledgeDocumentById(
       processingProgress: result.status === "ready" ? 100 : 96,
     });
     if (result.status === "ready") {
-      await ctx.runMutation(
-        internal.telemetry.posthog.enqueueEvent,
-        serializePostHogEvent({
-          eventName: "knowledge.document_indexed",
-          businessId: document.businessId,
-          distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
-          groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
-          properties: {
-            documentId: String(documentId),
-            sourceType: document.sourceType,
-            section: document.section,
-          },
-        }),
-      );
+      await enqueuePostHogEventBestEffort(ctx, {
+        eventName: "knowledge.document_indexed",
+        businessId: document.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+        properties: {
+          documentId: String(documentId),
+          sourceType: document.sourceType,
+          section: document.section,
+        },
+      });
     }
     await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
@@ -860,20 +857,17 @@ export const searchKnowledgeForVoiceInternal = internalAction({
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await enqueueStaleKnowledgeReindex(ctx, args.businessId);
     const results = await searchIndexedKnowledge(ctx, args);
-    await ctx.runMutation(
-      internal.telemetry.posthog.enqueueEvent,
-      serializePostHogEvent({
-        eventName: "knowledge.search_executed",
-        businessId: args.businessId,
-        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
-        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
-        channel: "voice",
-        properties: {
-          queryLength: args.query.trim().length,
-          resultCount: results.length,
-        },
-      }),
-    );
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "knowledge.search_executed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      channel: "voice",
+      properties: {
+        queryLength: args.query.trim().length,
+        resultCount: results.length,
+      },
+    });
     return results;
   },
 });
@@ -887,20 +881,17 @@ export const searchKnowledgeForDashboard = action({
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await requireKnowledgeAccess(ctx, args.businessId);
     const results = await searchKnowledge(ctx, args);
-    await ctx.runMutation(
-      internal.telemetry.posthog.enqueueEvent,
-      serializePostHogEvent({
-        eventName: "knowledge.search_executed",
-        businessId: args.businessId,
-        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
-        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
-        channel: "dashboard",
-        properties: {
-          queryLength: args.query.trim().length,
-          resultCount: results.length,
-        },
-      }),
-    );
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "knowledge.search_executed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      channel: "dashboard",
+      properties: {
+        queryLength: args.query.trim().length,
+        resultCount: results.length,
+      },
+    });
     return results;
   },
 });
