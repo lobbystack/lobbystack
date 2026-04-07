@@ -360,6 +360,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
     try {
       await disconnectGoogleCalendar({ businessId });
+      captureAnalyticsEvent("web.integration.calendar_disconnect_completed", {
+        businessId: String(businessId),
+        provider: "google",
+      });
       setGoogleSheetOpen(false);
       setCalendarOptions([]);
       setSelectedCalendarId("");

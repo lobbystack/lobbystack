@@ -57,6 +57,7 @@ type FlushResult = {
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
 const CLAIM_LEASE_MS = 60_000;
+const POSTHOG_REQUEST_TIMEOUT_MS = 30_000;
 const CLAIMED_STATUS = "processing";
 
 function buildCaptureUrl(host: string): string {
@@ -315,6 +316,7 @@ export const flushDueEvents = internalAction({
           headers: {
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(POSTHOG_REQUEST_TIMEOUT_MS),
           body: JSON.stringify({
             api_key: posthogKey,
             event: event.eventName,
