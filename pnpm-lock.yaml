@@ -375,11 +375,7 @@ importers:
 
   packages/shared: {}
 
-  packages/telemetry:
-    dependencies:
-      '@ai-receptionist/shared':
-        specifier: workspace:*
-        version: link:../shared
+  packages/telemetry: {}
 
 packages:
 

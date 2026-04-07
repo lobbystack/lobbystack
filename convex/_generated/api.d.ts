@@ -36,6 +36,7 @@ import type * as lib_accountCredentials from "../lib/accountCredentials.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_components from "../lib/components.js";
+import type * as lib_defaultStaff from "../lib/defaultStaff.js";
 import type * as lib_emailChange from "../lib/emailChange.js";
 import type * as lib_indexedQueries from "../lib/indexedQueries.js";
 import type * as lib_knowledgeDocuments from "../lib/knowledgeDocuments.js";
@@ -112,6 +113,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/components": typeof lib_components;
+  "lib/defaultStaff": typeof lib_defaultStaff;
   "lib/emailChange": typeof lib_emailChange;
   "lib/indexedQueries": typeof lib_indexedQueries;
   "lib/knowledgeDocuments": typeof lib_knowledgeDocuments;

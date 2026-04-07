@@ -397,14 +397,14 @@ function buildSetupIssueReply(
 ): string {
   if (setupIssue === "no_active_staff") {
     return localizeRuntimeText(locale, {
-      en: `${serviceName} cannot be booked yet because no active team members are configured for booking.`,
-      fr: `${serviceName} ne peut pas encore être réservé, car aucun membre actif de l'équipe n'est configuré pour les réservations.`,
+      en: `${serviceName} cannot be booked yet because booking is not configured for this business yet.`,
+      fr: `${serviceName} ne peut pas encore être réservé, car les réservations ne sont pas encore configurées pour cette entreprise.`,
     });
   }
 
   return localizeRuntimeText(locale, {
-    en: `${serviceName} cannot be booked yet because no active team member is assigned to that service.`,
-    fr: `${serviceName} ne peut pas encore être réservé, car aucun membre actif de l'équipe n'est assigné à ce service.`,
+    en: `${serviceName} cannot be booked yet because booking is not configured for this service yet.`,
+    fr: `${serviceName} ne peut pas encore être réservé, car les réservations ne sont pas encore configurées pour ce service.`,
   });
 }
 
@@ -2606,6 +2606,9 @@ async function maybeGenerateSmsSchedulingResult(
     locale,
   });
 
+  await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+    businessId,
+  });
   const setup: { activeStaffCount: number; assignmentCount: number } = await ctx.runQuery(
     internal.voice.runtime.getActiveStaffAssignmentsForService,
     {

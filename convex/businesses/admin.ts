@@ -3,6 +3,7 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
+import { ensureDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { assertBootstrapAllowed } from "../onboarding/abuse";
 import { workflowManager } from "../lib/components";
 import {
@@ -71,6 +72,11 @@ export const bootstrapBusiness = mutation({
       smsInstructions:
         "Keep replies concise and friendly. Ask one follow-up question at a time.",
       transferMode: DEFAULT_RECEPTIONIST_TRANSFER_MODE,
+    });
+
+    await ensureDefaultStaffForBusiness(ctx, {
+      businessId,
+      timezone: args.timezone,
     });
 
     await ctx.db.patch(user._id, { activeBusinessId: businessId });

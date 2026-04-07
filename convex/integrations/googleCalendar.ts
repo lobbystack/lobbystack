@@ -200,16 +200,12 @@ function buildGoogleAuthorizationUrl(state: string): string {
 
 function buildSettingsRedirectUrl(input: {
   status: "success" | "error";
-  staffId?: Id<"staff">;
   message?: string;
 }): string {
   const { appBaseUrl } = requireGoogleEnv();
   const url = new URL("/settings/integrations", appBaseUrl);
   url.searchParams.set("calendar", "google");
   url.searchParams.set("status", input.status);
-  if (input.staffId) {
-    url.searchParams.set("staffId", String(input.staffId));
-  }
   if (input.message) {
     url.searchParams.set("message", input.message);
   }
@@ -616,7 +612,6 @@ export const completeOAuthCallback = internalAction({
     return {
       redirectUrl: buildSettingsRedirectUrl({
         status: "success",
-        staffId: oauthState.staffId,
       }),
     };
   },
@@ -973,7 +968,6 @@ export const startGoogleConnection = internalAction({
 export const buildCallbackRedirect = internalAction({
   args: {
     status: v.union(v.literal("success"), v.literal("error")),
-    staffId: v.optional(v.id("staff")),
     message: v.optional(v.string()),
   },
   handler: async (_ctx, args): Promise<{ redirectUrl: string }> => {

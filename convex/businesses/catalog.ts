@@ -33,6 +33,10 @@ import {
   listStaffServiceAssignmentsForBusiness,
   replaceBusinessStaffServiceAssignments,
 } from "../lib/indexedQueries";
+import {
+  ensureDefaultStaffAssignmentForService,
+  ensureDefaultStaffForBusiness as ensureDefaultStaffRecordForBusiness,
+} from "../lib/defaultStaff";
 import { validatePasswordRequirements } from "../lib/passwordPolicy";
 import { generateMissingLocalizedServiceNames } from "../lib/serviceNameGeneration";
 import {
@@ -710,6 +714,10 @@ export const upsertServiceInternal = internalMutation({
     active: v.boolean(),
   },
   handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
     const localizedNames = normalizeLocalizedServiceNames(args.localizedNames);
 
     if (args.serviceId) {
@@ -720,6 +728,11 @@ export const upsertServiceInternal = internalMutation({
         ...(args.description !== undefined ? { description: args.description } : {}),
         durationMinutes: args.durationMinutes,
         active: args.active,
+      });
+      await ensureDefaultStaffAssignmentForService(ctx, {
+        businessId: args.businessId,
+        serviceId: args.serviceId,
+        timezone: business.timezone,
       });
       await scheduleSnapshotRefresh(ctx, args.businessId);
       return {
@@ -737,11 +750,33 @@ export const upsertServiceInternal = internalMutation({
       durationMinutes: args.durationMinutes,
       active: args.active,
     });
+    await ensureDefaultStaffAssignmentForService(ctx, {
+      businessId: args.businessId,
+      serviceId,
+      timezone: business.timezone,
+    });
     await scheduleSnapshotRefresh(ctx, args.businessId);
     return {
       serviceId,
       ...(localizedNames !== undefined ? { localizedNames } : {}),
     };
+  },
+});
+
+export const ensureDefaultStaffForBusiness = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<Id<"staff">> => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    return await ensureDefaultStaffRecordForBusiness(ctx, {
+      businessId: args.businessId,
+      timezone: business.timezone,
+    });
   },
 });
 

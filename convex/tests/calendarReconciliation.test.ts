@@ -461,7 +461,6 @@ describe("calendar reconciliation backend", () => {
     });
     await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
       businessId,
-      staffId,
     });
 
     const availableAfterDisconnect = await t.query(
@@ -486,7 +485,7 @@ describe("calendar reconciliation backend", () => {
       const connection = await ctx.db.get(connectionId);
 
       expect(busyBlocks).toHaveLength(0);
-      expect(connection?.status).toBe("disconnected");
+      expect(connection).toBeNull();
     });
   });
 
@@ -514,7 +513,6 @@ describe("calendar reconciliation backend", () => {
     });
     await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
       businessId,
-      staffId,
     });
 
     await t.run(async (ctx) => {
@@ -555,7 +553,6 @@ describe("calendar reconciliation backend", () => {
     });
     await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
       businessId,
-      staffId,
     });
 
     await t.run(async (ctx) => {
@@ -660,7 +657,6 @@ describe("calendar reconciliation backend", () => {
     });
     await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
       businessId,
-      staffId,
     });
 
     expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(0);
@@ -1633,7 +1629,6 @@ describe("calendar reconciliation backend", () => {
     await expect(
       authed.action(api.integrations.calendar.connectGoogle, {
         businessId,
-        staffId,
       }),
     ).rejects.toThrow("Calendar integrations require admin access.");
   });
