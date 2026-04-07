@@ -65,6 +65,7 @@
       "disconnectFailed": "Unable to disconnect Google Calendar.",
       "disconnectConfirmTitle": "Disconnect Google Calendar?",
       "disconnectConfirmDescription": "This will remove the current Google Calendar connection for bookings.",
+      "disconnectConfirm": "Confirm?",
       "disconnectConfirmAction": "Disconnect Google Calendar",
       "disconnectCancel": "Cancel",
       "connectedSuccess": "Google Calendar connected successfully.",

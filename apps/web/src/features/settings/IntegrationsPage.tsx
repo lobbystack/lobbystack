@@ -1,22 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAction, useQuery } from "convex/react";
-import { CheckCircle2, RefreshCcw, TriangleAlert } from "lucide-react";
+import { RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -118,40 +109,102 @@ function formatTimestamp(timestamp: string | undefined, locale: string): string 
   }).format(date);
 }
 
-type FeedbackBannerProps = {
-  message: string;
-  tone: "success" | "error";
+type InlineConfirmDeleteButtonProps = {
+  deleting: boolean;
+  disabled?: boolean;
+  onConfirm: () => void;
 };
 
-function FeedbackBanner({ message, tone }: FeedbackBannerProps) {
-  const styles =
-    tone === "success"
-      ? {
-          wrapper:
-            "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-          icon: CheckCircle2,
-        }
-      : {
-          wrapper:
-            "border-destructive/30 bg-destructive/10 text-destructive dark:text-destructive",
-          icon: TriangleAlert,
-        };
+function InlineConfirmDeleteButton({
+  deleting,
+  disabled = false,
+  onConfirm,
+}: InlineConfirmDeleteButtonProps) {
+  const { t } = useTranslation("settings");
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  const Icon = styles.icon;
+  useEffect(() => {
+    if (!isConfirming || deleting) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setIsConfirming(false);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [deleting, isConfirming]);
+
+  useEffect(() => {
+    if (!deleting) {
+      return;
+    }
+
+    setIsConfirming(false);
+  }, [deleting]);
 
   return (
-    <div
-      className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${styles.wrapper}`}
-    >
-      <Icon className="mt-0.5 size-4 shrink-0" />
-      <span>{message}</span>
-    </div>
+    <motion.div layout className="overflow-hidden">
+      <AnimatePresence initial={false} mode="wait">
+        {isConfirming ? (
+          <motion.div
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.96, x: 8 }}
+            initial={{ opacity: 0, scale: 0.96, x: 8 }}
+            key="confirm-delete"
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            <Button
+              disabled={disabled || deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onConfirm();
+              }}
+              size="sm"
+              title={t("integrations.google.disconnectConfirm")}
+              type="button"
+              variant="destructive"
+            >
+              {deleting
+                ? t("integrations.google.disconnecting")
+                : t("integrations.google.disconnectConfirm")}
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.96, x: -8 }}
+            initial={{ opacity: 0, scale: 0.96, x: -8 }}
+            key="delete-icon"
+            transition={{ duration: 0.16, ease: "easeOut" }}
+          >
+            <Button
+              aria-label={t("integrations.google.disconnect")}
+              disabled={disabled || deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsConfirming(true);
+              }}
+              size="icon-sm"
+              title={t("integrations.google.disconnect")}
+              type="button"
+              variant="ghost"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
 export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
+  const handledCallbackRef = useRef<string | null>(null);
   const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
   }) as Array<CalendarConnectionListItem> | undefined;
@@ -184,8 +237,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   const [calendarOptions, setCalendarOptions] = useState<Array<GoogleCalendarOption>>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
@@ -196,17 +247,21 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     const calendar = searchParams.get("calendar");
     const status = searchParams.get("status");
     const message = searchParams.get("message");
+    const callbackKey = `${calendar ?? ""}:${status ?? ""}:${message ?? ""}`;
 
     if (calendar !== "google" || !status) {
       return;
     }
 
+    if (handledCallbackRef.current === callbackKey) {
+      return;
+    }
+    handledCallbackRef.current = callbackKey;
+
     if (status === "success") {
-      setStatusMessage(message ?? t("integrations.google.connectedSuccess"));
-      setErrorMessage(null);
+      toast.success(message ?? t("integrations.google.connectedSuccess"));
     } else {
-      setErrorMessage(message ?? t("integrations.google.connectFailed"));
-      setStatusMessage(null);
+      toast.error(message ?? t("integrations.google.connectFailed"));
     }
 
     const nextParams = new URLSearchParams(searchParams);
@@ -225,7 +280,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       }
 
       setIsLoadingCalendars(true);
-      setErrorMessage(null);
       try {
         const calendars = (await listGoogleCalendars({
           businessId,
@@ -237,7 +291,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           calendars[0];
         setSelectedCalendarId(selected?.id ?? "");
       } catch (error) {
-        setErrorMessage(
+        toast.error(
           error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
         );
       } finally {
@@ -260,8 +314,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   async function handleConnectGoogle(): Promise<void> {
     setIsConnecting(true);
-    setErrorMessage(null);
-    setStatusMessage(null);
 
     try {
       const result = await connectGoogle({
@@ -269,7 +321,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       });
       window.location.assign(result.authorizationUrl);
     } catch (error) {
-      setErrorMessage(
+      toast.error(
         error instanceof Error ? error.message : t("integrations.google.connectFailed"),
       );
       setIsConnecting(false);
@@ -278,17 +330,15 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   async function handleDisconnectGoogle(): Promise<void> {
     setIsDisconnecting(true);
-    setErrorMessage(null);
-    setStatusMessage(null);
 
     try {
       await disconnectGoogleCalendar({ businessId });
       setGoogleSheetOpen(false);
       setCalendarOptions([]);
       setSelectedCalendarId("");
-      setStatusMessage(t("integrations.google.disconnectedSuccess"));
+      toast.success(t("integrations.google.disconnectedSuccess"));
     } catch (error) {
-      setErrorMessage(
+      toast.error(
         error instanceof Error ? error.message : t("integrations.google.disconnectFailed"),
       );
     } finally {
@@ -298,26 +348,24 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   async function handleSaveCalendar(): Promise<void> {
     if (selectedConnection?.status !== "connected") {
-      setErrorMessage("Reconnect Google Calendar before choosing a calendar.");
+      toast.error("Reconnect Google Calendar before choosing a calendar.");
       return;
     }
 
     if (!selectedCalendarId) {
-      setErrorMessage(t("integrations.google.chooseCalendarFirst"));
+      toast.error(t("integrations.google.chooseCalendarFirst"));
       return;
     }
 
     setIsSavingCalendar(true);
-    setErrorMessage(null);
-    setStatusMessage(null);
     try {
       await selectGoogleCalendar({
         businessId,
         calendarId: selectedCalendarId,
       });
-      setStatusMessage(t("integrations.google.calendarSaved"));
+      toast.success(t("integrations.google.calendarSaved"));
     } catch (error) {
-      setErrorMessage(
+      toast.error(
         error instanceof Error ? error.message : t("integrations.google.calendarSaveFailed"),
       );
     } finally {
@@ -330,8 +378,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       return;
     }
 
-    setStatusMessage(null);
-    setErrorMessage(null);
     setIsLoadingCalendars(true);
 
     try {
@@ -345,7 +391,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         calendars[0];
       setSelectedCalendarId(selected?.id ?? "");
     } catch (error) {
-      setErrorMessage(
+      toast.error(
         error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
       );
     } finally {
@@ -356,9 +402,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   return (
     <>
       <div className="flex flex-col gap-6">
-        {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
-        {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
-
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
@@ -367,35 +410,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               </div>
               <div className="flex items-center gap-2">
                 {googleHasConnection ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger render={<Button size="sm" type="button" variant="ghost" />}>
-                      {t("integrations.google.disconnect")}
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {t("integrations.google.disconnectConfirmTitle")}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("integrations.google.disconnectConfirmDescription")}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>
-                          {t("integrations.google.disconnectCancel")}
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          disabled={isDisconnecting}
-                          onClick={() => void handleDisconnectGoogle()}
-                          variant="destructive"
-                        >
-                          {isDisconnecting
-                            ? t("integrations.google.disconnecting")
-                            : t("integrations.google.disconnectConfirmAction")}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <InlineConfirmDeleteButton
+                    deleting={isDisconnecting}
+                    onConfirm={() => void handleDisconnectGoogle()}
+                  />
                 ) : null}
                 <Button
                   className={
@@ -475,9 +493,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           </DialogHeader>
 
           <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
-            {statusMessage ? <FeedbackBanner message={statusMessage} tone="success" /> : null}
-            {errorMessage ? <FeedbackBanner message={errorMessage} tone="error" /> : null}
-
             <section className="flex flex-col gap-4 rounded-xl border p-4">
               <div className="flex flex-col gap-1">
                 <h3 className="text-sm font-semibold">

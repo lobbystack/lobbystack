@@ -8,6 +8,7 @@ import "./i18n";
 import "./styles/index.css";
 import { AppearanceProvider } from "@/components/appearance-provider";
 import { LocaleProvider } from "@/components/locale-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <AppearanceProvider>
           <LocaleProvider>
             <App />
+            <Toaster richColors />
           </LocaleProvider>
         </AppearanceProvider>
       </ThemeProvider>
