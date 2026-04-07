@@ -501,6 +501,21 @@ export const getCalendarConnectionById = internalQuery({
   },
 });
 
+export const listAppointmentsForCalendarConnection = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    staffId: v.id("staff"),
+  },
+  handler: async (ctx, args) => {
+    const appointments = await ctx.db
+      .query("appointments")
+      .withIndex("by_staff_id_and_starts_at", (q) => q.eq("staffId", args.staffId))
+      .collect();
+
+    return appointments.filter((appointment) => appointment.businessId === args.businessId);
+  },
+});
+
 export const getCalendarConnectionRuntimeContext = internalQuery({
   args: {
     connectionId: v.id("calendar_connections"),
@@ -681,6 +696,25 @@ export const updateCalendarConnectionSelection = internalMutation({
       selectedCalendarId: args.selectedCalendarId,
       selectedCalendarSummary: args.selectedCalendarSummary,
     });
+    return null;
+  },
+});
+
+export const deleteCalendarConnection = internalMutation({
+  args: {
+    connectionId: v.id("calendar_connections"),
+  },
+  handler: async (ctx, args) => {
+    const busyBlocks = await ctx.db
+      .query("calendar_busy_blocks")
+      .withIndex("by_connection_id_and_starts_at", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    for (const block of busyBlocks) {
+      await ctx.db.delete(block._id);
+    }
+
+    await ctx.db.delete(args.connectionId);
     return null;
   },
 });
@@ -1926,6 +1960,60 @@ export const selectGoogleCalendar = action({
       selectedCalendarId: selected.id,
       selectedCalendarSummary: selected.summary,
     };
+  },
+});
+
+export const disconnectGoogleCalendar = action({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<{ disconnected: boolean }> => {
+    const identity = await requireIdentity(ctx);
+    const authUserId = await getAuthUserId(ctx);
+    const staffId = await ctx.runMutation(
+      internal.businesses.catalog.ensureDefaultStaffForBusiness,
+      {
+        businessId: args.businessId,
+      },
+    );
+    const accessContext: CalendarAccessContext = await ctx.runQuery(
+      internal.integrations.calendar.getCalendarConnectionAccessContext,
+      {
+        businessId: args.businessId,
+        staffId,
+        authSubject: identity.subject,
+        ...(authUserId !== null ? { authUserId } : {}),
+      },
+    );
+
+    if (!accessContext.existingConnectionId) {
+      return { disconnected: false };
+    }
+
+    const appointments: Array<Doc<"appointments">> = await ctx.runQuery(
+      internal.integrations.calendar.listAppointmentsForCalendarConnection,
+      {
+        businessId: args.businessId,
+        staffId: accessContext.staffId,
+      },
+    );
+
+    for (const appointment of appointments) {
+      await ctx.runMutation(internal.integrations.calendar.setAppointmentCalendarSyncState, {
+        appointmentId: appointment._id,
+        calendarSyncState: "not_required",
+        clearCalendarLastSyncError: true,
+        clearCalendarReconcileAfter: true,
+        clearCalendarSyncIssueId: true,
+        clearCalendarExternalEventId: true,
+      });
+    }
+
+    await ctx.runMutation(internal.integrations.calendar.deleteCalendarConnection, {
+      connectionId: accessContext.existingConnectionId,
+    });
+
+    return { disconnected: true };
   },
 });
 

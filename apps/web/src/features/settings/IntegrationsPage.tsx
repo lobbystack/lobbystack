@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAction, useQuery } from "convex/react";
-import { CheckCircle2, RefreshCcw, Settings2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, RefreshCcw, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -145,6 +156,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     businessId,
   }) as Array<CalendarConnectionListItem> | undefined;
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
+  const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
   const selectGoogleCalendar = useAction(api.integrations.calendar.selectGoogleCalendar);
 
@@ -175,6 +187,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
@@ -263,6 +276,26 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     }
   }
 
+  async function handleDisconnectGoogle(): Promise<void> {
+    setIsDisconnecting(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+
+    try {
+      await disconnectGoogleCalendar({ businessId });
+      setGoogleSheetOpen(false);
+      setCalendarOptions([]);
+      setSelectedCalendarId("");
+      setStatusMessage(t("integrations.google.disconnectedSuccess"));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : t("integrations.google.disconnectFailed"),
+      );
+    } finally {
+      setIsDisconnecting(false);
+    }
+  }
+
   async function handleSaveCalendar(): Promise<void> {
     if (selectedConnection?.status !== "connected") {
       setErrorMessage("Reconnect Google Calendar before choosing a calendar.");
@@ -334,15 +367,35 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               </div>
               <div className="flex items-center gap-2">
                 {googleHasConnection ? (
-                  <Button
-                    aria-label={t("integrations.actions.settings")}
-                    onClick={openGoogleSheet}
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Settings2 className="size-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger render={<Button size="sm" type="button" variant="ghost" />}>
+                      {t("integrations.google.disconnect")}
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {t("integrations.google.disconnectConfirmTitle")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t("integrations.google.disconnectConfirmDescription")}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>
+                          {t("integrations.google.disconnectCancel")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={isDisconnecting}
+                          onClick={() => void handleDisconnectGoogle()}
+                          variant="destructive"
+                        >
+                          {isDisconnecting
+                            ? t("integrations.google.disconnecting")
+                            : t("integrations.google.disconnectConfirmAction")}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 ) : null}
                 <Button
                   className={
@@ -350,10 +403,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
                       : undefined
                   }
-                  disabled={googleConnected && !googleNeedsReconnect}
+                  disabled={isConnecting}
                   onClick={() =>
                     googleConnected && !googleNeedsReconnect
-                      ? undefined
+                      ? openGoogleSheet()
                       : void handleConnectGoogle()
                   }
                   size="sm"
