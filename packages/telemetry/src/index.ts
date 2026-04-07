@@ -1,4 +1,7 @@
-import type { DeploymentMode } from "@ai-receptionist/shared";
+export type DeploymentMode =
+  | "cloud"
+  | "self_hosted_standard"
+  | "development";
 
 export const WEB_EVENT_NAMES = [
   "web.auth.login_succeeded",
