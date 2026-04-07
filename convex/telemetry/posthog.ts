@@ -54,6 +54,7 @@ type FlushResult = {
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
 const CLAIM_LEASE_MS = 60_000;
+const CLAIMED_STATUS = "processing";
 
 function buildCaptureUrl(host: string): string {
   return new URL("/i/v0/e/", host).toString();
@@ -168,25 +169,39 @@ export const claimDueEvents = internalMutation({
     const nowIso = new Date().toISOString();
     const leaseUntilIso = new Date(Date.now() + CLAIM_LEASE_MS).toISOString();
     const limit = Math.max(1, Math.min(args.limit ?? MAX_BATCH_SIZE, MAX_BATCH_SIZE));
-    const rows = await ctx.db
-      .query("telemetry_outbox")
-      .withIndex("by_status_and_available_at", (q) =>
-        q.eq("status", "pending").lte("availableAt", nowIso),
-      )
-      .take(limit);
-
-    const claimedRows = [];
-    for (const row of rows) {
-      if (row.destination !== TELEMETRY_DESTINATION) {
-        continue;
+    const claimRowsForStatus = async (status: string, remaining: number) => {
+      if (remaining <= 0) {
+        return [];
       }
-      await ctx.db.patch(row._id, {
-        availableAt: leaseUntilIso,
-      });
-      claimedRows.push(row);
-    }
 
-    return claimedRows;
+      const rows = await ctx.db
+        .query("telemetry_outbox")
+        .withIndex("by_status_and_available_at", (q) =>
+          q.eq("status", status).lte("availableAt", nowIso),
+        )
+        .take(remaining);
+
+      const claimedRows = [];
+      for (const row of rows) {
+        if (row.destination !== TELEMETRY_DESTINATION) {
+          continue;
+        }
+        await ctx.db.patch(row._id, {
+          status: CLAIMED_STATUS,
+          availableAt: leaseUntilIso,
+        });
+        claimedRows.push(row);
+      }
+      return claimedRows;
+    };
+
+    const claimedPendingRows = await claimRowsForStatus("pending", limit);
+    const claimedExpiredRows = await claimRowsForStatus(
+      CLAIMED_STATUS,
+      limit - claimedPendingRows.length,
+    );
+
+    return [...claimedPendingRows, ...claimedExpiredRows];
   },
 });
 

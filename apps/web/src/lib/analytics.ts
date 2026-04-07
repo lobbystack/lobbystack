@@ -206,6 +206,18 @@ export function identifyOperator(args: IdentifyOperatorArgs): void {
   }
 }
 
+export function resetAnalyticsIdentity(): void {
+  lastPageEventKey = null;
+  identifiedUserId = null;
+  identifiedBusinessId = null;
+
+  if (!isAnalyticsEnabled()) {
+    return;
+  }
+
+  posthog.reset();
+}
+
 export function captureAnalyticsEvent(
   name: TelemetryEventName,
   properties?: TelemetryProperties,

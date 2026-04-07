@@ -36,6 +36,7 @@ import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerif
 import {
   captureAnalyticsEvent,
   identifyOperator,
+  resetAnalyticsIdentity,
   trackPageView,
 } from "@/lib/analytics";
 
@@ -100,6 +101,11 @@ function WorkspaceShell() {
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
   const previousBusinessIdRef = useRef<string | null>(null);
+
+  async function handleSignOut(): Promise<void> {
+    resetAnalyticsIdentity();
+    await signOut();
+  }
 
   useEffect(() => {
     if (!currentUser?._id) {
@@ -166,7 +172,7 @@ function WorkspaceShell() {
   return (
     <AuthenticatedLayout
       businessName={activeBusiness?.name ?? "AI Receptionist"}
-      onSignOut={() => void signOut()}
+      onSignOut={() => void handleSignOut()}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
       {...(
@@ -296,6 +302,11 @@ function OnboardingNumberRoute() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
 
+  async function handleSignOut(): Promise<void> {
+    resetAnalyticsIdentity();
+    await signOut();
+  }
+
   useEffect(() => {
     if (!currentUser?._id || !activeBusiness?._id) {
       return;
@@ -327,7 +338,7 @@ function OnboardingNumberRoute() {
     <OnboardingNumberPage
       businessId={activeBusiness._id}
       {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
-      onSignOut={() => void signOut()}
+      onSignOut={() => void handleSignOut()}
     />
   );
 }
@@ -344,6 +355,11 @@ function OnboardingVerifyPhoneRoute() {
   const [isSkippingVerification, setIsSkippingVerification] = useState(false);
   const [hasAttemptedAutoSkip, setHasAttemptedAutoSkip] = useState(false);
   const hasReusableVerifiedPhone = Boolean(currentUser?.phone && currentUser?.phoneVerificationTime);
+
+  async function handleSignOut(): Promise<void> {
+    resetAnalyticsIdentity();
+    await signOut();
+  }
 
   useEffect(() => {
     if (!currentUser?._id || !activeBusiness?._id) {
@@ -431,7 +447,7 @@ function OnboardingVerifyPhoneRoute() {
       businessId={activeBusiness._id}
       {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
       {...(currentUser?.phone ? { currentUserPhone: currentUser.phone } : {})}
-      onSignOut={() => void signOut()}
+      onSignOut={() => void handleSignOut()}
     />
   );
 }
