@@ -186,67 +186,95 @@ function configureTraceSampling(sampleRatio: number): void {
 }
 
 export const tracer = trace.getTracer("ai-receptionist.voice-gateway");
-export const meter = metrics.getMeter("ai-receptionist.voice-gateway");
 
-const activeCallsCounter = meter.createUpDownCounter("voice_gateway.active_calls", {
-  description: "Number of currently active live voice sessions.",
-});
-const invalidSignatureCounter = meter.createCounter(
-  "voice_gateway.twilio_invalid_signature_total",
-  {
-    description: "Number of rejected Twilio requests with invalid signatures.",
-  },
-);
-const mediaDisconnectCounter = meter.createCounter(
-  "voice_gateway.media_stream_disconnect_total",
-  {
-    description: "Number of Twilio media stream websocket disconnects.",
-  },
-);
-const snapshotCacheHitCounter = meter.createCounter(
-  "voice_gateway.snapshot_cache_hit_total",
-  {
-    description: "Number of snapshot cache hits before starting a live call.",
-  },
-);
-const snapshotCacheMissCounter = meter.createCounter(
-  "voice_gateway.snapshot_cache_miss_total",
-  {
-    description: "Number of snapshot cache misses before starting a live call.",
-  },
-);
-const openAiRealtimeErrorCounter = meter.createCounter(
-  "voice_gateway.openai_realtime_error_total",
-  {
-    description: "Number of OpenAI Realtime websocket and provider failures.",
-  },
-);
-const openAiTurnLatencyHistogram = meter.createHistogram(
-  "voice_gateway.openai_turn_latency_ms",
-  {
-    description: "Latency for assistant response turns.",
-    unit: "ms",
-  },
-);
-const toolExecutionLatencyHistogram = meter.createHistogram(
-  "voice_gateway.tool_execution_latency_ms",
-  {
-    description: "Latency for voice tool execution calls.",
-    unit: "ms",
-  },
-);
-const toolExecutionFailureCounter = meter.createCounter(
-  "voice_gateway.tool_execution_failure_total",
-  {
-    description: "Number of tool execution failures.",
-  },
-);
-const recordingUploadFailureCounter = meter.createCounter(
-  "voice_gateway.recording_upload_failure_total",
-  {
-    description: "Number of failed call recording uploads.",
-  },
-);
+type MeterInstruments = {
+  activeCallsCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createUpDownCounter"]>;
+  invalidSignatureCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  mediaDisconnectCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  snapshotCacheHitCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  snapshotCacheMissCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  openAiRealtimeErrorCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  openAiTurnLatencyHistogram: ReturnType<ReturnType<typeof metrics.getMeter>["createHistogram"]>;
+  toolExecutionLatencyHistogram: ReturnType<ReturnType<typeof metrics.getMeter>["createHistogram"]>;
+  toolExecutionFailureCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+  recordingUploadFailureCounter: ReturnType<ReturnType<typeof metrics.getMeter>["createCounter"]>;
+};
+
+let meterInstruments: MeterInstruments | null = null;
+
+function createMeterInstruments(): MeterInstruments {
+  const meter = metrics.getMeter("ai-receptionist.voice-gateway");
+
+  return {
+    activeCallsCounter: meter.createUpDownCounter("voice_gateway.active_calls", {
+      description: "Number of currently active live voice sessions.",
+    }),
+    invalidSignatureCounter: meter.createCounter(
+      "voice_gateway.twilio_invalid_signature_total",
+      {
+        description: "Number of rejected Twilio requests with invalid signatures.",
+      },
+    ),
+    mediaDisconnectCounter: meter.createCounter(
+      "voice_gateway.media_stream_disconnect_total",
+      {
+        description: "Number of Twilio media stream websocket disconnects.",
+      },
+    ),
+    snapshotCacheHitCounter: meter.createCounter(
+      "voice_gateway.snapshot_cache_hit_total",
+      {
+        description: "Number of snapshot cache hits before starting a live call.",
+      },
+    ),
+    snapshotCacheMissCounter: meter.createCounter(
+      "voice_gateway.snapshot_cache_miss_total",
+      {
+        description: "Number of snapshot cache misses before starting a live call.",
+      },
+    ),
+    openAiRealtimeErrorCounter: meter.createCounter(
+      "voice_gateway.openai_realtime_error_total",
+      {
+        description: "Number of OpenAI Realtime websocket and provider failures.",
+      },
+    ),
+    openAiTurnLatencyHistogram: meter.createHistogram(
+      "voice_gateway.openai_turn_latency_ms",
+      {
+        description: "Latency for assistant response turns.",
+        unit: "ms",
+      },
+    ),
+    toolExecutionLatencyHistogram: meter.createHistogram(
+      "voice_gateway.tool_execution_latency_ms",
+      {
+        description: "Latency for voice tool execution calls.",
+        unit: "ms",
+      },
+    ),
+    toolExecutionFailureCounter: meter.createCounter(
+      "voice_gateway.tool_execution_failure_total",
+      {
+        description: "Number of tool execution failures.",
+      },
+    ),
+    recordingUploadFailureCounter: meter.createCounter(
+      "voice_gateway.recording_upload_failure_total",
+      {
+        description: "Number of failed call recording uploads.",
+      },
+    ),
+  };
+}
+
+function getMeterInstruments(): MeterInstruments | null {
+  if (!meterInstruments && sdk) {
+    meterInstruments = createMeterInstruments();
+  }
+
+  return meterInstruments;
+}
 
 export async function startObservability(): Promise<void> {
   if (sdk) {
@@ -285,6 +313,7 @@ export async function startObservability(): Promise<void> {
   });
 
   await sdk.start();
+  meterInstruments = createMeterInstruments();
 }
 
 export async function shutdownObservability(): Promise<void> {
@@ -294,6 +323,7 @@ export async function shutdownObservability(): Promise<void> {
 
   const activeSdk = sdk;
   sdk = null;
+  meterInstruments = null;
   await activeSdk.shutdown();
 }
 
@@ -344,49 +374,89 @@ export async function startActiveSpan<T>(
 }
 
 export function addActiveCalls(delta: number, attributes?: Attributes): void {
-  activeCallsCounter.add(delta, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.activeCallsCounter.add(delta, sanitizeAttributes(attributes));
 }
 
 export function recordTwilioInvalidSignature(attributes?: Attributes): void {
-  invalidSignatureCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.invalidSignatureCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordMediaStreamDisconnect(attributes?: Attributes): void {
-  mediaDisconnectCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.mediaDisconnectCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordSnapshotCacheHit(attributes?: Attributes): void {
-  snapshotCacheHitCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.snapshotCacheHitCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordSnapshotCacheMiss(attributes?: Attributes): void {
-  snapshotCacheMissCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.snapshotCacheMissCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordOpenAiRealtimeError(attributes?: Attributes): void {
-  openAiRealtimeErrorCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.openAiRealtimeErrorCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordOpenAiTurnLatency(
   latencyMs: number,
   attributes?: Attributes,
 ): void {
-  openAiTurnLatencyHistogram.record(latencyMs, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.openAiTurnLatencyHistogram.record(latencyMs, sanitizeAttributes(attributes));
 }
 
 export function recordToolExecutionLatency(
   latencyMs: number,
   attributes?: Attributes,
 ): void {
-  toolExecutionLatencyHistogram.record(latencyMs, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.toolExecutionLatencyHistogram.record(latencyMs, sanitizeAttributes(attributes));
 }
 
 export function recordToolExecutionFailure(attributes?: Attributes): void {
-  toolExecutionFailureCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.toolExecutionFailureCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function recordRecordingUploadFailure(attributes?: Attributes): void {
-  recordingUploadFailureCounter.add(1, sanitizeAttributes(attributes));
+  const instruments = getMeterInstruments();
+  if (!instruments) {
+    return;
+  }
+  instruments.recordingUploadFailureCounter.add(1, sanitizeAttributes(attributes));
 }
 
 export function getActiveTraceContext(): {

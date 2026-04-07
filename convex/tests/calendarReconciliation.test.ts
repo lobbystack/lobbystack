@@ -628,6 +628,40 @@ describe("calendar reconciliation backend", () => {
     expect(secondPage.isDone).toBe(true);
   });
 
+  it("does not create a default staff record before rejecting unauthorized calendar access", async () => {
+    const t = convexTest(schema, convexModules);
+    const businessId = await t.run(async (ctx) => {
+      return await insertBusiness(ctx, {
+        slug: "unauthorized-calendar-access-business",
+        name: "Unauthorized Calendar Access Business",
+      });
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("users", {
+        authSubject: "calendar-outsider",
+      });
+    });
+
+    const outsider = t.withIdentity({ subject: "calendar-outsider" });
+    await expect(
+      outsider.action(api.integrations.calendar.listGoogleCalendars, {
+        businessId,
+      }),
+    ).rejects.toThrow("You do not have access to this business.");
+
+    await t.run(async (ctx) => {
+      const staff = await ctx.db
+        .query("staff")
+        .withIndex("by_business_id_and_active", (q) =>
+          q.eq("businessId", businessId).eq("active", true),
+        )
+        .collect();
+
+      expect(staff).toHaveLength(0);
+    });
+  });
+
   it("removes mirrored Google events before disconnecting the calendar", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {

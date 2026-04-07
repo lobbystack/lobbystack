@@ -12,6 +12,7 @@ import {
   internalQuery,
   mutation,
   query,
+  type ActionCtx,
   type MutationCtx,
   type QueryCtx,
 } from "../_generated/server";
@@ -113,6 +114,31 @@ type CalendarBusyBlockInput = {
   sourceCalendarId: string;
   externalUpdatedAt?: string;
 };
+
+async function ensureAuthorizedDefaultStaffAccess(
+  ctx: ActionCtx,
+  args: {
+    businessId: Id<"businesses">;
+    authSubject: string;
+    authUserId?: string;
+  },
+): Promise<Id<"staff">> {
+  await ctx.runQuery(
+    internal.integrations.calendar.getCalendarIntegrationBusinessAccess,
+    {
+      businessId: args.businessId,
+      authSubject: args.authSubject,
+      ...(args.authUserId !== undefined ? { authUserId: args.authUserId } : {}),
+    },
+  );
+
+  return await ctx.runMutation(
+    internal.businesses.catalog.ensureDefaultStaffForBusiness,
+    {
+      businessId: args.businessId,
+    },
+  );
+}
 
 const CALENDAR_INTEGRATION_ADMIN_ROLES = new Set([
   "business_owner",
@@ -2005,12 +2031,11 @@ export const connectGoogle = action({
   handler: async (ctx, args): Promise<GoogleConnectResult> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
-    const staffId = await ctx.runMutation(
-      internal.businesses.catalog.ensureDefaultStaffForBusiness,
-      {
-        businessId: args.businessId,
-      },
-    );
+    const staffId = await ensureAuthorizedDefaultStaffAccess(ctx, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     return (await ctx.runAction(
       internal.integrations.googleCalendar.startGoogleConnection,
       {
@@ -2030,12 +2055,11 @@ export const listGoogleCalendars = action({
   handler: async (ctx, args): Promise<Array<GoogleCalendarOption>> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
-    const staffId = await ctx.runMutation(
-      internal.businesses.catalog.ensureDefaultStaffForBusiness,
-      {
-        businessId: args.businessId,
-      },
-    );
+    const staffId = await ensureAuthorizedDefaultStaffAccess(ctx, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
@@ -2080,12 +2104,11 @@ export const selectGoogleCalendar = action({
   ): Promise<{ selectedCalendarId: string; selectedCalendarSummary: string }> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
-    const staffId = await ctx.runMutation(
-      internal.businesses.catalog.ensureDefaultStaffForBusiness,
-      {
-        businessId: args.businessId,
-      },
-    );
+    const staffId = await ensureAuthorizedDefaultStaffAccess(ctx, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
@@ -2164,12 +2187,11 @@ export const disconnectGoogleCalendar = action({
   handler: async (ctx, args): Promise<{ disconnected: boolean }> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
-    const staffId = await ctx.runMutation(
-      internal.businesses.catalog.ensureDefaultStaffForBusiness,
-      {
-        businessId: args.businessId,
-      },
-    );
+    const staffId = await ensureAuthorizedDefaultStaffAccess(ctx, {
+      businessId: args.businessId,
+      authSubject: identity.subject,
+      ...(authUserId !== null ? { authUserId } : {}),
+    });
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
