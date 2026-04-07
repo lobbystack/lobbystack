@@ -103,7 +103,6 @@
       "description": "The next appointments on the calendar.",
       "unknownContact": "Unknown contact",
       "unknownService": "Unknown service",
-      "withStaff": "with {{name}}",
       "emptyTitle": "No upcoming appointments",
       "emptyDescription": "Future bookings will appear here as soon as they are created.",
       "status": {
@@ -176,7 +175,7 @@
   "nextSteps": {
     "title": "What to do next",
     "description": "Tighten the live receptionist behavior before you route real traffic.",
-    "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
+    "hours": "Set hours and services so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
   }

@@ -396,7 +396,12 @@ export const getActiveStaffAssignmentsForService = internalQuery({
 
     return {
       activeStaffCount: activeStaffIds.size,
-      assignmentCount: eligibleAssignments.length,
+      assignmentCount:
+        eligibleAssignments.length > 0
+          ? eligibleAssignments.length
+          : activeStaffIds.size > 0
+            ? 1
+            : 0,
     };
   },
 });
@@ -815,6 +820,9 @@ export const checkAvailabilityForVoice = internalAction({
     ctx: ActionCtx,
     args: CheckAvailabilityForVoiceArgs,
   ): Promise<CheckAvailabilityForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
@@ -883,6 +891,9 @@ export const findAvailabilityForVoice = internalAction({
     ctx: ActionCtx,
     args: FindAvailabilityForVoiceArgs,
   ): Promise<FindAvailabilityForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
@@ -913,8 +924,8 @@ export const findAvailabilityForVoice = internalAction({
         setupIssue,
         summary:
           setupIssue === "no_active_staff"
-            ? `${localizedServiceName} cannot be booked yet because no active team members are configured for booking.`
-            : `${localizedServiceName} cannot be booked yet because no active team member is assigned to that service.`,
+            ? `${localizedServiceName} cannot be booked yet because booking is not configured for this business yet.`
+            : `${localizedServiceName} cannot be booked yet because booking is not configured for this service yet.`,
       };
     }
 
@@ -972,6 +983,9 @@ export const bookAppointmentForVoice = internalAction({
     ctx: ActionCtx,
     args: BookAppointmentForVoiceArgs,
   ): Promise<BookAppointmentForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");

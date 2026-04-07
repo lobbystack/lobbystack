@@ -12,6 +12,7 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
+import { selectDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { computeAvailability } from "../lib/availability";
 
 const SLOT_INTERVAL_MINUTES = 15;
@@ -20,6 +21,7 @@ const DEFAULT_SLOT_LIMIT = 6;
 type BookingContext = {
   serviceDurationMinutes: number;
   staffIds: Array<string>;
+  defaultStaffId?: string;
   hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>;
   closures: Array<{ startsAt: string; endsAt: string; reason: string }>;
   existingAppointments: Array<{ startsAt: string; endsAt: string; staffId: string }>;
@@ -139,15 +141,54 @@ async function loadBookingContext(
         .collect(),
     ]);
   const activeStaffIds = new Set(activeStaff.map((row) => String(row._id)));
+  const defaultStaff = await selectDefaultStaffForBusiness(ctx, args.businessId);
+  const defaultStaffId = defaultStaff ? String(defaultStaff._id) : undefined;
   const eligibleAssignments = assignments.filter(
     (row) =>
       row.businessId === args.businessId &&
       activeStaffIds.has(String(row.staffId)),
   );
+  const staffIds =
+    eligibleAssignments.length > 0
+      ? eligibleAssignments.map((row) => String(row.staffId))
+      : defaultStaffId
+        ? [defaultStaffId]
+        : [];
+  const existingAppointments =
+    eligibleAssignments.length > 0
+      ? [
+          ...appointments.map((row) => ({
+            startsAt: row.startsAt,
+            endsAt: row.endsAt,
+            staffId: String(row.staffId),
+          })),
+          ...calendarBusyBlocks
+            .filter((row) => row.staffId)
+            .map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: String(row.staffId),
+            })),
+        ]
+      : defaultStaffId
+        ? [
+            ...appointments.map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: defaultStaffId,
+            })),
+            ...calendarBusyBlocks.map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: defaultStaffId,
+            })),
+          ]
+        : [];
 
   return {
     serviceDurationMinutes: service.durationMinutes,
-    staffIds: eligibleAssignments.map((row) => String(row.staffId)),
+    staffIds,
+    ...(defaultStaffId !== undefined ? { defaultStaffId } : {}),
     hours: hours.map((row) => ({
       dayOfWeek: row.dayOfWeek,
       openMinutes: row.openMinutes,
@@ -158,20 +199,7 @@ async function loadBookingContext(
       endsAt: row.endsAt,
       reason: row.reason,
     })),
-    existingAppointments: [
-      ...appointments.map((row) => ({
-        startsAt: row.startsAt,
-        endsAt: row.endsAt,
-        staffId: String(row.staffId),
-      })),
-      ...calendarBusyBlocks
-        .filter((row) => row.staffId)
-        .map((row) => ({
-          startsAt: row.startsAt,
-          endsAt: row.endsAt,
-          staffId: String(row.staffId),
-        })),
-    ],
+    existingAppointments,
   };
 }
 
@@ -188,6 +216,9 @@ async function bookAppointmentWithSource(
     sourceChannel: string;
   },
 ): Promise<{ appointmentId: Id<"appointments">; contactId: Id<"contacts"> }> {
+  await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+    businessId: args.businessId,
+  });
   const availability = await ctx.runQuery(
     internal.appointments.booking.checkAvailabilityForBusiness,
     {
@@ -277,14 +308,19 @@ export const checkAvailabilityForBusiness = internalQuery({
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
+    const normalizedPreferredStaffId =
+      args.preferredStaffId !== undefined &&
+      context.staffIds.includes(String(args.preferredStaffId))
+        ? String(args.preferredStaffId)
+        : undefined;
 
     return computeAvailability({
       request: {
         serviceId: String(args.serviceId),
         startsAt: args.startsAt,
         timezone: args.timezone,
-        ...(args.preferredStaffId !== undefined
-          ? { preferredStaffId: String(args.preferredStaffId) }
+        ...(normalizedPreferredStaffId !== undefined
+          ? { preferredStaffId: normalizedPreferredStaffId }
           : {}),
       },
       serviceDurationMinutes: context.serviceDurationMinutes,
@@ -309,6 +345,11 @@ export const findAvailabilityForBusiness = internalQuery({
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
+    const normalizedPreferredStaffId =
+      args.preferredStaffId !== undefined &&
+      context.staffIds.includes(String(args.preferredStaffId))
+        ? String(args.preferredStaffId)
+        : undefined;
     const dayStart = DateTime.fromISO(args.date, { zone: args.timezone }).startOf("day");
     if (!dayStart.isValid) {
       throw new Error("Invalid availability date.");
@@ -348,8 +389,8 @@ export const findAvailabilityForBusiness = internalQuery({
           serviceId: String(args.serviceId),
           startsAt: candidate.startsAt,
           timezone: args.timezone,
-          ...(args.preferredStaffId !== undefined
-            ? { preferredStaffId: String(args.preferredStaffId) }
+          ...(normalizedPreferredStaffId !== undefined
+            ? { preferredStaffId: normalizedPreferredStaffId }
             : {}),
         },
         serviceDurationMinutes: context.serviceDurationMinutes,

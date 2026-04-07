@@ -1784,15 +1784,21 @@ export const listAppointmentsNeedingCalendarAttention = query({
 export const connectGoogle = action({
   args: {
     businessId: v.id("businesses"),
-    staffId: v.id("staff"),
   },
   handler: async (ctx, args): Promise<GoogleConnectResult> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
+    const staffId = await ctx.runMutation(
+      internal.businesses.catalog.ensureDefaultStaffForBusiness,
+      {
+        businessId: args.businessId,
+      },
+    );
     return (await ctx.runAction(
       internal.integrations.googleCalendar.startGoogleConnection,
       {
-        ...args,
+        businessId: args.businessId,
+        staffId,
         authSubject: identity.subject,
         ...(authUserId !== null ? { authUserId } : {}),
       },
@@ -1803,16 +1809,21 @@ export const connectGoogle = action({
 export const listGoogleCalendars = action({
   args: {
     businessId: v.id("businesses"),
-    staffId: v.id("staff"),
   },
   handler: async (ctx, args): Promise<Array<GoogleCalendarOption>> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
+    const staffId = await ctx.runMutation(
+      internal.businesses.catalog.ensureDefaultStaffForBusiness,
+      {
+        businessId: args.businessId,
+      },
+    );
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
         businessId: args.businessId,
-        staffId: args.staffId,
+        staffId,
         authSubject: identity.subject,
         ...(authUserId !== null ? { authUserId } : {}),
       },
@@ -1844,7 +1855,6 @@ export const listGoogleCalendars = action({
 export const selectGoogleCalendar = action({
   args: {
     businessId: v.id("businesses"),
-    staffId: v.id("staff"),
     calendarId: v.string(),
   },
   handler: async (
@@ -1853,11 +1863,17 @@ export const selectGoogleCalendar = action({
   ): Promise<{ selectedCalendarId: string; selectedCalendarSummary: string }> => {
     const identity = await requireIdentity(ctx);
     const authUserId = await getAuthUserId(ctx);
+    const staffId = await ctx.runMutation(
+      internal.businesses.catalog.ensureDefaultStaffForBusiness,
+      {
+        businessId: args.businessId,
+      },
+    );
     const accessContext: CalendarAccessContext = await ctx.runQuery(
       internal.integrations.calendar.getCalendarConnectionAccessContext,
       {
         businessId: args.businessId,
-        staffId: args.staffId,
+        staffId,
         authSubject: identity.subject,
         ...(authUserId !== null ? { authUserId } : {}),
       },

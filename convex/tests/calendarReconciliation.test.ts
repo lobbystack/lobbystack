@@ -1386,7 +1386,6 @@ describe("calendar reconciliation backend", () => {
     await expect(
       authed.action(api.integrations.calendar.connectGoogle, {
         businessId,
-        staffId,
       }),
     ).rejects.toThrow("Calendar integrations require admin access.");
   });

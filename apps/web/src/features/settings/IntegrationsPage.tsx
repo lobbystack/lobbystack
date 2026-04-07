@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
-import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,9 +141,6 @@ function FeedbackBanner({ message, tone }: FeedbackBannerProps) {
 export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
-  const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
-    businessId,
-  });
   const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
   }) as Array<CalendarConnectionListItem> | undefined;
@@ -151,17 +148,20 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
   const selectGoogleCalendar = useAction(api.integrations.calendar.selectGoogleCalendar);
 
-  const staff = useMemo(
-    () => (configuration?.staff ?? []) as Array<Doc<"staff">>,
-    [configuration],
-  );
   const googleConnections = useMemo(
     () =>
       ((connections ?? []).filter(
-        (connection) =>
-          connection.provider === "google" && connection.staffId !== undefined,
+        (connection) => connection.provider === "google",
       ) as Array<CalendarConnectionListItem>),
     [connections],
+  );
+  const selectedConnection = useMemo(
+    () =>
+      googleConnections.find((connection) => connection.selectedCalendarId !== undefined) ??
+      googleConnections.find((connection) => connection.status === "connected") ??
+      googleConnections[0] ??
+      null,
+    [googleConnections],
   );
   const googleHasConnection = googleConnections.length > 0;
   const googleConnected = googleConnections.some((connection) => connection.status === "connected");
@@ -170,7 +170,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     (connection) => connection.provider === "microsoft",
   );
 
-  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [calendarOptions, setCalendarOptions] = useState<Array<GoogleCalendarOption>>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -179,43 +178,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
-
-  const selectedConnection =
-    googleConnections.find((connection) => String(connection.staffId) === selectedStaffId) ?? null;
-
-  useEffect(() => {
-    const requestedStaffId = searchParams.get("staffId");
-    setSelectedStaffId((current) => {
-      if (current) {
-        return current;
-      }
-
-      if (
-        requestedStaffId &&
-        staff.some((member) => String(member._id) === requestedStaffId)
-      ) {
-        return requestedStaffId;
-      }
-
-      return staff[0]?._id ? String(staff[0]._id) : "";
-    });
-  }, [searchParams, staff]);
-
-  useEffect(() => {
-    if (staff.length === 0) {
-      setSelectedStaffId("");
-      return;
-    }
-
-    setSelectedStaffId((current) => {
-      if (!current) {
-        return String(staff[0]?._id);
-      }
-      return staff.some((member) => String(member._id) === current)
-        ? current
-        : String(staff[0]?._id);
-    });
-  }, [staff]);
 
   useEffect(() => {
     const calendar = searchParams.get("calendar");
@@ -243,19 +205,9 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
   useEffect(() => {
     async function loadCalendars() {
-      if (
-        !googleSheetOpen ||
-        !selectedStaffId ||
-        !selectedConnection?.staffId ||
-        selectedConnection.status !== "connected"
-      ) {
-        if (!selectedConnection?.staffId) {
-          setCalendarOptions([]);
-          setSelectedCalendarId("");
-        } else if (selectedConnection.status !== "connected") {
-          setCalendarOptions([]);
-          setSelectedCalendarId(selectedConnection.selectedCalendarId ?? "");
-        }
+      if (!googleSheetOpen || !selectedConnection || selectedConnection.status !== "connected") {
+        setCalendarOptions([]);
+        setSelectedCalendarId(selectedConnection?.selectedCalendarId ?? "");
         return;
       }
 
@@ -264,7 +216,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       try {
         const calendars = (await listGoogleCalendars({
           businessId,
-          staffId: selectedConnection.staffId,
         })) as Array<GoogleCalendarOption>;
         setCalendarOptions(calendars);
         const selected =
@@ -286,28 +237,15 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     businessId,
     googleSheetOpen,
     listGoogleCalendars,
-    selectedConnection?.selectedCalendarId,
-    selectedConnection?.staffId,
-    selectedStaffId,
+    selectedConnection,
     t,
   ]);
 
   function openGoogleSheet(): void {
-    if (googleConnections[0]?.staffId) {
-      setSelectedStaffId(String(googleConnections[0].staffId));
-    } else if (staff[0]?._id) {
-      setSelectedStaffId(String(staff[0]._id));
-    }
-
     setGoogleSheetOpen(true);
   }
 
   async function handleConnectGoogle(): Promise<void> {
-    if (!selectedStaffId) {
-      setErrorMessage(t("integrations.google.chooseStaffFirst"));
-      return;
-    }
-
     setIsConnecting(true);
     setErrorMessage(null);
     setStatusMessage(null);
@@ -315,7 +253,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     try {
       const result = await connectGoogle({
         businessId,
-        staffId: selectedStaffId as Id<"staff">,
       });
       window.location.assign(result.authorizationUrl);
     } catch (error) {
@@ -332,7 +269,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       return;
     }
 
-    if (!selectedStaffId || !selectedCalendarId) {
+    if (!selectedCalendarId) {
       setErrorMessage(t("integrations.google.chooseCalendarFirst"));
       return;
     }
@@ -343,7 +280,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     try {
       await selectGoogleCalendar({
         businessId,
-        staffId: selectedStaffId as Id<"staff">,
         calendarId: selectedCalendarId,
       });
       setStatusMessage(t("integrations.google.calendarSaved"));
@@ -357,8 +293,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   }
 
   async function handleRefreshCalendars(): Promise<void> {
-    const connectionStaffId = selectedConnection?.staffId;
-    if (!connectionStaffId || selectedConnection?.status !== "connected") {
+    if (selectedConnection?.status !== "connected") {
       return;
     }
 
@@ -369,7 +304,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     try {
       const calendars = (await listGoogleCalendars({
         businessId,
-        staffId: connectionStaffId,
       })) as Array<GoogleCalendarOption>;
       setCalendarOptions(calendars);
       const selected =
@@ -497,35 +431,9 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 </p>
               </div>
 
-              <FieldGroup>
-                <Field>
-                  <FieldContent>
-                    <FieldLabel>{t("integrations.google.staffLabel")}</FieldLabel>
-                    <FieldDescription>
-                      {t("integrations.google.selectStaff")}
-                    </FieldDescription>
-                  </FieldContent>
-                  <Select
-                    onValueChange={(value) => setSelectedStaffId(value ?? "")}
-                    value={selectedStaffId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t("integrations.google.selectStaff")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staff.map((member) => (
-                        <SelectItem key={member._id} value={String(member._id)}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </FieldGroup>
-
               <Button
                 className="w-full sm:w-auto"
-                disabled={staff.length === 0 || isConnecting}
+                disabled={isConnecting}
                 onClick={() => void handleConnectGoogle()}
                 type="button"
               >
@@ -559,9 +467,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed px-4 py-4 text-sm text-muted-foreground">
-                  {staff.length === 0
-                    ? t("integrations.google.noStaff")
-                    : t("integrations.google.notConnectedForStaff")}
+                  {t("integrations.google.notConnectedDescription")}
                 </div>
               )}
             </section>
@@ -655,7 +561,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     <Button
                       disabled={
                         isLoadingCalendars ||
-                        !selectedConnection.staffId ||
                         selectedConnection.status !== "connected"
                       }
                       onClick={() => void handleRefreshCalendars()}
@@ -687,55 +592,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                           t("integrations.google.lastSyncOk")}
                       </p>
                     </div>
-                  </div>
-                </section>
-
-                <section className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-semibold">
-                      {t("integrations.google.mappedConnections")}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {t("integrations.google.mappedConnectionsDescription")}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {googleConnections.map((connection) => {
-                      const member = staff.find(
-                        (candidate) => candidate._id === connection.staffId,
-                      );
-
-                      return (
-                        <div
-                          className="rounded-xl border px-4 py-3"
-                          key={connection._id}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="flex flex-col gap-1">
-                              <p className="text-sm font-medium text-foreground">
-                                {member?.name ?? t("integrations.google.unknownStaff")}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {connection.externalAccountEmail ??
-                                  t("integrations.google.connectedAccountUnavailable")}
-                              </p>
-                            </div>
-                            <div className="text-right text-xs text-muted-foreground">
-                              <p>
-                                {connection.selectedCalendarSummary ??
-                                  connection.selectedCalendarId ??
-                                  t("integrations.google.noCalendarSelected")}
-                              </p>
-                              <p>
-                                {connection.lastSyncError ??
-                                  formatTimestamp(connection.lastSyncedAt, i18n.language) ??
-                                  t("integrations.google.neverSynced")}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </section>
               </>
