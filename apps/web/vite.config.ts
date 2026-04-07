@@ -6,6 +6,10 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   envDir: "../../",
   plugins: [react(), tailwindcss()],
+  build: {
+    // PostHog error tracking needs emitted source maps so deployed bundles can be symbolicated.
+    sourcemap: true,
+  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
@@ -14,6 +18,10 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@ai-receptionist/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@ai-receptionist/telemetry": path.resolve(
+        __dirname,
+        "../../packages/telemetry/src/index.ts",
+      ),
     },
   },
   server: {

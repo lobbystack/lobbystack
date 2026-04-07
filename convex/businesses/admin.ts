@@ -3,8 +3,17 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
+import { ensureDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { assertBootstrapAllowed } from "../onboarding/abuse";
 import { workflowManager } from "../lib/components";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import {
   buildDefaultReceptionistSummary,
   DEFAULT_RECEPTIONIST_BOOKING_POLICY,
@@ -65,12 +74,29 @@ export const bootstrapBusiness = mutation({
       transferMode: DEFAULT_RECEPTIONIST_TRANSFER_MODE,
     });
 
+    await ensureDefaultStaffForBusiness(ctx, {
+      businessId,
+      timezone: args.timezone,
+    });
+
     await ctx.db.patch(user._id, { activeBusinessId: businessId });
 
     await workflowManager.start(
       ctx,
       internal.ai.workflows.runtime.refreshBusinessContextSnapshotWorkflow,
       { businessId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(businessId)),
+        properties: {
+          workflowName: "refreshBusinessContextSnapshotWorkflow",
+        },
+      }),
     );
 
     return { businessId };

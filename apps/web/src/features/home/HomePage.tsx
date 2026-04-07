@@ -481,9 +481,6 @@ export function HomePage({ businessId }: HomePageProps) {
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {appointment.serviceName ?? t("home.upcoming.unknownService")}
-                            {appointment.staffName
-                              ? ` ${t("home.upcoming.withStaff", { name: appointment.staffName })}`
-                              : ""}
                           </p>
                         </div>
                         <div className="shrink-0 text-left sm:text-right">

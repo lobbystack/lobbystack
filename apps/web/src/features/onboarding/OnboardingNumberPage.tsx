@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
 type OnboardingNumberPageProps = {
@@ -230,6 +231,12 @@ export function OnboardingNumberPage({
     setIsClaiming(true);
     setClaimError(null);
     try {
+      captureAnalyticsEvent("web.onboarding.number_claim_started", {
+        businessId: String(businessId),
+        countryCode: selectedNumber.countryCode,
+        selectionMode: selectedNumber.selectionContext.mode,
+        numberKind: selectedNumber.kind,
+      });
       const result = (await claimOnboardingNumber({
         businessId,
         e164: selectedNumber.e164,
@@ -237,6 +244,12 @@ export function OnboardingNumberPage({
       })) as ClaimResult;
 
       if (result.status === "claimed") {
+        captureAnalyticsEvent("web.onboarding.number_claim_completed", {
+          businessId: String(businessId),
+          countryCode: selectedNumber.countryCode,
+          selectionMode: selectedNumber.selectionContext.mode,
+          numberKind: selectedNumber.kind,
+        });
         void navigate("/");
         return;
       }

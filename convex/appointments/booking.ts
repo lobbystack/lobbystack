@@ -1,3 +1,7 @@
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import { v } from "convex/values";
 import { DateTime } from "luxon";
 import {
@@ -12,7 +16,12 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
+import { selectDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { computeAvailability } from "../lib/availability";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 
 const SLOT_INTERVAL_MINUTES = 15;
 const DEFAULT_SLOT_LIMIT = 6;
@@ -20,6 +29,7 @@ const DEFAULT_SLOT_LIMIT = 6;
 type BookingContext = {
   serviceDurationMinutes: number;
   staffIds: Array<string>;
+  defaultStaffId?: string;
   hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>;
   closures: Array<{ startsAt: string; endsAt: string; reason: string }>;
   existingAppointments: Array<{ startsAt: string; endsAt: string; staffId: string }>;
@@ -139,15 +149,54 @@ async function loadBookingContext(
         .collect(),
     ]);
   const activeStaffIds = new Set(activeStaff.map((row) => String(row._id)));
+  const defaultStaff = await selectDefaultStaffForBusiness(ctx, args.businessId);
+  const defaultStaffId = defaultStaff ? String(defaultStaff._id) : undefined;
   const eligibleAssignments = assignments.filter(
     (row) =>
       row.businessId === args.businessId &&
       activeStaffIds.has(String(row.staffId)),
   );
+  const staffIds =
+    eligibleAssignments.length > 0
+      ? eligibleAssignments.map((row) => String(row.staffId))
+      : defaultStaffId
+        ? [defaultStaffId]
+        : [];
+  const existingAppointments =
+    eligibleAssignments.length > 0
+      ? [
+          ...appointments.map((row) => ({
+            startsAt: row.startsAt,
+            endsAt: row.endsAt,
+            staffId: String(row.staffId),
+          })),
+          ...calendarBusyBlocks
+            .filter((row) => row.staffId)
+            .map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: String(row.staffId),
+            })),
+        ]
+      : defaultStaffId
+        ? [
+            ...appointments.map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: defaultStaffId,
+            })),
+            ...calendarBusyBlocks.map((row) => ({
+              startsAt: row.startsAt,
+              endsAt: row.endsAt,
+              staffId: defaultStaffId,
+            })),
+          ]
+        : [];
 
   return {
     serviceDurationMinutes: service.durationMinutes,
-    staffIds: eligibleAssignments.map((row) => String(row.staffId)),
+    staffIds,
+    ...(defaultStaffId !== undefined ? { defaultStaffId } : {}),
     hours: hours.map((row) => ({
       dayOfWeek: row.dayOfWeek,
       openMinutes: row.openMinutes,
@@ -158,20 +207,7 @@ async function loadBookingContext(
       endsAt: row.endsAt,
       reason: row.reason,
     })),
-    existingAppointments: [
-      ...appointments.map((row) => ({
-        startsAt: row.startsAt,
-        endsAt: row.endsAt,
-        staffId: String(row.staffId),
-      })),
-      ...calendarBusyBlocks
-        .filter((row) => row.staffId)
-        .map((row) => ({
-          startsAt: row.startsAt,
-          endsAt: row.endsAt,
-          staffId: String(row.staffId),
-        })),
-    ],
+    existingAppointments,
   };
 }
 
@@ -188,83 +224,156 @@ async function bookAppointmentWithSource(
     sourceChannel: string;
   },
 ): Promise<{ appointmentId: Id<"appointments">; contactId: Id<"contacts"> }> {
-  const availability = await ctx.runQuery(
-    internal.appointments.booking.checkAvailabilityForBusiness,
-    {
+  try {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
       businessId: args.businessId,
-      serviceId: args.serviceId,
-      startsAt: args.startsAt,
-      timezone: args.timezone,
-      ...(args.preferredStaffId !== undefined
-        ? { preferredStaffId: args.preferredStaffId }
-        : {}),
-    },
-  );
-
-  if (availability.length === 0) {
-    throw new Error("No availability for the requested time.");
-  }
-
-  let contact = await ctx.db
-    .query("contacts")
-    .withIndex("by_business_id_and_phone", (q) =>
-      q.eq("businessId", args.businessId).eq("phone", args.contactPhone),
-    )
-    .unique();
-
-  if (!contact) {
-    const contactId = await ctx.db.insert("contacts", {
-      businessId: args.businessId,
-      phone: args.contactPhone,
-      ...(args.contactName !== undefined ? { name: args.contactName } : {}),
     });
-    contact = await ctx.db.get(contactId);
-  }
 
-  if (!contact) {
-    throw new Error("Failed to create contact.");
-  }
+    const availability = await ctx.runQuery(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId: args.businessId,
+        serviceId: args.serviceId,
+        startsAt: args.startsAt,
+        timezone: args.timezone,
+        ...(args.preferredStaffId !== undefined
+          ? { preferredStaffId: args.preferredStaffId }
+          : {}),
+      },
+    );
 
-  const selected = availability[0];
-  if (!selected) {
-    throw new Error("No availability for the requested time.");
-  }
-  const calendarState: {
-    hasConnectedCalendar: boolean;
-    selectedConnectionId?: Id<"calendar_connections">;
-    selectedCalendarId?: string;
-  } = await ctx.runQuery(
-    internal.integrations.calendar.getStaffCalendarConnectionState,
-    {
+    if (availability.length === 0) {
+      throw new Error("No availability for the requested time.");
+    }
+
+    let contact = await ctx.db
+      .query("contacts")
+      .withIndex("by_business_id_and_phone", (q) =>
+        q.eq("businessId", args.businessId).eq("phone", args.contactPhone),
+      )
+      .unique();
+
+    if (!contact) {
+      const contactId = await ctx.db.insert("contacts", {
+        businessId: args.businessId,
+        phone: args.contactPhone,
+        ...(args.contactName !== undefined ? { name: args.contactName } : {}),
+      });
+      contact = await ctx.db.get(contactId);
+    }
+
+    if (!contact) {
+      throw new Error("Failed to create contact.");
+    }
+
+    const selected = availability[0];
+    if (!selected) {
+      throw new Error("No availability for the requested time.");
+    }
+    const calendarState: {
+      hasConnectedCalendar: boolean;
+      selectedConnectionId?: Id<"calendar_connections">;
+      selectedCalendarId?: string;
+    } = await ctx.runQuery(
+      internal.integrations.calendar.getStaffCalendarConnectionState,
+      {
+        businessId: args.businessId,
+        staffId: selected.staffId as Id<"staff">,
+      },
+    );
+    const appointmentId = await ctx.db.insert("appointments", {
       businessId: args.businessId,
+      contactId: contact._id,
       staffId: selected.staffId as Id<"staff">,
-    },
-  );
-  const appointmentId = await ctx.db.insert("appointments", {
-    businessId: args.businessId,
-    contactId: contact._id,
-    staffId: selected.staffId as Id<"staff">,
-    serviceId: args.serviceId,
-    startsAt: selected.startsAt,
-    endsAt: selected.endsAt,
-    timezone: args.timezone,
-    status: "confirmed",
-    sourceChannel: args.sourceChannel,
-    calendarSyncState: calendarState.hasConnectedCalendar ? "pending" : "not_required",
-  });
+      serviceId: args.serviceId,
+      startsAt: selected.startsAt,
+      endsAt: selected.endsAt,
+      timezone: args.timezone,
+      status: "confirmed",
+      sourceChannel: args.sourceChannel,
+      calendarSyncState: calendarState.hasConnectedCalendar ? "pending" : "not_required",
+    });
 
-  await workflowManager.start(
-    ctx,
-    internal.ai.workflows.runtime.afterAppointmentBookedWorkflow,
-    { appointmentId },
-  );
-  await workflowManager.start(
-    ctx,
-    internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
-    { appointmentId },
-  );
+    await workflowManager.start(
+      ctx,
+      internal.ai.workflows.runtime.afterAppointmentBookedWorkflow,
+      { appointmentId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          workflowName: "afterAppointmentBookedWorkflow",
+        },
+      }),
+    );
+    await workflowManager.start(
+      ctx,
+      internal.ai.workflows.runtime.appointmentCalendarSyncWorkflow,
+      { appointmentId },
+    );
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "workflow.started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          workflowName: "appointmentCalendarSyncWorkflow",
+        },
+      }),
+    );
 
-  return { appointmentId, contactId: contact._id };
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "appointment.booked",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        appointmentId: String(appointmentId),
+        channel: args.sourceChannel,
+        properties: {
+          serviceId: String(args.serviceId),
+          staffId: String(selected.staffId),
+          startsAt: selected.startsAt,
+          sourceChannel: args.sourceChannel,
+        },
+      }),
+    );
+
+    return { appointmentId, contactId: contact._id };
+  } catch (error) {
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "appointment.booking_failed",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        channel: args.sourceChannel,
+        properties: {
+          serviceId: String(args.serviceId),
+          startsAt: args.startsAt,
+          sourceChannel: args.sourceChannel,
+          ...(args.preferredStaffId !== undefined
+            ? { preferredStaffId: String(args.preferredStaffId) }
+            : {}),
+          reason: error instanceof Error ? error.message : "Unknown booking failure",
+        },
+      }),
+    );
+    throw error;
+  }
 }
 
 export const checkAvailabilityForBusiness = internalQuery({
@@ -277,14 +386,19 @@ export const checkAvailabilityForBusiness = internalQuery({
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
+    const normalizedPreferredStaffId =
+      args.preferredStaffId !== undefined &&
+      context.staffIds.includes(String(args.preferredStaffId))
+        ? String(args.preferredStaffId)
+        : undefined;
 
     return computeAvailability({
       request: {
         serviceId: String(args.serviceId),
         startsAt: args.startsAt,
         timezone: args.timezone,
-        ...(args.preferredStaffId !== undefined
-          ? { preferredStaffId: String(args.preferredStaffId) }
+        ...(normalizedPreferredStaffId !== undefined
+          ? { preferredStaffId: normalizedPreferredStaffId }
           : {}),
       },
       serviceDurationMinutes: context.serviceDurationMinutes,
@@ -309,6 +423,11 @@ export const findAvailabilityForBusiness = internalQuery({
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
+    const normalizedPreferredStaffId =
+      args.preferredStaffId !== undefined &&
+      context.staffIds.includes(String(args.preferredStaffId))
+        ? String(args.preferredStaffId)
+        : undefined;
     const dayStart = DateTime.fromISO(args.date, { zone: args.timezone }).startOf("day");
     if (!dayStart.isValid) {
       throw new Error("Invalid availability date.");
@@ -348,8 +467,8 @@ export const findAvailabilityForBusiness = internalQuery({
           serviceId: String(args.serviceId),
           startsAt: candidate.startsAt,
           timezone: args.timezone,
-          ...(args.preferredStaffId !== undefined
-            ? { preferredStaffId: String(args.preferredStaffId) }
+          ...(normalizedPreferredStaffId !== undefined
+            ? { preferredStaffId: normalizedPreferredStaffId }
             : {}),
         },
         serviceDurationMinutes: context.serviceDurationMinutes,

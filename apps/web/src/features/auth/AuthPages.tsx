@@ -11,8 +11,14 @@ import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
+import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
 
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
+
+function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
+  resetAnalyticsIdentity();
+  captureAnalyticsEvent(name);
+}
 
 function AuthShell(props: { children: ReactNode }) {
   return (
@@ -109,10 +115,12 @@ export function LoginPage() {
 
       if (result.signingIn) {
         setStatusMessage(t("status.signedInFinishing"));
+        capturePublicAuthEvent("web.auth.login_succeeded");
         return;
       }
 
       setStatusMessage(t("status.signInCompleted"));
+      capturePublicAuthEvent("web.auth.login_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signIn", t));
     } finally {
@@ -165,10 +173,12 @@ export function SignupPage() {
 
       if (result.signingIn) {
         setStatusMessage(t("status.accountCreatedFinishing"));
+        capturePublicAuthEvent("web.auth.signup_succeeded");
         return;
       }
 
       setStatusMessage(t("status.accountCreatedFinalizing"));
+      capturePublicAuthEvent("web.auth.signup_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signUp", t));
     } finally {

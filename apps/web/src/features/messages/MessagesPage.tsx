@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -474,6 +475,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   async function selectConversation(conversationId: Id<"conversations">) {
+    const isChangingConversation = conversationId !== selectedConversationId;
     if (conversationId !== selectedConversationId) {
       await discardStagedAttachments(selectedConversationId);
       setDraftMessage("");
@@ -487,6 +489,15 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
       next.set("conversationId", String(conversationId));
       return next;
     });
+
+    if (isChangingConversation) {
+      const conversation = conversations?.find((item) => item.id === conversationId);
+      captureAnalyticsEvent("web.messages.thread_opened", {
+        businessId: businessId ? String(businessId) : undefined,
+        conversationId: String(conversationId),
+        channel: conversation?.channel ?? null,
+      });
+    }
   }
 
   async function handleAttachmentFiles(
@@ -618,6 +629,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
         ...(stagedAttachments.length > 0
           ? { attachmentIds: stagedAttachments.map((attachment) => attachment.id) }
           : {}),
+      });
+      captureAnalyticsEvent("web.messages.reply_sent", {
+        businessId: String(businessId),
+        conversationId: String(selectedConversationId),
+        channel: "sms",
+        attachmentCount: stagedAttachments.length,
+        hasBody: draftMessage.trim().length > 0,
       });
       setDraftMessage("");
     } catch (error) {

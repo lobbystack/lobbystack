@@ -8,6 +8,8 @@ import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
+import { recordTwilioInvalidSignature } from "../observability/otel";
+import { capturePostHogException } from "../observability/posthog";
 import { createSnapshotCache } from "../sessions/snapshotCache";
 
 export function createServer(): ReturnType<typeof Fastify> {
@@ -22,6 +24,19 @@ export function createServer(): ReturnType<typeof Fastify> {
   server.decorate("runtimeConfig", env);
 
   server.register(fastifyFormbody);
+  server.addHook("onError", async (request, _reply, error) => {
+    capturePostHogException(error, {
+      properties: {
+        operation: "fastify_request",
+        method: request.method,
+        path: request.routeOptions.url ?? request.url,
+        statusCode:
+          typeof (error as { statusCode?: unknown }).statusCode === "number"
+            ? ((error as { statusCode?: number }).statusCode ?? 500)
+            : 500,
+      },
+    });
+  });
 
   const mediaStreamServer = new WebSocketServer({ noServer: true });
   server.server.on("upgrade", (request, socket, head) => {
@@ -41,6 +56,9 @@ export function createServer(): ReturnType<typeof Fastify> {
       path: pathname,
     });
     if (!hasValidTwilioSignature) {
+      recordTwilioInvalidSignature({
+        "ai_receptionist.path": pathname,
+      });
       server.log.warn(
         {
           path: pathname,

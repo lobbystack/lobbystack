@@ -42,6 +42,8 @@ const serverEnvSchema = z.object({
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
 });
 
 const clientEnvSchema = z.object({
@@ -49,6 +51,9 @@ const clientEnvSchema = z.object({
   VITE_CONVEX_SITE_URL: z.string().url(),
   VITE_APP_NAME: z.string().default("AI Receptionist"),
   VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
+  VITE_POSTHOG_KEY: z.string().optional(),
+  VITE_POSTHOG_HOST: z.string().min(1).optional(),
+  VITE_POSTHOG_UI_HOST: z.string().url().optional(),
 });
 
 const voiceGatewayEnvSchema = z.object({
@@ -64,6 +69,11 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
+  POSTHOG_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

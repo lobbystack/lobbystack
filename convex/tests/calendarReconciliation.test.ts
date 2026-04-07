@@ -419,6 +419,283 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("removes stale busy blocks when a calendar connection is disconnected", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-busy-blocks-business",
+        name: "Disconnect Calendar Busy Blocks Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+
+    await t.mutation(internal.integrations.calendar.applyCalendarBusyBlockChanges, {
+      connectionId,
+      fullSync: true,
+      syncedAt: "2026-03-17T12:00:00.000Z",
+      busyBlocks: [
+        {
+          startsAt: "2026-03-17T14:00:00.000-04:00",
+          endsAt: "2026-03-17T14:30:00.000-04:00",
+          externalEventId: "busy-1",
+          sourceCalendarId: "primary-calendar",
+        },
+      ],
+      removedExternalEventIds: [],
+    });
+
+    const blockedAvailability = await t.query(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000-04:00",
+        timezone: "America/Toronto",
+      },
+    );
+
+    expect(blockedAvailability).toHaveLength(0);
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+    });
+
+    const availableAfterDisconnect = await t.query(
+      internal.appointments.booking.checkAvailabilityForBusiness,
+      {
+        businessId,
+        serviceId,
+        startsAt: "2026-03-17T14:00:00.000-04:00",
+        timezone: "America/Toronto",
+      },
+    );
+
+    expect(availableAfterDisconnect).toHaveLength(1);
+
+    await t.run(async (ctx) => {
+      const busyBlocks = await ctx.db
+        .query("calendar_busy_blocks")
+        .withIndex("by_connection_id_and_starts_at", (q) =>
+          q.eq("connectionId", connectionId),
+        )
+        .collect();
+      const connection = await ctx.db.get(connectionId);
+
+      expect(busyBlocks).toHaveLength(0);
+      expect(connection).toBeNull();
+    });
+  });
+
+  it("recomputes pending appointment sync state after disconnecting a calendar", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-pending-appointment-business",
+        name: "Disconnect Calendar Pending Appointment Business",
+      });
+    });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, {
+      businessId,
+      serviceId,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+      expect(appointment?.calendarSyncState).toBe("pending");
+    });
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+
+      expect(appointment?.calendarSyncState).toBe("not_required");
+      expect(appointment?.calendarLastSyncError).toBeUndefined();
+      expect(appointment?.calendarReconcileAfter).toBeUndefined();
+      expect(appointment?.calendarExternalEventId).toBeUndefined();
+    });
+  });
+
+  it("recomputes synced appointment sync state after disconnecting a calendar", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-synced-appointment-business",
+        name: "Disconnect Calendar Synced Appointment Business",
+      });
+    });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    const syncResult = await t.action(
+      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      {
+        appointmentId,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      ok: true,
+      status: "synced",
+    });
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+    });
+
+    await t.run(async (ctx) => {
+      const appointment = await ctx.db.get(appointmentId);
+
+      expect(appointment?.calendarSyncState).toBe("not_required");
+      expect(appointment?.calendarLastSyncError).toBeUndefined();
+      expect(appointment?.calendarReconcileAfter).toBeUndefined();
+    });
+  });
+
+  it("pages calendar disconnect reset candidates instead of collecting them all at once", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-paged-reset-business",
+        name: "Disconnect Calendar Paged Reset Business",
+      });
+    });
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 55; index += 1) {
+        const startsAt = new Date(Date.UTC(2026, 2, 17 + index, 18, 0, 0));
+        const endsAt = new Date(Date.UTC(2026, 2, 17 + index, 18, 30, 0));
+        const contactId = await ctx.db.insert("contacts", {
+          businessId,
+          phone: `+1416555${String(index).padStart(4, "0")}`,
+        });
+        await ctx.db.insert("appointments", {
+          businessId,
+          contactId,
+          staffId,
+          serviceId,
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          timezone: "America/Toronto",
+          status: "confirmed",
+          sourceChannel: "dashboard",
+          calendarSyncState: "synced",
+        });
+      }
+    });
+
+    const firstPage = await t.query(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionResetPage,
+      {
+        businessId,
+        staffId,
+        paginationOpts: {
+          numItems: 50,
+          cursor: null,
+        },
+      },
+    );
+
+    expect(firstPage.appointmentIds).toHaveLength(50);
+    expect(firstPage.isDone).toBe(false);
+    expect(firstPage.continueCursor).toBeTruthy();
+
+    const secondPage = await t.query(
+      internal.integrations.calendar.listAppointmentsForCalendarConnectionResetPage,
+      {
+        businessId,
+        staffId,
+        paginationOpts: {
+          numItems: 50,
+          cursor: firstPage.continueCursor,
+        },
+      },
+    );
+
+    expect(secondPage.appointmentIds).toHaveLength(5);
+    expect(secondPage.isDone).toBe(true);
+  });
+
+  it("does not create a default staff record before rejecting unauthorized calendar access", async () => {
+    const t = convexTest(schema, convexModules);
+    const businessId = await t.run(async (ctx) => {
+      return await insertBusiness(ctx, {
+        slug: "unauthorized-calendar-access-business",
+        name: "Unauthorized Calendar Access Business",
+      });
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("users", {
+        authSubject: "calendar-outsider",
+      });
+    });
+
+    const outsider = t.withIdentity({ subject: "calendar-outsider" });
+    await expect(
+      outsider.action(api.integrations.calendar.listGoogleCalendars, {
+        businessId,
+      }),
+    ).rejects.toThrow("You do not have access to this business.");
+
+    await t.run(async (ctx) => {
+      const staff = await ctx.db
+        .query("staff")
+        .withIndex("by_business_id_and_active", (q) =>
+          q.eq("businessId", businessId).eq("active", true),
+        )
+        .collect();
+
+      expect(staff).toHaveLength(0);
+    });
+  });
+
+  it("removes mirrored Google events before disconnecting the calendar", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-delete-external-event-business",
+        name: "Disconnect Calendar Delete External Event Business",
+      });
+    });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    const syncResult = await t.action(
+      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      {
+        appointmentId,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      ok: true,
+      status: "synced",
+    });
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(1);
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+    });
+
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(0);
+  });
+
   it("records sync failures and schedules reconciliation", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
@@ -1386,7 +1663,6 @@ describe("calendar reconciliation backend", () => {
     await expect(
       authed.action(api.integrations.calendar.connectGoogle, {
         businessId,
-        staffId,
       }),
     ).rejects.toThrow("Calendar integrations require admin access.");
   });

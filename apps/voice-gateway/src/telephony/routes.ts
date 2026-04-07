@@ -9,6 +9,7 @@ import {
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
+import { capturePostHogException } from "../observability/posthog";
 import {
   isTerminalTwilioCallStatus,
   normalizeTwilioCallStatusPayload,
@@ -51,6 +52,15 @@ async function initializeInboundCallRecord(
       startedAt: new Date().toISOString(),
     });
   } catch (error) {
+    capturePostHogException(error, {
+      businessId,
+      properties: {
+        operation: "initialize_inbound_call_record",
+        callSid,
+        channel: "voice",
+        provider: "twilio",
+      },
+    });
     server.log.error(
       {
         err: error,

@@ -200,16 +200,12 @@ function buildGoogleAuthorizationUrl(state: string): string {
 
 function buildSettingsRedirectUrl(input: {
   status: "success" | "error";
-  staffId?: Id<"staff">;
   message?: string;
 }): string {
   const { appBaseUrl } = requireGoogleEnv();
   const url = new URL("/settings/integrations", appBaseUrl);
   url.searchParams.set("calendar", "google");
   url.searchParams.set("status", input.status);
-  if (input.staffId) {
-    url.searchParams.set("staffId", String(input.staffId));
-  }
   if (input.message) {
     url.searchParams.set("message", input.message);
   }
@@ -616,7 +612,6 @@ export const completeOAuthCallback = internalAction({
     return {
       redirectUrl: buildSettingsRedirectUrl({
         status: "success",
-        staffId: oauthState.staffId,
       }),
     };
   },
@@ -879,6 +874,60 @@ export const syncAppointmentEvent = internalAction({
   },
 });
 
+export const deleteAppointmentEventForDisconnect = internalAction({
+  args: {
+    appointmentId: v.id("appointments"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ ok: true; status: "not_required" | "deleted" }> => {
+    const context: AppointmentSyncContext = await ctx.runQuery(
+      internal.integrations.calendar.getAppointmentCalendarSyncContext,
+      {
+        appointmentId: args.appointmentId,
+      },
+    );
+    if (
+      !context ||
+      context.provider !== "google" ||
+      !context.selectedConnectionId ||
+      !context.selectedCalendarId ||
+      !context.appointment.calendarExternalEventId
+    ) {
+      return { ok: true, status: "not_required" as const };
+    }
+
+    const { accessToken } = await withGoogleAccessToken(ctx, context.selectedConnectionId);
+    const baseUrl = `${GOOGLE_CALENDAR_API_BASE_URL}/calendars/${encodeURIComponent(
+      context.selectedCalendarId,
+    )}/events`;
+    const response = await fetch(
+      `${baseUrl}/${encodeURIComponent(context.appointment.calendarExternalEventId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Google event delete failed: ${await parseGoogleError(response)}`);
+    }
+
+    await ctx.runAction(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+      connectionId: context.selectedConnectionId,
+      fullSync: true,
+    });
+
+    return {
+      ok: true,
+      status: "deleted" as const,
+    };
+  },
+});
+
 export const startGoogleConnection = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -919,7 +968,6 @@ export const startGoogleConnection = internalAction({
 export const buildCallbackRedirect = internalAction({
   args: {
     status: v.union(v.literal("success"), v.literal("error")),
-    staffId: v.optional(v.id("staff")),
     message: v.optional(v.string()),
   },
   handler: async (_ctx, args): Promise<{ redirectUrl: string }> => {

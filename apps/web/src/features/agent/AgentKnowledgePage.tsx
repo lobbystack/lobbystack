@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { captureAnalyticsException } from "@/lib/analytics";
 import type { AgentSection } from "./sections";
 
 type AgentKnowledgePageProps = {
@@ -365,6 +366,12 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         setLoadedViewerText(document, fallbackText);
         return;
       }
+      captureAnalyticsException(error, {
+        businessId: String(businessId),
+        section,
+        operation: "knowledge_document_preview",
+        documentId,
+      });
       const message =
         error instanceof Error ? error.message : t(`agent:sections.${section}.previewError`);
       setViewerErrorsByDocumentId((current) => ({

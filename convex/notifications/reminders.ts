@@ -11,6 +11,13 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { retrier } from "../lib/components";
 import { requireMembership } from "../lib/auth";
 import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
+import {
+  serializePostHogEvent,
+} from "../telemetry/posthog";
+import {
   buildLocalizedAppointmentNotificationBody,
   inferRuntimeLocaleFromBusinessContext,
   normalizeRuntimeLocale,
@@ -20,7 +27,9 @@ import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 type AppointmentNotificationKind = "appointment_reminder" | "booking_confirmation";
 
 type NotificationDeliveryContext = {
+  businessId: Id<"businesses">;
   notificationId: Id<"notifications">;
+  appointmentId: Id<"appointments">;
   to: string;
   from: string;
   kind: AppointmentNotificationKind;
@@ -136,7 +145,9 @@ export const getNotificationDeliveryContext = internalQuery({
       }) ??
       "en";
     return {
+      businessId: notification.businessId,
       notificationId: notification._id,
+      appointmentId,
       to: contact.phone,
       from: senderPhoneNumber,
       kind: notification.kind,
@@ -371,6 +382,50 @@ export const deliverNotification = internalAction({
         providerUpdatedAt: new Date().toISOString(),
         providerStatus: "failed",
       });
+      const distinctId = getPostHogDistinctIdForBusinessSystem(
+        String(deliveryContext.businessId),
+      );
+      const groupKey = getPostHogBusinessGroupKey(String(deliveryContext.businessId));
+
+      if (deliveryContext.kind === "booking_confirmation") {
+        await ctx.runMutation(
+          internal.telemetry.posthog.enqueueEvent,
+          serializePostHogEvent({
+            eventName: "appointment.confirmation_notification_failed",
+            distinctId,
+            businessId: deliveryContext.businessId,
+            groupKey,
+            appointmentId: String(deliveryContext.appointmentId),
+            channel: "sms",
+            provider: "twilio",
+            properties: {
+              notificationId: String(deliveryContext.notificationId),
+              appointmentId: String(deliveryContext.appointmentId),
+              notificationKind: deliveryContext.kind,
+              status: "failed",
+            },
+          }),
+        );
+      }
+      await ctx.runMutation(
+        internal.telemetry.posthog.enqueueEvent,
+        serializePostHogEvent({
+          eventName: "workflow.failed",
+          distinctId,
+          businessId: deliveryContext.businessId,
+          groupKey,
+          appointmentId: String(deliveryContext.appointmentId),
+          channel: "sms",
+          provider: "twilio",
+          properties: {
+            workflowName: "notifications.deliver",
+            notificationId: String(deliveryContext.notificationId),
+            appointmentId: String(deliveryContext.appointmentId),
+            notificationKind: deliveryContext.kind,
+            status: "failed",
+          },
+        }),
+      );
       throw error;
     }
   },

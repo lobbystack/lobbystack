@@ -33,7 +33,6 @@ import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
   businessName: string;
-  businessSlug?: string | undefined;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;

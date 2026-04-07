@@ -14,6 +14,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
@@ -130,6 +131,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         greeting,
         transferNumber: transferNumberResolution.value,
       });
+      captureAnalyticsEvent("web.agent.settings_saved", {
+        businessId: String(businessId),
+        setting: "greeting",
+      });
       setGreetingStatus(t("agent:actions.saved"));
     } finally {
       setIsGreetingSaving(false);
@@ -160,6 +165,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         greeting,
         transferNumber: transferNumberResolution.value,
       });
+      captureAnalyticsEvent("web.agent.settings_saved", {
+        businessId: String(businessId),
+        setting: "default_locale",
+      });
       setLocaleStatus(t("agent:actions.saved"));
     } finally {
       setIsLocaleSaving(false);
@@ -189,6 +198,10 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         defaultLocale,
         greeting,
         transferNumber: transferNumberResolution.value,
+      });
+      captureAnalyticsEvent("web.agent.settings_saved", {
+        businessId: String(businessId),
+        setting: "transfer_number",
       });
       setTransferStatus(t("agent:actions.saved"));
       setTransferStatusTone("success");

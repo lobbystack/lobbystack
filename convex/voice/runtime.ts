@@ -2,7 +2,15 @@ import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
 } from "../lib/voiceCallStatus";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
 import { v } from "convex/values";
+import {
+  enqueuePostHogOutboxRecord,
+  serializePostHogEvent,
+} from "../telemetry/posthog";
 
 import { internal } from "../_generated/api";
 import {
@@ -396,7 +404,12 @@ export const getActiveStaffAssignmentsForService = internalQuery({
 
     return {
       activeStaffCount: activeStaffIds.size,
-      assignmentCount: eligibleAssignments.length,
+      assignmentCount:
+        eligibleAssignments.length > 0
+          ? eligibleAssignments.length
+          : activeStaffIds.size > 0
+            ? 1
+            : 0,
     };
   },
 });
@@ -492,6 +505,24 @@ export const startCall = internalMutation({
       startedAt: Date.parse(args.startedAt),
     });
 
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.call_started",
+        businessId: args.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+        conversationId: String(conversationId),
+        callId: String(callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          status: "in_progress",
+          gatewaySessionId: args.gatewaySessionId,
+        },
+      }),
+    );
+
     return {
       callId,
       conversationId,
@@ -546,9 +577,52 @@ export const setTransferState = internalMutation({
     transferState: v.string(),
   },
   handler: async (ctx: MutationCtx, args: SetTransferStateArgs) => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
     await ctx.db.patch(args.callId, {
       transferState: args.transferState,
     });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.transfer_state_changed",
+        businessId: call.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+        ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+        callId: String(args.callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          transferState: args.transferState,
+        },
+      }),
+    );
+    if (args.transferState === "requested" || args.transferState === "completed") {
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName:
+            args.transferState === "requested"
+              ? "voice.transfer_requested"
+              : "voice.transfer_completed",
+          businessId: call.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+          ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+          callId: String(args.callId),
+          channel: "voice",
+          provider: "twilio",
+          properties: {
+            transferState: args.transferState,
+          },
+        }),
+      );
+    }
     return null;
   },
 });
@@ -714,6 +788,24 @@ export const completeCall = internalMutation({
       endedAt: Date.parse(args.endedAt),
     });
 
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.call_completed",
+        businessId: call.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+        ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+        callId: String(args.callId),
+        channel: "voice",
+        provider: "twilio",
+        properties: {
+          status: args.status,
+          disposition,
+        },
+      }),
+    );
+
     return null;
   },
 });
@@ -815,6 +907,9 @@ export const checkAvailabilityForVoice = internalAction({
     ctx: ActionCtx,
     args: CheckAvailabilityForVoiceArgs,
   ): Promise<CheckAvailabilityForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
@@ -883,6 +978,9 @@ export const findAvailabilityForVoice = internalAction({
     ctx: ActionCtx,
     args: FindAvailabilityForVoiceArgs,
   ): Promise<FindAvailabilityForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");
@@ -913,8 +1011,8 @@ export const findAvailabilityForVoice = internalAction({
         setupIssue,
         summary:
           setupIssue === "no_active_staff"
-            ? `${localizedServiceName} cannot be booked yet because no active team members are configured for booking.`
-            : `${localizedServiceName} cannot be booked yet because no active team member is assigned to that service.`,
+            ? `${localizedServiceName} cannot be booked yet because booking is not configured for this business yet.`
+            : `${localizedServiceName} cannot be booked yet because booking is not configured for this service yet.`,
       };
     }
 
@@ -972,6 +1070,9 @@ export const bookAppointmentForVoice = internalAction({
     ctx: ActionCtx,
     args: BookAppointmentForVoiceArgs,
   ): Promise<BookAppointmentForVoiceResult> => {
+    await ctx.runMutation(internal.businesses.catalog.ensureDefaultStaffForBusiness, {
+      businessId: args.businessId,
+    });
     const service = await resolveServiceDocument(ctx, args.businessId, args.serviceName);
     if (!service || service.businessId !== args.businessId || !service.active) {
       throw new Error("Service not found for this business.");

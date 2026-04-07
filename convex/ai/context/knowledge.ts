@@ -1,5 +1,9 @@
 import { createThread } from "@convex-dev/agent";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../../telemetry/shared";
 import { v } from "convex/values";
 import {
   action,
@@ -36,6 +40,7 @@ import {
 } from "../../lib/knowledgeSections";
 import { normalizeRuntimeLocale } from "../../lib/runtimeLocale";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
+import { enqueuePostHogEventBestEffort } from "../../telemetry/posthog";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
 type PreviewKnowledgeAnswer = { text: string; threadId: string };
@@ -215,6 +220,19 @@ async function indexKnowledgeDocumentById(
       indexVersion: KNOWLEDGE_INDEX_VERSION,
       processingProgress: result.status === "ready" ? 100 : 96,
     });
+    if (result.status === "ready") {
+      await enqueuePostHogEventBestEffort(ctx, {
+        eventName: "knowledge.document_indexed",
+        businessId: document.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+        properties: {
+          documentId: String(documentId),
+          sourceType: document.sourceType,
+          section: document.section,
+        },
+      });
+    }
     await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
     });
@@ -838,7 +856,19 @@ export const searchKnowledgeForVoiceInternal = internalAction({
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await enqueueStaleKnowledgeReindex(ctx, args.businessId);
-    return await searchIndexedKnowledge(ctx, args);
+    const results = await searchIndexedKnowledge(ctx, args);
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "knowledge.search_executed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      channel: "voice",
+      properties: {
+        queryLength: args.query.trim().length,
+        resultCount: results.length,
+      },
+    });
+    return results;
   },
 });
 
@@ -850,7 +880,19 @@ export const searchKnowledgeForDashboard = action({
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await requireKnowledgeAccess(ctx, args.businessId);
-    return await searchKnowledge(ctx, args);
+    const results = await searchKnowledge(ctx, args);
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "knowledge.search_executed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      channel: "dashboard",
+      properties: {
+        queryLength: args.query.trim().length,
+        resultCount: results.length,
+      },
+    });
+    return results;
   },
 });
 
