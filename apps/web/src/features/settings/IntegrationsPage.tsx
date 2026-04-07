@@ -351,7 +351,11 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       : undefined
                   }
                   disabled={googleConnected && !googleNeedsReconnect}
-                  onClick={openGoogleSheet}
+                  onClick={() =>
+                    googleConnected && !googleNeedsReconnect
+                      ? undefined
+                      : void handleConnectGoogle()
+                  }
                   size="sm"
                   type="button"
                   variant="outline"
