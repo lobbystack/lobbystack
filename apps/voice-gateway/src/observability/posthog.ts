@@ -18,6 +18,8 @@ type AiTraceCommon = {
   provider: string;
 };
 
+type AiState = TelemetryProperties;
+
 let client: PostHog | null | undefined;
 
 function getClient(): PostHog | null {
@@ -71,7 +73,17 @@ function capture(
 }
 
 export function captureAiTraceStarted(input: AiTraceCommon): void {
-  capture("$ai_trace", input.businessId, buildBaseProperties(input));
+  capture("$ai_trace", input.businessId, {
+    ...buildBaseProperties(input),
+    $ai_input_state: {
+      phase: "session_initialized",
+      channel: "voice",
+      provider: input.provider,
+    } satisfies AiState,
+    $ai_output_state: {
+      phase: "awaiting_first_response",
+    } satisfies AiState,
+  });
 }
 
 export function captureAiGeneration(
@@ -112,6 +124,8 @@ export function captureAiGeneration(
 export function captureAiSpan(
   input: AiTraceCommon & {
     spanName: string;
+    inputState?: AiState;
+    outputState?: AiState;
     latencyMs?: number;
     isError?: boolean;
     error?: string;
@@ -123,6 +137,8 @@ export function captureAiSpan(
   capture("$ai_span", input.businessId, {
     ...buildBaseProperties(input),
     $ai_span_name: input.spanName,
+    $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
+    $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
     ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
     ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
     ...(input.error ? { $ai_error: input.error } : {}),

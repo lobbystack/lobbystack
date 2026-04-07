@@ -879,6 +879,60 @@ export const syncAppointmentEvent = internalAction({
   },
 });
 
+export const deleteAppointmentEventForDisconnect = internalAction({
+  args: {
+    appointmentId: v.id("appointments"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ ok: true; status: "not_required" | "deleted" }> => {
+    const context: AppointmentSyncContext = await ctx.runQuery(
+      internal.integrations.calendar.getAppointmentCalendarSyncContext,
+      {
+        appointmentId: args.appointmentId,
+      },
+    );
+    if (
+      !context ||
+      context.provider !== "google" ||
+      !context.selectedConnectionId ||
+      !context.selectedCalendarId ||
+      !context.appointment.calendarExternalEventId
+    ) {
+      return { ok: true, status: "not_required" as const };
+    }
+
+    const { accessToken } = await withGoogleAccessToken(ctx, context.selectedConnectionId);
+    const baseUrl = `${GOOGLE_CALENDAR_API_BASE_URL}/calendars/${encodeURIComponent(
+      context.selectedCalendarId,
+    )}/events`;
+    const response = await fetch(
+      `${baseUrl}/${encodeURIComponent(context.appointment.calendarExternalEventId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Google event delete failed: ${await parseGoogleError(response)}`);
+    }
+
+    await ctx.runAction(internal.integrations.googleCalendar.syncBusyTimeForConnection, {
+      connectionId: context.selectedConnectionId,
+      fullSync: true,
+    });
+
+    return {
+      ok: true,
+      status: "deleted" as const,
+    };
+  },
+});
+
 export const startGoogleConnection = internalAction({
   args: {
     businessId: v.id("businesses"),

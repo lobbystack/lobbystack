@@ -19,6 +19,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
 import {
+  enqueuePostHogEventBestEffort,
   enqueuePostHogOutboxRecord,
   serializePostHogEvent,
 } from "../telemetry/posthog";
@@ -2013,20 +2014,17 @@ export const selectGoogleCalendar = action({
         fullSync: true,
       },
     );
-    await ctx.runMutation(
-      internal.telemetry.posthog.enqueueEvent,
-      serializePostHogEvent({
-        eventName: "integration.calendar_connected",
-        businessId: args.businessId,
-        distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
-        groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
-        provider: "google",
-        properties: {
-          staffId: String(args.staffId),
-          selectedCalendarId: selected.id,
-        },
-      }),
-    );
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "integration.calendar_connected",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      provider: "google",
+      properties: {
+        staffId: String(args.staffId),
+        selectedCalendarId: selected.id,
+      },
+    });
 
     return {
       selectedCalendarId: selected.id,
@@ -2057,17 +2055,25 @@ export const disconnectGoogleCalendar = action({
       throw new Error("Google Calendar is not connected for this team member.");
     }
 
-    await ctx.runMutation(
-      internal.integrations.calendar.disconnectCalendarConnection,
-      {
-        connectionId: accessContext.existingConnectionId,
-      },
-    );
     const appointmentsToReevaluate = await ctx.runQuery(
       internal.integrations.calendar.listAppointmentsForCalendarConnectionReset,
       {
         businessId: args.businessId,
         staffId: args.staffId,
+      },
+    );
+    for (const appointmentId of appointmentsToReevaluate) {
+      await ctx.runAction(
+        internal.integrations.googleCalendar.deleteAppointmentEventForDisconnect,
+        {
+          appointmentId,
+        },
+      );
+    }
+    await ctx.runMutation(
+      internal.integrations.calendar.disconnectCalendarConnection,
+      {
+        connectionId: accessContext.existingConnectionId,
       },
     );
     for (const appointmentId of appointmentsToReevaluate) {

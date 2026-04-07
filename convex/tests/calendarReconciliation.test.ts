@@ -567,6 +567,41 @@ describe("calendar reconciliation backend", () => {
     });
   });
 
+  it("removes mirrored Google events before disconnecting the calendar", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-delete-external-event-business",
+        name: "Disconnect Calendar Delete External Event Business",
+      });
+    });
+    await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    const syncResult = await t.action(
+      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      {
+        appointmentId,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      ok: true,
+      status: "synced",
+    });
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(1);
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+      staffId,
+    });
+
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(0);
+  });
+
   it("records sync failures and schedules reconciliation", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId, staffId } = await t.run(async (ctx) => {

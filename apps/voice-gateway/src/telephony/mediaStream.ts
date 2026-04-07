@@ -899,6 +899,12 @@ async function handleToolCall(
       model: runtimeConfig.OPENAI_REALTIME_MODEL,
       provider: "openai",
       spanName: `tool_call:${message.name}`,
+      inputState: {
+        toolName: message.name,
+      },
+      outputState: {
+        succeeded: true,
+      },
       latencyMs: Date.now() - startedAt,
       properties: {
         toolName: message.name,
@@ -929,6 +935,14 @@ async function handleToolCall(
         model: runtimeConfig.OPENAI_REALTIME_MODEL,
         provider: "openai",
         spanName: `tool_call:${message.name}`,
+        inputState: {
+          toolName: message.name,
+        },
+        outputState: {
+          succeeded: false,
+          error:
+            error instanceof Error ? error.message : "Unknown tool error",
+        },
         latencyMs: Date.now() - startedAt,
         isError: true,
         error: error instanceof Error ? error.message : "Unknown tool error",

@@ -12,6 +12,7 @@ import {
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import {
+  type ActionCtx,
   internalAction,
   internalMutation,
   internalQuery,
@@ -43,6 +44,8 @@ type SerializedOutboxEvent = {
   groupKey?: string;
   payloadJson: string;
 };
+
+type TelemetryMutationRunner = Pick<ActionCtx | MutationCtx, "runMutation">;
 
 type FlushResult = {
   attempted: number;
@@ -150,6 +153,24 @@ export async function enqueuePostHogOutboxRecord(
   return outboxId;
 }
 
+export async function enqueuePostHogEventBestEffort(
+  ctx: TelemetryMutationRunner,
+  input: EnqueuePostHogEventInput,
+): Promise<void> {
+  try {
+    await ctx.runMutation(
+      internal.telemetry.posthog.enqueueEvent,
+      serializePostHogEvent(input),
+    );
+  } catch (error) {
+    console.warn("[telemetry] Failed to enqueue PostHog event", {
+      eventName: input.eventName,
+      ...(input.businessId ? { businessId: String(input.businessId) } : {}),
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export const enqueueEvent = internalMutation({
   args: {
     eventName: v.string(),
@@ -227,12 +248,18 @@ export const markEventForRetry = internalMutation({
   },
   handler: async (ctx, args) => {
     const nextAttemptCount = args.attemptCount + 1;
+    const retryDelayMs = getRetryDelayMs(nextAttemptCount);
     await ctx.db.patch(args.outboxId, {
       status: "pending",
       attemptCount: nextAttemptCount,
-      availableAt: new Date(Date.now() + getRetryDelayMs(nextAttemptCount)).toISOString(),
+      availableAt: new Date(Date.now() + retryDelayMs).toISOString(),
       lastError: args.errorMessage,
     });
+    await ctx.scheduler.runAfter(
+      retryDelayMs,
+      internal.telemetry.posthog.flushDueEvents,
+      {},
+    );
     return null;
   },
 });
