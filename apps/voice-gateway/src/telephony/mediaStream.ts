@@ -1194,6 +1194,7 @@ function handleOpenAiMessage(
           ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
           ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
           "ai_receptionist.provider": "openai",
+          "ai_receptionist.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
         });
       }
 

@@ -215,6 +215,9 @@ function normalizeOperationalAttributes(
       case "ai_receptionist.provider":
         normalized.provider = String(value);
         break;
+      case "ai_receptionist.model":
+        normalized.model = String(value);
+        break;
       case "ai_receptionist.tool_name":
         normalized.toolName = String(value);
         break;

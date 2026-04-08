@@ -59,9 +59,16 @@ function readNumberValue(
 }
 
 function getTelemetryContext(
-  providerOptions: Record<string, unknown> | undefined,
+  input:
+    | {
+        providerMetadata?: Record<string, unknown> | undefined;
+        providerOptions?: Record<string, unknown> | undefined;
+      }
+    | undefined,
 ): AiRequestTelemetryContext | undefined {
-  const context = providerOptions?.[AI_RECEPTIONIST_PROVIDER_OPTION_KEY];
+  const context =
+    input?.providerMetadata?.[AI_RECEPTIONIST_PROVIDER_OPTION_KEY] ??
+    input?.providerOptions?.[AI_RECEPTIONIST_PROVIDER_OPTION_KEY];
   return asUnknownRecord(context) as AiRequestTelemetryContext | undefined;
 }
 
@@ -200,7 +207,11 @@ function createTelemetryMiddleware(): LanguageModelMiddleware {
     specificationVersion: "v3",
     wrapGenerate: async ({ doGenerate, params, model }) => {
       const startedAt = Date.now();
-      const telemetryContext = getTelemetryContext(params.providerOptions);
+      const telemetryContext = getTelemetryContext({
+        providerMetadata: (params as { providerMetadata?: Record<string, unknown> })
+          .providerMetadata,
+        providerOptions: params.providerOptions,
+      });
 
       try {
         const result = await doGenerate();

@@ -65,6 +65,7 @@ type OutboxHealthSnapshot = {
 
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
+const OUTBOX_HEALTH_QUERY_LIMIT = 26;
 const CLAIM_LEASE_MS = 60_000;
 const POSTHOG_REQUEST_TIMEOUT_MS = 30_000;
 const CLAIMED_STATUS = "processing";
@@ -288,18 +289,21 @@ export const markEventForRetry = internalMutation({
 export const getOutboxHealth = internalQuery({
   args: {},
   handler: async (ctx): Promise<OutboxHealthSnapshot> => {
+    // We only need exact counts while the queue is healthy/elevated.
+    // Once we cross the critical threshold, a bounded sample keeps the
+    // heartbeat query cheap during exporter outages and backlog spikes.
     const pendingRows = await ctx.db
       .query("telemetry_outbox")
       .withIndex("by_destination_and_status", (q) =>
         q.eq("destination", TELEMETRY_DESTINATION).eq("status", "pending"),
       )
-      .collect();
+      .take(OUTBOX_HEALTH_QUERY_LIMIT);
     const processingRows = await ctx.db
       .query("telemetry_outbox")
       .withIndex("by_destination_and_status", (q) =>
         q.eq("destination", TELEMETRY_DESTINATION).eq("status", CLAIMED_STATUS),
       )
-      .collect();
+      .take(OUTBOX_HEALTH_QUERY_LIMIT);
     const retryingRows = pendingRows.filter((row) => row.attemptCount > 0);
     const backlogCount = pendingRows.length + processingRows.length;
 

@@ -179,6 +179,7 @@ export async function executeVoiceTool(input: {
     ...(input.conversationId
       ? { "ai_receptionist.conversation_id": input.conversationId }
       : {}),
+    "ai_receptionist.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
     "ai_receptionist.tool_name": input.toolName,
   };
 
