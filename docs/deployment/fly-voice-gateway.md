@@ -43,6 +43,9 @@ fly secrets set -a <your-app-name> \
   INTERNAL_SERVICE_TOKEN=<your-internal-service-token> \
   OPENAI_API_KEY=<your-openai-api-key> \
   OPENAI_REALTIME_MODEL=gpt-realtime \
+  OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD=<optional-input-price-per-token> \
+  OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD=<optional-output-price-per-token> \
+  OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD=<optional-cache-read-price-per-token> \
   OPENAI_REALTIME_VOICE=marin \
   OPENAI_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe \
   TWILIO_ACCOUNT_SID=<your-twilio-account-sid> \
@@ -80,5 +83,6 @@ POST https://<your-app-name>.fly.dev/twilio/voice/inbound
 ## Notes
 
 - `DEPLOYMENT_MODE=development` is intentional for the first validation pass. It keeps the current development-only fallbacks while we finish provider validation.
+- If PostHog does not auto-price your configured `OPENAI_REALTIME_MODEL`, set the optional `OPENAI_REALTIME_*_TOKEN_PRICE_USD` secrets so the gateway can emit `$ai_total_cost_usd` from token usage.
 - Once the Twilio number is mapped to a real business in Convex, the gateway will stop using the demo `Maple Family Clinic` snapshot.
 - Keep `min_machines_running = 1` so Twilio does not hit a cold-started machine during voice webhook delivery.

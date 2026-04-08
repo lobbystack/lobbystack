@@ -175,6 +175,12 @@ type RealtimeUsageMetrics = {
   totalCostUsd?: number;
 };
 
+type RealtimePricingConfig = {
+  inputTokenPriceUsd?: number;
+  outputTokenPriceUsd?: number;
+  cachedInputTokenPriceUsd?: number;
+};
+
 function asUnknownRecord(
   value: unknown,
 ): Record<string, unknown> | undefined {
@@ -238,6 +244,65 @@ function extractRealtimeUsageMetrics(
     ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
     ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
   };
+}
+
+function getRealtimePricingConfig(
+  env: Pick<
+    ReturnType<typeof loadVoiceGatewayEnv>,
+    | "OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD"
+  >,
+): RealtimePricingConfig {
+  return {
+    ...(env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { inputTokenPriceUsd: env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { outputTokenPriceUsd: env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { cachedInputTokenPriceUsd: env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD }
+      : {}),
+  };
+}
+
+export function estimateRealtimeTotalCostUsd(
+  metrics: RealtimeUsageMetrics,
+  pricing: RealtimePricingConfig,
+): number | undefined {
+  if (metrics.totalCostUsd !== undefined) {
+    return metrics.totalCostUsd;
+  }
+
+  const nonCachedInputTokens =
+    metrics.inputTokens !== undefined
+      ? Math.max(0, metrics.inputTokens - (metrics.cachedInputTokens ?? 0))
+      : undefined;
+  const nonCachedInputCostUsd =
+    nonCachedInputTokens !== undefined && pricing.inputTokenPriceUsd !== undefined
+      ? nonCachedInputTokens * pricing.inputTokenPriceUsd
+      : undefined;
+  const cachedInputCostUsd =
+    metrics.cachedInputTokens !== undefined &&
+    pricing.cachedInputTokenPriceUsd !== undefined
+      ? metrics.cachedInputTokens * pricing.cachedInputTokenPriceUsd
+      : undefined;
+  const outputCostUsd =
+    metrics.outputTokens !== undefined && pricing.outputTokenPriceUsd !== undefined
+      ? metrics.outputTokens * pricing.outputTokenPriceUsd
+      : undefined;
+
+  const totalCostUsd =
+    (nonCachedInputCostUsd ?? 0) +
+    (cachedInputCostUsd ?? 0) +
+    (outputCostUsd ?? 0);
+
+  return nonCachedInputCostUsd !== undefined ||
+    cachedInputCostUsd !== undefined ||
+    outputCostUsd !== undefined
+    ? totalCostUsd
+    : undefined;
 }
 
 type MediaStreamRequestContext = {
@@ -1177,6 +1242,7 @@ function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
       const completedAtMs = Date.now();
       const latencyMs =
         session.assistantResponseRequestedAtMs !== null
@@ -1194,9 +1260,14 @@ function handleOpenAiMessage(
           ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
           ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
           "ai_receptionist.provider": "openai",
-          "ai_receptionist.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
+          "ai_receptionist.model": runtimeConfig.OPENAI_REALTIME_MODEL,
         });
       }
+
+      const totalCostUsd = estimateRealtimeTotalCostUsd(
+        usageMetrics,
+        getRealtimePricingConfig(runtimeConfig),
+      );
 
       if (session.businessId) {
         captureAiGeneration({
@@ -1204,7 +1275,7 @@ function handleOpenAiMessage(
           traceId: session.aiTraceId,
           ...(session.callId ? { callId: session.callId } : {}),
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
-          model: loadVoiceGatewayEnv(process.env).OPENAI_REALTIME_MODEL,
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
           provider: "openai",
           ...(latencyMs !== undefined ? { latencyMs } : {}),
           ...(ttftMs !== undefined ? { ttftMs } : {}),
@@ -1223,9 +1294,7 @@ function handleOpenAiMessage(
           ...(usageMetrics.reasoningTokens !== undefined
             ? { reasoningTokens: usageMetrics.reasoningTokens }
             : {}),
-          ...(usageMetrics.totalCostUsd !== undefined
-            ? { totalCostUsd: usageMetrics.totalCostUsd }
-            : {}),
+          ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
           isStreaming: true,
           isError:
             payload.response?.status !== undefined &&
