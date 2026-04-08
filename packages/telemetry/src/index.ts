@@ -111,6 +111,46 @@ export type TelemetryValue =
 
 export type TelemetryProperties = Record<string, TelemetryValue | undefined>;
 
+export type PostHogAiTracePropertiesInput = {
+  traceId: string;
+  model: string;
+  provider: string;
+  callId?: string;
+  conversationId?: string;
+  sessionId?: string;
+};
+
+export type PostHogAiUsagePropertiesInput = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+  totalCostUsd?: number;
+};
+
+export type PostHogAiGenerationPropertiesInput =
+  PostHogAiTracePropertiesInput &
+    PostHogAiUsagePropertiesInput & {
+      latencyMs?: number;
+      ttftMs?: number;
+      isStreaming?: boolean;
+      isError?: boolean;
+      error?: string;
+      toolNames?: string[];
+      properties?: TelemetryProperties;
+    };
+
+export type PostHogAiSpanPropertiesInput = PostHogAiTracePropertiesInput & {
+  spanName: string;
+  inputState?: TelemetryProperties;
+  outputState?: TelemetryProperties;
+  latencyMs?: number;
+  isError?: boolean;
+  error?: string;
+  properties?: TelemetryProperties;
+};
+
 export type TelemetryContext = {
   businessId?: string;
   conversationId?: string;
@@ -441,6 +481,9 @@ export type TelemetryFacade = {
 };
 
 const EXACT_REDACTION_KEYS = new Set([
+  "$ai_input",
+  "$ai_output",
+  "$ai_output_choices",
   "body",
   "content",
   "message",
@@ -456,9 +499,21 @@ const EXACT_REDACTION_KEYS = new Set([
   "text",
   "toolArguments",
   "tool_arguments",
+  "toolOutput",
+  "tool_output",
+  "toolResult",
+  "tool_result",
   "transcript",
   "utterance",
   "utterances",
+  "aiinput",
+  "aioutput",
+  "aioutputchoices",
+  "assistantmessage",
+  "assistantresponse",
+  "tooloutput",
+  "toolresult",
+  "usermessage",
 ]);
 
 const PARTIAL_REDACTION_KEYWORDS = [
@@ -471,30 +526,47 @@ const PARTIAL_REDACTION_KEYWORDS = [
   "message",
   "name",
   "note",
+  "outputchoice",
   "phone",
   "prompt",
   "recording",
   "sms",
   "text",
+  "tool_output",
   "token",
   "toolarg",
   "tool_input",
   "transcript",
   "utterance",
+  "assistant",
 ];
 
 const SAFE_KEY_PATTERNS = [
   "cachedtokens",
+  "cachedinputtokens",
+  "charcount",
   "completiontokens",
+  "costusd",
+  "dimension",
+  "embeddingtokens",
+  "entrycount",
+  "inputcharcount",
   "inputtokens",
+  "messagecount",
   "outputtokens",
+  "outputcharcount",
   "prompttokens",
   "reasoningtokens",
+  "spanname",
+  "timetofirsttoken",
   "tokencount",
   "totaltokens",
+  "traceid",
+  "ttft",
   "toolname",
   "providername",
   "modelname",
+  "sessionid",
   "workflowname",
 ];
 
@@ -616,6 +688,76 @@ export function redactAiTraceProperties(
   properties: TelemetryProperties,
 ): TelemetryProperties {
   return sanitizeProperties(properties, { redactPhoneLikeStrings: true });
+}
+
+export function buildPostHogAiTraceProperties(
+  input: PostHogAiTracePropertiesInput,
+): TelemetryProperties {
+  return redactAiTraceProperties({
+    $ai_trace_id: input.traceId,
+    $ai_model: input.model,
+    $ai_provider: input.provider,
+    ...(input.sessionId ? { $ai_session_id: input.sessionId } : {}),
+    ...(input.callId ? { callId: input.callId } : {}),
+    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+  });
+}
+
+export function buildPostHogAiGenerationProperties(
+  input: PostHogAiGenerationPropertiesInput,
+): TelemetryProperties {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
+  const ttftSeconds = input.ttftMs !== undefined ? input.ttftMs / 1000 : undefined;
+
+  return redactAiTraceProperties({
+    ...buildPostHogAiTraceProperties(input),
+    ...(input.inputTokens !== undefined
+      ? { $ai_input_tokens: input.inputTokens }
+      : {}),
+    ...(input.outputTokens !== undefined
+      ? { $ai_output_tokens: input.outputTokens }
+      : {}),
+    ...(input.totalTokens !== undefined
+      ? { $ai_total_tokens: input.totalTokens }
+      : {}),
+    ...(input.totalCostUsd !== undefined
+      ? { $ai_total_cost_usd: input.totalCostUsd }
+      : {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(ttftSeconds !== undefined
+      ? { $ai_time_to_first_token: ttftSeconds }
+      : {}),
+    ...(input.isStreaming !== undefined ? { $ai_stream: input.isStreaming } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
+    ...(input.cachedInputTokens !== undefined
+      ? { cachedInputTokens: input.cachedInputTokens }
+      : {}),
+    ...(input.reasoningTokens !== undefined
+      ? { reasoningTokens: input.reasoningTokens }
+      : {}),
+    ...input.properties,
+  });
+}
+
+export function buildPostHogAiSpanProperties(
+  input: PostHogAiSpanPropertiesInput,
+): TelemetryProperties {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
+
+  return redactAiTraceProperties({
+    ...buildPostHogAiTraceProperties(input),
+    $ai_span_name: input.spanName,
+    $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
+    $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...input.properties,
+  });
 }
 
 export function redactOtelAttributes(

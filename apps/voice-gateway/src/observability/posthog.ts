@@ -7,12 +7,12 @@ import {
 } from "@opentelemetry/sdk-logs";
 import { PostHog } from "posthog-node";
 
-import {
-  loadVoiceGatewayEnv,
-  type VoiceGatewayEnv,
-} from "@ai-receptionist/config";
+import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@ai-receptionist/config";
 import {
   bucketLatencyMs,
+  buildPostHogAiGenerationProperties,
+  buildPostHogAiSpanProperties,
+  buildPostHogAiTraceProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   redactAiTraceProperties,
@@ -77,6 +77,7 @@ function getClient(): PostHog | null {
     flushAt: 1,
     flushInterval: 0,
     enableExceptionAutocapture: true,
+    privacyMode: env.POSTHOG_PRIVACY_MODE,
   });
   return client;
 }
@@ -123,11 +124,16 @@ function getOperationalLogger(): Logger | null {
 
 function buildBaseProperties(input: AiTraceCommon): Record<string, unknown> {
   return {
-    $ai_trace_id: input.traceId,
-    $ai_model: input.model,
-    $ai_provider: input.provider,
-    ...(input.callId ? { callId: input.callId } : {}),
-    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...buildPostHogAiTraceProperties({
+      traceId: input.traceId,
+      model: input.model,
+      provider: input.provider,
+      ...(input.conversationId ?? input.callId
+        ? { sessionId: input.conversationId ?? input.callId }
+        : {}),
+      ...(input.callId ? { callId: input.callId } : {}),
+      ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    }),
     $groups: {
       business: getPostHogBusinessGroupKey(input.businessId),
     },
@@ -352,6 +358,14 @@ export function captureAiTraceStarted(input: AiTraceCommon): void {
 export function captureAiGeneration(
   input: AiTraceCommon & {
     latencyMs?: number;
+    ttftMs?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+    cachedInputTokens?: number;
+    reasoningTokens?: number;
+    totalCostUsd?: number;
+    isStreaming?: boolean;
     isError?: boolean;
     error?: string;
     toolNames?: string[];
@@ -362,17 +376,39 @@ export function captureAiGeneration(
     properties?: TelemetryProperties;
   },
 ): void {
-  const latencySeconds =
-    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
   capture("$ai_generation", {
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     businessId: input.businessId,
     properties: {
       ...buildBaseProperties(input),
-      ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
-      ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
-      ...(input.error ? { $ai_error: input.error } : {}),
-      ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
+      ...buildPostHogAiGenerationProperties({
+        traceId: input.traceId,
+        model: input.model,
+        provider: input.provider,
+        ...(input.conversationId ?? input.callId
+          ? { sessionId: input.conversationId ?? input.callId }
+          : {}),
+        ...(input.callId ? { callId: input.callId } : {}),
+        ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+        ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
+        ...(input.ttftMs !== undefined ? { ttftMs: input.ttftMs } : {}),
+        ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+        ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+        ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+        ...(input.cachedInputTokens !== undefined
+          ? { cachedInputTokens: input.cachedInputTokens }
+          : {}),
+        ...(input.reasoningTokens !== undefined
+          ? { reasoningTokens: input.reasoningTokens }
+          : {}),
+        ...(input.totalCostUsd !== undefined
+          ? { totalCostUsd: input.totalCostUsd }
+          : {}),
+        ...(input.isStreaming !== undefined ? { isStreaming: input.isStreaming } : {}),
+        ...(input.isError !== undefined ? { isError: input.isError } : {}),
+        ...(input.error ? { error: input.error } : {}),
+        ...(input.toolNames?.length ? { toolNames: input.toolNames } : {}),
+      }),
       ...(input.transferInvoked !== undefined
         ? { transferInvoked: input.transferInvoked }
         : {}),
@@ -399,20 +435,28 @@ export function captureAiSpan(
     properties?: TelemetryProperties;
   },
 ): void {
-  const latencySeconds =
-    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
   capture("$ai_span", {
     distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
     businessId: input.businessId,
     properties: {
       ...buildBaseProperties(input),
-      $ai_span_name: input.spanName,
-      $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
-      $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
-      ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
-      ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
-      ...(input.error ? { $ai_error: input.error } : {}),
-      ...redactAiTraceProperties(input.properties ?? {}),
+      ...buildPostHogAiSpanProperties({
+        traceId: input.traceId,
+        model: input.model,
+        provider: input.provider,
+        ...(input.conversationId ?? input.callId
+          ? { sessionId: input.conversationId ?? input.callId }
+          : {}),
+        ...(input.callId ? { callId: input.callId } : {}),
+        ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+        spanName: input.spanName,
+        ...(input.inputState ? { inputState: input.inputState } : {}),
+        ...(input.outputState ? { outputState: input.outputState } : {}),
+        ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
+        ...(input.isError !== undefined ? { isError: input.isError } : {}),
+        ...(input.error ? { error: input.error } : {}),
+        ...(input.properties ? { properties: input.properties } : {}),
+      }),
     },
   });
 }

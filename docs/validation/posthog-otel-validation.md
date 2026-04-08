@@ -25,6 +25,7 @@ Validate that:
 
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
+- `POSTHOG_PRIVACY_MODE=true`
 
 Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 
@@ -109,22 +110,33 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 ## AI trace validation
 
 1. Run a live call that produces at least one assistant turn and one tool call.
-2. Verify PostHog receives:
+2. Run one non-realtime Gemini generation from the SMS assistant or dashboard knowledge preview.
+3. Trigger one knowledge search or indexing operation so embedding telemetry is emitted.
+4. Verify PostHog receives:
    - `$ai_trace`
    - `$ai_generation`
    - `$ai_span`
-3. Confirm the payload includes:
+   - `ai.embedding.completed`
+5. Confirm the payload includes:
    - trace ID
    - model
    - provider
    - latency
+   - time to first token for streaming voice generations
+   - token counts when the provider returns them
    - tool name or tool invocation state
-4. Confirm the payload does not include:
+6. Confirm the payload does not include:
+   - `$ai_input`
+   - `$ai_output_choices`
    - transcript text
    - SMS body text
    - prompt text
+   - assistant output text
    - customer name
    - customer phone number
+   - tool input or tool output content
+7. For non-realtime Gemini generations, confirm the payload still includes provider/model/latency metadata even though prompt and output text are absent.
+8. For embedding telemetry, confirm the payload includes only metadata such as operation name, provider/model, input size, latency, and result count.
 
 ## Dashboard and alert validation
 

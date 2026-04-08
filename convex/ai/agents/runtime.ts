@@ -12,6 +12,10 @@ import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
 import {
+  getNonRealtimeTextModelId,
+  withAiTelemetryContext,
+} from "../../lib/providers/nonRealtimeText";
+import {
   classifyRuntimeLocale,
   detectExplicitRuntimeLocaleRequest,
   formatRuntimeAppointmentDateTime,
@@ -32,6 +36,11 @@ import {
   getServiceNameCandidates,
   type LocalizedServiceNames,
 } from "../../lib/serviceNames";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../../telemetry/shared";
+import { captureAiTraceStartedBestEffort } from "../../telemetry/ai";
 
 function buildGroundedSystemPrompt(input: {
   locale: RuntimeLocale;
@@ -3548,6 +3557,23 @@ async function generateGroundedReply(
   );
 
   const threadId = await ensureConversationThread(ctx, businessId, conversationId);
+  const traceId = crypto.randomUUID();
+  const distinctId = getPostHogDistinctIdForBusinessSystem(String(businessId));
+  const groupKey = getPostHogBusinessGroupKey(String(businessId));
+  await captureAiTraceStartedBestEffort(ctx, {
+    businessId,
+    traceId,
+    sessionId: threadId,
+    distinctId,
+    groupKey,
+    conversationId: String(conversationId),
+    model: getNonRealtimeTextModelId(),
+    provider: "google",
+    properties: {
+      channel: "sms",
+      operation: "sms.generate_reply",
+    },
+  });
   const tools = createSmsAgentTools({
     ctx,
     businessId,
@@ -3560,7 +3586,7 @@ async function generateGroundedReply(
   const result = await receptionistAgent.generateText(
     ctx,
     { threadId },
-    {
+    withAiTelemetryContext({
       system: buildGroundedSystemPrompt({
         locale: nextLocale,
         summary: snapshot.summary,
@@ -3582,7 +3608,18 @@ async function generateGroundedReply(
       })}`,
       tools,
       stopWhen: stepCountIs(4),
-    } as any,
+    } as any, {
+      traceId,
+      sessionId: threadId,
+      distinctId,
+      groupKey,
+      businessId: String(businessId),
+      conversationId: String(conversationId),
+      properties: {
+        channel: "sms",
+        operation: "sms.generate_reply",
+      },
+    }),
   );
   const trimmedText = result.text.trim();
   if (trimmedText) {

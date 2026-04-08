@@ -29,6 +29,23 @@ Redaction is enforced in shared telemetry helpers for:
 - AI trace properties
 - PostHog log attributes
 
+Server-side LLM analytics also run with `POSTHOG_PRIVACY_MODE=true` by default. In this repo that means we intentionally keep:
+
+- model and provider
+- trace and session correlation IDs
+- latency and time-to-first-token
+- token counts and cost metadata when available
+- tool names and safe workflow outcome flags
+
+But we do not send:
+
+- `$ai_input`
+- `$ai_output_choices`
+- transcript text
+- prompt text
+- assistant text
+- tool inputs or tool outputs
+
 Audit data remains first-party only in `convex.audit_logs`.
 
 ## PostHog
@@ -133,22 +150,31 @@ Structured gateway logs sent to PostHog Logs should continue to include operatio
 
 ## AI traces in PostHog
 
-The live voice runtime emits redacted PostHog AI analytics events through `apps/voice-gateway/src/observability/posthog.ts`.
+The repo now emits redacted PostHog AI analytics across both runtime surfaces:
+
+- `apps/voice-gateway/src/observability/posthog.ts` for OpenAI Realtime voice
+- wrapped Gemini non-realtime model calls in `convex/lib/providers/nonRealtimeText.ts`
 
 Current event model:
 
-- `$ai_trace` when a live OpenAI session is configured
-- `$ai_generation` when a response turn completes
-- `$ai_span` for tool call execution
+- `$ai_trace` when a live OpenAI session or non-realtime Gemini generation starts
+- `$ai_generation` when a response turn or non-realtime generation completes
+- `$ai_span` for live voice tool call execution
+- `ai.embedding.completed` / `ai.embedding.failed` as metadata-only embedding telemetry for knowledge indexing and retrieval
 
 Only redacted metadata is sent, such as:
 
 - model
 - provider
 - latency
+- time to first token
+- input, output, cached, reasoning, and total token counts when available
+- total cost in USD when available
 - error status
 - tool names
 - transfer invocation state
+
+The non-realtime Gemini wrapper uses the shared provider layer in `convex/lib/providers/nonRealtimeText.ts`. It never forwards prompt content or model output to PostHog, and only captures metadata when callers attach safe telemetry context.
 
 ## Error tracking
 
@@ -176,6 +202,7 @@ Explicit exception capture should remain limited to technical failures where sta
 
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
+- `POSTHOG_PRIVACY_MODE`
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
 

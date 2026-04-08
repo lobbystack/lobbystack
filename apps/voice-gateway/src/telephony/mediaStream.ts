@@ -107,7 +107,8 @@ type OpenAiRealtimeMessage = {
     id?: string;
     status?: string;
     conversation_id?: string | null;
-    metadata?: Record<string, string | null> | null;
+    metadata?: Record<string, string | number | boolean | null> | null;
+    usage?: Record<string, unknown>;
     output?: Array<{
       type?: string;
       content?: Array<{
@@ -161,8 +162,83 @@ type ActiveVoiceSession = {
   pendingTasks: Set<Promise<unknown>>;
   aiTraceId: string;
   assistantResponseRequestedAtMs: number | null;
+  assistantFirstOutputAtMs: number | null;
   activeCallCounted: boolean;
 };
+
+type RealtimeUsageMetrics = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
+  totalCostUsd?: number;
+};
+
+function asUnknownRecord(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readNumberValue(
+  source: Record<string, unknown> | undefined,
+  keys: string[],
+): number | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractRealtimeUsageMetrics(
+  response: OpenAiRealtimeMessage["response"] | undefined,
+): RealtimeUsageMetrics {
+  const usage = asUnknownRecord(response?.usage);
+  const metadata = asUnknownRecord(response?.metadata);
+  const inputTokenDetails = asUnknownRecord(
+    usage?.input_token_details ?? usage?.inputTokenDetails,
+  );
+  const outputTokenDetails = asUnknownRecord(
+    usage?.output_token_details ?? usage?.outputTokenDetails,
+  );
+
+  const inputTokens = readNumberValue(usage, ["input_tokens", "inputTokens"]);
+  const outputTokens = readNumberValue(usage, ["output_tokens", "outputTokens"]);
+  const totalTokens = readNumberValue(usage, ["total_tokens", "totalTokens"]);
+  const cachedInputTokens = readNumberValue(inputTokenDetails, [
+    "cached_tokens",
+    "cachedTokens",
+    "cache_read_tokens",
+    "cacheReadTokens",
+  ]);
+  const reasoningTokens = readNumberValue(outputTokenDetails, [
+    "reasoning_tokens",
+    "reasoningTokens",
+  ]);
+  const totalCostUsd =
+    readNumberValue(usage, ["total_cost_usd", "totalCostUsd"]) ??
+    readNumberValue(metadata, ["total_cost_usd", "totalCostUsd"]);
+
+  return {
+    ...(inputTokens !== undefined ? { inputTokens } : {}),
+    ...(outputTokens !== undefined ? { outputTokens } : {}),
+    ...(totalTokens !== undefined ? { totalTokens } : {}),
+    ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+    ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+    ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+  };
+}
 
 type MediaStreamRequestContext = {
   url: string;
@@ -800,6 +876,7 @@ async function configureOpenAiSession(
   session.pendingInboundAudio = [];
 
   session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
   postRealtimeEvent(openAiSocket, {
     type: "response.create",
     response: {
@@ -916,6 +993,7 @@ async function handleToolCall(
       },
     });
     session.assistantResponseRequestedAtMs = Date.now();
+    session.assistantFirstOutputAtMs = null;
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
     });
@@ -963,6 +1041,7 @@ async function handleToolCall(
       },
     });
     session.assistantResponseRequestedAtMs = Date.now();
+    session.assistantFirstOutputAtMs = null;
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
       response: {
@@ -1017,6 +1096,13 @@ function handleOpenAiMessage(
   switch (payload.type) {
     case "response.audio.delta":
     case "response.output_audio.delta": {
+      if (
+        session.assistantResponseRequestedAtMs !== null &&
+        session.assistantFirstOutputAtMs === null
+      ) {
+        session.assistantFirstOutputAtMs = Date.now();
+      }
+
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
         if (
           payload.response_id &&
@@ -1091,10 +1177,17 @@ function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      const completedAtMs = Date.now();
       const latencyMs =
         session.assistantResponseRequestedAtMs !== null
-          ? Date.now() - session.assistantResponseRequestedAtMs
+          ? completedAtMs - session.assistantResponseRequestedAtMs
           : undefined;
+      const ttftMs =
+        session.assistantResponseRequestedAtMs !== null &&
+        session.assistantFirstOutputAtMs !== null
+          ? session.assistantFirstOutputAtMs - session.assistantResponseRequestedAtMs
+          : undefined;
+      const usageMetrics = extractRealtimeUsageMetrics(payload.response);
 
       if (latencyMs !== undefined) {
         recordOpenAiTurnLatency(latencyMs, {
@@ -1113,6 +1206,26 @@ function handleOpenAiMessage(
           model: loadVoiceGatewayEnv(process.env).OPENAI_REALTIME_MODEL,
           provider: "openai",
           ...(latencyMs !== undefined ? { latencyMs } : {}),
+          ...(ttftMs !== undefined ? { ttftMs } : {}),
+          ...(usageMetrics.inputTokens !== undefined
+            ? { inputTokens: usageMetrics.inputTokens }
+            : {}),
+          ...(usageMetrics.outputTokens !== undefined
+            ? { outputTokens: usageMetrics.outputTokens }
+            : {}),
+          ...(usageMetrics.totalTokens !== undefined
+            ? { totalTokens: usageMetrics.totalTokens }
+            : {}),
+          ...(usageMetrics.cachedInputTokens !== undefined
+            ? { cachedInputTokens: usageMetrics.cachedInputTokens }
+            : {}),
+          ...(usageMetrics.reasoningTokens !== undefined
+            ? { reasoningTokens: usageMetrics.reasoningTokens }
+            : {}),
+          ...(usageMetrics.totalCostUsd !== undefined
+            ? { totalCostUsd: usageMetrics.totalCostUsd }
+            : {}),
+          isStreaming: true,
           isError:
             payload.response?.status !== undefined &&
             payload.response.status !== "completed",
@@ -1123,6 +1236,7 @@ function handleOpenAiMessage(
         });
       }
       session.assistantResponseRequestedAtMs = null;
+      session.assistantFirstOutputAtMs = null;
 
       if (
         payload.response?.id &&
@@ -1327,6 +1441,7 @@ export async function handleMediaStreamConnection(
     pendingTasks: new Set(),
     aiTraceId: crypto.randomUUID(),
     assistantResponseRequestedAtMs: null,
+    assistantFirstOutputAtMs: null,
     activeCallCounted: false,
   };
 

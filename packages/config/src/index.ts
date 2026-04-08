@@ -8,6 +8,11 @@ const deploymentModeSchema = z.enum([
   "development",
 ]);
 
+const booleanEnvSchema = z
+  .enum(["true", "false"])
+  .default("true")
+  .transform((value) => value === "true");
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
@@ -38,6 +43,7 @@ const serverEnvSchema = z.object({
   EMAIL_FROM_ADDRESS: z.string().email(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
+  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
@@ -68,6 +74,7 @@ const voiceGatewayEnvSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
+  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

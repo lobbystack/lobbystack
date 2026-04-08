@@ -28,6 +28,13 @@ import {
   receptionistAgent,
 } from "../../lib/components";
 import {
+  getEmbeddingModelId,
+} from "../../lib/providers/embeddings";
+import {
+  getNonRealtimeTextModelId,
+  withAiTelemetryContext,
+} from "../../lib/providers/nonRealtimeText";
+import {
   inferKnowledgeDocumentContentTypeFromFileName,
   isSupportedKnowledgeDocumentContentType,
   MAX_KNOWLEDGE_DOCUMENT_UPLOAD_BYTES,
@@ -40,6 +47,7 @@ import {
 } from "../../lib/knowledgeSections";
 import { normalizeRuntimeLocale } from "../../lib/runtimeLocale";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
+import { captureAiTraceStartedBestEffort } from "../../telemetry/ai";
 import { enqueuePostHogEventBestEffort } from "../../telemetry/posthog";
 
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
@@ -49,6 +57,7 @@ type SearchKnowledgeArgs = {
   businessId: Id<"businesses">;
   query: string;
   limit?: number;
+  channel?: "internal" | "voice" | "dashboard";
 };
 type PreviewKnowledgeArgs = {
   businessId: Id<"businesses">;
@@ -194,6 +203,7 @@ async function indexKnowledgeDocumentById(
   });
 
   try {
+    const startedAt = Date.now();
     const result = await rag.add(ctx, {
       namespace: getKnowledgeNamespace(String(document.businessId)),
       title: document.title,
@@ -233,11 +243,43 @@ async function indexKnowledgeDocumentById(
         },
       });
     }
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.completed",
+      businessId: document.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      properties: {
+        operation: "knowledge.index_document",
+        sourceType: document.sourceType,
+        section: document.section,
+        inputCharacterCount: indexableText.length,
+        inputItemCount: 1,
+        latencyMs: Date.now() - startedAt,
+      },
+    });
     await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
       businessId: document.businessId,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to index this document.";
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.failed",
+      businessId: document.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      properties: {
+        operation: "knowledge.index_document",
+        sourceType: document.sourceType,
+        section: document.section,
+        inputCharacterCount: indexableText.length,
+        inputItemCount: 1,
+        error: message,
+      },
+    });
     await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
       documentId,
       status: "error",
@@ -260,34 +302,69 @@ async function indexKnowledgeSnippetById(
     return null;
   }
 
-  const result = await rag.add(ctx, {
-    namespace: getKnowledgeNamespace(String(snippet.businessId)),
-    title: snippet.title,
-    text: snippet.content,
-    key: `snippet:${String(snippetId)}`,
-    contentHash: `${snippet._creationTime}:${snippet.priority}:${snippet.active}`,
-    filterValues: [
-      { name: "businessId", value: String(snippet.businessId) },
-      { name: "sourceType", value: "snippet" },
-      {
-        name: "businessAndSource",
-        value: {
-          businessId: String(snippet.businessId),
-          sourceType: "snippet",
+  try {
+    const startedAt = Date.now();
+    const result = await rag.add(ctx, {
+      namespace: getKnowledgeNamespace(String(snippet.businessId)),
+      title: snippet.title,
+      text: snippet.content,
+      key: `snippet:${String(snippetId)}`,
+      contentHash: `${snippet._creationTime}:${snippet.priority}:${snippet.active}`,
+      filterValues: [
+        { name: "businessId", value: String(snippet.businessId) },
+        { name: "sourceType", value: "snippet" },
+        {
+          name: "businessAndSource",
+          value: {
+            businessId: String(snippet.businessId),
+            sourceType: "snippet",
+          },
         },
-      },
-    ],
-  });
+      ],
+    });
 
-  await ctx.runMutation(internal.ai.context.knowledge.markSnippetIndexed, {
-    snippetId,
-    indexedEntryId: String(result.entryId),
-    indexVersion: KNOWLEDGE_INDEX_VERSION,
-  });
-  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
-    businessId: snippet.businessId,
-  });
-  return String(result.entryId);
+    await ctx.runMutation(internal.ai.context.knowledge.markSnippetIndexed, {
+      snippetId,
+      indexedEntryId: String(result.entryId),
+      indexVersion: KNOWLEDGE_INDEX_VERSION,
+    });
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.completed",
+      businessId: snippet.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(snippet.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(snippet.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      properties: {
+        operation: "knowledge.index_snippet",
+        section: snippet.section,
+        inputCharacterCount: snippet.content.length,
+        inputItemCount: 1,
+        latencyMs: Date.now() - startedAt,
+      },
+    });
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: snippet.businessId,
+    });
+    return String(result.entryId);
+  } catch (error) {
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.failed",
+      businessId: snippet.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(snippet.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(snippet.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      properties: {
+        operation: "knowledge.index_snippet",
+        section: snippet.section,
+        inputCharacterCount: snippet.content.length,
+        inputItemCount: 1,
+        error: error instanceof Error ? error.message : "Failed to index knowledge snippet.",
+      },
+    });
+    throw error;
+  }
 }
 
 async function searchKnowledge(
@@ -316,16 +393,56 @@ async function searchIndexedKnowledge(
   ctx: ActionCtx,
   args: SearchKnowledgeArgs,
 ): Promise<KnowledgeSearchResult> {
-  const { entries } = await rag.search(ctx, {
-    namespace: getKnowledgeNamespace(String(args.businessId)),
-    query: args.query,
-    limit: args.limit ?? 5,
-  });
+  const startedAt = Date.now();
 
-  return entries.map((entry) => ({
-    ...(entry.title !== undefined ? { title: entry.title } : {}),
-    text: entry.text,
-  }));
+  try {
+    const { entries } = await rag.search(ctx, {
+      namespace: getKnowledgeNamespace(String(args.businessId)),
+      query: args.query,
+      limit: args.limit ?? 5,
+    });
+
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.completed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      ...(args.channel ? { channel: args.channel } : {}),
+      properties: {
+        operation: "knowledge.search",
+        queryLength: args.query.trim().length,
+        inputCharacterCount: args.query.trim().length,
+        inputItemCount: 1,
+        resultCount: entries.length,
+        latencyMs: Date.now() - startedAt,
+      },
+    });
+
+    return entries.map((entry) => ({
+      ...(entry.title !== undefined ? { title: entry.title } : {}),
+      text: entry.text,
+    }));
+  } catch (error) {
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName: "ai.embedding.failed",
+      businessId: args.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+      provider: "google",
+      model: getEmbeddingModelId(),
+      ...(args.channel ? { channel: args.channel } : {}),
+      properties: {
+        operation: "knowledge.search",
+        queryLength: args.query.trim().length,
+        inputCharacterCount: args.query.trim().length,
+        inputItemCount: 1,
+        error: error instanceof Error ? error.message : "Knowledge search failed.",
+      },
+    });
+    throw error;
+  }
 }
 
 async function enqueueStaleKnowledgeReindex(
@@ -377,11 +494,27 @@ async function generatePreviewAnswer(
     title: `Preview for ${snapshot.displayName}`,
     summary: "Admin-side receptionist preview thread",
   });
+  const traceId = crypto.randomUUID();
+  const distinctId = getPostHogDistinctIdForBusinessSystem(String(args.businessId));
+  const groupKey = getPostHogBusinessGroupKey(String(args.businessId));
+  await captureAiTraceStartedBestEffort(ctx, {
+    businessId: args.businessId,
+    traceId,
+    sessionId: threadId,
+    distinctId,
+    groupKey,
+    model: getNonRealtimeTextModelId(),
+    provider: "google",
+    properties: {
+      channel: "dashboard",
+      operation: "knowledge.preview_answer",
+    },
+  });
 
   const result = await receptionistAgent.generateText(
     ctx,
     { threadId },
-    {
+    withAiTelemetryContext({
       prompt: [
         `Business snapshot summary: ${snapshot.summary}`,
         `Booking policy: ${snapshot.bookingPolicy}`,
@@ -389,7 +522,17 @@ async function generatePreviewAnswer(
         `Relevant knowledge: ${context.map((entry) => entry.text).join("\n---\n")}`,
         `User prompt: ${args.prompt}`,
       ].join("\n\n"),
-    } as any,
+    } as any, {
+      traceId,
+      sessionId: threadId,
+      distinctId,
+      groupKey,
+      businessId: String(args.businessId),
+      properties: {
+        channel: "dashboard",
+        operation: "knowledge.preview_answer",
+      },
+    }),
   );
 
   return { text: result.text, threadId };
@@ -844,7 +987,7 @@ export const searchKnowledgeInternal = internalAction({
     limit: v.optional(v.number()),
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
-    return await searchKnowledge(ctx, args);
+    return await searchKnowledge(ctx, { ...args, channel: "internal" });
   },
 });
 
@@ -856,7 +999,7 @@ export const searchKnowledgeForVoiceInternal = internalAction({
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await enqueueStaleKnowledgeReindex(ctx, args.businessId);
-    const results = await searchIndexedKnowledge(ctx, args);
+    const results = await searchIndexedKnowledge(ctx, { ...args, channel: "voice" });
     await enqueuePostHogEventBestEffort(ctx, {
       eventName: "knowledge.search_executed",
       businessId: args.businessId,
@@ -880,7 +1023,7 @@ export const searchKnowledgeForDashboard = action({
   },
   handler: async (ctx: ActionCtx, args: SearchKnowledgeArgs): Promise<KnowledgeSearchResult> => {
     await requireKnowledgeAccess(ctx, args.businessId);
-    const results = await searchKnowledge(ctx, args);
+    const results = await searchKnowledge(ctx, { ...args, channel: "dashboard" });
     await enqueuePostHogEventBestEffort(ctx, {
       eventName: "knowledge.search_executed",
       businessId: args.businessId,
