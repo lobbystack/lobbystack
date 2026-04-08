@@ -170,7 +170,13 @@ type RealtimeUsageMetrics = {
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
+  textInputTokens?: number;
+  audioInputTokens?: number;
   cachedInputTokens?: number;
+  cachedTextInputTokens?: number;
+  cachedAudioInputTokens?: number;
+  textOutputTokens?: number;
+  audioOutputTokens?: number;
   reasoningTokens?: number;
   totalCostUsd?: number;
 };
@@ -178,6 +184,10 @@ type RealtimeUsageMetrics = {
 type RealtimePricingConfig = {
   inputTokenPriceUsd?: number;
   outputTokenPriceUsd?: number;
+  textInputTokenPriceUsd?: number;
+  audioInputTokenPriceUsd?: number;
+  textOutputTokenPriceUsd?: number;
+  audioOutputTokenPriceUsd?: number;
   cachedInputTokenPriceUsd?: number;
 };
 
@@ -218,15 +228,42 @@ function extractRealtimeUsageMetrics(
   const outputTokenDetails = asUnknownRecord(
     usage?.output_token_details ?? usage?.outputTokenDetails,
   );
+  const cachedTokenDetails = asUnknownRecord(
+    inputTokenDetails?.cached_tokens_details ?? inputTokenDetails?.cachedTokensDetails,
+  );
 
   const inputTokens = readNumberValue(usage, ["input_tokens", "inputTokens"]);
   const outputTokens = readNumberValue(usage, ["output_tokens", "outputTokens"]);
   const totalTokens = readNumberValue(usage, ["total_tokens", "totalTokens"]);
+  const textInputTokens = readNumberValue(inputTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const audioInputTokens = readNumberValue(inputTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
+  ]);
   const cachedInputTokens = readNumberValue(inputTokenDetails, [
     "cached_tokens",
     "cachedTokens",
     "cache_read_tokens",
     "cacheReadTokens",
+  ]);
+  const cachedTextInputTokens = readNumberValue(cachedTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const cachedAudioInputTokens = readNumberValue(cachedTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
+  ]);
+  const textOutputTokens = readNumberValue(outputTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const audioOutputTokens = readNumberValue(outputTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
   ]);
   const reasoningTokens = readNumberValue(outputTokenDetails, [
     "reasoning_tokens",
@@ -240,7 +277,13 @@ function extractRealtimeUsageMetrics(
     ...(inputTokens !== undefined ? { inputTokens } : {}),
     ...(outputTokens !== undefined ? { outputTokens } : {}),
     ...(totalTokens !== undefined ? { totalTokens } : {}),
+    ...(textInputTokens !== undefined ? { textInputTokens } : {}),
+    ...(audioInputTokens !== undefined ? { audioInputTokens } : {}),
     ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+    ...(cachedTextInputTokens !== undefined ? { cachedTextInputTokens } : {}),
+    ...(cachedAudioInputTokens !== undefined ? { cachedAudioInputTokens } : {}),
+    ...(textOutputTokens !== undefined ? { textOutputTokens } : {}),
+    ...(audioOutputTokens !== undefined ? { audioOutputTokens } : {}),
     ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
     ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
   };
@@ -251,6 +294,10 @@ function getRealtimePricingConfig(
     ReturnType<typeof loadVoiceGatewayEnv>,
     | "OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD"
     | "OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD"
     | "OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD"
   >,
 ): RealtimePricingConfig {
@@ -261,10 +308,37 @@ function getRealtimePricingConfig(
     ...(env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD !== undefined
       ? { outputTokenPriceUsd: env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD }
       : {}),
+    ...(env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { textInputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioInputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { textOutputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioOutputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
     ...(env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD !== undefined
       ? { cachedInputTokenPriceUsd: env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD }
       : {}),
   };
+}
+
+function priceBucket(
+  tokenCount: number | undefined,
+  tokenPriceUsd: number | undefined,
+): number | undefined {
+  if (tokenCount === undefined || tokenCount === 0) {
+    return 0;
+  }
+
+  if (tokenPriceUsd === undefined) {
+    return undefined;
+  }
+
+  return tokenCount * tokenPriceUsd;
 }
 
 export function estimateRealtimeTotalCostUsd(
@@ -273,6 +347,76 @@ export function estimateRealtimeTotalCostUsd(
 ): number | undefined {
   if (metrics.totalCostUsd !== undefined) {
     return metrics.totalCostUsd;
+  }
+
+  const hasDetailedInputBreakdown =
+    metrics.textInputTokens !== undefined || metrics.audioInputTokens !== undefined;
+  const hasDetailedOutputBreakdown =
+    metrics.textOutputTokens !== undefined || metrics.audioOutputTokens !== undefined;
+  const hasDetailedCachedBreakdown =
+    metrics.cachedInputTokens === undefined ||
+    metrics.cachedTextInputTokens !== undefined ||
+    metrics.cachedAudioInputTokens !== undefined;
+
+  if (hasDetailedInputBreakdown && !hasDetailedCachedBreakdown) {
+    return undefined;
+  }
+
+  if ((hasDetailedInputBreakdown && hasDetailedCachedBreakdown) || hasDetailedOutputBreakdown) {
+    const cachedTextInputTokens = metrics.cachedTextInputTokens ?? 0;
+    const cachedAudioInputTokens = metrics.cachedAudioInputTokens ?? 0;
+    const uncachedTextInputTokens =
+      metrics.textInputTokens !== undefined
+        ? Math.max(0, metrics.textInputTokens - cachedTextInputTokens)
+        : undefined;
+    const uncachedAudioInputTokens =
+      metrics.audioInputTokens !== undefined
+        ? Math.max(0, metrics.audioInputTokens - cachedAudioInputTokens)
+        : undefined;
+    const remainingCachedInputTokens =
+      metrics.cachedInputTokens !== undefined
+        ? Math.max(
+            0,
+            metrics.cachedInputTokens -
+              cachedTextInputTokens -
+              cachedAudioInputTokens,
+          )
+        : undefined;
+
+    const bucketCosts = [
+      priceBucket(
+        uncachedTextInputTokens,
+        pricing.textInputTokenPriceUsd ?? pricing.inputTokenPriceUsd,
+      ),
+      priceBucket(
+        uncachedAudioInputTokens,
+        pricing.audioInputTokenPriceUsd,
+      ),
+      priceBucket(
+        cachedTextInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        cachedAudioInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        remainingCachedInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        metrics.textOutputTokens,
+        pricing.textOutputTokenPriceUsd ?? pricing.outputTokenPriceUsd,
+      ),
+      priceBucket(
+        metrics.audioOutputTokens,
+        pricing.audioOutputTokenPriceUsd,
+      ),
+    ];
+
+    return bucketCosts.every((value) => value !== undefined)
+      ? bucketCosts.reduce((sum, value) => sum + (value ?? 0), 0)
+      : undefined;
   }
 
   const nonCachedInputTokens =
