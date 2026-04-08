@@ -73,6 +73,23 @@ export const WORKFLOW_EVENT_NAMES = [
   "workflow.failed",
 ] as const;
 
+export const OPERATIONS_EVENT_NAMES = [
+  "ops.voice.heartbeat",
+  "ops.voice.invalid_signature",
+  "ops.voice.media_disconnect",
+  "ops.voice.snapshot_cache_hit",
+  "ops.voice.snapshot_cache_miss",
+  "ops.voice.openai_realtime_error",
+  "ops.voice.turn_completed",
+  "ops.voice.turn_slow",
+  "ops.voice.tool_completed",
+  "ops.voice.tool_failed",
+  "ops.voice.recording_upload_failed",
+  "ops.convex.heartbeat",
+  "ops.convex.outbox_backlog_sample",
+  "ops.convex.outbox_flush_failed",
+] as const;
+
 export const TELEMETRY_EVENT_NAMES = [
   ...WEB_EVENT_NAMES,
   ...VOICE_EVENT_NAMES,
@@ -81,6 +98,7 @@ export const TELEMETRY_EVENT_NAMES = [
   ...KNOWLEDGE_EVENT_NAMES,
   ...INTEGRATION_EVENT_NAMES,
   ...WORKFLOW_EVENT_NAMES,
+  ...OPERATIONS_EVENT_NAMES,
 ] as const;
 
 export type TelemetryEventName = (typeof TELEMETRY_EVENT_NAMES)[number];
@@ -132,7 +150,10 @@ export type TelemetryRequirementKey =
   | "serviceId"
   | "sourceChannel"
   | "staffId"
-  | "workflowName";
+  | "workflowName"
+  | "latencyBucket"
+  | "toolName"
+  | "backlogBucket";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -345,6 +366,49 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "business.snapshot_refreshed": ["businessId", "deploymentMode"],
   "workflow.started": ["businessId", "deploymentMode", "workflowName"],
   "workflow.failed": ["businessId", "deploymentMode", "workflowName"],
+  "ops.voice.heartbeat": ["deploymentMode"],
+  "ops.voice.invalid_signature": ["deploymentMode", "provider"],
+  "ops.voice.media_disconnect": ["deploymentMode", "provider"],
+  "ops.voice.snapshot_cache_hit": ["businessId", "deploymentMode"],
+  "ops.voice.snapshot_cache_miss": ["businessId", "deploymentMode"],
+  "ops.voice.openai_realtime_error": ["deploymentMode", "provider"],
+  "ops.voice.turn_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "latencyBucket",
+  ],
+  "ops.voice.turn_slow": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "latencyBucket",
+  ],
+  "ops.voice.tool_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "toolName",
+    "latencyBucket",
+  ],
+  "ops.voice.tool_failed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "toolName",
+  ],
+  "ops.voice.recording_upload_failed": ["deploymentMode", "callId"],
+  "ops.convex.heartbeat": ["deploymentMode"],
+  "ops.convex.outbox_backlog_sample": ["deploymentMode", "backlogBucket"],
+  "ops.convex.outbox_flush_failed": ["deploymentMode", "backlogBucket"],
 } satisfies Record<TelemetryEventName, ReadonlyArray<string>>;
 
 export type TelemetryValidationInput = Partial<TelemetryContext> & {
@@ -581,6 +645,22 @@ export function redactOtelAttributes(
   }
 
   return sanitized;
+}
+
+export function bucketLatencyMs(latencyMs: number): string {
+  if (latencyMs < 500) {
+    return "under_500ms";
+  }
+  if (latencyMs < 1_000) {
+    return "500ms_to_1s";
+  }
+  if (latencyMs < 2_500) {
+    return "1s_to_2_5s";
+  }
+  if (latencyMs < 5_000) {
+    return "2_5s_to_5s";
+  }
+  return "over_5s";
 }
 
 export function getPostHogDistinctIdForOperator(userId: string): string {

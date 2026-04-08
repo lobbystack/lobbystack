@@ -2,8 +2,7 @@ import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
 
 import {
   recordRecordingUploadFailure,
-  startActiveSpan,
-} from "../observability/otel";
+} from "../observability/posthog";
 
 type StartCallResponse = {
   callId: string;
@@ -73,39 +72,12 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  return await startActiveSpan(
-    `convex.runtime${path.replaceAll("/", ".")}`,
-    {
-      "ai_receptionist.convex_path": path,
-      ...(typeof body === "object" &&
-      body !== null &&
-      "businessId" in body &&
-      typeof body.businessId === "string"
-        ? { "ai_receptionist.business_id": body.businessId }
-        : {}),
-      ...(typeof body === "object" &&
-      body !== null &&
-      "callId" in body &&
-      typeof body.callId === "string"
-        ? { "ai_receptionist.call_id": body.callId }
-        : {}),
-      ...(typeof body === "object" &&
-      body !== null &&
-      "conversationId" in body &&
-      typeof body.conversationId === "string"
-        ? { "ai_receptionist.conversation_id": body.conversationId }
-        : {}),
-    },
-    async (span) => {
-      const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
-        method: "POST",
-        headers: getRuntimeHeaders(),
-        body: JSON.stringify(body),
-      });
-      span.setAttribute("http.status_code", response.status);
-      return await parseJsonResponse<T>(response);
-    },
-  );
+  const response = await fetch(`${getRuntimeBaseUrl()}${path}`, {
+    method: "POST",
+    headers: getRuntimeHeaders(),
+    body: JSON.stringify(body),
+  });
+  return await parseJsonResponse<T>(response);
 }
 
 export async function startVoiceCall(input: {
@@ -170,34 +142,24 @@ export async function uploadVoiceRecording(input: {
   const url = new URL("/voice/call/recording", env.CONVEX_SITE_URL);
   url.searchParams.set("callId", input.callId);
   url.searchParams.set("durationMs", String(input.durationMs));
-  await startActiveSpan(
-    "convex.runtime.voice.call.recording",
-    {
-      "ai_receptionist.convex_path": "/voice/call/recording",
+  const bytes = Uint8Array.from(input.audio);
+  const arrayBuffer = bytes.buffer as ArrayBuffer;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "audio/wav",
+      "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
+    },
+    body: new Blob([arrayBuffer], { type: "audio/wav" }),
+  });
+
+  if (!response.ok) {
+    recordRecordingUploadFailure({
       "ai_receptionist.call_id": input.callId,
-    },
-    async (span) => {
-      const bytes = Uint8Array.from(input.audio);
-      const arrayBuffer = bytes.buffer as ArrayBuffer;
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "audio/wav",
-          "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
-        },
-        body: new Blob([arrayBuffer], { type: "audio/wav" }),
-      });
-      span.setAttribute("http.status_code", response.status);
-
-      if (!response.ok) {
-        recordRecordingUploadFailure({
-          "ai_receptionist.call_id": input.callId,
-        });
-        throw new Error(await response.text());
-      }
-    },
-  );
+    });
+    throw new Error(await response.text());
+  }
 }
 
 export async function findVoiceAvailability(input: {

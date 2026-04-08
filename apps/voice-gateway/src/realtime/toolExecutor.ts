@@ -4,8 +4,7 @@ import { z } from "zod";
 import {
   recordToolExecutionFailure,
   recordToolExecutionLatency,
-  startActiveSpan,
-} from "../observability/otel";
+} from "../observability/posthog";
 import {
   bookVoiceAppointment,
   checkVoiceAvailability,
@@ -183,12 +182,8 @@ export async function executeVoiceTool(input: {
     "ai_receptionist.tool_name": input.toolName,
   };
 
-  return await startActiveSpan(
-    `voice.tool.${input.toolName}`,
-    attributes,
-    async () => {
-      try {
-        switch (input.toolName) {
+  try {
+    switch (input.toolName) {
           case "getBusinessHours": {
             return {
               result: {
@@ -384,12 +379,10 @@ export async function executeVoiceTool(input: {
             };
           }
         }
-      } catch (error) {
-        recordToolExecutionFailure(attributes);
-        throw error;
-      } finally {
-        recordToolExecutionLatency(Date.now() - startedAt, attributes);
-      }
-    },
-  );
+  } catch (error) {
+    recordToolExecutionFailure(attributes);
+    throw error;
+  } finally {
+    recordToolExecutionLatency(Date.now() - startedAt, attributes);
+  }
 }

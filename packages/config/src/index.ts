@@ -41,9 +41,6 @@ const serverEnvSchema = z.object({
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
-  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
 });
 
 const clientEnvSchema = z.object({
@@ -71,9 +68,6 @@ const voiceGatewayEnvSchema = z.object({
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
-  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

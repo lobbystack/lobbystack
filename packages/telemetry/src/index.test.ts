@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TelemetryEvent } from "./index";
 import {
+  bucketLatencyMs,
   createTelemetryFacade,
   getTelemetryRequiredProperties,
   getPostHogBusinessGroupKey,
@@ -127,6 +128,15 @@ describe("telemetry redaction", () => {
       "serviceId",
       "sourceChannel",
     ]);
+    expect(getTelemetryRequiredProperties("ops.voice.tool_completed")).toEqual([
+      "businessId",
+      "deploymentMode",
+      "callId",
+      "provider",
+      "model",
+      "toolName",
+      "latencyBucket",
+    ]);
   });
 
   it("validates required telemetry properties across top-level context and event props", () => {
@@ -153,5 +163,13 @@ describe("telemetry redaction", () => {
     expect(valid).toEqual({ ok: true, missing: [] });
     expect(invalid.ok).toBe(false);
     expect(invalid.missing).toEqual(["conversationId", "channel"]);
+  });
+
+  it("buckets operational latency values into stable ranges", () => {
+    expect(bucketLatencyMs(120)).toBe("under_500ms");
+    expect(bucketLatencyMs(800)).toBe("500ms_to_1s");
+    expect(bucketLatencyMs(1_700)).toBe("1s_to_2_5s");
+    expect(bucketLatencyMs(3_600)).toBe("2_5s_to_5s");
+    expect(bucketLatencyMs(8_100)).toBe("over_5s");
   });
 });

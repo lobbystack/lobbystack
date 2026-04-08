@@ -54,11 +54,21 @@ type FlushResult = {
   skipped: boolean;
 };
 
+type OutboxHealthSnapshot = {
+  pendingCount: number;
+  processingCount: number;
+  retryingCount: number;
+  backlogCount: number;
+  backlogBucket: string;
+  lastError?: string;
+};
+
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
 const CLAIM_LEASE_MS = 60_000;
 const POSTHOG_REQUEST_TIMEOUT_MS = 30_000;
 const CLAIMED_STATUS = "processing";
+const CONVEX_TELEMETRY_DISTINCT_ID = "system:convex:telemetry";
 
 function buildCaptureUrl(host: string): string {
   return new URL("/i/v0/e/", host).toString();
@@ -66,6 +76,16 @@ function buildCaptureUrl(host: string): string {
 
 function getRetryDelayMs(attemptCount: number): number {
   return Math.min(5 * 60_000, Math.max(5_000, 2 ** attemptCount * 1_000));
+}
+
+function getBacklogBucket(backlogCount: number): string {
+  if (backlogCount <= 5) {
+    return "healthy";
+  }
+  if (backlogCount <= 25) {
+    return "elevated";
+  }
+  return "critical";
 }
 
 function isPostHogExportEnabled(): boolean {
@@ -262,6 +282,85 @@ export const markEventForRetry = internalMutation({
       {},
     );
     return null;
+  },
+});
+
+export const getOutboxHealth = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<OutboxHealthSnapshot> => {
+    const pendingRows = await ctx.db
+      .query("telemetry_outbox")
+      .withIndex("by_destination_and_status", (q) =>
+        q.eq("destination", TELEMETRY_DESTINATION).eq("status", "pending"),
+      )
+      .collect();
+    const processingRows = await ctx.db
+      .query("telemetry_outbox")
+      .withIndex("by_destination_and_status", (q) =>
+        q.eq("destination", TELEMETRY_DESTINATION).eq("status", CLAIMED_STATUS),
+      )
+      .collect();
+    const retryingRows = pendingRows.filter((row) => row.attemptCount > 0);
+    const backlogCount = pendingRows.length + processingRows.length;
+
+    return {
+      pendingCount: pendingRows.length,
+      processingCount: processingRows.length,
+      retryingCount: retryingRows.length,
+      backlogCount,
+      backlogBucket: getBacklogBucket(backlogCount),
+      ...(retryingRows[0]?.lastError ? { lastError: retryingRows[0].lastError } : {}),
+    };
+  },
+});
+
+export const emitObservabilityHeartbeat = internalAction({
+  args: {},
+  handler: async (ctx): Promise<OutboxHealthSnapshot | null> => {
+    if (!isPostHogExportEnabled()) {
+      return null;
+    }
+
+    const snapshot = await ctx.runQuery(internal.telemetry.posthog.getOutboxHealth, {});
+    const sharedProperties = {
+      runtime: "convex",
+      pendingCount: snapshot.pendingCount,
+      processingCount: snapshot.processingCount,
+      retryingCount: snapshot.retryingCount,
+      backlogCount: snapshot.backlogCount,
+      backlogBucket: snapshot.backlogBucket,
+      ...(snapshot.lastError ? { lastError: snapshot.lastError } : {}),
+    } satisfies TelemetryProperties;
+
+    await ctx.runMutation(
+      internal.telemetry.posthog.enqueueEvent,
+      serializePostHogEvent({
+        eventName: "ops.convex.heartbeat",
+        distinctId: CONVEX_TELEMETRY_DISTINCT_ID,
+        properties: sharedProperties,
+      }),
+    );
+    await ctx.runMutation(
+      internal.telemetry.posthog.enqueueEvent,
+      serializePostHogEvent({
+        eventName: "ops.convex.outbox_backlog_sample",
+        distinctId: CONVEX_TELEMETRY_DISTINCT_ID,
+        properties: sharedProperties,
+      }),
+    );
+
+    if (snapshot.retryingCount > 0) {
+      await ctx.runMutation(
+        internal.telemetry.posthog.enqueueEvent,
+        serializePostHogEvent({
+          eventName: "ops.convex.outbox_flush_failed",
+          distinctId: CONVEX_TELEMETRY_DISTINCT_ID,
+          properties: sharedProperties,
+        }),
+      );
+    }
+
+    return snapshot;
   },
 });
 

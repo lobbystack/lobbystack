@@ -15,14 +15,13 @@ import {
 } from "../convex/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
-  addActiveCalls,
   recordMediaStreamDisconnect,
   recordOpenAiRealtimeError,
   recordOpenAiTurnLatency,
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
-} from "../observability/otel";
+} from "../observability/posthog";
 import {
   captureAiGeneration,
   captureAiSpan,
@@ -481,10 +480,6 @@ async function finalizeCall(
   }
   session.finalized = true;
   if (session.activeCallCounted) {
-    addActiveCalls(-1, {
-      ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-      ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
-    });
     session.activeCallCounted = false;
   }
 
@@ -1411,9 +1406,6 @@ export async function handleMediaStreamConnection(
     session.snapshot = snapshot;
     await initializeCallRecord(server, session);
     if (!session.activeCallCounted) {
-      addActiveCalls(1, {
-        "ai_receptionist.business_id": session.businessId ?? snapshot.businessId,
-      });
       session.activeCallCounted = true;
     }
 
