@@ -694,10 +694,18 @@ export function buildPostHogAiTraceProperties(
   input: PostHogAiTracePropertiesInput,
 ): TelemetryProperties {
   return redactAiTraceProperties({
+    traceId: input.traceId,
+    model: input.model,
+    provider: input.provider,
     $ai_trace_id: input.traceId,
     $ai_model: input.model,
     $ai_provider: input.provider,
-    ...(input.sessionId ? { $ai_session_id: input.sessionId } : {}),
+    ...(input.sessionId
+      ? {
+          sessionId: input.sessionId,
+          $ai_session_id: input.sessionId,
+        }
+      : {}),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
   });
@@ -712,25 +720,35 @@ export function buildPostHogAiGenerationProperties(
 
   return redactAiTraceProperties({
     ...buildPostHogAiTraceProperties(input),
+    ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
     ...(input.inputTokens !== undefined
       ? { $ai_input_tokens: input.inputTokens }
       : {}),
+    ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
     ...(input.outputTokens !== undefined
       ? { $ai_output_tokens: input.outputTokens }
       : {}),
+    ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
     ...(input.totalTokens !== undefined
       ? { $ai_total_tokens: input.totalTokens }
       : {}),
+    ...(input.totalCostUsd !== undefined ? { totalCostUsd: input.totalCostUsd } : {}),
     ...(input.totalCostUsd !== undefined
       ? { $ai_total_cost_usd: input.totalCostUsd }
       : {}),
+    ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
     ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(input.ttftMs !== undefined ? { ttftMs: input.ttftMs } : {}),
     ...(ttftSeconds !== undefined
       ? { $ai_time_to_first_token: ttftSeconds }
       : {}),
+    ...(input.isStreaming !== undefined ? { isStreaming: input.isStreaming } : {}),
     ...(input.isStreaming !== undefined ? { $ai_stream: input.isStreaming } : {}),
+    ...(input.isError !== undefined ? { isError: input.isError } : {}),
     ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { error: input.error } : {}),
     ...(input.error ? { $ai_error: input.error } : {}),
+    ...(input.toolNames?.length ? { toolNames: input.toolNames } : {}),
     ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
     ...(input.cachedInputTokens !== undefined
       ? { cachedInputTokens: input.cachedInputTokens }
@@ -750,11 +768,15 @@ export function buildPostHogAiSpanProperties(
 
   return redactAiTraceProperties({
     ...buildPostHogAiTraceProperties(input),
+    spanName: input.spanName,
     $ai_span_name: input.spanName,
     $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
     $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
+    ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
     ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(input.isError !== undefined ? { isError: input.isError } : {}),
     ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { error: input.error } : {}),
     ...(input.error ? { $ai_error: input.error } : {}),
     ...input.properties,
   });

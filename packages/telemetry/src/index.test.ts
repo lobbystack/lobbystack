@@ -125,16 +125,27 @@ describe("telemetry redaction", () => {
 
     expect(properties.$ai_trace_id).toBe("trace-1");
     expect(properties.$ai_session_id).toBe("session-1");
+    expect(properties.traceId).toBe("trace-1");
+    expect(properties.sessionId).toBe("session-1");
+    expect(properties.model).toBe("gpt-realtime");
+    expect(properties.provider).toBe("openai");
     expect(properties.$ai_model).toBe("gpt-realtime");
     expect(properties.$ai_provider).toBe("openai");
+    expect(properties.inputTokens).toBe(12);
+    expect(properties.outputTokens).toBe(34);
+    expect(properties.totalTokens).toBe(46);
     expect(properties.$ai_input_tokens).toBe(12);
     expect(properties.$ai_output_tokens).toBe(34);
     expect(properties.$ai_total_tokens).toBe(46);
     expect(properties.cachedInputTokens).toBe(5);
     expect(properties.reasoningTokens).toBe(3);
+    expect(properties.totalCostUsd).toBe(0.12);
     expect(properties.$ai_total_cost_usd).toBe(0.12);
+    expect(properties.latencyMs).toBe(1_500);
     expect(properties.$ai_latency).toBe(1.5);
+    expect(properties.ttftMs).toBe(250);
     expect(properties.$ai_time_to_first_token).toBe(0.25);
+    expect(properties.isStreaming).toBe(true);
     expect(properties.$ai_stream).toBe(true);
     expect(properties.$ai_input).toBe("[redacted]");
     expect(properties.$ai_output_choices).toBe("[redacted]");
@@ -174,8 +185,14 @@ describe("telemetry redaction", () => {
 
     expect(traceProperties.$ai_trace_id).toBe("trace-2");
     expect(traceProperties.$ai_session_id).toBe("session-2");
+    expect(traceProperties.traceId).toBe("trace-2");
+    expect(traceProperties.sessionId).toBe("session-2");
+    expect(traceProperties.model).toBe("gemini-3.1-flash-lite-preview");
+    expect(traceProperties.provider).toBe("google");
     expect(traceProperties.conversationId).toBe("conv-2");
+    expect(spanProperties.spanName).toBe("tool_call:searchKnowledge");
     expect(spanProperties.$ai_span_name).toBe("tool_call:searchKnowledge");
+    expect(spanProperties.latencyMs).toBe(800);
     expect(spanProperties.$ai_latency).toBe(0.8);
     expect(spanProperties.$ai_input_state).toEqual({
       toolName: "searchKnowledge",
