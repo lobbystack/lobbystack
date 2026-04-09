@@ -221,6 +221,9 @@ export const recordProviderPricing = internalMutation({
           properties: {
             providerMessageSid: args.providerMessageSid,
             providerCostUsd: args.providerCostUsd,
+            ...(args.providerUpdatedAt !== undefined
+              ? { providerUpdatedAt: args.providerUpdatedAt }
+              : {}),
             ...(args.providerPrice !== undefined ? { providerPrice: args.providerPrice } : {}),
             ...(args.providerPriceUnit !== undefined ? { providerPriceUnit: args.providerPriceUnit } : {}),
             ...(args.providerNumSegments !== undefined ? { providerNumSegments: args.providerNumSegments } : {}),
@@ -230,5 +233,54 @@ export const recordProviderPricing = internalMutation({
     }
 
     return { matched: true, applied: true };
+  },
+});
+
+export const replayProviderCostRecorded = internalMutation({
+  args: {
+    providerMessageSid: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_provider_message_sid", (q) =>
+        q.eq("providerMessageSid", args.providerMessageSid),
+      )
+      .unique();
+
+    if (!message || message.providerCostUsd === undefined) {
+      return { matched: false, enqueued: false };
+    }
+
+    await ctx.runMutation(internal.telemetry.posthog.enqueueEvent, {
+      ...serializePostHogEvent({
+        eventName: "sms.provider_cost_recorded",
+        businessId: message.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(message.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(message.businessId)),
+        conversationId: String(message.conversationId),
+        messageId: String(message._id),
+        channel: message.channel,
+        provider: "twilio",
+        properties: {
+          providerMessageSid: args.providerMessageSid,
+          providerCostUsd: message.providerCostUsd,
+          ...(message.providerUpdatedAt !== undefined
+            ? { providerUpdatedAt: message.providerUpdatedAt }
+            : {}),
+          ...(message.providerPrice !== undefined
+            ? { providerPrice: message.providerPrice }
+            : {}),
+          ...(message.providerPriceUnit !== undefined
+            ? { providerPriceUnit: message.providerPriceUnit }
+            : {}),
+          ...(message.providerNumSegments !== undefined
+            ? { providerNumSegments: message.providerNumSegments }
+            : {}),
+        },
+      }),
+    });
+
+    return { matched: true, enqueued: true };
   },
 });

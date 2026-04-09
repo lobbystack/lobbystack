@@ -892,6 +892,7 @@ export const markOutboundMessageAccepted = internalMutation({
         properties: {
           providerMessageSid: args.providerMessageSid,
           providerStatus: args.providerStatus,
+          providerUpdatedAt: args.providerUpdatedAt,
         },
       }),
     );

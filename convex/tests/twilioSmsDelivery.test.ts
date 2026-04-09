@@ -1030,6 +1030,18 @@ describe("Twilio SMS delivery flow", () => {
         providerNumSegments: 2,
       });
     });
+
+    const replayResult = await t.mutation(
+      internal.integrations.twilioMessageStatus.replayProviderCostRecorded,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+      },
+    );
+
+    expect(replayResult).toEqual({
+      matched: true,
+      enqueued: true,
+    });
   });
 
   it("persists undelivered callbacks as terminal failures", async () => {
