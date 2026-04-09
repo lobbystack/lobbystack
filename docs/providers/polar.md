@@ -64,6 +64,9 @@ Set these on the Convex deployment:
 `SITE_URL` is used for hosted checkout and the customer portal return URL.
 `POLAR_WEBHOOK_SECRET` must match the webhook endpoint secret from Polar so the
 Convex component can validate incoming webhook signatures.
+If your organization is on `polar.sh` and the dashboard says it is in "test
+mode", keep using `POLAR_SERVER=production`. Only use `POLAR_SERVER=sandbox`
+for the fully separate `sandbox.polar.sh` environment.
 
 ## Webhook Endpoint
 
