@@ -38,10 +38,13 @@ Set these on the Convex deployment:
 
 - `POLAR_SERVER`
 - `POLAR_ORGANIZATION_TOKEN`
+- `POLAR_WEBHOOK_SECRET`
 - `POLAR_PAID_PRODUCT_ID`
 - `SITE_URL`
 
 `SITE_URL` is used for hosted checkout and the customer portal return URL.
+`POLAR_WEBHOOK_SECRET` must match the webhook endpoint secret from Polar so the
+Convex component can validate incoming webhook signatures.
 
 ## Webhook Endpoint
 
@@ -63,6 +66,10 @@ Use the default route from the Convex Polar component and subscribe it to:
 - `order.refunded`
 - `refund.created`
 - `refund.updated`
+
+The endpoint secret returned by Polar should be stored in:
+
+- `POLAR_WEBHOOK_SECRET`
 
 ## Free Tier Enforcement
 
