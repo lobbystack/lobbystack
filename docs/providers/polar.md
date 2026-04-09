@@ -73,6 +73,8 @@ The registered Polar webhook route is:
 
 Use the default route from the Convex Polar component and subscribe it to:
 
+- `product.created`
+- `product.updated`
 - `subscription.created`
 - `subscription.updated`
 - `subscription.active`
