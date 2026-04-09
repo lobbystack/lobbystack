@@ -4,8 +4,7 @@ import { type HttpRouter } from "convex/server";
 import { v } from "convex/values";
 
 import {
-  billingMeterEventNames,
-  getPolarBillableUsageCents,
+  getPolarMeteredUsagePayload,
   type BillingPaidTier,
   type BillingStatus,
   type BillingTier,
@@ -63,7 +62,8 @@ type SendBillingUsagePayload = {
   billingKey: string;
   usageKind: BillingUsageKind;
   quantity: number;
-  billableCents: number;
+  polarEventName: string;
+  polarQuantity: number;
   sourceKey: string;
   recordedAt: string;
 };
@@ -879,7 +879,8 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: v.string(),
       usageKind: v.string(),
       quantity: v.number(),
-      billableCents: v.number(),
+      polarEventName: v.string(),
+      polarQuantity: v.number(),
       sourceKey: v.string(),
       recordedAt: v.string(),
     }),
@@ -901,16 +902,19 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
+    const meteredUsage = getPolarMeteredUsagePayload(
+      tierAtRecordTime,
+      usageEvent.usageKind as BillingUsageKind,
+      usageEvent.quantity,
+    );
+
     return {
       businessId: usageEvent.businessId,
       billingKey: account.billingKey,
       usageKind: usageEvent.usageKind as BillingUsageKind,
       quantity: usageEvent.quantity,
-      billableCents: getPolarBillableUsageCents(
-        tierAtRecordTime,
-        usageEvent.usageKind as BillingUsageKind,
-        usageEvent.quantity,
-      ),
+      polarEventName: meteredUsage.eventName,
+      polarQuantity: meteredUsage.quantity,
       sourceKey: usageEvent.sourceKey,
       recordedAt: usageEvent.recordedAt,
     };
@@ -1075,13 +1079,12 @@ export const syncUsageEventToPolar = internalAction({
       await createPolarClient().events.ingest({
         events: [
           {
-            name: billingMeterEventNames.usageCents,
+            name: payload.polarEventName,
             externalCustomerId: payload.billingKey,
             externalId: payload.sourceKey,
             timestamp: new Date(payload.recordedAt),
             metadata: {
-              quantity: payload.billableCents,
-              rawQuantity: payload.quantity,
+              quantity: payload.polarQuantity,
               businessId: String(payload.businessId),
               usageKind: payload.usageKind,
             },

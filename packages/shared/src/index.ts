@@ -119,12 +119,13 @@ export {
   billingTiers,
   billingTransactionKinds,
   billingUsageKinds,
-  getPolarBillableUsageCents,
+  getPolarMeteredUsagePayload,
   isPaidBillingTier,
 } from "./billing";
 export type {
   BillingErrorCode,
   BillingPaidTier,
+  PolarMeteredUsagePayload,
   BillingStatus,
   BillingTier,
   BillingTransactionKind,

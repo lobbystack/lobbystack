@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { deriveBillingTier, getBillingKey } from "../lib/billing";
-import { getPolarBillableUsageCents } from "../../packages/shared/src/billing";
+import { getPolarMeteredUsagePayload } from "../../packages/shared/src/billing";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -88,11 +88,23 @@ describe("billing", () => {
     ).toBe("free");
   });
 
-  it("converts raw usage to billable cents for Polar metering", () => {
-    expect(getPolarBillableUsageCents("starter", "voice_seconds", 60)).toBe(22);
-    expect(getPolarBillableUsageCents("growth", "voice_seconds", 60)).toBe(18);
-    expect(getPolarBillableUsageCents("starter", "sms_segments", 3)).toBe(9);
-    expect(getPolarBillableUsageCents("growth", "sms_segments", 4)).toBe(10);
+  it("maps raw usage into Polar metered event payloads", () => {
+    expect(getPolarMeteredUsagePayload("starter", "voice_seconds", 60)).toEqual({
+      eventName: "billing.voice_minutes",
+      quantity: 1,
+    });
+    expect(getPolarMeteredUsagePayload("growth", "voice_seconds", 30)).toEqual({
+      eventName: "billing.voice_minutes",
+      quantity: 0.5,
+    });
+    expect(getPolarMeteredUsagePayload("starter", "sms_segments", 3)).toEqual({
+      eventName: "billing.sms_segments",
+      quantity: 3,
+    });
+    expect(getPolarMeteredUsagePayload("growth", "sms_segments", 4)).toEqual({
+      eventName: "billing.sms_segments",
+      quantity: 4,
+    });
   });
 
   it("records each usage source key only once and splits usage by UTC month", async () => {
@@ -208,7 +220,7 @@ describe("billing", () => {
     expect(status.hasCheckoutAccess).toBe(true);
   });
 
-  it("builds a single usage-cents payload for paid Polar syncing", async () => {
+  it("builds metered payloads for paid Polar syncing", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedBillingWorkspace(t, "billing-polar-payload");
 
@@ -242,7 +254,8 @@ describe("billing", () => {
       billingKey: getBillingKey(businessId),
       usageKind: "voice_seconds",
       quantity: 120,
-      billableCents: 44,
+      polarEventName: "billing.voice_minutes",
+      polarQuantity: 2,
     });
   });
 });

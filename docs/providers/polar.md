@@ -17,16 +17,17 @@ The paid catalog is expected to contain two recurring monthly products:
 
 - `Starter`
   - fixed recurring price of `$5.00 USD`
-  - one metered usage price on the shared `Usage Spend (USD cents)` meter
-  - monthly meter-credit benefit of `500` units
+  - one metered usage price on the `Voice Minutes` meter at `$0.22/min`
+  - one metered usage price on the `SMS Messages` meter at `$0.03/text`
 - `Growth`
   - fixed recurring price of `$20.00 USD`
-  - one metered usage price on the shared `Usage Spend (USD cents)` meter
-  - monthly meter-credit benefit of `2,000` units
+  - one metered usage price on the `Voice Minutes` meter at `$0.18/min`
+  - one metered usage price on the `SMS Messages` meter at `$0.025/text`
 
-This product shape makes Polar bill the greater of the monthly minimum or the
-workspace's actual usage, because the fixed monthly charge is fully offset by
-the matching monthly meter credits.
+This product shape charges the recurring base fee up front each month and then
+adds voice/SMS overage to the renewal invoice for the completed billing period.
+That keeps checkout closer to Railway-style pricing and avoids exposing an
+artificial cents-based meter to the customer.
 
 The Convex billing wrapper currently expects the product ids in:
 
@@ -35,29 +36,27 @@ The Convex billing wrapper currently expects the product ids in:
 
 ## Meter Event Names
 
-The app sends a single metered event to Polar:
+The app sends two metered events to Polar:
 
-- `billing.usage_cents`
+- `billing.voice_minutes`
+- `billing.sms_segments`
 
-Create one Polar meter with:
+Create two Polar meters:
 
-- name: `Usage Spend (USD cents)`
-- filter: event name equals `billing.usage_cents`
+- `Voice Minutes`
+  - filter: event name equals `billing.voice_minutes`
+  - aggregation: `sum`
+  - aggregation property: `quantity`
+  - unit: `scalar`
+- `SMS Messages`
+  - filter: event name equals `billing.sms_segments`
 - aggregation: `sum`
 - aggregation property: `quantity`
 - unit: `scalar`
 
-Attach that same meter to both recurring products as a metered unit price with
-`unit_amount = 1` cent.
-
 App-owned billing logic still tracks `voice_seconds` and `sms_segments`
-internally. Before syncing to Polar, Convex converts each usage event into
-billable USD cents using the plan rates:
-
-- `Starter` voice: `$0.22/min`
-- `Starter` SMS: `$0.03/text`
-- `Growth` voice: `$0.18/min`
-- `Growth` SMS: `$0.025/text`
+internally. Before syncing to Polar, Convex converts voice usage into minutes
+for the Polar meter payload and keeps SMS usage in segments.
 
 ## Required Environment Variables
 

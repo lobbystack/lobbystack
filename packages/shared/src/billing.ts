@@ -18,7 +18,8 @@ export type BillingErrorCode =
   (typeof billingErrorCodes)[keyof typeof billingErrorCodes];
 
 export const billingMeterEventNames = {
-  usageCents: "billing.usage_cents",
+  voiceMinutes: "billing.voice_minutes",
+  smsSegments: "billing.sms_segments",
 } as const;
 
 export const billingDefaults = {
@@ -59,18 +60,27 @@ export function isPaidBillingTier(tier: BillingTier): tier is BillingPaidTier {
   return tier === "starter" || tier === "growth";
 }
 
-export function getPolarBillableUsageCents(
-  tier: BillingPaidTier,
+export type PolarMeteredUsagePayload = {
+  eventName: (typeof billingMeterEventNames)[keyof typeof billingMeterEventNames];
+  quantity: number;
+};
+
+export function getPolarMeteredUsagePayload(
+  _tier: BillingPaidTier,
   usageKind: BillingUsageKind,
   quantity: number,
-): number {
-  const plan = billingPlanCatalog[tier];
-
+): PolarMeteredUsagePayload {
   if (usageKind === "voice_seconds") {
-    return (quantity * plan.voiceRatePerMinuteCents) / 60;
+    return {
+      eventName: billingMeterEventNames.voiceMinutes,
+      quantity: quantity / 60,
+    };
   }
 
-  return quantity * plan.smsRatePerMessageCents;
+  return {
+    eventName: billingMeterEventNames.smsSegments,
+    quantity,
+  };
 }
 
 export type BillingUsageSnapshot = {
