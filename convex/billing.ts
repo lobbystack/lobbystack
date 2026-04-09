@@ -5,6 +5,7 @@ import { v } from "convex/values";
 
 import {
   billingMeterEventNames,
+  getPolarBillableUsageCents,
   type BillingPaidTier,
   type BillingStatus,
   type BillingTier,
@@ -62,6 +63,7 @@ type SendBillingUsagePayload = {
   billingKey: string;
   usageKind: BillingUsageKind;
   quantity: number;
+  billableCents: number;
   sourceKey: string;
   recordedAt: string;
 };
@@ -877,6 +879,7 @@ export const getUsageSyncPayload = internalQuery({
       billingKey: v.string(),
       usageKind: v.string(),
       quantity: v.number(),
+      billableCents: v.number(),
       sourceKey: v.string(),
       recordedAt: v.string(),
     }),
@@ -893,11 +896,21 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
+    const tierAtRecordTime = usageEvent.tierAtRecordTime;
+    if (tierAtRecordTime !== "starter" && tierAtRecordTime !== "growth") {
+      return null;
+    }
+
     return {
       businessId: usageEvent.businessId,
       billingKey: account.billingKey,
       usageKind: usageEvent.usageKind as BillingUsageKind,
       quantity: usageEvent.quantity,
+      billableCents: getPolarBillableUsageCents(
+        tierAtRecordTime,
+        usageEvent.usageKind as BillingUsageKind,
+        usageEvent.quantity,
+      ),
       sourceKey: usageEvent.sourceKey,
       recordedAt: usageEvent.recordedAt,
     };
@@ -1062,15 +1075,13 @@ export const syncUsageEventToPolar = internalAction({
       await createPolarClient().events.ingest({
         events: [
           {
-            name:
-              payload.usageKind === "voice_seconds"
-                ? billingMeterEventNames.voiceSeconds
-                : billingMeterEventNames.smsSegments,
+            name: billingMeterEventNames.usageCents,
             externalCustomerId: payload.billingKey,
             externalId: payload.sourceKey,
             timestamp: new Date(payload.recordedAt),
             metadata: {
-              quantity: payload.quantity,
+              quantity: payload.billableCents,
+              rawQuantity: payload.quantity,
               businessId: String(payload.businessId),
               usageKind: payload.usageKind,
             },

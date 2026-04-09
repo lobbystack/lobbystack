@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { deriveBillingTier, getBillingKey } from "../lib/billing";
+import { getPolarBillableUsageCents } from "../../packages/shared/src/billing";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -85,6 +86,13 @@ describe("billing", () => {
         subscriptionProductId: "prod_unknown",
       }),
     ).toBe("free");
+  });
+
+  it("converts raw usage to billable cents for Polar metering", () => {
+    expect(getPolarBillableUsageCents("starter", "voice_seconds", 60)).toBe(22);
+    expect(getPolarBillableUsageCents("growth", "voice_seconds", 60)).toBe(18);
+    expect(getPolarBillableUsageCents("starter", "sms_segments", 3)).toBe(9);
+    expect(getPolarBillableUsageCents("growth", "sms_segments", 4)).toBe(10);
   });
 
   it("records each usage source key only once and splits usage by UTC month", async () => {
@@ -198,5 +206,43 @@ describe("billing", () => {
 
     expect(status.availableCheckoutPlans).toEqual(["starter", "growth"]);
     expect(status.hasCheckoutAccess).toBe(true);
+  });
+
+  it("builds a single usage-cents payload for paid Polar syncing", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedBillingWorkspace(t, "billing-polar-payload");
+
+    const usageEventId = await t.run(async (ctx: any) => {
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentTier: "starter",
+        subscriptionState: "active",
+        polarCustomerId: "cus_polar",
+        lastSyncedAt: "2026-04-09T12:05:00.000Z",
+      });
+
+      return await ctx.db.insert("billing_usage_events", {
+        businessId,
+        periodKey: "2026-04",
+        sourceKey: "voice:test-paid-sync",
+        usageKind: "voice_seconds",
+        quantity: 120,
+        tierAtRecordTime: "starter",
+        recordedAt: "2026-04-09T12:00:00.000Z",
+        syncStatus: "pending",
+      });
+    });
+
+    const payload = await t.query(internal.billing.getUsageSyncPayload, {
+      usageEventId,
+    });
+
+    expect(payload).toMatchObject({
+      billingKey: getBillingKey(businessId),
+      usageKind: "voice_seconds",
+      quantity: 120,
+      billableCents: 44,
+    });
   });
 });

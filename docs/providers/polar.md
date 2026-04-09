@@ -17,12 +17,16 @@ The paid catalog is expected to contain two recurring monthly products:
 
 - `Starter`
   - fixed recurring price of `$5.00 USD`
-  - metered voice price of `$0.22/min`
-  - metered SMS price of `$0.03/text`
+  - one metered usage price on the shared `Usage Spend (USD cents)` meter
+  - monthly meter-credit benefit of `500` units
 - `Growth`
   - fixed recurring price of `$20.00 USD`
-  - metered voice price of `$0.18/min`
-  - metered SMS price of `$0.025/text`
+  - one metered usage price on the shared `Usage Spend (USD cents)` meter
+  - monthly meter-credit benefit of `2,000` units
+
+This product shape makes Polar bill the greater of the monthly minimum or the
+workspace's actual usage, because the fixed monthly charge is fully offset by
+the matching monthly meter credits.
 
 The Convex billing wrapper currently expects the product ids in:
 
@@ -31,24 +35,29 @@ The Convex billing wrapper currently expects the product ids in:
 
 ## Meter Event Names
 
-The app sends usage events to Polar with these event names:
+The app sends a single metered event to Polar:
 
-- `billing.voice_seconds`
-- `billing.sms_segments`
+- `billing.usage_cents`
 
-Create Polar meters that map to those event names, then attach them to both
-recurring products as metered unit prices.
+Create one Polar meter with:
 
-Because the voice meter is reported in seconds, the Polar metered unit amounts
-should be configured in cents per second:
+- name: `Usage Spend (USD cents)`
+- filter: event name equals `billing.usage_cents`
+- aggregation: `sum`
+- aggregation property: `quantity`
+- unit: `scalar`
 
-- `Starter` voice: `0.366666666667` cents per second (`$0.22/min`)
-- `Growth` voice: `0.3` cents per second (`$0.18/min`)
+Attach that same meter to both recurring products as a metered unit price with
+`unit_amount = 1` cent.
 
-For SMS, the metered unit amount stays in cents per message:
+App-owned billing logic still tracks `voice_seconds` and `sms_segments`
+internally. Before syncing to Polar, Convex converts each usage event into
+billable USD cents using the plan rates:
 
-- `Starter` SMS: `3`
-- `Growth` SMS: `2.5`
+- `Starter` voice: `$0.22/min`
+- `Starter` SMS: `$0.03/text`
+- `Growth` voice: `$0.18/min`
+- `Growth` SMS: `$0.025/text`
 
 ## Required Environment Variables
 

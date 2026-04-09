@@ -119,6 +119,7 @@ export {
   billingTiers,
   billingTransactionKinds,
   billingUsageKinds,
+  getPolarBillableUsageCents,
   isPaidBillingTier,
 } from "./billing";
 export type {
