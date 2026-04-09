@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { estimateRealtimeTotalCostUsd } from "./mediaStream";
+import {
+  estimateRealtimeTotalCostUsd,
+  getRealtimeGenerationOutcome,
+} from "./mediaStream";
 
 describe("estimateRealtimeTotalCostUsd", () => {
   it("prefers provider-reported total cost when available", () => {
@@ -114,5 +117,27 @@ describe("estimateRealtimeTotalCostUsd", () => {
     );
 
     expect(totalCostUsd).toBeUndefined();
+  });
+});
+
+describe("getRealtimeGenerationOutcome", () => {
+  it("does not mark completed generations as errors", () => {
+    expect(getRealtimeGenerationOutcome("completed")).toEqual({
+      isError: false,
+    });
+  });
+
+  it("treats cancelled generations as interruptions instead of errors", () => {
+    expect(getRealtimeGenerationOutcome("cancelled")).toEqual({
+      isError: false,
+      error: "cancelled",
+    });
+  });
+
+  it("still marks other terminal statuses as errors", () => {
+    expect(getRealtimeGenerationOutcome("failed")).toEqual({
+      isError: true,
+      error: "failed",
+    });
   });
 });

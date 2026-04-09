@@ -449,6 +449,31 @@ export function estimateRealtimeTotalCostUsd(
     : undefined;
 }
 
+export function getRealtimeGenerationOutcome(
+  status: string | undefined,
+): {
+  isError: boolean;
+  error?: string;
+} {
+  if (!status || status === "completed") {
+    return {
+      isError: false,
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      isError: false,
+      error: status,
+    };
+  }
+
+  return {
+    isError: true,
+    error: status,
+  };
+}
+
 type MediaStreamRequestContext = {
   url: string;
   headers: IncomingHttpHeaders;
@@ -1412,6 +1437,7 @@ function handleOpenAiMessage(
         usageMetrics,
         getRealtimePricingConfig(runtimeConfig),
       );
+      const generationOutcome = getRealtimeGenerationOutcome(payload.response?.status);
 
       if (session.businessId) {
         captureAiGeneration({
@@ -1440,12 +1466,8 @@ function handleOpenAiMessage(
             : {}),
           ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
           isStreaming: true,
-          isError:
-            payload.response?.status !== undefined &&
-            payload.response.status !== "completed",
-          ...(payload.response?.status && payload.response.status !== "completed"
-            ? { error: payload.response.status }
-            : {}),
+          isError: generationOutcome.isError,
+          ...(generationOutcome.error ? { error: generationOutcome.error } : {}),
           transferInvoked: Boolean(session.pendingTransferDestination),
         });
       }
