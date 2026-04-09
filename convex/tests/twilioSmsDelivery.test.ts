@@ -8,11 +8,13 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 
 const {
+  fetchTwilioMessageMock,
   generateSmsReplyMock,
   retrierRunMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
 } = vi.hoisted(() => ({
+  fetchTwilioMessageMock: vi.fn(),
   generateSmsReplyMock: vi.fn(),
   retrierRunMock: vi.fn(),
   sendTwilioMessageMock: vi.fn(),
@@ -20,11 +22,17 @@ const {
 }));
 
 vi.mock("twilio", () => {
+  const messagesResource = Object.assign(
+    vi.fn((sid?: string) => ({
+      fetch: () => fetchTwilioMessageMock(sid),
+    })),
+    {
+      create: sendTwilioMessageMock,
+    },
+  );
   const twilioFactory = Object.assign(
     vi.fn(() => ({
-      messages: {
-        create: sendTwilioMessageMock,
-      },
+      messages: messagesResource,
     })),
     {
       validateRequest: validateTwilioRequestMock,
@@ -168,6 +176,14 @@ beforeEach(() => {
   generateSmsReplyMock.mockImplementation(async ({ prompt }: { prompt: string }) => {
     return `Auto-reply: ${prompt}`;
   });
+  fetchTwilioMessageMock.mockImplementation(async (sid?: string) => ({
+    sid: sid ?? "SM-fetched",
+    status: "delivered",
+    price: "0.0075",
+    priceUnit: "usd",
+    numSegments: "1",
+    dateUpdated: new Date("2026-04-09T15:15:00.000Z"),
+  }));
   retrierRunMock.mockResolvedValue(null);
 });
 
@@ -907,6 +923,10 @@ describe("Twilio SMS delivery flow", () => {
       expect(message).toMatchObject({
         status: "delivered",
         providerStatus: "delivered",
+        providerPrice: 0.0075,
+        providerPriceUnit: "usd",
+        providerCostUsd: 0.0075,
+        providerNumSegments: 1,
         providerRawDlrDoneDate: "2603111530",
       });
     });

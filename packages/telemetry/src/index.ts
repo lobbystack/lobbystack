@@ -48,6 +48,7 @@ export const SMS_EVENT_NAMES = [
   "sms.reply_generated",
   "sms.delivery_accepted",
   "sms.delivery_failed",
+  "sms.provider_cost_recorded",
   "sms.automation_paused",
 ] as const;
 
@@ -368,6 +369,14 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
     "provider",
     "providerStatus",
+  ],
+  "sms.provider_cost_recorded": [
+    "businessId",
+    "deploymentMode",
+    "conversationId",
+    "messageId",
+    "channel",
+    "provider",
   ],
   "sms.automation_paused": [
     "businessId",

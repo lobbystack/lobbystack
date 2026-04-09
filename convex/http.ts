@@ -580,6 +580,18 @@ http.route({
         : {}),
     });
 
+    try {
+      await ctx.runAction(internal.integrations.twilioSms.syncMessagePriceFromProvider, {
+        providerMessageSid,
+        providerStatus: parsedPayload.data.MessageStatus,
+      });
+    } catch (error) {
+      console.warn("[twilioSms] Failed to start provider price sync", {
+        providerMessageSid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     return new Response("OK", { status: 200 });
   }),
 });

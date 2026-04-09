@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { internalMutation, type MutationCtx } from "../_generated/server";
 import { mapTwilioStatusToMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyMessageStatusTransition, shouldApplyNotificationStatusTransition } from "../lib/twilioMessageStatus";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../telemetry/shared";
+import { serializePostHogEvent } from "../telemetry/posthog";
 
 type ReconcileTwilioMessageStatusArgs = {
   providerMessageSid: string;
@@ -10,6 +15,15 @@ type ReconcileTwilioMessageStatusArgs = {
   providerUpdatedAt: string;
   providerErrorCode?: string;
   providerRawDlrDoneDate?: string;
+};
+
+type RecordTwilioMessagePricingArgs = {
+  providerMessageSid: string;
+  providerUpdatedAt?: string;
+  providerPrice?: number;
+  providerPriceUnit?: string;
+  providerCostUsd?: number;
+  providerNumSegments?: number;
 };
 
 type ReconcileTwilioMessageStatusResult =
@@ -136,5 +150,85 @@ export const reconcileProviderStatus = internalMutation({
     }
 
     return { matched: false };
+  },
+});
+
+export const recordProviderPricing = internalMutation({
+  args: {
+    providerMessageSid: v.string(),
+    providerUpdatedAt: v.optional(v.string()),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerNumSegments: v.optional(v.number()),
+  },
+  handler: async (ctx, args: RecordTwilioMessagePricingArgs) => {
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_provider_message_sid", (q) => q.eq("providerMessageSid", args.providerMessageSid))
+      .unique();
+
+    if (!message) {
+      return { matched: false, applied: false };
+    }
+
+    const patch: Partial<typeof message> = {};
+    let changed = false;
+    let pricingChanged = false;
+
+    if (args.providerUpdatedAt !== undefined && args.providerUpdatedAt !== message.providerUpdatedAt) {
+      patch.providerUpdatedAt = args.providerUpdatedAt;
+      changed = true;
+    }
+    if (args.providerPrice !== undefined && args.providerPrice !== message.providerPrice) {
+      patch.providerPrice = args.providerPrice;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerPriceUnit !== undefined && args.providerPriceUnit !== message.providerPriceUnit) {
+      patch.providerPriceUnit = args.providerPriceUnit;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerCostUsd !== undefined && args.providerCostUsd !== message.providerCostUsd) {
+      patch.providerCostUsd = args.providerCostUsd;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerNumSegments !== undefined && args.providerNumSegments !== message.providerNumSegments) {
+      patch.providerNumSegments = args.providerNumSegments;
+      changed = true;
+      pricingChanged = true;
+    }
+
+    if (!changed) {
+      return { matched: true, applied: false };
+    }
+
+    await ctx.db.patch(message._id, patch);
+
+    if (pricingChanged && args.providerCostUsd !== undefined) {
+      await ctx.runMutation(internal.telemetry.posthog.enqueueEvent, {
+        ...serializePostHogEvent({
+          eventName: "sms.provider_cost_recorded",
+          businessId: message.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(message.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(message.businessId)),
+          conversationId: String(message.conversationId),
+          messageId: String(message._id),
+          channel: message.channel,
+          provider: "twilio",
+          properties: {
+            providerMessageSid: args.providerMessageSid,
+            providerCostUsd: args.providerCostUsd,
+            ...(args.providerPrice !== undefined ? { providerPrice: args.providerPrice } : {}),
+            ...(args.providerPriceUnit !== undefined ? { providerPriceUnit: args.providerPriceUnit } : {}),
+            ...(args.providerNumSegments !== undefined ? { providerNumSegments: args.providerNumSegments } : {}),
+          },
+        }),
+      });
+    }
+
+    return { matched: true, applied: true };
   },
 });
