@@ -8,6 +8,7 @@ import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BotIcon } from "@/components/ui/bot";
 import { BlocksIcon } from "@/components/ui/blocks";
+import { BoxIcon } from "@/components/ui/box";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { FileTextIcon } from "@/components/ui/file-text";
@@ -83,6 +84,7 @@ const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
 const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
 const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
 const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
+const AnimatedBillingIcon = createAnimatedSidebarIcon(BoxIcon);
 const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
@@ -162,6 +164,11 @@ export function AppSidebar({
                   title: t("settings:sections.appearance"),
                   url: "/settings/appearance",
                   icon: AnimatedAppearanceIcon,
+                },
+                {
+                  title: t("settings:sections.billing"),
+                  url: "/settings/billing",
+                  icon: AnimatedBillingIcon,
                 },
                 {
                   title: t("settings:sections.integrations"),

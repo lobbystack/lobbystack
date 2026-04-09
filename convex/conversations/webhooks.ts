@@ -1,3 +1,4 @@
+import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
@@ -34,6 +35,10 @@ function asConversationId(value: string): Id<"conversations"> {
 
 function asMessageId(value: string): Id<"messages"> {
   return value as Id<"messages">;
+}
+
+function isBillingLimitError(error: unknown, code: string): boolean {
+  return error instanceof Error && error.message === code;
 }
 
 type MessageMediaAttachment = {
@@ -105,6 +110,7 @@ type MarkOutboundMessageAcceptedArgs = {
   messageId: Id<"messages">;
   providerMessageSid: string;
   providerStatus: string;
+  providerNumSegments?: number;
   providerUpdatedAt: string;
 };
 type MarkOutboundMessageSendFailedArgs = {
@@ -715,6 +721,7 @@ export const markOutboundMessageAccepted = internalMutation({
     messageId: v.id("messages"),
     providerMessageSid: v.string(),
     providerStatus: v.string(),
+    providerNumSegments: v.optional(v.number()),
     providerUpdatedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: MarkOutboundMessageAcceptedArgs) => {
@@ -727,6 +734,9 @@ export const markOutboundMessageAccepted = internalMutation({
       providerMessageSid: args.providerMessageSid,
       status: mapTwilioStatusToMessageStatus(args.providerStatus),
       providerStatus: args.providerStatus,
+      ...(args.providerNumSegments !== undefined
+        ? { providerNumSegments: args.providerNumSegments }
+        : {}),
       providerUpdatedAt: args.providerUpdatedAt,
     });
 
@@ -843,6 +853,20 @@ export const sendStoredOutboundMessage = internalAction({
     }
 
     try {
+      const smsAllowance: { allowed: boolean } = await ctx.runQuery(
+        internal.billing.assertSmsCanSend,
+        {
+          businessId: context.businessId,
+        },
+      );
+      if (!smsAllowance.allowed) {
+        await ctx.runMutation(internal.billing.markMessageBillingBlocked, {
+          messageId: context.messageId,
+          providerUpdatedAt: new Date().toISOString(),
+        });
+        throw new Error(billingErrorCodes.smsQuotaExhausted);
+      }
+
       const directMediaUrls =
         context.media
           ?.filter((attachment) => attachment.deliveryMode !== "link" && attachment.url)
@@ -870,8 +894,22 @@ export const sendStoredOutboundMessage = internalAction({
         messageId: context.messageId,
         providerMessageSid: result.providerMessageSid,
         providerStatus: result.providerStatus,
+        providerNumSegments: result.providerNumSegments,
         providerUpdatedAt: new Date().toISOString(),
       });
+
+      const usageRecord = await ctx.runMutation(internal.billing.recordSmsUsage, {
+        businessId: context.businessId,
+        messageId: context.messageId,
+        quantity: result.providerNumSegments,
+        recordedAt: new Date().toISOString(),
+      });
+
+      if (usageRecord.syncNeeded) {
+        await ctx.runAction(internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageRecord.usageEventId,
+        });
+      }
 
       return {
         businessId: context.businessId,
@@ -882,10 +920,12 @@ export const sendStoredOutboundMessage = internalAction({
         status: mapTwilioStatusToMessageStatus(result.providerStatus),
       };
     } catch (error) {
-      await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
-        messageId: context.messageId,
-        providerUpdatedAt: new Date().toISOString(),
-      });
+      if (!isBillingLimitError(error, billingErrorCodes.smsQuotaExhausted)) {
+        await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
+          messageId: context.messageId,
+          providerUpdatedAt: new Date().toISOString(),
+        });
+      }
       if (context.appointmentId) {
         await ctx.runMutation(
           internal.notifications.reminders.ensureBookingConfirmationNotification,
@@ -1070,9 +1110,26 @@ export const handleTwilioSmsInbound = internalAction({
       });
     }
 
-    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
-      messageId,
-    });
+    try {
+      await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+        messageId,
+      });
+    } catch (error) {
+      if (isBillingLimitError(error, billingErrorCodes.smsQuotaExhausted)) {
+        if (idempotencyKeyId) {
+          await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+            idempotencyKeyId,
+            resourceTable: "messages",
+            resourceId: String(messageId),
+            status: "processed_no_reply",
+          });
+        }
+
+        return { businessId: phoneNumber.businessId, conversationId, reply: null };
+      }
+
+      throw error;
+    }
 
     if (idempotencyKeyId) {
       await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {

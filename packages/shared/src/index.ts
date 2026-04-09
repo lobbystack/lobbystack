@@ -110,6 +110,24 @@ export type SmsConversationInput = {
   contactPhone: string;
 };
 
+export {
+  billingDefaults,
+  billingErrorCodes,
+  billingMeterEventNames,
+  billingTiers,
+  billingTransactionKinds,
+  billingUsageKinds,
+} from "./billing";
+export type {
+  BillingErrorCode,
+  BillingStatus,
+  BillingTier,
+  BillingTransactionKind,
+  BillingTransactionSummary,
+  BillingUsageKind,
+  BillingUsageSnapshot,
+} from "./billing";
+
 export type VoiceToolName =
   | "getBusinessHours"
   | "getBusinessServices"

@@ -1,3 +1,4 @@
+import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
@@ -25,6 +26,10 @@ import {
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
+import {
+  getBillingSnapshot,
+  getBillingUsageSnapshotData,
+} from "../lib/billing";
 import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
@@ -102,7 +107,7 @@ type ReconcileTwilioCallStatusArgs = {
 };
 type ReconcileTwilioCallStatusResult =
   | { ignored: true; reason: "unknown_call" | "missing_sequence" | "stale_sequence" }
-  | { ignored: false; callId: Id<"calls"> };
+  | { ignored: false; callId: Id<"calls">; usageEventId?: Id<"billing_usage_events"> };
 type CheckAvailabilityForVoiceArgs = {
   businessId: Id<"businesses">;
   serviceName: string;
@@ -424,6 +429,19 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
+    const billingSnapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+      at: args.startedAt,
+    });
+    const usage = getBillingUsageSnapshotData({
+      tier: billingSnapshot.tier,
+      periodKey: billingSnapshot.periodKey,
+      usage: billingSnapshot.usage,
+    });
+    if (billingSnapshot.tier === "free" && usage.voiceBlocked) {
+      throw new Error(billingErrorCodes.voiceQuotaExhausted);
+    }
+
     let contact: Doc<"contacts"> | null = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
@@ -883,14 +901,33 @@ export const reconcileTwilioCallStatus = internalMutation({
       }
     }
 
+    let usageEventId: Id<"billing_usage_events"> | undefined;
+
     if (isTerminalTwilioCallStatus(args.callStatus)) {
       await finalizeVoiceSessionForCall(ctx, {
         callId: call._id,
         endedAt: Date.parse(args.providerUpdatedAt),
       });
+
+      if ((args.providerDurationSeconds ?? 0) > 0) {
+        const usageRecord = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+          businessId: call.businessId,
+          callId: call._id,
+          quantity: args.providerDurationSeconds!,
+          recordedAt: args.providerUpdatedAt,
+        });
+
+        if (usageRecord.syncNeeded) {
+          usageEventId = usageRecord.usageEventId;
+        }
+      }
     }
 
-    return { ignored: false, callId: call._id } as const;
+    return {
+      ignored: false,
+      callId: call._id,
+      ...(usageEventId ? { usageEventId } : {}),
+    } as const;
   },
 });
 

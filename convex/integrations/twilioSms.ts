@@ -92,6 +92,7 @@ export const sendMessage = internalAction({
     return {
       providerMessageSid: message.sid,
       providerStatus: message.status ?? "queued",
+      providerNumSegments: Number.parseInt(message.numSegments ?? "1", 10) || 1,
     };
   },
 });

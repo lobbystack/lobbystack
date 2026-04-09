@@ -211,6 +211,79 @@ export default defineSchema({
     .index("by_business_id", ["businessId"])
     .index("by_user_id_and_purchased_at", ["userId", "purchasedAt"]),
 
+  billing_accounts: defineTable({
+    businessId: v.id("businesses"),
+    billingKey: v.string(),
+    currentTier: v.string(),
+    subscriptionState: v.string(),
+    polarCustomerId: v.optional(v.string()),
+    polarCustomerExternalId: v.optional(v.string()),
+    billingContactEmail: v.optional(v.string()),
+    billingContactName: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    subscriptionProductId: v.optional(v.string()),
+    subscriptionPriceId: v.optional(v.string()),
+    checkoutId: v.optional(v.string()),
+    currentPeriodStart: v.optional(v.string()),
+    currentPeriodEnd: v.optional(v.string()),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    lastWebhookEventType: v.optional(v.string()),
+    lastSyncedAt: v.string(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_billing_key", ["billingKey"])
+    .index("by_polar_customer_id", ["polarCustomerId"])
+    .index("by_subscription_id", ["subscriptionId"]),
+
+  billing_usage_months: defineTable({
+    businessId: v.id("businesses"),
+    periodKey: v.string(),
+    tier: v.string(),
+    voiceSecondsUsed: v.number(),
+    smsSegmentsUsed: v.number(),
+    voiceSecondsIncluded: v.optional(v.number()),
+    smsSegmentsIncluded: v.optional(v.number()),
+    voiceBlocked: v.boolean(),
+    smsBlocked: v.boolean(),
+    lastRecordedAt: v.string(),
+  })
+    .index("by_business_id_and_period_key", ["businessId", "periodKey"]),
+
+  billing_usage_events: defineTable({
+    businessId: v.id("businesses"),
+    periodKey: v.string(),
+    sourceKey: v.string(),
+    usageKind: v.string(),
+    quantity: v.number(),
+    tierAtRecordTime: v.string(),
+    recordedAt: v.string(),
+    syncStatus: v.string(),
+    syncAttemptedAt: v.optional(v.string()),
+    syncedAt: v.optional(v.string()),
+    syncError: v.optional(v.string()),
+  })
+    .index("by_business_id_and_source_key", ["businessId", "sourceKey"])
+    .index("by_business_id_and_period_key", ["businessId", "periodKey"])
+    .index("by_sync_status", ["syncStatus"]),
+
+  billing_transactions: defineTable({
+    businessId: v.id("businesses"),
+    sourceId: v.string(),
+    kind: v.string(),
+    status: v.string(),
+    amountCents: v.number(),
+    currency: v.string(),
+    description: v.optional(v.string()),
+    invoiceUrl: v.optional(v.string()),
+    orderId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    occurredAt: v.string(),
+    lastSyncedAt: v.string(),
+  })
+    .index("by_business_id_and_occurred_at", ["businessId", "occurredAt"])
+    .index("by_kind_and_source_id", ["kind", "sourceId"]),
+
   receptionist_profiles: defineTable({
     businessId: v.id("businesses"),
     greeting: v.string(),
@@ -369,6 +442,7 @@ export default defineSchema({
     status: v.string(),
     providerStatus: v.optional(v.string()),
     providerErrorCode: v.optional(v.string()),
+    providerNumSegments: v.optional(v.number()),
     providerUpdatedAt: v.optional(v.string()),
     providerRawDlrDoneDate: v.optional(v.string()),
     aiGenerated: v.boolean(),

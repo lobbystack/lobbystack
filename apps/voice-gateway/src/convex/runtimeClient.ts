@@ -5,6 +5,20 @@ import {
   startActiveSpan,
 } from "../observability/otel";
 
+export class RuntimeRequestError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(input: { message: string; status: number; code?: string }) {
+    super(input.message);
+    this.name = "RuntimeRequestError";
+    this.status = input.status;
+    if (input.code !== undefined) {
+      this.code = input.code;
+    }
+  }
+}
+
 type StartCallResponse = {
   callId: string;
   conversationId?: string;
@@ -67,7 +81,23 @@ function getRuntimeHeaders(): HeadersInit {
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new Error(await response.text());
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const payload = (await response.json()) as {
+        code?: string;
+        message?: string;
+      };
+      throw new RuntimeRequestError({
+        message: payload.message ?? `Runtime request failed with status ${response.status}.`,
+        status: response.status,
+        ...(payload.code ? { code: payload.code } : {}),
+      });
+    }
+
+    throw new RuntimeRequestError({
+      message: await response.text(),
+      status: response.status,
+    });
   }
   return (await response.json()) as T;
 }
@@ -154,9 +184,28 @@ export async function reconcileVoiceCallStatus(input: {
   callbackSource?: string;
   providerUpdatedAt: string;
   providerDurationSeconds?: number;
-}): Promise<{ ignored: boolean; reason?: string; callId?: string }> {
-  return await postJson<{ ignored: boolean; reason?: string; callId?: string }>(
+}): Promise<{
+  ignored: boolean;
+  reason?: string;
+  callId?: string;
+  usageEventId?: string;
+}> {
+  return await postJson<{
+    ignored: boolean;
+    reason?: string;
+    callId?: string;
+    usageEventId?: string;
+  }>(
     "/voice/call/reconcile-status",
+    input,
+  );
+}
+
+export async function syncUsageEventToPolar(input: {
+  usageEventId: string;
+}): Promise<{ synced: boolean; error?: string }> {
+  return await postJson<{ synced: boolean; error?: string }>(
+    "/billing/usage/sync",
     input,
   );
 }

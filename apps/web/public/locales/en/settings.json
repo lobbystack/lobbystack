@@ -5,12 +5,76 @@
   },
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
+    "billingDescription": "Review your plan, monthly minimum, metered usage, and recent charges.",
     "integrationsDescription": "Connect your favorite tools and applications."
   },
   "sections": {
     "business": "Account",
     "appearance": "Preferences",
+    "billing": "Billing",
     "integrations": "Integrations"
+  },
+  "billing": {
+    "title": "Billing",
+    "description": "Manage your monthly minimum, metered usage, and billing access.",
+    "checkoutSuccess": "Checkout completed. Billing will refresh after Polar confirms the subscription.",
+    "actions": {
+      "upgrade": "Upgrade to usage-based billing",
+      "openingCheckout": "Opening checkout...",
+      "manage": "Manage billing",
+      "openingPortal": "Opening portal..."
+    },
+    "plan": {
+      "title": "Plan",
+      "currentPlan": "Current plan",
+      "freeName": "Free",
+      "paidName": "Usage-based",
+      "freeDescription": "Includes 30 voice minutes and 60 SMS segments each month.",
+      "paidDescription": "Includes a $5 monthly minimum, then bills only for phone minutes and SMS segments used.",
+      "freeAllowanceValue": "Monthly included usage",
+      "minimumCharge": "Monthly minimum",
+      "minimumChargeDescription": "The minimum charge applied before metered voice and SMS usage.",
+      "minimumChargeValue": "{{amount}} monthly minimum",
+      "usageModel": "Usage model",
+      "usageModelDescription": "Paid workspaces are billed only for actual usage after the monthly minimum.",
+      "usageModelValue": "Per phone minute and per SMS segment",
+      "billingContact": "Billing contact",
+      "billingContactDescription": "Polar checkout and invoices follow this workspace billing contact.",
+      "notConfigured": "Not configured yet",
+      "notApplicable": "Not applicable on the free plan"
+    },
+    "usage": {
+      "title": "Current month usage",
+      "description": "Usage resets on {{resetAt}}.",
+      "voice": "Voice",
+      "voiceValue": "{{minutes}} min",
+      "voiceRemaining": "{{minutes}} min remaining",
+      "sms": "SMS",
+      "smsValue": "{{count}} segments",
+      "smsRemaining": "{{count}} segments remaining",
+      "meteredUsage": "Metered usage with no included cap on the paid plan.",
+      "limitReached": "The free workspace limit has been reached."
+    },
+    "transactions": {
+      "title": "Recent charges",
+      "description": "Invoices, payments, and refunds synced from Polar.",
+      "empty": "No billing activity yet.",
+      "order": "Charge",
+      "refund": "Refund",
+      "invoice": "Invoice"
+    },
+    "states": {
+      "active": "Active",
+      "trialing": "Trialing",
+      "pastDue": "Past due",
+      "canceled": "Canceled",
+      "revoked": "Revoked",
+      "inactive": "Inactive"
+    },
+    "errors": {
+      "checkoutFailed": "Unable to start checkout.",
+      "portalFailed": "Unable to open the customer portal."
+    }
   },
   "appearance": {
     "title": "Preferences",

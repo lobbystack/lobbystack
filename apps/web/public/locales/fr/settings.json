@@ -5,12 +5,76 @@
   },
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
+    "billingDescription": "Consultez votre forfait, le minimum mensuel, l'usage mesuré et les frais récents.",
     "integrationsDescription": "Connectez vos outils et applications préférés."
   },
   "sections": {
     "business": "Compte",
     "appearance": "Préférences",
+    "billing": "Facturation",
     "integrations": "Intégrations"
+  },
+  "billing": {
+    "title": "Facturation",
+    "description": "Gérez votre minimum mensuel, votre usage mesuré et l'accès à la facturation.",
+    "checkoutSuccess": "Le paiement a été complété. La facturation sera actualisée après la confirmation de Polar.",
+    "actions": {
+      "upgrade": "Passer à la facturation à l'usage",
+      "openingCheckout": "Ouverture du paiement...",
+      "manage": "Gérer la facturation",
+      "openingPortal": "Ouverture du portail..."
+    },
+    "plan": {
+      "title": "Forfait",
+      "currentPlan": "Forfait actuel",
+      "freeName": "Gratuit",
+      "paidName": "À l'usage",
+      "freeDescription": "Inclut 30 minutes d'appels et 60 segments SMS chaque mois.",
+      "paidDescription": "Inclut un minimum mensuel de 5 $ puis facture seulement les minutes d'appel et les segments SMS utilisés.",
+      "freeAllowanceValue": "Usage mensuel inclus",
+      "minimumCharge": "Minimum mensuel",
+      "minimumChargeDescription": "Le montant minimal appliqué avant l'usage mesuré voix et SMS.",
+      "minimumChargeValue": "Minimum mensuel de {{amount}}",
+      "usageModel": "Modèle d'usage",
+      "usageModelDescription": "Les espaces payants sont facturés seulement selon l'usage réel après le minimum mensuel.",
+      "usageModelValue": "Par minute d'appel et par segment SMS",
+      "billingContact": "Contact de facturation",
+      "billingContactDescription": "Le paiement et les factures Polar utilisent ce contact de facturation.",
+      "notConfigured": "Pas encore configuré",
+      "notApplicable": "Ne s'applique pas au forfait gratuit"
+    },
+    "usage": {
+      "title": "Usage du mois en cours",
+      "description": "L'usage sera réinitialisé le {{resetAt}}.",
+      "voice": "Voix",
+      "voiceValue": "{{minutes}} min",
+      "voiceRemaining": "{{minutes}} min restantes",
+      "sms": "SMS",
+      "smsValue": "{{count}} segments",
+      "smsRemaining": "{{count}} segments restants",
+      "meteredUsage": "Usage mesuré sans plafond inclus sur le forfait payant.",
+      "limitReached": "La limite du forfait gratuit a été atteinte."
+    },
+    "transactions": {
+      "title": "Frais récents",
+      "description": "Factures, paiements et remboursements synchronisés depuis Polar.",
+      "empty": "Aucune activité de facturation pour le moment.",
+      "order": "Débit",
+      "refund": "Remboursement",
+      "invoice": "Facture"
+    },
+    "states": {
+      "active": "Actif",
+      "trialing": "Essai",
+      "pastDue": "En retard",
+      "canceled": "Annulé",
+      "revoked": "Révoqué",
+      "inactive": "Inactif"
+    },
+    "errors": {
+      "checkoutFailed": "Impossible de démarrer le paiement.",
+      "portalFailed": "Impossible d'ouvrir le portail client."
+    }
   },
   "appearance": {
     "title": "Préférences",

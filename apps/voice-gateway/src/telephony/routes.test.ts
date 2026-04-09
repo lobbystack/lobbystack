@@ -1,19 +1,38 @@
 import { createHmac } from "node:crypto";
 
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import {
+  billingErrorCodes,
+  type BusinessContextSnapshot,
+} from "@ai-receptionist/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   fetchSnapshotForPhoneNumberMock,
+  runtimeRequestErrorClass,
   startVoiceCallMock,
   completeVoiceCallMock,
   reconcileVoiceCallStatusMock,
+  syncUsageEventToPolarMock,
   updateVoiceTransferStateMock,
 } = vi.hoisted(() => ({
   fetchSnapshotForPhoneNumberMock: vi.fn(),
+  runtimeRequestErrorClass: class RuntimeRequestError extends Error {
+    status: number;
+    code?: string;
+
+    constructor(input: { message: string; status: number; code?: string }) {
+      super(input.message);
+      this.name = "RuntimeRequestError";
+      this.status = input.status;
+      if (input.code !== undefined) {
+        this.code = input.code;
+      }
+    }
+  },
   startVoiceCallMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   reconcileVoiceCallStatusMock: vi.fn(),
+  syncUsageEventToPolarMock: vi.fn(),
   updateVoiceTransferStateMock: vi.fn(),
 }));
 
@@ -22,9 +41,11 @@ vi.mock("../context/fetchSnapshot", () => ({
 }));
 
 vi.mock("../convex/runtimeClient", () => ({
+  RuntimeRequestError: runtimeRequestErrorClass,
   startVoiceCall: startVoiceCallMock,
   completeVoiceCall: completeVoiceCallMock,
   reconcileVoiceCallStatus: reconcileVoiceCallStatusMock,
+  syncUsageEventToPolar: syncUsageEventToPolarMock,
   updateVoiceTransferState: updateVoiceTransferStateMock,
 }));
 
@@ -86,6 +107,9 @@ describe("voice routes", () => {
       ignored: false,
       callId: "call_123",
     });
+    syncUsageEventToPolarMock.mockResolvedValue({
+      synced: true,
+    });
     updateVoiceTransferStateMock.mockResolvedValue(undefined);
   });
 
@@ -123,6 +147,42 @@ describe("voice routes", () => {
     await server.close();
   });
 
+  it("returns a polite hangup when the voice quota is exhausted", async () => {
+    const server = createServer();
+    const payload = {
+      CallSid: "CA123",
+      From: "+14165550123",
+      To: "+14165550000",
+    };
+
+    startVoiceCallMock.mockRejectedValueOnce(
+      new runtimeRequestErrorClass({
+        message: "Voice quota exhausted.",
+        status: 402,
+        code: billingErrorCodes.voiceQuotaExhausted,
+      }),
+    );
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/twilio/voice/inbound",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": signTwilioRequest("/twilio/voice/inbound", payload),
+      },
+      payload: new URLSearchParams(payload).toString(),
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      "This business has reached its voice usage limit. Please try again later.",
+    );
+    expect(response.body).toContain("<Hangup />");
+    expect(response.body).not.toContain("<Stream");
+
+    await server.close();
+  });
+
   it("returns a retryable response when the call-status callback arrives before reconciliation can find the call", async () => {
     const server = createServer();
     const payload = {
@@ -148,6 +208,37 @@ describe("voice routes", () => {
     expect(response.statusCode).toBe(503);
     expect(response.headers["retry-after"]).toBe("1");
     expect(response.body).toBe("Call record not ready");
+
+    await server.close();
+  });
+
+  it("syncs recorded voice usage to Polar after terminal call reconciliation", async () => {
+    const server = createServer();
+    const payload = {
+      CallSid: "CA123",
+      CallStatus: "completed",
+    };
+
+    reconcileVoiceCallStatusMock.mockResolvedValueOnce({
+      ignored: false,
+      callId: "call_123",
+      usageEventId: "usage_event_123",
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/twilio/voice/call-status",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": signTwilioRequest("/twilio/voice/call-status", payload),
+      },
+      payload: new URLSearchParams(payload).toString(),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(syncUsageEventToPolarMock).toHaveBeenCalledWith({
+      usageEventId: "usage_event_123",
+    });
 
     await server.close();
   });
