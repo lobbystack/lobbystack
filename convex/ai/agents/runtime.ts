@@ -3432,6 +3432,7 @@ async function generateGroundedReply(
   businessId: Id<"businesses">,
   conversationId: Id<"conversations">,
   prompt: string,
+  messageId?: Id<"messages">,
 ): Promise<string> {
   const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
     businessId,
@@ -3567,6 +3568,7 @@ async function generateGroundedReply(
     distinctId,
     groupKey,
     conversationId: String(conversationId),
+    ...(messageId ? { messageId: String(messageId) } : {}),
     model: getNonRealtimeTextModelId(),
     provider: "google",
     properties: {
@@ -3615,6 +3617,7 @@ async function generateGroundedReply(
       groupKey,
       businessId: String(businessId),
       conversationId: String(conversationId),
+      ...(messageId ? { messageId: String(messageId) } : {}),
       properties: {
         channel: "sms",
         operation: "sms.generate_reply",
@@ -3639,6 +3642,7 @@ export const generateSmsReply = internalAction({
     businessId: v.id("businesses"),
     conversationId: v.id("conversations"),
     prompt: v.string(),
+    messageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
     return await generateGroundedReply(
@@ -3646,6 +3650,7 @@ export const generateSmsReply = internalAction({
       args.businessId,
       args.conversationId,
       args.prompt,
+      args.messageId,
     );
   },
 });

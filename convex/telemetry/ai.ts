@@ -56,6 +56,7 @@ export async function captureAiTraceStartedBestEffort(
     groupKey: getGroupKey(input),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.messageId ? { messageId: input.messageId } : {}),
     provider: input.provider,
     model: input.model,
     properties: {
@@ -76,6 +77,7 @@ export async function captureAiGenerationBestEffort(
     groupKey: getGroupKey(input),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.messageId ? { messageId: input.messageId } : {}),
     provider: input.provider,
     model: input.model,
     properties: buildPostHogAiGenerationProperties(input),
@@ -93,6 +95,7 @@ export async function captureAiSpanBestEffort(
     groupKey: getGroupKey(input),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.messageId ? { messageId: input.messageId } : {}),
     provider: input.provider,
     model: input.model,
     properties: buildPostHogAiSpanProperties(input),

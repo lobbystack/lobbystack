@@ -25,6 +25,7 @@ type AiRequestTelemetryContext = {
   businessId?: string;
   callId?: string;
   conversationId?: string;
+  messageId?: string;
   properties?: TelemetryProperties;
 };
 
@@ -58,6 +59,51 @@ function readNumberValue(
   return undefined;
 }
 
+function readTokenCountValue(
+  source: Record<string, unknown> | undefined,
+  keys: string[],
+): number | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    const nested = asUnknownRecord(value);
+    if (!nested) {
+      continue;
+    }
+
+    const nestedValue = readNumberValue(nested, [
+      "total",
+      "value",
+      "count",
+      "inputTokens",
+      "input_tokens",
+      "outputTokens",
+      "output_tokens",
+      "totalTokens",
+      "total_tokens",
+      "cacheRead",
+      "cache_read",
+      "cacheReadTokens",
+      "cache_read_tokens",
+      "reasoning",
+      "reasoningTokens",
+      "reasoning_tokens",
+    ]);
+    if (nestedValue !== undefined) {
+      return nestedValue;
+    }
+  }
+
+  return undefined;
+}
+
 function getTelemetryContext(
   input:
     | {
@@ -72,7 +118,7 @@ function getTelemetryContext(
   return asUnknownRecord(context) as AiRequestTelemetryContext | undefined;
 }
 
-function extractGenerationMetrics(
+export function extractGenerationMetrics(
   result: unknown,
 ): {
   inputTokens?: number;
@@ -86,27 +132,45 @@ function extractGenerationMetrics(
   const usage =
     asUnknownRecord(source?.usage) ?? asUnknownRecord(source?.totalUsage);
   const providerMetadata = asUnknownRecord(source?.providerMetadata);
-  const googleMetadata = asUnknownRecord(providerMetadata?.google);
+  const googleMetadata =
+    asUnknownRecord(providerMetadata?.google) ??
+    asUnknownRecord(providerMetadata?.["google.generative-ai"]);
   const outputTokenDetails = asUnknownRecord(
     usage?.outputTokenDetails ?? usage?.output_token_details,
   );
   const inputTokenDetails = asUnknownRecord(
     usage?.inputTokenDetails ?? usage?.input_token_details,
   );
+  const usageRaw =
+    asUnknownRecord(usage?.raw) ??
+    asUnknownRecord(googleMetadata?.usageMetadata) ??
+    asUnknownRecord(googleMetadata?.usage_metadata);
 
-  const inputTokens = readNumberValue(usage, ["inputTokens", "input_tokens"]);
-  const outputTokens = readNumberValue(usage, ["outputTokens", "output_tokens"]);
-  const totalTokens = readNumberValue(usage, ["totalTokens", "total_tokens"]);
-  const cachedInputTokens = readNumberValue(inputTokenDetails, [
-    "cacheReadTokens",
-    "cache_read_tokens",
-    "cachedTokens",
-    "cached_tokens",
-  ]);
+  const inputTokens =
+    readTokenCountValue(usage, ["inputTokens", "input_tokens"]) ??
+    readNumberValue(usageRaw, ["promptTokenCount", "prompt_token_count"]);
+  const outputTokens =
+    readTokenCountValue(usage, ["outputTokens", "output_tokens"]) ??
+    readNumberValue(usageRaw, ["candidatesTokenCount", "candidates_token_count"]);
+  const totalTokens =
+    readNumberValue(usage, ["totalTokens", "total_tokens"]) ??
+    readNumberValue(usageRaw, ["totalTokenCount", "total_token_count"]) ??
+    (inputTokens !== undefined || outputTokens !== undefined
+      ? (inputTokens ?? 0) + (outputTokens ?? 0)
+      : undefined);
+  const cachedInputTokens =
+    readNumberValue(inputTokenDetails, [
+      "cacheReadTokens",
+      "cache_read_tokens",
+      "cachedTokens",
+      "cached_tokens",
+    ]) ??
+    readTokenCountValue(usage, ["cachedInputTokens", "cached_input_tokens"]) ??
+    readNumberValue(usageRaw, ["cachedContentTokenCount", "cached_content_token_count"]);
   const reasoningTokens = readNumberValue(outputTokenDetails, [
     "reasoningTokens",
     "reasoning_tokens",
-  ]);
+  ]) ?? readTokenCountValue(usage, ["reasoningTokens", "reasoning_tokens"]);
   const totalCostUsd = readNumberValue(googleMetadata, [
     "totalCostUsd",
     "total_cost_usd",
@@ -153,6 +217,7 @@ async function captureAiGenerationBestEffort(input: {
     ...(input.context.conversationId
       ? { conversationId: input.context.conversationId }
       : {}),
+    ...(input.context.messageId ? { messageId: input.context.messageId } : {}),
     latencyMs: input.latencyMs,
     isStreaming: false,
     ...(input.isError !== undefined ? { isError: input.isError } : {}),

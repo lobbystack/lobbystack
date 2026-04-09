@@ -50,6 +50,7 @@ vi.mock("../ai/agents/runtime.ts", async () => {
         businessId: v.id("businesses"),
         conversationId: v.id("conversations"),
         prompt: v.string(),
+        messageId: v.optional(v.id("messages")),
       },
       handler: async (_ctx, args) => {
         return await generateSmsReplyMock(args);
@@ -253,6 +254,11 @@ describe("Twilio SMS delivery flow", () => {
     expect(duplicateResponse.status).toBe(200);
     expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
     expect(generateSmsReplyMock).toHaveBeenCalledTimes(1);
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: expect.any(String),
+      }),
+    );
     expect(validateTwilioRequestMock).toHaveBeenCalledTimes(2);
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550199",

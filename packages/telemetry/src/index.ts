@@ -117,6 +117,7 @@ export type PostHogAiTracePropertiesInput = {
   provider: string;
   callId?: string;
   conversationId?: string;
+  messageId?: string;
   sessionId?: string;
 };
 
@@ -714,6 +715,7 @@ export function buildPostHogAiTraceProperties(
       : {}),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.messageId ? { messageId: input.messageId } : {}),
   });
 }
 
