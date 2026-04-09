@@ -118,6 +118,44 @@ describe("estimateRealtimeTotalCostUsd", () => {
 
     expect(totalCostUsd).toBeUndefined();
   });
+
+  it("computes transcription cost from generic input and output pricing", () => {
+    const totalCostUsd = estimateRealtimeTotalCostUsd(
+      {
+        inputTokens: 2400,
+        outputTokens: 320,
+        totalTokens: 2720,
+      },
+      {
+        inputTokenPriceUsd: 0.00000125,
+        outputTokenPriceUsd: 0.000005,
+      },
+    );
+
+    expect(totalCostUsd).toBeCloseTo(0.0046);
+  });
+
+  it("computes transcription cost when usage includes audio input and text output buckets", () => {
+    const totalCostUsd = estimateRealtimeTotalCostUsd(
+      {
+        inputTokens: 2400,
+        outputTokens: 320,
+        totalTokens: 2720,
+        audioInputTokens: 2400,
+        textOutputTokens: 320,
+      },
+      {
+        inputTokenPriceUsd: 0.00000125,
+        outputTokenPriceUsd: 0.000005,
+        textInputTokenPriceUsd: 0.00000125,
+        audioInputTokenPriceUsd: 0.00000125,
+        textOutputTokenPriceUsd: 0.000005,
+        audioOutputTokenPriceUsd: 0.000005,
+      },
+    );
+
+    expect(totalCostUsd).toBeCloseTo(0.0046);
+  });
 });
 
 describe("getRealtimeGenerationOutcome", () => {

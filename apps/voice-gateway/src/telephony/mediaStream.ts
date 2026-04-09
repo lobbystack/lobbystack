@@ -79,6 +79,8 @@ type OpenAiRealtimeMessage = {
   delta?: string;
   transcript?: string;
   text?: string;
+  usage?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
   name?: string;
   call_id?: string;
   arguments?: string;
@@ -97,6 +99,8 @@ type OpenAiRealtimeMessage = {
     name?: string;
     call_id?: string;
     arguments?: string;
+    usage?: Record<string, unknown>;
+    metadata?: Record<string, unknown> | null;
     content?: Array<{
       type?: string;
       transcript?: string;
@@ -222,6 +226,21 @@ function extractRealtimeUsageMetrics(
 ): RealtimeUsageMetrics {
   const usage = asUnknownRecord(response?.usage);
   const metadata = asUnknownRecord(response?.metadata);
+  return extractUsageMetrics(usage, metadata);
+}
+
+function extractTranscriptionUsageMetrics(
+  payload: OpenAiRealtimeMessage,
+): RealtimeUsageMetrics {
+  const usage = asUnknownRecord(payload.usage ?? payload.item?.usage);
+  const metadata = asUnknownRecord(payload.metadata ?? payload.item?.metadata);
+  return extractUsageMetrics(usage, metadata);
+}
+
+function extractUsageMetrics(
+  usage: Record<string, unknown> | undefined,
+  metadata: Record<string, unknown> | undefined,
+): RealtimeUsageMetrics {
   const inputTokenDetails = asUnknownRecord(
     usage?.input_token_details ?? usage?.inputTokenDetails,
   );
@@ -322,6 +341,35 @@ function getRealtimePricingConfig(
       : {}),
     ...(env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD !== undefined
       ? { cachedInputTokenPriceUsd: env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD }
+      : {}),
+  };
+}
+
+function getTranscriptionPricingConfig(
+  env: Pick<
+    ReturnType<typeof loadVoiceGatewayEnv>,
+    | "OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD"
+  >,
+): RealtimePricingConfig {
+  return {
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { inputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { textInputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioInputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { outputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { textOutputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioOutputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
       : {}),
   };
 }
@@ -1369,6 +1417,63 @@ function handleOpenAiMessage(
       return;
     }
     case "conversation.item.input_audio_transcription.completed": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const usageMetrics = extractTranscriptionUsageMetrics(payload);
+      const totalCostUsd = estimateRealtimeTotalCostUsd(
+        usageMetrics,
+        getTranscriptionPricingConfig(runtimeConfig),
+      );
+
+      if (session.businessId) {
+        captureAiGeneration({
+          businessId: session.businessId,
+          traceId: session.aiTraceId,
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+          model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+          provider: "openai",
+          ...(usageMetrics.inputTokens !== undefined
+            ? { inputTokens: usageMetrics.inputTokens }
+            : {}),
+          ...(usageMetrics.outputTokens !== undefined
+            ? { outputTokens: usageMetrics.outputTokens }
+            : {}),
+          ...(usageMetrics.totalTokens !== undefined
+            ? { totalTokens: usageMetrics.totalTokens }
+            : {}),
+          ...(usageMetrics.textInputTokens !== undefined
+            ? { textInputTokens: usageMetrics.textInputTokens }
+            : {}),
+          ...(usageMetrics.audioInputTokens !== undefined
+            ? { audioInputTokens: usageMetrics.audioInputTokens }
+            : {}),
+          ...(usageMetrics.cachedInputTokens !== undefined
+            ? { cachedInputTokens: usageMetrics.cachedInputTokens }
+            : {}),
+          ...(usageMetrics.cachedTextInputTokens !== undefined
+            ? { cachedTextInputTokens: usageMetrics.cachedTextInputTokens }
+            : {}),
+          ...(usageMetrics.cachedAudioInputTokens !== undefined
+            ? { cachedAudioInputTokens: usageMetrics.cachedAudioInputTokens }
+            : {}),
+          ...(usageMetrics.textOutputTokens !== undefined
+            ? { textOutputTokens: usageMetrics.textOutputTokens }
+            : {}),
+          ...(usageMetrics.audioOutputTokens !== undefined
+            ? { audioOutputTokens: usageMetrics.audioOutputTokens }
+            : {}),
+          ...(usageMetrics.reasoningTokens !== undefined
+            ? { reasoningTokens: usageMetrics.reasoningTokens }
+            : {}),
+          ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+          isStreaming: false,
+          properties: {
+            generationKind: "input_audio_transcription",
+            channel: "voice",
+          },
+        });
+      }
+
       queueTranscriptWriteIfNew(
         server,
         session,
