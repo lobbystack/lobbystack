@@ -262,6 +262,13 @@ describe("telemetry redaction", () => {
       "toolName",
       "latencyBucket",
     ]);
+    expect(getTelemetryRequiredProperties("voice.provider_cost_recorded")).toEqual([
+      "businessId",
+      "deploymentMode",
+      "callId",
+      "channel",
+      "provider",
+    ]);
   });
 
   it("validates required telemetry properties across top-level context and event props", () => {

@@ -103,6 +103,14 @@ type ReconcileTwilioCallStatusArgs = {
 type ReconcileTwilioCallStatusResult =
   | { ignored: true; reason: "unknown_call" | "missing_sequence" | "stale_sequence" }
   | { ignored: false; callId: Id<"calls"> };
+type RecordTwilioCallPricingArgs = {
+  twilioCallSid: string;
+  providerUpdatedAt?: string;
+  providerPrice?: number;
+  providerPriceUnit?: string;
+  providerCostUsd?: number;
+  providerDurationSeconds?: number;
+};
 type CheckAvailabilityForVoiceArgs = {
   businessId: Id<"businesses">;
   serviceName: string;
@@ -810,6 +818,96 @@ export const completeCall = internalMutation({
   },
 });
 
+export const recordProviderPricing = internalMutation({
+  args: {
+    twilioCallSid: v.string(),
+    providerUpdatedAt: v.optional(v.string()),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerDurationSeconds: v.optional(v.number()),
+  },
+  handler: async (ctx: MutationCtx, args: RecordTwilioCallPricingArgs) => {
+    const call: Doc<"calls"> | null = await ctx.db
+      .query("calls")
+      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
+      .unique();
+
+    if (!call) {
+      return { matched: false, applied: false };
+    }
+
+    const patch: Partial<Doc<"calls">> = {};
+    let changed = false;
+    let pricingChanged = false;
+
+    if (args.providerUpdatedAt !== undefined && args.providerUpdatedAt !== call.providerUpdatedAt) {
+      patch.providerUpdatedAt = args.providerUpdatedAt;
+      changed = true;
+    }
+    if (args.providerPrice !== undefined && args.providerPrice !== call.providerPrice) {
+      patch.providerPrice = args.providerPrice;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerPriceUnit !== undefined && args.providerPriceUnit !== call.providerPriceUnit) {
+      patch.providerPriceUnit = args.providerPriceUnit;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerCostUsd !== undefined && args.providerCostUsd !== call.providerCostUsd) {
+      patch.providerCostUsd = args.providerCostUsd;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (
+      args.providerDurationSeconds !== undefined &&
+      args.providerDurationSeconds !== call.providerCallDurationSeconds
+    ) {
+      patch.providerCallDurationSeconds = args.providerDurationSeconds;
+      changed = true;
+    }
+
+    if (!changed) {
+      return { matched: true, applied: false };
+    }
+
+    await ctx.db.patch(call._id, patch);
+
+    if (pricingChanged && args.providerCostUsd !== undefined) {
+      await enqueuePostHogOutboxRecord(
+        ctx,
+        serializePostHogEvent({
+          eventName: "voice.provider_cost_recorded",
+          businessId: call.businessId,
+          distinctId: getPostHogDistinctIdForBusinessSystem(String(call.businessId)),
+          groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
+          ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
+          callId: String(call._id),
+          channel: "voice",
+          provider: "twilio",
+          properties: {
+            twilioCallSid: args.twilioCallSid,
+            providerCostUsd: args.providerCostUsd,
+            ...(args.providerUpdatedAt !== undefined
+              ? { providerUpdatedAt: args.providerUpdatedAt }
+              : {}),
+            ...(args.providerPrice !== undefined ? { providerPrice: args.providerPrice } : {}),
+            ...(args.providerPriceUnit !== undefined
+              ? { providerPriceUnit: args.providerPriceUnit }
+              : {}),
+            ...(args.providerDurationSeconds !== undefined
+              ? { providerDurationSeconds: args.providerDurationSeconds }
+              : {}),
+          },
+        }),
+      );
+    }
+
+    return { matched: true, applied: true };
+  },
+});
+
 // @ts-ignore Deep type instantiation from Convex mutation builder.
 export const reconcileTwilioCallStatus = internalMutation({
   args: {
@@ -888,6 +986,17 @@ export const reconcileTwilioCallStatus = internalMutation({
         callId: call._id,
         endedAt: Date.parse(args.providerUpdatedAt),
       });
+
+      if (call.providerCostUsd === undefined) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.integrations.twilioVoice.syncCallPriceFromProvider,
+          {
+            twilioCallSid: call.twilioCallSid,
+            providerCallStatus: args.callStatus,
+          },
+        );
+      }
     }
 
     return { ignored: false, callId: call._id } as const;

@@ -36,6 +36,7 @@ export const WEB_EVENT_NAMES = [
 export const VOICE_EVENT_NAMES = [
   "voice.call_started",
   "voice.call_completed",
+  "voice.provider_cost_recorded",
   "voice.transfer_state_changed",
   "voice.transfer_requested",
   "voice.transfer_completed",
@@ -301,6 +302,13 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "voice.call_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "channel",
+    "provider",
+  ],
+  "voice.provider_cost_recorded": [
     "businessId",
     "deploymentMode",
     "callId",
