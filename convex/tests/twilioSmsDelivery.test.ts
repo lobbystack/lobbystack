@@ -932,6 +932,106 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("backfills Twilio provider cost when pricing becomes available after delivery", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-status-delayed-pricing",
+      status: "queued",
+    });
+    fetchTwilioMessageMock.mockResolvedValueOnce({
+      sid: "SM-status-delayed-pricing",
+      status: "delivered",
+      price: "-0.01660",
+      priceUnit: "USD",
+      numSegments: "2",
+      dateUpdated: new Date("2026-04-09T15:45:47.943Z"),
+    });
+
+    const smsNumber = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-status-delayed-pricing",
+        name: "Twilio Status Delayed Pricing",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550108",
+      });
+      return "+14165550108";
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-status-delayed-pricing",
+      From: "+14165550188",
+      To: smsNumber,
+      Body: "Delayed pricing",
+    });
+
+    await t.mutation(
+      internal.integrations.twilioMessageStatus.reconcileProviderStatus,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerStatus: "delivered",
+        providerUpdatedAt: "2026-04-09T15:40:47.943Z",
+      },
+    );
+
+    await t.mutation(
+      internal.integrations.twilioMessageStatus.recordProviderPricing,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerUpdatedAt: "2026-04-09T15:40:47.943Z",
+        providerNumSegments: 2,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_provider_message_sid", (q) =>
+          q.eq("providerMessageSid", "SM-status-delayed-pricing"),
+        )
+        .unique();
+
+      expect(message).toMatchObject({
+        status: "delivered",
+        providerStatus: "delivered",
+        providerNumSegments: 2,
+      });
+      expect(message?.providerCostUsd).toBeUndefined();
+    });
+
+    const syncResult = await t.action(
+      internal.integrations.twilioSms.syncMessagePriceFromProvider,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerStatus: "delivered",
+        attempt: 1,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      synced: true,
+      scheduledRetry: false,
+      skipped: false,
+    });
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_provider_message_sid", (q) =>
+          q.eq("providerMessageSid", "SM-status-delayed-pricing"),
+        )
+        .unique();
+
+      expect(message).toMatchObject({
+        providerPrice: -0.0166,
+        providerPriceUnit: "usd",
+        providerCostUsd: 0.0166,
+        providerNumSegments: 2,
+      });
+    });
+  });
+
   it("persists undelivered callbacks as terminal failures", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({

@@ -104,7 +104,12 @@ const TERMINAL_SMS_STATUSES = new Set([
   "failed",
   "canceled",
 ]);
-const MESSAGE_PRICE_RETRY_DELAYS_MS = [30_000, 120_000] as const;
+const MESSAGE_PRICE_RETRY_DELAYS_MS = [
+  30_000,
+  120_000,
+  600_000,
+  1_800_000,
+] as const;
 
 function parseOptionalFiniteNumber(value: string | null | undefined): number | undefined {
   if (!value) {
