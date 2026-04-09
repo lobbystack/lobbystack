@@ -218,9 +218,10 @@ export const recordProviderPricing = internalMutation({
           messageId: String(message._id),
           channel: message.channel,
           provider: "twilio",
-          properties: {
-            providerMessageSid: args.providerMessageSid,
-            providerCostUsd: args.providerCostUsd,
+        properties: {
+          messageLinkKey: String(message._id),
+          providerMessageSid: args.providerMessageSid,
+          providerCostUsd: args.providerCostUsd,
             ...(args.providerUpdatedAt !== undefined
               ? { providerUpdatedAt: args.providerUpdatedAt }
               : {}),
@@ -263,6 +264,7 @@ export const replayProviderCostRecorded = internalMutation({
         channel: message.channel,
         provider: "twilio",
         properties: {
+          messageLinkKey: String(message._id),
           providerMessageSid: args.providerMessageSid,
           providerCostUsd: message.providerCostUsd,
           ...(message.providerUpdatedAt !== undefined

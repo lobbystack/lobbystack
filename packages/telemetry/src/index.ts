@@ -576,6 +576,7 @@ const SAFE_KEY_PATTERNS = [
   "entrycount",
   "inputcharcount",
   "inputtokens",
+  "messagelinkkey",
   "messagecount",
   "outputtokens",
   "outputcharcount",
@@ -732,7 +733,12 @@ export function buildPostHogAiTraceProperties(
       : {}),
     ...(input.callId ? { callId: input.callId } : {}),
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
-    ...(input.messageId ? { messageId: input.messageId } : {}),
+    ...(input.messageId
+      ? {
+          messageId: input.messageId,
+          messageLinkKey: input.messageId,
+        }
+      : {}),
   });
 }
 

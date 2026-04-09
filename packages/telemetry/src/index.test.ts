@@ -106,6 +106,7 @@ describe("telemetry redaction", () => {
       provider: "openai",
       callId: "call-1",
       conversationId: "conv-1",
+      messageId: "message-1",
       inputTokens: 12,
       outputTokens: 34,
       totalTokens: 46,
@@ -133,6 +134,8 @@ describe("telemetry redaction", () => {
     expect(properties.$ai_session_id).toBe("session-1");
     expect(properties.traceId).toBe("trace-1");
     expect(properties.sessionId).toBe("session-1");
+    expect(properties.messageId).toBe("[redacted]");
+    expect(properties.messageLinkKey).toBe("message-1");
     expect(properties.model).toBe("gpt-realtime");
     expect(properties.provider).toBe("openai");
     expect(properties.$ai_model).toBe("gpt-realtime");

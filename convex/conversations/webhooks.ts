@@ -890,6 +890,7 @@ export const markOutboundMessageAccepted = internalMutation({
         channel: message.channel,
         provider: "twilio",
         properties: {
+          messageLinkKey: String(args.messageId),
           providerMessageSid: args.providerMessageSid,
           providerStatus: args.providerStatus,
           providerUpdatedAt: args.providerUpdatedAt,
