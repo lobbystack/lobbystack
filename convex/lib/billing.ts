@@ -1,8 +1,14 @@
 import type {
+  BillingPaidTier,
   BillingTier,
   BillingUsageSnapshot,
 } from "../../packages/shared/src/billing";
-import { billingDefaults } from "../../packages/shared/src/billing";
+import {
+  billingDefaults,
+  billingPaidTiers,
+  billingPlanCatalog,
+  isPaidBillingTier,
+} from "../../packages/shared/src/billing";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
@@ -35,7 +41,7 @@ export function getBillingIncludedUsage(tier: BillingTier): {
   voiceSecondsIncluded: number | null;
   smsSegmentsIncluded: number | null;
 } {
-  if (tier === "paid_monthly") {
+  if (isPaidBillingTier(tier)) {
     return {
       voiceSecondsIncluded: null,
       smsSegmentsIncluded: null,
@@ -46,6 +52,36 @@ export function getBillingIncludedUsage(tier: BillingTier): {
     voiceSecondsIncluded: billingDefaults.freeVoiceSeconds,
     smsSegmentsIncluded: billingDefaults.freeSmsSegments,
   };
+}
+
+export function getBillingMinimumChargeCents(tier: BillingTier): number | null {
+  return billingPlanCatalog[tier].minimumMonthlyChargeCents;
+}
+
+function getBillingProductEnvVarName(plan: BillingPaidTier): string {
+  switch (plan) {
+    case "starter":
+      return "POLAR_STARTER_PRODUCT_ID";
+    case "growth":
+      return "POLAR_GROWTH_PRODUCT_ID";
+  }
+}
+
+export function getBillingProductIdForPlan(plan: BillingPaidTier): string {
+  const envVarName = getBillingProductEnvVarName(plan);
+  const productId = process.env[envVarName]?.trim();
+
+  if (!productId) {
+    throw new Error(`${envVarName} is required.`);
+  }
+
+  return productId;
+}
+
+export function getConfiguredCheckoutPlans(): Array<BillingPaidTier> {
+  return billingPaidTiers.filter(
+    (plan) => Boolean(process.env[getBillingProductEnvVarName(plan)]?.trim()),
+  );
 }
 
 export function getBillingUsageSnapshotData(args: {
@@ -97,14 +133,13 @@ export function deriveBillingTier(input: {
     return "free";
   }
 
-  const configuredPaidProductId = process.env.POLAR_PAID_PRODUCT_ID?.trim();
-  if (!configuredPaidProductId) {
-    return "paid_monthly";
+  for (const plan of billingPaidTiers) {
+    if (input.subscriptionProductId === process.env[getBillingProductEnvVarName(plan)]?.trim()) {
+      return plan;
+    }
   }
 
-  return input.subscriptionProductId === configuredPaidProductId
-    ? "paid_monthly"
-    : "free";
+  return "free";
 }
 
 export async function getBillingAccount(
@@ -146,7 +181,9 @@ export async function getBillingSnapshot(
   }> {
   const account = await getBillingAccount(ctx, args.businessId);
   const tier: BillingTier =
-    account?.currentTier === "paid_monthly" ? "paid_monthly" : "free";
+    account?.currentTier === "starter" || account?.currentTier === "growth"
+      ? account.currentTier
+      : "free";
   const periodKey = getBillingPeriodKey(args.at ?? Date.now());
   const usage = await getBillingUsageMonth(ctx, {
     businessId: args.businessId,

@@ -114,12 +114,16 @@ export {
   billingDefaults,
   billingErrorCodes,
   billingMeterEventNames,
+  billingPaidTiers,
+  billingPlanCatalog,
   billingTiers,
   billingTransactionKinds,
   billingUsageKinds,
+  isPaidBillingTier,
 } from "./billing";
 export type {
   BillingErrorCode,
+  BillingPaidTier,
   BillingStatus,
   BillingTier,
   BillingTransactionKind,

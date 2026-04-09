@@ -13,15 +13,21 @@ This repo uses a hybrid Polar integration:
 
 ## Product Shape
 
-The paid plan is expected to be a recurring monthly product with:
+The paid catalog is expected to contain two recurring monthly products:
 
-- one fixed recurring price of `$5.00 USD`
-- one metered unit price for voice usage
-- one metered unit price for SMS usage
+- `Starter`
+  - fixed recurring price of `$5.00 USD`
+  - metered voice price of `$0.22/min`
+  - metered SMS price of `$0.03/text`
+- `Growth`
+  - fixed recurring price of `$20.00 USD`
+  - metered voice price of `$0.18/min`
+  - metered SMS price of `$0.025/text`
 
-The Convex billing wrapper currently expects the paid subscription product id in:
+The Convex billing wrapper currently expects the product ids in:
 
-- `POLAR_PAID_PRODUCT_ID`
+- `POLAR_STARTER_PRODUCT_ID`
+- `POLAR_GROWTH_PRODUCT_ID`
 
 ## Meter Event Names
 
@@ -30,7 +36,19 @@ The app sends usage events to Polar with these event names:
 - `billing.voice_seconds`
 - `billing.sms_segments`
 
-Create Polar meters that map to those event names, then attach them to the recurring product as metered unit prices.
+Create Polar meters that map to those event names, then attach them to both
+recurring products as metered unit prices.
+
+Because the voice meter is reported in seconds, the Polar metered unit amounts
+should be configured in cents per second:
+
+- `Starter` voice: `0.366666666667` cents per second (`$0.22/min`)
+- `Growth` voice: `0.3` cents per second (`$0.18/min`)
+
+For SMS, the metered unit amount stays in cents per message:
+
+- `Starter` SMS: `3`
+- `Growth` SMS: `2.5`
 
 ## Required Environment Variables
 
@@ -39,7 +57,8 @@ Set these on the Convex deployment:
 - `POLAR_SERVER`
 - `POLAR_ORGANIZATION_TOKEN`
 - `POLAR_WEBHOOK_SECRET`
-- `POLAR_PAID_PRODUCT_ID`
+- `POLAR_STARTER_PRODUCT_ID`
+- `POLAR_GROWTH_PRODUCT_ID`
 - `SITE_URL`
 
 `SITE_URL` is used for hosted checkout and the customer portal return URL.

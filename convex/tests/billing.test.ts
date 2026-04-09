@@ -1,13 +1,36 @@
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { getBillingKey } from "../lib/billing";
+import { deriveBillingTier, getBillingKey } from "../lib/billing";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
 const convexModules = modules;
+const originalStarterProductId = process.env.POLAR_STARTER_PRODUCT_ID;
+const originalGrowthProductId = process.env.POLAR_GROWTH_PRODUCT_ID;
+const originalSiteUrl = process.env.SITE_URL;
+
+afterEach(() => {
+  if (originalStarterProductId === undefined) {
+    delete process.env.POLAR_STARTER_PRODUCT_ID;
+  } else {
+    process.env.POLAR_STARTER_PRODUCT_ID = originalStarterProductId;
+  }
+
+  if (originalGrowthProductId === undefined) {
+    delete process.env.POLAR_GROWTH_PRODUCT_ID;
+  } else {
+    process.env.POLAR_GROWTH_PRODUCT_ID = originalGrowthProductId;
+  }
+
+  if (originalSiteUrl === undefined) {
+    delete process.env.SITE_URL;
+  } else {
+    process.env.SITE_URL = originalSiteUrl;
+  }
+});
 
 async function seedBillingWorkspace(t: any, subject: string) {
   const seeded = await t.run(async (ctx: any) => {
@@ -40,6 +63,30 @@ async function seedBillingWorkspace(t: any, subject: string) {
 }
 
 describe("billing", () => {
+  it("maps configured Polar product ids to starter and growth tiers", () => {
+    process.env.POLAR_STARTER_PRODUCT_ID = "prod_starter";
+    process.env.POLAR_GROWTH_PRODUCT_ID = "prod_growth";
+
+    expect(
+      deriveBillingTier({
+        subscriptionStatus: "active",
+        subscriptionProductId: "prod_starter",
+      }),
+    ).toBe("starter");
+    expect(
+      deriveBillingTier({
+        subscriptionStatus: "active",
+        subscriptionProductId: "prod_growth",
+      }),
+    ).toBe("growth");
+    expect(
+      deriveBillingTier({
+        subscriptionStatus: "active",
+        subscriptionProductId: "prod_unknown",
+      }),
+    ).toBe("free");
+  });
+
   it("records each usage source key only once and splits usage by UTC month", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedBillingWorkspace(t, "billing-idempotent");
@@ -90,7 +137,7 @@ describe("billing", () => {
     expect(usageByPeriod.may?.voiceSecondsUsed).toBe(45);
   });
 
-  it("lifts stale free-tier blocking as soon as the workspace becomes paid", async () => {
+  it("lifts stale free-tier blocking as soon as the workspace becomes growth", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedBillingWorkspace(t, "billing-upgrade");
 
@@ -112,7 +159,7 @@ describe("billing", () => {
       await ctx.db.insert("billing_accounts", {
         businessId,
         billingKey: getBillingKey(businessId),
-        currentTier: "paid_monthly",
+        currentTier: "growth",
         subscriptionState: "active",
         lastSyncedAt: "2026-04-09T12:05:00.000Z",
       });
@@ -129,11 +176,27 @@ describe("billing", () => {
     });
 
     expect(status).toMatchObject({
-      tier: "paid_monthly",
-      minimumMonthlyChargeCents: 500,
+      tier: "growth",
+      minimumMonthlyChargeCents: 2_000,
     });
     expect(status.usage.smsBlocked).toBe(false);
     expect(status.usage.smsSegmentsIncluded).toBeNull();
     expect(status.usage.smsSegmentsRemaining).toBeNull();
+  });
+
+  it("exposes starter and growth as checkout plans when both products are configured", async () => {
+    process.env.POLAR_STARTER_PRODUCT_ID = "prod_starter";
+    process.env.POLAR_GROWTH_PRODUCT_ID = "prod_growth";
+    process.env.SITE_URL = "https://example.com";
+
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedBillingWorkspace(t, "billing-plans");
+
+    const status = await authed.query(api.billing.getStatus, {
+      businessId,
+    });
+
+    expect(status.availableCheckoutPlans).toEqual(["starter", "growth"]);
+    expect(status.hasCheckoutAccess).toBe(true);
   });
 });

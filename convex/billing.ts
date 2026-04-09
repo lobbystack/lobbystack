@@ -4,8 +4,8 @@ import { type HttpRouter } from "convex/server";
 import { v } from "convex/values";
 
 import {
-  billingDefaults,
   billingMeterEventNames,
+  type BillingPaidTier,
   type BillingStatus,
   type BillingTier,
   type BillingTransactionKind,
@@ -27,10 +27,14 @@ import {
 import {
   deriveBillingTier,
   getBillingAccount,
+  getBillingMinimumChargeCents,
+  getBillingProductIdForPlan,
+  getConfiguredCheckoutPlans,
   getBillingIncludedUsage,
   getBillingKey,
   getBillingSnapshot,
   getBillingUsageSnapshotData,
+  isPaidSubscriptionStatus,
 } from "./lib/billing";
 import { requireCurrentUser, requireMembership } from "./lib/auth";
 
@@ -85,14 +89,6 @@ function getBillingSiteUrl(): URL {
   }
 
   return new URL(rawSiteUrl);
-}
-
-function getPaidProductId(): string {
-  const productId = process.env.POLAR_PAID_PRODUCT_ID?.trim();
-  if (!productId) {
-    throw new Error("POLAR_PAID_PRODUCT_ID is required.");
-  }
-  return productId;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -188,7 +184,7 @@ function buildBillingStatus(input: {
   periodKey: string;
   recentTransactions: Array<BillingTransactionSummary>;
   hasCustomerPortalAccess: boolean;
-  hasCheckoutAccess: boolean;
+  availableCheckoutPlans: Array<BillingPaidTier>;
 }): BillingStatus {
   const usage = getBillingUsageSnapshotData({
     tier: input.tier,
@@ -200,14 +196,12 @@ function buildBillingStatus(input: {
     tier: input.tier,
     billingKey: input.billingKey,
     subscriptionState: input.subscriptionState,
-    minimumMonthlyChargeCents:
-      input.tier === "paid_monthly" || input.hasCheckoutAccess
-        ? billingDefaults.paidMonthlyMinimumChargeCents
-        : null,
+    minimumMonthlyChargeCents: getBillingMinimumChargeCents(input.tier),
     billingContactEmail: input.contact.email,
     billingContactName: input.contact.name,
     hasCustomerPortalAccess: input.hasCustomerPortalAccess,
-    hasCheckoutAccess: input.hasCheckoutAccess,
+    hasCheckoutAccess: input.availableCheckoutPlans.length > 0,
+    availableCheckoutPlans: input.availableCheckoutPlans,
     usage,
     recentTransactions: input.recentTransactions,
   };
@@ -683,6 +677,7 @@ async function ensurePolarCustomer(
 export const startCheckout = action({
   args: {
     businessId: v.id("businesses"),
+    plan: v.union(v.literal("starter"), v.literal("growth")),
   },
   returns: v.object({
     url: v.string(),
@@ -708,7 +703,7 @@ export const startCheckout = action({
       ...(checkoutContext.billingContactName
         ? { customerName: checkoutContext.billingContactName }
         : {}),
-      products: [getPaidProductId()],
+      products: [getBillingProductIdForPlan(args.plan)],
       successUrl: new URL("/settings/billing?checkout=success", siteUrl).toString(),
       returnUrl: new URL("/settings/billing", siteUrl).toString(),
       embedOrigin: siteUrl.origin,
@@ -807,6 +802,8 @@ export const getStatus = query({
       .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", args.businessId))
       .order("desc")
       .take(10);
+    const availableCheckoutPlans =
+      process.env.SITE_URL?.trim() ? getConfiguredCheckoutPlans() : [];
 
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
@@ -826,9 +823,7 @@ export const getStatus = query({
         invoiceUrl: transaction.invoiceUrl ?? null,
       })),
       hasCustomerPortalAccess: Boolean(snapshot.account?.polarCustomerId),
-      hasCheckoutAccess: Boolean(
-        process.env.POLAR_PAID_PRODUCT_ID?.trim() && process.env.SITE_URL?.trim(),
-      ),
+      availableCheckoutPlans,
     });
   },
 });
@@ -1028,13 +1023,15 @@ export const recordUsageEvent = internalMutation({
       quantity: args.quantity,
       tierAtRecordTime: snapshot.tier,
       recordedAt: args.recordedAt,
-      syncStatus: snapshot.tier === "paid_monthly" ? "pending" : "skipped",
+      syncStatus: isPaidSubscriptionStatus(snapshot.account?.subscriptionState)
+        ? "pending"
+        : "skipped",
     });
 
     return {
       usageEventId,
       tier: snapshot.tier,
-      syncNeeded: snapshot.tier === "paid_monthly",
+      syncNeeded: isPaidSubscriptionStatus(snapshot.account?.subscriptionState),
     };
   },
 });

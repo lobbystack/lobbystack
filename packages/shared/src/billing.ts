@@ -1,5 +1,7 @@
-export const billingTiers = ["free", "paid_monthly"] as const;
+export const billingTiers = ["free", "starter", "growth"] as const;
 export type BillingTier = (typeof billingTiers)[number];
+export const billingPaidTiers = ["starter", "growth"] as const;
+export type BillingPaidTier = (typeof billingPaidTiers)[number];
 
 export const billingUsageKinds = ["voice_seconds", "sms_segments"] as const;
 export type BillingUsageKind = (typeof billingUsageKinds)[number];
@@ -23,8 +25,40 @@ export const billingMeterEventNames = {
 export const billingDefaults = {
   freeVoiceSeconds: 1_800,
   freeSmsSegments: 60,
-  paidMonthlyMinimumChargeCents: 500,
 } as const;
+
+export const billingPlanCatalog = {
+  free: {
+    includedLocalNumbers: 0,
+    minimumMonthlyChargeCents: null,
+    smsRatePerMessageCents: null,
+    voiceRatePerMinuteCents: null,
+  },
+  starter: {
+    includedLocalNumbers: 1,
+    minimumMonthlyChargeCents: 500,
+    smsRatePerMessageCents: 3,
+    voiceRatePerMinuteCents: 22,
+  },
+  growth: {
+    includedLocalNumbers: 1,
+    minimumMonthlyChargeCents: 2_000,
+    smsRatePerMessageCents: 2.5,
+    voiceRatePerMinuteCents: 18,
+  },
+} as const satisfies Record<
+  BillingTier,
+  {
+    includedLocalNumbers: number;
+    minimumMonthlyChargeCents: number | null;
+    smsRatePerMessageCents: number | null;
+    voiceRatePerMinuteCents: number | null;
+  }
+>;
+
+export function isPaidBillingTier(tier: BillingTier): tier is BillingPaidTier {
+  return tier === "starter" || tier === "growth";
+}
 
 export type BillingUsageSnapshot = {
   periodKey: string;
@@ -59,6 +93,7 @@ export type BillingStatus = {
   billingContactName: string | null;
   hasCustomerPortalAccess: boolean;
   hasCheckoutAccess: boolean;
+  availableCheckoutPlans: Array<BillingPaidTier>;
   usage: BillingUsageSnapshot;
   recentTransactions: Array<BillingTransactionSummary>;
 };

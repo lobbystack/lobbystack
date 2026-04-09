@@ -4,7 +4,13 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import type { BillingStatus } from "@ai-receptionist/shared";
+import {
+  billingPaidTiers,
+  billingPlanCatalog,
+  type BillingPaidTier,
+  type BillingStatus,
+  type BillingTier,
+} from "@ai-receptionist/shared";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +53,25 @@ function formatCurrencyFromCents(
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function formatMeteredRateFromCents(
+  cents: number | null,
+  locale: string,
+  currency = "USD",
+): string | null {
+  if (cents === null) {
+    return null;
+  }
+
+  const minimumFractionDigits = Number.isInteger(cents) ? 2 : 3;
+
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits,
+    maximumFractionDigits: 3,
   }).format(cents / 100);
 }
 
@@ -111,6 +136,31 @@ function getSubscriptionStateLabel(
   }
 }
 
+function getPlanName(tier: BillingTier, t: (key: string) => string): string {
+  switch (tier) {
+    case "starter":
+      return t("billing.plan.starterName");
+    case "growth":
+      return t("billing.plan.growthName");
+    default:
+      return t("billing.plan.freeName");
+  }
+}
+
+function getPlanDescription(
+  tier: BillingTier,
+  t: (key: string) => string,
+): string {
+  switch (tier) {
+    case "starter":
+      return t("billing.plan.starterDescription");
+    case "growth":
+      return t("billing.plan.growthDescription");
+    default:
+      return t("billing.plan.freeDescription");
+  }
+}
+
 function PlanSkeleton() {
   return (
     <div className="flex flex-col gap-6">
@@ -170,7 +220,8 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
   }) as BillingStatus | undefined;
   const startCheckout = useAction(api.billing.startCheckout);
   const openPortal = useAction(api.billing.openPortal);
-  const [isOpeningCheckout, setIsOpeningCheckout] = useState(false);
+  const [checkoutPlanInFlight, setCheckoutPlanInFlight] =
+    useState<BillingPaidTier | null>(null);
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   useEffect(() => {
@@ -189,16 +240,9 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
       return null;
     }
 
-    if (billingStatus.tier === "paid_monthly") {
-      return {
-        name: t("billing.plan.paidName"),
-        description: t("billing.plan.paidDescription"),
-      };
-    }
-
     return {
-      name: t("billing.plan.freeName"),
-      description: t("billing.plan.freeDescription"),
+      name: getPlanName(billingStatus.tier, t),
+      description: getPlanDescription(billingStatus.tier, t),
     };
   }, [billingStatus, t]);
 
@@ -234,18 +278,18 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
             100,
         );
 
-  async function handleStartCheckout(): Promise<void> {
-    setIsOpeningCheckout(true);
+  async function handleStartCheckout(plan: BillingPaidTier): Promise<void> {
+    setCheckoutPlanInFlight(plan);
 
     try {
-      const result = await startCheckout({ businessId });
+      const result = await startCheckout({ businessId, plan });
       window.location.assign(result.url);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : t("billing.errors.checkoutFailed"),
       );
     } finally {
-      setIsOpeningCheckout(false);
+      setCheckoutPlanInFlight(null);
     }
   }
 
@@ -293,7 +337,7 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {billingStatus.minimumMonthlyChargeCents !== null
-                    ? t("billing.plan.minimumChargeValue", {
+                    ? t("billing.plan.minimumUsageValue", {
                         amount:
                           formatCurrencyFromCents(
                             billingStatus.minimumMonthlyChargeCents,
@@ -304,17 +348,6 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
                 </p>
               </div>
               <div className="mt-5 flex flex-wrap gap-3">
-                {billingStatus.tier === "free" && billingStatus.hasCheckoutAccess ? (
-                  <Button
-                    disabled={isOpeningCheckout}
-                    onClick={() => void handleStartCheckout()}
-                    type="button"
-                  >
-                    {isOpeningCheckout
-                      ? t("billing.actions.openingCheckout")
-                      : t("billing.actions.upgrade")}
-                  </Button>
-                ) : null}
                 {billingStatus.hasCustomerPortalAccess ? (
                   <Button
                     disabled={isOpeningPortal}
@@ -355,7 +388,9 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
                     {t("billing.plan.usageModelDescription")}
                   </ItemDescription>
                   <p className="text-sm font-medium text-foreground">
-                    {t("billing.plan.usageModelValue")}
+                    {billingStatus.tier === "free"
+                      ? t("billing.plan.freeAllowanceValue")
+                      : t("billing.plan.usageModelValue")}
                   </p>
                 </ItemContent>
               </Item>
@@ -375,6 +410,127 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
               </Item>
             </ItemGroup>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("billing.catalog.title")}</CardTitle>
+          <CardDescription>{t("billing.catalog.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-2">
+          {billingPaidTiers.map((plan) => {
+            const planDetails = billingPlanCatalog[plan];
+            const isCurrentPlan = billingStatus.tier === plan;
+            const isCheckoutConfigured =
+              billingStatus.availableCheckoutPlans.includes(plan);
+
+            return (
+              <div
+                className="rounded-xl border border-border/80 bg-muted/20 p-5"
+                key={plan}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <p className="text-xl font-semibold tracking-tight text-foreground">
+                      {getPlanName(plan, t)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {getPlanDescription(plan, t)}
+                    </p>
+                  </div>
+                  {isCurrentPlan ? (
+                    <Badge variant="outline">{t("billing.actions.currentPlan")}</Badge>
+                  ) : null}
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <div className="rounded-lg border border-border/80 bg-background/70 p-4">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("billing.plan.minimumCharge")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("billing.plan.minimumUsageValue", {
+                        amount:
+                          formatCurrencyFromCents(
+                            planDetails.minimumMonthlyChargeCents,
+                            i18n.language,
+                          ) ?? "$0.00",
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-border/80 bg-background/70 p-4">
+                      <p className="text-sm font-medium text-foreground">
+                        {t("billing.plan.voiceRate")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("billing.plan.voiceRateValue", {
+                          amount:
+                            formatMeteredRateFromCents(
+                              planDetails.voiceRatePerMinuteCents,
+                              i18n.language,
+                            ) ?? "$0.00",
+                        })}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border/80 bg-background/70 p-4">
+                      <p className="text-sm font-medium text-foreground">
+                        {t("billing.plan.smsRate")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("billing.plan.smsRateValue", {
+                          amount:
+                            formatMeteredRateFromCents(
+                              planDetails.smsRatePerMessageCents,
+                              i18n.language,
+                            ) ?? "$0.00",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-dashed border-border/80 bg-background/70 p-4">
+                    <p className="text-sm font-medium text-foreground">
+                      {t("billing.plan.includedLocalNumber")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("billing.plan.includedLocalNumberValue", {
+                        count: planDetails.includedLocalNumbers,
+                      })}
+                    </p>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {t("billing.plan.minimumCreditValue")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button
+                    disabled={
+                      isCurrentPlan ||
+                      !isCheckoutConfigured ||
+                      checkoutPlanInFlight !== null
+                    }
+                    onClick={() => void handleStartCheckout(plan)}
+                    type="button"
+                    variant={isCurrentPlan ? "outline" : "default"}
+                  >
+                    {isCurrentPlan
+                      ? t("billing.actions.currentPlan")
+                      : checkoutPlanInFlight === plan
+                        ? t("billing.actions.openingCheckout")
+                        : isCheckoutConfigured
+                          ? t("billing.actions.selectPlan", {
+                              plan: getPlanName(plan, t),
+                            })
+                          : t("billing.actions.checkoutUnavailable")}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 
