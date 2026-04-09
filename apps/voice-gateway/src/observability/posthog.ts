@@ -365,7 +365,13 @@ export function captureAiGeneration(
     inputTokens?: number;
     outputTokens?: number;
     totalTokens?: number;
+    textInputTokens?: number;
+    audioInputTokens?: number;
     cachedInputTokens?: number;
+    cachedTextInputTokens?: number;
+    cachedAudioInputTokens?: number;
+    textOutputTokens?: number;
+    audioOutputTokens?: number;
     reasoningTokens?: number;
     totalCostUsd?: number;
     isStreaming?: boolean;
@@ -398,8 +404,26 @@ export function captureAiGeneration(
         ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
         ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
         ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+        ...(input.textInputTokens !== undefined
+          ? { textInputTokens: input.textInputTokens }
+          : {}),
+        ...(input.audioInputTokens !== undefined
+          ? { audioInputTokens: input.audioInputTokens }
+          : {}),
         ...(input.cachedInputTokens !== undefined
           ? { cachedInputTokens: input.cachedInputTokens }
+          : {}),
+        ...(input.cachedTextInputTokens !== undefined
+          ? { cachedTextInputTokens: input.cachedTextInputTokens }
+          : {}),
+        ...(input.cachedAudioInputTokens !== undefined
+          ? { cachedAudioInputTokens: input.cachedAudioInputTokens }
+          : {}),
+        ...(input.textOutputTokens !== undefined
+          ? { textOutputTokens: input.textOutputTokens }
+          : {}),
+        ...(input.audioOutputTokens !== undefined
+          ? { audioOutputTokens: input.audioOutputTokens }
           : {}),
         ...(input.reasoningTokens !== undefined
           ? { reasoningTokens: input.reasoningTokens }

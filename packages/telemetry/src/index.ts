@@ -124,7 +124,13 @@ export type PostHogAiUsagePropertiesInput = {
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
+  textInputTokens?: number;
+  audioInputTokens?: number;
   cachedInputTokens?: number;
+  cachedTextInputTokens?: number;
+  cachedAudioInputTokens?: number;
+  textOutputTokens?: number;
+  audioOutputTokens?: number;
   reasoningTokens?: number;
   totalCostUsd?: number;
 };
@@ -752,6 +758,24 @@ export function buildPostHogAiGenerationProperties(
     ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
     ...(input.cachedInputTokens !== undefined
       ? { cachedInputTokens: input.cachedInputTokens }
+      : {}),
+    ...(input.textInputTokens !== undefined
+      ? { textInputTokens: input.textInputTokens }
+      : {}),
+    ...(input.audioInputTokens !== undefined
+      ? { audioInputTokens: input.audioInputTokens }
+      : {}),
+    ...(input.cachedTextInputTokens !== undefined
+      ? { cachedTextInputTokens: input.cachedTextInputTokens }
+      : {}),
+    ...(input.cachedAudioInputTokens !== undefined
+      ? { cachedAudioInputTokens: input.cachedAudioInputTokens }
+      : {}),
+    ...(input.textOutputTokens !== undefined
+      ? { textOutputTokens: input.textOutputTokens }
+      : {}),
+    ...(input.audioOutputTokens !== undefined
+      ? { audioOutputTokens: input.audioOutputTokens }
       : {}),
     ...(input.reasoningTokens !== undefined
       ? { reasoningTokens: input.reasoningTokens }

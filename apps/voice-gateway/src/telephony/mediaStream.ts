@@ -1458,8 +1458,26 @@ function handleOpenAiMessage(
           ...(usageMetrics.totalTokens !== undefined
             ? { totalTokens: usageMetrics.totalTokens }
             : {}),
+          ...(usageMetrics.textInputTokens !== undefined
+            ? { textInputTokens: usageMetrics.textInputTokens }
+            : {}),
+          ...(usageMetrics.audioInputTokens !== undefined
+            ? { audioInputTokens: usageMetrics.audioInputTokens }
+            : {}),
           ...(usageMetrics.cachedInputTokens !== undefined
             ? { cachedInputTokens: usageMetrics.cachedInputTokens }
+            : {}),
+          ...(usageMetrics.cachedTextInputTokens !== undefined
+            ? { cachedTextInputTokens: usageMetrics.cachedTextInputTokens }
+            : {}),
+          ...(usageMetrics.cachedAudioInputTokens !== undefined
+            ? { cachedAudioInputTokens: usageMetrics.cachedAudioInputTokens }
+            : {}),
+          ...(usageMetrics.textOutputTokens !== undefined
+            ? { textOutputTokens: usageMetrics.textOutputTokens }
+            : {}),
+          ...(usageMetrics.audioOutputTokens !== undefined
+            ? { audioOutputTokens: usageMetrics.audioOutputTokens }
             : {}),
           ...(usageMetrics.reasoningTokens !== undefined
             ? { reasoningTokens: usageMetrics.reasoningTokens }

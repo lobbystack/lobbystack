@@ -109,7 +109,13 @@ describe("telemetry redaction", () => {
       inputTokens: 12,
       outputTokens: 34,
       totalTokens: 46,
+      textInputTokens: 7,
+      audioInputTokens: 5,
       cachedInputTokens: 5,
+      cachedTextInputTokens: 4,
+      cachedAudioInputTokens: 1,
+      textOutputTokens: 14,
+      audioOutputTokens: 20,
       reasoningTokens: 3,
       totalCostUsd: 0.12,
       latencyMs: 1_500,
@@ -137,7 +143,13 @@ describe("telemetry redaction", () => {
     expect(properties.$ai_input_tokens).toBe(12);
     expect(properties.$ai_output_tokens).toBe(34);
     expect(properties.$ai_total_tokens).toBe(46);
+    expect(properties.textInputTokens).toBe(7);
+    expect(properties.audioInputTokens).toBe(5);
     expect(properties.cachedInputTokens).toBe(5);
+    expect(properties.cachedTextInputTokens).toBe(4);
+    expect(properties.cachedAudioInputTokens).toBe(1);
+    expect(properties.textOutputTokens).toBe(14);
+    expect(properties.audioOutputTokens).toBe(20);
     expect(properties.reasoningTokens).toBe(3);
     expect(properties.totalCostUsd).toBe(0.12);
     expect(properties.$ai_total_cost_usd).toBe(0.12);
