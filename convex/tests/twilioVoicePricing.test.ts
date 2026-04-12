@@ -177,4 +177,36 @@ describe("Twilio voice pricing sync", () => {
       expect(call?.providerUpdatedAt).toBe("2026-04-09T18:00:19.000Z");
     });
   });
+
+  it("records an estimated provider cost from the terminal status callback before Twilio pricing hydrates", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { businessId, callId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx);
+      const callId = await insertCall(ctx, {
+        businessId,
+        twilioCallSid: "CA-voice-estimated",
+      });
+      return { businessId, callId };
+    });
+
+    const result = await t.mutation(internal.voice.runtime.reconcileTwilioCallStatus, {
+      twilioCallSid: "CA-voice-estimated",
+      callStatus: "completed",
+      providerUpdatedAt: "2026-04-09T19:00:23.000Z",
+      providerDurationSeconds: 23,
+    });
+
+    expect(result).toEqual({
+      ignored: false,
+      callId,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(callId);
+      expect(call?.providerCostUsd).toBe(0.0085);
+      expect(call?.providerPriceUnit).toBe("usd");
+      expect(call?.providerCallDurationSeconds).toBe(23);
+    });
+  });
 });
