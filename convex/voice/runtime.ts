@@ -482,6 +482,13 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
+    const voicePolicy = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+      businessId: args.businessId,
+    });
+    if (!voicePolicy.allowed) {
+      throw new Error("Voice quota reached for this billing period.");
+    }
+
     let contact: Doc<"contacts"> | null = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
@@ -924,6 +931,21 @@ export const recordProviderPricing = internalMutation({
 
     await ctx.db.patch(call._id, patch);
 
+    if (args.providerDurationSeconds !== undefined) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: args.providerDurationSeconds,
+        recordedAt: args.providerUpdatedAt ?? new Date().toISOString(),
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
+
     if (pricingChanged && args.providerCostUsd !== undefined) {
       await enqueueVoiceProviderCostRecordedEvent(ctx, {
         businessId: call.businessId,
@@ -1025,6 +1047,21 @@ export const reconcileTwilioCallStatus = internalMutation({
     }
 
     await ctx.db.patch(call._id, patch);
+
+    if (args.providerDurationSeconds !== undefined) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: args.providerDurationSeconds,
+        recordedAt: args.providerUpdatedAt,
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
 
     if (estimatedPricingChanged && estimatedProviderCostUsd !== undefined) {
       await enqueueVoiceProviderCostRecordedEvent(ctx, {

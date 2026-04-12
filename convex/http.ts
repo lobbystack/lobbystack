@@ -8,8 +8,11 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
+import { registerBillingRoutes } from "./billing";
 
 const http = httpRouter();
+
+registerBillingRoutes(http);
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; response: Response };
 

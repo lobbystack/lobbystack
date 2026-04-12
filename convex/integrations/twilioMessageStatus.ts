@@ -169,7 +169,82 @@ export const recordProviderPricing = internalMutation({
       .unique();
 
     if (!message) {
-      return { matched: false, applied: false };
+      const notification = await ctx.db
+        .query("notifications")
+        .withIndex("by_provider_message_id", (q) => q.eq("providerMessageId", args.providerMessageSid))
+        .unique();
+
+      if (!notification) {
+        return { matched: false, applied: false };
+      }
+
+      const notificationPatch: Partial<typeof notification> = {};
+      let notificationChanged = false;
+      let notificationPricingChanged = false;
+
+      if (
+        args.providerUpdatedAt !== undefined &&
+        args.providerUpdatedAt !== notification.providerUpdatedAt
+      ) {
+        notificationPatch.providerUpdatedAt = args.providerUpdatedAt;
+        notificationChanged = true;
+      }
+      if (args.providerPrice !== undefined && args.providerPrice !== notification.providerPrice) {
+        notificationPatch.providerPrice = args.providerPrice;
+        notificationChanged = true;
+        notificationPricingChanged = true;
+      }
+      if (
+        args.providerPriceUnit !== undefined &&
+        args.providerPriceUnit !== notification.providerPriceUnit
+      ) {
+        notificationPatch.providerPriceUnit = args.providerPriceUnit;
+        notificationChanged = true;
+        notificationPricingChanged = true;
+      }
+      if (
+        args.providerCostUsd !== undefined &&
+        args.providerCostUsd !== notification.providerCostUsd
+      ) {
+        notificationPatch.providerCostUsd = args.providerCostUsd;
+        notificationChanged = true;
+        notificationPricingChanged = true;
+      }
+      if (
+        args.providerNumSegments !== undefined &&
+        args.providerNumSegments !== notification.providerNumSegments
+      ) {
+        notificationPatch.providerNumSegments = args.providerNumSegments;
+        notificationChanged = true;
+        notificationPricingChanged = true;
+      }
+
+      if (!notificationChanged) {
+        return { matched: true, applied: false };
+      }
+
+      await ctx.db.patch(notification._id, notificationPatch);
+
+      if (
+        notificationPricingChanged &&
+        args.providerNumSegments !== undefined &&
+        notification.senderRole === "platform_alert"
+      ) {
+        const usageResult = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
+          businessId: notification.businessId,
+          notificationId: notification._id,
+          quantity: args.providerNumSegments,
+          recordedAt: args.providerUpdatedAt ?? new Date().toISOString(),
+        });
+
+        if (usageResult.syncNeeded) {
+          await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+            usageEventId: usageResult.usageEventId,
+          });
+        }
+      }
+
+      return { matched: true, applied: true };
     }
 
     const patch: Partial<typeof message> = {};
@@ -206,6 +281,27 @@ export const recordProviderPricing = internalMutation({
     }
 
     await ctx.db.patch(message._id, patch);
+
+    if (
+      pricingChanged &&
+      args.providerNumSegments !== undefined &&
+      message.senderRole === "business_ai" &&
+      message.direction === "outbound" &&
+      message.channel === "sms"
+    ) {
+      const usageResult = await ctx.runMutation(internal.billing.recordAiSmsUsage, {
+        businessId: message.businessId,
+        messageId: message._id,
+        quantity: args.providerNumSegments,
+        recordedAt: args.providerUpdatedAt ?? new Date().toISOString(),
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
 
     if (pricingChanged && args.providerCostUsd !== undefined) {
       await ctx.runMutation(internal.telemetry.posthog.enqueueEvent, {

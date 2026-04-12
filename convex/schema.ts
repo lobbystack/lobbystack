@@ -66,6 +66,35 @@ const conversationSessionSummaryValidator = v.object({
   disposition: v.optional(v.string()),
 });
 
+const billingPlanSlugValidator = v.union(
+  v.literal("self_host"),
+  v.literal("free_cloud"),
+  v.literal("pro"),
+  v.literal("enterprise"),
+);
+
+const legacyBillingTierValidator = v.union(
+  v.literal("free"),
+  v.literal("starter"),
+  v.literal("growth"),
+);
+
+const billingAddonSlugValidator = v.union(v.literal("ai_sms"));
+
+const billingUsageKindValidator = v.union(
+  v.literal("voice_seconds"),
+  // Legacy generic SMS bucket retained while older usage events are migrated.
+  v.literal("sms_segments"),
+  v.literal("alert_sms_segments"),
+  v.literal("outbound_call_attempts"),
+  v.literal("ai_sms_segments"),
+);
+
+const smsSenderRoleValidator = v.union(
+  v.literal("platform_alert"),
+  v.literal("business_ai"),
+);
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -181,6 +210,19 @@ export default defineSchema({
     .index("by_e164", ["e164"])
     .index("by_twilio_phone_sid", ["twilioPhoneSid"])
     .index("by_business_id", ["businessId"]),
+
+  platform_sms_senders: defineTable({
+    role: v.literal("platform_alert"),
+    label: v.string(),
+    e164: v.string(),
+    twilioPhoneSid: v.optional(v.string()),
+    twilioMessagingServiceSid: v.optional(v.string()),
+    status: v.string(),
+    smsEnabled: v.boolean(),
+    compliantDestinationCountries: v.optional(v.array(v.string())),
+  })
+    .index("by_role", ["role"])
+    .index("by_e164", ["e164"]),
 
   onboarding_phone_verifications: defineTable({
     businessId: v.id("businesses"),
@@ -375,6 +417,7 @@ export default defineSchema({
     providerErrorCode: v.optional(v.string()),
     providerUpdatedAt: v.optional(v.string()),
     providerRawDlrDoneDate: v.optional(v.string()),
+    senderRole: v.optional(smsSenderRoleValidator),
     aiGenerated: v.boolean(),
   })
     .index("by_conversation_id", ["conversationId"])
@@ -582,6 +625,11 @@ export default defineSchema({
     relatedId: v.optional(v.string()),
     scheduledFor: v.string(),
     status: v.string(),
+    senderRole: v.optional(smsSenderRoleValidator),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerNumSegments: v.optional(v.number()),
     providerMessageId: v.optional(v.string()),
     providerStatus: v.optional(v.string()),
     providerErrorCode: v.optional(v.string()),
@@ -663,4 +711,97 @@ export default defineSchema({
     .index("by_business_id_and_user_id", ["businessId", "userId"])
     .index("by_user_id", ["userId"])
     .index("by_stream_id", ["streamId"]),
+
+  billing_accounts: defineTable({
+    businessId: v.id("businesses"),
+    billingKey: v.string(),
+    currentPlan: v.optional(billingPlanSlugValidator),
+    // Legacy tier kept optional while older billing records are migrated.
+    currentTier: v.optional(legacyBillingTierValidator),
+    activeAddons: v.optional(v.array(billingAddonSlugValidator)),
+    subscriptionState: v.optional(v.string()),
+    billingContactEmail: v.optional(v.string()),
+    billingContactName: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    polarCustomerExternalId: v.optional(v.string()),
+    proSubscriptionId: v.optional(v.string()),
+    proSubscriptionProductId: v.optional(v.string()),
+    proSubscriptionPriceId: v.optional(v.string()),
+    aiSmsSubscriptionId: v.optional(v.string()),
+    aiSmsSubscriptionProductId: v.optional(v.string()),
+    aiSmsSubscriptionPriceId: v.optional(v.string()),
+    aiSmsSetupOrderId: v.optional(v.string()),
+    currentPeriodStart: v.optional(v.string()),
+    currentPeriodEnd: v.optional(v.string()),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    checkoutId: v.optional(v.string()),
+    lastWebhookEventType: v.optional(v.string()),
+    lastSyncedAt: v.string(),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_billing_key", ["billingKey"])
+    .index("by_polar_customer_id", ["polarCustomerId"]),
+
+  billing_usage_months: defineTable({
+    businessId: v.id("businesses"),
+    periodKey: v.string(),
+    planAtSnapshot: v.optional(billingPlanSlugValidator),
+    // Legacy billing snapshot tier retained while older records are migrated.
+    tierAtSnapshot: v.optional(legacyBillingTierValidator),
+    tier: v.optional(legacyBillingTierValidator),
+    voiceSecondsUsed: v.optional(v.number()),
+    alertSmsSegmentsUsed: v.optional(v.number()),
+    // Legacy SMS bucket retained while migrating prior billing records.
+    smsSegmentsUsed: v.optional(v.number()),
+    outboundCallAttemptsUsed: v.optional(v.number()),
+    aiSmsSegmentsUsed: v.optional(v.number()),
+    voiceSecondsIncluded: v.optional(v.number()),
+    alertSmsSegmentsIncluded: v.optional(v.number()),
+    smsSegmentsIncluded: v.optional(v.number()),
+    outboundCallAttemptsIncluded: v.optional(v.number()),
+    voiceBlocked: v.optional(v.boolean()),
+    alertSmsBlocked: v.optional(v.boolean()),
+    // Legacy blocked flag retained while migrating prior billing records.
+    smsBlocked: v.optional(v.boolean()),
+    outboundCallAttemptsBlocked: v.optional(v.boolean()),
+    lastRecordedAt: v.string(),
+  }).index("by_business_id_and_period_key", ["businessId", "periodKey"]),
+
+  billing_usage_events: defineTable({
+    businessId: v.id("businesses"),
+    periodKey: v.string(),
+    sourceKey: v.string(),
+    usageKind: billingUsageKindValidator,
+    quantity: v.number(),
+    planAtRecordTime: v.optional(billingPlanSlugValidator),
+    // Legacy record tier retained while older usage events are migrated.
+    tierAtRecordTime: v.optional(legacyBillingTierValidator),
+    activeAddonsAtRecordTime: v.optional(v.array(billingAddonSlugValidator)),
+    recordedAt: v.string(),
+    syncStatus: v.string(),
+    syncAttemptedAt: v.optional(v.string()),
+    syncedAt: v.optional(v.string()),
+    syncError: v.optional(v.string()),
+  })
+    .index("by_business_id_and_source_key", ["businessId", "sourceKey"])
+    .index("by_sync_status_and_recorded_at", ["syncStatus", "recordedAt"])
+    .index("by_business_id_and_period_key", ["businessId", "periodKey"]),
+
+  billing_transactions: defineTable({
+    businessId: v.id("businesses"),
+    kind: v.string(),
+    sourceId: v.string(),
+    status: v.string(),
+    amountCents: v.number(),
+    currency: v.string(),
+    description: v.optional(v.string()),
+    invoiceUrl: v.optional(v.string()),
+    orderId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    occurredAt: v.string(),
+    lastSyncedAt: v.string(),
+  })
+    .index("by_kind_and_source_id", ["kind", "sourceId"])
+    .index("by_business_id_and_occurred_at", ["businessId", "occurredAt"]),
 });

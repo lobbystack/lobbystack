@@ -88,12 +88,14 @@ type StoreOutboundMessageArgs = {
   appointmentId?: Id<"appointments">;
   media?: Array<MessageMediaAttachment>;
   aiGenerated?: boolean;
+  senderRole?: "business_ai";
 };
 type ReserveOutboundAiMessageArgs = {
   businessId: Id<"businesses">;
   conversationId: Id<"conversations">;
   channel: string;
   fromPhoneNumber?: string;
+  senderRole?: "business_ai";
 };
 type FinalizeReservedOutboundMessageArgs = {
   messageId: Id<"messages">;
@@ -490,8 +492,17 @@ export const getOutboundMessageDeliveryContext = internalQuery({
         .collect(),
     ]);
 
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: message.businessId,
+      capability: "ai",
+    });
+
     if (!contact) {
       throw new Error("Contact not found for SMS delivery.");
+    }
+
+    if (!smsPolicy.allowed) {
+      throw new Error("AI SMS is not enabled for this workspace.");
     }
 
     const senderPhoneNumber = selectSmsSenderPhoneNumber(
@@ -656,6 +667,7 @@ export const storeOutboundMessage = internalMutation({
       ),
     ),
     aiGenerated: v.optional(v.boolean()),
+    senderRole: v.optional(v.literal("business_ai")),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     const messageId = await ctx.db.insert("messages", {
@@ -668,6 +680,7 @@ export const storeOutboundMessage = internalMutation({
       ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       body: args.body,
       status: "queued",
+      ...(args.senderRole !== undefined ? { senderRole: args.senderRole } : {}),
       aiGenerated: args.aiGenerated ?? true,
     });
 
@@ -728,6 +741,7 @@ export const reserveOutboundAiMessage = internalMutation({
     conversationId: v.id("conversations"),
     channel: v.string(),
     fromPhoneNumber: v.optional(v.string()),
+    senderRole: v.optional(v.literal("business_ai")),
   },
   handler: async (
     ctx: MutationCtx,
@@ -741,6 +755,7 @@ export const reserveOutboundAiMessage = internalMutation({
       ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
       body: "",
       status: "draft",
+      senderRole: args.senderRole ?? "business_ai",
       aiGenerated: true,
     });
   },
@@ -1179,6 +1194,14 @@ export const handleTwilioSmsInbound = internalAction({
       return { businessId: phoneNumber.businessId, conversationId, reply: null };
     }
 
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: phoneNumber.businessId,
+      capability: "ai",
+    });
+    if (!smsPolicy.allowed) {
+      return { businessId: phoneNumber.businessId, conversationId, reply: null };
+    }
+
     const prompt = buildInboundSmsPrompt({
       body: args.body,
       ...(normalizedMedia ? { media: normalizedMedia } : {}),
@@ -1190,6 +1213,7 @@ export const handleTwilioSmsInbound = internalAction({
         conversationId,
         channel: "sms",
         fromPhoneNumber: phoneNumber.e164,
+        senderRole: "business_ai",
       },
     );
 
