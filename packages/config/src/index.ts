@@ -8,6 +8,11 @@ const deploymentModeSchema = z.enum([
   "development",
 ]);
 
+const booleanEnvSchema = z
+  .enum(["true", "false"])
+  .default("true")
+  .transform((value) => value === "true");
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
@@ -19,6 +24,15 @@ const serverEnvSchema = z.object({
   SESSION_ENCRYPTION_KEY: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
+  OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
   GEMINI_TEXT_MODEL: z.string().default("gemini-3.1-flash-lite-preview"),
   GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
@@ -38,12 +52,10 @@ const serverEnvSchema = z.object({
   EMAIL_FROM_ADDRESS: z.string().email(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
+  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
-  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
 });
 
 const clientEnvSchema = z.object({
@@ -65,15 +77,22 @@ const voiceGatewayEnvSchema = z.object({
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_REALTIME_MODEL: z.string().default("gpt-realtime"),
+  OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_REALTIME_VOICE: z.string().default("marin"),
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
+  OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
-  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
-  OTEL_TRACE_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(0.1),
+  POSTHOG_PRIVACY_MODE: booleanEnvSchema,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

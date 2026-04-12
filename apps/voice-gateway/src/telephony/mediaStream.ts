@@ -15,14 +15,13 @@ import {
 } from "../convex/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
-  addActiveCalls,
   recordMediaStreamDisconnect,
   recordOpenAiRealtimeError,
   recordOpenAiTurnLatency,
   recordSnapshotCacheHit,
   recordSnapshotCacheMiss,
   recordTwilioInvalidSignature,
-} from "../observability/otel";
+} from "../observability/posthog";
 import {
   captureAiGeneration,
   captureAiSpan,
@@ -80,6 +79,8 @@ type OpenAiRealtimeMessage = {
   delta?: string;
   transcript?: string;
   text?: string;
+  usage?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
   name?: string;
   call_id?: string;
   arguments?: string;
@@ -98,6 +99,8 @@ type OpenAiRealtimeMessage = {
     name?: string;
     call_id?: string;
     arguments?: string;
+    usage?: Record<string, unknown>;
+    metadata?: Record<string, unknown> | null;
     content?: Array<{
       type?: string;
       transcript?: string;
@@ -108,7 +111,8 @@ type OpenAiRealtimeMessage = {
     id?: string;
     status?: string;
     conversation_id?: string | null;
-    metadata?: Record<string, string | null> | null;
+    metadata?: Record<string, string | number | boolean | null> | null;
+    usage?: Record<string, unknown>;
     output?: Array<{
       type?: string;
       content?: Array<{
@@ -162,8 +166,361 @@ type ActiveVoiceSession = {
   pendingTasks: Set<Promise<unknown>>;
   aiTraceId: string;
   assistantResponseRequestedAtMs: number | null;
+  assistantFirstOutputAtMs: number | null;
   activeCallCounted: boolean;
 };
+
+type RealtimeUsageMetrics = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  textInputTokens?: number;
+  audioInputTokens?: number;
+  cachedInputTokens?: number;
+  cachedTextInputTokens?: number;
+  cachedAudioInputTokens?: number;
+  textOutputTokens?: number;
+  audioOutputTokens?: number;
+  reasoningTokens?: number;
+  totalCostUsd?: number;
+};
+
+type RealtimePricingConfig = {
+  inputTokenPriceUsd?: number;
+  outputTokenPriceUsd?: number;
+  textInputTokenPriceUsd?: number;
+  audioInputTokenPriceUsd?: number;
+  textOutputTokenPriceUsd?: number;
+  audioOutputTokenPriceUsd?: number;
+  cachedInputTokenPriceUsd?: number;
+};
+
+function asUnknownRecord(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function readNumberValue(
+  source: Record<string, unknown> | undefined,
+  keys: string[],
+): number | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function extractRealtimeUsageMetrics(
+  response: OpenAiRealtimeMessage["response"] | undefined,
+): RealtimeUsageMetrics {
+  const usage = asUnknownRecord(response?.usage);
+  const metadata = asUnknownRecord(response?.metadata);
+  return extractUsageMetrics(usage, metadata);
+}
+
+function extractTranscriptionUsageMetrics(
+  payload: OpenAiRealtimeMessage,
+): RealtimeUsageMetrics {
+  const usage = asUnknownRecord(payload.usage ?? payload.item?.usage);
+  const metadata = asUnknownRecord(payload.metadata ?? payload.item?.metadata);
+  return extractUsageMetrics(usage, metadata);
+}
+
+function extractUsageMetrics(
+  usage: Record<string, unknown> | undefined,
+  metadata: Record<string, unknown> | undefined,
+): RealtimeUsageMetrics {
+  const inputTokenDetails = asUnknownRecord(
+    usage?.input_token_details ?? usage?.inputTokenDetails,
+  );
+  const outputTokenDetails = asUnknownRecord(
+    usage?.output_token_details ?? usage?.outputTokenDetails,
+  );
+  const cachedTokenDetails = asUnknownRecord(
+    inputTokenDetails?.cached_tokens_details ?? inputTokenDetails?.cachedTokensDetails,
+  );
+
+  const inputTokens = readNumberValue(usage, ["input_tokens", "inputTokens"]);
+  const outputTokens = readNumberValue(usage, ["output_tokens", "outputTokens"]);
+  const totalTokens = readNumberValue(usage, ["total_tokens", "totalTokens"]);
+  const textInputTokens = readNumberValue(inputTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const audioInputTokens = readNumberValue(inputTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
+  ]);
+  const cachedInputTokens = readNumberValue(inputTokenDetails, [
+    "cached_tokens",
+    "cachedTokens",
+    "cache_read_tokens",
+    "cacheReadTokens",
+  ]);
+  const cachedTextInputTokens = readNumberValue(cachedTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const cachedAudioInputTokens = readNumberValue(cachedTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
+  ]);
+  const textOutputTokens = readNumberValue(outputTokenDetails, [
+    "text_tokens",
+    "textTokens",
+  ]);
+  const audioOutputTokens = readNumberValue(outputTokenDetails, [
+    "audio_tokens",
+    "audioTokens",
+  ]);
+  const reasoningTokens = readNumberValue(outputTokenDetails, [
+    "reasoning_tokens",
+    "reasoningTokens",
+  ]);
+  const totalCostUsd =
+    readNumberValue(usage, ["total_cost_usd", "totalCostUsd"]) ??
+    readNumberValue(metadata, ["total_cost_usd", "totalCostUsd"]);
+
+  return {
+    ...(inputTokens !== undefined ? { inputTokens } : {}),
+    ...(outputTokens !== undefined ? { outputTokens } : {}),
+    ...(totalTokens !== undefined ? { totalTokens } : {}),
+    ...(textInputTokens !== undefined ? { textInputTokens } : {}),
+    ...(audioInputTokens !== undefined ? { audioInputTokens } : {}),
+    ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
+    ...(cachedTextInputTokens !== undefined ? { cachedTextInputTokens } : {}),
+    ...(cachedAudioInputTokens !== undefined ? { cachedAudioInputTokens } : {}),
+    ...(textOutputTokens !== undefined ? { textOutputTokens } : {}),
+    ...(audioOutputTokens !== undefined ? { audioOutputTokens } : {}),
+    ...(reasoningTokens !== undefined ? { reasoningTokens } : {}),
+    ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+  };
+}
+
+function getRealtimePricingConfig(
+  env: Pick<
+    ReturnType<typeof loadVoiceGatewayEnv>,
+    | "OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD"
+    | "OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD"
+  >,
+): RealtimePricingConfig {
+  return {
+    ...(env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { inputTokenPriceUsd: env.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { outputTokenPriceUsd: env.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { textInputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioInputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { textOutputTokenPriceUsd: env.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioOutputTokenPriceUsd: env.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { cachedInputTokenPriceUsd: env.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD }
+      : {}),
+  };
+}
+
+function getTranscriptionPricingConfig(
+  env: Pick<
+    ReturnType<typeof loadVoiceGatewayEnv>,
+    | "OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD"
+    | "OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD"
+  >,
+): RealtimePricingConfig {
+  return {
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { inputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { textInputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioInputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { outputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { textOutputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+    ...(env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD !== undefined
+      ? { audioOutputTokenPriceUsd: env.OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD }
+      : {}),
+  };
+}
+
+function priceBucket(
+  tokenCount: number | undefined,
+  tokenPriceUsd: number | undefined,
+): number | undefined {
+  if (tokenCount === undefined || tokenCount === 0) {
+    return 0;
+  }
+
+  if (tokenPriceUsd === undefined) {
+    return undefined;
+  }
+
+  return tokenCount * tokenPriceUsd;
+}
+
+export function estimateRealtimeTotalCostUsd(
+  metrics: RealtimeUsageMetrics,
+  pricing: RealtimePricingConfig,
+): number | undefined {
+  if (metrics.totalCostUsd !== undefined) {
+    return metrics.totalCostUsd;
+  }
+
+  const hasDetailedInputBreakdown =
+    metrics.textInputTokens !== undefined || metrics.audioInputTokens !== undefined;
+  const hasDetailedOutputBreakdown =
+    metrics.textOutputTokens !== undefined || metrics.audioOutputTokens !== undefined;
+  const hasDetailedCachedBreakdown =
+    metrics.cachedInputTokens === undefined ||
+    metrics.cachedTextInputTokens !== undefined ||
+    metrics.cachedAudioInputTokens !== undefined;
+
+  if (hasDetailedInputBreakdown && !hasDetailedCachedBreakdown) {
+    return undefined;
+  }
+
+  if ((hasDetailedInputBreakdown && hasDetailedCachedBreakdown) || hasDetailedOutputBreakdown) {
+    const cachedTextInputTokens = metrics.cachedTextInputTokens ?? 0;
+    const cachedAudioInputTokens = metrics.cachedAudioInputTokens ?? 0;
+    const uncachedTextInputTokens =
+      metrics.textInputTokens !== undefined
+        ? Math.max(0, metrics.textInputTokens - cachedTextInputTokens)
+        : undefined;
+    const uncachedAudioInputTokens =
+      metrics.audioInputTokens !== undefined
+        ? Math.max(0, metrics.audioInputTokens - cachedAudioInputTokens)
+        : undefined;
+    const remainingCachedInputTokens =
+      metrics.cachedInputTokens !== undefined
+        ? Math.max(
+            0,
+            metrics.cachedInputTokens -
+              cachedTextInputTokens -
+              cachedAudioInputTokens,
+          )
+        : undefined;
+
+    const bucketCosts = [
+      priceBucket(
+        uncachedTextInputTokens,
+        pricing.textInputTokenPriceUsd ?? pricing.inputTokenPriceUsd,
+      ),
+      priceBucket(
+        uncachedAudioInputTokens,
+        pricing.audioInputTokenPriceUsd,
+      ),
+      priceBucket(
+        cachedTextInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        cachedAudioInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        remainingCachedInputTokens,
+        pricing.cachedInputTokenPriceUsd,
+      ),
+      priceBucket(
+        metrics.textOutputTokens,
+        pricing.textOutputTokenPriceUsd ?? pricing.outputTokenPriceUsd,
+      ),
+      priceBucket(
+        metrics.audioOutputTokens,
+        pricing.audioOutputTokenPriceUsd,
+      ),
+    ];
+
+    return bucketCosts.every((value) => value !== undefined)
+      ? bucketCosts.reduce((sum, value) => sum + (value ?? 0), 0)
+      : undefined;
+  }
+
+  const nonCachedInputTokens =
+    metrics.inputTokens !== undefined
+      ? Math.max(0, metrics.inputTokens - (metrics.cachedInputTokens ?? 0))
+      : undefined;
+  const nonCachedInputCostUsd =
+    nonCachedInputTokens !== undefined && pricing.inputTokenPriceUsd !== undefined
+      ? nonCachedInputTokens * pricing.inputTokenPriceUsd
+      : undefined;
+  const cachedInputCostUsd =
+    metrics.cachedInputTokens !== undefined &&
+    pricing.cachedInputTokenPriceUsd !== undefined
+      ? metrics.cachedInputTokens * pricing.cachedInputTokenPriceUsd
+      : undefined;
+  const outputCostUsd =
+    metrics.outputTokens !== undefined && pricing.outputTokenPriceUsd !== undefined
+      ? metrics.outputTokens * pricing.outputTokenPriceUsd
+      : undefined;
+
+  const totalCostUsd =
+    (nonCachedInputCostUsd ?? 0) +
+    (cachedInputCostUsd ?? 0) +
+    (outputCostUsd ?? 0);
+
+  return nonCachedInputCostUsd !== undefined ||
+    cachedInputCostUsd !== undefined ||
+    outputCostUsd !== undefined
+    ? totalCostUsd
+    : undefined;
+}
+
+export function getRealtimeGenerationOutcome(
+  status: string | undefined,
+): {
+  isError: boolean;
+  error?: string;
+} {
+  if (!status || status === "completed") {
+    return {
+      isError: false,
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      isError: false,
+      error: status,
+    };
+  }
+
+  return {
+    isError: true,
+    error: status,
+  };
+}
 
 type MediaStreamRequestContext = {
   url: string;
@@ -481,10 +838,6 @@ async function finalizeCall(
   }
   session.finalized = true;
   if (session.activeCallCounted) {
-    addActiveCalls(-1, {
-      ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-      ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
-    });
     session.activeCallCounted = false;
   }
 
@@ -805,6 +1158,7 @@ async function configureOpenAiSession(
   session.pendingInboundAudio = [];
 
   session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
   postRealtimeEvent(openAiSocket, {
     type: "response.create",
     response: {
@@ -921,6 +1275,7 @@ async function handleToolCall(
       },
     });
     session.assistantResponseRequestedAtMs = Date.now();
+    session.assistantFirstOutputAtMs = null;
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
     });
@@ -968,6 +1323,7 @@ async function handleToolCall(
       },
     });
     session.assistantResponseRequestedAtMs = Date.now();
+    session.assistantFirstOutputAtMs = null;
     postRealtimeEvent(openAiSocket, {
       type: "response.create",
       response: {
@@ -1022,6 +1378,13 @@ function handleOpenAiMessage(
   switch (payload.type) {
     case "response.audio.delta":
     case "response.output_audio.delta": {
+      if (
+        session.assistantResponseRequestedAtMs !== null &&
+        session.assistantFirstOutputAtMs === null
+      ) {
+        session.assistantFirstOutputAtMs = Date.now();
+      }
+
       if (payload.delta && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
         if (
           payload.response_id &&
@@ -1054,6 +1417,63 @@ function handleOpenAiMessage(
       return;
     }
     case "conversation.item.input_audio_transcription.completed": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const usageMetrics = extractTranscriptionUsageMetrics(payload);
+      const totalCostUsd = estimateRealtimeTotalCostUsd(
+        usageMetrics,
+        getTranscriptionPricingConfig(runtimeConfig),
+      );
+
+      if (session.businessId) {
+        captureAiGeneration({
+          businessId: session.businessId,
+          traceId: session.aiTraceId,
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+          model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+          provider: "openai",
+          ...(usageMetrics.inputTokens !== undefined
+            ? { inputTokens: usageMetrics.inputTokens }
+            : {}),
+          ...(usageMetrics.outputTokens !== undefined
+            ? { outputTokens: usageMetrics.outputTokens }
+            : {}),
+          ...(usageMetrics.totalTokens !== undefined
+            ? { totalTokens: usageMetrics.totalTokens }
+            : {}),
+          ...(usageMetrics.textInputTokens !== undefined
+            ? { textInputTokens: usageMetrics.textInputTokens }
+            : {}),
+          ...(usageMetrics.audioInputTokens !== undefined
+            ? { audioInputTokens: usageMetrics.audioInputTokens }
+            : {}),
+          ...(usageMetrics.cachedInputTokens !== undefined
+            ? { cachedInputTokens: usageMetrics.cachedInputTokens }
+            : {}),
+          ...(usageMetrics.cachedTextInputTokens !== undefined
+            ? { cachedTextInputTokens: usageMetrics.cachedTextInputTokens }
+            : {}),
+          ...(usageMetrics.cachedAudioInputTokens !== undefined
+            ? { cachedAudioInputTokens: usageMetrics.cachedAudioInputTokens }
+            : {}),
+          ...(usageMetrics.textOutputTokens !== undefined
+            ? { textOutputTokens: usageMetrics.textOutputTokens }
+            : {}),
+          ...(usageMetrics.audioOutputTokens !== undefined
+            ? { audioOutputTokens: usageMetrics.audioOutputTokens }
+            : {}),
+          ...(usageMetrics.reasoningTokens !== undefined
+            ? { reasoningTokens: usageMetrics.reasoningTokens }
+            : {}),
+          ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+          isStreaming: false,
+          properties: {
+            generationKind: "input_audio_transcription",
+            channel: "voice",
+          },
+        });
+      }
+
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -1096,18 +1516,33 @@ function handleOpenAiMessage(
       return;
     }
     case "response.done": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const completedAtMs = Date.now();
       const latencyMs =
         session.assistantResponseRequestedAtMs !== null
-          ? Date.now() - session.assistantResponseRequestedAtMs
+          ? completedAtMs - session.assistantResponseRequestedAtMs
           : undefined;
+      const ttftMs =
+        session.assistantResponseRequestedAtMs !== null &&
+        session.assistantFirstOutputAtMs !== null
+          ? session.assistantFirstOutputAtMs - session.assistantResponseRequestedAtMs
+          : undefined;
+      const usageMetrics = extractRealtimeUsageMetrics(payload.response);
 
       if (latencyMs !== undefined) {
         recordOpenAiTurnLatency(latencyMs, {
           ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
           ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
           "ai_receptionist.provider": "openai",
+          "ai_receptionist.model": runtimeConfig.OPENAI_REALTIME_MODEL,
         });
       }
+
+      const totalCostUsd = estimateRealtimeTotalCostUsd(
+        usageMetrics,
+        getRealtimePricingConfig(runtimeConfig),
+      );
+      const generationOutcome = getRealtimeGenerationOutcome(payload.response?.status);
 
       if (session.businessId) {
         captureAiGeneration({
@@ -1115,19 +1550,52 @@ function handleOpenAiMessage(
           traceId: session.aiTraceId,
           ...(session.callId ? { callId: session.callId } : {}),
           ...(session.conversationId ? { conversationId: session.conversationId } : {}),
-          model: loadVoiceGatewayEnv(process.env).OPENAI_REALTIME_MODEL,
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
           provider: "openai",
           ...(latencyMs !== undefined ? { latencyMs } : {}),
-          isError:
-            payload.response?.status !== undefined &&
-            payload.response.status !== "completed",
-          ...(payload.response?.status && payload.response.status !== "completed"
-            ? { error: payload.response.status }
+          ...(ttftMs !== undefined ? { ttftMs } : {}),
+          ...(usageMetrics.inputTokens !== undefined
+            ? { inputTokens: usageMetrics.inputTokens }
             : {}),
+          ...(usageMetrics.outputTokens !== undefined
+            ? { outputTokens: usageMetrics.outputTokens }
+            : {}),
+          ...(usageMetrics.totalTokens !== undefined
+            ? { totalTokens: usageMetrics.totalTokens }
+            : {}),
+          ...(usageMetrics.textInputTokens !== undefined
+            ? { textInputTokens: usageMetrics.textInputTokens }
+            : {}),
+          ...(usageMetrics.audioInputTokens !== undefined
+            ? { audioInputTokens: usageMetrics.audioInputTokens }
+            : {}),
+          ...(usageMetrics.cachedInputTokens !== undefined
+            ? { cachedInputTokens: usageMetrics.cachedInputTokens }
+            : {}),
+          ...(usageMetrics.cachedTextInputTokens !== undefined
+            ? { cachedTextInputTokens: usageMetrics.cachedTextInputTokens }
+            : {}),
+          ...(usageMetrics.cachedAudioInputTokens !== undefined
+            ? { cachedAudioInputTokens: usageMetrics.cachedAudioInputTokens }
+            : {}),
+          ...(usageMetrics.textOutputTokens !== undefined
+            ? { textOutputTokens: usageMetrics.textOutputTokens }
+            : {}),
+          ...(usageMetrics.audioOutputTokens !== undefined
+            ? { audioOutputTokens: usageMetrics.audioOutputTokens }
+            : {}),
+          ...(usageMetrics.reasoningTokens !== undefined
+            ? { reasoningTokens: usageMetrics.reasoningTokens }
+            : {}),
+          ...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+          isStreaming: true,
+          isError: generationOutcome.isError,
+          ...(generationOutcome.error ? { error: generationOutcome.error } : {}),
           transferInvoked: Boolean(session.pendingTransferDestination),
         });
       }
       session.assistantResponseRequestedAtMs = null;
+      session.assistantFirstOutputAtMs = null;
 
       if (
         payload.response?.id &&
@@ -1332,6 +1800,7 @@ export async function handleMediaStreamConnection(
     pendingTasks: new Set(),
     aiTraceId: crypto.randomUUID(),
     assistantResponseRequestedAtMs: null,
+    assistantFirstOutputAtMs: null,
     activeCallCounted: false,
   };
 
@@ -1411,9 +1880,6 @@ export async function handleMediaStreamConnection(
     session.snapshot = snapshot;
     await initializeCallRecord(server, session);
     if (!session.activeCallCounted) {
-      addActiveCalls(1, {
-        "ai_receptionist.business_id": session.businessId ?? snapshot.businessId,
-      });
       session.activeCallCounted = true;
     }
 

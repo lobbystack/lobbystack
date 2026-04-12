@@ -17,5 +17,11 @@ crons.interval(
   internal.crons.dispatchDueNotifications,
   {},
 );
+crons.interval(
+  "emit telemetry observability heartbeat",
+  { minutes: 5 },
+  internal.telemetry.posthog.emitObservabilityHeartbeat,
+  {},
+);
 
 export default crons;

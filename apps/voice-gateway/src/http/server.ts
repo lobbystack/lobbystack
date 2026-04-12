@@ -8,8 +8,10 @@ import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
-import { recordTwilioInvalidSignature } from "../observability/otel";
-import { capturePostHogException } from "../observability/posthog";
+import {
+  capturePostHogException,
+  recordTwilioInvalidSignature,
+} from "../observability/posthog";
 import { createSnapshotCache } from "../sessions/snapshotCache";
 
 export function createServer(): ReturnType<typeof Fastify> {

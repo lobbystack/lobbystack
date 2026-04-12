@@ -2,11 +2,6 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 
-import {
-  shutdownObservability,
-  startObservability,
-} from "./observability/otel";
-
 for (const envPath of [
   resolve(process.cwd(), "../../.env"),
   resolve(process.cwd(), "../../.env.local"),
@@ -19,21 +14,33 @@ for (const envPath of [
 }
 
 async function main(): Promise<void> {
-  await startObservability();
-  const [{ createServer }, { capturePostHogException, shutdownPostHog }] =
-    await Promise.all([
-      import("./http/server"),
-      import("./observability/posthog"),
-    ]);
+  const [
+    { createServer },
+    {
+      capturePostHogException,
+      recordVoiceHeartbeat,
+      shutdownPostHog,
+      startPostHogObservability,
+    },
+  ] = await Promise.all([import("./http/server"), import("./observability/posthog")]);
+
+  await startPostHogObservability();
 
   const server = createServer();
   const port = Number(process.env.PORT ?? 3001);
+  const startedAtMs = Date.now();
+  const heartbeatInterval = setInterval(() => {
+    recordVoiceHeartbeat({
+      uptimeMs: Date.now() - startedAtMs,
+    });
+  }, 60_000);
+  heartbeatInterval.unref();
 
   const shutdown = async () => {
+    clearInterval(heartbeatInterval);
     await Promise.allSettled([
       server.close(),
       shutdownPostHog(),
-      shutdownObservability(),
     ]);
   };
 
@@ -62,6 +69,7 @@ async function main(): Promise<void> {
 void main().catch(async (error: unknown) => {
   const unknownError = error instanceof Error ? error : new Error(String(error));
   console.error(unknownError);
-  await shutdownObservability().catch(() => undefined);
+  const { shutdownPostHog } = await import("./observability/posthog");
+  await shutdownPostHog().catch(() => undefined);
   process.exitCode = 1;
 });

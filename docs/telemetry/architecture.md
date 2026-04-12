@@ -2,16 +2,15 @@
 
 ## Overview
 
-This repository uses a two-destination telemetry architecture:
+This repository now uses a PostHog-first telemetry architecture:
 
-- `PostHog` for operator product analytics and AI trace analytics
-- `OpenTelemetry -> Grafana Cloud` for backend traces, metrics, and logs from the voice gateway
+- `PostHog` for operator product analytics, runtime health events, PostHog Logs, AI trace analytics, and error tracking
 
-The split is intentional:
+The split of responsibilities stays the same:
 
 - `apps/web` owns operator intent and product workflow events
-- `convex` owns authoritative business outcome events
-- `apps/voice-gateway` owns runtime observability and redacted AI trace analytics
+- `convex` owns authoritative business outcome events and telemetry delivery health
+- `apps/voice-gateway` owns runtime observability, PostHog Logs emission, and redacted AI trace analytics
 
 ## Privacy rules
 
@@ -28,7 +27,24 @@ Redaction is enforced in shared telemetry helpers for:
 
 - PostHog event properties
 - AI trace properties
-- OpenTelemetry attributes
+- PostHog log attributes
+
+Server-side LLM analytics also run with `POSTHOG_PRIVACY_MODE=true` by default. In this repo that means we intentionally keep:
+
+- model and provider
+- trace and session correlation IDs
+- latency and time-to-first-token
+- token counts and cost metadata when available
+- tool names and safe workflow outcome flags
+
+But we do not send:
+
+- `$ai_input`
+- `$ai_output_choices`
+- transcript text
+- prompt text
+- assistant text
+- tool inputs or tool outputs
 
 Audit data remains first-party only in `convex.audit_logs`.
 
@@ -38,6 +54,8 @@ Audit data remains first-party only in `convex.audit_logs`.
 
 - operator/browser analytics use `distinct_id = user:{userId}`
 - server-side business analytics use `distinct_id = system:business:{businessId}`
+- system-wide Convex telemetry uses `distinct_id = system:convex:telemetry`
+- system-wide voice gateway telemetry uses `distinct_id = system:voice-gateway`
 - PostHog group key uses `business:{businessId}`
 - customers are never modeled as PostHog persons
 
@@ -56,20 +74,14 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
 Operator actions are captured from feature entry points such as auth, onboarding, calendar setup, knowledge uploads, and follow-up completion.
 
-This means the app now emits both:
+This means the app emits both:
 
 - PostHog-native `$pageview` and `$pageleave` events for the built-in Web Analytics product
 - custom `web.page.*` events for product analytics dashboards
 
-Browser events automatically include:
+The browser also exposes a `captureAnalyticsException(...)` helper for explicit technical failures in high-signal flows such as calendar connection and knowledge document upload. This remains reserved for unexpected implementation or provider errors, not expected validation or business-rule failures.
 
-- `deploymentMode`
-- `pathname` for `web.*` events unless a more specific path is already set
-- `$groups.business` when a `businessId` is present
-
-The browser also exposes a `captureAnalyticsException(...)` helper for explicit technical failures in high-signal flows such as calendar connection or knowledge document upload. This is reserved for unexpected implementation or provider errors, not for expected validation or business-rule failures.
-
-Production browser deploys now follow PostHog's required source map flow:
+Production browser deploys continue to follow PostHog's source map flow:
 
 - `vite build` emits source maps
 - `apps/web/scripts/upload-posthog-sourcemaps.mjs` runs `posthog-cli sourcemap inject`
@@ -84,8 +96,6 @@ Browser analytics should use PostHog's managed reverse proxy directly:
 - browser `ui_host = https://us.posthog.com`
 - the old worker proxy path `/ingest/posthog` is treated as a legacy value and mapped to `https://t.nontia.com` in the web client for a safe rollout
 
-This keeps session replay support intact while reducing Safari and ad-blocker drop-off without requiring a custom Worker relay.
-
 ### `convex`
 
 Convex writes PostHog-bound events to `telemetry_outbox` and flushes them through `convex/telemetry/posthog.ts`.
@@ -95,89 +105,82 @@ Key properties of the outbox:
 - non-blocking delivery from business logic
 - retry with backoff
 - no direct vendor calls from mutations
-- disabled automatically outside cloud mode unless telemetry env vars are set
+- disabled automatically outside cloud mode unless PostHog env vars are set
 
-### Domain events currently emitted
+Convex also emits operational telemetry through the same outbox for:
 
-- `voice.call_started`
-- `voice.call_completed`
-- `voice.transfer_state_changed`
-- `voice.transfer_requested`
-- `voice.transfer_completed`
-- `sms.inbound_received`
-- `sms.reply_generated`
-- `sms.delivery_accepted`
-- `sms.delivery_failed`
-- `sms.automation_paused`
-- `appointment.booked`
-- `appointment.booking_failed`
-- `appointment.confirmation_notification_failed`
-- `integration.calendar_connected`
-- `integration.calendar_sync_failed`
-- `knowledge.document_indexed`
-- `knowledge.search_executed`
-- `business.snapshot_refreshed`
-- `workflow.started`
-- `workflow.failed`
+- `ops.convex.heartbeat`
+- `ops.convex.outbox_backlog_sample`
+- `ops.convex.outbox_flush_failed`
 
-## OpenTelemetry
+The heartbeat cron samples outbox backlog and retry state so PostHog dashboards and alerts can track delivery health without a second observability backend.
 
-`apps/voice-gateway` exports OpenTelemetry data to OTLP using `apps/voice-gateway/src/observability/otel.ts`.
+### `apps/voice-gateway`
 
-Current service resource attributes:
+The voice gateway uses PostHog for three telemetry paths:
 
-- `service.name = ai-receptionist-voice-gateway`
-- `service.namespace = ai-receptionist`
-- `deployment.environment = DEPLOYMENT_MODE`
+- AI traces in `apps/voice-gateway/src/observability/posthog.ts`
+- runtime exceptions through PostHog Error Tracking
+- operational logs through PostHog Logs OTLP ingestion
 
-### Gateway instrumentation
+The gateway emits operational PostHog events for:
 
-The voice gateway currently emits:
+- `ops.voice.heartbeat`
+- `ops.voice.invalid_signature`
+- `ops.voice.media_disconnect`
+- `ops.voice.snapshot_cache_hit`
+- `ops.voice.snapshot_cache_miss`
+- `ops.voice.openai_realtime_error`
+- `ops.voice.turn_completed`
+- `ops.voice.turn_slow`
+- `ops.voice.tool_completed`
+- `ops.voice.tool_failed`
+- `ops.voice.recording_upload_failed`
 
-- auto-instrumented HTTP/runtime spans through the Node SDK
-- manual spans around Convex runtime calls and tool execution
-- metrics for:
-  - active calls
-  - invalid Twilio signatures
-  - media stream disconnects
-  - snapshot cache hits and misses
-  - OpenAI Realtime errors
-  - assistant turn latency
-  - tool execution latency and failures
-  - recording upload failures
+These events intentionally replace the previous runtime metrics path. Alerting is now based on event trends, thresholded slow-event volume, and heartbeat absence instead of external percentiles.
 
-Structured gateway logs should continue to include operational identifiers like:
+Structured gateway logs sent to PostHog Logs should continue to include operational identifiers like:
 
 - `businessId`
 - `callId`
 - `conversationId`
 - `provider`
 - `toolName`
+- `traceId`
 
 ## AI traces in PostHog
 
-The live voice runtime emits redacted PostHog AI analytics events through `apps/voice-gateway/src/observability/posthog.ts`.
+The repo now emits redacted PostHog AI analytics across both runtime surfaces:
+
+- `apps/voice-gateway/src/observability/posthog.ts` for OpenAI Realtime voice
+- wrapped Gemini non-realtime model calls in `convex/lib/providers/nonRealtimeText.ts`
 
 Current event model:
 
-- `$ai_trace` when a live OpenAI session is configured
-- `$ai_generation` when a response turn completes
-- `$ai_span` for tool call execution
+- `$ai_trace` when a live OpenAI session or non-realtime Gemini generation starts
+- `$ai_generation` when a response turn or non-realtime generation completes
+- `$ai_span` for live voice tool call execution
+- `ai.embedding.completed` / `ai.embedding.failed` as metadata-only embedding telemetry for knowledge indexing and retrieval
 
 Only redacted metadata is sent, such as:
 
 - model
 - provider
 - latency
+- time to first token
+- input, output, cached, reasoning, and total token counts when available
+- total cost in USD when available
 - error status
 - tool names
 - transfer invocation state
 
-### Error tracking
+The non-realtime Gemini wrapper uses the shared provider layer in `convex/lib/providers/nonRealtimeText.ts`. It never forwards prompt content or model output to PostHog, and only captures metadata when callers attach safe telemetry context.
+
+## Error tracking
 
 PostHog Error Tracking is enabled in both runtimes:
 
-- `apps/web` captures unhandled browser errors and unhandled promise rejections automatically, plus a few explicit technical exceptions through `captureAnalyticsException(...)`
+- `apps/web` captures unhandled browser errors and unhandled promise rejections automatically, plus explicit technical exceptions through `captureAnalyticsException(...)`
 - `apps/voice-gateway` enables Node exception autocapture and uses `capturePostHogException(...)` for startup, request, and selected provider/runtime recovery failures
 
 Explicit exception capture should remain limited to technical failures where stack traces and runtime context materially help debugging. Business outcome failures such as `appointment.booking_failed` or `workflow.failed` should continue to be tracked as product/domain events instead of exceptions.
@@ -199,17 +202,15 @@ Explicit exception capture should remain limited to technical failures where sta
 
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
-- `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `OTEL_EXPORTER_OTLP_HEADERS`
-- `OTEL_TRACE_SAMPLE_RATIO`
+- `POSTHOG_PRIVACY_MODE`
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
 
-Readable browser stack traces in hosted PostHog now depend on the deploy path continuing to run `pnpm posthog:sourcemaps` before Cloudflare publish. If that step is skipped, browser errors will regress back to minified stack traces even though exception capture itself still works.
+Readable browser stack traces in hosted PostHog still depend on the deploy path continuing to run `pnpm posthog:sourcemaps` before Cloudflare publish. If that step is skipped, browser errors regress back to minified stack traces even though exception capture itself still works.
 
-## Product analytics phase 2 assets
+## Product and operations assets
 
-PostHog now includes these KPI-era assets:
+PostHog includes these KPI-era assets:
 
 - action: `Meaningful First Usage`
 - dashboards:
@@ -219,4 +220,9 @@ PostHog now includes these KPI-era assets:
   - `AI Receptionist - Voice & Booking Outcomes`
   - `AI Receptionist - Analytics Health`
 
-The original `AI Receptionist Telemetry v1` dashboard remains available as a raw telemetry surface while the KPI dashboards become the operational default.
+This phase adds PostHog-first runtime assets:
+
+- `AI Receptionist - Runtime Health`
+- `AI Receptionist - Voice Gateway Operations`
+- `AI Receptionist - AI Runtime`
+- `AI Receptionist - Telemetry Delivery Health`

@@ -8,11 +8,13 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 
 const {
+  fetchTwilioMessageMock,
   generateSmsReplyMock,
   retrierRunMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
 } = vi.hoisted(() => ({
+  fetchTwilioMessageMock: vi.fn(),
   generateSmsReplyMock: vi.fn(),
   retrierRunMock: vi.fn(),
   sendTwilioMessageMock: vi.fn(),
@@ -20,11 +22,17 @@ const {
 }));
 
 vi.mock("twilio", () => {
+  const messagesResource = Object.assign(
+    vi.fn((sid?: string) => ({
+      fetch: () => fetchTwilioMessageMock(sid),
+    })),
+    {
+      create: sendTwilioMessageMock,
+    },
+  );
   const twilioFactory = Object.assign(
     vi.fn(() => ({
-      messages: {
-        create: sendTwilioMessageMock,
-      },
+      messages: messagesResource,
     })),
     {
       validateRequest: validateTwilioRequestMock,
@@ -50,6 +58,7 @@ vi.mock("../ai/agents/runtime.ts", async () => {
         businessId: v.id("businesses"),
         conversationId: v.id("conversations"),
         prompt: v.string(),
+        messageId: v.optional(v.id("messages")),
       },
       handler: async (_ctx, args) => {
         return await generateSmsReplyMock(args);
@@ -167,6 +176,14 @@ beforeEach(() => {
   generateSmsReplyMock.mockImplementation(async ({ prompt }: { prompt: string }) => {
     return `Auto-reply: ${prompt}`;
   });
+  fetchTwilioMessageMock.mockImplementation(async (sid?: string) => ({
+    sid: sid ?? "SM-fetched",
+    status: "delivered",
+    price: "0.0075",
+    priceUnit: "usd",
+    numSegments: "1",
+    dateUpdated: new Date("2026-04-09T15:15:00.000Z"),
+  }));
   retrierRunMock.mockResolvedValue(null);
 });
 
@@ -253,6 +270,11 @@ describe("Twilio SMS delivery flow", () => {
     expect(duplicateResponse.status).toBe(200);
     expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
     expect(generateSmsReplyMock).toHaveBeenCalledTimes(1);
+    expect(generateSmsReplyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: expect.any(String),
+      }),
+    );
     expect(validateTwilioRequestMock).toHaveBeenCalledTimes(2);
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550199",
@@ -901,8 +923,124 @@ describe("Twilio SMS delivery flow", () => {
       expect(message).toMatchObject({
         status: "delivered",
         providerStatus: "delivered",
+        providerPrice: 0.0075,
+        providerPriceUnit: "usd",
+        providerCostUsd: 0.0075,
+        providerNumSegments: 1,
         providerRawDlrDoneDate: "2603111530",
       });
+    });
+  });
+
+  it("backfills Twilio provider cost when pricing becomes available after delivery", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-status-delayed-pricing",
+      status: "queued",
+    });
+    fetchTwilioMessageMock.mockResolvedValueOnce({
+      sid: "SM-status-delayed-pricing",
+      status: "delivered",
+      price: "-0.01660",
+      priceUnit: "USD",
+      numSegments: "2",
+      dateUpdated: new Date("2026-04-09T15:45:47.943Z"),
+    });
+
+    const smsNumber = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-status-delayed-pricing",
+        name: "Twilio Status Delayed Pricing",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550108",
+      });
+      return "+14165550108";
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-status-delayed-pricing",
+      From: "+14165550188",
+      To: smsNumber,
+      Body: "Delayed pricing",
+    });
+
+    await t.mutation(
+      internal.integrations.twilioMessageStatus.reconcileProviderStatus,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerStatus: "delivered",
+        providerUpdatedAt: "2026-04-09T15:40:47.943Z",
+      },
+    );
+
+    await t.mutation(
+      internal.integrations.twilioMessageStatus.recordProviderPricing,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerUpdatedAt: "2026-04-09T15:40:47.943Z",
+        providerNumSegments: 2,
+      },
+    );
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_provider_message_sid", (q) =>
+          q.eq("providerMessageSid", "SM-status-delayed-pricing"),
+        )
+        .unique();
+
+      expect(message).toMatchObject({
+        status: "delivered",
+        providerStatus: "delivered",
+        providerNumSegments: 2,
+      });
+      expect(message?.providerCostUsd).toBeUndefined();
+    });
+
+    const syncResult = await t.action(
+      internal.integrations.twilioSms.syncMessagePriceFromProvider,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+        providerStatus: "delivered",
+        attempt: 1,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      synced: true,
+      scheduledRetry: false,
+      skipped: false,
+    });
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_provider_message_sid", (q) =>
+          q.eq("providerMessageSid", "SM-status-delayed-pricing"),
+        )
+        .unique();
+
+      expect(message).toMatchObject({
+        providerPrice: -0.0166,
+        providerPriceUnit: "usd",
+        providerCostUsd: 0.0166,
+        providerNumSegments: 2,
+      });
+    });
+
+    const replayResult = await t.mutation(
+      internal.integrations.twilioMessageStatus.replayProviderCostRecorded,
+      {
+        providerMessageSid: "SM-status-delayed-pricing",
+      },
+    );
+
+    expect(replayResult).toEqual({
+      matched: true,
+      enqueued: true,
     });
   });
 

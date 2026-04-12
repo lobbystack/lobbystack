@@ -36,6 +36,7 @@ export const WEB_EVENT_NAMES = [
 export const VOICE_EVENT_NAMES = [
   "voice.call_started",
   "voice.call_completed",
+  "voice.provider_cost_recorded",
   "voice.transfer_state_changed",
   "voice.transfer_requested",
   "voice.transfer_completed",
@@ -48,6 +49,7 @@ export const SMS_EVENT_NAMES = [
   "sms.reply_generated",
   "sms.delivery_accepted",
   "sms.delivery_failed",
+  "sms.provider_cost_recorded",
   "sms.automation_paused",
 ] as const;
 
@@ -73,6 +75,23 @@ export const WORKFLOW_EVENT_NAMES = [
   "workflow.failed",
 ] as const;
 
+export const OPERATIONS_EVENT_NAMES = [
+  "ops.voice.heartbeat",
+  "ops.voice.invalid_signature",
+  "ops.voice.media_disconnect",
+  "ops.voice.snapshot_cache_hit",
+  "ops.voice.snapshot_cache_miss",
+  "ops.voice.openai_realtime_error",
+  "ops.voice.turn_completed",
+  "ops.voice.turn_slow",
+  "ops.voice.tool_completed",
+  "ops.voice.tool_failed",
+  "ops.voice.recording_upload_failed",
+  "ops.convex.heartbeat",
+  "ops.convex.outbox_backlog_sample",
+  "ops.convex.outbox_flush_failed",
+] as const;
+
 export const TELEMETRY_EVENT_NAMES = [
   ...WEB_EVENT_NAMES,
   ...VOICE_EVENT_NAMES,
@@ -81,6 +100,7 @@ export const TELEMETRY_EVENT_NAMES = [
   ...KNOWLEDGE_EVENT_NAMES,
   ...INTEGRATION_EVENT_NAMES,
   ...WORKFLOW_EVENT_NAMES,
+  ...OPERATIONS_EVENT_NAMES,
 ] as const;
 
 export type TelemetryEventName = (typeof TELEMETRY_EVENT_NAMES)[number];
@@ -92,6 +112,53 @@ export type TelemetryValue =
   | { [key: string]: TelemetryValue | undefined };
 
 export type TelemetryProperties = Record<string, TelemetryValue | undefined>;
+
+export type PostHogAiTracePropertiesInput = {
+  traceId: string;
+  model: string;
+  provider: string;
+  callId?: string;
+  conversationId?: string;
+  messageId?: string;
+  sessionId?: string;
+};
+
+export type PostHogAiUsagePropertiesInput = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  textInputTokens?: number;
+  audioInputTokens?: number;
+  cachedInputTokens?: number;
+  cachedTextInputTokens?: number;
+  cachedAudioInputTokens?: number;
+  textOutputTokens?: number;
+  audioOutputTokens?: number;
+  reasoningTokens?: number;
+  totalCostUsd?: number;
+};
+
+export type PostHogAiGenerationPropertiesInput =
+  PostHogAiTracePropertiesInput &
+    PostHogAiUsagePropertiesInput & {
+      latencyMs?: number;
+      ttftMs?: number;
+      isStreaming?: boolean;
+      isError?: boolean;
+      error?: string;
+      toolNames?: string[];
+      properties?: TelemetryProperties;
+    };
+
+export type PostHogAiSpanPropertiesInput = PostHogAiTracePropertiesInput & {
+  spanName: string;
+  inputState?: TelemetryProperties;
+  outputState?: TelemetryProperties;
+  latencyMs?: number;
+  isError?: boolean;
+  error?: string;
+  properties?: TelemetryProperties;
+};
 
 export type TelemetryContext = {
   businessId?: string;
@@ -132,7 +199,10 @@ export type TelemetryRequirementKey =
   | "serviceId"
   | "sourceChannel"
   | "staffId"
-  | "workflowName";
+  | "workflowName"
+  | "latencyBucket"
+  | "toolName"
+  | "backlogBucket";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -238,6 +308,13 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
     "provider",
   ],
+  "voice.provider_cost_recorded": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "channel",
+    "provider",
+  ],
   "voice.transfer_state_changed": [
     "businessId",
     "deploymentMode",
@@ -301,6 +378,14 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "providerStatus",
   ],
+  "sms.provider_cost_recorded": [
+    "businessId",
+    "deploymentMode",
+    "conversationId",
+    "messageId",
+    "channel",
+    "provider",
+  ],
   "sms.automation_paused": [
     "businessId",
     "deploymentMode",
@@ -345,6 +430,49 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "business.snapshot_refreshed": ["businessId", "deploymentMode"],
   "workflow.started": ["businessId", "deploymentMode", "workflowName"],
   "workflow.failed": ["businessId", "deploymentMode", "workflowName"],
+  "ops.voice.heartbeat": ["deploymentMode"],
+  "ops.voice.invalid_signature": ["deploymentMode", "provider"],
+  "ops.voice.media_disconnect": ["deploymentMode", "provider"],
+  "ops.voice.snapshot_cache_hit": ["businessId", "deploymentMode"],
+  "ops.voice.snapshot_cache_miss": ["businessId", "deploymentMode"],
+  "ops.voice.openai_realtime_error": ["deploymentMode", "provider"],
+  "ops.voice.turn_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "latencyBucket",
+  ],
+  "ops.voice.turn_slow": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "latencyBucket",
+  ],
+  "ops.voice.tool_completed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "toolName",
+    "latencyBucket",
+  ],
+  "ops.voice.tool_failed": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "provider",
+    "model",
+    "toolName",
+  ],
+  "ops.voice.recording_upload_failed": ["deploymentMode", "callId"],
+  "ops.convex.heartbeat": ["deploymentMode"],
+  "ops.convex.outbox_backlog_sample": ["deploymentMode", "backlogBucket"],
+  "ops.convex.outbox_flush_failed": ["deploymentMode", "backlogBucket"],
 } satisfies Record<TelemetryEventName, ReadonlyArray<string>>;
 
 export type TelemetryValidationInput = Partial<TelemetryContext> & {
@@ -377,6 +505,9 @@ export type TelemetryFacade = {
 };
 
 const EXACT_REDACTION_KEYS = new Set([
+  "$ai_input",
+  "$ai_output",
+  "$ai_output_choices",
   "body",
   "content",
   "message",
@@ -392,9 +523,21 @@ const EXACT_REDACTION_KEYS = new Set([
   "text",
   "toolArguments",
   "tool_arguments",
+  "toolOutput",
+  "tool_output",
+  "toolResult",
+  "tool_result",
   "transcript",
   "utterance",
   "utterances",
+  "aiinput",
+  "aioutput",
+  "aioutputchoices",
+  "assistantmessage",
+  "assistantresponse",
+  "tooloutput",
+  "toolresult",
+  "usermessage",
 ]);
 
 const PARTIAL_REDACTION_KEYWORDS = [
@@ -407,30 +550,48 @@ const PARTIAL_REDACTION_KEYWORDS = [
   "message",
   "name",
   "note",
+  "outputchoice",
   "phone",
   "prompt",
   "recording",
   "sms",
   "text",
+  "tool_output",
   "token",
   "toolarg",
   "tool_input",
   "transcript",
   "utterance",
+  "assistant",
 ];
 
 const SAFE_KEY_PATTERNS = [
   "cachedtokens",
+  "cachedinputtokens",
+  "charcount",
   "completiontokens",
+  "costusd",
+  "dimension",
+  "embeddingtokens",
+  "entrycount",
+  "inputcharcount",
   "inputtokens",
+  "messagelinkkey",
+  "messagecount",
   "outputtokens",
+  "outputcharcount",
   "prompttokens",
   "reasoningtokens",
+  "spanname",
+  "timetofirsttoken",
   "tokencount",
   "totaltokens",
+  "traceid",
+  "ttft",
   "toolname",
   "providername",
   "modelname",
+  "sessionid",
   "workflowname",
 ];
 
@@ -554,6 +715,122 @@ export function redactAiTraceProperties(
   return sanitizeProperties(properties, { redactPhoneLikeStrings: true });
 }
 
+export function buildPostHogAiTraceProperties(
+  input: PostHogAiTracePropertiesInput,
+): TelemetryProperties {
+  return redactAiTraceProperties({
+    traceId: input.traceId,
+    model: input.model,
+    provider: input.provider,
+    $ai_trace_id: input.traceId,
+    $ai_model: input.model,
+    $ai_provider: input.provider,
+    ...(input.sessionId
+      ? {
+          sessionId: input.sessionId,
+          $ai_session_id: input.sessionId,
+        }
+      : {}),
+    ...(input.callId ? { callId: input.callId } : {}),
+    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    ...(input.messageId
+      ? {
+          messageId: input.messageId,
+          messageLinkKey: input.messageId,
+        }
+      : {}),
+  });
+}
+
+export function buildPostHogAiGenerationProperties(
+  input: PostHogAiGenerationPropertiesInput,
+): TelemetryProperties {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
+  const ttftSeconds = input.ttftMs !== undefined ? input.ttftMs / 1000 : undefined;
+
+  return redactAiTraceProperties({
+    ...buildPostHogAiTraceProperties(input),
+    ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+    ...(input.inputTokens !== undefined
+      ? { $ai_input_tokens: input.inputTokens }
+      : {}),
+    ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+    ...(input.outputTokens !== undefined
+      ? { $ai_output_tokens: input.outputTokens }
+      : {}),
+    ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+    ...(input.totalTokens !== undefined
+      ? { $ai_total_tokens: input.totalTokens }
+      : {}),
+    ...(input.totalCostUsd !== undefined ? { totalCostUsd: input.totalCostUsd } : {}),
+    ...(input.totalCostUsd !== undefined
+      ? { $ai_total_cost_usd: input.totalCostUsd }
+      : {}),
+    ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(input.ttftMs !== undefined ? { ttftMs: input.ttftMs } : {}),
+    ...(ttftSeconds !== undefined
+      ? { $ai_time_to_first_token: ttftSeconds }
+      : {}),
+    ...(input.isStreaming !== undefined ? { isStreaming: input.isStreaming } : {}),
+    ...(input.isStreaming !== undefined ? { $ai_stream: input.isStreaming } : {}),
+    ...(input.isError !== undefined ? { isError: input.isError } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { error: input.error } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...(input.toolNames?.length ? { toolNames: input.toolNames } : {}),
+    ...(input.toolNames?.length ? { $ai_tools_called: input.toolNames } : {}),
+    ...(input.cachedInputTokens !== undefined
+      ? { cachedInputTokens: input.cachedInputTokens }
+      : {}),
+    ...(input.textInputTokens !== undefined
+      ? { textInputTokens: input.textInputTokens }
+      : {}),
+    ...(input.audioInputTokens !== undefined
+      ? { audioInputTokens: input.audioInputTokens }
+      : {}),
+    ...(input.cachedTextInputTokens !== undefined
+      ? { cachedTextInputTokens: input.cachedTextInputTokens }
+      : {}),
+    ...(input.cachedAudioInputTokens !== undefined
+      ? { cachedAudioInputTokens: input.cachedAudioInputTokens }
+      : {}),
+    ...(input.textOutputTokens !== undefined
+      ? { textOutputTokens: input.textOutputTokens }
+      : {}),
+    ...(input.audioOutputTokens !== undefined
+      ? { audioOutputTokens: input.audioOutputTokens }
+      : {}),
+    ...(input.reasoningTokens !== undefined
+      ? { reasoningTokens: input.reasoningTokens }
+      : {}),
+    ...input.properties,
+  });
+}
+
+export function buildPostHogAiSpanProperties(
+  input: PostHogAiSpanPropertiesInput,
+): TelemetryProperties {
+  const latencySeconds =
+    input.latencyMs !== undefined ? input.latencyMs / 1000 : undefined;
+
+  return redactAiTraceProperties({
+    ...buildPostHogAiTraceProperties(input),
+    spanName: input.spanName,
+    $ai_span_name: input.spanName,
+    $ai_input_state: redactAiTraceProperties(input.inputState ?? {}),
+    $ai_output_state: redactAiTraceProperties(input.outputState ?? {}),
+    ...(input.latencyMs !== undefined ? { latencyMs: input.latencyMs } : {}),
+    ...(latencySeconds !== undefined ? { $ai_latency: latencySeconds } : {}),
+    ...(input.isError !== undefined ? { isError: input.isError } : {}),
+    ...(input.isError !== undefined ? { $ai_is_error: input.isError } : {}),
+    ...(input.error ? { error: input.error } : {}),
+    ...(input.error ? { $ai_error: input.error } : {}),
+    ...input.properties,
+  });
+}
+
 export function redactOtelAttributes(
   attributes: Record<string, string | number | boolean | undefined>,
 ): Record<string, string | number | boolean | undefined> {
@@ -581,6 +858,22 @@ export function redactOtelAttributes(
   }
 
   return sanitized;
+}
+
+export function bucketLatencyMs(latencyMs: number): string {
+  if (latencyMs < 500) {
+    return "under_500ms";
+  }
+  if (latencyMs < 1_000) {
+    return "500ms_to_1s";
+  }
+  if (latencyMs < 2_500) {
+    return "1s_to_2_5s";
+  }
+  if (latencyMs < 5_000) {
+    return "2_5s_to_5s";
+  }
+  return "over_5s";
 }
 
 export function getPostHogDistinctIdForOperator(userId: string): string {

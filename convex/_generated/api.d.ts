@@ -75,6 +75,7 @@ import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
 import type * as onboarding_phoneVerification from "../onboarding/phoneVerification.js";
 import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
+import type * as telemetry_ai from "../telemetry/ai.js";
 import type * as telemetry_posthog from "../telemetry/posthog.js";
 import type * as telemetry_shared from "../telemetry/shared.js";
 import type * as users from "../users.js";
@@ -155,6 +156,7 @@ declare const fullApi: ApiFromModules<{
   "onboarding/phoneVerification": typeof onboarding_phoneVerification;
   "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
   "services/localizedNames": typeof services_localizedNames;
+  "telemetry/ai": typeof telemetry_ai;
   "telemetry/posthog": typeof telemetry_posthog;
   "telemetry/shared": typeof telemetry_shared;
   users: typeof users;
