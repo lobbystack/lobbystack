@@ -1,113 +1,80 @@
-# Polar Billing
+# Polar billing setup
 
-This repo uses a hybrid Polar integration:
+This repo uses Polar for hosted cloud billing.
 
-- `@convex-dev/polar` owns product and subscription sync plus webhook registration.
-- App-owned Convex code owns workspace billing identity, usage metering, transaction history, and entitlement enforcement.
+## Products
 
-## Workspace Billing Identity
+Create these Polar products:
 
-- Billing is scoped to a business workspace, not an operator user.
-- Each Polar customer uses `external_id = business:<businessId>`.
-- Checkout and portal access always resolve a customer from that workspace billing key first.
+- `Pro`
+  - recurring monthly product
+  - mapped to `POLAR_PRO_PRODUCT_ID`
+- `AI SMS add-on`
+  - recurring monthly product
+  - mapped to `POLAR_AI_SMS_ADDON_PRODUCT_ID`
+- `AI SMS setup`
+  - one-time product
+  - mapped to `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 
-## Product Shape
+The current hosted pricing model is:
 
-The paid catalog is expected to contain two recurring monthly products:
+- `Free Cloud`
+  - no Polar subscription
+  - `10` voice minutes included
+  - `10` Alert SMS segments included
+  - `2` outbound call attempts included
+  - no AI SMS
+  - no overages
+- `Pro`
+  - `$15/month`
+  - `80` voice minutes included
+  - `50` Alert SMS segments included
+  - `20` outbound call attempts included
+  - overages after the included pool is consumed
+- `AI SMS add-on`
+  - `$5/month`
+  - `$19` one-time setup
+  - `$0.03` per AI SMS segment
 
-- `Starter`
-  - fixed recurring price of `$5.00 USD`
-  - one metered usage price on the `Voice Minutes` meter at `$0.22/min`
-  - one metered usage price on the `SMS Messages` meter at `$0.03/text`
-- `Growth`
-  - fixed recurring price of `$20.00 USD`
-  - one metered usage price on the `Voice Minutes` meter at `$0.18/min`
-  - one metered usage price on the `SMS Messages` meter at `$0.025/text`
+## Metered events
 
-This product shape charges the recurring base fee up front each month and then
-adds voice/SMS overage to the renewal invoice for the completed billing period.
-That keeps checkout closer to Railway-style pricing and avoids exposing an
-artificial cents-based meter to the customer.
-
-The Convex billing wrapper currently expects the product ids in:
-
-- `POLAR_STARTER_PRODUCT_ID`
-- `POLAR_GROWTH_PRODUCT_ID`
-
-## Meter Event Names
-
-The app sends two metered events to Polar:
+The app sends these usage events to Polar:
 
 - `billing.voice_minutes`
-- `billing.sms_segments`
+- `billing.alert_sms_segments`
+- `billing.outbound_call_attempts`
+- `billing.ai_sms_segments`
 
-Create two Polar meters:
+`Alert SMS` and `AI SMS` are intentionally separate:
 
-- `Voice Minutes`
-  - filter: event name equals `billing.voice_minutes`
-  - aggregation: `sum`
-  - aggregation property: `quantity`
-  - unit: `scalar`
-- `SMS Messages`
-  - filter: event name equals `billing.sms_segments`
-- aggregation: `sum`
-- aggregation property: `quantity`
-- unit: `scalar`
+- `Alert SMS` is sent from Noncia's shared platform sender
+- `AI SMS` is sent from the customer's own business number
 
-App-owned billing logic still tracks `voice_seconds` and `sms_segments`
-internally. Before syncing to Polar, Convex converts voice usage into minutes
-for the Polar meter payload and keeps SMS usage in segments.
+## Environment variables
 
-## Required Environment Variables
-
-Set these on the Convex deployment:
+Set these values in Convex and local development when billing is enabled:
 
 - `POLAR_SERVER`
 - `POLAR_ORGANIZATION_TOKEN`
 - `POLAR_WEBHOOK_SECRET`
-- `POLAR_STARTER_PRODUCT_ID`
-- `POLAR_GROWTH_PRODUCT_ID`
+- `POLAR_PRO_PRODUCT_ID`
+- `POLAR_AI_SMS_ADDON_PRODUCT_ID`
+- `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 - `SITE_URL`
 
-`SITE_URL` is used for hosted checkout and the customer portal return URL.
-`POLAR_WEBHOOK_SECRET` must match the webhook endpoint secret from Polar so the
-Convex component can validate incoming webhook signatures.
-If your organization is on `polar.sh` and the dashboard says it is in "test
-mode", keep using `POLAR_SERVER=production`. Only use `POLAR_SERVER=sandbox`
-for the fully separate `sandbox.polar.sh` environment.
+For hosted Alert SMS, also configure:
 
-## Webhook Endpoint
+- `TWILIO_ALERT_SMS_FROM`
 
-The registered Polar webhook route is:
+## Webhook routing
 
-- `https://<your-convex-site>/polar/events`
+Polar routes are registered from [convex/http.ts](/Users/raphael/Coding/ai-receptionist/convex/http.ts) through [convex/billing.ts](/Users/raphael/Coding/ai-receptionist/convex/billing.ts).
 
-Use the default route from the Convex Polar component and subscribe it to:
+Use the Convex HTTP endpoint:
 
-- `product.created`
-- `product.updated`
-- `subscription.created`
-- `subscription.updated`
-- `subscription.active`
-- `subscription.canceled`
-- `subscription.uncanceled`
-- `subscription.revoked`
-- `subscription.past_due`
-- `order.created`
-- `order.paid`
-- `order.refunded`
-- `refund.created`
-- `refund.updated`
+- `/polar/events`
 
-The endpoint secret returned by Polar should be stored in:
+## Notes
 
-- `POLAR_WEBHOOK_SECRET`
-
-## Free Tier Enforcement
-
-The free tier is enforced in app code with monthly UTC buckets:
-
-- `1,800` voice seconds
-- `60` SMS segments
-
-Voice and SMS are blocked only on billable paths. The dashboard and settings remain accessible after the free tier is exhausted.
+- `Self-host` workspaces stay outside hosted billing enforcement.
+- Legacy billing records from earlier pricing models are still accepted by the current schema to keep the dev deployment deployable during migration.

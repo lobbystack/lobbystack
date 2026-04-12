@@ -26,8 +26,8 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
         }
       : location.pathname === "/settings/billing"
         ? {
-            title: t("billing.title"),
-            description: t("billing.description"),
+            title: t("sections.billing"),
+            description: t("layout.billingDescription"),
           }
       : location.pathname === "/settings/integrations"
         ? {

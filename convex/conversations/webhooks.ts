@@ -1,4 +1,3 @@
-import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
@@ -35,10 +34,6 @@ function asConversationId(value: string): Id<"conversations"> {
 
 function asMessageId(value: string): Id<"messages"> {
   return value as Id<"messages">;
-}
-
-function isBillingLimitError(error: unknown, code: string): boolean {
-  return error instanceof Error && error.message === code;
 }
 
 type MessageMediaAttachment = {
@@ -93,6 +88,20 @@ type StoreOutboundMessageArgs = {
   appointmentId?: Id<"appointments">;
   media?: Array<MessageMediaAttachment>;
   aiGenerated?: boolean;
+  senderRole?: "business_ai";
+};
+type ReserveOutboundAiMessageArgs = {
+  businessId: Id<"businesses">;
+  conversationId: Id<"conversations">;
+  channel: string;
+  fromPhoneNumber?: string;
+  senderRole?: "business_ai";
+};
+type FinalizeReservedOutboundMessageArgs = {
+  messageId: Id<"messages">;
+  body: string;
+  appointmentId?: Id<"appointments">;
+  media?: Array<MessageMediaAttachment>;
 };
 type OutboundMessageDeliveryContext = {
   businessId: Id<"businesses">;
@@ -110,7 +119,6 @@ type MarkOutboundMessageAcceptedArgs = {
   messageId: Id<"messages">;
   providerMessageSid: string;
   providerStatus: string;
-  providerNumSegments?: number;
   providerUpdatedAt: string;
 };
 type MarkOutboundMessageSendFailedArgs = {
@@ -484,8 +492,17 @@ export const getOutboundMessageDeliveryContext = internalQuery({
         .collect(),
     ]);
 
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: message.businessId,
+      capability: "ai",
+    });
+
     if (!contact) {
       throw new Error("Contact not found for SMS delivery.");
+    }
+
+    if (!smsPolicy.allowed) {
+      throw new Error("AI SMS is not enabled for this workspace.");
     }
 
     const senderPhoneNumber = selectSmsSenderPhoneNumber(
@@ -650,6 +667,7 @@ export const storeOutboundMessage = internalMutation({
       ),
     ),
     aiGenerated: v.optional(v.boolean()),
+    senderRole: v.optional(v.literal("business_ai")),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
     const messageId = await ctx.db.insert("messages", {
@@ -662,6 +680,7 @@ export const storeOutboundMessage = internalMutation({
       ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       body: args.body,
       status: "queued",
+      ...(args.senderRole !== undefined ? { senderRole: args.senderRole } : {}),
       aiGenerated: args.aiGenerated ?? true,
     });
 
@@ -716,12 +735,146 @@ export const storeOutboundMessage = internalMutation({
   },
 });
 
+export const reserveOutboundAiMessage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    conversationId: v.id("conversations"),
+    channel: v.string(),
+    fromPhoneNumber: v.optional(v.string()),
+    senderRole: v.optional(v.literal("business_ai")),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: ReserveOutboundAiMessageArgs,
+  ): Promise<Id<"messages">> => {
+    return await ctx.db.insert("messages", {
+      businessId: args.businessId,
+      conversationId: args.conversationId,
+      direction: "outbound",
+      channel: args.channel,
+      ...(args.fromPhoneNumber !== undefined ? { fromPhoneNumber: args.fromPhoneNumber } : {}),
+      body: "",
+      status: "draft",
+      senderRole: args.senderRole ?? "business_ai",
+      aiGenerated: true,
+    });
+  },
+});
+
+export const finalizeReservedOutboundMessage = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    body: v.string(),
+    appointmentId: v.optional(v.id("appointments")),
+    media: v.optional(
+      v.array(
+        v.object({
+          url: v.optional(v.string()),
+          storageId: v.optional(v.id("_storage")),
+          fileName: v.optional(v.string()),
+          contentType: v.optional(v.string()),
+          byteLength: v.optional(v.number()),
+          previewUrl: v.optional(v.string()),
+          previewStorageId: v.optional(v.id("_storage")),
+          previewFileName: v.optional(v.string()),
+          previewContentType: v.optional(v.string()),
+          previewByteLength: v.optional(v.number()),
+          deliveryMode: v.optional(v.string()),
+        }),
+      ),
+    ),
+  },
+  handler: async (ctx: MutationCtx, args: FinalizeReservedOutboundMessageArgs) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new Error("Reserved outbound message not found.");
+    }
+
+    if (message.direction !== "outbound") {
+      throw new Error("Only outbound messages can be finalized.");
+    }
+
+    await ctx.db.patch(args.messageId, {
+      body: args.body,
+      status: "queued",
+      ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
+      ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
+    });
+
+    await ensureSessionForStoredMessage(ctx, {
+      businessId: message.businessId,
+      conversationId: message.conversationId,
+      channel: message.channel,
+      messageId: args.messageId,
+    });
+
+    if (
+      args.media?.some(
+        (attachment) =>
+          ((attachment.storageId &&
+            !attachment.url &&
+            attachment.fileName &&
+            attachment.contentType) ||
+            (attachment.previewStorageId &&
+              !attachment.previewUrl &&
+              attachment.previewFileName &&
+              attachment.previewContentType)),
+      )
+    ) {
+      await ctx.runMutation(internal.dashboard.messages.materializeMessageAttachmentUrls, {
+        messageId: args.messageId,
+      });
+    }
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "sms.reply_generated",
+        businessId: message.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(message.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(message.businessId)),
+        conversationId: String(message.conversationId),
+        messageId: String(args.messageId),
+        ...(args.appointmentId !== undefined
+          ? { appointmentId: String(args.appointmentId) }
+          : {}),
+        channel: message.channel,
+        provider: "twilio",
+        properties: {
+          aiGenerated: message.aiGenerated,
+          hasMedia: Boolean(args.media?.length),
+          mediaCount: args.media?.length ?? 0,
+        },
+      }),
+    );
+
+    return null;
+  },
+});
+
+export const discardReservedOutboundMessage = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx: MutationCtx, args: MessageIdArgs) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || message.direction !== "outbound") {
+      return null;
+    }
+
+    if (message.status === "draft" && message.body.trim().length === 0) {
+      await ctx.db.delete(args.messageId);
+    }
+
+    return null;
+  },
+});
+
 export const markOutboundMessageAccepted = internalMutation({
   args: {
     messageId: v.id("messages"),
     providerMessageSid: v.string(),
     providerStatus: v.string(),
-    providerNumSegments: v.optional(v.number()),
     providerUpdatedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: MarkOutboundMessageAcceptedArgs) => {
@@ -734,9 +887,6 @@ export const markOutboundMessageAccepted = internalMutation({
       providerMessageSid: args.providerMessageSid,
       status: mapTwilioStatusToMessageStatus(args.providerStatus),
       providerStatus: args.providerStatus,
-      ...(args.providerNumSegments !== undefined
-        ? { providerNumSegments: args.providerNumSegments }
-        : {}),
       providerUpdatedAt: args.providerUpdatedAt,
     });
 
@@ -755,8 +905,10 @@ export const markOutboundMessageAccepted = internalMutation({
         channel: message.channel,
         provider: "twilio",
         properties: {
+          messageLinkKey: String(args.messageId),
           providerMessageSid: args.providerMessageSid,
           providerStatus: args.providerStatus,
+          providerUpdatedAt: args.providerUpdatedAt,
         },
       }),
     );
@@ -853,20 +1005,6 @@ export const sendStoredOutboundMessage = internalAction({
     }
 
     try {
-      const smsAllowance: { allowed: boolean } = await ctx.runQuery(
-        internal.billing.assertSmsCanSend,
-        {
-          businessId: context.businessId,
-        },
-      );
-      if (!smsAllowance.allowed) {
-        await ctx.runMutation(internal.billing.markMessageBillingBlocked, {
-          messageId: context.messageId,
-          providerUpdatedAt: new Date().toISOString(),
-        });
-        throw new Error(billingErrorCodes.smsQuotaExhausted);
-      }
-
       const directMediaUrls =
         context.media
           ?.filter((attachment) => attachment.deliveryMode !== "link" && attachment.url)
@@ -894,22 +1032,8 @@ export const sendStoredOutboundMessage = internalAction({
         messageId: context.messageId,
         providerMessageSid: result.providerMessageSid,
         providerStatus: result.providerStatus,
-        providerNumSegments: result.providerNumSegments,
         providerUpdatedAt: new Date().toISOString(),
       });
-
-      const usageRecord = await ctx.runMutation(internal.billing.recordSmsUsage, {
-        businessId: context.businessId,
-        messageId: context.messageId,
-        quantity: result.providerNumSegments,
-        recordedAt: new Date().toISOString(),
-      });
-
-      if (usageRecord.syncNeeded) {
-        await ctx.runAction(internal.billing.syncUsageEventToPolar, {
-          usageEventId: usageRecord.usageEventId,
-        });
-      }
 
       return {
         businessId: context.businessId,
@@ -920,12 +1044,10 @@ export const sendStoredOutboundMessage = internalAction({
         status: mapTwilioStatusToMessageStatus(result.providerStatus),
       };
     } catch (error) {
-      if (!isBillingLimitError(error, billingErrorCodes.smsQuotaExhausted)) {
-        await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
-          messageId: context.messageId,
-          providerUpdatedAt: new Date().toISOString(),
-        });
-      }
+      await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
+        messageId: context.messageId,
+        providerUpdatedAt: new Date().toISOString(),
+      });
       if (context.appointmentId) {
         await ctx.runMutation(
           internal.notifications.reminders.ensureBookingConfirmationNotification,
@@ -1072,34 +1194,62 @@ export const handleTwilioSmsInbound = internalAction({
       return { businessId: phoneNumber.businessId, conversationId, reply: null };
     }
 
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: phoneNumber.businessId,
+      capability: "ai",
+    });
+    if (!smsPolicy.allowed) {
+      return { businessId: phoneNumber.businessId, conversationId, reply: null };
+    }
+
     const prompt = buildInboundSmsPrompt({
       body: args.body,
       ...(normalizedMedia ? { media: normalizedMedia } : {}),
     });
-    const rawReply: string = await ctx.runAction(internal.ai.agents.runtime.generateSmsReply, {
-      businessId: phoneNumber.businessId,
-      conversationId,
-      prompt,
-    });
-    const reply = rawReply.trim() || "I'm sorry, could you rephrase that?";
-    const appointmentId: Id<"appointments"> | null = await ctx.runMutation(
-      internal.ai.agents.runtime.consumePendingConfirmationAppointmentId,
-      {
-        conversationId,
-      },
-    );
-
     const messageId: Id<"messages"> = await ctx.runMutation(
-      internal.conversations.webhooks.storeOutboundMessage,
+      internal.conversations.webhooks.reserveOutboundAiMessage,
       {
         businessId: phoneNumber.businessId,
         conversationId,
         channel: "sms",
-        body: reply,
         fromPhoneNumber: phoneNumber.e164,
-        ...(appointmentId !== null ? { appointmentId } : {}),
+        senderRole: "business_ai",
       },
     );
+
+    let reply: string;
+    try {
+      const rawReply: string = await ctx.runAction(
+        internal.ai.agents.runtime.generateSmsReply,
+        {
+          businessId: phoneNumber.businessId,
+          conversationId,
+          prompt,
+          messageId,
+        },
+      );
+      reply = rawReply.trim() || "I'm sorry, could you rephrase that?";
+      const appointmentId: Id<"appointments"> | null = await ctx.runMutation(
+        internal.ai.agents.runtime.consumePendingConfirmationAppointmentId,
+        {
+          conversationId,
+        },
+      );
+
+      await ctx.runMutation(
+        internal.conversations.webhooks.finalizeReservedOutboundMessage,
+        {
+          messageId,
+          body: reply,
+          ...(appointmentId !== null ? { appointmentId } : {}),
+        },
+      );
+    } catch (error) {
+      await ctx.runMutation(internal.conversations.webhooks.discardReservedOutboundMessage, {
+        messageId,
+      });
+      throw error;
+    }
 
     if (idempotencyKeyId) {
       await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
@@ -1110,26 +1260,9 @@ export const handleTwilioSmsInbound = internalAction({
       });
     }
 
-    try {
-      await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
-        messageId,
-      });
-    } catch (error) {
-      if (isBillingLimitError(error, billingErrorCodes.smsQuotaExhausted)) {
-        if (idempotencyKeyId) {
-          await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
-            idempotencyKeyId,
-            resourceTable: "messages",
-            resourceId: String(messageId),
-            status: "processed_no_reply",
-          });
-        }
-
-        return { businessId: phoneNumber.businessId, conversationId, reply: null };
-      }
-
-      throw error;
-    }
+    await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+      messageId,
+    });
 
     if (idempotencyKeyId) {
       await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {

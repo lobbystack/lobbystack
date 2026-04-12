@@ -1,4 +1,3 @@
-import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
@@ -26,10 +25,6 @@ import {
 } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
-import {
-  getBillingSnapshot,
-  getBillingUsageSnapshotData,
-} from "../lib/billing";
 import { buildConversationOutcome } from "../dashboard/outcomes";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
@@ -107,7 +102,15 @@ type ReconcileTwilioCallStatusArgs = {
 };
 type ReconcileTwilioCallStatusResult =
   | { ignored: true; reason: "unknown_call" | "missing_sequence" | "stale_sequence" }
-  | { ignored: false; callId: Id<"calls">; usageEventId?: Id<"billing_usage_events"> };
+  | { ignored: false; callId: Id<"calls"> };
+type RecordTwilioCallPricingArgs = {
+  twilioCallSid: string;
+  providerUpdatedAt?: string;
+  providerPrice?: number;
+  providerPriceUnit?: string;
+  providerCostUsd?: number;
+  providerDurationSeconds?: number;
+};
 type CheckAvailabilityForVoiceArgs = {
   businessId: Id<"businesses">;
   serviceName: string;
@@ -126,6 +129,56 @@ type CheckAvailabilityForVoiceResult = {
     endsAt: string;
   }>;
 };
+
+const ESTIMATED_TWILIO_INBOUND_VOICE_RATE_USD_PER_MINUTE = 0.0085;
+
+function estimateTwilioInboundVoiceCostUsd(durationSeconds: number): number {
+  const billableMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
+  return Number((billableMinutes * ESTIMATED_TWILIO_INBOUND_VOICE_RATE_USD_PER_MINUTE).toFixed(6));
+}
+
+async function enqueueVoiceProviderCostRecordedEvent(
+  ctx: MutationCtx,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId?: Id<"conversations">;
+    callId: Id<"calls">;
+    twilioCallSid: string;
+    providerCostUsd: number;
+    providerUpdatedAt?: string;
+    providerPrice?: number;
+    providerPriceUnit?: string;
+    providerDurationSeconds?: number;
+  },
+): Promise<void> {
+  await enqueuePostHogOutboxRecord(
+    ctx,
+    serializePostHogEvent({
+      eventName: "voice.provider_cost_recorded",
+      businessId: input.businessId,
+      distinctId: getPostHogDistinctIdForBusinessSystem(String(input.businessId)),
+      groupKey: getPostHogBusinessGroupKey(String(input.businessId)),
+      ...(input.conversationId ? { conversationId: String(input.conversationId) } : {}),
+      callId: String(input.callId),
+      channel: "voice",
+      provider: "twilio",
+      properties: {
+        twilioCallSid: input.twilioCallSid,
+        providerCostUsd: input.providerCostUsd,
+        ...(input.providerUpdatedAt !== undefined
+          ? { providerUpdatedAt: input.providerUpdatedAt }
+          : {}),
+        ...(input.providerPrice !== undefined ? { providerPrice: input.providerPrice } : {}),
+        ...(input.providerPriceUnit !== undefined
+          ? { providerPriceUnit: input.providerPriceUnit }
+          : {}),
+        ...(input.providerDurationSeconds !== undefined
+          ? { providerDurationSeconds: input.providerDurationSeconds }
+          : {}),
+      },
+    }),
+  );
+}
 type FindAvailabilityForVoiceArgs = {
   businessId: Id<"businesses">;
   serviceName: string;
@@ -429,17 +482,11 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
-    const billingSnapshot = await getBillingSnapshot(ctx, {
+    const voicePolicy = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
       businessId: args.businessId,
-      at: args.startedAt,
     });
-    const usage = getBillingUsageSnapshotData({
-      tier: billingSnapshot.tier,
-      periodKey: billingSnapshot.periodKey,
-      usage: billingSnapshot.usage,
-    });
-    if (billingSnapshot.tier === "free" && usage.voiceBlocked) {
-      throw new Error(billingErrorCodes.voiceQuotaExhausted);
+    if (!voicePolicy.allowed) {
+      throw new Error("Voice quota reached for this billing period.");
     }
 
     let contact: Doc<"contacts"> | null = await ctx.db
@@ -828,6 +875,97 @@ export const completeCall = internalMutation({
   },
 });
 
+export const recordProviderPricing = internalMutation({
+  args: {
+    twilioCallSid: v.string(),
+    providerUpdatedAt: v.optional(v.string()),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerDurationSeconds: v.optional(v.number()),
+  },
+  handler: async (ctx: MutationCtx, args: RecordTwilioCallPricingArgs) => {
+    const call: Doc<"calls"> | null = await ctx.db
+      .query("calls")
+      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
+      .unique();
+
+    if (!call) {
+      return { matched: false, applied: false };
+    }
+
+    const patch: Partial<Doc<"calls">> = {};
+    let changed = false;
+    let pricingChanged = false;
+
+    if (args.providerUpdatedAt !== undefined && args.providerUpdatedAt !== call.providerUpdatedAt) {
+      patch.providerUpdatedAt = args.providerUpdatedAt;
+      changed = true;
+    }
+    if (args.providerPrice !== undefined && args.providerPrice !== call.providerPrice) {
+      patch.providerPrice = args.providerPrice;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerPriceUnit !== undefined && args.providerPriceUnit !== call.providerPriceUnit) {
+      patch.providerPriceUnit = args.providerPriceUnit;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (args.providerCostUsd !== undefined && args.providerCostUsd !== call.providerCostUsd) {
+      patch.providerCostUsd = args.providerCostUsd;
+      changed = true;
+      pricingChanged = true;
+    }
+    if (
+      args.providerDurationSeconds !== undefined &&
+      args.providerDurationSeconds !== call.providerCallDurationSeconds
+    ) {
+      patch.providerCallDurationSeconds = args.providerDurationSeconds;
+      changed = true;
+    }
+
+    if (!changed) {
+      return { matched: true, applied: false };
+    }
+
+    await ctx.db.patch(call._id, patch);
+
+    if (args.providerDurationSeconds !== undefined) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: args.providerDurationSeconds,
+        recordedAt: args.providerUpdatedAt ?? new Date().toISOString(),
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
+
+    if (pricingChanged && args.providerCostUsd !== undefined) {
+      await enqueueVoiceProviderCostRecordedEvent(ctx, {
+        businessId: call.businessId,
+        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+        callId: call._id,
+        twilioCallSid: args.twilioCallSid,
+        providerCostUsd: args.providerCostUsd,
+        ...(args.providerUpdatedAt !== undefined ? { providerUpdatedAt: args.providerUpdatedAt } : {}),
+        ...(args.providerPrice !== undefined ? { providerPrice: args.providerPrice } : {}),
+        ...(args.providerPriceUnit !== undefined ? { providerPriceUnit: args.providerPriceUnit } : {}),
+        ...(args.providerDurationSeconds !== undefined
+          ? { providerDurationSeconds: args.providerDurationSeconds }
+          : {}),
+      });
+    }
+
+    return { matched: true, applied: true };
+  },
+});
+
 // @ts-ignore Deep type instantiation from Convex mutation builder.
 export const reconcileTwilioCallStatus = internalMutation({
   args: {
@@ -880,6 +1018,24 @@ export const reconcileTwilioCallStatus = internalMutation({
         : {}),
     };
 
+    let estimatedProviderCostUsd: number | undefined;
+    let estimatedPricingChanged = false;
+
+    if (
+      isTerminalTwilioCallStatus(args.callStatus) &&
+      call.providerCostUsd === undefined &&
+      args.providerDurationSeconds !== undefined
+    ) {
+      estimatedProviderCostUsd = estimateTwilioInboundVoiceCostUsd(args.providerDurationSeconds);
+      if (estimatedProviderCostUsd !== call.providerCostUsd) {
+        patch.providerCostUsd = estimatedProviderCostUsd;
+        estimatedPricingChanged = true;
+      }
+      if (call.providerPriceUnit !== "usd") {
+        patch.providerPriceUnit = "usd";
+      }
+    }
+
     if (isTerminalTwilioCallStatus(args.callStatus)) {
       Object.assign(
         patch,
@@ -892,6 +1048,36 @@ export const reconcileTwilioCallStatus = internalMutation({
 
     await ctx.db.patch(call._id, patch);
 
+    if (args.providerDurationSeconds !== undefined) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: args.providerDurationSeconds,
+        recordedAt: args.providerUpdatedAt,
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
+
+    if (estimatedPricingChanged && estimatedProviderCostUsd !== undefined) {
+      await enqueueVoiceProviderCostRecordedEvent(ctx, {
+        businessId: call.businessId,
+        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+        callId: call._id,
+        twilioCallSid: call.twilioCallSid,
+        providerCostUsd: estimatedProviderCostUsd,
+        providerUpdatedAt: args.providerUpdatedAt,
+        providerPriceUnit: "usd",
+        ...(args.providerDurationSeconds !== undefined
+          ? { providerDurationSeconds: args.providerDurationSeconds }
+          : {}),
+      });
+    }
+
     if (isTerminalTwilioCallStatus(args.callStatus) && call.conversationId) {
       const conversation = await ctx.db.get(call.conversationId);
       if (conversation && conversation.status !== "closed") {
@@ -901,33 +1087,25 @@ export const reconcileTwilioCallStatus = internalMutation({
       }
     }
 
-    let usageEventId: Id<"billing_usage_events"> | undefined;
-
     if (isTerminalTwilioCallStatus(args.callStatus)) {
       await finalizeVoiceSessionForCall(ctx, {
         callId: call._id,
         endedAt: Date.parse(args.providerUpdatedAt),
       });
 
-      if ((args.providerDurationSeconds ?? 0) > 0) {
-        const usageRecord = await ctx.runMutation(internal.billing.recordVoiceUsage, {
-          businessId: call.businessId,
-          callId: call._id,
-          quantity: args.providerDurationSeconds!,
-          recordedAt: args.providerUpdatedAt,
-        });
-
-        if (usageRecord.syncNeeded) {
-          usageEventId = usageRecord.usageEventId;
-        }
+      if (call.providerCostUsd === undefined) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.integrations.twilioVoice.syncCallPriceFromProvider,
+          {
+            twilioCallSid: call.twilioCallSid,
+            providerCallStatus: args.callStatus,
+          },
+        );
       }
     }
 
-    return {
-      ignored: false,
-      callId: call._id,
-      ...(usageEventId ? { usageEventId } : {}),
-    } as const;
+    return { ignored: false, callId: call._id } as const;
   },
 });
 

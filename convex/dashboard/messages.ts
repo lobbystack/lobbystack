@@ -495,6 +495,14 @@ export const getSmsReplyContext = internalQuery({
       throw new Error("This contact has opted out of SMS messages.");
     }
 
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: args.businessId,
+      capability: "ai",
+    });
+    if (!smsPolicy.allowed) {
+      throw new Error("AI SMS add-on required before sending conversational SMS.");
+    }
+
     const preferredSenderPhoneNumber = await getPreferredConversationSmsSenderPhoneNumber(
       ctx,
       conversation._id,
@@ -1465,6 +1473,7 @@ export const sendSmsReply = action({
         body,
         fromPhoneNumber: replyContext.fromPhoneNumber,
         aiGenerated: false,
+        senderRole: "business_ai",
         ...(outboundAttachments.length > 0
           ? {
               media: outboundAttachments.map((attachment) => ({

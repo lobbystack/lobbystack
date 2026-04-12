@@ -1,16 +1,25 @@
 import { Polar as ConvexPolar, type PolarWebhookEvent } from "@convex-dev/polar";
 import { Polar as PolarSdk } from "@polar-sh/sdk";
-import { type HttpRouter } from "convex/server";
+import type { HttpRouter } from "convex/server";
 import { v } from "convex/values";
 
+import type {
+  BillingAddonSlug,
+  BillingErrorCode,
+  BillingPlanSlug,
+  BillingStatus,
+  BillingTransactionKind,
+  BillingTransactionSummary,
+  BillingUsageKind,
+  HostedCheckoutPlanSlug,
+  SmsCapability,
+  SmsSenderRole,
+} from "../packages/shared/src/billing";
 import {
+  billingAddonCatalog,
+  billingErrorCodes,
+  billingPlanCatalog,
   getPolarMeteredUsagePayload,
-  type BillingPaidTier,
-  type BillingStatus,
-  type BillingTier,
-  type BillingTransactionKind,
-  type BillingTransactionSummary,
-  type BillingUsageKind,
 } from "../packages/shared/src/billing";
 import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -24,24 +33,32 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
+import { requireCurrentUser, requireMembership } from "./lib/auth";
 import {
-  deriveBillingTier,
+  canPurchaseAiSmsAddon,
+  deriveActiveAddonsFromProductIds,
+  deriveCloudPlanFromProductIds,
+  getAiSmsAddonPricing,
+  getAiSmsAddonProductIds,
   getBillingAccount,
-  getBillingMinimumChargeCents,
-  getBillingProductIdForPlan,
-  getConfiguredCheckoutPlans,
-  getBillingIncludedUsage,
   getBillingKey,
   getBillingSnapshot,
   getBillingUsageSnapshotData,
-  isPaidSubscriptionStatus,
+  getConfiguredCheckoutPlans,
+  getNormalizedAddons,
+  getPlanFromLegacyTier,
+  getPlanEntitlements,
+  getPlanForBusiness,
+  getProProductId,
+  isAiSmsEnabled,
 } from "./lib/billing";
-import { requireCurrentUser, requireMembership } from "./lib/auth";
 
 type BillingContact = {
   email: string | null;
   name: string | null;
 };
+
+type CheckoutTarget = HostedCheckoutPlanSlug | BillingAddonSlug;
 
 type CheckoutContext = {
   billingKey: string;
@@ -51,13 +68,7 @@ type CheckoutContext = {
   polarCustomerExternalId: string | null;
 };
 
-type RecordUsageEventResult = {
-  usageEventId: Id<"billing_usage_events">;
-  tier: BillingTier;
-  syncNeeded: boolean;
-};
-
-type SendBillingUsagePayload = {
+type UsageSyncPayload = {
   businessId: Id<"businesses">;
   billingKey: string;
   usageKind: BillingUsageKind;
@@ -67,6 +78,37 @@ type SendBillingUsagePayload = {
   sourceKey: string;
   recordedAt: string;
 };
+
+type UpsertUsageResult = {
+  usageEventId: Id<"billing_usage_events">;
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+  syncNeeded: boolean;
+};
+
+type PricingSummary = {
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+  aiSmsEnabled: boolean;
+  alertSmsPlatformSenderConfigured: boolean;
+  proMonthlyChargeCents: number;
+  aiSmsMonthlyChargeCents: number;
+  aiSmsSetupChargeCents: number;
+};
+
+type SmsCapabilityPolicy = {
+  allowed: boolean;
+  senderRole: SmsSenderRole;
+  errorCode: BillingErrorCode | null;
+};
+
+const billingPolar = new ConvexPolar(components.polar, {
+  getUserInfo: async () => ({
+    userId: "",
+    email: "",
+  }),
+  server: getPolarServer(),
+});
 
 function getPolarServer(): "sandbox" | "production" {
   return process.env.POLAR_SERVER === "production" ? "production" : "sandbox";
@@ -97,6 +139,10 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown billing error.";
 }
 
+function isActiveSubscriptionStatus(status: string | undefined): boolean {
+  return status === "active" || status === "trialing";
+}
+
 function parseBusinessIdFromBillingKey(
   billingKey: string | null | undefined,
 ): Id<"businesses"> | null {
@@ -105,6 +151,31 @@ function parseBusinessIdFromBillingKey(
   }
 
   return billingKey.slice("business:".length) as Id<"businesses">;
+}
+
+function getUsageQuantityField(
+  usageKind: BillingUsageKind,
+): "voiceSecondsUsed" | "alertSmsSegmentsUsed" | "outboundCallAttemptsUsed" | "aiSmsSegmentsUsed" {
+  switch (usageKind) {
+    case "voice_seconds":
+      return "voiceSecondsUsed";
+    case "alert_sms_segments":
+      return "alertSmsSegmentsUsed";
+    case "outbound_call_attempts":
+      return "outboundCallAttemptsUsed";
+    case "ai_sms_segments":
+      return "aiSmsSegmentsUsed";
+  }
+}
+
+function normalizePersistedUsageKind(
+  usageKind: BillingUsageKind | "sms_segments",
+): BillingUsageKind {
+  if (usageKind === "sms_segments") {
+    return "alert_sms_segments";
+  }
+
+  return usageKind;
 }
 
 async function findBillingContactForRole(
@@ -179,46 +250,224 @@ async function resolveBillingContact(
 
 function buildBillingStatus(input: {
   billingKey: string;
-  tier: BillingTier;
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
   subscriptionState: string;
   contact: BillingContact;
   usage: Doc<"billing_usage_months"> | null;
   periodKey: string;
   recentTransactions: Array<BillingTransactionSummary>;
   hasCustomerPortalAccess: boolean;
-  availableCheckoutPlans: Array<BillingPaidTier>;
+  availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
 }): BillingStatus {
   const usage = getBillingUsageSnapshotData({
-    tier: input.tier,
+    plan: input.plan,
     periodKey: input.periodKey,
     usage: input.usage,
   });
 
   return {
-    tier: input.tier,
+    plan: input.plan,
     billingKey: input.billingKey,
     subscriptionState: input.subscriptionState,
-    minimumMonthlyChargeCents: getBillingMinimumChargeCents(input.tier),
+    activeAddons: input.activeAddons,
+    aiSmsEnabled: isAiSmsEnabled({
+      plan: input.plan,
+      activeAddons: input.activeAddons,
+    }),
+    overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
+    monthlyChargeCents: billingPlanCatalog[input.plan].monthlyChargeCents,
     billingContactEmail: input.contact.email,
     billingContactName: input.contact.name,
+    includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
     hasCustomerPortalAccess: input.hasCustomerPortalAccess,
-    hasCheckoutAccess: input.availableCheckoutPlans.length > 0,
+    hasCheckoutAccess:
+      input.availableCheckoutPlans.length > 0 ||
+      canPurchaseAiSmsAddon({
+        plan: input.plan,
+        activeAddons: input.activeAddons,
+      }),
     availableCheckoutPlans: input.availableCheckoutPlans,
+    canPurchaseAiSmsAddon: canPurchaseAiSmsAddon({
+      plan: input.plan,
+      activeAddons: input.activeAddons,
+    }),
     usage,
     recentTransactions: input.recentTransactions,
   };
 }
 
-const billingPolar = new ConvexPolar(components.polar, {
-  getUserInfo: async () => ({
-    userId: "",
-    email: "",
-  }),
-  server: getPolarServer(),
-});
+function shouldSyncUsageEvent(args: {
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+  usageKind: BillingUsageKind;
+}): boolean {
+  if (args.plan !== "pro") {
+    return false;
+  }
+
+  if (args.usageKind === "ai_sms_segments") {
+    return args.activeAddons.includes("ai_sms");
+  }
+
+  return true;
+}
+
+function buildUsageMonthPatch(args: {
+  plan: BillingPlanSlug;
+  usage: Doc<"billing_usage_months"> | null;
+  usageKind: BillingUsageKind;
+  deltaQuantity: number;
+  recordedAt: string;
+}) {
+  const entitlements = getPlanEntitlements(args.plan);
+  const currentVoiceSeconds = args.usage?.voiceSecondsUsed ?? 0;
+  const currentAlertSmsSegments =
+    args.usage?.alertSmsSegmentsUsed ?? args.usage?.smsSegmentsUsed ?? 0;
+  const currentOutboundCallAttempts = args.usage?.outboundCallAttemptsUsed ?? 0;
+  const currentAiSmsSegments = args.usage?.aiSmsSegmentsUsed ?? 0;
+
+  const nextVoiceSeconds =
+    currentVoiceSeconds + (args.usageKind === "voice_seconds" ? args.deltaQuantity : 0);
+  const nextAlertSmsSegments =
+    currentAlertSmsSegments +
+    (args.usageKind === "alert_sms_segments" ? args.deltaQuantity : 0);
+  const nextOutboundCallAttempts =
+    currentOutboundCallAttempts +
+    (args.usageKind === "outbound_call_attempts" ? args.deltaQuantity : 0);
+  const nextAiSmsSegments =
+    currentAiSmsSegments + (args.usageKind === "ai_sms_segments" ? args.deltaQuantity : 0);
+
+  return {
+    planAtSnapshot: args.plan,
+    voiceSecondsUsed: Math.max(0, nextVoiceSeconds),
+    alertSmsSegmentsUsed: Math.max(0, nextAlertSmsSegments),
+    outboundCallAttemptsUsed: Math.max(0, nextOutboundCallAttempts),
+    aiSmsSegmentsUsed: Math.max(0, nextAiSmsSegments),
+    ...(entitlements.voiceSecondsIncluded !== null
+      ? { voiceSecondsIncluded: entitlements.voiceSecondsIncluded }
+      : {}),
+    ...(entitlements.alertSmsSegmentsIncluded !== null
+      ? { alertSmsSegmentsIncluded: entitlements.alertSmsSegmentsIncluded }
+      : {}),
+    ...(entitlements.outboundCallAttemptsIncluded !== null
+      ? { outboundCallAttemptsIncluded: entitlements.outboundCallAttemptsIncluded }
+      : {}),
+    voiceBlocked:
+      !entitlements.overagesBillable &&
+      entitlements.voiceSecondsIncluded !== null &&
+      nextVoiceSeconds >= entitlements.voiceSecondsIncluded,
+    alertSmsBlocked:
+      !entitlements.overagesBillable &&
+      entitlements.alertSmsSegmentsIncluded !== null &&
+      nextAlertSmsSegments >= entitlements.alertSmsSegmentsIncluded,
+    outboundCallAttemptsBlocked:
+      !entitlements.overagesBillable &&
+      entitlements.outboundCallAttemptsIncluded !== null &&
+      nextOutboundCallAttempts >= entitlements.outboundCallAttemptsIncluded,
+    lastRecordedAt: args.recordedAt,
+  };
+}
+
+function getPlatformAlertSmsSenderFromEnv(): string | null {
+  const e164 = process.env.TWILIO_ALERT_SMS_FROM?.trim();
+  return e164 && e164.length > 0 ? e164 : null;
+}
+
+function getTargetProductIds(target: CheckoutTarget): Array<string> {
+  if (target === "pro") {
+    return [getProProductId()];
+  }
+
+  const addonProducts = getAiSmsAddonProductIds();
+  return [addonProducts.recurringProductId, addonProducts.setupFeeProductId];
+}
+
+async function ensurePolarCustomer(
+  ctx: ActionCtx,
+  args: {
+    businessId: Id<"businesses">;
+    checkoutContext: CheckoutContext;
+  },
+): Promise<{
+  id: string;
+  externalId: string;
+}> {
+  if (args.checkoutContext.polarCustomerId) {
+    return {
+      id: args.checkoutContext.polarCustomerId,
+      externalId: args.checkoutContext.billingKey,
+    };
+  }
+
+  if (!args.checkoutContext.billingContactEmail) {
+    throw new Error("A billing contact email is required before starting checkout.");
+  }
+
+  const customer = await createPolarClient().customers.create({
+    type: "team",
+    externalId: args.checkoutContext.billingKey,
+    email: args.checkoutContext.billingContactEmail,
+    ...(args.checkoutContext.billingContactName
+      ? { name: args.checkoutContext.billingContactName }
+      : {}),
+  });
+
+  await ctx.runMutation(internal.billing.ensureBillingAccountCustomerLink, {
+    businessId: args.businessId,
+    billingKey: args.checkoutContext.billingKey,
+    polarCustomerId: customer.id,
+    polarCustomerExternalId: args.checkoutContext.billingKey,
+    ...(args.checkoutContext.billingContactEmail
+      ? { billingContactEmail: args.checkoutContext.billingContactEmail }
+      : {}),
+    ...(args.checkoutContext.billingContactName
+      ? { billingContactName: args.checkoutContext.billingContactName }
+      : {}),
+    lastSyncedAt: new Date().toISOString(),
+  });
+
+  const existingComponentCustomer = await ctx.runQuery(
+    components.polar.lib.getCustomerByUserId,
+    { userId: args.checkoutContext.billingKey },
+  );
+
+  if (!existingComponentCustomer) {
+    await ctx.runMutation(components.polar.lib.insertCustomer, {
+      id: customer.id,
+      userId: args.checkoutContext.billingKey,
+    });
+  }
+
+  return {
+    id: customer.id,
+    externalId: args.checkoutContext.billingKey,
+  };
+}
+
+function mergeActiveAddon(
+  currentAddons: Array<BillingAddonSlug>,
+  nextAddon: BillingAddonSlug,
+  active: boolean,
+): Array<BillingAddonSlug> {
+  const next = new Set(currentAddons);
+  if (active) {
+    next.add(nextAddon);
+  } else {
+    next.delete(nextAddon);
+  }
+  return [...next];
+}
+
+function shouldRecordAiSmsOrderAsSetupFee(args: {
+  orderProductIds: Array<string>;
+}): boolean {
+  const setupFeeProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim();
+  return Boolean(setupFeeProductId && args.orderProductIds.includes(setupFeeProductId));
+}
 
 export function registerBillingRoutes(http: HttpRouter): void {
-  billingPolar.registerRoutes(http as any, {
+  billingPolar.registerRoutes(http as never, {
     events: {
       "subscription.created": async (ctx, event) => {
         await syncSubscriptionFromWebhookEvent(ctx, event);
@@ -256,6 +505,8 @@ export function registerBillingRoutes(http: HttpRouter): void {
       "refund.updated": async (ctx, event) => {
         await syncRefundTransactionFromWebhookEvent(ctx, event);
       },
+      "product.created": async () => {},
+      "product.updated": async () => {},
     },
   });
 }
@@ -287,17 +538,11 @@ async function syncSubscriptionFromWebhookEvent(
     billingKey,
     polarCustomerId: event.data.customerId,
     polarCustomerExternalId: billingKey,
-    ...(event.data.customer.email
-      ? { billingContactEmail: event.data.customer.email }
-      : {}),
-    ...(event.data.customer.name
-      ? { billingContactName: event.data.customer.name }
-      : {}),
+    ...(event.data.customer.email ? { billingContactEmail: event.data.customer.email } : {}),
+    ...(event.data.customer.name ? { billingContactName: event.data.customer.name } : {}),
     subscriptionId: event.data.id,
     subscriptionProductId: event.data.productId,
-    ...(event.data.prices[0]?.id
-      ? { subscriptionPriceId: event.data.prices[0].id }
-      : {}),
+    ...(event.data.prices[0]?.id ? { subscriptionPriceId: event.data.prices[0].id } : {}),
     subscriptionState: event.data.status,
     currentPeriodStart: event.data.currentPeriodStart.toISOString(),
     currentPeriodEnd: event.data.currentPeriodEnd.toISOString(),
@@ -348,6 +593,11 @@ async function syncOrderTransactionFromWebhookEvent(
     ...(event.data.subscriptionId ? { subscriptionId: event.data.subscriptionId } : {}),
     ...(event.data.customerId ? { polarCustomerId: event.data.customerId } : {}),
     orderId: event.data.id,
+    ...(shouldRecordAiSmsOrderAsSetupFee({
+      orderProductIds: event.data.productId ? [event.data.productId] : [],
+    })
+      ? { aiSmsSetupOrderId: event.data.id }
+      : {}),
     occurredAt: event.data.createdAt.toISOString(),
     lastSyncedAt: event.timestamp.toISOString(),
   });
@@ -404,6 +654,46 @@ export const findBusinessIdForCustomerMutation = internalMutation({
   },
 });
 
+export const ensureBillingAccountCustomerLink = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    billingKey: v.string(),
+    polarCustomerId: v.string(),
+    polarCustomerExternalId: v.string(),
+    billingContactEmail: v.optional(v.string()),
+    billingContactName: v.optional(v.string()),
+    lastSyncedAt: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const account = await getBillingAccount(ctx, args.businessId);
+    if (account) {
+      await ctx.db.patch(account._id, {
+        billingKey: args.billingKey,
+        polarCustomerId: args.polarCustomerId,
+        polarCustomerExternalId: args.polarCustomerExternalId,
+        ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
+        ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
+        lastSyncedAt: args.lastSyncedAt,
+      });
+      return null;
+    }
+
+    await ctx.db.insert("billing_accounts", {
+      businessId: args.businessId,
+      billingKey: args.billingKey,
+      currentPlan: "free_cloud",
+      activeAddons: [],
+      polarCustomerId: args.polarCustomerId,
+      polarCustomerExternalId: args.polarCustomerExternalId,
+      ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
+      ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
+      lastSyncedAt: args.lastSyncedAt,
+    });
+    return null;
+  },
+});
+
 export const syncSubscriptionFromWebhook = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -425,27 +715,52 @@ export const syncSubscriptionFromWebhook = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const currentTier = deriveBillingTier({
-      subscriptionStatus: args.subscriptionState,
-      subscriptionProductId: args.subscriptionProductId,
-    });
     const existingAccount = await getBillingAccount(ctx, args.businessId);
+    const business = await ctx.db.get(args.businessId);
+    const existingPlan = getPlanForBusiness({
+      business,
+      account: existingAccount,
+    });
+    const existingAddons = getNormalizedAddons(existingAccount?.activeAddons);
+    const isProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
+    const isAiSmsProduct =
+      args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+    const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
+
+    const nextPlan: BillingPlanSlug =
+      isProProduct && subscriptionActive
+        ? "pro"
+        : isProProduct && existingPlan !== "enterprise"
+          ? "free_cloud"
+          : existingPlan;
+    const nextActiveAddons = isAiSmsProduct
+      ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
+      : existingAddons;
+
     const patch = {
       businessId: args.businessId,
       billingKey: args.billingKey,
-      currentTier,
-      subscriptionState: args.subscriptionState,
+      currentPlan: nextPlan === "self_host" ? "free_cloud" : nextPlan,
+      activeAddons: nextActiveAddons,
       polarCustomerId: args.polarCustomerId,
       polarCustomerExternalId: args.polarCustomerExternalId,
       ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
       ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
-      subscriptionId: args.subscriptionId,
-      subscriptionProductId: args.subscriptionProductId,
-      ...(args.subscriptionPriceId ? { subscriptionPriceId: args.subscriptionPriceId } : {}),
-      ...(args.checkoutId ? { checkoutId: args.checkoutId } : {}),
+      ...(isProProduct ? { subscriptionState: args.subscriptionState } : {}),
+      ...(isProProduct ? { proSubscriptionId: args.subscriptionId } : {}),
+      ...(isProProduct ? { proSubscriptionProductId: args.subscriptionProductId } : {}),
+      ...(isProProduct && args.subscriptionPriceId
+        ? { proSubscriptionPriceId: args.subscriptionPriceId }
+        : {}),
+      ...(isAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
+      ...(isAiSmsProduct ? { aiSmsSubscriptionProductId: args.subscriptionProductId } : {}),
+      ...(isAiSmsProduct && args.subscriptionPriceId
+        ? { aiSmsSubscriptionPriceId: args.subscriptionPriceId }
+        : {}),
       currentPeriodStart: args.currentPeriodStart,
       currentPeriodEnd: args.currentPeriodEnd,
       cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+      ...(args.checkoutId ? { checkoutId: args.checkoutId } : {}),
       lastWebhookEventType: args.lastWebhookEventType,
       lastSyncedAt: args.lastSyncedAt,
     };
@@ -485,6 +800,7 @@ export const upsertTransactionFromWebhook = internalMutation({
     orderId: v.optional(v.string()),
     subscriptionId: v.optional(v.string()),
     polarCustomerId: v.optional(v.string()),
+    aiSmsSetupOrderId: v.optional(v.string()),
     occurredAt: v.string(),
     lastSyncedAt: v.string(),
   },
@@ -517,6 +833,16 @@ export const upsertTransactionFromWebhook = internalMutation({
       await ctx.db.patch(existing._id, patch);
     } else {
       await ctx.db.insert("billing_transactions", patch);
+    }
+
+    if (args.aiSmsSetupOrderId) {
+      const account = await getBillingAccount(ctx, args.businessId);
+      if (account) {
+        await ctx.db.patch(account._id, {
+          aiSmsSetupOrderId: args.aiSmsSetupOrderId,
+          lastSyncedAt: args.lastSyncedAt,
+        });
+      }
     }
 
     return null;
@@ -554,213 +880,6 @@ export const getCheckoutContext = internalQuery({
   },
 });
 
-export const upsertCustomerLink = internalMutation({
-  args: {
-    businessId: v.id("businesses"),
-    billingKey: v.string(),
-    polarCustomerId: v.string(),
-    polarCustomerExternalId: v.string(),
-    billingContactEmail: v.optional(v.string()),
-    billingContactName: v.optional(v.string()),
-    lastSyncedAt: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const existingAccount = await getBillingAccount(ctx, args.businessId);
-
-    if (existingAccount) {
-      await ctx.db.patch(existingAccount._id, {
-        billingKey: args.billingKey,
-        polarCustomerId: args.polarCustomerId,
-        polarCustomerExternalId: args.polarCustomerExternalId,
-        ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
-        ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
-        lastSyncedAt: args.lastSyncedAt,
-      });
-    } else {
-      await ctx.db.insert("billing_accounts", {
-        businessId: args.businessId,
-        billingKey: args.billingKey,
-        currentTier: "free",
-        subscriptionState: "inactive",
-        polarCustomerId: args.polarCustomerId,
-        polarCustomerExternalId: args.polarCustomerExternalId,
-        ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
-        ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
-        lastSyncedAt: args.lastSyncedAt,
-      });
-    }
-
-    const existingComponentCustomer = await ctx.runQuery(
-      components.polar.lib.getCustomerByUserId,
-      { userId: args.billingKey },
-    );
-
-    if (!existingComponentCustomer) {
-      await ctx.runMutation(components.polar.lib.insertCustomer, {
-        id: args.polarCustomerId,
-        userId: args.billingKey,
-      });
-    }
-
-    return null;
-  },
-});
-
-async function ensurePolarCustomer(
-  ctx: ActionCtx,
-  args: {
-    businessId: Id<"businesses">;
-    checkoutContext: CheckoutContext;
-  },
-): Promise<{ id: string; externalId: string }> {
-  const client = createPolarClient();
-  const existingExternalId = args.checkoutContext.polarCustomerExternalId ?? args.checkoutContext.billingKey;
-
-  try {
-    const customer = await client.customers.getExternal({
-      externalId: existingExternalId,
-    });
-
-    await ctx.runMutation(internal.billing.upsertCustomerLink, {
-      businessId: args.businessId,
-      billingKey: args.checkoutContext.billingKey,
-      polarCustomerId: customer.id,
-      polarCustomerExternalId: existingExternalId,
-      ...(args.checkoutContext.billingContactEmail
-        ? { billingContactEmail: args.checkoutContext.billingContactEmail }
-        : {}),
-      ...(args.checkoutContext.billingContactName
-        ? { billingContactName: args.checkoutContext.billingContactName }
-        : {}),
-      lastSyncedAt: new Date().toISOString(),
-    });
-
-    return {
-      id: customer.id,
-      externalId: existingExternalId,
-    };
-  } catch {
-    if (!args.checkoutContext.billingContactEmail) {
-      throw new Error("No billing contact email is configured for this business.");
-    }
-
-    const customer = await client.customers.create({
-      email: args.checkoutContext.billingContactEmail,
-      ...(args.checkoutContext.billingContactName
-        ? { name: args.checkoutContext.billingContactName }
-        : {}),
-      externalId: args.checkoutContext.billingKey,
-      metadata: {
-        billingKey: args.checkoutContext.billingKey,
-        businessId: String(args.businessId),
-      },
-    });
-
-    await ctx.runMutation(internal.billing.upsertCustomerLink, {
-      businessId: args.businessId,
-      billingKey: args.checkoutContext.billingKey,
-      polarCustomerId: customer.id,
-      polarCustomerExternalId: args.checkoutContext.billingKey,
-      billingContactEmail: args.checkoutContext.billingContactEmail,
-      ...(args.checkoutContext.billingContactName
-        ? { billingContactName: args.checkoutContext.billingContactName }
-        : {}),
-      lastSyncedAt: new Date().toISOString(),
-    });
-
-    return {
-      id: customer.id,
-      externalId: args.checkoutContext.billingKey,
-    };
-  }
-}
-
-export const startCheckout = action({
-  args: {
-    businessId: v.id("businesses"),
-    plan: v.union(v.literal("starter"), v.literal("growth")),
-  },
-  returns: v.object({
-    url: v.string(),
-  }),
-  handler: async (ctx, args) => {
-    const checkoutContext: CheckoutContext = await ctx.runQuery(
-      internal.billing.getCheckoutContext,
-      {
-        businessId: args.businessId,
-      },
-    );
-    const customer = await ensurePolarCustomer(ctx, {
-      businessId: args.businessId,
-      checkoutContext,
-    });
-    const siteUrl = getBillingSiteUrl();
-    const client = createPolarClient();
-    const checkout = await client.checkouts.create({
-      externalCustomerId: customer.externalId,
-      ...(checkoutContext.billingContactEmail
-        ? { customerEmail: checkoutContext.billingContactEmail }
-        : {}),
-      ...(checkoutContext.billingContactName
-        ? { customerName: checkoutContext.billingContactName }
-        : {}),
-      products: [getBillingProductIdForPlan(args.plan)],
-      successUrl: new URL("/settings/billing?checkout=success", siteUrl).toString(),
-      returnUrl: new URL("/settings/billing", siteUrl).toString(),
-      embedOrigin: siteUrl.origin,
-      customerMetadata: {
-        billingKey: checkoutContext.billingKey,
-        businessId: String(args.businessId),
-      },
-      metadata: {
-        billingKey: checkoutContext.billingKey,
-        businessId: String(args.businessId),
-      },
-    });
-
-    await ctx.runMutation(internal.billing.syncCheckoutSession, {
-      businessId: args.businessId,
-      checkoutId: checkout.id,
-      lastSyncedAt: new Date().toISOString(),
-    });
-
-    return {
-      url: checkout.url,
-    };
-  },
-});
-
-export const openPortal = action({
-  args: {
-    businessId: v.id("businesses"),
-  },
-  returns: v.object({
-    url: v.string(),
-  }),
-  handler: async (ctx, args) => {
-    const checkoutContext: CheckoutContext = await ctx.runQuery(
-      internal.billing.getCheckoutContext,
-      {
-        businessId: args.businessId,
-      },
-    );
-    const customer = await ensurePolarCustomer(ctx, {
-      businessId: args.businessId,
-      checkoutContext,
-    });
-    const siteUrl = getBillingSiteUrl();
-    const session = await createPolarClient().customerSessions.create({
-      externalCustomerId: customer.externalId,
-      returnUrl: new URL("/settings/billing", siteUrl).toString(),
-    });
-
-    return {
-      url: session.customerPortalUrl,
-    };
-  },
-});
-
 export const syncCheckoutSession = internalMutation({
   args: {
     businessId: v.id("businesses"),
@@ -783,6 +902,122 @@ export const syncCheckoutSession = internalMutation({
   },
 });
 
+export const startCheckout = action({
+  args: {
+    businessId: v.id("businesses"),
+    target: v.union(v.literal("pro"), v.literal("ai_sms")),
+  },
+  returns: v.object({
+    url: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const snapshot = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
+      businessId: args.businessId,
+    });
+
+    if (args.target === "pro" && snapshot.plan !== "free_cloud") {
+      throw new Error("Only Free Cloud workspaces can start Pro checkout.");
+    }
+    if (args.target === "ai_sms" && !snapshot.canPurchaseAiSmsAddon) {
+      throw new Error("AI SMS add-on is only available for eligible Pro workspaces.");
+    }
+
+    const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
+      businessId: args.businessId,
+    });
+    const customer = await ensurePolarCustomer(ctx, {
+      businessId: args.businessId,
+      checkoutContext,
+    });
+    const siteUrl = getBillingSiteUrl();
+    const checkout = await createPolarClient().checkouts.create({
+      externalCustomerId: customer.externalId,
+      ...(checkoutContext.billingContactEmail
+        ? { customerEmail: checkoutContext.billingContactEmail }
+        : {}),
+      ...(checkoutContext.billingContactName
+        ? { customerName: checkoutContext.billingContactName }
+        : {}),
+      products: getTargetProductIds(args.target),
+      successUrl: new URL("/settings/billing?checkout=success", siteUrl).toString(),
+      returnUrl: new URL("/settings/billing", siteUrl).toString(),
+      embedOrigin: siteUrl.origin,
+      customerMetadata: {
+        billingKey: checkoutContext.billingKey,
+        businessId: String(args.businessId),
+      },
+      metadata: {
+        billingKey: checkoutContext.billingKey,
+        businessId: String(args.businessId),
+        checkoutTarget: args.target,
+      },
+    });
+
+    await ctx.runMutation(internal.billing.syncCheckoutSession, {
+      businessId: args.businessId,
+      checkoutId: checkout.id,
+      lastSyncedAt: new Date().toISOString(),
+    });
+
+    return { url: checkout.url };
+  },
+});
+
+export const openPortal = action({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    url: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
+      businessId: args.businessId,
+    });
+    const customer = await ensurePolarCustomer(ctx, {
+      businessId: args.businessId,
+      checkoutContext,
+    });
+    const siteUrl = getBillingSiteUrl();
+    const session = await createPolarClient().customerSessions.create({
+      externalCustomerId: customer.externalId,
+      returnUrl: new URL("/settings/billing", siteUrl).toString(),
+    });
+
+    return { url: session.customerPortalUrl };
+  },
+});
+
+export const getSnapshotForCheckout = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    canPurchaseAiSmsAddon: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+
+    return {
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+      canPurchaseAiSmsAddon: canPurchaseAiSmsAddon({
+        plan: snapshot.plan,
+        activeAddons: snapshot.activeAddons,
+      }),
+    };
+  },
+});
+
 export const getStatus = query({
   args: {
     businessId: v.id("businesses"),
@@ -798,7 +1033,6 @@ export const getStatus = query({
       currentUser,
       account: snapshot.account,
     });
-
     const recentTransactions = await ctx.db
       .query("billing_transactions")
       .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", args.businessId))
@@ -809,7 +1043,8 @@ export const getStatus = query({
 
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
-      tier: snapshot.tier,
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
       subscriptionState: snapshot.account?.subscriptionState ?? "inactive",
       contact,
       usage: snapshot.usage,
@@ -869,6 +1104,117 @@ export const listTransactions = query({
   },
 });
 
+export const upsertUsageEvent = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    usageKind: v.union(
+      v.literal("voice_seconds"),
+      v.literal("alert_sms_segments"),
+      v.literal("outbound_call_attempts"),
+      v.literal("ai_sms_segments"),
+    ),
+    quantity: v.number(),
+    sourceKey: v.string(),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    usageEventId: v.id("billing_usage_events"),
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    syncNeeded: v.boolean(),
+  }),
+  handler: async (ctx, args): Promise<UpsertUsageResult> => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+      at: args.recordedAt,
+    });
+    const syncNeeded = shouldSyncUsageEvent({
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+      usageKind: args.usageKind,
+    });
+
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", args.sourceKey),
+      )
+      .unique();
+
+    const deltaQuantity = args.quantity - (existingUsageEvent?.quantity ?? 0);
+
+    if (!snapshot.usage) {
+      const monthPatch = buildUsageMonthPatch({
+        plan: snapshot.plan,
+        usage: null,
+        usageKind: args.usageKind,
+        deltaQuantity: args.quantity,
+        recordedAt: args.recordedAt,
+      });
+
+      await ctx.db.insert("billing_usage_months", {
+        businessId: args.businessId,
+        periodKey: snapshot.periodKey,
+        ...monthPatch,
+      });
+    } else if (deltaQuantity !== 0) {
+      const monthPatch = buildUsageMonthPatch({
+        plan: snapshot.plan,
+        usage: snapshot.usage,
+        usageKind: args.usageKind,
+        deltaQuantity,
+        recordedAt: args.recordedAt,
+      });
+      await ctx.db.patch(snapshot.usage._id, monthPatch);
+    } else if (snapshot.usage.lastRecordedAt !== args.recordedAt) {
+      await ctx.db.patch(snapshot.usage._id, {
+        lastRecordedAt: args.recordedAt,
+      });
+    }
+
+    if (existingUsageEvent) {
+      await ctx.db.patch(existingUsageEvent._id, {
+        quantity: args.quantity,
+        planAtRecordTime: snapshot.plan,
+        activeAddonsAtRecordTime: snapshot.activeAddons,
+        recordedAt: args.recordedAt,
+        syncStatus: syncNeeded ? "pending" : "skipped",
+      });
+
+      return {
+        usageEventId: existingUsageEvent._id,
+        plan: snapshot.plan,
+        activeAddons: snapshot.activeAddons,
+        syncNeeded,
+      };
+    }
+
+    const usageEventId = await ctx.db.insert("billing_usage_events", {
+      businessId: args.businessId,
+      periodKey: snapshot.periodKey,
+      sourceKey: args.sourceKey,
+      usageKind: args.usageKind,
+      quantity: args.quantity,
+      planAtRecordTime: snapshot.plan,
+      activeAddonsAtRecordTime: snapshot.activeAddons,
+      recordedAt: args.recordedAt,
+      syncStatus: syncNeeded ? "pending" : "skipped",
+    });
+
+    return {
+      usageEventId,
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+      syncNeeded,
+    };
+  },
+});
+
 export const getUsageSyncPayload = internalQuery({
   args: {
     usageEventId: v.id("billing_usage_events"),
@@ -886,7 +1232,7 @@ export const getUsageSyncPayload = internalQuery({
     }),
     v.null(),
   ),
-  handler: async (ctx, args): Promise<SendBillingUsagePayload | null> => {
+  handler: async (ctx, args): Promise<UsageSyncPayload | null> => {
     const usageEvent = await ctx.db.get(args.usageEventId);
     if (!usageEvent || usageEvent.syncStatus === "succeeded" || usageEvent.syncStatus === "skipped") {
       return null;
@@ -897,21 +1243,25 @@ export const getUsageSyncPayload = internalQuery({
       return null;
     }
 
-    const tierAtRecordTime = usageEvent.tierAtRecordTime;
-    if (tierAtRecordTime !== "starter" && tierAtRecordTime !== "growth") {
+    if (
+      !shouldSyncUsageEvent({
+        plan: usageEvent.planAtRecordTime ?? getPlanFromLegacyTier(usageEvent.tierAtRecordTime) ?? "free_cloud",
+        activeAddons: getNormalizedAddons(usageEvent.activeAddonsAtRecordTime),
+        usageKind: normalizePersistedUsageKind(usageEvent.usageKind),
+      })
+    ) {
       return null;
     }
 
     const meteredUsage = getPolarMeteredUsagePayload(
-      tierAtRecordTime,
-      usageEvent.usageKind as BillingUsageKind,
+      normalizePersistedUsageKind(usageEvent.usageKind),
       usageEvent.quantity,
     );
 
     return {
       businessId: usageEvent.businessId,
       billingKey: account.billingKey,
-      usageKind: usageEvent.usageKind as BillingUsageKind,
+      usageKind: normalizePersistedUsageKind(usageEvent.usageKind),
       quantity: usageEvent.quantity,
       polarEventName: meteredUsage.eventName,
       polarQuantity: meteredUsage.quantity,
@@ -947,112 +1297,6 @@ export const markUsageEventSyncResult = internalMutation({
   },
 });
 
-export const recordUsageEvent = internalMutation({
-  args: {
-    businessId: v.id("businesses"),
-    usageKind: v.string(),
-    quantity: v.number(),
-    sourceKey: v.string(),
-    recordedAt: v.string(),
-  },
-  returns: v.object({
-    usageEventId: v.id("billing_usage_events"),
-    tier: v.string(),
-    syncNeeded: v.boolean(),
-  }),
-  handler: async (ctx, args): Promise<RecordUsageEventResult> => {
-    const existingUsageEvent = await ctx.db
-      .query("billing_usage_events")
-      .withIndex("by_business_id_and_source_key", (q) =>
-        q.eq("businessId", args.businessId).eq("sourceKey", args.sourceKey),
-      )
-      .unique();
-
-    if (existingUsageEvent) {
-      return {
-        usageEventId: existingUsageEvent._id,
-        tier: existingUsageEvent.tierAtRecordTime as BillingTier,
-        syncNeeded:
-          existingUsageEvent.syncStatus === "pending" ||
-          existingUsageEvent.syncStatus === "failed",
-      };
-    }
-
-    const snapshot = await getBillingSnapshot(ctx, {
-      businessId: args.businessId,
-      at: args.recordedAt,
-    });
-    const included = getBillingIncludedUsage(snapshot.tier);
-    const nextVoiceSecondsUsed =
-      (snapshot.usage?.voiceSecondsUsed ?? 0) +
-      (args.usageKind === "voice_seconds" ? args.quantity : 0);
-    const nextSmsSegmentsUsed =
-      (snapshot.usage?.smsSegmentsUsed ?? 0) +
-      (args.usageKind === "sms_segments" ? args.quantity : 0);
-    const nextVoiceBlocked =
-      included.voiceSecondsIncluded === null
-        ? false
-        : nextVoiceSecondsUsed >= included.voiceSecondsIncluded;
-    const nextSmsBlocked =
-      included.smsSegmentsIncluded === null
-        ? false
-        : nextSmsSegmentsUsed >= included.smsSegmentsIncluded;
-
-    if (snapshot.usage) {
-      await ctx.db.patch(snapshot.usage._id, {
-        tier: snapshot.tier,
-        voiceSecondsUsed: nextVoiceSecondsUsed,
-        smsSegmentsUsed: nextSmsSegmentsUsed,
-        ...(included.voiceSecondsIncluded !== null
-          ? { voiceSecondsIncluded: included.voiceSecondsIncluded }
-          : {}),
-        ...(included.smsSegmentsIncluded !== null
-          ? { smsSegmentsIncluded: included.smsSegmentsIncluded }
-          : {}),
-        voiceBlocked: nextVoiceBlocked,
-        smsBlocked: nextSmsBlocked,
-        lastRecordedAt: args.recordedAt,
-      });
-    } else {
-      await ctx.db.insert("billing_usage_months", {
-        businessId: args.businessId,
-        periodKey: snapshot.periodKey,
-        tier: snapshot.tier,
-        voiceSecondsUsed: nextVoiceSecondsUsed,
-        smsSegmentsUsed: nextSmsSegmentsUsed,
-        ...(included.voiceSecondsIncluded !== null
-          ? { voiceSecondsIncluded: included.voiceSecondsIncluded }
-          : {}),
-        ...(included.smsSegmentsIncluded !== null
-          ? { smsSegmentsIncluded: included.smsSegmentsIncluded }
-          : {}),
-        voiceBlocked: nextVoiceBlocked,
-        smsBlocked: nextSmsBlocked,
-        lastRecordedAt: args.recordedAt,
-      });
-    }
-
-    const usageEventId = await ctx.db.insert("billing_usage_events", {
-      businessId: args.businessId,
-      periodKey: snapshot.periodKey,
-      sourceKey: args.sourceKey,
-      usageKind: args.usageKind,
-      quantity: args.quantity,
-      tierAtRecordTime: snapshot.tier,
-      recordedAt: args.recordedAt,
-      syncStatus: isPaidSubscriptionStatus(snapshot.account?.subscriptionState)
-        ? "pending"
-        : "skipped",
-    });
-
-    return {
-      usageEventId,
-      tier: snapshot.tier,
-      syncNeeded: isPaidSubscriptionStatus(snapshot.account?.subscriptionState),
-    };
-  },
-});
-
 export const syncUsageEventToPolar = internalAction({
   args: {
     usageEventId: v.id("billing_usage_events"),
@@ -1062,12 +1306,9 @@ export const syncUsageEventToPolar = internalAction({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    const payload: SendBillingUsagePayload | null = await ctx.runQuery(
-      internal.billing.getUsageSyncPayload,
-      {
-        usageEventId: args.usageEventId,
-      },
-    );
+    const payload = await ctx.runQuery(internal.billing.getUsageSyncPayload, {
+      usageEventId: args.usageEventId,
+    });
 
     if (!payload) {
       return { synced: false };
@@ -1102,7 +1343,6 @@ export const syncUsageEventToPolar = internalAction({
       return { synced: true };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
-
       await ctx.runMutation(internal.billing.markUsageEventSyncResult, {
         usageEventId: args.usageEventId,
         syncStatus: "failed",
@@ -1110,34 +1350,8 @@ export const syncUsageEventToPolar = internalAction({
         syncError: errorMessage,
       });
 
-      return {
-        synced: false,
-        error: errorMessage,
-      };
+      return { synced: false, error: errorMessage };
     }
-  },
-});
-
-export const assertSmsCanSend = internalQuery({
-  args: {
-    businessId: v.id("businesses"),
-  },
-  returns: v.object({
-    allowed: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    const snapshot = await getBillingSnapshot(ctx, {
-      businessId: args.businessId,
-    });
-    const usage = getBillingUsageSnapshotData({
-      tier: snapshot.tier,
-      periodKey: snapshot.periodKey,
-      usage: snapshot.usage,
-    });
-
-    return {
-      allowed: !usage.smsBlocked,
-    };
   },
 });
 
@@ -1150,11 +1364,17 @@ export const recordVoiceUsage = internalMutation({
   },
   returns: v.object({
     usageEventId: v.id("billing_usage_events"),
-    tier: v.string(),
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
     syncNeeded: v.boolean(),
   }),
-  handler: async (ctx, args): Promise<RecordUsageEventResult> => {
-    return await ctx.runMutation(internal.billing.recordUsageEvent, {
+  handler: async (ctx, args): Promise<UpsertUsageResult> => {
+    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
       businessId: args.businessId,
       usageKind: "voice_seconds",
       quantity: args.quantity,
@@ -1164,7 +1384,36 @@ export const recordVoiceUsage = internalMutation({
   },
 });
 
-export const recordSmsUsage = internalMutation({
+export const recordAlertSmsUsage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    notificationId: v.id("notifications"),
+    quantity: v.number(),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    usageEventId: v.id("billing_usage_events"),
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    syncNeeded: v.boolean(),
+  }),
+  handler: async (ctx, args): Promise<UpsertUsageResult> => {
+    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+      businessId: args.businessId,
+      usageKind: "alert_sms_segments",
+      quantity: args.quantity,
+      sourceKey: `alert_sms:${String(args.notificationId)}`,
+      recordedAt: args.recordedAt,
+    });
+  },
+});
+
+export const recordAiSmsUsage = internalMutation({
   args: {
     businessId: v.id("businesses"),
     messageId: v.id("messages"),
@@ -1173,38 +1422,279 @@ export const recordSmsUsage = internalMutation({
   },
   returns: v.object({
     usageEventId: v.id("billing_usage_events"),
-    tier: v.string(),
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
     syncNeeded: v.boolean(),
   }),
-  handler: async (ctx, args): Promise<RecordUsageEventResult> => {
-    return await ctx.runMutation(internal.billing.recordUsageEvent, {
+  handler: async (ctx, args): Promise<UpsertUsageResult> => {
+    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
       businessId: args.businessId,
-      usageKind: "sms_segments",
+      usageKind: "ai_sms_segments",
       quantity: args.quantity,
-      sourceKey: `sms:${String(args.messageId)}`,
+      sourceKey: `ai_sms:${String(args.messageId)}`,
       recordedAt: args.recordedAt,
     });
   },
 });
 
-export const markMessageBillingBlocked = internalMutation({
+export const recordOutboundCallAttemptUsage = internalMutation({
   args: {
-    messageId: v.id("messages"),
-    providerUpdatedAt: v.string(),
+    businessId: v.id("businesses"),
+    sourceKey: v.string(),
+    quantity: v.number(),
+    recordedAt: v.string(),
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const message = await ctx.db.get(args.messageId);
-    if (!message) {
-      return null;
-    }
+  returns: v.object({
+    usageEventId: v.id("billing_usage_events"),
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    syncNeeded: v.boolean(),
+  }),
+  handler: async (ctx, args): Promise<UpsertUsageResult> => {
+    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+      businessId: args.businessId,
+      usageKind: "outbound_call_attempts",
+      quantity: args.quantity,
+      sourceKey: args.sourceKey,
+      recordedAt: args.recordedAt,
+    });
+  },
+});
 
-    await ctx.db.patch(args.messageId, {
-      status: "failed",
-      providerStatus: "billing_blocked",
-      providerUpdatedAt: args.providerUpdatedAt,
+export const getSmsCapabilityPolicy = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+    capability: v.union(v.literal("alert"), v.literal("ai")),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    senderRole: v.union(v.literal("platform_alert"), v.literal("business_ai")),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+  }),
+  handler: async (ctx, args): Promise<SmsCapabilityPolicy> => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
     });
 
+    if (args.capability === "alert") {
+      return {
+        allowed: !usage.alertSmsBlocked,
+        senderRole: "platform_alert",
+        errorCode: usage.alertSmsBlocked ? billingErrorCodes.alertSmsLimitReached : null,
+      };
+    }
+
+    const aiSmsAllowed = isAiSmsEnabled({
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+    });
+
+    return {
+      allowed: aiSmsAllowed,
+      senderRole: "business_ai",
+      errorCode: aiSmsAllowed ? null : billingErrorCodes.aiSmsNotEnabled,
+    };
+  },
+});
+
+export const assertVoiceCanStart = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
+    });
+
+    return {
+      allowed: !usage.voiceBlocked,
+      errorCode: usage.voiceBlocked ? billingErrorCodes.voiceLimitReached : null,
+    };
+  },
+});
+
+export const assertOutboundCallAttemptCanStart = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
+    });
+
+    return {
+      allowed: !usage.outboundCallAttemptsBlocked,
+      errorCode: usage.outboundCallAttemptsBlocked
+        ? billingErrorCodes.outboundCallAttemptLimitReached
+        : null,
+    };
+  },
+});
+
+export const getPlatformAlertSmsSender = internalQuery({
+  args: {},
+  returns: v.union(v.object({ e164: v.string() }), v.null()),
+  handler: async (ctx) => {
+    const sender = await ctx.db
+      .query("platform_sms_senders")
+      .withIndex("by_role", (q) => q.eq("role", "platform_alert"))
+      .unique();
+
+    if (sender && sender.status === "active" && sender.smsEnabled) {
+      return { e164: sender.e164 };
+    }
+
+    const envSender = getPlatformAlertSmsSenderFromEnv();
+    if (envSender) {
+      return { e164: envSender };
+    }
+
     return null;
+  },
+});
+
+export const seedPlatformAlertSmsSender = internalMutation({
+  args: {
+    label: v.string(),
+    e164: v.string(),
+    twilioPhoneSid: v.optional(v.string()),
+    twilioMessagingServiceSid: v.optional(v.string()),
+    compliantDestinationCountries: v.optional(v.array(v.string())),
+  },
+  returns: v.id("platform_sms_senders"),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("platform_sms_senders")
+      .withIndex("by_role", (q) => q.eq("role", "platform_alert"))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        label: args.label,
+        e164: args.e164,
+        ...(args.twilioPhoneSid ? { twilioPhoneSid: args.twilioPhoneSid } : {}),
+        ...(args.twilioMessagingServiceSid
+          ? { twilioMessagingServiceSid: args.twilioMessagingServiceSid }
+          : {}),
+        ...(args.compliantDestinationCountries
+          ? { compliantDestinationCountries: args.compliantDestinationCountries }
+          : {}),
+        status: "active",
+        smsEnabled: true,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("platform_sms_senders", {
+      role: "platform_alert",
+      label: args.label,
+      e164: args.e164,
+      ...(args.twilioPhoneSid ? { twilioPhoneSid: args.twilioPhoneSid } : {}),
+      ...(args.twilioMessagingServiceSid
+        ? { twilioMessagingServiceSid: args.twilioMessagingServiceSid }
+        : {}),
+      ...(args.compliantDestinationCountries
+        ? { compliantDestinationCountries: args.compliantDestinationCountries }
+        : {}),
+      status: "active",
+      smsEnabled: true,
+    });
+  },
+});
+
+export const getPricingSummary = query({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    plan: v.union(
+      v.literal("self_host"),
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    aiSmsEnabled: v.boolean(),
+    alertSmsPlatformSenderConfigured: v.boolean(),
+    proMonthlyChargeCents: v.number(),
+    aiSmsMonthlyChargeCents: v.number(),
+    aiSmsSetupChargeCents: v.number(),
+  }),
+  handler: async (ctx, args): Promise<PricingSummary> => {
+    await requireMembership(ctx, args.businessId);
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+    });
+    const platformSender = await ctx.db
+      .query("platform_sms_senders")
+      .withIndex("by_role", (q) => q.eq("role", "platform_alert"))
+      .unique();
+    const hasPlatformSender =
+      Boolean(platformSender?.smsEnabled && platformSender?.status === "active") ||
+      Boolean(getPlatformAlertSmsSenderFromEnv());
+
+    return {
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+      aiSmsEnabled: isAiSmsEnabled({
+        plan: snapshot.plan,
+        activeAddons: snapshot.activeAddons,
+      }),
+      alertSmsPlatformSenderConfigured: hasPlatformSender,
+      proMonthlyChargeCents: billingPlanCatalog.pro.monthlyChargeCents ?? 0,
+      aiSmsMonthlyChargeCents: getAiSmsAddonPricing().recurringMonthlyChargeCents,
+      aiSmsSetupChargeCents: getAiSmsAddonPricing().oneTimeSetupChargeCents,
+    };
   },
 });

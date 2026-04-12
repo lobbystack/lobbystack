@@ -1,13 +1,13 @@
 import type {
-  BillingPaidTier,
-  BillingTier,
+  BillingAddonSlug,
+  BillingPlanSlug,
   BillingUsageSnapshot,
+  CloudBillingPlanSlug,
+  HostedCheckoutPlanSlug,
 } from "../../packages/shared/src/billing";
 import {
-  billingDefaults,
-  billingPaidTiers,
+  billingAddonCatalog,
   billingPlanCatalog,
-  isPaidBillingTier,
 } from "../../packages/shared/src/billing";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -37,109 +37,138 @@ export function getBillingResetAt(periodKey: string): string {
   return new Date(Date.UTC(year, month, 1, 0, 0, 0, 0)).toISOString();
 }
 
-export function getBillingIncludedUsage(tier: BillingTier): {
-  voiceSecondsIncluded: number | null;
-  smsSegmentsIncluded: number | null;
-} {
-  if (isPaidBillingTier(tier)) {
-    return {
-      voiceSecondsIncluded: null,
-      smsSegmentsIncluded: null,
-    };
-  }
-
-  return {
-    voiceSecondsIncluded: billingDefaults.freeVoiceSeconds,
-    smsSegmentsIncluded: billingDefaults.freeSmsSegments,
-  };
-}
-
-export function getBillingMinimumChargeCents(tier: BillingTier): number | null {
-  return billingPlanCatalog[tier].minimumMonthlyChargeCents;
-}
-
-function getBillingProductEnvVarName(plan: BillingPaidTier): string {
-  switch (plan) {
-    case "starter":
-      return "POLAR_STARTER_PRODUCT_ID";
-    case "growth":
-      return "POLAR_GROWTH_PRODUCT_ID";
-  }
-}
-
-export function getBillingProductIdForPlan(plan: BillingPaidTier): string {
-  const envVarName = getBillingProductEnvVarName(plan);
-  const productId = process.env[envVarName]?.trim();
-
-  if (!productId) {
-    throw new Error(`${envVarName} is required.`);
-  }
-
-  return productId;
-}
-
-export function getConfiguredCheckoutPlans(): Array<BillingPaidTier> {
-  return billingPaidTiers.filter(
-    (plan) => Boolean(process.env[getBillingProductEnvVarName(plan)]?.trim()),
+export function getNormalizedAddons(
+  activeAddons: Array<string> | undefined | null,
+): Array<BillingAddonSlug> {
+  return (activeAddons ?? []).filter(
+    (addon): addon is BillingAddonSlug => addon === "ai_sms",
   );
 }
 
+export function getPlanFromLegacyTier(
+  tier: "free" | "starter" | "growth" | undefined | null,
+): BillingPlanSlug | null {
+  if (tier === "free") {
+    return "free_cloud";
+  }
+  if (tier === "starter" || tier === "growth") {
+    return "pro";
+  }
+  return null;
+}
+
+export function getPlanForBusiness(input: {
+  business: Pick<Doc<"businesses">, "deploymentMode"> | null;
+  account: Pick<Doc<"billing_accounts">, "currentPlan" | "currentTier"> | null;
+}): BillingPlanSlug {
+  if (
+    input.business?.deploymentMode &&
+    input.business.deploymentMode !== "cloud" &&
+    input.business.deploymentMode !== "development"
+  ) {
+    return "self_host";
+  }
+
+  const accountPlan = input.account?.currentPlan;
+  if (
+    accountPlan === "free_cloud" ||
+    accountPlan === "pro" ||
+    accountPlan === "enterprise"
+  ) {
+    return accountPlan;
+  }
+
+  const legacyPlan = getPlanFromLegacyTier(input.account?.currentTier);
+  if (legacyPlan) {
+    return legacyPlan;
+  }
+
+  return "free_cloud";
+}
+
+export function isAiSmsEnabled(input: {
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+}): boolean {
+  if (input.plan === "self_host") {
+    return true;
+  }
+  if (input.plan === "enterprise") {
+    return true;
+  }
+
+  return input.plan === "pro" && input.activeAddons.includes("ai_sms");
+}
+
+export function getPlanEntitlements(plan: BillingPlanSlug) {
+  const config = billingPlanCatalog[plan];
+  return {
+    voiceSecondsIncluded: config.voiceSecondsIncluded,
+    alertSmsSegmentsIncluded: config.alertSmsSegmentsIncluded,
+    outboundCallAttemptsIncluded: config.outboundCallAttemptsIncluded,
+    includedBusinessNumbers: config.includedBusinessNumbers,
+    overagesBillable: config.overagesBillable,
+  };
+}
+
 export function getBillingUsageSnapshotData(args: {
-  tier: BillingTier;
-  periodKey: string;
+  plan: BillingPlanSlug;
   usage: Doc<"billing_usage_months"> | null;
+  periodKey: string;
 }): BillingUsageSnapshot {
-  const included = getBillingIncludedUsage(args.tier);
+  const entitlements = getPlanEntitlements(args.plan);
   const voiceSecondsUsed = args.usage?.voiceSecondsUsed ?? 0;
-  const smsSegmentsUsed = args.usage?.smsSegmentsUsed ?? 0;
+  const alertSmsSegmentsUsed =
+    args.usage?.alertSmsSegmentsUsed ?? args.usage?.smsSegmentsUsed ?? 0;
+  const outboundCallAttemptsUsed = args.usage?.outboundCallAttemptsUsed ?? 0;
+  const aiSmsSegmentsUsed = args.usage?.aiSmsSegmentsUsed ?? 0;
+  const alertSmsSegmentsIncluded =
+    args.usage?.alertSmsSegmentsIncluded ??
+    args.usage?.smsSegmentsIncluded ??
+    entitlements.alertSmsSegmentsIncluded;
+
   const voiceSecondsRemaining =
-    included.voiceSecondsIncluded === null
+    entitlements.voiceSecondsIncluded === null
       ? null
-      : Math.max(0, included.voiceSecondsIncluded - voiceSecondsUsed);
-  const smsSegmentsRemaining =
-    included.smsSegmentsIncluded === null
+      : Math.max(0, entitlements.voiceSecondsIncluded - voiceSecondsUsed);
+  const alertSmsSegmentsRemaining =
+    alertSmsSegmentsIncluded === null
       ? null
-      : Math.max(0, included.smsSegmentsIncluded - smsSegmentsUsed);
+      : Math.max(0, alertSmsSegmentsIncluded - alertSmsSegmentsUsed);
+  const outboundCallAttemptsRemaining =
+    entitlements.outboundCallAttemptsIncluded === null
+      ? null
+      : Math.max(0, entitlements.outboundCallAttemptsIncluded - outboundCallAttemptsUsed);
 
   return {
     periodKey: args.periodKey,
     resetAt: getBillingResetAt(args.periodKey),
     voiceSecondsUsed,
-    smsSegmentsUsed,
-    voiceSecondsIncluded: included.voiceSecondsIncluded,
-    smsSegmentsIncluded: included.smsSegmentsIncluded,
+    alertSmsSegmentsUsed,
+    outboundCallAttemptsUsed,
+    aiSmsSegmentsUsed,
+    voiceSecondsIncluded: entitlements.voiceSecondsIncluded,
+    alertSmsSegmentsIncluded,
+    outboundCallAttemptsIncluded: entitlements.outboundCallAttemptsIncluded,
     voiceSecondsRemaining,
-    smsSegmentsRemaining,
+    alertSmsSegmentsRemaining,
+    outboundCallAttemptsRemaining,
     voiceBlocked:
-      included.voiceSecondsIncluded === null
+      entitlements.overagesBillable || entitlements.voiceSecondsIncluded === null
         ? false
-        : voiceSecondsUsed >= included.voiceSecondsIncluded,
-    smsBlocked:
-      included.smsSegmentsIncluded === null
+        : args.usage?.voiceBlocked ?? voiceSecondsUsed >= entitlements.voiceSecondsIncluded,
+    alertSmsBlocked:
+      entitlements.overagesBillable || alertSmsSegmentsIncluded === null
         ? false
-        : smsSegmentsUsed >= included.smsSegmentsIncluded,
+        : (args.usage?.alertSmsBlocked ?? args.usage?.smsBlocked) ??
+          alertSmsSegmentsUsed >= alertSmsSegmentsIncluded,
+    outboundCallAttemptsBlocked:
+      entitlements.overagesBillable ||
+      entitlements.outboundCallAttemptsIncluded === null
+        ? false
+        : args.usage?.outboundCallAttemptsBlocked ??
+          outboundCallAttemptsUsed >= entitlements.outboundCallAttemptsIncluded,
   };
-}
-
-export function isPaidSubscriptionStatus(status: string | undefined): boolean {
-  return status === "active" || status === "trialing";
-}
-
-export function deriveBillingTier(input: {
-  subscriptionStatus?: string;
-  subscriptionProductId?: string;
-}): BillingTier {
-  if (!isPaidSubscriptionStatus(input.subscriptionStatus)) {
-    return "free";
-  }
-
-  for (const plan of billingPaidTiers) {
-    if (input.subscriptionProductId === process.env[getBillingProductEnvVarName(plan)]?.trim()) {
-      return plan;
-    }
-  }
-
-  return "free";
 }
 
 export async function getBillingAccount(
@@ -174,26 +203,100 @@ export async function getBillingSnapshot(
     at?: string;
   },
 ): Promise<{
-    account: Doc<"billing_accounts"> | null;
-    periodKey: string;
-    tier: BillingTier;
-    usage: Doc<"billing_usage_months"> | null;
-  }> {
-  const account = await getBillingAccount(ctx, args.businessId);
-  const tier: BillingTier =
-    account?.currentTier === "starter" || account?.currentTier === "growth"
-      ? account.currentTier
-      : "free";
+  business: Doc<"businesses"> | null;
+  account: Doc<"billing_accounts"> | null;
+  periodKey: string;
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+  usage: Doc<"billing_usage_months"> | null;
+}> {
+  const [business, account] = await Promise.all([
+    ctx.db.get(args.businessId),
+    getBillingAccount(ctx, args.businessId),
+  ]);
+  const plan = getPlanForBusiness({ business, account });
   const periodKey = getBillingPeriodKey(args.at ?? Date.now());
+  const activeAddons = getNormalizedAddons(account?.activeAddons);
   const usage = await getBillingUsageMonth(ctx, {
     businessId: args.businessId,
     periodKey,
   });
 
   return {
+    business,
     account,
     periodKey,
-    tier,
+    plan,
+    activeAddons,
     usage,
   };
+}
+
+export function getConfiguredCheckoutPlans(): Array<HostedCheckoutPlanSlug> {
+  return process.env.POLAR_PRO_PRODUCT_ID?.trim() ? ["pro"] : [];
+}
+
+export function getProProductId(): string {
+  const productId = process.env.POLAR_PRO_PRODUCT_ID?.trim();
+  if (!productId) {
+    throw new Error("POLAR_PRO_PRODUCT_ID is required.");
+  }
+  return productId;
+}
+
+export function getAiSmsAddonProductIds(): {
+  recurringProductId: string;
+  setupFeeProductId: string;
+} {
+  const recurringProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+  const setupFeeProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim();
+
+  if (!recurringProductId) {
+    throw new Error("POLAR_AI_SMS_ADDON_PRODUCT_ID is required.");
+  }
+  if (!setupFeeProductId) {
+    throw new Error("POLAR_AI_SMS_SETUP_PRODUCT_ID is required.");
+  }
+
+  return {
+    recurringProductId,
+    setupFeeProductId,
+  };
+}
+
+export function canPurchaseAiSmsAddon(input: {
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+}): boolean {
+  return input.plan === "pro" && !input.activeAddons.includes("ai_sms");
+}
+
+export function deriveCloudPlanFromProductIds(input: {
+  account: Doc<"billing_accounts"> | null;
+  subscriptionProductIds: Array<string>;
+}): CloudBillingPlanSlug {
+  if (input.account?.currentPlan === "enterprise") {
+    return "enterprise";
+  }
+
+  const proProductId = process.env.POLAR_PRO_PRODUCT_ID?.trim();
+  if (proProductId && input.subscriptionProductIds.includes(proProductId)) {
+    return "pro";
+  }
+
+  return "free_cloud";
+}
+
+export function deriveActiveAddonsFromProductIds(
+  subscriptionProductIds: Array<string>,
+): Array<BillingAddonSlug> {
+  const recurringAiSmsProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+  if (recurringAiSmsProductId && subscriptionProductIds.includes(recurringAiSmsProductId)) {
+    return ["ai_sms"];
+  }
+  return [];
+}
+
+export function getAiSmsAddonPricing() {
+  return billingAddonCatalog.ai_sms;
 }

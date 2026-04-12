@@ -38,6 +38,7 @@ type NotificationDeliveryContext = {
   startsAt: string;
   timezone: string;
   locale: "en" | "fr";
+  senderRole: "platform_alert" | "business_ai";
 };
 
 type DeliverNotificationResult = {
@@ -98,7 +99,8 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Appointment not found for notification.");
     }
 
-    const [service, contact, business, profile, phoneNumbers] = await Promise.all([
+    const [service, contact, business, profile, phoneNumbers, sender, smsPolicy, billingSnapshot] =
+      await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
       ctx.db.get(notification.businessId),
@@ -110,6 +112,14 @@ export const getNotificationDeliveryContext = internalQuery({
         .query("phone_numbers")
         .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
         .collect(),
+      ctx.runQuery(internal.billing.getPlatformAlertSmsSender, {}),
+      ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+        businessId: notification.businessId,
+        capability: "alert",
+      }),
+      ctx.runQuery(internal.billing.getSnapshotForCheckout, {
+        businessId: notification.businessId,
+      }),
     ]);
 
     if (!service) {
@@ -127,10 +137,20 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Unsupported notification kind.");
     }
 
-    const senderPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
+    if (!smsPolicy.allowed && billingSnapshot.plan !== "self_host") {
+      throw new Error("Alert SMS quota reached. Upgrade to continue sending notifications.");
+    }
+
+    const senderPhoneNumber =
+      billingSnapshot.plan === "self_host"
+        ? selectSmsSenderPhoneNumber(phoneNumbers)
+        : sender?.e164 ?? null;
+
     if (!senderPhoneNumber) {
       throw new Error(
-        "At least one active SMS-enabled phone number must be mapped to the business.",
+        billingSnapshot.plan === "self_host"
+          ? "At least one active SMS-enabled phone number must be mapped to the business."
+          : "Configure the shared alert SMS sender before delivering hosted notifications.",
       );
     }
 
@@ -156,6 +176,7 @@ export const getNotificationDeliveryContext = internalQuery({
       startsAt: appointment.startsAt,
       timezone: appointment.timezone,
       locale,
+      senderRole: billingSnapshot.plan === "self_host" ? "business_ai" : "platform_alert",
     };
   },
 });
@@ -232,6 +253,11 @@ export const createAppointmentNotifications = internalMutation({
     if (!appointment) {
       throw new Error("Appointment not found.");
     }
+    const business = await ctx.db.get(appointment.businessId);
+    const senderRole =
+      business?.deploymentMode === "cloud" || business?.deploymentMode === "development"
+        ? "platform_alert"
+        : "business_ai";
 
     if (appointment.sourceChannel !== "sms") {
       await ctx.runMutation(
@@ -252,6 +278,7 @@ export const createAppointmentNotifications = internalMutation({
         relatedId: String(args.appointmentId),
         scheduledFor: reminderDate.toISOString(),
         status: "scheduled",
+        senderRole,
       });
 
       await ctx.scheduler.runAt(
@@ -276,6 +303,11 @@ export const ensureBookingConfirmationNotification = internalMutation({
     if (!appointment) {
       throw new Error("Appointment not found.");
     }
+    const business = await ctx.db.get(appointment.businessId);
+    const senderRole =
+      business?.deploymentMode === "cloud" || business?.deploymentMode === "development"
+        ? "platform_alert"
+        : "business_ai";
 
     const existing = await ctx.db
       .query("notifications")
@@ -299,6 +331,7 @@ export const ensureBookingConfirmationNotification = internalMutation({
       relatedId: String(args.appointmentId),
       scheduledFor: new Date().toISOString(),
       status: "pending",
+      senderRole,
     });
 
     await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
