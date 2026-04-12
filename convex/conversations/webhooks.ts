@@ -1225,7 +1225,6 @@ export const handleTwilioSmsInbound = internalAction({
           businessId: phoneNumber.businessId,
           conversationId,
           prompt,
-          messageId,
         },
       );
       reply = rawReply.trim() || "I'm sorry, could you rephrase that?";

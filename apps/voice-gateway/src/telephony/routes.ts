@@ -60,7 +60,7 @@ async function initializeInboundCallRecord(
   } catch (error) {
     if (
       error instanceof RuntimeRequestError &&
-      error.code === billingErrorCodes.voiceQuotaExhausted
+      error.code === billingErrorCodes.voiceLimitReached
     ) {
       server.log.info(
         {

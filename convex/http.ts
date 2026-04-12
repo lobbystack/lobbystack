@@ -1,6 +1,5 @@
 import { httpRouter } from "convex/server";
 import { z } from "zod";
-import { billingErrorCodes } from "../packages/shared/src/billing";
 import {
   normalizeTwilioFormFields,
 } from "./lib/twilioSecurity";
@@ -80,10 +79,6 @@ const reconcileStatusSchema = z.object({
   providerDurationSeconds: z.number().optional(),
 });
 
-const syncBillingUsageSchema = z.object({
-  usageEventId: z.string().min(1),
-});
-
 const recordingQuerySchema = z.object({
   callId: z.string().min(1),
   durationMs: z.coerce.number().optional(),
@@ -161,7 +156,6 @@ function asId<TableName extends keyof IdFieldMap>(_table: TableName, value: stri
 type IdFieldMap = {
   _storage: "_storage";
   appointments: "appointments";
-  billing_usage_events: "billing_usage_events";
   businesses: "businesses";
   calls: "calls";
   contacts: "contacts";
@@ -589,6 +583,18 @@ http.route({
         : {}),
     });
 
+    try {
+      await ctx.runAction(internal.integrations.twilioSms.syncMessagePriceFromProvider, {
+        providerMessageSid,
+        providerStatus: parsedPayload.data.MessageStatus,
+      });
+    } catch (error) {
+      console.warn("[twilioSms] Failed to start provider price sync", {
+        providerMessageSid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     return new Response("OK", { status: 200 });
   }),
 });
@@ -653,35 +659,18 @@ http.route({
       return body.response;
     }
 
-    try {
-      const result = await ctx.runMutation(internal.voice.runtime.startCall, {
-        businessId: asId("businesses", body.data.businessId),
-        twilioCallSid: body.data.twilioCallSid,
-        ...(body.data.gatewaySessionId !== undefined
-          ? { gatewaySessionId: body.data.gatewaySessionId }
-          : {}),
-        from: body.data.from,
-        to: body.data.to,
-        startedAt: body.data.startedAt,
-      });
+    const result = await ctx.runMutation(internal.voice.runtime.startCall, {
+      businessId: asId("businesses", body.data.businessId),
+      twilioCallSid: body.data.twilioCallSid,
+      ...(body.data.gatewaySessionId !== undefined
+        ? { gatewaySessionId: body.data.gatewaySessionId }
+        : {}),
+      from: body.data.from,
+      to: body.data.to,
+      startedAt: body.data.startedAt,
+    });
 
-      return Response.json(result);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === billingErrorCodes.voiceQuotaExhausted
-      ) {
-        return Response.json(
-          {
-            code: billingErrorCodes.voiceQuotaExhausted,
-            message: "Voice quota exhausted.",
-          },
-          { status: 402 },
-        );
-      }
-
-      throw error;
-    }
+    return Response.json(result);
   }),
 });
 
@@ -791,28 +780,6 @@ http.route({
     });
 
     return Response.json(result);
-  }),
-});
-
-http.route({
-  path: "/billing/usage/sync",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const unauthorized = requireServiceToken(request);
-    if (unauthorized) {
-      return unauthorized;
-    }
-
-    const body = await parseJsonBody(request, syncBillingUsageSchema);
-    if (!body.ok) {
-      return body.response;
-    }
-
-    return Response.json(
-      await ctx.runAction(internal.billing.syncUsageEventToPolar, {
-        usageEventId: asId("billing_usage_events", body.data.usageEventId),
-      }),
-    );
   }),
 });
 

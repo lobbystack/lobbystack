@@ -159,7 +159,7 @@ describe("voice routes", () => {
       new runtimeRequestErrorClass({
         message: "Voice quota exhausted.",
         status: 402,
-        code: billingErrorCodes.voiceQuotaExhausted,
+        code: billingErrorCodes.voiceLimitReached,
       }),
     );
 

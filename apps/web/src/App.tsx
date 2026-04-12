@@ -29,7 +29,6 @@ import { HomePage } from "@/features/home/HomePage";
 import { MessagesPage } from "@/features/messages/MessagesPage";
 import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
-import { SettingsBillingPage } from "@/features/settings/SettingsBillingPage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 import { SettingsBillingPage } from "@/features/settings/SettingsBillingPage";
@@ -279,16 +278,6 @@ function WorkspaceShell() {
                 )
               }
               path="appearance"
-            />
-            <Route
-              element={
-                businessId ? (
-                  <SettingsBillingPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              path="billing"
             />
             <Route
               element={

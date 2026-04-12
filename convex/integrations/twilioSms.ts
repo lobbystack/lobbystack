@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import twilio from "twilio";
 
+import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { internalAction } from "../_generated/server";
 import {
@@ -92,8 +93,128 @@ export const sendMessage = internalAction({
     return {
       providerMessageSid: message.sid,
       providerStatus: message.status ?? "queued",
-      providerNumSegments: Number.parseInt(message.numSegments ?? "1", 10) || 1,
     };
+  },
+});
+
+const TERMINAL_SMS_STATUSES = new Set([
+  "sent",
+  "delivered",
+  "undelivered",
+  "failed",
+  "canceled",
+]);
+const MESSAGE_PRICE_RETRY_DELAYS_MS = [
+  30_000,
+  120_000,
+  600_000,
+  1_800_000,
+] as const;
+
+function parseOptionalFiniteNumber(value: string | null | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizePriceUnit(value: string | null | undefined): string | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeProviderCostUsd(
+  providerPrice: number | undefined,
+  providerPriceUnit: string | undefined,
+): number | undefined {
+  if (providerPrice === undefined || providerPriceUnit !== "usd") {
+    return undefined;
+  }
+
+  return Math.abs(providerPrice);
+}
+
+export const syncMessagePriceFromProvider = internalAction({
+  args: {
+    providerMessageSid: v.string(),
+    providerStatus: v.string(),
+    attempt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const attempt = Math.max(0, args.attempt ?? 0);
+    const status = args.providerStatus.trim().toLowerCase();
+    if (!TERMINAL_SMS_STATUSES.has(status)) {
+      return { synced: false, scheduledRetry: false, skipped: true };
+    }
+
+    try {
+      const client = getTwilioClient();
+      const message = await client.messages(args.providerMessageSid).fetch();
+      const providerPrice = parseOptionalFiniteNumber(message.price);
+      const providerPriceUnit = normalizePriceUnit(message.priceUnit);
+      const providerCostUsd = normalizeProviderCostUsd(providerPrice, providerPriceUnit);
+      const providerNumSegments = parseOptionalFiniteNumber(message.numSegments);
+
+      await ctx.runMutation(internal.integrations.twilioMessageStatus.recordProviderPricing, {
+        providerMessageSid: args.providerMessageSid,
+        ...(message.dateUpdated
+          ? { providerUpdatedAt: message.dateUpdated.toISOString() }
+          : {}),
+        ...(providerPrice !== undefined ? { providerPrice } : {}),
+        ...(providerPriceUnit !== undefined ? { providerPriceUnit } : {}),
+        ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
+        ...(providerNumSegments !== undefined
+          ? { providerNumSegments: Math.max(0, Math.trunc(providerNumSegments)) }
+          : {}),
+      });
+
+      if (
+        providerCostUsd === undefined &&
+        attempt < MESSAGE_PRICE_RETRY_DELAYS_MS.length
+      ) {
+        const retryDelayMs = MESSAGE_PRICE_RETRY_DELAYS_MS[attempt];
+        if (retryDelayMs === undefined) {
+          return { synced: false, scheduledRetry: false, skipped: false };
+        }
+        await ctx.scheduler.runAfter(
+          retryDelayMs,
+          internal.integrations.twilioSms.syncMessagePriceFromProvider,
+          {
+            providerMessageSid: args.providerMessageSid,
+            providerStatus: message.status ?? args.providerStatus,
+            attempt: attempt + 1,
+          },
+        );
+        return { synced: false, scheduledRetry: true, skipped: false };
+      }
+
+      return { synced: providerCostUsd !== undefined, scheduledRetry: false, skipped: false };
+    } catch (error) {
+      if (attempt < MESSAGE_PRICE_RETRY_DELAYS_MS.length) {
+        const retryDelayMs = MESSAGE_PRICE_RETRY_DELAYS_MS[attempt];
+        if (retryDelayMs === undefined) {
+          return { synced: false, scheduledRetry: false, skipped: false };
+        }
+        await ctx.scheduler.runAfter(
+          retryDelayMs,
+          internal.integrations.twilioSms.syncMessagePriceFromProvider,
+          {
+            providerMessageSid: args.providerMessageSid,
+            providerStatus: args.providerStatus,
+            attempt: attempt + 1,
+          },
+        );
+        return { synced: false, scheduledRetry: true, skipped: false };
+      }
+
+      console.warn("[twilioSms] Failed to hydrate provider message price", {
+        providerMessageSid: args.providerMessageSid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { synced: false, scheduledRetry: false, skipped: false };
+    }
   },
 });
 
