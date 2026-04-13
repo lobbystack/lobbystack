@@ -8,6 +8,7 @@ import workflow from "@convex-dev/workflow/convex.config";
 import workpool from "@convex-dev/workpool/convex.config";
 import actionRetrier from "@convex-dev/action-retrier/convex.config";
 import crons from "@convex-dev/crons/convex.config";
+import polar from "@convex-dev/polar/convex.config";
 
 const app = defineApp();
 
@@ -21,5 +22,6 @@ app.use(workpool, { name: "highPriorityWorkpool" });
 app.use(workpool, { name: "bulkWorkpool" });
 app.use(actionRetrier);
 app.use(crons);
+app.use(polar);
 
 export default app;

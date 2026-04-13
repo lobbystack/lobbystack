@@ -1,4 +1,4 @@
-# PostHog + OTel Validation
+# PostHog Validation
 
 ## Goal
 
@@ -6,7 +6,7 @@ Validate that:
 
 - web product events reach PostHog
 - Convex domain events reach PostHog through the outbox
-- voice-gateway traces and metrics reach Grafana Cloud through OTLP
+- voice-gateway operational logs and health events reach PostHog
 - AI traces reach PostHog without leaking sensitive content
 
 ## Required environment
@@ -25,8 +25,7 @@ Validate that:
 
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
-- `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `OTEL_EXPORTER_OTLP_HEADERS`
+- `POSTHOG_PRIVACY_MODE=true`
 
 Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 
@@ -48,20 +47,15 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - `web.knowledge.upload_*`
    - `web.integration.calendar_connect_*`
 5. Confirm session replay still appears for the session.
-6. Confirm the PostHog `Web analytics` product now shows route traffic for the tested pages.
-7. In Safari, validate again with:
-   - the managed reverse proxy host `https://t.nontia.com` enabled as `VITE_POSTHOG_HOST`
-   - content blockers disabled and then re-enabled if you are testing the proxy hardening
-8. Validate browser error tracking:
+6. Confirm the PostHog `Web analytics` product shows route traffic for the tested pages.
+7. Validate browser error tracking:
    - trigger one unhandled error in the browser console and confirm it appears in PostHog Error Tracking
    - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
    - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
-9. Validate browser source maps:
+8. Validate browser source maps:
    - deploy with `pnpm --filter @ai-receptionist/web deploy:cloudflare` or `preview:cloudflare`
-   - confirm the built JavaScript served in production includes injected `//# chunkId=...` comments
-   - confirm the matching release exists in PostHog symbol sets and browser stack traces resolve to source files instead of minified bundles
-
-If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POSTHOG_HOST` to `https://us.i.posthog.com` and keep `VITE_POSTHOG_UI_HOST=https://us.posthog.com`.
+   - confirm the matching release exists in PostHog symbol sets
+   - confirm browser stack traces resolve to source files instead of minified bundles
 
 ## Convex validation
 
@@ -86,101 +80,100 @@ If the managed proxy ever needs to be rolled back temporarily, switch `VITE_POST
    - `knowledge.search_executed`
    - `workflow.started`
    - `workflow.failed`
+6. Verify operational delivery events in PostHog:
+   - `ops.convex.heartbeat`
+   - `ops.convex.outbox_backlog_sample`
+   - `ops.convex.outbox_flush_failed` when retrying rows exist
 
 ## Voice gateway validation
 
 1. Start a live call through Twilio.
-2. Confirm OTLP ingestion in Grafana Cloud for service `ai-receptionist-voice-gateway`.
-3. Validate traces or metrics for:
-   - active calls
-   - snapshot cache hit or miss
-   - OpenAI turn latency
-   - tool execution latency
-   - media stream disconnects
-4. Validate PostHog error tracking for the gateway:
-   - confirm a startup or request-path failure appears in PostHog Error Tracking with `runtime = voice-gateway`
+2. Validate PostHog Error Tracking for the gateway:
+   - confirm a startup or request-path failure appears with `runtime = voice-gateway`
    - confirm a provider recovery failure or call record initialization failure appears with `channel = voice` and `provider = twilio`
+3. Validate PostHog operational events for:
+   - `ops.voice.heartbeat`
+   - `ops.voice.invalid_signature`
+   - `ops.voice.media_disconnect`
+   - `ops.voice.snapshot_cache_hit`
+   - `ops.voice.snapshot_cache_miss`
+   - `ops.voice.openai_realtime_error`
+   - `ops.voice.turn_completed`
+   - `ops.voice.turn_slow`
+   - `ops.voice.tool_completed`
+   - `ops.voice.tool_failed`
+   - `ops.voice.recording_upload_failed`
+4. Validate PostHog Logs for the gateway:
+   - confirm log records are present for heartbeat, invalid signatures, media disconnects, OpenAI realtime failures, slow turns, tool failures, and recording upload failures
+   - confirm log records remain searchable by `businessId`, `callId`, `conversationId`, `provider`, and `toolName` when those identifiers exist
 
 ## AI trace validation
 
 1. Run a live call that produces at least one assistant turn and one tool call.
-2. Verify PostHog receives:
+2. Run one non-realtime Gemini generation from the SMS assistant or dashboard knowledge preview.
+3. Trigger one knowledge search or indexing operation so embedding telemetry is emitted.
+4. Verify PostHog receives:
    - `$ai_trace`
    - `$ai_generation`
    - `$ai_span`
-3. Confirm the payload includes:
+   - `ai.embedding.completed`
+5. Confirm the payload includes:
    - trace ID
    - model
    - provider
    - latency
+   - time to first token for streaming voice generations
+   - token counts when the provider returns them
    - tool name or tool invocation state
-4. Confirm the payload does not include:
+6. Confirm the payload does not include:
+   - `$ai_input`
+   - `$ai_output_choices`
    - transcript text
    - SMS body text
    - prompt text
+   - assistant output text
    - customer name
    - customer phone number
+   - tool input or tool output content
+7. For non-realtime Gemini generations, confirm the payload still includes provider/model/latency metadata even though prompt and output text are absent.
+8. For embedding telemetry, confirm the payload includes only metadata such as operation name, provider/model, input size, latency, and result count.
 
-## KPI dashboard validation
+## Dashboard and alert validation
 
-Validate these hosted dashboards:
+Validate these runtime dashboards:
 
-- `AI Receptionist - Product KPIs`
-- `AI Receptionist - Operator Workflow`
-- `AI Receptionist - Messaging`
-- `AI Receptionist - Voice & Booking Outcomes`
-- `AI Receptionist - Analytics Health`
+- `AI Receptionist - Runtime Health`
+- `AI Receptionist - Voice Gateway Operations`
+- `AI Receptionist - AI Runtime`
+- `AI Receptionist - Telemetry Delivery Health`
 
-Each dashboard should have at least one saved insight behind it and should load without ad hoc query edits.
+Each dashboard should load from saved trend or SQL insights without ad hoc query edits.
 
-Validate these saved insights:
+Validate these runtime insights:
 
-- `KPI - Onboarding Activation Funnel`
-- `KPI - SMS Adoption Funnel`
-- `KPI - Voice Booking Funnel`
-- `KPI - Booking Success vs Failure`
-- `KPI - Calendar Integration Health`
-- `KPI - Workflow Health`
-- `KPI - Meaningful Usage by Business`
-- `KPI - Analytics Critical Event Volume`
+- call starts versus completions
+- OpenAI realtime errors
+- slow turn volume
+- tool failure volume
+- invalid signature volume
+- media disconnect volume
+- outbox backlog samples
+- outbox flush failures
+- workflow failures
+- calendar sync failures
+- booking failures
 
-Validate group analytics behavior:
+Validate these alert policies in PostHog:
 
-- events with `businessId` should also resolve under the `business` PostHog group
-- `KPI - Meaningful Usage by Business` should show grouped usage by `businessId`
-- onboarding and booking insights should remain sliceable at the business level
-
-Validate the first meaningful usage action:
-
-- `Meaningful First Usage` should match at least one of:
-  - `web.messages.thread_opened`
-  - `web.messages.reply_sent`
-  - `web.contacts.contact_opened`
-  - `web.agent.settings_saved`
-- the onboarding KPI funnel should include the action as its final step
-
-## Analytics health validation
-
-Validate the analytics health dashboard covers:
-
-- `web.auth.login_succeeded` volume
-- `sms.inbound_received` volume
-- `voice.call_started` volume
-- `appointment.booked` volume
-- failure events via `Telemetry - Delivery and Workflow Failures`
-- workflow starts versus failures
-- calendar connections versus sync failures
-
-Alert policies should be configured manually in PostHog or the owning incident tool for:
-
-- sudden drop in `web.auth.login_succeeded`
-- sudden drop in `sms.inbound_received`
-- sudden drop in `voice.call_started`
-- sudden drop in `appointment.booked`
+- no `ops.voice.heartbeat` for the interval
+- spike in `ops.voice.openai_realtime_error`
+- spike in `ops.voice.turn_slow`
+- spike in `ops.voice.tool_failed`
+- drop in `voice.call_started`
 - spike in `appointment.booking_failed`
 - spike in `workflow.failed`
 - spike in `integration.calendar_sync_failed`
-- backlog growth in `telemetry_outbox`
+- sustained `ops.convex.outbox_backlog_sample` with `backlogBucket = critical`
 
 ## Outbox validation
 
@@ -191,12 +184,11 @@ Alert policies should be configured manually in PostHog or the owning incident t
 
 ## Current local verification
 
-These checks were completed in code during implementation:
+These checks should be run before review:
 
 - `pnpm --filter @ai-receptionist/telemetry test`
 - `pnpm --filter @ai-receptionist/web typecheck`
+- `pnpm --filter @ai-receptionist/voice-gateway typecheck`
 - `pnpm typecheck:convex`
 
-Provider validation in real PostHog and Grafana Cloud still requires live credentials and runtime traffic.
-
-Browser source maps are now uploaded through the web deploy pipeline. If stack traces show minified bundles again, first verify that `pnpm posthog:sourcemaps` ran with valid CLI credentials and that Cloudflare served the injected assets from that same build output.
+Provider validation in real PostHog still requires live credentials and runtime traffic.

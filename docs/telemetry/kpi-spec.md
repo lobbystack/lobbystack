@@ -157,5 +157,5 @@ Target business cohorts to maintain in PostHog:
 ## Notes
 
 - experiments and feature flags are intentionally out of scope for this phase
-- Grafana Cloud remains the home for observability, not KPI reporting
+- PostHog now covers both KPI reporting and the current phase of operational telemetry
 - the KPI dashboards should become the default reporting surface; `AI Receptionist Telemetry v1` remains useful as a raw telemetry backup

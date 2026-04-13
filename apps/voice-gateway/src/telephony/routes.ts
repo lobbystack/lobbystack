@@ -1,10 +1,15 @@
 import type { FastifyInstance } from "fastify";
 
-import { demoBusinessId } from "@ai-receptionist/shared";
+import {
+  billingErrorCodes,
+  demoBusinessId,
+} from "@ai-receptionist/shared";
 
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   completeVoiceCall,
+  RuntimeRequestError,
+  syncUsageEventToPolar,
   startVoiceCall,
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
@@ -34,13 +39,13 @@ async function initializeInboundCallRecord(
   server: FastifyInstance,
   payload: Record<string, string>,
   businessId: string,
-): Promise<void> {
+): Promise<"ready" | "blocked"> {
   const callSid = payload.CallSid?.trim();
   const from = payload.From?.trim();
   const to = payload.To?.trim();
 
   if (businessId === demoBusinessId || !callSid || !from || !to) {
-    return;
+    return "ready";
   }
 
   try {
@@ -51,7 +56,22 @@ async function initializeInboundCallRecord(
       to,
       startedAt: new Date().toISOString(),
     });
+    return "ready";
   } catch (error) {
+    if (
+      error instanceof RuntimeRequestError &&
+      error.code === billingErrorCodes.voiceLimitReached
+    ) {
+      server.log.info(
+        {
+          businessId,
+          callSid,
+        },
+        "Blocked inbound call because the business has reached its voice quota",
+      );
+      return "blocked";
+    }
+
     capturePostHogException(error, {
       businessId,
       properties: {
@@ -69,6 +89,7 @@ async function initializeInboundCallRecord(
       },
       "Failed to initialize inbound call record",
     );
+    return "ready";
   }
 }
 
@@ -103,7 +124,24 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
     const snapshot = await fetchSnapshotForPhoneNumber(calledNumber);
 
     server.snapshotCache.set(snapshot.businessId, snapshot);
-    await initializeInboundCallRecord(server, payload, snapshot.businessId);
+    const initializationState = await initializeInboundCallRecord(
+      server,
+      payload,
+      snapshot.businessId,
+    );
+
+    if (initializationState === "blocked") {
+      const blockedTwiml = [
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+        "<Response>",
+        "<Say>This business has reached its voice usage limit. Please try again later.</Say>",
+        "<Hangup />",
+        "</Response>",
+      ].join("");
+
+      reply.header("Content-Type", "text/xml");
+      return blockedTwiml;
+    }
 
     const streamUrl = new URL("/media-stream", server.runtimeConfig.VOICE_GATEWAY_BASE_URL);
     streamUrl.protocol = streamUrl.protocol === "https:" ? "wss:" : "ws:";
@@ -232,6 +270,12 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         ? { providerDurationSeconds: normalized.durationSeconds }
         : {}),
     });
+
+    if (!result.ignored && result.usageEventId) {
+      await syncUsageEventToPolar({
+        usageEventId: result.usageEventId,
+      });
+    }
 
     if (result.ignored && result.reason === "unknown_call") {
       server.log.warn(

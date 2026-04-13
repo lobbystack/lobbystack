@@ -31,6 +31,7 @@ import { SettingsLayout } from "@/features/settings/SettingsLayout";
 import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePage";
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
+import { SettingsBillingPage } from "@/features/settings/SettingsBillingPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import {
@@ -287,6 +288,16 @@ function WorkspaceShell() {
                 )
               }
               path="integrations"
+            />
+            <Route
+              element={
+                businessId ? (
+                  <SettingsBillingPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/settings" />
+                )
+              }
+              path="billing"
             />
           </Route>
           <Route element={<Navigate replace to="/" />} path="*" />

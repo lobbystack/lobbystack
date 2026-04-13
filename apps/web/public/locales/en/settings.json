@@ -5,12 +5,84 @@
   },
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
-    "integrationsDescription": "Connect your favorite tools and applications."
+    "integrationsDescription": "Connect your favorite tools and applications.",
+    "billingDescription": "Review hosted usage, plan limits, and SMS add-on access."
   },
   "sections": {
     "business": "Account",
     "appearance": "Preferences",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "billing": "Billing"
+  },
+  "billing": {
+    "toast": {
+      "checkoutSuccess": "Checkout completed successfully.",
+      "checkoutFailed": "Unable to open checkout.",
+      "portalFailed": "Unable to open the customer portal."
+    },
+    "planLabels": {
+      "selfHost": "Self-host",
+      "freeCloud": "Free Cloud",
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "actions": {
+      "upgradeToPro": "Upgrade to Pro",
+      "unlockAiSms": "Unlock AI SMS",
+      "manageBilling": "Manage billing",
+      "openingCheckout": "Opening checkout...",
+      "openingPortal": "Opening portal..."
+    },
+    "currentPlan": {
+      "title": "Plan and access",
+      "description": "Hosted billing applies only to cloud workspaces. Self-host keeps the full product with your own providers.",
+      "planLabel": "Current plan",
+      "monthlyChargeValue": "{{amount}} / month",
+      "customPricing": "Custom pricing and usage arrangement.",
+      "includedNumberTitle": "Included business numbers",
+      "includedNumberValue": "{{count}} included",
+      "customIncludedNumbers": "Custom by agreement",
+      "billingContactTitle": "Billing contact",
+      "billingContactMissing": "No billing contact on file yet.",
+      "subscriptionStateTitle": "Subscription state"
+    },
+    "usage": {
+      "title": "Usage this month",
+      "description": "Resets on {{resetAt}}.",
+      "voiceTitle": "Voice minutes",
+      "voiceValue": "{{minutes}} minutes used",
+      "voiceRemaining": "{{minutes}} minutes remaining",
+      "alertSmsTitle": "Alert SMS segments",
+      "alertSmsValue": "{{formattedCount}} segments used",
+      "alertSmsRemaining": "{{formattedCount}} segments remaining",
+      "outboundAttemptsTitle": "Outbound call attempts",
+      "outboundAttemptsValue": "{{formattedCount}} attempts used",
+      "outboundAttemptsRemaining": "{{formattedCount}} attempts remaining",
+      "aiSmsTitle": "AI SMS segments",
+      "aiSmsValue": "{{formattedCount}} segments used",
+      "aiSmsMetered": "Billed separately at metered AI SMS usage.",
+      "aiSmsLocked": "Locked until the AI SMS add-on is active.",
+      "overageEnabled": "Additional usage is billed as overage."
+    },
+    "catalog": {
+      "title": "Hosted offers",
+      "description": "Alert SMS uses the shared Noncia sender in hosted cloud. AI SMS stays on the customer's own number.",
+      "selfHostDescription": "Free forever. Full product, bring your own AI keys, Twilio account, numbers, and compliance setup.",
+      "freeCloudDescription": "$0 per month. No overages and no AI SMS.",
+      "freeCloudLimits": "Includes {{voiceMinutes}} voice minutes, {{alertSmsSegments}} Alert SMS segments, and {{outboundAttempts}} outbound call attempts per month.",
+      "proDescription": "{{amount}} per month with one business number included and hosted overages after the included pool is used.",
+      "proOverages": "Pro overages: {{voiceRate}} per extra voice minute, {{alertSmsRate}} per extra Alert SMS segment, and {{outboundAttemptRate}} per extra outbound call attempt.",
+      "aiSmsAddon": "AI SMS add-on: {{monthly}} per month + {{setup}} one-time setup. AI SMS usage is billed at {{usage}} per segment."
+    },
+    "addon": {
+      "aiSmsActiveBadge": "AI SMS active"
+    },
+    "transactions": {
+      "title": "Recent billing events",
+      "description": "Orders, refunds, and setup fees synced from Polar.",
+      "empty": "No billing transactions yet.",
+      "invoice": "Invoice"
+    }
   },
   "appearance": {
     "title": "Preferences",

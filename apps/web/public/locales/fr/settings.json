@@ -5,12 +5,84 @@
   },
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
-    "integrationsDescription": "Connectez vos outils et applications préférés."
+    "integrationsDescription": "Connectez vos outils et applications préférés.",
+    "billingDescription": "Consultez l'utilisation hébergée, les limites du forfait et l'accès au module SMS IA."
   },
   "sections": {
     "business": "Compte",
     "appearance": "Préférences",
-    "integrations": "Intégrations"
+    "integrations": "Intégrations",
+    "billing": "Facturation"
+  },
+  "billing": {
+    "toast": {
+      "checkoutSuccess": "Le paiement a bien été lancé.",
+      "checkoutFailed": "Impossible d'ouvrir le paiement.",
+      "portalFailed": "Impossible d'ouvrir le portail client."
+    },
+    "planLabels": {
+      "selfHost": "Auto-hébergé",
+      "freeCloud": "Cloud gratuit",
+      "pro": "Pro",
+      "enterprise": "Entreprise"
+    },
+    "actions": {
+      "upgradeToPro": "Passer à Pro",
+      "unlockAiSms": "Activer les SMS IA",
+      "manageBilling": "Gérer la facturation",
+      "openingCheckout": "Ouverture du paiement...",
+      "openingPortal": "Ouverture du portail..."
+    },
+    "currentPlan": {
+      "title": "Forfait et accès",
+      "description": "La facturation hébergée s'applique seulement aux espaces cloud. L'auto-hébergement garde le produit complet avec vos propres fournisseurs.",
+      "planLabel": "Forfait actuel",
+      "monthlyChargeValue": "{{amount}} / mois",
+      "customPricing": "Tarification et usage personnalisés.",
+      "includedNumberTitle": "Numéros d'entreprise inclus",
+      "includedNumberValue": "{{count}} inclus",
+      "customIncludedNumbers": "Personnalisé selon l'entente",
+      "billingContactTitle": "Contact de facturation",
+      "billingContactMissing": "Aucun contact de facturation pour le moment.",
+      "subscriptionStateTitle": "État de l'abonnement"
+    },
+    "usage": {
+      "title": "Utilisation ce mois-ci",
+      "description": "Réinitialisation le {{resetAt}}.",
+      "voiceTitle": "Minutes vocales",
+      "voiceValue": "{{minutes}} minutes utilisées",
+      "voiceRemaining": "{{minutes}} minutes restantes",
+      "alertSmsTitle": "Segments SMS d'alerte",
+      "alertSmsValue": "{{formattedCount}} segments utilisés",
+      "alertSmsRemaining": "{{formattedCount}} segments restants",
+      "outboundAttemptsTitle": "Tentatives d'appel sortant",
+      "outboundAttemptsValue": "{{formattedCount}} tentatives utilisées",
+      "outboundAttemptsRemaining": "{{formattedCount}} tentatives restantes",
+      "aiSmsTitle": "Segments SMS IA",
+      "aiSmsValue": "{{formattedCount}} segments utilisés",
+      "aiSmsMetered": "Facturés séparément selon l'usage SMS IA.",
+      "aiSmsLocked": "Verrouillés tant que l'option SMS IA n'est pas active.",
+      "overageEnabled": "L'utilisation supplémentaire est facturée en dépassement."
+    },
+    "catalog": {
+      "title": "Offres hébergées",
+      "description": "Les SMS d'alerte utilisent l'expéditeur partagé de Noncia en cloud hébergé. Les SMS IA restent sur le numéro du client.",
+      "selfHostDescription": "Gratuit pour toujours. Produit complet, apportez vos clés IA, votre compte Twilio, vos numéros et votre conformité.",
+      "freeCloudDescription": "0 $ par mois. Aucun dépassement et aucun SMS IA.",
+      "freeCloudLimits": "Inclut {{voiceMinutes}} minutes vocales, {{alertSmsSegments}} segments SMS d'alerte et {{outboundAttempts}} tentatives d'appel sortant par mois.",
+      "proDescription": "{{amount}} par mois avec un numéro d'entreprise inclus et des dépassements hébergés après le forfait inclus.",
+      "proOverages": "Dépassements Pro : {{voiceRate}} par minute vocale supplémentaire, {{alertSmsRate}} par segment SMS d'alerte supplémentaire et {{outboundAttemptRate}} par tentative d'appel sortant supplémentaire.",
+      "aiSmsAddon": "Option SMS IA : {{monthly}} par mois + {{setup}} de mise en service. Les SMS IA sont facturés à {{usage}} par segment."
+    },
+    "addon": {
+      "aiSmsActiveBadge": "SMS IA actifs"
+    },
+    "transactions": {
+      "title": "Événements de facturation récents",
+      "description": "Commandes, remboursements et frais d'activation synchronisés depuis Polar.",
+      "empty": "Aucune transaction de facturation pour le moment.",
+      "invoice": "Facture"
+    }
   },
   "appearance": {
     "title": "Préférences",

@@ -8,8 +8,11 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
+import { registerBillingRoutes } from "./billing";
 
 const http = httpRouter();
+
+registerBillingRoutes(http);
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; response: Response };
 
@@ -579,6 +582,18 @@ http.route({
         ? { providerRawDlrDoneDate: parsedPayload.data.RawDlrDoneDate }
         : {}),
     });
+
+    try {
+      await ctx.runAction(internal.integrations.twilioSms.syncMessagePriceFromProvider, {
+        providerMessageSid,
+        providerStatus: parsedPayload.data.MessageStatus,
+      });
+    } catch (error) {
+      console.warn("[twilioSms] Failed to start provider price sync", {
+        providerMessageSid,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     return new Response("OK", { status: 200 });
   }),
