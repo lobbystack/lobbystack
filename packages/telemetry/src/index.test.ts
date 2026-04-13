@@ -270,6 +270,9 @@ describe("telemetry redaction", () => {
       "deploymentMode",
       "provider",
     ]);
+    expect(
+      getTelemetryRequiredProperties("ops.billing.unit_economics_rollup_recorded"),
+    ).toEqual(["businessId", "deploymentMode", "monthKey"]);
     expect(getTelemetryRequiredProperties("voice.provider_cost_recorded")).toEqual([
       "businessId",
       "deploymentMode",

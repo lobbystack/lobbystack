@@ -78,6 +78,7 @@ export const WORKFLOW_EVENT_NAMES = [
 export const OPERATIONS_EVENT_NAMES = [
   "ops.billing.usage_sync_failed",
   "ops.billing.usage_sync_recovered",
+  "ops.billing.unit_economics_rollup_recorded",
   "ops.voice.heartbeat",
   "ops.voice.invalid_signature",
   "ops.voice.media_disconnect",
@@ -204,7 +205,8 @@ export type TelemetryRequirementKey =
   | "workflowName"
   | "latencyBucket"
   | "toolName"
-  | "backlogBucket";
+  | "backlogBucket"
+  | "monthKey";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -441,6 +443,11 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "businessId",
     "deploymentMode",
     "provider",
+  ],
+  "ops.billing.unit_economics_rollup_recorded": [
+    "businessId",
+    "deploymentMode",
+    "monthKey",
   ],
   "ops.voice.heartbeat": ["deploymentMode"],
   "ops.voice.invalid_signature": ["deploymentMode", "provider"],

@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireMembership } from "./lib/auth";
+import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "./telemetry/shared";
 
 type UnitEconomicsEventKind =
   | "voice_provider"
@@ -157,13 +162,17 @@ function getConfiguredMonthlyInfraCostUsd(): number {
   return roundUsd(Math.max(0, normalizedConvex) + Math.max(0, normalizedFly));
 }
 
+type UnitEconomicsRollupSnapshot =
+  | Doc<"unit_economics_rollups">
+  | Omit<Doc<"unit_economics_rollups">, "_id" | "_creationTime">;
+
 async function recomputeMonthRollup(
   ctx: MutationCtx,
   args: {
     businessId: Id<"businesses">;
     monthKey: string;
   },
-): Promise<void> {
+): Promise<UnitEconomicsRollupSnapshot> {
   const events = await ctx.db
     .query("unit_economics_events")
     .withIndex("by_business_id_and_month_key_and_occurred_at", (q) =>
@@ -270,10 +279,52 @@ async function recomputeMonthRollup(
 
   if (existingRollup) {
     await ctx.db.patch(existingRollup._id, rollup);
-    return;
+    return {
+      ...existingRollup,
+      ...rollup,
+    };
   }
 
   await ctx.db.insert("unit_economics_rollups", rollup);
+  return rollup;
+}
+
+async function emitMonthRollupTelemetry(
+  ctx: Pick<MutationCtx, "runMutation">,
+  args: {
+    businessId: Id<"businesses">;
+    monthKey: string;
+    rollup: UnitEconomicsRollupSnapshot;
+  },
+): Promise<void> {
+  await enqueuePostHogEventBestEffort(ctx, {
+    eventName: "ops.billing.unit_economics_rollup_recorded",
+    businessId: args.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(String(args.businessId)),
+    groupKey: getPostHogBusinessGroupKey(String(args.businessId)),
+    provider: "internal",
+    properties: {
+      monthKey: args.monthKey,
+      totalCostUsd: args.rollup.totalCostUsd,
+      providerCostUsd: args.rollup.providerCostUsd,
+      aiCostUsd: args.rollup.aiCostUsd,
+      infraCostUsd: args.rollup.infraCostUsd,
+      voiceCostUsd: args.rollup.voiceCostUsd,
+      smsCostUsd: args.rollup.smsCostUsd,
+      alertSmsCostUsd: args.rollup.alertSmsCostUsd,
+      voiceCallCount: args.rollup.voiceCallCount,
+      voiceMinutes: args.rollup.voiceMinutes,
+      outboundSmsCount: args.rollup.outboundSmsCount,
+      smsThreadCount: args.rollup.smsThreadCount,
+      activeUserCount: args.rollup.activeUserCount,
+      costPerVoiceCallUsd: args.rollup.costPerVoiceCallUsd,
+      costPerVoiceMinuteUsd: args.rollup.costPerVoiceMinuteUsd,
+      costPerOutboundSmsUsd: args.rollup.costPerOutboundSmsUsd,
+      costPerSmsThreadUsd: args.rollup.costPerSmsThreadUsd,
+      costPerActiveUserUsd: args.rollup.costPerActiveUserUsd,
+      costPerBusinessUsd: args.rollup.costPerBusinessUsd,
+    },
+  });
 }
 
 async function upsertCostEvent(
@@ -309,11 +360,6 @@ async function upsertCostEvent(
   } else {
     await ctx.db.insert("unit_economics_events", document);
   }
-
-  await recomputeMonthRollup(ctx, {
-    businessId: input.businessId,
-    monthKey: document.monthKey,
-  });
 }
 
 async function backfillProviderCostsForMonth(
@@ -534,6 +580,16 @@ export const recordVoiceProviderCost = internalMutation({
           }
         : {}),
     });
+    const monthKey = toMonthKey(args.occurredAt);
+    const rollup = await recomputeMonthRollup(ctx, {
+      businessId: args.businessId,
+      monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
+    });
     return null;
   },
 });
@@ -565,6 +621,16 @@ export const recordSmsProviderCost = internalMutation({
           }
         : {}),
     });
+    const monthKey = toMonthKey(args.occurredAt);
+    const rollup = await recomputeMonthRollup(ctx, {
+      businessId: args.businessId,
+      monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
+    });
     return null;
   },
 });
@@ -593,6 +659,16 @@ export const recordNotificationProviderCost = internalMutation({
             quantityUnit: "segment" as const,
           }
         : {}),
+    });
+    const monthKey = toMonthKey(args.occurredAt);
+    const rollup = await recomputeMonthRollup(ctx, {
+      businessId: args.businessId,
+      monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
     });
     return null;
   },
@@ -634,6 +710,16 @@ export const recordAiGenerationCost = internalMutation({
       ...(args.conversationId ? { conversationId: args.conversationId } : {}),
       ...(args.messageId ? { messageId: args.messageId } : {}),
     });
+    const monthKey = toMonthKey(args.occurredAt);
+    const rollup = await recomputeMonthRollup(ctx, {
+      businessId: args.businessId,
+      monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
+    });
     return null;
   },
 });
@@ -655,9 +741,14 @@ export const refreshMonth = mutation({
       businessId: args.businessId,
       monthKey,
     });
-    await recomputeMonthRollup(ctx, {
+    const rollup = await recomputeMonthRollup(ctx, {
       businessId: args.businessId,
       monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
     });
 
     return { monthKey };
