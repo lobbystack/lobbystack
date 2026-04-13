@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { z } from "zod";
+import { billingErrorCodes } from "../packages/shared/src/billing";
 import {
   normalizeTwilioFormFields,
 } from "./lib/twilioSecurity";
@@ -657,6 +658,19 @@ http.route({
     const body = await parseJsonBody(request, startCallSchema);
     if (!body.ok) {
       return body.response;
+    }
+
+    const voicePolicy = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+      businessId: asId("businesses", body.data.businessId),
+    });
+    if (!voicePolicy.allowed) {
+      return Response.json(
+        {
+          code: voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached,
+          message: "Voice quota reached for this billing period.",
+        },
+        { status: 402 },
+      );
     }
 
     const result = await ctx.runMutation(internal.voice.runtime.startCall, {
