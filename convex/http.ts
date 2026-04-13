@@ -64,10 +64,15 @@ const transferStateSchema = z.object({
   transferState: z.string().min(1),
 });
 
-const prepareTransferSchema = z.object({
-  callId: z.string().min(1),
-  recordedAt: z.string().min(1),
-});
+const prepareTransferSchema = z
+  .object({
+    callId: z.string().min(1).optional(),
+    twilioCallSid: z.string().min(1).optional(),
+    recordedAt: z.string().min(1),
+  })
+  .refine((value) => value.callId !== undefined || value.twilioCallSid !== undefined, {
+    message: "callId or twilioCallSid is required",
+  });
 
 const completeCallSchema = z.object({
   callId: z.string().min(1),
@@ -665,19 +670,6 @@ http.route({
       return body.response;
     }
 
-    const voicePolicy = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
-      businessId: asId("businesses", body.data.businessId),
-    });
-    if (!voicePolicy.allowed) {
-      return Response.json(
-        {
-          code: voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached,
-          message: "Voice quota reached for this billing period.",
-        },
-        { status: 402 },
-      );
-    }
-
     let result;
     try {
       result = await ctx.runMutation(internal.voice.runtime.startCall, {
@@ -753,7 +745,10 @@ http.route({
     }
 
     const result = await ctx.runMutation(internal.voice.runtime.prepareTransferForVoice, {
-      callId: asId("calls", body.data.callId),
+      ...(body.data.callId !== undefined ? { callId: asId("calls", body.data.callId) } : {}),
+      ...(body.data.twilioCallSid !== undefined
+        ? { twilioCallSid: body.data.twilioCallSid }
+        : {}),
       recordedAt: body.data.recordedAt,
     });
 

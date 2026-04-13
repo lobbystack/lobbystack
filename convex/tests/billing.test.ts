@@ -783,6 +783,86 @@ describe("billing", () => {
     });
   });
 
+  it("prepares transfer reservations by Twilio SID when the gateway has no callId", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-outbound-fallback",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const reservation = await t.mutation(internal.voice.runtime.prepareTransferForVoice, {
+      twilioCallSid: "CA-billing-test",
+      recordedAt: "2026-04-12T14:02:30.000Z",
+    });
+
+    const usageMonth = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+    });
+
+    expect(anchors.callId).toBeDefined();
+    expect(reservation).toEqual({
+      allowed: true,
+      errorCode: null,
+    });
+    expect(usageMonth).toMatchObject({
+      outboundCallAttemptsUsed: 1,
+      outboundCallAttemptsBlocked: false,
+    });
+  });
+
+  it("still blocks transfer preparation by Twilio SID after free outbound quota is exhausted", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-outbound-fallback-cap",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const secondCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-fallback-2",
+        status: "in_progress",
+        startedAt: "2026-04-12T14:06:00.000Z",
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-fallback-3",
+        status: "in_progress",
+        startedAt: "2026-04-12T14:07:00.000Z",
+      });
+      return { ...seeded, secondCallId };
+    });
+
+    await t.mutation(internal.billing.reserveOutboundCallAttemptUsage, {
+      businessId,
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:02:00.000Z",
+    });
+    await t.mutation(internal.billing.reserveOutboundCallAttemptUsage, {
+      businessId,
+      callId: anchors.secondCallId,
+      recordedAt: "2026-04-12T14:03:00.000Z",
+    });
+
+    const reservation = await t.mutation(internal.voice.runtime.prepareTransferForVoice, {
+      twilioCallSid: "CA-billing-fallback-3",
+      recordedAt: "2026-04-12T14:04:00.000Z",
+    });
+
+    expect(reservation).toEqual({
+      allowed: false,
+      errorCode: "outbound_call_attempt_limit_reached",
+    });
+  });
+
   it("lets Pro workspaces exceed included usage while keeping AI SMS metered separately", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {

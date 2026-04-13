@@ -72,7 +72,8 @@ type SetTransferStateArgs = {
   transferState: string;
 };
 type PrepareTransferForVoiceArgs = {
-  callId: Id<"calls">;
+  callId?: Id<"calls">;
+  twilioCallSid?: string;
   recordedAt: string;
 };
 type TakeMessageForVoiceArgs = {
@@ -707,7 +708,8 @@ export const setTransferState = internalMutation({
 
 export const prepareTransferForVoice = internalMutation({
   args: {
-    callId: v.id("calls"),
+    callId: v.optional(v.id("calls")),
+    twilioCallSid: v.optional(v.string()),
     recordedAt: v.string(),
   },
   returns: v.object({
@@ -724,7 +726,15 @@ export const prepareTransferForVoice = internalMutation({
     ctx: MutationCtx,
     args: PrepareTransferForVoiceArgs,
   ): Promise<{ allowed: boolean; errorCode: BillingErrorCode | null }> => {
-    const call = await ctx.db.get(args.callId);
+    const call =
+      args.callId !== undefined
+        ? await ctx.db.get(args.callId)
+        : args.twilioCallSid !== undefined
+          ? await ctx.db
+              .query("calls")
+              .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid!))
+              .unique()
+          : null;
     if (!call) {
       throw new Error("Call not found.");
     }

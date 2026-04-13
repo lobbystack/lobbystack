@@ -141,7 +141,8 @@ export async function updateVoiceTransferState(input: {
 }
 
 export async function prepareVoiceTransfer(input: {
-  callId: string;
+  callId?: string;
+  twilioCallSid?: string;
   recordedAt: string;
 }): Promise<void> {
   await postJson("/voice/call/prepare-transfer", input);

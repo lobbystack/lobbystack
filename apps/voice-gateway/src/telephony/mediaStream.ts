@@ -762,15 +762,15 @@ async function performTransfer(
   if (
     !session.pendingTransferDestination ||
     session.transferExecuted ||
-    !session.callSid ||
-    !session.callId
+    !session.callSid
   ) {
     return;
   }
 
   try {
     await prepareVoiceTransfer({
-      callId: session.callId,
+      ...(session.callId ? { callId: session.callId } : {}),
+      ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
       recordedAt: new Date().toISOString(),
     });
     session.transferExecuted = true;
@@ -975,12 +975,11 @@ async function recoverFromProviderFailure(
       }
 
       try {
-        if (session.callId) {
-          await prepareVoiceTransfer({
-            callId: session.callId,
-            recordedAt: new Date().toISOString(),
-          });
-        }
+        await prepareVoiceTransfer({
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
+          recordedAt: new Date().toISOString(),
+        });
         await transferLiveCall({
           callSid: session.callSid,
           destination: transferDestination,
