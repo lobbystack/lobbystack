@@ -16,6 +16,10 @@ import type {
   SmsSenderRole,
 } from "../packages/shared/src/billing";
 import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "./telemetry/shared";
+import {
   billingAddonCatalog,
   billingErrorCodes,
   billingPlanCatalog,
@@ -53,6 +57,7 @@ import {
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
+import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
 
 type BillingContact = {
   email: string | null;
@@ -110,6 +115,10 @@ type SmsCapabilityPolicy = {
   errorCode: BillingErrorCode | null;
 };
 
+type UsageSyncTelemetryEventName =
+  | "ops.billing.usage_sync_failed"
+  | "ops.billing.usage_sync_recovered";
+
 const BILLING_ADMIN_ROLES = new Set([
   "business_owner",
   "business_admin",
@@ -122,6 +131,42 @@ const USAGE_SYNC_RETRY_DELAYS_MS = [
   600_000,
   1_800_000,
 ] as const;
+
+async function emitUsageSyncTelemetry(
+  ctx: Pick<ActionCtx, "runMutation">,
+  input: {
+    eventName: UsageSyncTelemetryEventName;
+    businessId: Id<"businesses">;
+    usageKind: BillingUsageKind;
+    quantity: number;
+    sourceKey: string;
+    attemptNumber: number;
+    retryScheduled?: boolean;
+    retryDelayMs?: number;
+    errorType?: string;
+    recovered?: boolean;
+  },
+): Promise<void> {
+  await enqueuePostHogEventBestEffort(ctx, {
+    eventName: input.eventName,
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(String(input.businessId)),
+    groupKey: getPostHogBusinessGroupKey(String(input.businessId)),
+    provider: "polar",
+    properties: {
+      usageKind: input.usageKind,
+      quantity: input.quantity,
+      sourceKey: input.sourceKey,
+      attemptNumber: input.attemptNumber,
+      ...(input.retryScheduled !== undefined
+        ? { retryScheduled: input.retryScheduled }
+        : {}),
+      ...(input.retryDelayMs !== undefined ? { retryDelayMs: input.retryDelayMs } : {}),
+      ...(input.errorType ? { errorType: input.errorType } : {}),
+      ...(input.recovered !== undefined ? { recovered: input.recovered } : {}),
+    },
+  });
+}
 
 const billingPolar = new ConvexPolar(components.polar, {
   getUserInfo: async () => ({
@@ -1448,13 +1493,26 @@ export const syncUsageEventToPolar = internalAction({
         syncedAt: syncAttemptedAt,
       });
 
+      if (attempt > 0) {
+        await emitUsageSyncTelemetry(ctx, {
+          eventName: "ops.billing.usage_sync_recovered",
+          businessId: payload.businessId,
+          usageKind: payload.usageKind,
+          quantity: payload.quantity,
+          sourceKey: payload.sourceKey,
+          attemptNumber: attempt + 1,
+          recovered: true,
+        });
+      }
+
       return { synced: true };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       let scheduledRetry = false;
+      let retryDelayMs: number | undefined;
 
       if (attempt < USAGE_SYNC_RETRY_DELAYS_MS.length) {
-        const retryDelayMs = USAGE_SYNC_RETRY_DELAYS_MS[attempt];
+        retryDelayMs = USAGE_SYNC_RETRY_DELAYS_MS[attempt];
         if (retryDelayMs !== undefined) {
           await ctx.scheduler.runAfter(  // Best-effort retry for transient Polar failures.
             retryDelayMs,
@@ -1473,6 +1531,18 @@ export const syncUsageEventToPolar = internalAction({
         syncStatus: "failed",
         syncAttemptedAt,
         syncError: errorMessage,
+      });
+
+      await emitUsageSyncTelemetry(ctx, {
+        eventName: "ops.billing.usage_sync_failed",
+        businessId: payload.businessId,
+        usageKind: payload.usageKind,
+        quantity: payload.quantity,
+        sourceKey: payload.sourceKey,
+        attemptNumber: attempt + 1,
+        retryScheduled: scheduledRetry,
+        ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        errorType: error instanceof Error ? error.name : "UnknownError",
       });
 
       return { synced: false, scheduledRetry, error: errorMessage };

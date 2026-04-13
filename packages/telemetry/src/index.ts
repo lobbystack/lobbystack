@@ -76,6 +76,8 @@ export const WORKFLOW_EVENT_NAMES = [
 ] as const;
 
 export const OPERATIONS_EVENT_NAMES = [
+  "ops.billing.usage_sync_failed",
+  "ops.billing.usage_sync_recovered",
   "ops.voice.heartbeat",
   "ops.voice.invalid_signature",
   "ops.voice.media_disconnect",
@@ -430,6 +432,16 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "business.snapshot_refreshed": ["businessId", "deploymentMode"],
   "workflow.started": ["businessId", "deploymentMode", "workflowName"],
   "workflow.failed": ["businessId", "deploymentMode", "workflowName"],
+  "ops.billing.usage_sync_failed": [
+    "businessId",
+    "deploymentMode",
+    "provider",
+  ],
+  "ops.billing.usage_sync_recovered": [
+    "businessId",
+    "deploymentMode",
+    "provider",
+  ],
   "ops.voice.heartbeat": ["deploymentMode"],
   "ops.voice.invalid_signature": ["deploymentMode", "provider"],
   "ops.voice.media_disconnect": ["deploymentMode", "provider"],

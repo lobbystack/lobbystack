@@ -5,6 +5,10 @@ const { polarEventsIngestMock } = vi.hoisted(() => ({
   polarEventsIngestMock: vi.fn(),
 }));
 
+const { enqueuePostHogEventBestEffortMock } = vi.hoisted(() => ({
+  enqueuePostHogEventBestEffortMock: vi.fn(async () => {}),
+}));
+
 vi.mock("@polar-sh/sdk", () => ({
   Polar: vi.fn(function MockPolar() {
     return {
@@ -26,6 +30,16 @@ vi.mock("@polar-sh/sdk", () => ({
     };
   }),
 }));
+
+vi.mock("../telemetry/posthog", async () => {
+  const actual = await vi.importActual<typeof import("../telemetry/posthog")>(
+    "../telemetry/posthog",
+  );
+  return {
+    ...actual,
+    enqueuePostHogEventBestEffort: enqueuePostHogEventBestEffortMock,
+  };
+});
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -942,6 +956,100 @@ describe("billing", () => {
         syncError: "temporary polar outage",
       });
     });
+
+    expect(enqueuePostHogEventBestEffortMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventName: "ops.billing.usage_sync_failed",
+        businessId,
+        distinctId: `system:business:${String(businessId)}`,
+        groupKey: `business:${String(businessId)}`,
+        provider: "polar",
+        properties: expect.objectContaining({
+          usageKind: "voice_seconds",
+          quantity: 61,
+          attemptNumber: 1,
+          retryScheduled: true,
+          retryDelayMs: 30000,
+          errorType: "Error",
+        }),
+      }),
+    );
+  });
+
+  it("emits a recovery telemetry event when a retry later succeeds", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    polarEventsIngestMock
+      .mockRejectedValueOnce(new Error("temporary polar outage"))
+      .mockResolvedValueOnce(undefined);
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-polar-recovery",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_polar_recovery",
+      });
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 61,
+      recordedAt: "2026-04-12T16:00:00.000Z",
+    });
+
+    await t.action(internal.billing.syncUsageEventToPolar, {
+      usageEventId: usageResult.usageEventId,
+    });
+    const recoveryResult = await t.action(internal.billing.syncUsageEventToPolar, {
+      usageEventId: usageResult.usageEventId,
+      attempt: 1,
+    });
+
+    expect(recoveryResult).toEqual({ synced: true });
+
+    await t.run(async (ctx: TestContext) => {
+      const usageEvent = await ctx.db.get(usageResult.usageEventId);
+
+      expect(usageEvent).toMatchObject({
+        syncStatus: "succeeded",
+      });
+    });
+
+    expect(enqueuePostHogEventBestEffortMock).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        eventName: "ops.billing.usage_sync_failed",
+        businessId,
+      }),
+    );
+    expect(enqueuePostHogEventBestEffortMock).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({
+        eventName: "ops.billing.usage_sync_recovered",
+        businessId,
+        distinctId: `system:business:${String(businessId)}`,
+        groupKey: `business:${String(businessId)}`,
+        provider: "polar",
+        properties: expect.objectContaining({
+          usageKind: "voice_seconds",
+          quantity: 61,
+          attemptNumber: 2,
+          recovered: true,
+        }),
+      }),
+    );
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {
