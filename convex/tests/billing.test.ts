@@ -787,6 +787,9 @@ describe("billing", () => {
     expect(status.hasCustomerPortalAccess).toBe(false);
     expect(status.availableCheckoutPlans).toEqual([]);
     expect(status.canPurchaseAiSmsAddon).toBe(false);
+    expect(status.billingContactEmail).toBeNull();
+    expect(status.billingContactName).toBeNull();
+    expect(status.recentTransactions).toEqual([]);
 
     await expect(
       authed.action(api.billing.startCheckout, {
@@ -797,6 +800,12 @@ describe("billing", () => {
 
     await expect(
       authed.action(api.billing.openPortal, {
+        businessId,
+      }),
+    ).rejects.toThrow("Billing management requires admin access.");
+
+    await expect(
+      authed.query(api.billing.listTransactions, {
         businessId,
       }),
     ).rejects.toThrow("Billing management requires admin access.");

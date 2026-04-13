@@ -289,8 +289,8 @@ function buildBillingStatus(input: {
     }),
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
     monthlyChargeCents: billingPlanCatalog[input.plan].monthlyChargeCents,
-    billingContactEmail: input.contact.email,
-    billingContactName: input.contact.name,
+    billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
+    billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
     hasCustomerPortalAccess:
       input.hasBillingManagementAccess && input.hasCustomerPortalAccess,
@@ -303,7 +303,7 @@ function buildBillingStatus(input: {
     canPurchaseAiSmsAddon:
       input.hasBillingManagementAccess && canPurchaseConfiguredAiSmsAddon,
     usage,
-    recentTransactions: input.recentTransactions,
+    recentTransactions: input.hasBillingManagementAccess ? input.recentTransactions : [],
   };
 }
 
@@ -1054,19 +1054,27 @@ export const getStatus = query({
   handler: async (ctx, args): Promise<BillingStatus> => {
     const currentUser = await requireCurrentUser(ctx);
     const membership = await requireMembership(ctx, args.businessId);
+    const hasManagementAccess = hasBillingManagementAccess(membership.role);
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
-    const contact = await resolveBillingContact(ctx, {
-      businessId: args.businessId,
-      currentUser,
-      account: snapshot.account,
-    });
-    const recentTransactions = await ctx.db
-      .query("billing_transactions")
-      .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", args.businessId))
-      .order("desc")
-      .take(10);
+    const contact = hasManagementAccess
+      ? await resolveBillingContact(ctx, {
+          businessId: args.businessId,
+          currentUser,
+          account: snapshot.account,
+        })
+      : {
+          email: null,
+          name: null,
+        };
+    const recentTransactions = hasManagementAccess
+      ? await ctx.db
+          .query("billing_transactions")
+          .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", args.businessId))
+          .order("desc")
+          .take(10)
+      : [];
     const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
     const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
 
@@ -1088,7 +1096,7 @@ export const getStatus = query({
         occurredAt: transaction.occurredAt,
         invoiceUrl: transaction.invoiceUrl ?? null,
       })),
-      hasBillingManagementAccess: hasBillingManagementAccess(membership.role),
+      hasBillingManagementAccess: hasManagementAccess,
       hasCustomerPortalAccess: Boolean(snapshot.account?.polarCustomerId),
       availableCheckoutPlans,
       aiSmsAddonCheckoutConfigured:
@@ -1115,7 +1123,8 @@ export const listTransactions = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireBillingManagementAccess(membership.role);
     const limit = Math.max(1, Math.min(args.limit ?? 20, 100));
     const transactions = await ctx.db
       .query("billing_transactions")
