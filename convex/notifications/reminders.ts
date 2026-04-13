@@ -59,6 +59,17 @@ function buildTwilioSmsStatusCallbackUrl(): string {
   return new URL("/twilio/sms/status", siteUrl).toString();
 }
 
+function estimateAlertSmsSegmentsUpperBound(body: string): number {
+  const normalizedLength = Array.from(body).length;
+  if (normalizedLength <= 70) {
+    return 1;
+  }
+
+  // Reserve against the worst-case UCS-2 concatenation size and let Twilio status
+  // callbacks reconcile the exact segment count later.
+  return Math.max(1, Math.ceil(normalizedLength / 67));
+}
+
 export const getNotification = internalQuery({
   args: {
     notificationId: v.id("notifications"),
@@ -373,6 +384,7 @@ export const deliverNotification = internalAction({
       throw new Error("Notification not found.");
     }
 
+    let messageAcceptedByProvider = false;
     try {
       const localizedServiceName = await ctx.runAction(
         internal.services.localizedNames.ensureLocalizedServiceName,
@@ -388,6 +400,26 @@ export const deliverNotification = internalAction({
         timezone: deliveryContext.timezone,
         locale: deliveryContext.locale,
       });
+      const providerUpdatedAt = new Date().toISOString();
+      if (deliveryContext.senderRole === "platform_alert") {
+        const reservedUsage = await ctx.runMutation(
+          internal.billing.reserveAlertSmsUsage,
+          {
+            businessId: deliveryContext.businessId,
+            notificationId: args.notificationId,
+            estimatedSegments: estimateAlertSmsSegmentsUpperBound(body),
+            recordedAt: providerUpdatedAt,
+          },
+        );
+        if (!reservedUsage.allowed) {
+          throw new Error("Alert SMS quota reached. Upgrade to continue sending notifications.");
+        }
+        if (reservedUsage.syncNeeded && reservedUsage.usageEventId) {
+          await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+            usageEventId: reservedUsage.usageEventId,
+          });
+        }
+      }
       const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
         internal.integrations.twilioSms.sendMessage,
         {
@@ -397,12 +429,13 @@ export const deliverNotification = internalAction({
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
         },
       );
+      messageAcceptedByProvider = true;
 
       await ctx.runMutation(internal.notifications.reminders.markNotificationSent, {
         notificationId: args.notificationId,
         providerMessageId: result.providerMessageSid,
         providerStatus: result.providerStatus,
-        providerUpdatedAt: new Date().toISOString(),
+        providerUpdatedAt,
       });
 
       return {
@@ -410,6 +443,19 @@ export const deliverNotification = internalAction({
         providerMessageId: result.providerMessageSid,
       };
     } catch (error) {
+      if (deliveryContext.senderRole === "platform_alert" && !messageAcceptedByProvider) {
+        const releasedUsage = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
+          businessId: deliveryContext.businessId,
+          notificationId: args.notificationId,
+          quantity: 0,
+          recordedAt: new Date().toISOString(),
+        });
+        if (releasedUsage.syncNeeded) {
+          await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+            usageEventId: releasedUsage.usageEventId,
+          });
+        }
+      }
       await ctx.runMutation(internal.notifications.reminders.markNotificationSendFailed, {
         notificationId: args.notificationId,
         providerUpdatedAt: new Date().toISOString(),

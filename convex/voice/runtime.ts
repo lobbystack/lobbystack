@@ -2,6 +2,8 @@ import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
 } from "../lib/voiceCallStatus";
+import type { BillingErrorCode } from "../../packages/shared/src/billing";
+import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
@@ -68,6 +70,10 @@ type AppendTranscriptArgs = {
 type SetTransferStateArgs = {
   callId: Id<"calls">;
   transferState: string;
+};
+type PrepareTransferForVoiceArgs = {
+  callId: Id<"calls">;
+  recordedAt: string;
 };
 type TakeMessageForVoiceArgs = {
   businessId: Id<"businesses">;
@@ -482,13 +488,6 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
-    const voicePolicy = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
-      businessId: args.businessId,
-    });
-    if (!voicePolicy.allowed) {
-      throw new Error("Voice quota reached for this billing period.");
-    }
-
     let contact: Doc<"contacts"> | null = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
@@ -531,6 +530,8 @@ export const startCall = internalMutation({
       .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
       .unique();
 
+    let callId: Id<"calls">;
+
     if (existingCall) {
       await ctx.db.patch(existingCall._id, {
         conversationId,
@@ -539,29 +540,41 @@ export const startCall = internalMutation({
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
       });
-      await ensureVoiceSessionForCall(ctx, {
+      callId = existingCall._id;
+    } else {
+      callId = await ctx.db.insert("calls", {
         businessId: args.businessId,
         conversationId,
-        callId: existingCall._id,
-        startedAt: Date.parse(args.startedAt),
+        twilioCallSid: args.twilioCallSid,
+        ...(args.gatewaySessionId !== undefined
+          ? { gatewaySessionId: args.gatewaySessionId }
+          : {}),
+        status: "in_progress",
+        startedAt: args.startedAt,
       });
-      return {
-        callId: existingCall._id,
-        conversationId,
-        contactId: contact._id,
-      };
     }
 
-    const callId = await ctx.db.insert("calls", {
+    const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
       businessId: args.businessId,
-      conversationId,
-      twilioCallSid: args.twilioCallSid,
-      ...(args.gatewaySessionId !== undefined
-        ? { gatewaySessionId: args.gatewaySessionId }
-        : {}),
-      status: "in_progress",
-      startedAt: args.startedAt,
+      callId,
+      recordedAt: args.startedAt,
     });
+    if (!reservation.allowed) {
+      await ctx.db.patch(callId, {
+        status: "completed",
+        endedAt: args.startedAt,
+        disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+      });
+      await ctx.db.patch(conversationId, {
+        status: "closed",
+      });
+      throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
+    }
+    if (reservation.syncNeeded && reservation.usageEventId) {
+      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+        usageEventId: reservation.usageEventId,
+      });
+    }
 
     await ensureVoiceSessionForCall(ctx, {
       businessId: args.businessId,
@@ -689,6 +702,48 @@ export const setTransferState = internalMutation({
       );
     }
     return null;
+  },
+});
+
+export const prepareTransferForVoice = internalMutation({
+  args: {
+    callId: v.id("calls"),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+  }),
+  handler: async (
+    ctx: MutationCtx,
+    args: PrepareTransferForVoiceArgs,
+  ): Promise<{ allowed: boolean; errorCode: BillingErrorCode | null }> => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
+    const reservation = await ctx.runMutation(internal.billing.reserveOutboundCallAttemptUsage, {
+      businessId: call.businessId,
+      callId: call._id,
+      recordedAt: args.recordedAt,
+    });
+    if (reservation.syncNeeded && reservation.usageEventId) {
+      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+        usageEventId: reservation.usageEventId,
+      });
+    }
+
+    return {
+      allowed: reservation.allowed,
+      errorCode: reservation.errorCode,
+    };
   },
 });
 

@@ -7,8 +7,10 @@ import WebSocket from "ws";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
 import {
+  RuntimeRequestError,
   appendVoiceTranscript,
   completeVoiceCall,
+  prepareVoiceTransfer,
   startVoiceCall,
   updateVoiceTransferState,
   uploadVoiceRecording,
@@ -194,6 +196,16 @@ type RealtimePricingConfig = {
   audioOutputTokenPriceUsd?: number;
   cachedInputTokenPriceUsd?: number;
 };
+
+function isTransferQuotaError(error: unknown): boolean {
+  return (
+    error instanceof RuntimeRequestError &&
+    error.code === "outbound_call_attempt_limit_reached"
+  );
+}
+
+const TRANSFER_QUOTA_REACHED_MESSAGE =
+  "This business has reached its transfer limit for this billing period. Please try again later.";
 
 function asUnknownRecord(
   value: unknown,
@@ -747,12 +759,21 @@ async function performTransfer(
   server: FastifyInstance,
   session: ActiveVoiceSession,
 ): Promise<void> {
-  if (!session.pendingTransferDestination || session.transferExecuted || !session.callSid) {
+  if (
+    !session.pendingTransferDestination ||
+    session.transferExecuted ||
+    !session.callSid ||
+    !session.callId
+  ) {
     return;
   }
 
-  session.transferExecuted = true;
   try {
+    await prepareVoiceTransfer({
+      callId: session.callId,
+      recordedAt: new Date().toISOString(),
+    });
+    session.transferExecuted = true;
     await transferLiveCall({
       callSid: session.callSid,
       destination: session.pendingTransferDestination,
@@ -774,6 +795,12 @@ async function performTransfer(
       await updateVoiceTransferState({
         callId: session.callId,
         transferState: "failed",
+      });
+    }
+    if (isTransferQuotaError(error)) {
+      await endLiveCallWithMessage({
+        callSid: session.callSid,
+        sayMessage: TRANSFER_QUOTA_REACHED_MESSAGE,
       });
     }
   }
@@ -948,6 +975,12 @@ async function recoverFromProviderFailure(
       }
 
       try {
+        if (session.callId) {
+          await prepareVoiceTransfer({
+            callId: session.callId,
+            recordedAt: new Date().toISOString(),
+          });
+        }
         await transferLiveCall({
           callSid: session.callSid,
           destination: transferDestination,
@@ -973,6 +1006,13 @@ async function recoverFromProviderFailure(
                 : "Failed to persist failed transfer state during provider recovery",
             );
           }
+        }
+        if (isTransferQuotaError(error)) {
+          await endLiveCallWithMessage({
+            callSid: session.callSid,
+            sayMessage: TRANSFER_QUOTA_REACHED_MESSAGE,
+          });
+          return;
         }
         throw error;
       }

@@ -64,6 +64,11 @@ const transferStateSchema = z.object({
   transferState: z.string().min(1),
 });
 
+const prepareTransferSchema = z.object({
+  callId: z.string().min(1),
+  recordedAt: z.string().min(1),
+});
+
 const completeCallSchema = z.object({
   callId: z.string().min(1),
   status: z.string().min(1),
@@ -673,16 +678,33 @@ http.route({
       );
     }
 
-    const result = await ctx.runMutation(internal.voice.runtime.startCall, {
-      businessId: asId("businesses", body.data.businessId),
-      twilioCallSid: body.data.twilioCallSid,
-      ...(body.data.gatewaySessionId !== undefined
-        ? { gatewaySessionId: body.data.gatewaySessionId }
-        : {}),
-      from: body.data.from,
-      to: body.data.to,
-      startedAt: body.data.startedAt,
-    });
+    let result;
+    try {
+      result = await ctx.runMutation(internal.voice.runtime.startCall, {
+        businessId: asId("businesses", body.data.businessId),
+        twilioCallSid: body.data.twilioCallSid,
+        ...(body.data.gatewaySessionId !== undefined
+          ? { gatewaySessionId: body.data.gatewaySessionId }
+          : {}),
+        from: body.data.from,
+        to: body.data.to,
+        startedAt: body.data.startedAt,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === billingErrorCodes.voiceLimitReached
+      ) {
+        return Response.json(
+          {
+            code: billingErrorCodes.voiceLimitReached,
+            message: "Voice quota reached for this billing period.",
+          },
+          { status: 402 },
+        );
+      }
+      throw error;
+    }
 
     return Response.json(result);
   }),
@@ -713,6 +735,40 @@ http.route({
     });
 
     return Response.json({ transcriptId });
+  }),
+});
+
+http.route({
+  path: "/voice/call/prepare-transfer",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, prepareTransferSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runMutation(internal.voice.runtime.prepareTransferForVoice, {
+      callId: asId("calls", body.data.callId),
+      recordedAt: body.data.recordedAt,
+    });
+
+    if (!result.allowed) {
+      return Response.json(
+        {
+          code:
+            result.errorCode ?? billingErrorCodes.outboundCallAttemptLimitReached,
+          message: "Outbound transfer quota reached for this billing period.",
+        },
+        { status: 402 },
+      );
+    }
+
+    return Response.json({ ok: true });
   }),
 });
 

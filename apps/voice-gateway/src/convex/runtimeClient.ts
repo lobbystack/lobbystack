@@ -140,6 +140,13 @@ export async function updateVoiceTransferState(input: {
   await postJson("/voice/call/transfer-state", input);
 }
 
+export async function prepareVoiceTransfer(input: {
+  callId: string;
+  recordedAt: string;
+}): Promise<void> {
+  await postJson("/voice/call/prepare-transfer", input);
+}
+
 export async function completeVoiceCall(input: {
   callId: string;
   status: string;
