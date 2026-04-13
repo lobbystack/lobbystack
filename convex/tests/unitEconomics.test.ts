@@ -210,4 +210,73 @@ describe("unit economics", () => {
       { key: "alerts", value: 0 },
     ]);
   });
+
+  it("does not double count AI costs that are already recorded directly", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-dedup");
+
+    const { conversationId, messageId } = await t.run(async (ctx) => {
+      const { conversationId } = await seedConversation(ctx, businessId);
+      const messageId = await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Thanks for reaching out.",
+        status: "queued",
+        senderRole: "business_ai",
+        aiGenerated: true,
+      });
+
+      return { conversationId, messageId };
+    });
+
+    const occurredAt = new Date().toISOString();
+    await t.mutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId,
+      occurredAt,
+      eventKey: `sms_ai:message:${String(messageId)}`,
+      eventKind: "sms_ai",
+      channel: "sms",
+      costUsd: 0.15,
+      provider: "google",
+      model: "gemini-3.1-flash-lite-preview",
+      operation: "sms.generate_reply",
+      conversationId,
+      messageId,
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("telemetry_outbox", {
+        destination: "posthog",
+        status: "pending",
+        availableAt: occurredAt,
+        attemptCount: 0,
+        eventName: "$ai_generation",
+        distinctId: "system:business",
+        businessId,
+        groupKey: "business:unit-economics-dedup",
+        payloadJson: JSON.stringify({
+          occurredAt,
+          conversationId,
+          messageId,
+          provider: "google",
+          model: "gemini-3.1-flash-lite-preview",
+          properties: {
+            totalCostUsd: 0.15,
+            $ai_total_cost_usd: 0.15,
+            operation: "sms.generate_reply",
+          },
+        }),
+      });
+    });
+
+    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.aiCostUsd).toBe(0.15);
+    expect(summary.rollup?.totalCostUsd).toBe(0.15);
+    expect(summary.rollup?.outboundSmsCount).toBe(1);
+  });
 });

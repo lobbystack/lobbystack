@@ -120,6 +120,15 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+function isDirectAiCostOperation(operation: string | undefined): boolean {
+  return (
+    operation === "sms.generate_reply" ||
+    operation === "knowledge.preview_answer" ||
+    operation === "voice.response_generation" ||
+    operation === "voice.input_audio_transcription"
+  );
+}
+
 function buildVoiceProviderEventKey(callId: Id<"calls">): string {
   return `voice_provider:call:${String(callId)}`;
 }
@@ -531,6 +540,9 @@ async function backfillAiCostsFromTelemetryOutbox(
     const provider = parseOptionalString(payload, ["provider"]);
     const model = parseOptionalString(payload, ["model"]);
     const operation = parseOptionalString(properties, ["operation"]);
+    if (isDirectAiCostOperation(operation)) {
+      continue;
+    }
 
     await upsertCostEvent(ctx, {
       businessId: args.businessId,
