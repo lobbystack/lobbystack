@@ -82,6 +82,18 @@ const completeCallSchema = z.object({
   providerDurationSeconds: z.number().optional(),
 });
 
+const recordVoiceAiCostSchema = z.object({
+  businessId: z.string().min(1),
+  callId: z.string().min(1),
+  occurredAt: z.string().min(1),
+  eventKey: z.string().min(1),
+  costUsd: z.number(),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  operation: z.string().min(1).optional(),
+  conversationId: z.string().min(1).optional(),
+});
+
 const reconcileStatusSchema = z.object({
   twilioCallSid: z.string().min(1),
   callStatus: z.string().min(1),
@@ -728,6 +740,40 @@ http.route({
     });
 
     return Response.json({ transcriptId });
+  }),
+});
+
+http.route({
+  path: "/voice/call/ai-cost",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, recordVoiceAiCostSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    await ctx.runMutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId: asId("businesses", body.data.businessId),
+      callId: asId("calls", body.data.callId),
+      occurredAt: body.data.occurredAt,
+      eventKey: body.data.eventKey,
+      eventKind: "voice_ai",
+      channel: "voice",
+      costUsd: body.data.costUsd,
+      provider: body.data.provider,
+      model: body.data.model,
+      ...(body.data.operation ? { operation: body.data.operation } : {}),
+      ...(body.data.conversationId
+        ? { conversationId: asId("conversations", body.data.conversationId) }
+        : {}),
+    });
+
+    return new Response("OK", { status: 200 });
   }),
 });
 

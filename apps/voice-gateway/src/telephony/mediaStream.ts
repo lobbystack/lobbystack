@@ -11,6 +11,7 @@ import {
   appendVoiceTranscript,
   completeVoiceCall,
   prepareVoiceTransfer,
+  recordVoiceAiCost,
   releaseVoiceTransfer,
   startVoiceCall,
   updateVoiceTransferState,
@@ -1558,6 +1559,29 @@ function handleOpenAiMessage(
           },
         });
       }
+      if (session.businessId && session.callId && totalCostUsd !== undefined) {
+        const recordCostTask = recordVoiceAiCost({
+          businessId: session.businessId,
+          callId: session.callId,
+          occurredAt: new Date().toISOString(),
+          eventKey: `voice_ai:transcription:${session.callId}:${payload.item_id ?? payload.event_id ?? "unknown"}`,
+          costUsd: totalCostUsd,
+          provider: "openai",
+          model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+          operation: "voice.input_audio_transcription",
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+        }).catch((error: unknown) => {
+          server.log.error(
+            {
+              err: error,
+              businessId: session.businessId,
+              callId: session.callId,
+            },
+            "Failed to persist voice transcription AI cost",
+          );
+        });
+        trackTask(session, recordCostTask);
+      }
 
       queueTranscriptWriteIfNew(
         server,
@@ -1678,6 +1702,34 @@ function handleOpenAiMessage(
           ...(generationOutcome.error ? { error: generationOutcome.error } : {}),
           transferInvoked: Boolean(session.pendingTransferDestination),
         });
+      }
+      if (
+        session.businessId &&
+        session.callId &&
+        totalCostUsd !== undefined &&
+        payload.response?.id
+      ) {
+        const recordCostTask = recordVoiceAiCost({
+          businessId: session.businessId,
+          callId: session.callId,
+          occurredAt: new Date().toISOString(),
+          eventKey: `voice_ai:response:${session.callId}:${payload.response.id}`,
+          costUsd: totalCostUsd,
+          provider: "openai",
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          operation: "voice.response_generation",
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+        }).catch((error: unknown) => {
+          server.log.error(
+            {
+              err: error,
+              businessId: session.businessId,
+              callId: session.callId,
+            },
+            "Failed to persist voice response AI cost",
+          );
+        });
+        trackTask(session, recordCostTask);
       }
       session.assistantResponseRequestedAtMs = null;
       session.assistantFirstOutputAtMs = null;

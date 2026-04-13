@@ -3,6 +3,62 @@
     "dashboardTitle": "Tableau de bord",
     "dashboardDescription": "Suivez l'état de préparation pour les appels, les messages et la prise de rendez-vous."
   },
+  "analyticsPage": {
+    "title": "Analytique",
+    "description": "Consultez les tendances d'engagement ainsi que l'economie unitaire des appels, SMS et usages operateur.",
+    "unitEconomics": {
+      "cards": {
+        "total": "Base de cout mensuelle",
+        "totalHint": "Couts directs et alloues combines pour {{monthKey}}.",
+        "voiceCall": "Cout par appel vocal",
+        "voiceCallHint": "{{formattedCount}} appels tarifies dans cette periode.",
+        "outboundSms": "Cout par SMS sortant",
+        "outboundSmsHint": "{{formattedCount}} SMS sortants inclus.",
+        "activeUser": "Cout par utilisateur actif",
+        "activeUserHint": "{{formattedCount}} operateurs actifs dans cet espace."
+      },
+      "costMix": {
+        "title": "Repartition des couts",
+        "description": "Comment les couts fournisseur, IA et infra partagee se combinent.",
+        "labels": {
+          "provider": "Fournisseur",
+          "ai": "IA",
+          "infra": "Infra partagee"
+        }
+      },
+      "channelMix": {
+        "title": "Repartition par canal",
+        "description": "Ou les couts du mois sont depenses entre voix et messagerie.",
+        "labels": {
+          "voice": "Voix",
+          "sms": "SMS entreprise",
+          "alerts": "SMS d'alerte"
+        }
+      },
+      "floors": {
+        "title": "Bases minimales de tarification",
+        "description": "Bases de cout brutes a utiliser pour definir les marges et prix minimums.",
+        "labels": {
+          "voiceMinute": "Minimum par minute voix",
+          "smsThread": "Minimum par fil SMS",
+          "business": "Minimum par entreprise"
+        }
+      },
+      "topVoice": {
+        "title": "Appels vocaux les plus couteux",
+        "description": "Appels avec la depense fournisseur et IA la plus elevee.",
+        "meta": "{{minutes}} minutes",
+        "empty": "Les couts voix apparaitront ici une fois les appels tarifes."
+      },
+      "topSms": {
+        "title": "Fils SMS les plus couteux",
+        "description": "Fils avec la depense SMS sortant et IA la plus elevee.",
+        "meta": "{{formattedCount}} SMS sortants",
+        "unknown": "Contact inconnu",
+        "empty": "Les couts SMS apparaitront ici quand les reponses seront tarifes."
+      }
+    }
+  },
   "delta": {
     "flat": "Aucun changement depuis le mois dernier",
     "up": "+{{value}} % depuis le mois dernier",

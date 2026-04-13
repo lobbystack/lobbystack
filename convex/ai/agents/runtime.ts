@@ -12,6 +12,7 @@ import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
 import {
+  extractGenerationMetrics,
   getNonRealtimeTextModelId,
   withAiTelemetryContext,
 } from "../../lib/providers/nonRealtimeText";
@@ -3624,6 +3625,22 @@ async function generateGroundedReply(
       },
     }),
   );
+  const metrics = extractGenerationMetrics(result);
+  if (metrics.totalCostUsd !== undefined) {
+    await ctx.runMutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId,
+      occurredAt: new Date().toISOString(),
+      eventKey: `sms_ai:message:${String(messageId ?? conversationId)}`,
+      eventKind: "sms_ai",
+      channel: "sms",
+      costUsd: metrics.totalCostUsd,
+      provider: "google",
+      model: getNonRealtimeTextModelId(),
+      operation: "sms.generate_reply",
+      conversationId,
+      ...(messageId ? { messageId } : {}),
+    });
+  }
   const trimmedText = result.text.trim();
   if (trimmedText) {
     return trimmedText;
