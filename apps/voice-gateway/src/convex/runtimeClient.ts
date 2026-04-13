@@ -166,6 +166,20 @@ export async function completeVoiceCall(input: {
   await postJson("/voice/call/complete", input);
 }
 
+export async function recordVoiceAiCost(input: {
+  businessId: string;
+  callId: string;
+  occurredAt: string;
+  eventKey: string;
+  costUsd: number;
+  provider: string;
+  model: string;
+  operation?: string;
+  conversationId?: string;
+}): Promise<void> {
+  await postJson("/voice/call/ai-cost", input);
+}
+
 export async function reconcileVoiceCallStatus(input: {
   twilioCallSid: string;
   callStatus: string;

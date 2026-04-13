@@ -56,6 +56,8 @@ const serverEnvSchema = z.object({
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
+  UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD: z.coerce.number().optional(),
+  UNIT_ECONOMICS_MONTHLY_FLY_COST_USD: z.coerce.number().optional(),
 });
 
 const clientEnvSchema = z.object({

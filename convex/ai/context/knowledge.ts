@@ -31,6 +31,7 @@ import {
   getEmbeddingModelId,
 } from "../../lib/providers/embeddings";
 import {
+  extractGenerationMetrics,
   getNonRealtimeTextModelId,
   withAiTelemetryContext,
 } from "../../lib/providers/nonRealtimeText";
@@ -527,13 +528,29 @@ async function generatePreviewAnswer(
       sessionId: threadId,
       distinctId,
       groupKey,
-      businessId: String(args.businessId),
+      businessId: args.businessId,
+      mutationRunner: ctx,
       properties: {
         channel: "dashboard",
         operation: "knowledge.preview_answer",
       },
     }),
   );
+
+  const metrics = extractGenerationMetrics(result);
+  if (metrics.totalCostUsd !== undefined) {
+    await ctx.runMutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId: args.businessId,
+      occurredAt: new Date().toISOString(),
+      eventKey: `dashboard_ai:knowledge_preview:${traceId}`,
+      eventKind: "dashboard_ai",
+      channel: "dashboard",
+      costUsd: metrics.totalCostUsd,
+      provider: "google",
+      model: getNonRealtimeTextModelId(),
+      operation: "knowledge.preview_answer",
+    });
+  }
 
   return { text: result.text, threadId };
 }

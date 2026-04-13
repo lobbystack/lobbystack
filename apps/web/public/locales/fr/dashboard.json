@@ -3,6 +3,10 @@
     "dashboardTitle": "Tableau de bord",
     "dashboardDescription": "Suivez l'état de préparation pour les appels, les messages et la prise de rendez-vous."
   },
+  "analyticsPage": {
+    "title": "Analytique",
+    "description": "Consultez les tendances d'engagement pour les appels, les messages et l'activite de reservation."
+  },
   "delta": {
     "flat": "Aucun changement depuis le mois dernier",
     "up": "+{{value}} % depuis le mois dernier",

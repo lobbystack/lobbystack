@@ -228,6 +228,14 @@ describe("Twilio voice pricing sync", () => {
       expect(call?.providerCostUsd).toBe(0.0085);
       expect(call?.providerPriceUnit).toBe("usd");
       expect(call?.providerCallDurationSeconds).toBe(23);
+
+      const ledgerEvent = await ctx.db
+        .query("unit_economics_events")
+        .withIndex("by_call_id", (q) => q.eq("callId", callId))
+        .unique();
+      expect(ledgerEvent?.eventKind).toBe("voice_provider");
+      expect(ledgerEvent?.costUsd).toBe(0.0085);
+      expect(ledgerEvent?.occurredAt).toBe("2026-04-09T19:00:23.000Z");
     });
     await flushImmediateScheduledFunctions(t);
   });

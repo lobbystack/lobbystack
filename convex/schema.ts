@@ -87,6 +87,34 @@ const smsSenderRoleValidator = v.union(
   v.literal("business_ai"),
 );
 
+const unitEconomicsEventKindValidator = v.union(
+  v.literal("voice_provider"),
+  v.literal("sms_provider"),
+  v.literal("notification_provider"),
+  v.literal("sms_ai"),
+  v.literal("voice_ai"),
+  v.literal("dashboard_ai"),
+  v.literal("infra_allocation"),
+);
+
+const unitEconomicsChannelValidator = v.union(
+  v.literal("voice"),
+  v.literal("sms"),
+  v.literal("platform"),
+  v.literal("dashboard"),
+);
+
+const unitEconomicsQuantityUnitValidator = v.union(
+  v.literal("call"),
+  v.literal("minute"),
+  v.literal("message"),
+  v.literal("segment"),
+  v.literal("thread"),
+  v.literal("generation"),
+  v.literal("business"),
+  v.literal("user"),
+);
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -632,6 +660,66 @@ export default defineSchema({
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
     .index("by_provider_message_id", ["providerMessageId"]),
+
+  unit_economics_events: defineTable({
+    businessId: v.id("businesses"),
+    monthKey: v.string(),
+    occurredAt: v.string(),
+    eventKey: v.string(),
+    eventKind: unitEconomicsEventKindValidator,
+    channel: unitEconomicsChannelValidator,
+    costUsd: v.number(),
+    quantity: v.optional(v.number()),
+    quantityUnit: v.optional(unitEconomicsQuantityUnitValidator),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    operation: v.optional(v.string()),
+    callId: v.optional(v.id("calls")),
+    conversationId: v.optional(v.id("conversations")),
+    messageId: v.optional(v.id("messages")),
+    notificationId: v.optional(v.id("notifications")),
+  })
+    .index("by_event_key", ["eventKey"])
+    .index("by_business_id_and_month_key_and_occurred_at", [
+      "businessId",
+      "monthKey",
+      "occurredAt",
+    ])
+    .index("by_business_id_and_event_kind_and_occurred_at", [
+      "businessId",
+      "eventKind",
+      "occurredAt",
+    ])
+    .index("by_call_id", ["callId"])
+    .index("by_message_id", ["messageId"])
+    .index("by_notification_id", ["notificationId"])
+    .index("by_conversation_id", ["conversationId"]),
+
+  unit_economics_rollups: defineTable({
+    businessId: v.id("businesses"),
+    monthKey: v.string(),
+    totalCostUsd: v.number(),
+    providerCostUsd: v.number(),
+    aiCostUsd: v.number(),
+    infraCostUsd: v.number(),
+    voiceCostUsd: v.number(),
+    smsCostUsd: v.number(),
+    alertSmsCostUsd: v.number(),
+    voiceCallCount: v.number(),
+    voiceMinutes: v.number(),
+    outboundSmsCount: v.number(),
+    smsThreadCount: v.number(),
+    activeUserCount: v.number(),
+    costPerVoiceCallUsd: v.number(),
+    costPerVoiceMinuteUsd: v.number(),
+    costPerOutboundSmsUsd: v.number(),
+    costPerSmsThreadUsd: v.number(),
+    costPerActiveUserUsd: v.number(),
+    costPerBusinessUsd: v.number(),
+    recomputedAt: v.string(),
+  })
+    .index("by_business_id_and_month_key", ["businessId", "monthKey"])
+    .index("by_month_key", ["monthKey"]),
 
   inbox_items: defineTable({
     businessId: v.id("businesses"),

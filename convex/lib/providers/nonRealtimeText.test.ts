@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { Id } from "../../_generated/dataModel";
 import {
   extractGenerationMetrics,
   withAiTelemetryContext,
@@ -16,7 +17,10 @@ describe("withAiTelemetryContext", () => {
       },
       {
         traceId: "trace-123",
-        businessId: "business-123",
+        businessId: "business-123" as Id<"businesses">,
+        mutationRunner: {
+          runMutation: vi.fn(),
+        },
         properties: {
           channel: "sms",
         },
@@ -27,6 +31,9 @@ describe("withAiTelemetryContext", () => {
       aiReceptionistTelemetry: {
         traceId: "trace-123",
         businessId: "business-123",
+        mutationRunner: {
+          runMutation: expect.any(Function),
+        },
         properties: {
           channel: "sms",
         },

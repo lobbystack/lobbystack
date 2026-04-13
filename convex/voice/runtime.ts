@@ -1098,6 +1098,17 @@ export const recordProviderPricing = internalMutation({
     }
 
     if (pricingChanged && args.providerCostUsd !== undefined) {
+      await ctx.runMutation(internal.unitEconomics.recordVoiceProviderCost, {
+        businessId: call.businessId,
+        callId: call._id,
+        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+        occurredAt: args.providerUpdatedAt ?? new Date().toISOString(),
+        costUsd: args.providerCostUsd,
+        ...(args.providerDurationSeconds !== undefined
+          ? { durationSeconds: args.providerDurationSeconds }
+          : {}),
+      });
+
       await enqueueVoiceProviderCostRecordedEvent(ctx, {
         businessId: call.businessId,
         ...(call.conversationId ? { conversationId: call.conversationId } : {}),
@@ -1215,6 +1226,17 @@ export const reconcileTwilioCallStatus = internalMutation({
     }
 
     if (estimatedPricingChanged && estimatedProviderCostUsd !== undefined) {
+      await ctx.runMutation(internal.unitEconomics.recordVoiceProviderCost, {
+        businessId: call.businessId,
+        callId: call._id,
+        ...(call.conversationId ? { conversationId: call.conversationId } : {}),
+        occurredAt: args.providerUpdatedAt,
+        costUsd: estimatedProviderCostUsd,
+        ...(args.providerDurationSeconds !== undefined
+          ? { durationSeconds: args.providerDurationSeconds }
+          : {}),
+      });
+
       await enqueueVoiceProviderCostRecordedEvent(ctx, {
         businessId: call.businessId,
         ...(call.conversationId ? { conversationId: call.conversationId } : {}),

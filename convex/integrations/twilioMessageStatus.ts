@@ -244,6 +244,18 @@ export const recordProviderPricing = internalMutation({
         }
       }
 
+      if (notificationPricingChanged && args.providerCostUsd !== undefined) {
+        await ctx.runMutation(internal.unitEconomics.recordNotificationProviderCost, {
+          businessId: notification.businessId,
+          notificationId: notification._id,
+          occurredAt: args.providerUpdatedAt ?? new Date().toISOString(),
+          costUsd: args.providerCostUsd,
+          ...(args.providerNumSegments !== undefined
+            ? { numSegments: args.providerNumSegments }
+            : {}),
+        });
+      }
+
       return { matched: true, applied: true };
     }
 
@@ -304,6 +316,17 @@ export const recordProviderPricing = internalMutation({
     }
 
     if (pricingChanged && args.providerCostUsd !== undefined) {
+      await ctx.runMutation(internal.unitEconomics.recordSmsProviderCost, {
+        businessId: message.businessId,
+        messageId: message._id,
+        conversationId: message.conversationId,
+        occurredAt: args.providerUpdatedAt ?? new Date().toISOString(),
+        costUsd: args.providerCostUsd,
+        ...(args.providerNumSegments !== undefined
+          ? { numSegments: args.providerNumSegments }
+          : {}),
+      });
+
       await ctx.runMutation(internal.telemetry.posthog.enqueueEvent, {
         ...serializePostHogEvent({
           eventName: "sms.provider_cost_recorded",

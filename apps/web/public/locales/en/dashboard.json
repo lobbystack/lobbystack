@@ -3,6 +3,10 @@
     "dashboardTitle": "Dashboard",
     "dashboardDescription": "Track operational readiness for calls, messages, and booking."
   },
+  "analyticsPage": {
+    "title": "Analytics",
+    "description": "Review engagement trends across calls, messages, and booking activity."
+  },
   "delta": {
     "flat": "No change from last month",
     "up": "+{{value}}% from last month",
