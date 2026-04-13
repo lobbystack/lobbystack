@@ -5,6 +5,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { getBillingKey } from "../lib/billing";
+import { buildLocalizedAppointmentNotificationBody } from "../lib/runtimeLocale";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -1440,6 +1441,102 @@ describe("Twilio SMS delivery flow", () => {
       body: sentBody,
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
+  });
+
+  it("blocks a hosted reminder when emoji push the UCS-2 body into a third segment", async () => {
+    const t = convexTest(schema, convexModules);
+    const currentPeriodKey = new Date().toISOString().slice(0, 7);
+    const serviceName = "Style AAAAAAAAAAAAAAAAA \ud83e\uddf4";
+    const expectedBody = buildLocalizedAppointmentNotificationBody({
+      kind: "appointment_reminder",
+      serviceName,
+      startsAt: "2026-06-15T15:00:00.000Z",
+      timezone: "America/Toronto",
+      locale: "en",
+    });
+
+    expect(Array.from(expectedBody)).toHaveLength(134);
+    expect(expectedBody.length).toBe(135);
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await ctx.db.insert("businesses", {
+        slug: "twilio-notification-unicode-boundary",
+        name: "Twilio Notification Unicode Boundary",
+        timezone: "America/Toronto",
+        businessType: "service_company",
+        defaultLocale: "en",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: currentPeriodKey,
+        planAtSnapshot: "free_cloud",
+        alertSmsSegmentsUsed: 8,
+        alertSmsSegmentsIncluded: 10,
+        alertSmsBlocked: false,
+        lastRecordedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        lastSyncedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550159",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: serviceName,
+        slug: "cut-unicode-boundary",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    await expect(
+      t.action(internal.notifications.reminders.deliverNotification, {
+        notificationId,
+      }),
+    ).rejects.toThrow("Alert SMS quota reached");
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
   });
 
   it("localizes reminders to the contact's remembered French preference", async () => {

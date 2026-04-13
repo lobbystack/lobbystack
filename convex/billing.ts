@@ -1779,7 +1779,7 @@ export const reserveAlertSmsUsage = internalMutation({
         q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
       )
       .unique();
-    if (existingUsageEvent) {
+    if (existingUsageEvent && existingUsageEvent.quantity > 0) {
       return {
         allowed: true,
         errorCode: null,

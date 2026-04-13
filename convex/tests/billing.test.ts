@@ -592,6 +592,55 @@ describe("billing", () => {
     });
   });
 
+  it("rejects a blocked voice call before creating contact or call records", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-blocked-start",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "free_cloud",
+        voiceSecondsUsed: 600,
+        voiceSecondsIncluded: 600,
+        voiceBlocked: true,
+        lastRecordedAt: "2026-04-12T14:00:00.000Z",
+      });
+    });
+
+    await expect(
+      t.mutation(internal.voice.runtime.startCall, {
+        businessId,
+        twilioCallSid: "CA-blocked-start",
+        from: "+14165550123",
+        to: "+14165550999",
+        startedAt: "2026-04-12T14:00:30.000Z",
+      }),
+    ).rejects.toThrow("voice_limit_reached");
+
+    const persistedState = await t.run(async (ctx: TestContext) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550123"),
+        )
+        .unique();
+      const call = await ctx.db
+        .query("calls")
+        .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", "CA-blocked-start"))
+        .unique();
+      return { contact, call };
+    });
+
+    expect(persistedState).toEqual({
+      contact: null,
+      call: null,
+    });
+  });
+
   it("treats duplicate voice start reservations for the same call as idempotent", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -834,6 +883,72 @@ describe("billing", () => {
     expect(usageState.usageEvent).toMatchObject({
       quantity: 8,
       recordedAt: "2026-04-12T14:01:00.000Z",
+    });
+  });
+
+  it("re-checks hosted alert SMS quota after a released notification retries", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-alert-retry-quota",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const secondNotificationId = await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        scheduledFor: "2026-04-12T14:03:00.000Z",
+        status: "pending",
+      });
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: "2026-04",
+        planAtSnapshot: "free_cloud",
+        alertSmsSegmentsUsed: 9,
+        alertSmsSegmentsIncluded: 10,
+        alertSmsBlocked: false,
+        lastRecordedAt: "2026-04-12T14:00:00.000Z",
+      });
+      return { ...seeded, secondNotificationId };
+    });
+
+    const firstReservation = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T14:01:00.000Z",
+    });
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      quantity: 0,
+      recordedAt: "2026-04-12T14:01:30.000Z",
+    });
+    const secondReservation = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.secondNotificationId,
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T14:02:00.000Z",
+    });
+    const retriedReservation = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      estimatedSegments: 1,
+      recordedAt: "2026-04-12T14:02:30.000Z",
+    });
+
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+    });
+    expect(secondReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+    });
+    expect(retriedReservation).toEqual({
+      allowed: false,
+      errorCode: "alert_sms_limit_reached",
     });
   });
 

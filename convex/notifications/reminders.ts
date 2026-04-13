@@ -81,7 +81,7 @@ function estimateSmsSegments(body: string): number {
       continue;
     }
 
-    const unicodeLength = characters.length;
+    const unicodeLength = body.length;
     return unicodeLength <= 70 ? 1 : Math.max(1, Math.ceil(unicodeLength / 67));
   }
 

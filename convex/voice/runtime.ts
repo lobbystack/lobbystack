@@ -495,6 +495,16 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
+    const voicePolicy: {
+      allowed: boolean;
+      errorCode: BillingErrorCode | null;
+    } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+      businessId: args.businessId,
+    });
+    if (!voicePolicy.allowed) {
+      throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+    }
+
     let contact: Doc<"contacts"> | null = await ctx.db
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) =>
