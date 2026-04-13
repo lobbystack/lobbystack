@@ -13,6 +13,30 @@ const convexModules = modules;
 const originalMonthlyConvexCost = process.env.UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD;
 const originalMonthlyFlyCost = process.env.UNIT_ECONOMICS_MONTHLY_FLY_COST_USD;
 
+async function refreshMonthUntilDone(
+  authed: { mutation: (ref: unknown, args: unknown) => Promise<any> },
+  businessId: Id<"businesses">,
+  monthKey?: string,
+) {
+  let state: Record<string, unknown> | undefined;
+
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const result = await authed.mutation(api.unitEconomics.refreshMonth as unknown, {
+      businessId,
+      ...(monthKey ? { monthKey } : {}),
+      ...(state ? { state } : {}),
+    });
+
+    if (result.done) {
+      return result;
+    }
+
+    state = result.state;
+  }
+
+  throw new Error("refreshMonth did not complete within 200 steps");
+}
+
 async function seedBusinessMember(t: ConvexHarness, subject: string) {
   const { businessId, userId } = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
@@ -114,7 +138,7 @@ describe("unit economics", () => {
 
     });
 
-    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    await refreshMonthUntilDone(authed, businessId);
     const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
 
     expect(summary.rollup).not.toBeNull();
@@ -265,13 +289,14 @@ describe("unit economics", () => {
           properties: {
             totalCostUsd: 0.15,
             $ai_total_cost_usd: 0.15,
+            channel: "sms",
             operation: "sms.generate_reply",
           },
         }),
       });
     });
 
-    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    await refreshMonthUntilDone(authed, businessId);
     const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
 
     expect(summary.rollup).not.toBeNull();
@@ -315,6 +340,7 @@ describe("unit economics", () => {
           properties: {
             totalCostUsd: 0.15,
             $ai_total_cost_usd: 0.15,
+            channel: "sms",
             operation: "sms.generate_reply",
             messageId,
           },
@@ -324,7 +350,7 @@ describe("unit economics", () => {
       return { conversationId, messageId };
     });
 
-    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    await refreshMonthUntilDone(authed, businessId);
     const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
 
     expect(summary.rollup).not.toBeNull();
@@ -383,7 +409,7 @@ describe("unit economics", () => {
       messageId: firstMessageId,
     });
 
-    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    await refreshMonthUntilDone(authed, businessId);
 
     await t.mutation(internal.unitEconomics.recordAiGenerationCost, {
       businessId,
@@ -405,5 +431,73 @@ describe("unit economics", () => {
     expect(summary.rollup?.infraCostUsd).toBe(10);
     expect(summary.rollup?.aiCostUsd).toBe(0.4);
     expect(summary.rollup?.totalCostUsd).toBe(10.4);
+  });
+
+  it("backfills provider costs into the month they were recorded", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-provider-month");
+
+    await t.run(async (ctx) => {
+      const { conversationId } = await seedConversation(ctx, businessId);
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-unit-economics-provider-month",
+        status: "completed",
+        providerCallStatus: "completed",
+        providerCallDurationSeconds: 120,
+        providerCostUsd: 0.05,
+        startedAt: "2026-03-31T23:58:00.000Z",
+        endedAt: "2026-03-31T23:59:00.000Z",
+        providerUpdatedAt: "2026-04-01T00:02:00.000Z",
+      });
+    });
+
+    await refreshMonthUntilDone(authed, businessId, "2026-04");
+    const summary = await authed.query(api.unitEconomics.getSummary, {
+      businessId,
+      monthKey: "2026-04",
+    });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.providerCostUsd).toBe(0.05);
+    expect(summary.rollup?.voiceCallCount).toBe(1);
+    expect(summary.rollup?.voiceMinutes).toBe(2);
+  });
+
+  it("processes large refreshes across multiple mutation batches", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-batches");
+
+    await t.run(async (ctx) => {
+      const nowIso = "2026-04-11T12:00:00.000Z";
+
+      for (let index = 0; index < 55; index += 1) {
+        const { conversationId } = await seedConversation(ctx, businessId);
+        await ctx.db.insert("messages", {
+          businessId,
+          conversationId,
+          direction: "outbound",
+          channel: "sms",
+          body: `Batch message ${index}`,
+          status: "sent",
+          senderRole: "business_ai",
+          aiGenerated: true,
+          providerCostUsd: 0.01,
+          providerNumSegments: 1,
+          providerUpdatedAt: nowIso,
+        });
+      }
+    });
+
+    await refreshMonthUntilDone(authed, businessId, "2026-04");
+    const summary = await authed.query(api.unitEconomics.getSummary, {
+      businessId,
+      monthKey: "2026-04",
+    });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.providerCostUsd).toBe(0.55);
+    expect(summary.rollup?.outboundSmsCount).toBe(55);
   });
 });

@@ -29,6 +29,29 @@ type QuantityUnit =
   | "business"
   | "user";
 
+type RefreshPhase =
+  | "calls"
+  | "notifications"
+  | "conversations"
+  | "telemetry"
+  | "finalize";
+
+type RefreshState = {
+  phase: RefreshPhase;
+  callsCursor?: string;
+  notificationsCursor?: string;
+  conversationCursor?: string;
+  activeConversationId?: Id<"conversations">;
+  messagesCursor?: string;
+  hasMoreConversations?: boolean;
+  outboxCursor?: string;
+};
+
+type RefreshStepResult = {
+  done: boolean;
+  state?: RefreshState;
+};
+
 type CostEventInput = {
   businessId: Id<"businesses">;
   occurredAt: string;
@@ -55,17 +78,6 @@ function getCurrentMonthKey(): string {
   return toMonthKey(new Date().toISOString());
 }
 
-function getMonthStartIso(monthKey: string): string {
-  return `${monthKey}-01T00:00:00.000Z`;
-}
-
-function getNextMonthStartIso(monthKey: string): string {
-  const [rawYear, rawMonth] = monthKey.split("-");
-  const year = Number(rawYear);
-  const month = Number(rawMonth);
-  return new Date(Date.UTC(year, month, 1)).toISOString();
-}
-
 function roundUsd(value: number): number {
   return Number(value.toFixed(6));
 }
@@ -77,6 +89,25 @@ function roundUnitCost(totalCostUsd: number, divisor: number): number {
 
   return roundUsd(totalCostUsd / divisor);
 }
+
+const REFRESH_BATCH_SIZE = 50;
+const refreshPhaseValidator = v.union(
+  v.literal("calls"),
+  v.literal("notifications"),
+  v.literal("conversations"),
+  v.literal("telemetry"),
+  v.literal("finalize"),
+);
+const refreshStateValidator = v.object({
+  phase: refreshPhaseValidator,
+  callsCursor: v.optional(v.string()),
+  notificationsCursor: v.optional(v.string()),
+  conversationCursor: v.optional(v.string()),
+  activeConversationId: v.optional(v.id("conversations")),
+  messagesCursor: v.optional(v.string()),
+  hasMoreConversations: v.optional(v.boolean()),
+  outboxCursor: v.optional(v.string()),
+});
 
 function parseOptionalNumber(
   source: Record<string, unknown> | undefined,
@@ -173,6 +204,26 @@ function buildSmsProviderEventKey(messageId: Id<"messages">): string {
 
 function buildNotificationProviderEventKey(notificationId: Id<"notifications">): string {
   return `notification_provider:notification:${String(notificationId)}`;
+}
+
+function getCallOccurredAt(call: Pick<Doc<"calls">, "providerUpdatedAt" | "endedAt" | "startedAt">): string {
+  return call.providerUpdatedAt ?? call.endedAt ?? call.startedAt;
+}
+
+function getNotificationOccurredAt(
+  notification: Pick<Doc<"notifications">, "providerUpdatedAt" | "scheduledFor">,
+): string {
+  return notification.providerUpdatedAt ?? notification.scheduledFor;
+}
+
+function getMessageOccurredAt(
+  message: Pick<Doc<"messages">, "providerUpdatedAt" | "_creationTime">,
+): string {
+  return message.providerUpdatedAt ?? new Date(message._creationTime).toISOString();
+}
+
+function monthMatches(monthKey: string, occurredAt: string): boolean {
+  return toMonthKey(occurredAt) === monthKey;
 }
 
 async function countActiveBusinesses(ctx: MutationCtx): Promise<number> {
@@ -413,31 +464,31 @@ async function upsertCostEvent(
   }
 }
 
-async function backfillProviderCostsForMonth(
+async function refreshCallsBatch(
   ctx: MutationCtx,
   args: {
     businessId: Id<"businesses">;
     monthKey: string;
+    cursor?: string;
   },
-): Promise<void> {
-  const monthStart = getMonthStartIso(args.monthKey);
-  const nextMonthStart = getNextMonthStartIso(args.monthKey);
-
-  const calls = await ctx.db
+): Promise<RefreshStepResult> {
+  const page = await ctx.db
     .query("calls")
-    .withIndex("by_business_id_and_started_at", (q) =>
-      q.eq("businessId", args.businessId).gte("startedAt", monthStart).lt("startedAt", nextMonthStart),
-    )
-    .collect();
+    .withIndex("by_business_id_and_started_at", (q) => q.eq("businessId", args.businessId))
+    .paginate({
+      numItems: REFRESH_BATCH_SIZE,
+      cursor: args.cursor ?? null,
+    });
 
-  for (const call of calls) {
-    if (call.providerCostUsd === undefined) {
+  for (const call of page.page) {
+    const occurredAt = getCallOccurredAt(call);
+    if (call.providerCostUsd === undefined || !monthMatches(args.monthKey, occurredAt)) {
       continue;
     }
 
     await upsertCostEvent(ctx, {
       businessId: call.businessId,
-      occurredAt: call.providerUpdatedAt ?? call.endedAt ?? call.startedAt,
+      occurredAt,
       eventKey: buildVoiceProviderEventKey(call._id),
       eventKind: "voice_provider",
       channel: "voice",
@@ -454,23 +505,50 @@ async function backfillProviderCostsForMonth(
     });
   }
 
-  const notifications = await ctx.db
-    .query("notifications")
-    .withIndex("by_business_id_and_scheduled_for", (q) =>
-      q.eq("businessId", args.businessId)
-        .gte("scheduledFor", monthStart)
-        .lt("scheduledFor", nextMonthStart),
-    )
-    .collect();
+  if (page.isDone) {
+    return {
+      done: false,
+      state: { phase: "notifications" },
+    };
+  }
 
-  for (const notification of notifications) {
-    if (notification.providerCostUsd === undefined) {
+  return {
+    done: false,
+    state: {
+      phase: "calls",
+      callsCursor: page.continueCursor,
+    },
+  };
+}
+
+async function refreshNotificationsBatch(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    monthKey: string;
+    cursor?: string;
+  },
+): Promise<RefreshStepResult> {
+  const page = await ctx.db
+    .query("notifications")
+    .withIndex("by_business_id_and_scheduled_for", (q) => q.eq("businessId", args.businessId))
+    .paginate({
+      numItems: REFRESH_BATCH_SIZE,
+      cursor: args.cursor ?? null,
+    });
+
+  for (const notification of page.page) {
+    const occurredAt = getNotificationOccurredAt(notification);
+    if (
+      notification.providerCostUsd === undefined ||
+      !monthMatches(args.monthKey, occurredAt)
+    ) {
       continue;
     }
 
     await upsertCostEvent(ctx, {
       businessId: notification.businessId,
-      occurredAt: notification.providerUpdatedAt ?? notification.scheduledFor,
+      occurredAt,
       eventKey: buildNotificationProviderEventKey(notification._id),
       eventKind: "notification_provider",
       channel: "platform",
@@ -486,61 +564,142 @@ async function backfillProviderCostsForMonth(
     });
   }
 
-  const conversations = await ctx.db
-    .query("conversations")
-    .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
-    .collect();
-
-  for (const conversation of conversations) {
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-      .collect();
-
-    for (const message of messages) {
-      if (
-        message.direction !== "outbound" ||
-        message.channel !== "sms" ||
-        message.providerCostUsd === undefined ||
-        toMonthKey(new Date(message._creationTime).toISOString()) !== args.monthKey
-      ) {
-        continue;
-      }
-
-      await upsertCostEvent(ctx, {
-        businessId: message.businessId,
-        occurredAt: message.providerUpdatedAt ?? new Date(message._creationTime).toISOString(),
-        eventKey: buildSmsProviderEventKey(message._id),
-        eventKind: "sms_provider",
-        channel: "sms",
-        costUsd: message.providerCostUsd,
-        provider: "twilio",
-        messageId: message._id,
-        conversationId: message.conversationId,
-        ...(message.providerNumSegments !== undefined
-          ? {
-              quantity: message.providerNumSegments,
-              quantityUnit: "segment" as const,
-            }
-          : {}),
-      });
-    }
+  if (page.isDone) {
+    return {
+      done: false,
+      state: { phase: "conversations" },
+    };
   }
+
+  return {
+    done: false,
+    state: {
+      phase: "notifications",
+      notificationsCursor: page.continueCursor,
+    },
+  };
 }
 
-async function backfillAiCostsFromTelemetryOutbox(
+async function refreshConversationMessagesBatch(
   ctx: MutationCtx,
   args: {
     businessId: Id<"businesses">;
     monthKey: string;
+    state: RefreshState;
   },
-): Promise<void> {
-  const outboxRows = await ctx.db
+): Promise<RefreshStepResult> {
+  let activeConversationId = args.state.activeConversationId;
+  let messagesCursor = args.state.messagesCursor;
+  let conversationCursor = args.state.conversationCursor;
+  let hasMoreConversations = args.state.hasMoreConversations ?? false;
+
+  if (!activeConversationId) {
+    const conversationPage = await ctx.db
+      .query("conversations")
+      .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
+      .paginate({
+        numItems: 1,
+        cursor: conversationCursor ?? null,
+      });
+
+    const nextConversation = conversationPage.page[0];
+    if (!nextConversation) {
+      return {
+        done: false,
+        state: { phase: "telemetry" },
+      };
+    }
+
+    activeConversationId = nextConversation._id;
+    messagesCursor = undefined;
+    conversationCursor = conversationPage.isDone ? undefined : conversationPage.continueCursor;
+    hasMoreConversations = !conversationPage.isDone;
+  }
+
+  const messagePage = await ctx.db
+    .query("messages")
+    .withIndex("by_conversation_id", (q) => q.eq("conversationId", activeConversationId))
+    .paginate({
+      numItems: REFRESH_BATCH_SIZE,
+      cursor: messagesCursor ?? null,
+    });
+
+  for (const message of messagePage.page) {
+    const occurredAt = getMessageOccurredAt(message);
+    if (
+      message.direction !== "outbound" ||
+      message.channel !== "sms" ||
+      message.providerCostUsd === undefined ||
+      !monthMatches(args.monthKey, occurredAt)
+    ) {
+      continue;
+    }
+
+    await upsertCostEvent(ctx, {
+      businessId: message.businessId,
+      occurredAt,
+      eventKey: buildSmsProviderEventKey(message._id),
+      eventKind: "sms_provider",
+      channel: "sms",
+      costUsd: message.providerCostUsd,
+      provider: "twilio",
+      messageId: message._id,
+      conversationId: message.conversationId,
+      ...(message.providerNumSegments !== undefined
+        ? {
+            quantity: message.providerNumSegments,
+            quantityUnit: "segment" as const,
+          }
+        : {}),
+    });
+  }
+
+  if (!messagePage.isDone) {
+    return {
+      done: false,
+      state: {
+        phase: "conversations",
+        ...(conversationCursor ? { conversationCursor } : {}),
+        activeConversationId,
+        messagesCursor: messagePage.continueCursor,
+        hasMoreConversations,
+      },
+    };
+  }
+
+  if (!hasMoreConversations) {
+    return {
+      done: false,
+      state: { phase: "telemetry" },
+    };
+  }
+
+  return {
+    done: false,
+    state: {
+      phase: "conversations",
+      ...(conversationCursor ? { conversationCursor } : {}),
+    },
+  };
+}
+
+async function refreshTelemetryBatch(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    monthKey: string;
+    cursor?: string;
+  },
+): Promise<RefreshStepResult> {
+  const page = await ctx.db
     .query("telemetry_outbox")
     .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
-    .collect();
+    .paginate({
+      numItems: REFRESH_BATCH_SIZE,
+      cursor: args.cursor ?? null,
+    });
 
-  for (const row of outboxRows) {
+  for (const row of page.page) {
     if (row.eventName !== "$ai_generation") {
       continue;
     }
@@ -553,7 +712,7 @@ async function backfillAiCostsFromTelemetryOutbox(
     }
 
     const occurredAt = parseOptionalString(payload, ["occurredAt"]);
-    if (!occurredAt || toMonthKey(occurredAt) !== args.monthKey) {
+    if (!occurredAt || !monthMatches(args.monthKey, occurredAt)) {
       continue;
     }
 
@@ -566,7 +725,9 @@ async function backfillAiCostsFromTelemetryOutbox(
       continue;
     }
 
-    const channelValue = parseOptionalString(payload, ["channel"]);
+    const channelValue =
+      parseOptionalString(payload, ["channel"]) ??
+      parseOptionalString(properties, ["channel"]);
     const channel: UnitEconomicsChannel =
       channelValue === "voice" ||
       channelValue === "sms" ||
@@ -605,6 +766,21 @@ async function backfillAiCostsFromTelemetryOutbox(
       ...(operation ? { operation } : {}),
     });
   }
+
+  if (page.isDone) {
+    return {
+      done: false,
+      state: { phase: "finalize" },
+    };
+  }
+
+  return {
+    done: false,
+    state: {
+      phase: "telemetry",
+      outboxCursor: page.continueCursor,
+    },
+  };
 }
 
 export const recordVoiceProviderCost = internalMutation({
@@ -782,19 +958,50 @@ export const refreshMonth = mutation({
   args: {
     businessId: v.id("businesses"),
     monthKey: v.optional(v.string()),
+    state: v.optional(refreshStateValidator),
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
 
     const monthKey = args.monthKey ?? getCurrentMonthKey();
-    await backfillProviderCostsForMonth(ctx, {
-      businessId: args.businessId,
-      monthKey,
-    });
-    await backfillAiCostsFromTelemetryOutbox(ctx, {
-      businessId: args.businessId,
-      monthKey,
-    });
+    const state = args.state ?? { phase: "calls" as const };
+
+    if (state.phase === "calls") {
+      const result = await refreshCallsBatch(ctx, {
+        businessId: args.businessId,
+        monthKey,
+        ...(state.callsCursor ? { cursor: state.callsCursor } : {}),
+      });
+      return { monthKey, ...result };
+    }
+
+    if (state.phase === "notifications") {
+      const result = await refreshNotificationsBatch(ctx, {
+        businessId: args.businessId,
+        monthKey,
+        ...(state.notificationsCursor ? { cursor: state.notificationsCursor } : {}),
+      });
+      return { monthKey, ...result };
+    }
+
+    if (state.phase === "conversations") {
+      const result = await refreshConversationMessagesBatch(ctx, {
+        businessId: args.businessId,
+        monthKey,
+        state,
+      });
+      return { monthKey, ...result };
+    }
+
+    if (state.phase === "telemetry") {
+      const result = await refreshTelemetryBatch(ctx, {
+        businessId: args.businessId,
+        monthKey,
+        ...(state.outboxCursor ? { cursor: state.outboxCursor } : {}),
+      });
+      return { monthKey, ...result };
+    }
+
     const rollup = await recomputeMonthRollup(ctx, {
       businessId: args.businessId,
       monthKey,
@@ -806,7 +1013,7 @@ export const refreshMonth = mutation({
       rollup,
     });
 
-    return { monthKey };
+    return { monthKey, done: true as const };
   },
 });
 
