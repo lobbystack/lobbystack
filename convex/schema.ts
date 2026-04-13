@@ -73,18 +73,10 @@ const billingPlanSlugValidator = v.union(
   v.literal("enterprise"),
 );
 
-const legacyBillingTierValidator = v.union(
-  v.literal("free"),
-  v.literal("starter"),
-  v.literal("growth"),
-);
-
 const billingAddonSlugValidator = v.union(v.literal("ai_sms"));
 
 const billingUsageKindValidator = v.union(
   v.literal("voice_seconds"),
-  // Legacy generic SMS bucket retained while older usage events are migrated.
-  v.literal("sms_segments"),
   v.literal("alert_sms_segments"),
   v.literal("outbound_call_attempts"),
   v.literal("ai_sms_segments"),
@@ -716,8 +708,6 @@ export default defineSchema({
     businessId: v.id("businesses"),
     billingKey: v.string(),
     currentPlan: v.optional(billingPlanSlugValidator),
-    // Legacy tier kept optional while older billing records are migrated.
-    currentTier: v.optional(legacyBillingTierValidator),
     activeAddons: v.optional(v.array(billingAddonSlugValidator)),
     subscriptionState: v.optional(v.string()),
     billingContactEmail: v.optional(v.string()),
@@ -746,23 +736,15 @@ export default defineSchema({
     businessId: v.id("businesses"),
     periodKey: v.string(),
     planAtSnapshot: v.optional(billingPlanSlugValidator),
-    // Legacy billing snapshot tier retained while older records are migrated.
-    tierAtSnapshot: v.optional(legacyBillingTierValidator),
-    tier: v.optional(legacyBillingTierValidator),
     voiceSecondsUsed: v.optional(v.number()),
     alertSmsSegmentsUsed: v.optional(v.number()),
-    // Legacy SMS bucket retained while migrating prior billing records.
-    smsSegmentsUsed: v.optional(v.number()),
     outboundCallAttemptsUsed: v.optional(v.number()),
     aiSmsSegmentsUsed: v.optional(v.number()),
     voiceSecondsIncluded: v.optional(v.number()),
     alertSmsSegmentsIncluded: v.optional(v.number()),
-    smsSegmentsIncluded: v.optional(v.number()),
     outboundCallAttemptsIncluded: v.optional(v.number()),
     voiceBlocked: v.optional(v.boolean()),
     alertSmsBlocked: v.optional(v.boolean()),
-    // Legacy blocked flag retained while migrating prior billing records.
-    smsBlocked: v.optional(v.boolean()),
     outboundCallAttemptsBlocked: v.optional(v.boolean()),
     lastRecordedAt: v.string(),
   }).index("by_business_id_and_period_key", ["businessId", "periodKey"]),
@@ -774,8 +756,6 @@ export default defineSchema({
     usageKind: billingUsageKindValidator,
     quantity: v.number(),
     planAtRecordTime: v.optional(billingPlanSlugValidator),
-    // Legacy record tier retained while older usage events are migrated.
-    tierAtRecordTime: v.optional(legacyBillingTierValidator),
     activeAddonsAtRecordTime: v.optional(v.array(billingAddonSlugValidator)),
     recordedAt: v.string(),
     syncStatus: v.string(),

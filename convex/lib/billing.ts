@@ -45,21 +45,9 @@ export function getNormalizedAddons(
   );
 }
 
-export function getPlanFromLegacyTier(
-  tier: "free" | "starter" | "growth" | undefined | null,
-): BillingPlanSlug | null {
-  if (tier === "free") {
-    return "free_cloud";
-  }
-  if (tier === "starter" || tier === "growth") {
-    return "pro";
-  }
-  return null;
-}
-
 export function getPlanForBusiness(input: {
   business: Pick<Doc<"businesses">, "deploymentMode"> | null;
-  account: Pick<Doc<"billing_accounts">, "currentPlan" | "currentTier"> | null;
+  account: Pick<Doc<"billing_accounts">, "currentPlan"> | null;
 }): BillingPlanSlug {
   if (
     input.business?.deploymentMode &&
@@ -76,11 +64,6 @@ export function getPlanForBusiness(input: {
     accountPlan === "enterprise"
   ) {
     return accountPlan;
-  }
-
-  const legacyPlan = getPlanFromLegacyTier(input.account?.currentTier);
-  if (legacyPlan) {
-    return legacyPlan;
   }
 
   return "free_cloud";
@@ -118,14 +101,11 @@ export function getBillingUsageSnapshotData(args: {
 }): BillingUsageSnapshot {
   const entitlements = getPlanEntitlements(args.plan);
   const voiceSecondsUsed = args.usage?.voiceSecondsUsed ?? 0;
-  const alertSmsSegmentsUsed =
-    args.usage?.alertSmsSegmentsUsed ?? args.usage?.smsSegmentsUsed ?? 0;
+  const alertSmsSegmentsUsed = args.usage?.alertSmsSegmentsUsed ?? 0;
   const outboundCallAttemptsUsed = args.usage?.outboundCallAttemptsUsed ?? 0;
   const aiSmsSegmentsUsed = args.usage?.aiSmsSegmentsUsed ?? 0;
   const alertSmsSegmentsIncluded =
-    args.usage?.alertSmsSegmentsIncluded ??
-    args.usage?.smsSegmentsIncluded ??
-    entitlements.alertSmsSegmentsIncluded;
+    args.usage?.alertSmsSegmentsIncluded ?? entitlements.alertSmsSegmentsIncluded;
 
   const voiceSecondsRemaining =
     entitlements.voiceSecondsIncluded === null
@@ -160,7 +140,7 @@ export function getBillingUsageSnapshotData(args: {
     alertSmsBlocked:
       entitlements.overagesBillable || alertSmsSegmentsIncluded === null
         ? false
-        : (args.usage?.alertSmsBlocked ?? args.usage?.smsBlocked) ??
+        : (args.usage?.alertSmsBlocked ?? false) ||
           alertSmsSegmentsUsed >= alertSmsSegmentsIncluded,
     outboundCallAttemptsBlocked:
       entitlements.overagesBillable ||

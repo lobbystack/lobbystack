@@ -46,7 +46,6 @@ import {
   getBillingUsageSnapshotData,
   getConfiguredCheckoutPlans,
   getNormalizedAddons,
-  getPlanFromLegacyTier,
   getPlanEntitlements,
   getPlanForBusiness,
   getProProductId,
@@ -166,16 +165,6 @@ function getUsageQuantityField(
     case "ai_sms_segments":
       return "aiSmsSegmentsUsed";
   }
-}
-
-function normalizePersistedUsageKind(
-  usageKind: BillingUsageKind | "sms_segments",
-): BillingUsageKind {
-  if (usageKind === "sms_segments") {
-    return "alert_sms_segments";
-  }
-
-  return usageKind;
 }
 
 async function findBillingContactForRole(
@@ -322,8 +311,7 @@ function buildUsageMonthPatch(args: {
 }) {
   const entitlements = getPlanEntitlements(args.plan);
   const currentVoiceSeconds = args.usage?.voiceSecondsUsed ?? 0;
-  const currentAlertSmsSegments =
-    args.usage?.alertSmsSegmentsUsed ?? args.usage?.smsSegmentsUsed ?? 0;
+  const currentAlertSmsSegments = args.usage?.alertSmsSegmentsUsed ?? 0;
   const currentOutboundCallAttempts = args.usage?.outboundCallAttemptsUsed ?? 0;
   const currentAiSmsSegments = args.usage?.aiSmsSegmentsUsed ?? 0;
 
@@ -1245,23 +1233,23 @@ export const getUsageSyncPayload = internalQuery({
 
     if (
       !shouldSyncUsageEvent({
-        plan: usageEvent.planAtRecordTime ?? getPlanFromLegacyTier(usageEvent.tierAtRecordTime) ?? "free_cloud",
+        plan: usageEvent.planAtRecordTime ?? "free_cloud",
         activeAddons: getNormalizedAddons(usageEvent.activeAddonsAtRecordTime),
-        usageKind: normalizePersistedUsageKind(usageEvent.usageKind),
+        usageKind: usageEvent.usageKind,
       })
     ) {
       return null;
     }
 
     const meteredUsage = getPolarMeteredUsagePayload(
-      normalizePersistedUsageKind(usageEvent.usageKind),
+      usageEvent.usageKind,
       usageEvent.quantity,
     );
 
     return {
       businessId: usageEvent.businessId,
       billingKey: account.billingKey,
-      usageKind: normalizePersistedUsageKind(usageEvent.usageKind),
+      usageKind: usageEvent.usageKind,
       quantity: usageEvent.quantity,
       polarEventName: meteredUsage.eventName,
       polarQuantity: meteredUsage.quantity,
