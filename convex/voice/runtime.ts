@@ -959,7 +959,8 @@ export const completeCall = internalMutation({
       status: args.status,
       endedAt: args.endedAt,
       ...(disposition !== undefined ? { disposition } : {}),
-      ...(args.providerDurationSeconds !== undefined
+      ...(args.providerDurationSeconds !== undefined &&
+      call.providerCallDurationSeconds === undefined
         ? { providerCallDurationSeconds: args.providerDurationSeconds }
         : {}),
     });
@@ -977,7 +978,7 @@ export const completeCall = internalMutation({
 
     if (
       args.providerDurationSeconds !== undefined &&
-      args.providerDurationSeconds !== call.providerCallDurationSeconds
+      call.providerCallDurationSeconds === undefined
     ) {
       const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
         businessId: call.businessId,

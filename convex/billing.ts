@@ -1772,6 +1772,22 @@ export const reserveAlertSmsUsage = internalMutation({
     syncNeeded: v.optional(v.boolean()),
   }),
   handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `alert_sms:${String(args.notificationId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
       at: args.recordedAt,
@@ -1805,7 +1821,7 @@ export const reserveAlertSmsUsage = internalMutation({
       businessId: args.businessId,
       usageKind: "alert_sms_segments",
       quantity: normalizedSegments,
-      sourceKey: `alert_sms:${String(args.notificationId)}`,
+      sourceKey,
       recordedAt: args.recordedAt,
     });
 
@@ -1837,6 +1853,22 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
     syncNeeded: v.optional(v.boolean()),
   }),
   handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `outbound_attempt:voice_call:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
       at: args.recordedAt,
@@ -1869,7 +1901,7 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
       businessId: args.businessId,
       usageKind: "outbound_call_attempts",
       quantity: 1,
-      sourceKey: `outbound_attempt:voice_call:${String(args.callId)}`,
+      sourceKey,
       recordedAt: args.recordedAt,
     });
 
