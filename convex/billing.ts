@@ -16,6 +16,10 @@ import type {
   SmsSenderRole,
 } from "../packages/shared/src/billing";
 import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "./telemetry/shared";
+import {
   billingAddonCatalog,
   billingErrorCodes,
   billingPlanCatalog,
@@ -53,6 +57,7 @@ import {
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
+import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
 
 type BillingContact = {
   email: string | null;
@@ -87,6 +92,13 @@ type UpsertUsageResult = {
   syncNeeded: boolean;
 };
 
+type UsageReservationResult = {
+  allowed: boolean;
+  errorCode: BillingErrorCode | null;
+  usageEventId?: Id<"billing_usage_events">;
+  syncNeeded?: boolean;
+};
+
 type PricingSummary = {
   plan: BillingPlanSlug;
   activeAddons: Array<BillingAddonSlug>;
@@ -103,6 +115,10 @@ type SmsCapabilityPolicy = {
   errorCode: BillingErrorCode | null;
 };
 
+type UsageSyncTelemetryEventName =
+  | "ops.billing.usage_sync_failed"
+  | "ops.billing.usage_sync_recovered";
+
 const BILLING_ADMIN_ROLES = new Set([
   "business_owner",
   "business_admin",
@@ -115,6 +131,42 @@ const USAGE_SYNC_RETRY_DELAYS_MS = [
   600_000,
   1_800_000,
 ] as const;
+
+async function emitUsageSyncTelemetry(
+  ctx: Pick<ActionCtx, "runMutation">,
+  input: {
+    eventName: UsageSyncTelemetryEventName;
+    businessId: Id<"businesses">;
+    usageKind: BillingUsageKind;
+    quantity: number;
+    sourceKey: string;
+    attemptNumber: number;
+    retryScheduled?: boolean;
+    retryDelayMs?: number;
+    errorType?: string;
+    recovered?: boolean;
+  },
+): Promise<void> {
+  await enqueuePostHogEventBestEffort(ctx, {
+    eventName: input.eventName,
+    businessId: input.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(String(input.businessId)),
+    groupKey: getPostHogBusinessGroupKey(String(input.businessId)),
+    provider: "polar",
+    properties: {
+      usageKind: input.usageKind,
+      quantity: input.quantity,
+      sourceKey: input.sourceKey,
+      attemptNumber: input.attemptNumber,
+      ...(input.retryScheduled !== undefined
+        ? { retryScheduled: input.retryScheduled }
+        : {}),
+      ...(input.retryDelayMs !== undefined ? { retryDelayMs: input.retryDelayMs } : {}),
+      ...(input.errorType ? { errorType: input.errorType } : {}),
+      ...(input.recovered !== undefined ? { recovered: input.recovered } : {}),
+    },
+  });
+}
 
 const billingPolar = new ConvexPolar(components.polar, {
   getUserInfo: async () => ({
@@ -386,6 +438,146 @@ function buildUsageMonthPatch(args: {
       nextOutboundCallAttempts >= entitlements.outboundCallAttemptsIncluded,
     lastRecordedAt: args.recordedAt,
   };
+}
+
+async function upsertUsageEventInTx(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    usageKind: BillingUsageKind;
+    quantity: number;
+    sourceKey: string;
+    recordedAt: string;
+  },
+): Promise<UpsertUsageResult> {
+  const snapshot = await getBillingSnapshot(ctx, {
+    businessId: args.businessId,
+    at: args.recordedAt,
+  });
+  const syncNeeded = shouldSyncUsageEvent({
+    plan: snapshot.plan,
+    activeAddons: snapshot.activeAddons,
+    usageKind: args.usageKind,
+  });
+
+  const existingUsageEvent = await ctx.db
+    .query("billing_usage_events")
+    .withIndex("by_business_id_and_source_key", (q) =>
+      q.eq("businessId", args.businessId).eq("sourceKey", args.sourceKey),
+    )
+    .unique();
+
+  const deltaQuantity = args.quantity - (existingUsageEvent?.quantity ?? 0);
+  const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
+  const periodChanged =
+    existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
+
+  if (periodChanged && existingUsageEvent) {
+    const previousUsageMonth = await getBillingUsageMonth(ctx, {
+      businessId: args.businessId,
+      periodKey: existingUsageEvent.periodKey,
+    });
+    if (previousUsageMonth) {
+      const previousMonthPatch = buildUsageMonthPatch({
+        plan:
+          previousUsageMonth.planAtSnapshot ??
+          existingUsageEvent.planAtRecordTime ??
+          snapshot.plan,
+        usage: previousUsageMonth,
+        usageKind: args.usageKind,
+        deltaQuantity: -existingUsageEvent.quantity,
+        recordedAt: existingUsageEvent.recordedAt,
+      });
+      await ctx.db.patch(previousUsageMonth._id, previousMonthPatch);
+    }
+  }
+
+  if (!snapshot.usage) {
+    const monthPatch = buildUsageMonthPatch({
+      plan: snapshot.plan,
+      usage: null,
+      usageKind: args.usageKind,
+      deltaQuantity: args.quantity,
+      recordedAt: args.recordedAt,
+    });
+
+    await ctx.db.insert("billing_usage_months", {
+      businessId: args.businessId,
+      periodKey: snapshot.periodKey,
+      ...monthPatch,
+    });
+  } else if (periodChanged) {
+    const monthPatch = buildUsageMonthPatch({
+      plan: snapshot.plan,
+      usage: snapshot.usage,
+      usageKind: args.usageKind,
+      deltaQuantity: args.quantity,
+      recordedAt: args.recordedAt,
+    });
+    await ctx.db.patch(snapshot.usage._id, monthPatch);
+  } else if (deltaQuantity !== 0) {
+    const monthPatch = buildUsageMonthPatch({
+      plan: snapshot.plan,
+      usage: snapshot.usage,
+      usageKind: args.usageKind,
+      deltaQuantity,
+      recordedAt: args.recordedAt,
+    });
+    await ctx.db.patch(snapshot.usage._id, monthPatch);
+  } else if (snapshot.usage.lastRecordedAt !== args.recordedAt) {
+    await ctx.db.patch(snapshot.usage._id, {
+      lastRecordedAt: args.recordedAt,
+    });
+  }
+
+  if (existingUsageEvent) {
+    await ctx.db.patch(existingUsageEvent._id, {
+      periodKey: snapshot.periodKey,
+      quantity: args.quantity,
+      planAtRecordTime: snapshot.plan,
+      activeAddonsAtRecordTime: snapshot.activeAddons,
+      recordedAt: args.recordedAt,
+      syncStatus: syncNeeded ? "pending" : "skipped",
+    });
+
+    return {
+      usageEventId: existingUsageEvent._id,
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+      syncNeeded,
+    };
+  }
+
+  const usageEventId = await ctx.db.insert("billing_usage_events", {
+    businessId: args.businessId,
+    periodKey: snapshot.periodKey,
+    sourceKey: args.sourceKey,
+    usageKind: args.usageKind,
+    quantity: args.quantity,
+    planAtRecordTime: snapshot.plan,
+    activeAddonsAtRecordTime: snapshot.activeAddons,
+    recordedAt: args.recordedAt,
+    syncStatus: syncNeeded ? "pending" : "skipped",
+  });
+
+  return {
+    usageEventId,
+    plan: snapshot.plan,
+    activeAddons: snapshot.activeAddons,
+    syncNeeded,
+  };
+}
+
+function reserveVoiceSecondsForStart(args: {
+  plan: BillingPlanSlug;
+  usage: ReturnType<typeof getBillingUsageSnapshotData>;
+}): number | null {
+  const entitlements = billingPlanCatalog[args.plan];
+  if (entitlements.overagesBillable || entitlements.voiceSecondsIncluded === null) {
+    return null;
+  }
+
+  return args.usage.voiceSecondsRemaining;
 }
 
 function getPlatformAlertSmsSenderFromEnv(): string | null {
@@ -1169,124 +1361,8 @@ export const upsertUsageEvent = internalMutation({
     activeAddons: v.array(v.union(v.literal("ai_sms"))),
     syncNeeded: v.boolean(),
   }),
-  handler: async (ctx, args): Promise<UpsertUsageResult> => {
-    const snapshot = await getBillingSnapshot(ctx, {
-      businessId: args.businessId,
-      at: args.recordedAt,
-    });
-    const syncNeeded = shouldSyncUsageEvent({
-      plan: snapshot.plan,
-      activeAddons: snapshot.activeAddons,
-      usageKind: args.usageKind,
-    });
-
-    const existingUsageEvent = await ctx.db
-      .query("billing_usage_events")
-      .withIndex("by_business_id_and_source_key", (q) =>
-        q.eq("businessId", args.businessId).eq("sourceKey", args.sourceKey),
-      )
-      .unique();
-
-    const deltaQuantity = args.quantity - (existingUsageEvent?.quantity ?? 0);
-    const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
-    const periodChanged =
-      existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
-
-    if (periodChanged && existingUsageEvent) {
-      const previousUsageMonth = await getBillingUsageMonth(ctx, {
-        businessId: args.businessId,
-        periodKey: existingUsageEvent.periodKey,
-      });
-      if (previousUsageMonth) {
-        const previousMonthPatch = buildUsageMonthPatch({
-          plan:
-            previousUsageMonth.planAtSnapshot ??
-            existingUsageEvent.planAtRecordTime ??
-            snapshot.plan,
-          usage: previousUsageMonth,
-          usageKind: args.usageKind,
-          deltaQuantity: -existingUsageEvent.quantity,
-          recordedAt: existingUsageEvent.recordedAt,
-        });
-        await ctx.db.patch(previousUsageMonth._id, previousMonthPatch);
-      }
-    }
-
-    if (!snapshot.usage) {
-      const monthPatch = buildUsageMonthPatch({
-        plan: snapshot.plan,
-        usage: null,
-        usageKind: args.usageKind,
-        deltaQuantity: args.quantity,
-        recordedAt: args.recordedAt,
-      });
-
-      await ctx.db.insert("billing_usage_months", {
-        businessId: args.businessId,
-        periodKey: snapshot.periodKey,
-        ...monthPatch,
-      });
-    } else if (periodChanged) {
-      const monthPatch = buildUsageMonthPatch({
-        plan: snapshot.plan,
-        usage: snapshot.usage,
-        usageKind: args.usageKind,
-        deltaQuantity: args.quantity,
-        recordedAt: args.recordedAt,
-      });
-      await ctx.db.patch(snapshot.usage._id, monthPatch);
-    } else if (deltaQuantity !== 0) {
-      const monthPatch = buildUsageMonthPatch({
-        plan: snapshot.plan,
-        usage: snapshot.usage,
-        usageKind: args.usageKind,
-        deltaQuantity,
-        recordedAt: args.recordedAt,
-      });
-      await ctx.db.patch(snapshot.usage._id, monthPatch);
-    } else if (snapshot.usage.lastRecordedAt !== args.recordedAt) {
-      await ctx.db.patch(snapshot.usage._id, {
-        lastRecordedAt: args.recordedAt,
-      });
-    }
-
-    if (existingUsageEvent) {
-      await ctx.db.patch(existingUsageEvent._id, {
-        periodKey: snapshot.periodKey,
-        quantity: args.quantity,
-        planAtRecordTime: snapshot.plan,
-        activeAddonsAtRecordTime: snapshot.activeAddons,
-        recordedAt: args.recordedAt,
-        syncStatus: syncNeeded ? "pending" : "skipped",
-      });
-
-      return {
-        usageEventId: existingUsageEvent._id,
-        plan: snapshot.plan,
-        activeAddons: snapshot.activeAddons,
-        syncNeeded,
-      };
-    }
-
-    const usageEventId = await ctx.db.insert("billing_usage_events", {
-      businessId: args.businessId,
-      periodKey: snapshot.periodKey,
-      sourceKey: args.sourceKey,
-      usageKind: args.usageKind,
-      quantity: args.quantity,
-      planAtRecordTime: snapshot.plan,
-      activeAddonsAtRecordTime: snapshot.activeAddons,
-      recordedAt: args.recordedAt,
-      syncStatus: syncNeeded ? "pending" : "skipped",
-    });
-
-    return {
-      usageEventId,
-      plan: snapshot.plan,
-      activeAddons: snapshot.activeAddons,
-      syncNeeded,
-    };
-  },
+  handler: async (ctx, args): Promise<UpsertUsageResult> =>
+    await upsertUsageEventInTx(ctx, args),
 });
 
 export const getUsageSyncPayload = internalQuery({
@@ -1417,13 +1493,26 @@ export const syncUsageEventToPolar = internalAction({
         syncedAt: syncAttemptedAt,
       });
 
+      if (attempt > 0) {
+        await emitUsageSyncTelemetry(ctx, {
+          eventName: "ops.billing.usage_sync_recovered",
+          businessId: payload.businessId,
+          usageKind: payload.usageKind,
+          quantity: payload.quantity,
+          sourceKey: payload.sourceKey,
+          attemptNumber: attempt + 1,
+          recovered: true,
+        });
+      }
+
       return { synced: true };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       let scheduledRetry = false;
+      let retryDelayMs: number | undefined;
 
       if (attempt < USAGE_SYNC_RETRY_DELAYS_MS.length) {
-        const retryDelayMs = USAGE_SYNC_RETRY_DELAYS_MS[attempt];
+        retryDelayMs = USAGE_SYNC_RETRY_DELAYS_MS[attempt];
         if (retryDelayMs !== undefined) {
           await ctx.scheduler.runAfter(  // Best-effort retry for transient Polar failures.
             retryDelayMs,
@@ -1442,6 +1531,18 @@ export const syncUsageEventToPolar = internalAction({
         syncStatus: "failed",
         syncAttemptedAt,
         syncError: errorMessage,
+      });
+
+      await emitUsageSyncTelemetry(ctx, {
+        eventName: "ops.billing.usage_sync_failed",
+        businessId: payload.businessId,
+        usageKind: payload.usageKind,
+        quantity: payload.quantity,
+        sourceKey: payload.sourceKey,
+        attemptNumber: attempt + 1,
+        retryScheduled: scheduledRetry,
+        ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        errorType: error instanceof Error ? error.name : "UnknownError",
       });
 
       return { synced: false, scheduledRetry, error: errorMessage };
@@ -1468,7 +1569,7 @@ export const recordVoiceUsage = internalMutation({
     syncNeeded: v.boolean(),
   }),
   handler: async (ctx, args): Promise<UpsertUsageResult> => {
-    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+    return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "voice_seconds",
       quantity: args.quantity,
@@ -1497,7 +1598,7 @@ export const recordAlertSmsUsage = internalMutation({
     syncNeeded: v.boolean(),
   }),
   handler: async (ctx, args): Promise<UpsertUsageResult> => {
-    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+    return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "alert_sms_segments",
       quantity: args.quantity,
@@ -1526,7 +1627,7 @@ export const recordAiSmsUsage = internalMutation({
     syncNeeded: v.boolean(),
   }),
   handler: async (ctx, args): Promise<UpsertUsageResult> => {
-    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+    return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "ai_sms_segments",
       quantity: args.quantity,
@@ -1555,13 +1656,308 @@ export const recordOutboundCallAttemptUsage = internalMutation({
     syncNeeded: v.boolean(),
   }),
   handler: async (ctx, args): Promise<UpsertUsageResult> => {
-    return await ctx.runMutation(internal.billing.upsertUsageEvent, {
+    return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "outbound_call_attempts",
       quantity: args.quantity,
       sourceKey: args.sourceKey,
       recordedAt: args.recordedAt,
     });
+  },
+});
+
+export const reserveVoiceUsageAtCallStart = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+    usageEventId: v.optional(v.id("billing_usage_events")),
+    syncNeeded: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `voice:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+      at: args.recordedAt,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
+    });
+
+    if (usage.voiceBlocked) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.voiceLimitReached,
+      };
+    }
+
+    const reserveQuantity = reserveVoiceSecondsForStart({
+      plan: snapshot.plan,
+      usage,
+    });
+    if (reserveQuantity === null) {
+      return {
+        allowed: true,
+        errorCode: null,
+      };
+    }
+    if (reserveQuantity <= 0) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.voiceLimitReached,
+      };
+    }
+
+    const usageResult = await upsertUsageEventInTx(ctx, {
+      businessId: args.businessId,
+      usageKind: "voice_seconds",
+      quantity: reserveQuantity,
+      sourceKey,
+      recordedAt: args.recordedAt,
+    });
+
+    return {
+      allowed: true,
+      errorCode: null,
+      usageEventId: usageResult.usageEventId,
+      syncNeeded: usageResult.syncNeeded,
+    };
+  },
+});
+
+export const reserveAlertSmsUsage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    notificationId: v.id("notifications"),
+    estimatedSegments: v.number(),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+    usageEventId: v.optional(v.id("billing_usage_events")),
+    syncNeeded: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `alert_sms:${String(args.notificationId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent && existingUsageEvent.quantity > 0) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+      at: args.recordedAt,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
+    });
+    const normalizedSegments = Math.max(1, Math.trunc(args.estimatedSegments));
+    const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
+
+    if (usage.alertSmsBlocked) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.alertSmsLimitReached,
+      };
+    }
+    if (
+      !overagesBillable &&
+      usage.alertSmsSegmentsRemaining !== null &&
+      normalizedSegments > usage.alertSmsSegmentsRemaining
+    ) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.alertSmsLimitReached,
+      };
+    }
+
+    const usageResult = await upsertUsageEventInTx(ctx, {
+      businessId: args.businessId,
+      usageKind: "alert_sms_segments",
+      quantity: normalizedSegments,
+      sourceKey,
+      recordedAt: args.recordedAt,
+    });
+
+    return {
+      allowed: true,
+      errorCode: null,
+      usageEventId: usageResult.usageEventId,
+      syncNeeded: usageResult.syncNeeded,
+    };
+  },
+});
+
+export const reserveOutboundCallAttemptUsage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    allowed: v.boolean(),
+    errorCode: v.union(
+      v.literal("voice_limit_reached"),
+      v.literal("alert_sms_limit_reached"),
+      v.literal("outbound_call_attempt_limit_reached"),
+      v.literal("ai_sms_not_enabled"),
+      v.null(),
+    ),
+    usageEventId: v.optional(v.id("billing_usage_events")),
+    syncNeeded: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `outbound_attempt:voice_call:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
+    const snapshot = await getBillingSnapshot(ctx, {
+      businessId: args.businessId,
+      at: args.recordedAt,
+    });
+    const usage = getBillingUsageSnapshotData({
+      plan: snapshot.plan,
+      periodKey: snapshot.periodKey,
+      usage: snapshot.usage,
+    });
+    const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
+
+    if (usage.outboundCallAttemptsBlocked) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.outboundCallAttemptLimitReached,
+      };
+    }
+    if (
+      !overagesBillable &&
+      usage.outboundCallAttemptsRemaining !== null &&
+      usage.outboundCallAttemptsRemaining < 1
+    ) {
+      return {
+        allowed: false,
+        errorCode: billingErrorCodes.outboundCallAttemptLimitReached,
+      };
+    }
+
+    const usageResult = await upsertUsageEventInTx(ctx, {
+      businessId: args.businessId,
+      usageKind: "outbound_call_attempts",
+      quantity: 1,
+      sourceKey,
+      recordedAt: args.recordedAt,
+    });
+
+    return {
+      allowed: true,
+      errorCode: null,
+      usageEventId: usageResult.usageEventId,
+      syncNeeded: usageResult.syncNeeded,
+    };
+  },
+});
+
+export const releaseOutboundCallAttemptReservation = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    released: v.boolean(),
+    usageEventId: v.optional(v.id("billing_usage_events")),
+    syncNeeded: v.optional(v.boolean()),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    released: boolean;
+    usageEventId?: Id<"billing_usage_events">;
+    syncNeeded?: boolean;
+  }> => {
+    const sourceKey = `outbound_attempt:voice_call:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+
+    if (!existingUsageEvent) {
+      return { released: false };
+    }
+
+    const usageResult = await upsertUsageEventInTx(ctx, {
+      businessId: args.businessId,
+      usageKind: "outbound_call_attempts",
+      quantity: 0,
+      sourceKey,
+      recordedAt: args.recordedAt,
+    });
+
+    return {
+      released: true,
+      usageEventId: usageResult.usageEventId,
+      syncNeeded: usageResult.syncNeeded,
+    };
   },
 });
 

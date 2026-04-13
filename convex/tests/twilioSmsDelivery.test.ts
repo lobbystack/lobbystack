@@ -1,19 +1,23 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { Jimp, JimpMime } from "jimp";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import { getBillingKey } from "../lib/billing";
+import { buildLocalizedAppointmentNotificationBody } from "../lib/runtimeLocale";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
 const {
+  enqueuePostHogOutboxRecordMock,
   fetchTwilioMessageMock,
   generateSmsReplyMock,
   retrierRunMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
 } = vi.hoisted(() => ({
+  enqueuePostHogOutboxRecordMock: vi.fn(async () => null),
   fetchTwilioMessageMock: vi.fn(),
   generateSmsReplyMock: vi.fn(),
   retrierRunMock: vi.fn(),
@@ -80,6 +84,17 @@ vi.mock("../lib/components", async () => {
   };
 });
 
+vi.mock("../telemetry/posthog", async () => {
+  const actual = await vi.importActual<typeof import("../telemetry/posthog")>(
+    "../telemetry/posthog",
+  );
+
+  return {
+    ...actual,
+    enqueuePostHogOutboxRecord: enqueuePostHogOutboxRecordMock,
+  };
+});
+
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
@@ -87,8 +102,16 @@ const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
 const originalFetch = globalThis.fetch;
+const activeHarnesses: Array<TestConvex<typeof schema>> = [];
 let tinyPngBuffer: Buffer;
+
+function createTestHarness(): TestConvex<typeof schema> {
+  const t = convexTest(schema, convexModules);
+  activeHarnesses.push(t);
+  return t;
+}
 
 async function insertBusiness(
   ctx: TestContext,
@@ -166,10 +189,16 @@ async function postTwilioForm(
   });
 }
 
+async function flushImmediateScheduledFunctions(t: TestConvex<typeof schema>): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await t.finishInProgressScheduledFunctions();
+}
+
 beforeEach(() => {
   process.env.CONVEX_SITE_URL = "https://example.convex.site";
   process.env.TWILIO_ACCOUNT_SID = "ACtestaccountsid";
   process.env.TWILIO_AUTH_TOKEN = "test-auth-token";
+  process.env.TWILIO_ALERT_SMS_FROM = "+14165550999";
 
   vi.clearAllMocks();
   validateTwilioRequestMock.mockReturnValue(true);
@@ -225,12 +254,24 @@ afterAll(() => {
   process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
   process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
   process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+  process.env.TWILIO_ALERT_SMS_FROM = originalTwilioAlertSmsFrom;
   vi.unstubAllGlobals();
+});
+
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  while (activeHarnesses.length > 0) {
+    const harness = activeHarnesses.pop();
+    if (harness) {
+      await harness.finishInProgressScheduledFunctions();
+    }
+  }
 });
 
 describe("Twilio SMS delivery flow", () => {
   it("creates one outbound reply and reuses it on duplicate inbound delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-reply",
       status: "queued",
@@ -329,7 +370,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores STOP messages, marks the contact opted out, and suppresses replies", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
@@ -404,7 +445,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores inbound SMS during human handoff and suppresses AI replies", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
@@ -466,7 +507,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("clears opt-out on START and resumes reply generation", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-start-reply",
       status: "queued",
@@ -526,7 +567,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores inbound MMS attachments without breaking reply delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-mms-reply",
       status: "queued",
@@ -630,7 +671,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("builds a non-empty AI prompt for media-only inbound MMS", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-mms-media-only",
       status: "queued",
@@ -675,7 +716,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("falls back to a fresh storage URL after an attachment token expires", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const subject = "twilio-expired-attachment-token-owner";
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-expired-token",
@@ -756,7 +797,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("repairs legacy external inbound media into previewable stored attachments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const subject = "twilio-legacy-media-repair-owner";
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
@@ -835,7 +876,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("replies from the same inbound business number when multiple SMS numbers are active", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-multi-number-reply",
       status: "queued",
@@ -873,7 +914,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("applies delivered callbacks and ignores stale regressions", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-delivered",
       status: "queued",
@@ -933,7 +974,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("backfills Twilio provider cost when pricing becomes available after delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-delayed-pricing",
       status: "queued",
@@ -1045,7 +1086,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("keeps retrying when Twilio returns cost before numSegments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-cost-before-segments",
       status: "queued",
@@ -1111,7 +1152,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("persists undelivered callbacks as terminal failures", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-undelivered",
       status: "queued",
@@ -1166,7 +1207,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("supports backend debug lookups by provider SID and counterparty phone", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-debug-1",
       status: "queued",
@@ -1221,7 +1262,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("sends appointment notifications through Twilio and reconciles delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-1",
       status: "accepted",
@@ -1318,8 +1359,206 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("keeps a one-segment GSM reminder sendable when only one hosted segment remains", async () => {
+    const t = createTestHarness();
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-notification-gsm-boundary",
+      status: "accepted",
+    });
+    const currentPeriodKey = new Date().toISOString().slice(0, 7);
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await ctx.db.insert("businesses", {
+        slug: "twilio-notification-gsm-boundary",
+        name: "Twilio Notification GSM Boundary",
+        timezone: "America/Toronto",
+        businessType: "service_company",
+        defaultLocale: "en",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: currentPeriodKey,
+        planAtSnapshot: "free_cloud",
+        alertSmsSegmentsUsed: 9,
+        alertSmsSegmentsIncluded: 10,
+        alertSmsBlocked: false,
+        lastRecordedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        lastSyncedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550158",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut",
+        slug: "cut-gsm-boundary",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    const deliveryResult = await t.action(internal.notifications.reminders.deliverNotification, {
+      notificationId,
+    });
+    await flushImmediateScheduledFunctions(t);
+
+    const sentBody = sendTwilioMessageMock.mock.calls[0]?.[0]?.body;
+
+    expect(deliveryResult).toEqual({
+      delivered: true,
+      providerMessageId: "SM-notification-gsm-boundary",
+    });
+    expect(sentBody).toBeDefined();
+    expect(sentBody!.length).toBeGreaterThan(70);
+    expect(sentBody!.length).toBeLessThanOrEqual(160);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550158",
+      from: "+14165550999",
+      body: sentBody,
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+  });
+
+  it("blocks a hosted reminder when emoji push the UCS-2 body into a third segment", async () => {
+    const t = createTestHarness();
+    const currentPeriodKey = new Date().toISOString().slice(0, 7);
+    const serviceName = "Style AAAAAAAAAAAAAAAAA \ud83e\uddf4";
+    const expectedBody = buildLocalizedAppointmentNotificationBody({
+      kind: "appointment_reminder",
+      serviceName,
+      startsAt: "2026-06-15T15:00:00.000Z",
+      timezone: "America/Toronto",
+      locale: "en",
+    });
+
+    expect(Array.from(expectedBody)).toHaveLength(134);
+    expect(expectedBody.length).toBe(135);
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await ctx.db.insert("businesses", {
+        slug: "twilio-notification-unicode-boundary",
+        name: "Twilio Notification Unicode Boundary",
+        timezone: "America/Toronto",
+        businessType: "service_company",
+        defaultLocale: "en",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: currentPeriodKey,
+        planAtSnapshot: "free_cloud",
+        alertSmsSegmentsUsed: 8,
+        alertSmsSegmentsIncluded: 10,
+        alertSmsBlocked: false,
+        lastRecordedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        lastSyncedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550159",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: serviceName,
+        slug: "cut-unicode-boundary",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    await expect(
+      t.action(internal.notifications.reminders.deliverNotification, {
+        notificationId,
+      }),
+    ).rejects.toThrow("Alert SMS quota reached");
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+  });
+
   it("localizes reminders to the contact's remembered French preference", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-fr-contact",
       status: "accepted",
@@ -1404,7 +1643,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("uses the stored French business locale for booking confirmations with mixed profile text", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-fr-business",
       status: "accepted",
@@ -1496,7 +1735,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("skips the immediate booking confirmation notification for sms-booked appointments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const startsAt = new Date(Date.now() + 49 * 60 * 60 * 1000);
     const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
 
@@ -1581,7 +1820,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("creates one fallback booking confirmation when a conversational booking SMS send fails", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio send failed"));
 
     const messageId = await t.run(async (ctx) => {
@@ -1680,7 +1919,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("creates one fallback booking confirmation when delivery later becomes undelivered", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const appointmentId = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {

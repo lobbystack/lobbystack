@@ -265,6 +265,11 @@ describe("telemetry redaction", () => {
       "toolName",
       "latencyBucket",
     ]);
+    expect(getTelemetryRequiredProperties("ops.billing.usage_sync_failed")).toEqual([
+      "businessId",
+      "deploymentMode",
+      "provider",
+    ]);
     expect(getTelemetryRequiredProperties("voice.provider_cost_recorded")).toEqual([
       "businessId",
       "deploymentMode",

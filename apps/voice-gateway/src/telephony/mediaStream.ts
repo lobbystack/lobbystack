@@ -7,8 +7,11 @@ import WebSocket from "ws";
 
 import { buildStereoCallRecording, type TimedAudioChunk } from "../audio/wav";
 import {
+  RuntimeRequestError,
   appendVoiceTranscript,
   completeVoiceCall,
+  prepareVoiceTransfer,
+  releaseVoiceTransfer,
   startVoiceCall,
   updateVoiceTransferState,
   uploadVoiceRecording,
@@ -194,6 +197,16 @@ type RealtimePricingConfig = {
   audioOutputTokenPriceUsd?: number;
   cachedInputTokenPriceUsd?: number;
 };
+
+function isTransferQuotaError(error: unknown): boolean {
+  return (
+    error instanceof RuntimeRequestError &&
+    error.code === "outbound_call_attempt_limit_reached"
+  );
+}
+
+const TRANSFER_QUOTA_REACHED_MESSAGE =
+  "This business has reached its transfer limit for this billing period. Please try again later.";
 
 function asUnknownRecord(
   value: unknown,
@@ -747,12 +760,24 @@ async function performTransfer(
   server: FastifyInstance,
   session: ActiveVoiceSession,
 ): Promise<void> {
-  if (!session.pendingTransferDestination || session.transferExecuted || !session.callSid) {
+  if (
+    !session.pendingTransferDestination ||
+    session.transferExecuted ||
+    !session.callSid
+  ) {
     return;
   }
 
-  session.transferExecuted = true;
+  let reservationPrepared = false;
+  let transferSubmitted = false;
   try {
+    await prepareVoiceTransfer({
+      ...(session.callId ? { callId: session.callId } : {}),
+      ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
+      recordedAt: new Date().toISOString(),
+    });
+    reservationPrepared = true;
+    session.transferExecuted = true;
     await transferLiveCall({
       callSid: session.callSid,
       destination: session.pendingTransferDestination,
@@ -762,6 +787,7 @@ async function performTransfer(
           }
         : {}),
     });
+    transferSubmitted = true;
     if (session.callId) {
       await updateVoiceTransferState({
         callId: session.callId,
@@ -774,6 +800,30 @@ async function performTransfer(
       await updateVoiceTransferState({
         callId: session.callId,
         transferState: "failed",
+      });
+    }
+    if (reservationPrepared && !transferSubmitted) {
+      try {
+        await releaseVoiceTransfer({
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
+          recordedAt: new Date().toISOString(),
+        });
+      } catch (releaseError) {
+        server.log.error(
+          {
+            err: releaseError,
+            callId: session.callId,
+            callSid: session.callSid,
+          },
+          "Failed to release reserved transfer usage after handoff submission error",
+        );
+      }
+    }
+    if (isTransferQuotaError(error)) {
+      await endLiveCallWithMessage({
+        callSid: session.callSid,
+        sayMessage: TRANSFER_QUOTA_REACHED_MESSAGE,
       });
     }
   }
@@ -876,6 +926,7 @@ async function finalizeCall(
         status: finalDisposition === "transferred" ? "transferred" : "completed",
         endedAt: new Date().toISOString(),
         disposition: finalDisposition,
+        providerDurationSeconds: Math.max(0, Math.ceil(durationMs / 1000)),
       });
     }
   } catch (error) {
@@ -947,13 +998,22 @@ async function recoverFromProviderFailure(
         }
       }
 
+      let reservationPrepared = false;
+      let transferSubmitted = false;
       try {
+        await prepareVoiceTransfer({
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
+          recordedAt: new Date().toISOString(),
+        });
+        reservationPrepared = true;
         await transferLiveCall({
           callSid: session.callSid,
           destination: transferDestination,
           sayMessage: fallbackMessage,
           ...(session.callId ? { actionUrl: getTransferActionUrl(server, session.callId) } : {}),
         });
+        transferSubmitted = true;
       } catch (error) {
         if (session.callId) {
           try {
@@ -973,6 +1033,31 @@ async function recoverFromProviderFailure(
                 : "Failed to persist failed transfer state during provider recovery",
             );
           }
+        }
+        if (reservationPrepared && !transferSubmitted) {
+          try {
+            await releaseVoiceTransfer({
+              ...(session.callId ? { callId: session.callId } : {}),
+              ...(!session.callId ? { twilioCallSid: session.callSid } : {}),
+              recordedAt: new Date().toISOString(),
+            });
+          } catch (releaseError) {
+            server.log.error(
+              {
+                err: releaseError,
+                callId: session.callId,
+                callSid: session.callSid,
+              },
+              "Failed to release transfer usage after provider recovery handoff error",
+            );
+          }
+        }
+        if (isTransferQuotaError(error)) {
+          await endLiveCallWithMessage({
+            callSid: session.callSid,
+            sayMessage: TRANSFER_QUOTA_REACHED_MESSAGE,
+          });
+          return;
         }
         throw error;
       }

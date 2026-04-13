@@ -59,6 +59,41 @@ function buildTwilioSmsStatusCallbackUrl(): string {
   return new URL("/twilio/sms/status", siteUrl).toString();
 }
 
+const GSM_7_BASIC_CHARACTERS = new Set(
+  Array.from(
+    "@\u00a3$\u00a5\u00e8\u00e9\u00f9\u00ec\u00f2\u00c7\n\u00d8\u00f8\r\u00c5\u00e5\u0394_\u03a6\u0393\u039b\u03a9\u03a0\u03a8\u03a3\u0398\u039e\u00c6\u00e6\u00df\u00c9 !\"#\u00a4%&'()*+,-./0123456789:;<=>?\u00a1ABCDEFGHIJKLMNOPQRSTUVWXYZ\u00c4\u00d6\u00d1\u00dc`\u00bfabcdefghijklmnopqrstuvwxyz\u00e4\u00f6\u00f1\u00fc\u00e0",
+  ),
+);
+const GSM_7_EXTENDED_CHARACTERS = new Set(["^", "{", "}", "\\", "[", "~", "]", "|", "\u20ac"]);
+
+function estimateSmsSegments(body: string): number {
+  const characters = Array.from(body);
+  let gsmSeptetLength = 0;
+
+  for (const character of characters) {
+    if (GSM_7_BASIC_CHARACTERS.has(character)) {
+      gsmSeptetLength += 1;
+      continue;
+    }
+
+    if (GSM_7_EXTENDED_CHARACTERS.has(character)) {
+      gsmSeptetLength += 2;
+      continue;
+    }
+
+    const unicodeLength = body.length;
+    return unicodeLength <= 70 ? 1 : Math.max(1, Math.ceil(unicodeLength / 67));
+  }
+
+  return gsmSeptetLength <= 160
+    ? 1
+    : Math.max(1, Math.ceil(gsmSeptetLength / 153));
+}
+
+function estimateAlertSmsSegmentsUpperBound(body: string): number {
+  return estimateSmsSegments(body);
+}
+
 export const getNotification = internalQuery({
   args: {
     notificationId: v.id("notifications"),
@@ -373,6 +408,13 @@ export const deliverNotification = internalAction({
       throw new Error("Notification not found.");
     }
 
+    let messageAcceptedByProvider = false;
+    let reservedAlertUsage:
+      | {
+          usageEventId?: Id<"billing_usage_events">;
+          syncNeeded?: boolean;
+        }
+      | null = null;
     try {
       const localizedServiceName = await ctx.runAction(
         internal.services.localizedNames.ensureLocalizedServiceName,
@@ -388,6 +430,32 @@ export const deliverNotification = internalAction({
         timezone: deliveryContext.timezone,
         locale: deliveryContext.locale,
       });
+      const providerUpdatedAt = new Date().toISOString();
+      if (deliveryContext.senderRole === "platform_alert") {
+        const reservedUsage = await ctx.runMutation(
+          internal.billing.reserveAlertSmsUsage,
+          {
+            businessId: deliveryContext.businessId,
+            notificationId: args.notificationId,
+            estimatedSegments: estimateAlertSmsSegmentsUpperBound(body),
+            recordedAt: providerUpdatedAt,
+          },
+        );
+        if (!reservedUsage.allowed) {
+          throw new Error("Alert SMS quota reached. Upgrade to continue sending notifications.");
+        }
+        reservedAlertUsage = {
+          ...(reservedUsage.usageEventId ? { usageEventId: reservedUsage.usageEventId } : {}),
+          ...(reservedUsage.syncNeeded !== undefined
+            ? { syncNeeded: reservedUsage.syncNeeded }
+            : {}),
+        };
+        if (reservedUsage.syncNeeded && reservedUsage.usageEventId) {
+          await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+            usageEventId: reservedUsage.usageEventId,
+          });
+        }
+      }
       const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
         internal.integrations.twilioSms.sendMessage,
         {
@@ -397,12 +465,13 @@ export const deliverNotification = internalAction({
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
         },
       );
+      messageAcceptedByProvider = true;
 
       await ctx.runMutation(internal.notifications.reminders.markNotificationSent, {
         notificationId: args.notificationId,
         providerMessageId: result.providerMessageSid,
         providerStatus: result.providerStatus,
-        providerUpdatedAt: new Date().toISOString(),
+        providerUpdatedAt,
       });
 
       return {
@@ -410,6 +479,23 @@ export const deliverNotification = internalAction({
         providerMessageId: result.providerMessageSid,
       };
     } catch (error) {
+      if (
+        deliveryContext.senderRole === "platform_alert" &&
+        !messageAcceptedByProvider &&
+        reservedAlertUsage?.usageEventId
+      ) {
+        const releasedUsage = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
+          businessId: deliveryContext.businessId,
+          notificationId: args.notificationId,
+          quantity: 0,
+          recordedAt: new Date().toISOString(),
+        });
+        if (releasedUsage.syncNeeded && releasedUsage.usageEventId) {
+          await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+            usageEventId: releasedUsage.usageEventId,
+          });
+        }
+      }
       await ctx.runMutation(internal.notifications.reminders.markNotificationSendFailed, {
         notificationId: args.notificationId,
         providerUpdatedAt: new Date().toISOString(),

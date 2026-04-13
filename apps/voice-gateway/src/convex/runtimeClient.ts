@@ -140,11 +140,28 @@ export async function updateVoiceTransferState(input: {
   await postJson("/voice/call/transfer-state", input);
 }
 
+export async function prepareVoiceTransfer(input: {
+  callId?: string;
+  twilioCallSid?: string;
+  recordedAt: string;
+}): Promise<void> {
+  await postJson("/voice/call/prepare-transfer", input);
+}
+
+export async function releaseVoiceTransfer(input: {
+  callId?: string;
+  twilioCallSid?: string;
+  recordedAt: string;
+}): Promise<void> {
+  await postJson("/voice/call/release-transfer", input);
+}
+
 export async function completeVoiceCall(input: {
   callId: string;
   status: string;
   endedAt: string;
   disposition?: string;
+  providerDurationSeconds?: number;
 }): Promise<void> {
   await postJson("/voice/call/complete", input);
 }
@@ -160,24 +177,13 @@ export async function reconcileVoiceCallStatus(input: {
   ignored: boolean;
   reason?: string;
   callId?: string;
-  usageEventId?: string;
 }> {
   return await postJson<{
     ignored: boolean;
     reason?: string;
     callId?: string;
-    usageEventId?: string;
   }>(
     "/voice/call/reconcile-status",
-    input,
-  );
-}
-
-export async function syncUsageEventToPolar(input: {
-  usageEventId: string;
-}): Promise<{ synced: boolean; error?: string }> {
-  return await postJson<{ synced: boolean; error?: string }>(
-    "/billing/usage/sync",
     input,
   );
 }

@@ -2,6 +2,13 @@
 
 This repo uses Polar for hosted cloud billing.
 
+The integration is intentionally hosted and backend-driven:
+
+- checkout creation stays in [convex/billing.ts](/Users/raphael/Coding/ai-receptionist/convex/billing.ts)
+- customer self-service uses Polar customer sessions instead of custom billing UI
+- subscription and transaction state are synchronized from Polar webhooks
+- metered usage is emitted from backend usage events, never from the client
+
 ## Products
 
 Create these Polar products:
@@ -66,6 +73,30 @@ For hosted Alert SMS, also configure:
 
 - `TWILIO_ALERT_SMS_FROM`
 
+## Secret handling
+
+Treat these as backend-only secrets:
+
+- `POLAR_ORGANIZATION_TOKEN`
+- `POLAR_WEBHOOK_SECRET`
+
+Do not expose them to the web app, mobile clients, third-party scripts, or browser-visible env vars.
+
+Operational defaults:
+
+- use separate Polar credentials for `sandbox` and `production`
+- keep `POLAR_SERVER` aligned with the matching token, webhook secret, and product IDs
+- store secrets in your deployment platform's secret manager or protected environment configuration
+- never log Polar secrets, paste them into tickets, or include them in analytics payloads
+
+If a Polar secret is exposed:
+
+1. Rotate the affected credential immediately.
+2. Review recent checkout, subscription, transaction, and metered-event activity.
+3. Re-verify webhook delivery and metered usage sync after rotation.
+
+This repo does not assume Stripe-style restricted API keys exist in Polar. Until Polar documents an equivalent scoped credential for this workflow, keep the organization token limited to backend infrastructure you control.
+
 ## Webhook routing
 
 Polar routes are registered from [convex/http.ts](/Users/raphael/Coding/ai-receptionist/convex/http.ts) through [convex/billing.ts](/Users/raphael/Coding/ai-receptionist/convex/billing.ts).
@@ -73,6 +104,44 @@ Polar routes are registered from [convex/http.ts](/Users/raphael/Coding/ai-recep
 Use the Convex HTTP endpoint:
 
 - `/polar/events`
+
+Webhook handling expectations:
+
+- signature verification is enforced by `@convex-dev/polar` before app handlers run
+- webhook updates are the source of truth for hosted plan, add-on, and transaction state
+- do not introduce separate manual renewal loops or invoice polling to drive subscription state
+
+## Metered usage operations
+
+Polar metered usage is driven by rows in the `billing_usage_events` table.
+
+Important fields:
+
+- `syncStatus`
+- `syncAttemptedAt`
+- `syncedAt`
+- `syncError`
+
+Expected retry behavior for `internal.billing.syncUsageEventToPolar`:
+
+- immediate first attempt from the triggering workflow
+- best-effort retries after `30s`, `2m`, `10m`, and `30m`
+
+Operational guidance:
+
+- treat repeated `syncStatus = "failed"` rows as an alertable billing issue
+- check `syncError` first for token, customer-link, or transient Polar API failures
+- after fixing the underlying issue, manually re-run `internal.billing.syncUsageEventToPolar` for the affected usage event IDs
+- do not backfill usage by minting ad hoc Polar events outside this table unless you also reconcile local billing records deliberately
+
+## Validation
+
+Before go-live, confirm:
+
+- checkout creation works only from backend actions and only for billing admins
+- customer portal sessions are created server-side and only for billing admins
+- `/polar/events` rejects missing or invalid webhook signatures
+- metered usage failures are visible through `billing_usage_events.syncStatus`
 
 ## Notes
 
