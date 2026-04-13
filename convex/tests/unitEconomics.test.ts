@@ -279,4 +279,131 @@ describe("unit economics", () => {
     expect(summary.rollup?.totalCostUsd).toBe(0.15);
     expect(summary.rollup?.outboundSmsCount).toBe(1);
   });
+
+  it("imports telemetry-only AI costs when no direct event exists yet", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-telemetry-only");
+
+    const { conversationId, messageId } = await t.run(async (ctx) => {
+      const { conversationId } = await seedConversation(ctx, businessId);
+      const messageId = await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Thanks for reaching out.",
+        status: "queued",
+        senderRole: "business_ai",
+        aiGenerated: true,
+      });
+
+      await ctx.db.insert("telemetry_outbox", {
+        destination: "posthog",
+        status: "pending",
+        availableAt: new Date().toISOString(),
+        attemptCount: 0,
+        eventName: "$ai_generation",
+        distinctId: "system:business",
+        businessId,
+        groupKey: "business:unit-economics-telemetry-only",
+        payloadJson: JSON.stringify({
+          occurredAt: new Date().toISOString(),
+          conversationId,
+          messageId,
+          provider: "google",
+          model: "gemini-3.1-flash-lite-preview",
+          properties: {
+            totalCostUsd: 0.15,
+            $ai_total_cost_usd: 0.15,
+            operation: "sms.generate_reply",
+            messageId,
+          },
+        }),
+      });
+
+      return { conversationId, messageId };
+    });
+
+    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+    const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.aiCostUsd).toBe(0.15);
+    expect(summary.rollup?.totalCostUsd).toBe(0.15);
+    expect(summary.rollup?.outboundSmsCount).toBe(1);
+    expect(conversationId).toBeTruthy();
+    expect(messageId).toBeTruthy();
+  });
+
+  it("reuses the last infra allocation during direct event recomputes", async () => {
+    process.env.UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD = "12";
+    process.env.UNIT_ECONOMICS_MONTHLY_FLY_COST_USD = "8";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-infra-stable");
+    await seedBusinessMember(t, "unit-economics-infra-stable-peer");
+
+    const { conversationId, firstMessageId, secondMessageId } = await t.run(async (ctx) => {
+      const { conversationId } = await seedConversation(ctx, businessId);
+      const firstMessageId = await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "First reply.",
+        status: "queued",
+        senderRole: "business_ai",
+        aiGenerated: true,
+      });
+      const secondMessageId = await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Second reply.",
+        status: "queued",
+        senderRole: "business_ai",
+        aiGenerated: true,
+      });
+
+      return { conversationId, firstMessageId, secondMessageId };
+    });
+
+    await t.mutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId,
+      occurredAt: new Date().toISOString(),
+      eventKey: `sms_ai:message:${String(firstMessageId)}`,
+      eventKind: "sms_ai",
+      channel: "sms",
+      costUsd: 0.15,
+      provider: "google",
+      model: "gemini-3.1-flash-lite-preview",
+      operation: "sms.generate_reply",
+      conversationId,
+      messageId: firstMessageId,
+    });
+
+    await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
+
+    await t.mutation(internal.unitEconomics.recordAiGenerationCost, {
+      businessId,
+      occurredAt: new Date().toISOString(),
+      eventKey: `sms_ai:message:${String(secondMessageId)}`,
+      eventKind: "sms_ai",
+      channel: "sms",
+      costUsd: 0.25,
+      provider: "google",
+      model: "gemini-3.1-flash-lite-preview",
+      operation: "sms.generate_reply",
+      conversationId,
+      messageId: secondMessageId,
+    });
+
+    const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.infraCostUsd).toBe(10);
+    expect(summary.rollup?.aiCostUsd).toBe(0.4);
+    expect(summary.rollup?.totalCostUsd).toBe(10.4);
+  });
 });

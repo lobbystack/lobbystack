@@ -120,13 +120,47 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-function isDirectAiCostOperation(operation: string | undefined): boolean {
-  return (
-    operation === "sms.generate_reply" ||
-    operation === "knowledge.preview_answer" ||
-    operation === "voice.response_generation" ||
-    operation === "voice.input_audio_transcription"
+function buildDirectAiEventKeyFromTelemetry(
+  operation: string | undefined,
+  payload: Record<string, unknown>,
+  properties: Record<string, unknown> | undefined,
+): string | undefined {
+  if (operation === "sms.generate_reply") {
+    const messageId = parseOptionalString(payload, ["messageId"]);
+    return messageId ? `sms_ai:message:${messageId}` : undefined;
+  }
+
+  if (operation === "knowledge.preview_answer") {
+    const traceId = parseOptionalString(properties, ["traceId", "$ai_trace_id"]);
+    return traceId ? `dashboard_ai:knowledge_preview:${traceId}` : undefined;
+  }
+
+  return undefined;
+}
+
+async function hasMatchingDirectAiCostEvent(
+  ctx: MutationCtx,
+  args: {
+    operation: string | undefined;
+    payload: Record<string, unknown>;
+    properties: Record<string, unknown> | undefined;
+  },
+): Promise<boolean> {
+  const eventKey = buildDirectAiEventKeyFromTelemetry(
+    args.operation,
+    args.payload,
+    args.properties,
   );
+  if (!eventKey) {
+    return false;
+  }
+
+  const existing = await ctx.db
+    .query("unit_economics_events")
+    .withIndex("by_event_key", (q) => q.eq("eventKey", eventKey))
+    .unique();
+
+  return existing !== null;
 }
 
 function buildVoiceProviderEventKey(callId: Id<"calls">): string {
@@ -180,8 +214,16 @@ async function recomputeMonthRollup(
   args: {
     businessId: Id<"businesses">;
     monthKey: string;
+    recomputeInfraAllocation?: boolean;
   },
 ): Promise<UnitEconomicsRollupSnapshot> {
+  const existingRollup = await ctx.db
+    .query("unit_economics_rollups")
+    .withIndex("by_business_id_and_month_key", (q) =>
+      q.eq("businessId", args.businessId).eq("monthKey", args.monthKey),
+    )
+    .unique();
+
   const events = await ctx.db
     .query("unit_economics_events")
     .withIndex("by_business_id_and_month_key_and_occurred_at", (q) =>
@@ -247,20 +289,20 @@ async function recomputeMonthRollup(
 
   let infraCostUsd = 0;
   if (directCostExists) {
-    const activeBusinessCount = await countActiveBusinesses(ctx);
-    infraCostUsd = roundUnitCost(
-      getConfiguredMonthlyInfraCostUsd(),
-      activeBusinessCount,
-    );
+    // Cross-tenant infra allocation is refreshed explicitly, and otherwise only
+    // recomputed when we are creating the first rollup for the month.
+    if (args.recomputeInfraAllocation || !existingRollup) {
+      const activeBusinessCount = await countActiveBusinesses(ctx);
+      infraCostUsd = roundUnitCost(
+        getConfiguredMonthlyInfraCostUsd(),
+        activeBusinessCount,
+      );
+    } else {
+      infraCostUsd = existingRollup?.infraCostUsd ?? 0;
+    }
   }
 
   const totalCostUsd = roundUsd(providerCostUsd + aiCostUsd + infraCostUsd);
-  const existingRollup = await ctx.db
-    .query("unit_economics_rollups")
-    .withIndex("by_business_id_and_month_key", (q) =>
-      q.eq("businessId", args.businessId).eq("monthKey", args.monthKey),
-    )
-    .unique();
 
   const rollup = {
     businessId: args.businessId,
@@ -540,7 +582,7 @@ async function backfillAiCostsFromTelemetryOutbox(
     const provider = parseOptionalString(payload, ["provider"]);
     const model = parseOptionalString(payload, ["model"]);
     const operation = parseOptionalString(properties, ["operation"]);
-    if (isDirectAiCostOperation(operation)) {
+    if (await hasMatchingDirectAiCostEvent(ctx, { operation, payload, properties })) {
       continue;
     }
 
@@ -756,6 +798,7 @@ export const refreshMonth = mutation({
     const rollup = await recomputeMonthRollup(ctx, {
       businessId: args.businessId,
       monthKey,
+      recomputeInfraAllocation: true,
     });
     await emitMonthRollupTelemetry(ctx, {
       businessId: args.businessId,
