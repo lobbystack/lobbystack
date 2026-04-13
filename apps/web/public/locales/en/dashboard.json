@@ -8,8 +8,6 @@
     "description": "Review engagement trends alongside the unit economics behind calls, SMS, and operator usage.",
     "unitEconomics": {
       "cards": {
-        "total": "Monthly cost basis",
-        "totalHint": "Blended direct and allocated costs for {{monthKey}}.",
         "voiceCall": "Cost per voice call",
         "voiceCallHint": "{{formattedCount}} priced calls in this window.",
         "outboundSms": "Cost per outbound SMS",

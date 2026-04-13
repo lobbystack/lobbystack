@@ -8,8 +8,6 @@
     "description": "Consultez les tendances d'engagement ainsi que l'economie unitaire des appels, SMS et usages operateur.",
     "unitEconomics": {
       "cards": {
-        "total": "Base de cout mensuelle",
-        "totalHint": "Couts directs et alloues combines pour {{monthKey}}.",
         "voiceCall": "Cout par appel vocal",
         "voiceCallHint": "{{formattedCount}} appels tarifies dans cette periode.",
         "outboundSms": "Cout par SMS sortant",

@@ -1,11 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
-import {
-  CircleDollarSign,
-  MessageSquareText,
-  PhoneCall,
-  Users,
-} from "lucide-react";
+import { MessageSquareText, PhoneCall, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../../convex/_generated/api";
@@ -26,7 +21,6 @@ type UnitEconomicsProps = {
 type UnitEconomicsSummary = {
   monthKey: string;
   rollup: {
-    totalCostUsd: number;
     providerCostUsd: number;
     aiCostUsd: number;
     infraCostUsd: number;
@@ -68,8 +62,8 @@ function formatNumber(value: number, locale: string): string {
 function UnitEconomicsSkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
           <Card key={index}>
             <CardHeader>
               <Skeleton className="h-4 w-28" />
@@ -119,15 +113,6 @@ export function UnitEconomics({ businessId }: UnitEconomicsProps) {
 
   const cards = [
     {
-      key: "total",
-      title: t("analyticsPage.unitEconomics.cards.total"),
-      value: formatCurrency(rollup.totalCostUsd, i18n.language),
-      description: t("analyticsPage.unitEconomics.cards.totalHint", {
-        monthKey: summary.monthKey,
-      }),
-      icon: CircleDollarSign,
-    },
-    {
       key: "voiceCall",
       title: t("analyticsPage.unitEconomics.cards.voiceCall"),
       value: formatCurrency(rollup.priceFloorInputs.voiceCallUsd, i18n.language),
@@ -161,7 +146,7 @@ export function UnitEconomics({ businessId }: UnitEconomicsProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
           <Card key={card.key}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
