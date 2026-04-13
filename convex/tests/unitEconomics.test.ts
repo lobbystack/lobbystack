@@ -217,6 +217,7 @@ describe("unit economics", () => {
       messageId,
     });
 
+    await refreshMonthUntilDone(authed, businessId);
     const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
 
     expect(summary.rollup).not.toBeNull();

@@ -340,9 +340,9 @@ async function recomputeMonthRollup(
 
   let infraCostUsd = 0;
   if (directCostExists) {
-    // Cross-tenant infra allocation is refreshed explicitly, and otherwise only
-    // recomputed when we are creating the first rollup for the month.
-    if (args.recomputeInfraAllocation || !existingRollup) {
+    // Cross-tenant infra allocation is only recomputed during the explicit
+    // refresh flow so hot-path event writes never scan the full businesses table.
+    if (args.recomputeInfraAllocation) {
       const activeBusinessCount = await countActiveBusinesses(ctx);
       infraCostUsd = roundUnitCost(
         getConfiguredMonthlyInfraCostUsd(),
