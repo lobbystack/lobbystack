@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { CreditCard } from "lucide-react";
 
 import { NavGroup } from "@/components/layout/nav-group";
 import { NavUser } from "@/components/layout/nav-user";
@@ -87,7 +86,6 @@ const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
 const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
 const AnimatedBillingIcon = createAnimatedSidebarIcon(BoxIcon);
 const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
-const BillingIcon = createStaticSidebarIcon(CreditCard);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
@@ -176,11 +174,6 @@ export function AppSidebar({
                   title: t("settings:sections.integrations"),
                   url: "/settings/integrations",
                   icon: AnimatedIntegrationsIcon,
-                },
-                {
-                  title: t("settings:sections.billing"),
-                  url: "/settings/billing",
-                  icon: BillingIcon,
                 },
               ],
             },
