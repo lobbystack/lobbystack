@@ -1,6 +1,5 @@
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Analytics } from "@/features/home/components/analytics";
-import { UnitEconomics } from "@/features/analytics/components/unit-economics";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { useTranslation } from "react-i18next";
@@ -23,7 +22,6 @@ export function AnalyticsPage({ businessId }: AnalyticsPageProps) {
         description={t("analyticsPage.description")}
       />
       <Analytics businessId={businessId} />
-      <UnitEconomics businessId={businessId} />
     </section>
   );
 }

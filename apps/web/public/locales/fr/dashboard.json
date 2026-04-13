@@ -5,26 +5,7 @@
   },
   "analyticsPage": {
     "title": "Analytique",
-    "description": "Consultez les tendances d'engagement ainsi que l'economie unitaire des appels, SMS et usages operateur.",
-    "unitEconomics": {
-      "cards": {
-        "voiceCall": "Cout par appel vocal",
-        "voiceCallHint": "{{formattedCount}} appels tarifies dans cette periode.",
-        "outboundSms": "Cout par SMS sortant",
-        "outboundSmsHint": "{{formattedCount}} SMS sortants inclus.",
-        "activeUser": "Cout par utilisateur actif",
-        "activeUserHint": "{{formattedCount}} operateurs actifs dans cet espace."
-      },
-      "channelMix": {
-        "title": "Repartition par canal",
-        "description": "Ou les couts du mois sont depenses entre voix et messagerie.",
-        "labels": {
-          "voice": "Voix",
-          "sms": "SMS entreprise",
-          "alerts": "SMS d'alerte"
-        }
-      }
-    }
+    "description": "Consultez les tendances d'engagement pour les appels, les messages et l'activite de reservation."
   },
   "delta": {
     "flat": "Aucun changement depuis le mois dernier",

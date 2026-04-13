@@ -5,26 +5,7 @@
   },
   "analyticsPage": {
     "title": "Analytics",
-    "description": "Review engagement trends alongside the unit economics behind calls, SMS, and operator usage.",
-    "unitEconomics": {
-      "cards": {
-        "voiceCall": "Cost per voice call",
-        "voiceCallHint": "{{formattedCount}} priced calls in this window.",
-        "outboundSms": "Cost per outbound SMS",
-        "outboundSmsHint": "{{formattedCount}} outbound texts included.",
-        "activeUser": "Cost per active user",
-        "activeUserHint": "{{formattedCount}} active operators in this workspace."
-      },
-      "channelMix": {
-        "title": "Channel mix",
-        "description": "Where this month's cost is being spent across voice and messaging.",
-        "labels": {
-          "voice": "Voice",
-          "sms": "Business SMS",
-          "alerts": "Alert SMS"
-        }
-      }
-    }
+    "description": "Review engagement trends across calls, messages, and booking activity."
   },
   "delta": {
     "flat": "No change from last month",
