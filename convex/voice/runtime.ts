@@ -76,6 +76,11 @@ type PrepareTransferForVoiceArgs = {
   twilioCallSid?: string;
   recordedAt: string;
 };
+type ReleaseTransferForVoiceArgs = {
+  callId?: Id<"calls">;
+  twilioCallSid?: string;
+  recordedAt: string;
+};
 type TakeMessageForVoiceArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
@@ -98,6 +103,7 @@ type CompleteCallArgs = {
   status: string;
   endedAt: string;
   disposition?: string;
+  providerDurationSeconds?: number;
 };
 type ReconcileTwilioCallStatusArgs = {
   twilioCallSid: string;
@@ -757,6 +763,53 @@ export const prepareTransferForVoice = internalMutation({
   },
 });
 
+export const releaseTransferForVoice = internalMutation({
+  args: {
+    callId: v.optional(v.id("calls")),
+    twilioCallSid: v.optional(v.string()),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    released: v.boolean(),
+  }),
+  handler: async (
+    ctx: MutationCtx,
+    args: ReleaseTransferForVoiceArgs,
+  ): Promise<{ released: boolean }> => {
+    const call =
+      args.callId !== undefined
+        ? await ctx.db.get(args.callId)
+        : args.twilioCallSid !== undefined
+          ? await ctx.db
+              .query("calls")
+              .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid!))
+              .unique()
+          : null;
+    if (!call) {
+      throw new Error("Call not found.");
+    }
+
+    const releaseResult = await ctx.runMutation(
+      internal.billing.releaseOutboundCallAttemptReservation,
+      {
+        businessId: call.businessId,
+        callId: call._id,
+        recordedAt: args.recordedAt,
+      },
+    );
+
+    if (releaseResult.syncNeeded && releaseResult.usageEventId) {
+      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+        usageEventId: releaseResult.usageEventId,
+      });
+    }
+
+    return {
+      released: releaseResult.released,
+    };
+  },
+});
+
 // @ts-ignore Deep type instantiation from Convex mutation builder.
 export const takeMessageForVoice = internalMutation({
   args: {
@@ -887,6 +940,7 @@ export const completeCall = internalMutation({
     status: v.string(),
     endedAt: v.string(),
     disposition: v.optional(v.string()),
+    providerDurationSeconds: v.optional(v.number()),
   },
   handler: async (ctx: MutationCtx, args: CompleteCallArgs) => {
     const call: Doc<"calls"> | null = await ctx.db.get(args.callId);
@@ -905,6 +959,9 @@ export const completeCall = internalMutation({
       status: args.status,
       endedAt: args.endedAt,
       ...(disposition !== undefined ? { disposition } : {}),
+      ...(args.providerDurationSeconds !== undefined
+        ? { providerCallDurationSeconds: args.providerDurationSeconds }
+        : {}),
     });
 
     if (call.conversationId) {
@@ -917,6 +974,24 @@ export const completeCall = internalMutation({
       callId: args.callId,
       endedAt: Date.parse(args.endedAt),
     });
+
+    if (
+      args.providerDurationSeconds !== undefined &&
+      args.providerDurationSeconds !== call.providerCallDurationSeconds
+    ) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: args.providerDurationSeconds,
+        recordedAt: args.endedAt,
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
 
     await enqueuePostHogOutboxRecord(
       ctx,

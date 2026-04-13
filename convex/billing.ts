@@ -1882,6 +1882,53 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
   },
 });
 
+export const releaseOutboundCallAttemptReservation = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    callId: v.id("calls"),
+    recordedAt: v.string(),
+  },
+  returns: v.object({
+    released: v.boolean(),
+    usageEventId: v.optional(v.id("billing_usage_events")),
+    syncNeeded: v.optional(v.boolean()),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    released: boolean;
+    usageEventId?: Id<"billing_usage_events">;
+    syncNeeded?: boolean;
+  }> => {
+    const sourceKey = `outbound_attempt:voice_call:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+
+    if (!existingUsageEvent) {
+      return { released: false };
+    }
+
+    const usageResult = await upsertUsageEventInTx(ctx, {
+      businessId: args.businessId,
+      usageKind: "outbound_call_attempts",
+      quantity: 0,
+      sourceKey,
+      recordedAt: args.recordedAt,
+    });
+
+    return {
+      released: true,
+      usageEventId: usageResult.usageEventId,
+      syncNeeded: usageResult.syncNeeded,
+    };
+  },
+});
+
 export const getSmsCapabilityPolicy = internalQuery({
   args: {
     businessId: v.id("businesses"),

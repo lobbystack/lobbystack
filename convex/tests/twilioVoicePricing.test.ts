@@ -9,6 +9,9 @@ import { modules } from "../test.setup";
 const { fetchTwilioCallMock } = vi.hoisted(() => ({
   fetchTwilioCallMock: vi.fn(),
 }));
+const { enqueuePostHogOutboxRecordMock } = vi.hoisted(() => ({
+  enqueuePostHogOutboxRecordMock: vi.fn(async () => null),
+}));
 
 vi.mock("twilio", () => {
   const callsResource = vi.fn((sid?: string) => ({
@@ -20,6 +23,17 @@ vi.mock("twilio", () => {
 
   return {
     default: twilioFactory,
+  };
+});
+
+vi.mock("../telemetry/posthog", async () => {
+  const actual = await vi.importActual<typeof import("../telemetry/posthog")>(
+    "../telemetry/posthog",
+  );
+
+  return {
+    ...actual,
+    enqueuePostHogOutboxRecord: enqueuePostHogOutboxRecordMock,
   };
 });
 
@@ -209,4 +223,5 @@ describe("Twilio voice pricing sync", () => {
       expect(call?.providerCallDurationSeconds).toBe(23);
     });
   });
+
 });

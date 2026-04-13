@@ -4,16 +4,19 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
+import { getBillingKey } from "../lib/billing";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
 const {
+  enqueuePostHogOutboxRecordMock,
   fetchTwilioMessageMock,
   generateSmsReplyMock,
   retrierRunMock,
   sendTwilioMessageMock,
   validateTwilioRequestMock,
 } = vi.hoisted(() => ({
+  enqueuePostHogOutboxRecordMock: vi.fn(async () => null),
   fetchTwilioMessageMock: vi.fn(),
   generateSmsReplyMock: vi.fn(),
   retrierRunMock: vi.fn(),
@@ -80,6 +83,17 @@ vi.mock("../lib/components", async () => {
   };
 });
 
+vi.mock("../telemetry/posthog", async () => {
+  const actual = await vi.importActual<typeof import("../telemetry/posthog")>(
+    "../telemetry/posthog",
+  );
+
+  return {
+    ...actual,
+    enqueuePostHogOutboxRecord: enqueuePostHogOutboxRecordMock,
+  };
+});
+
 type TestRunFunction = Parameters<TestConvex<typeof schema>["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
@@ -87,6 +101,7 @@ const convexModules = modules;
 const originalConvexSiteUrl = process.env.CONVEX_SITE_URL;
 const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
 const originalFetch = globalThis.fetch;
 let tinyPngBuffer: Buffer;
 
@@ -166,10 +181,16 @@ async function postTwilioForm(
   });
 }
 
+async function flushImmediateScheduledFunctions(t: TestConvex<typeof schema>): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await t.finishInProgressScheduledFunctions();
+}
+
 beforeEach(() => {
   process.env.CONVEX_SITE_URL = "https://example.convex.site";
   process.env.TWILIO_ACCOUNT_SID = "ACtestaccountsid";
   process.env.TWILIO_AUTH_TOKEN = "test-auth-token";
+  process.env.TWILIO_ALERT_SMS_FROM = "+14165550999";
 
   vi.clearAllMocks();
   validateTwilioRequestMock.mockReturnValue(true);
@@ -225,6 +246,7 @@ afterAll(() => {
   process.env.CONVEX_SITE_URL = originalConvexSiteUrl;
   process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
   process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+  process.env.TWILIO_ALERT_SMS_FROM = originalTwilioAlertSmsFrom;
   vi.unstubAllGlobals();
 });
 
@@ -1315,6 +1337,108 @@ describe("Twilio SMS delivery flow", () => {
         providerStatus: "delivered",
         providerRawDlrDoneDate: "2606141505",
       });
+    });
+  });
+
+  it("keeps a one-segment GSM reminder sendable when only one hosted segment remains", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-notification-gsm-boundary",
+      status: "accepted",
+    });
+    const currentPeriodKey = new Date().toISOString().slice(0, 7);
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await ctx.db.insert("businesses", {
+        slug: "twilio-notification-gsm-boundary",
+        name: "Twilio Notification GSM Boundary",
+        timezone: "America/Toronto",
+        businessType: "service_company",
+        defaultLocale: "en",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+
+      await ctx.db.insert("billing_usage_months", {
+        businessId,
+        periodKey: currentPeriodKey,
+        planAtSnapshot: "free_cloud",
+        alertSmsSegmentsUsed: 9,
+        alertSmsSegmentsIncluded: 10,
+        alertSmsBlocked: false,
+        lastRecordedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        lastSyncedAt: `${currentPeriodKey}-01T12:00:00.000Z`,
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550158",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut",
+        slug: "cut-gsm-boundary",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    const deliveryResult = await t.action(internal.notifications.reminders.deliverNotification, {
+      notificationId,
+    });
+    await flushImmediateScheduledFunctions(t);
+
+    const sentBody = sendTwilioMessageMock.mock.calls[0]?.[0]?.body;
+
+    expect(deliveryResult).toEqual({
+      delivered: true,
+      providerMessageId: "SM-notification-gsm-boundary",
+    });
+    expect(sentBody).toBeDefined();
+    expect(sentBody!.length).toBeGreaterThan(70);
+    expect(sentBody!.length).toBeLessThanOrEqual(160);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550158",
+      from: "+14165550999",
+      body: sentBody,
+      statusCallback: "https://example.convex.site/twilio/sms/status",
     });
   });
 

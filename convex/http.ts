@@ -79,6 +79,7 @@ const completeCallSchema = z.object({
   status: z.string().min(1),
   endedAt: z.string().min(1),
   disposition: z.string().min(1).optional(),
+  providerDurationSeconds: z.number().optional(),
 });
 
 const reconcileStatusSchema = z.object({
@@ -768,6 +769,32 @@ http.route({
 });
 
 http.route({
+  path: "/voice/call/release-transfer",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, prepareTransferSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    await ctx.runMutation(internal.voice.runtime.releaseTransferForVoice, {
+      ...(body.data.callId !== undefined ? { callId: asId("calls", body.data.callId) } : {}),
+      ...(body.data.twilioCallSid !== undefined
+        ? { twilioCallSid: body.data.twilioCallSid }
+        : {}),
+      recordedAt: body.data.recordedAt,
+    });
+
+    return Response.json({ ok: true });
+  }),
+});
+
+http.route({
   path: "/voice/call/transfer-state",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
@@ -809,6 +836,9 @@ http.route({
       status: body.data.status,
       endedAt: body.data.endedAt,
       ...(body.data.disposition !== undefined ? { disposition: body.data.disposition } : {}),
+      ...(body.data.providerDurationSeconds !== undefined
+        ? { providerDurationSeconds: body.data.providerDurationSeconds }
+        : {}),
     });
 
     return Response.json({ ok: true });

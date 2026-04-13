@@ -148,11 +148,20 @@ export async function prepareVoiceTransfer(input: {
   await postJson("/voice/call/prepare-transfer", input);
 }
 
+export async function releaseVoiceTransfer(input: {
+  callId?: string;
+  twilioCallSid?: string;
+  recordedAt: string;
+}): Promise<void> {
+  await postJson("/voice/call/release-transfer", input);
+}
+
 export async function completeVoiceCall(input: {
   callId: string;
   status: string;
   endedAt: string;
   disposition?: string;
+  providerDurationSeconds?: number;
 }): Promise<void> {
   await postJson("/voice/call/complete", input);
 }

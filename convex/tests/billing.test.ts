@@ -651,6 +651,58 @@ describe("billing", () => {
     });
   });
 
+  it("shrinks a full voice reservation back to the actual duration when the call completes", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-reconcile",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+      businessId,
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:00:00.000Z",
+    });
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 33,
+      recordedAt: "2026-04-12T14:00:33.000Z",
+    });
+
+    const usageState = await t.run(async (ctx: TestContext) => {
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(anchors.callId)}`),
+        )
+        .unique();
+      return { usageMonth, usageEvent };
+    });
+
+    expect(usageResult).toMatchObject({
+      syncNeeded: false,
+    });
+    expect(usageState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 33,
+      voiceBlocked: false,
+      lastRecordedAt: "2026-04-12T14:00:33.000Z",
+    });
+    expect(usageState.usageEvent).toMatchObject({
+      quantity: 33,
+      recordedAt: "2026-04-12T14:00:33.000Z",
+    });
+  });
+
   it("reserves hosted alert SMS usage before Twilio reports segments", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -860,6 +912,62 @@ describe("billing", () => {
     expect(reservation).toEqual({
       allowed: false,
       errorCode: "outbound_call_attempt_limit_reached",
+    });
+  });
+
+  it("releases a reserved outbound transfer attempt when the handoff never starts", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-outbound-release",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const reserved = await t.mutation(internal.voice.runtime.prepareTransferForVoice, {
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:02:00.000Z",
+    });
+
+    const released = await t.mutation(internal.voice.runtime.releaseTransferForVoice, {
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:02:30.000Z",
+    });
+
+    const usageState = await t.run(async (ctx: TestContext) => {
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q
+            .eq("businessId", businessId)
+            .eq("sourceKey", `outbound_attempt:voice_call:${String(anchors.callId)}`),
+        )
+        .unique();
+      return { usageMonth, usageEvent };
+    });
+
+    expect(reserved).toEqual({
+      allowed: true,
+      errorCode: null,
+    });
+    expect(released).toEqual({
+      released: true,
+    });
+    expect(usageState.usageMonth).toMatchObject({
+      outboundCallAttemptsUsed: 0,
+      outboundCallAttemptsBlocked: false,
+      lastRecordedAt: "2026-04-12T14:02:30.000Z",
+    });
+    expect(usageState.usageEvent).toMatchObject({
+      quantity: 0,
+      recordedAt: "2026-04-12T14:02:30.000Z",
     });
   });
 
