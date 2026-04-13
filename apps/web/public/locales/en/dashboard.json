@@ -17,15 +17,6 @@
         "activeUser": "Cost per active user",
         "activeUserHint": "{{formattedCount}} active operators in this workspace."
       },
-      "costMix": {
-        "title": "Cost mix",
-        "description": "How direct provider, AI, and shared infra costs stack together.",
-        "labels": {
-          "provider": "Provider",
-          "ai": "AI",
-          "infra": "Shared infra"
-        }
-      },
       "channelMix": {
         "title": "Channel mix",
         "description": "Where this month's cost is being spent across voice and messaging.",
@@ -34,28 +25,6 @@
           "sms": "Business SMS",
           "alerts": "Alert SMS"
         }
-      },
-      "floors": {
-        "title": "Pricing floor inputs",
-        "description": "Raw cost floors to use when setting margins or minimum pricing.",
-        "labels": {
-          "voiceMinute": "Voice minute floor",
-          "smsThread": "SMS thread floor",
-          "business": "Per-business floor"
-        }
-      },
-      "topVoice": {
-        "title": "Highest-cost voice calls",
-        "description": "Calls with the biggest combined provider and AI spend.",
-        "meta": "{{minutes}} minutes",
-        "empty": "Voice costs will appear here as calls are priced."
-      },
-      "topSms": {
-        "title": "Highest-cost SMS threads",
-        "description": "Threads with the largest outbound SMS and AI spend.",
-        "meta": "{{formattedCount}} outbound texts",
-        "unknown": "Unknown contact",
-        "empty": "SMS thread costs will appear here once replies are priced."
       }
     }
   },

@@ -40,34 +40,14 @@ type UnitEconomicsSummary = {
     activeUserCount: number;
     priceFloorInputs: {
       voiceCallUsd: number;
-      voiceMinuteUsd: number;
       outboundSmsUsd: number;
-      smsThreadUsd: number;
       activeUserUsd: number;
-      businessUsd: number;
     };
-    costMix: Array<{
-      key: "provider" | "ai" | "infra";
-      value: number;
-    }>;
     channelMix: Array<{
       key: "voice" | "sms" | "alerts";
       value: number;
     }>;
   } | null;
-  topVoiceCalls: Array<{
-    callId: Id<"calls">;
-    startedAt: string;
-    durationSeconds: number;
-    costUsd: number;
-  }>;
-  topSmsThreads: Array<{
-    conversationId: Id<"conversations">;
-    contactName: string | null;
-    contactPhone: string | null;
-    outboundTextCount: number;
-    costUsd: number;
-  }>;
 };
 
 function formatCurrency(value: number, locale: string): string {
@@ -83,13 +63,6 @@ function formatNumber(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-function formatDateTime(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 function UnitEconomicsSkeleton() {
@@ -108,8 +81,8 @@ function UnitEconomicsSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-4 xl:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
+      <div className="grid gap-4 xl:grid-cols-1">
+        {Array.from({ length: 1 }).map((_, index) => (
           <Card key={index}>
             <CardHeader>
               <Skeleton className="h-5 w-40" />
@@ -203,24 +176,7 @@ export function UnitEconomics({ businessId }: UnitEconomicsProps) {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("analyticsPage.unitEconomics.costMix.title")}</CardTitle>
-            <CardDescription>{t("analyticsPage.unitEconomics.costMix.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {rollup.costMix.map((item) => (
-              <div className="flex items-center justify-between gap-4" key={item.key}>
-                <span className="text-sm text-muted-foreground">
-                  {t(`analyticsPage.unitEconomics.costMix.labels.${item.key}`)}
-                </span>
-                <span className="font-medium">{formatCurrency(item.value, i18n.language)}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 xl:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle>{t("analyticsPage.unitEconomics.channelMix.title")}</CardTitle>
@@ -235,93 +191,6 @@ export function UnitEconomics({ businessId }: UnitEconomicsProps) {
                 <span className="font-medium">{formatCurrency(item.value, i18n.language)}</span>
               </div>
             ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("analyticsPage.unitEconomics.floors.title")}</CardTitle>
-            <CardDescription>{t("analyticsPage.unitEconomics.floors.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {([
-              ["voiceMinuteUsd", "voiceMinute"],
-              ["smsThreadUsd", "smsThread"],
-              ["businessUsd", "business"],
-            ] as const).map(([field, label]) => (
-              <div className="flex items-center justify-between gap-4" key={field}>
-                <span className="text-sm text-muted-foreground">
-                  {t(`analyticsPage.unitEconomics.floors.labels.${label}`)}
-                </span>
-                <span className="font-medium">
-                  {formatCurrency(rollup.priceFloorInputs[field], i18n.language)}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("analyticsPage.unitEconomics.topVoice.title")}</CardTitle>
-            <CardDescription>{t("analyticsPage.unitEconomics.topVoice.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.topVoiceCalls.length > 0 ? (
-              summary.topVoiceCalls.map((call) => (
-                <div className="flex items-center justify-between gap-4" key={String(call.callId)}>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{formatDateTime(call.startedAt, i18n.language)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("analyticsPage.unitEconomics.topVoice.meta", {
-                        minutes: formatNumber(call.durationSeconds / 60, i18n.language),
-                      })}
-                    </p>
-                  </div>
-                  <span className="font-medium">{formatCurrency(call.costUsd, i18n.language)}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("analyticsPage.unitEconomics.topVoice.empty")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("analyticsPage.unitEconomics.topSms.title")}</CardTitle>
-            <CardDescription>{t("analyticsPage.unitEconomics.topSms.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {summary.topSmsThreads.length > 0 ? (
-              summary.topSmsThreads.map((thread) => (
-                <div
-                  className="flex items-center justify-between gap-4"
-                  key={String(thread.conversationId)}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {thread.contactName ?? thread.contactPhone ?? t("analyticsPage.unitEconomics.topSms.unknown")}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t("analyticsPage.unitEconomics.topSms.meta", {
-                        count: thread.outboundTextCount,
-                        formattedCount: formatNumber(thread.outboundTextCount, i18n.language),
-                      })}
-                    </p>
-                  </div>
-                  <span className="font-medium">{formatCurrency(thread.costUsd, i18n.language)}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("analyticsPage.unitEconomics.topSms.empty")}
-              </p>
-            )}
           </CardContent>
         </Card>
       </div>

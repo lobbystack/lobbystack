@@ -680,81 +680,6 @@ export const getSummary = query({
       )
       .unique();
 
-    const events = await ctx.db
-      .query("unit_economics_events")
-      .withIndex("by_business_id_and_month_key_and_occurred_at", (q) =>
-        q.eq("businessId", args.businessId).eq("monthKey", monthKey),
-      )
-      .collect();
-
-    const voiceCostByCall = new Map<string, number>();
-    for (const event of events) {
-      if (!event.callId) {
-        continue;
-      }
-
-      const key = String(event.callId);
-      voiceCostByCall.set(key, roundUsd((voiceCostByCall.get(key) ?? 0) + event.costUsd));
-    }
-
-    const topVoiceCalls = await Promise.all(
-      Array.from(voiceCostByCall.entries())
-        .sort((left, right) => right[1] - left[1])
-        .slice(0, 5)
-        .map(async ([callId, costUsd]) => {
-          const call = await ctx.db.get(callId as Id<"calls">);
-          if (!call) {
-            return null;
-          }
-
-          return {
-            callId: call._id,
-            startedAt: call.startedAt,
-            durationSeconds: call.providerCallDurationSeconds ?? 0,
-            costUsd,
-          };
-        }),
-    );
-
-    const smsCostByConversation = new Map<string, { costUsd: number; messageIds: Set<string> }>();
-    for (const event of events) {
-      if (event.channel !== "sms" || !event.conversationId) {
-        continue;
-      }
-
-      const key = String(event.conversationId);
-      const current = smsCostByConversation.get(key) ?? {
-        costUsd: 0,
-        messageIds: new Set<string>(),
-      };
-      current.costUsd = roundUsd(current.costUsd + event.costUsd);
-      if (event.messageId) {
-        current.messageIds.add(String(event.messageId));
-      }
-      smsCostByConversation.set(key, current);
-    }
-
-    const topSmsThreads = await Promise.all(
-      Array.from(smsCostByConversation.entries())
-        .sort((left, right) => right[1].costUsd - left[1].costUsd)
-        .slice(0, 5)
-        .map(async ([conversationId, summary]) => {
-          const conversation = await ctx.db.get(conversationId as Id<"conversations">);
-          if (!conversation?.contactId) {
-            return null;
-          }
-
-          const contact = await ctx.db.get(conversation.contactId);
-          return {
-            conversationId: conversation._id,
-            contactName: contact?.name ?? null,
-            contactPhone: contact?.phone ?? null,
-            outboundTextCount: summary.messageIds.size,
-            costUsd: summary.costUsd,
-          };
-        }),
-    );
-
     return {
       monthKey,
       rollup: rollup
@@ -762,17 +687,9 @@ export const getSummary = query({
             ...rollup,
             priceFloorInputs: {
               voiceCallUsd: rollup.costPerVoiceCallUsd,
-              voiceMinuteUsd: rollup.costPerVoiceMinuteUsd,
               outboundSmsUsd: rollup.costPerOutboundSmsUsd,
-              smsThreadUsd: rollup.costPerSmsThreadUsd,
               activeUserUsd: rollup.costPerActiveUserUsd,
-              businessUsd: rollup.costPerBusinessUsd,
             },
-            costMix: [
-              { key: "provider", value: rollup.providerCostUsd },
-              { key: "ai", value: rollup.aiCostUsd },
-              { key: "infra", value: rollup.infraCostUsd },
-            ],
             channelMix: [
               { key: "voice", value: rollup.voiceCostUsd },
               { key: "sms", value: rollup.smsCostUsd },
@@ -780,8 +697,6 @@ export const getSummary = query({
             ],
           }
         : null,
-      topVoiceCalls: topVoiceCalls.filter((item) => item !== null),
-      topSmsThreads: topSmsThreads.filter((item) => item !== null),
     };
   },
 });

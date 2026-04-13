@@ -71,10 +71,10 @@ describe("unit economics", () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "unit-economics-provider");
 
-    const { callId, conversationId } = await t.run(async (ctx) => {
+    await t.run(async (ctx) => {
       const { conversationId } = await seedConversation(ctx, businessId);
       const nowIso = new Date().toISOString();
-      const callId = await ctx.db.insert("calls", {
+      await ctx.db.insert("calls", {
         businessId,
         conversationId,
         twilioCallSid: "CA-unit-economics-provider",
@@ -112,7 +112,6 @@ describe("unit economics", () => {
         providerUpdatedAt: nowIso,
       });
 
-      return { callId, conversationId };
     });
 
     await authed.mutation(api.unitEconomics.refreshMonth, { businessId });
@@ -127,18 +126,10 @@ describe("unit economics", () => {
     expect(summary.rollup?.outboundSmsCount).toBe(1);
     expect(summary.rollup?.smsThreadCount).toBe(1);
     expect(summary.rollup?.priceFloorInputs.voiceCallUsd).toBe(0.07);
-    expect(summary.topVoiceCalls).toEqual([
-      expect.objectContaining({
-        callId,
-        costUsd: 0.04,
-      }),
-    ]);
-    expect(summary.topSmsThreads).toEqual([
-      expect.objectContaining({
-        conversationId,
-        outboundTextCount: 1,
-        costUsd: 0.02,
-      }),
+    expect(summary.rollup?.channelMix).toEqual([
+      { key: "voice", value: 0.04 },
+      { key: "sms", value: 0.02 },
+      { key: "alerts", value: 0.01 },
     ]);
   });
 
@@ -212,12 +203,11 @@ describe("unit economics", () => {
     expect(summary.rollup?.voiceCallCount).toBe(1);
     expect(summary.rollup?.outboundSmsCount).toBe(1);
     expect(summary.rollup?.activeUserCount).toBe(1);
-    expect(summary.rollup?.priceFloorInputs.businessUsd).toBe(20.75);
-    expect(summary.topVoiceCalls).toEqual([
-      expect.objectContaining({
-        callId,
-        costUsd: 0.6,
-      }),
+    expect(summary.rollup?.priceFloorInputs.activeUserUsd).toBe(20.75);
+    expect(summary.rollup?.channelMix).toEqual([
+      { key: "voice", value: 0.6 },
+      { key: "sms", value: 0.15 },
+      { key: "alerts", value: 0 },
     ]);
   });
 });
