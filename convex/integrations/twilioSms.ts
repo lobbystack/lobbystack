@@ -156,6 +156,13 @@ export const syncMessagePriceFromProvider = internalAction({
       const providerPriceUnit = normalizePriceUnit(message.priceUnit);
       const providerCostUsd = normalizeProviderCostUsd(providerPrice, providerPriceUnit);
       const providerNumSegments = parseOptionalFiniteNumber(message.numSegments);
+      const normalizedProviderNumSegments =
+        providerNumSegments !== undefined
+          ? Math.max(0, Math.trunc(providerNumSegments))
+          : undefined;
+      const hasCompleteProviderPricing =
+        providerCostUsd !== undefined &&
+        normalizedProviderNumSegments !== undefined;
 
       await ctx.runMutation(internal.integrations.twilioMessageStatus.recordProviderPricing, {
         providerMessageSid: args.providerMessageSid,
@@ -165,13 +172,13 @@ export const syncMessagePriceFromProvider = internalAction({
         ...(providerPrice !== undefined ? { providerPrice } : {}),
         ...(providerPriceUnit !== undefined ? { providerPriceUnit } : {}),
         ...(providerCostUsd !== undefined ? { providerCostUsd } : {}),
-        ...(providerNumSegments !== undefined
-          ? { providerNumSegments: Math.max(0, Math.trunc(providerNumSegments)) }
+        ...(normalizedProviderNumSegments !== undefined
+          ? { providerNumSegments: normalizedProviderNumSegments }
           : {}),
       });
 
       if (
-        providerCostUsd === undefined &&
+        !hasCompleteProviderPricing &&
         attempt < MESSAGE_PRICE_RETRY_DELAYS_MS.length
       ) {
         const retryDelayMs = MESSAGE_PRICE_RETRY_DELAYS_MS[attempt];
@@ -190,7 +197,7 @@ export const syncMessagePriceFromProvider = internalAction({
         return { synced: false, scheduledRetry: true, skipped: false };
       }
 
-      return { synced: providerCostUsd !== undefined, scheduledRetry: false, skipped: false };
+      return { synced: hasCompleteProviderPricing, scheduledRetry: false, skipped: false };
     } catch (error) {
       if (attempt < MESSAGE_PRICE_RETRY_DELAYS_MS.length) {
         const retryDelayMs = MESSAGE_PRICE_RETRY_DELAYS_MS[attempt];

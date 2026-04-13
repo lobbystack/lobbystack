@@ -1044,6 +1044,72 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("keeps retrying when Twilio returns cost before numSegments", async () => {
+    const t = convexTest(schema, convexModules);
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-status-cost-before-segments",
+      status: "queued",
+    });
+    fetchTwilioMessageMock.mockResolvedValueOnce({
+      sid: "SM-status-cost-before-segments",
+      status: "delivered",
+      price: "-0.01660",
+      priceUnit: "USD",
+      numSegments: null,
+      dateUpdated: new Date("2026-04-09T16:10:47.943Z"),
+    });
+
+    const smsNumber = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-status-cost-before-segments",
+        name: "Twilio Status Cost Before Segments",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550118",
+      });
+      return "+14165550118";
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-cost-before-segments",
+      From: "+14165550198",
+      To: smsNumber,
+      Body: "Cost before segments",
+    });
+
+    const syncResult = await t.action(
+      internal.integrations.twilioSms.syncMessagePriceFromProvider,
+      {
+        providerMessageSid: "SM-status-cost-before-segments",
+        providerStatus: "delivered",
+        attempt: 1,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      synced: false,
+      scheduledRetry: true,
+      skipped: false,
+    });
+
+    await t.run(async (ctx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_provider_message_sid", (q) =>
+          q.eq("providerMessageSid", "SM-status-cost-before-segments"),
+        )
+        .unique();
+
+      expect(message).toMatchObject({
+        providerPrice: -0.0166,
+        providerPriceUnit: "usd",
+        providerCostUsd: 0.0166,
+      });
+      expect(message?.providerNumSegments).toBeUndefined();
+    });
+  });
+
   it("persists undelivered callbacks as terminal failures", async () => {
     const t = convexTest(schema, convexModules);
     sendTwilioMessageMock.mockResolvedValue({
