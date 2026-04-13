@@ -7,6 +7,16 @@ const USER_DATA_DIR = "/tmp/polar-playwright-profile";
 
 const rl = readline.createInterface({ input, output });
 
+function maskSecret(value) {
+  if (!value) {
+    return "NOT_FOUND";
+  }
+  if (value.length <= 8) {
+    return "[redacted]";
+  }
+  return `${value.slice(0, 4)}***${value.slice(-4)}`;
+}
+
 async function waitForEnter(prompt) {
   await rl.question(`${prompt}\nPress Enter here when you are ready to continue.`);
 }
@@ -105,7 +115,10 @@ async function main() {
     await dumpPage(page, "Products");
 
     const token = await ensureApiToken(page);
-    console.log("\nPOLAR_ORGANIZATION_TOKEN:", token ?? "NOT_FOUND");
+    console.log("\nPOLAR_ORGANIZATION_TOKEN:", maskSecret(token));
+    if (token) {
+      console.log("Copy the full token directly from the Polar dashboard instead of terminal output.");
+    }
 
     await waitForEnter("The browser session is ready for the next Polar setup step.");
   } finally {

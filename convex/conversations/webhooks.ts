@@ -1224,6 +1224,7 @@ export const handleTwilioSmsInbound = internalAction({
         {
           businessId: phoneNumber.businessId,
           conversationId,
+          messageId,
           prompt,
         },
       );

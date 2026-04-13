@@ -6,6 +6,10 @@ function uniq(values) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
+function summarizePresence(hasValue) {
+  return hasValue ? "[present]" : "";
+}
+
 async function dump(page, label) {
   const data = await page.evaluate(() => {
     const textOf = (selector) =>
@@ -29,10 +33,9 @@ async function dump(page, label) {
         type: node.getAttribute("type"),
         name: node.getAttribute("name"),
         placeholder: node.getAttribute("placeholder"),
-        value: node.value,
+        hasValue: node.value.length > 0,
         ariaLabel: node.getAttribute("aria-label"),
       })),
-      bodyPreview: document.body.innerText.slice(0, 6000),
     };
   });
 
@@ -44,6 +47,10 @@ async function dump(page, label) {
         headings: uniq(data.headings),
         buttons: uniq(data.buttons),
         labels: uniq(data.labels),
+        inputs: data.inputs.map((input) => ({
+          ...input,
+          value: summarizePresence(input.hasValue),
+        })),
       },
       null,
       2,

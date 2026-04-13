@@ -103,6 +103,19 @@ type SmsCapabilityPolicy = {
   errorCode: BillingErrorCode | null;
 };
 
+const BILLING_ADMIN_ROLES = new Set([
+  "business_owner",
+  "business_admin",
+  "owner",
+]);
+
+const USAGE_SYNC_RETRY_DELAYS_MS = [
+  30_000,
+  120_000,
+  600_000,
+  1_800_000,
+] as const;
+
 const billingPolar = new ConvexPolar(components.polar, {
   getUserInfo: async () => ({
     userId: "",
@@ -248,6 +261,7 @@ function buildBillingStatus(input: {
   usage: Doc<"billing_usage_months"> | null;
   periodKey: string;
   recentTransactions: Array<BillingTransactionSummary>;
+  hasBillingManagementAccess: boolean;
   hasCustomerPortalAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
   aiSmsAddonCheckoutConfigured: boolean;
@@ -278,14 +292,29 @@ function buildBillingStatus(input: {
     billingContactEmail: input.contact.email,
     billingContactName: input.contact.name,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
-    hasCustomerPortalAccess: input.hasCustomerPortalAccess,
+    hasCustomerPortalAccess:
+      input.hasBillingManagementAccess && input.hasCustomerPortalAccess,
     hasCheckoutAccess:
-      input.availableCheckoutPlans.length > 0 || canPurchaseConfiguredAiSmsAddon,
-    availableCheckoutPlans: input.availableCheckoutPlans,
-    canPurchaseAiSmsAddon: canPurchaseConfiguredAiSmsAddon,
+      input.hasBillingManagementAccess &&
+      (input.availableCheckoutPlans.length > 0 || canPurchaseConfiguredAiSmsAddon),
+    availableCheckoutPlans: input.hasBillingManagementAccess
+      ? input.availableCheckoutPlans
+      : [],
+    canPurchaseAiSmsAddon:
+      input.hasBillingManagementAccess && canPurchaseConfiguredAiSmsAddon,
     usage,
     recentTransactions: input.recentTransactions,
   };
+}
+
+function hasBillingManagementAccess(role: string): boolean {
+  return BILLING_ADMIN_ROLES.has(role);
+}
+
+function requireBillingManagementAccess(role: string): void {
+  if (!hasBillingManagementAccess(role)) {
+    throw new Error("Billing management requires admin access.");
+  }
 }
 
 function shouldSyncUsageEvent(args: {
@@ -852,7 +881,8 @@ export const getCheckoutContext = internalQuery({
   }),
   handler: async (ctx, args): Promise<CheckoutContext> => {
     const currentUser = await requireCurrentUser(ctx);
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
+    requireBillingManagementAccess(membership.role);
     const account = await getBillingAccount(ctx, args.businessId);
     const contact = await resolveBillingContact(ctx, {
       businessId: args.businessId,
@@ -901,6 +931,9 @@ export const startCheckout = action({
     url: v.string(),
   }),
   handler: async (ctx, args) => {
+    const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
+      businessId: args.businessId,
+    });
     const snapshot = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
       businessId: args.businessId,
     });
@@ -914,10 +947,6 @@ export const startCheckout = action({
     if (args.target === "ai_sms" && !snapshot.canPurchaseAiSmsAddon) {
       throw new Error("AI SMS add-on is only available for eligible Pro workspaces.");
     }
-
-    const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
-      businessId: args.businessId,
-    });
     const customer = await ensurePolarCustomer(ctx, {
       businessId: args.businessId,
       checkoutContext,
@@ -1024,7 +1053,7 @@ export const getStatus = query({
   },
   handler: async (ctx, args): Promise<BillingStatus> => {
     const currentUser = await requireCurrentUser(ctx);
-    await requireMembership(ctx, args.businessId);
+    const membership = await requireMembership(ctx, args.businessId);
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
@@ -1059,6 +1088,7 @@ export const getStatus = query({
         occurredAt: transaction.occurredAt,
         invoiceUrl: transaction.invoiceUrl ?? null,
       })),
+      hasBillingManagementAccess: hasBillingManagementAccess(membership.role),
       hasCustomerPortalAccess: Boolean(snapshot.account?.polarCustomerId),
       availableCheckoutPlans,
       aiSmsAddonCheckoutConfigured:
@@ -1335,12 +1365,15 @@ export const markUsageEventSyncResult = internalMutation({
 export const syncUsageEventToPolar = internalAction({
   args: {
     usageEventId: v.id("billing_usage_events"),
+    attempt: v.optional(v.number()),
   },
   returns: v.object({
     synced: v.boolean(),
+    scheduledRetry: v.optional(v.boolean()),
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    const attempt = Math.max(0, args.attempt ?? 0);
     const payload = await ctx.runQuery(internal.billing.getUsageSyncPayload, {
       usageEventId: args.usageEventId,
     });
@@ -1378,6 +1411,23 @@ export const syncUsageEventToPolar = internalAction({
       return { synced: true };
     } catch (error) {
       const errorMessage = getErrorMessage(error);
+      let scheduledRetry = false;
+
+      if (attempt < USAGE_SYNC_RETRY_DELAYS_MS.length) {
+        const retryDelayMs = USAGE_SYNC_RETRY_DELAYS_MS[attempt];
+        if (retryDelayMs !== undefined) {
+          await ctx.scheduler.runAfter(  // Best-effort retry for transient Polar failures.
+            retryDelayMs,
+            internal.billing.syncUsageEventToPolar,
+            {
+              usageEventId: args.usageEventId,
+              attempt: attempt + 1,
+            },
+          );
+          scheduledRetry = true;
+        }
+      }
+
       await ctx.runMutation(internal.billing.markUsageEventSyncResult, {
         usageEventId: args.usageEventId,
         syncStatus: "failed",
@@ -1385,7 +1435,7 @@ export const syncUsageEventToPolar = internalAction({
         syncError: errorMessage,
       });
 
-      return { synced: false, error: errorMessage };
+      return { synced: false, scheduledRetry, error: errorMessage };
     }
   },
 });

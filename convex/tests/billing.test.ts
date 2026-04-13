@@ -1,5 +1,31 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { polarEventsIngestMock } = vi.hoisted(() => ({
+  polarEventsIngestMock: vi.fn(),
+}));
+
+vi.mock("@polar-sh/sdk", () => ({
+  Polar: vi.fn(function MockPolar() {
+    return {
+      checkouts: {
+        create: vi.fn(),
+      },
+      customerSessions: {
+        create: vi.fn(),
+      },
+      customers: {
+        create: vi.fn(),
+      },
+      events: {
+        ingest: polarEventsIngestMock,
+      },
+      orders: {
+        invoice: vi.fn(),
+      },
+    };
+  }),
+}));
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -11,6 +37,7 @@ const convexModules = modules;
 const originalProProductId = process.env.POLAR_PRO_PRODUCT_ID;
 const originalAiSmsAddonProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
 const originalAiSmsSetupProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID;
+const originalPolarOrganizationToken = process.env.POLAR_ORGANIZATION_TOKEN;
 const originalSiteUrl = process.env.SITE_URL;
 
 type ConvexHarness = TestConvex<typeof schema>;
@@ -36,11 +63,19 @@ afterEach(() => {
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = originalAiSmsSetupProductId;
   }
 
+  if (originalPolarOrganizationToken === undefined) {
+    delete process.env.POLAR_ORGANIZATION_TOKEN;
+  } else {
+    process.env.POLAR_ORGANIZATION_TOKEN = originalPolarOrganizationToken;
+  }
+
   if (originalSiteUrl === undefined) {
     delete process.env.SITE_URL;
   } else {
     process.env.SITE_URL = originalSiteUrl;
   }
+
+  vi.clearAllMocks();
 });
 
 async function seedWorkspace(
@@ -48,6 +83,7 @@ async function seedWorkspace(
   input: {
     subject: string;
     deploymentMode: "cloud" | "manual";
+    role?: "business_owner" | "business_admin" | "scheduler" | "viewer";
   },
 ) {
   const seeded = await t.run(async (ctx: TestContext) => {
@@ -68,7 +104,7 @@ async function seedWorkspace(
     await ctx.db.insert("business_memberships", {
       businessId,
       userId,
-      role: "business_owner",
+      role: input.role ?? "business_owner",
       status: "active",
     });
 
@@ -87,6 +123,7 @@ async function seedBillingAccount(
     businessId: Id<"businesses">;
     currentPlan: "free_cloud" | "pro" | "enterprise";
     activeAddons?: Array<"ai_sms">;
+    polarCustomerId?: string;
   },
 ): Promise<void> {
   await ctx.db.insert("billing_accounts", {
@@ -97,6 +134,7 @@ async function seedBillingAccount(
     subscriptionState: input.currentPlan === "pro" ? "active" : "inactive",
     billingContactEmail: "owner@example.com",
     billingContactName: "Billing Owner",
+    ...(input.polarCustomerId ? { polarCustomerId: input.polarCustomerId } : {}),
     lastSyncedAt: "2026-04-12T12:00:00.000Z",
   });
 }
@@ -305,6 +343,7 @@ describe("billing", () => {
       await seedBillingAccount(ctx, {
         businessId,
         currentPlan: "pro",
+        polarCustomerId: "cus_polar_retry",
       });
     });
 
@@ -651,5 +690,115 @@ describe("billing", () => {
       quantity: 4,
       recordedAt: "2026-05-01T00:01:00.000Z",
     });
+  });
+
+  it("schedules a retry when Polar usage ingestion fails transiently", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    polarEventsIngestMock.mockRejectedValueOnce(new Error("temporary polar outage"));
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-polar-retry",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_polar_retry",
+      });
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 61,
+      recordedAt: "2026-04-12T16:00:00.000Z",
+    });
+    const state = await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      const usageEvent = await ctx.db.get(usageResult.usageEventId);
+      return { account, usageEvent };
+    });
+
+    expect(state.account?.polarCustomerId).toBe("cus_polar_retry");
+    expect(state.usageEvent).toMatchObject({
+      syncStatus: "pending",
+      planAtRecordTime: "pro",
+      quantity: 61,
+    });
+    const payload = await t.query(internal.billing.getUsageSyncPayload, {
+      usageEventId: usageResult.usageEventId,
+    });
+
+    expect(payload).not.toBeNull();
+
+    const syncResult = await t.action(internal.billing.syncUsageEventToPolar, {
+      usageEventId: usageResult.usageEventId,
+    });
+
+    expect(syncResult).toMatchObject({
+      synced: false,
+      scheduledRetry: true,
+      error: "temporary polar outage",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const usageEvent = await ctx.db.get(usageResult.usageEventId);
+
+      expect(usageEvent).toMatchObject({
+        syncStatus: "failed",
+        syncError: "temporary polar outage",
+      });
+    });
+  });
+
+  it("requires admin access for billing checkout and portal actions", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-viewer",
+      deploymentMode: "cloud",
+      role: "viewer",
+    });
+
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
+    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.SITE_URL = "https://example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_polar_viewer",
+      });
+    });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+
+    expect(status.hasCheckoutAccess).toBe(false);
+    expect(status.hasCustomerPortalAccess).toBe(false);
+    expect(status.availableCheckoutPlans).toEqual([]);
+    expect(status.canPurchaseAiSmsAddon).toBe(false);
+
+    await expect(
+      authed.action(api.billing.startCheckout, {
+        businessId,
+        target: "pro",
+      }),
+    ).rejects.toThrow("Billing management requires admin access.");
+
+    await expect(
+      authed.action(api.billing.openPortal, {
+        businessId,
+      }),
+    ).rejects.toThrow("Billing management requires admin access.");
   });
 });

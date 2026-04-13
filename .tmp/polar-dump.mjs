@@ -7,6 +7,10 @@ function uniq(values) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
+function summarizePresence(hasValue) {
+  return hasValue ? "[present]" : "";
+}
+
 async function main() {
   const context = await chromium.launchPersistentContext(USER_DATA_DIR, {
     headless: false,
@@ -49,10 +53,9 @@ async function main() {
           type: node.getAttribute("type"),
           name: node.getAttribute("name"),
           placeholder: node.getAttribute("placeholder"),
-          value: node.value,
+          hasValue: node.value.length > 0,
           ariaLabel: node.getAttribute("aria-label"),
         })),
-        bodyPreview: document.body.innerText.slice(0, 4000),
       };
     });
 
@@ -63,6 +66,10 @@ async function main() {
       links: data.links.filter((link) => link.text || link.href).slice(0, 50),
       labels: uniq(data.labels),
       selects: data.selects,
+      inputs: data.inputs.map((input) => ({
+        ...input,
+        value: summarizePresence(input.hasValue),
+      })),
     }, null, 2));
   } finally {
     await context.close();
