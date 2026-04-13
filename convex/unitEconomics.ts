@@ -432,15 +432,19 @@ async function emitMonthRollupTelemetry(
 async function upsertCostEvent(
   ctx: MutationCtx,
   input: CostEventInput,
-): Promise<void> {
+): Promise<{
+  monthKey: string;
+  previousMonthKey?: string;
+}> {
   const existing = await ctx.db
     .query("unit_economics_events")
     .withIndex("by_event_key", (q) => q.eq("eventKey", input.eventKey))
     .unique();
+  const monthKey = toMonthKey(input.occurredAt);
 
   const document = {
     businessId: input.businessId,
-    monthKey: toMonthKey(input.occurredAt),
+    monthKey,
     occurredAt: input.occurredAt,
     eventKey: input.eventKey,
     eventKind: input.eventKind,
@@ -459,8 +463,43 @@ async function upsertCostEvent(
 
   if (existing) {
     await ctx.db.patch(existing._id, document);
+    return {
+      monthKey,
+      ...(existing.monthKey !== monthKey
+        ? { previousMonthKey: existing.monthKey }
+        : {}),
+    };
   } else {
     await ctx.db.insert("unit_economics_events", document);
+    return { monthKey };
+  }
+}
+
+async function recomputeAffectedMonths(
+  ctx: MutationCtx,
+  args: {
+    businessId: Id<"businesses">;
+    monthKey: string;
+    previousMonthKey?: string;
+  },
+): Promise<void> {
+  const monthKeys = [
+    ...(args.previousMonthKey && args.previousMonthKey !== args.monthKey
+      ? [args.previousMonthKey]
+      : []),
+    args.monthKey,
+  ];
+
+  for (const monthKey of monthKeys) {
+    const rollup = await recomputeMonthRollup(ctx, {
+      businessId: args.businessId,
+      monthKey,
+    });
+    await emitMonthRollupTelemetry(ctx, {
+      businessId: args.businessId,
+      monthKey,
+      rollup,
+    });
   }
 }
 
@@ -793,7 +832,7 @@ export const recordVoiceProviderCost = internalMutation({
     durationSeconds: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await upsertCostEvent(ctx, {
+    const eventWrite = await upsertCostEvent(ctx, {
       businessId: args.businessId,
       occurredAt: args.occurredAt,
       eventKey: buildVoiceProviderEventKey(args.callId),
@@ -810,15 +849,12 @@ export const recordVoiceProviderCost = internalMutation({
           }
         : {}),
     });
-    const monthKey = toMonthKey(args.occurredAt);
-    const rollup = await recomputeMonthRollup(ctx, {
+    await recomputeAffectedMonths(ctx, {
       businessId: args.businessId,
-      monthKey,
-    });
-    await emitMonthRollupTelemetry(ctx, {
-      businessId: args.businessId,
-      monthKey,
-      rollup,
+      monthKey: eventWrite.monthKey,
+      ...(eventWrite.previousMonthKey
+        ? { previousMonthKey: eventWrite.previousMonthKey }
+        : {}),
     });
     return null;
   },
@@ -834,7 +870,7 @@ export const recordSmsProviderCost = internalMutation({
     numSegments: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await upsertCostEvent(ctx, {
+    const eventWrite = await upsertCostEvent(ctx, {
       businessId: args.businessId,
       occurredAt: args.occurredAt,
       eventKey: buildSmsProviderEventKey(args.messageId),
@@ -851,15 +887,12 @@ export const recordSmsProviderCost = internalMutation({
           }
         : {}),
     });
-    const monthKey = toMonthKey(args.occurredAt);
-    const rollup = await recomputeMonthRollup(ctx, {
+    await recomputeAffectedMonths(ctx, {
       businessId: args.businessId,
-      monthKey,
-    });
-    await emitMonthRollupTelemetry(ctx, {
-      businessId: args.businessId,
-      monthKey,
-      rollup,
+      monthKey: eventWrite.monthKey,
+      ...(eventWrite.previousMonthKey
+        ? { previousMonthKey: eventWrite.previousMonthKey }
+        : {}),
     });
     return null;
   },
@@ -874,7 +907,7 @@ export const recordNotificationProviderCost = internalMutation({
     numSegments: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await upsertCostEvent(ctx, {
+    const eventWrite = await upsertCostEvent(ctx, {
       businessId: args.businessId,
       occurredAt: args.occurredAt,
       eventKey: buildNotificationProviderEventKey(args.notificationId),
@@ -890,15 +923,12 @@ export const recordNotificationProviderCost = internalMutation({
           }
         : {}),
     });
-    const monthKey = toMonthKey(args.occurredAt);
-    const rollup = await recomputeMonthRollup(ctx, {
+    await recomputeAffectedMonths(ctx, {
       businessId: args.businessId,
-      monthKey,
-    });
-    await emitMonthRollupTelemetry(ctx, {
-      businessId: args.businessId,
-      monthKey,
-      rollup,
+      monthKey: eventWrite.monthKey,
+      ...(eventWrite.previousMonthKey
+        ? { previousMonthKey: eventWrite.previousMonthKey }
+        : {}),
     });
     return null;
   },
@@ -924,7 +954,7 @@ export const recordAiGenerationCost = internalMutation({
     messageId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
-    await upsertCostEvent(ctx, {
+    const eventWrite = await upsertCostEvent(ctx, {
       businessId: args.businessId,
       occurredAt: args.occurredAt,
       eventKey: args.eventKey,
@@ -940,15 +970,12 @@ export const recordAiGenerationCost = internalMutation({
       ...(args.conversationId ? { conversationId: args.conversationId } : {}),
       ...(args.messageId ? { messageId: args.messageId } : {}),
     });
-    const monthKey = toMonthKey(args.occurredAt);
-    const rollup = await recomputeMonthRollup(ctx, {
+    await recomputeAffectedMonths(ctx, {
       businessId: args.businessId,
-      monthKey,
-    });
-    await emitMonthRollupTelemetry(ctx, {
-      businessId: args.businessId,
-      monthKey,
-      rollup,
+      monthKey: eventWrite.monthKey,
+      ...(eventWrite.previousMonthKey
+        ? { previousMonthKey: eventWrite.previousMonthKey }
+        : {}),
     });
     return null;
   },

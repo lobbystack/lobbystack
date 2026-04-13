@@ -9,6 +9,9 @@ import {
   buildPostHogAiGenerationProperties,
   type TelemetryProperties,
 } from "../../../packages/telemetry/src/index";
+import type { Id } from "../../_generated/dataModel";
+import type { ActionCtx, MutationCtx } from "../../_generated/server";
+import { captureAiGenerationBestEffort as enqueueAiGenerationBestEffort } from "../../telemetry/ai";
 
 export const NON_REALTIME_TEXT_PROVIDER = "google";
 export const DEFAULT_NON_REALTIME_TEXT_MODEL_ID =
@@ -22,11 +25,12 @@ type AiRequestTelemetryContext = {
   sessionId?: string;
   distinctId?: string;
   groupKey?: string;
-  businessId?: string;
-  callId?: string;
-  conversationId?: string;
-  messageId?: string;
+  businessId?: Id<"businesses">;
+  callId?: Id<"calls">;
+  conversationId?: Id<"conversations">;
+  messageId?: Id<"messages">;
   properties?: TelemetryProperties;
+  mutationRunner?: Pick<ActionCtx | MutationCtx, "runMutation">;
 };
 
 function getCaptureUrl(host: string): string {
@@ -202,6 +206,41 @@ async function captureAiGenerationBestEffort(input: {
   reasoningTokens?: number;
   totalCostUsd?: number;
 }): Promise<void> {
+  if (input.context.mutationRunner && input.context.businessId) {
+    await enqueueAiGenerationBestEffort(input.context.mutationRunner, {
+      businessId: input.context.businessId,
+      traceId: input.context.traceId,
+      model: input.model,
+      provider: input.provider,
+      latencyMs: input.latencyMs,
+      isStreaming: false,
+      ...(input.context.distinctId ? { distinctId: input.context.distinctId } : {}),
+      ...(input.context.groupKey ? { groupKey: input.context.groupKey } : {}),
+      ...(input.context.callId ? { callId: input.context.callId } : {}),
+      ...(input.context.conversationId
+        ? { conversationId: input.context.conversationId }
+        : {}),
+      ...(input.context.messageId ? { messageId: input.context.messageId } : {}),
+      ...(input.context.sessionId ? { sessionId: input.context.sessionId } : {}),
+      ...(input.isError !== undefined ? { isError: input.isError } : {}),
+      ...(input.error ? { error: input.error } : {}),
+      ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
+      ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+      ...(input.totalTokens !== undefined ? { totalTokens: input.totalTokens } : {}),
+      ...(input.cachedInputTokens !== undefined
+        ? { cachedInputTokens: input.cachedInputTokens }
+        : {}),
+      ...(input.reasoningTokens !== undefined
+        ? { reasoningTokens: input.reasoningTokens }
+        : {}),
+      ...(input.totalCostUsd !== undefined
+        ? { totalCostUsd: input.totalCostUsd }
+        : {}),
+      ...(input.context.properties ? { properties: input.context.properties } : {}),
+    });
+    return;
+  }
+
   const posthogKey = process.env.POSTHOG_KEY;
   const posthogHost = process.env.POSTHOG_HOST;
   if (!posthogKey || !posthogHost) {

@@ -465,6 +465,65 @@ describe("unit economics", () => {
     expect(summary.rollup?.voiceMinutes).toBe(2);
   });
 
+  it("recomputes both months when provider pricing moves across a month boundary", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-month-shift");
+
+    const { conversationId, messageId } = await t.run(async (ctx) => {
+      const { conversationId } = await seedConversation(ctx, businessId);
+      const messageId = await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Month shift correction.",
+        status: "sent",
+        senderRole: "business_ai",
+        aiGenerated: true,
+        providerCostUsd: 0.02,
+        providerNumSegments: 1,
+        providerUpdatedAt: "2026-03-31T23:59:00.000Z",
+      });
+
+      return { conversationId, messageId };
+    });
+
+    await t.mutation(internal.unitEconomics.recordSmsProviderCost, {
+      businessId,
+      messageId,
+      conversationId,
+      occurredAt: "2026-03-31T23:59:00.000Z",
+      costUsd: 0.02,
+      numSegments: 1,
+    });
+
+    await t.mutation(internal.unitEconomics.recordSmsProviderCost, {
+      businessId,
+      messageId,
+      conversationId,
+      occurredAt: "2026-04-01T00:02:00.000Z",
+      costUsd: 0.02,
+      numSegments: 1,
+    });
+
+    const marchSummary = await authed.query(api.unitEconomics.getSummary, {
+      businessId,
+      monthKey: "2026-03",
+    });
+    const aprilSummary = await authed.query(api.unitEconomics.getSummary, {
+      businessId,
+      monthKey: "2026-04",
+    });
+
+    expect(marchSummary.rollup).not.toBeNull();
+    expect(marchSummary.rollup?.providerCostUsd).toBe(0);
+    expect(marchSummary.rollup?.outboundSmsCount).toBe(0);
+
+    expect(aprilSummary.rollup).not.toBeNull();
+    expect(aprilSummary.rollup?.providerCostUsd).toBe(0.02);
+    expect(aprilSummary.rollup?.outboundSmsCount).toBe(1);
+  });
+
   it("processes large refreshes across multiple mutation batches", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "unit-economics-batches");

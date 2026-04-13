@@ -528,7 +528,8 @@ async function generatePreviewAnswer(
       sessionId: threadId,
       distinctId,
       groupKey,
-      businessId: String(args.businessId),
+      businessId: args.businessId,
+      mutationRunner: ctx,
       properties: {
         channel: "dashboard",
         operation: "knowledge.preview_answer",

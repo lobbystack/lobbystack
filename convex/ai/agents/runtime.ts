@@ -3616,9 +3616,10 @@ async function generateGroundedReply(
       sessionId: threadId,
       distinctId,
       groupKey,
-      businessId: String(businessId),
-      conversationId: String(conversationId),
-      ...(messageId ? { messageId: String(messageId) } : {}),
+      businessId,
+      conversationId,
+      ...(messageId ? { messageId } : {}),
+      mutationRunner: ctx,
       properties: {
         channel: "sms",
         operation: "sms.generate_reply",
