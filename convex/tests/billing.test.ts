@@ -592,6 +592,65 @@ describe("billing", () => {
     });
   });
 
+  it("treats duplicate voice start reservations for the same call as idempotent", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-idempotent",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const firstReservation = await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+      businessId,
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:00:00.000Z",
+    });
+    const secondReservation = await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+      businessId,
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:00:05.000Z",
+    });
+
+    const usageState = await t.run(async (ctx: TestContext) => {
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(anchors.callId)}`),
+        )
+        .unique();
+      return { usageMonth, usageEvent };
+    });
+
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: false,
+    });
+    expect(secondReservation).toEqual({
+      allowed: true,
+      errorCode: null,
+      usageEventId: firstReservation.usageEventId,
+      syncNeeded: false,
+    });
+    expect(usageState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 600,
+      voiceBlocked: true,
+      lastRecordedAt: "2026-04-12T14:00:00.000Z",
+    });
+    expect(usageState.usageEvent).toMatchObject({
+      quantity: 600,
+      recordedAt: "2026-04-12T14:00:00.000Z",
+    });
+  });
+
   it("reserves hosted alert SMS usage before Twilio reports segments", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -827,6 +886,135 @@ describe("billing", () => {
     expect(outboundPolicy).toEqual({
       allowed: true,
       errorCode: null,
+    });
+  });
+
+  it("allows Pro alert SMS reservations after included segments are exhausted", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-pro-alert-reservation",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const secondNotificationId = await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        scheduledFor: "2026-04-12T16:03:00.000Z",
+        status: "pending",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+      return { ...seeded, secondNotificationId };
+    });
+
+    const firstReservation = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.notificationId,
+      estimatedSegments: 50,
+      recordedAt: "2026-04-12T16:01:00.000Z",
+    });
+    const secondReservation = await t.mutation(internal.billing.reserveAlertSmsUsage, {
+      businessId,
+      notificationId: anchors.secondNotificationId,
+      estimatedSegments: 3,
+      recordedAt: "2026-04-12T16:02:00.000Z",
+    });
+
+    const usageMonth = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+    });
+
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: true,
+    });
+    expect(secondReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: true,
+    });
+    expect(usageMonth).toMatchObject({
+      alertSmsSegmentsUsed: 53,
+      alertSmsBlocked: false,
+    });
+  });
+
+  it("allows Pro outbound transfer reservations after included attempts are exhausted", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-pro-outbound-reservation",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      const seeded = await seedUsageAnchors(ctx, { businessId });
+      const secondCallId = await ctx.db.insert("calls", {
+        businessId,
+        twilioCallSid: "CA-billing-pro-outbound-2",
+        status: "in_progress",
+        startedAt: "2026-04-12T16:06:00.000Z",
+      });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+      });
+      return { ...seeded, secondCallId };
+    });
+
+    const firstReservation = await t.mutation(
+      internal.billing.reserveOutboundCallAttemptUsage,
+      {
+        businessId,
+        callId: anchors.callId,
+        recordedAt: "2026-04-12T16:03:00.000Z",
+      },
+    );
+    await t.mutation(internal.billing.recordOutboundCallAttemptUsage, {
+      businessId,
+      sourceKey: "outbound_attempt:pro-existing-bundle",
+      quantity: 19,
+      recordedAt: "2026-04-12T16:03:30.000Z",
+    });
+    const secondReservation = await t.mutation(
+      internal.billing.reserveOutboundCallAttemptUsage,
+      {
+        businessId,
+        callId: anchors.secondCallId,
+        recordedAt: "2026-04-12T16:04:00.000Z",
+      },
+    );
+
+    const usageMonth = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+    });
+
+    expect(firstReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: true,
+    });
+    expect(secondReservation).toMatchObject({
+      allowed: true,
+      errorCode: null,
+      syncNeeded: true,
+    });
+    expect(usageMonth).toMatchObject({
+      outboundCallAttemptsUsed: 21,
+      outboundCallAttemptsBlocked: false,
     });
   });
 

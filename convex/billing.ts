@@ -1685,6 +1685,22 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
     syncNeeded: v.optional(v.boolean()),
   }),
   handler: async (ctx, args): Promise<UsageReservationResult> => {
+    const sourceKey = `voice:${String(args.callId)}`;
+    const existingUsageEvent = await ctx.db
+      .query("billing_usage_events")
+      .withIndex("by_business_id_and_source_key", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceKey", sourceKey),
+      )
+      .unique();
+    if (existingUsageEvent) {
+      return {
+        allowed: true,
+        errorCode: null,
+        usageEventId: existingUsageEvent._id,
+        syncNeeded: false,
+      };
+    }
+
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
       at: args.recordedAt,
@@ -1723,7 +1739,7 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
       businessId: args.businessId,
       usageKind: "voice_seconds",
       quantity: reserveQuantity,
-      sourceKey: `voice:${String(args.callId)}`,
+      sourceKey,
       recordedAt: args.recordedAt,
     });
 
@@ -1766,6 +1782,7 @@ export const reserveAlertSmsUsage = internalMutation({
       usage: snapshot.usage,
     });
     const normalizedSegments = Math.max(1, Math.trunc(args.estimatedSegments));
+    const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
 
     if (usage.alertSmsBlocked) {
       return {
@@ -1774,6 +1791,7 @@ export const reserveAlertSmsUsage = internalMutation({
       };
     }
     if (
+      !overagesBillable &&
       usage.alertSmsSegmentsRemaining !== null &&
       normalizedSegments > usage.alertSmsSegmentsRemaining
     ) {
@@ -1828,6 +1846,7 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
     });
+    const overagesBillable = billingPlanCatalog[snapshot.plan].overagesBillable;
 
     if (usage.outboundCallAttemptsBlocked) {
       return {
@@ -1836,6 +1855,7 @@ export const reserveOutboundCallAttemptUsage = internalMutation({
       };
     }
     if (
+      !overagesBillable &&
       usage.outboundCallAttemptsRemaining !== null &&
       usage.outboundCallAttemptsRemaining < 1
     ) {
