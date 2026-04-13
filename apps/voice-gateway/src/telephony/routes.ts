@@ -9,7 +9,6 @@ import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   completeVoiceCall,
   RuntimeRequestError,
-  syncUsageEventToPolar,
   startVoiceCall,
   reconcileVoiceCallStatus,
   updateVoiceTransferState,
@@ -270,12 +269,6 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
         ? { providerDurationSeconds: normalized.durationSeconds }
         : {}),
     });
-
-    if (!result.ignored && result.usageEventId) {
-      await syncUsageEventToPolar({
-        usageEventId: result.usageEventId,
-      });
-    }
 
     if (result.ignored && result.reason === "unknown_call") {
       server.log.warn(

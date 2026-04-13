@@ -12,7 +12,6 @@ const {
   startVoiceCallMock,
   completeVoiceCallMock,
   reconcileVoiceCallStatusMock,
-  syncUsageEventToPolarMock,
   updateVoiceTransferStateMock,
 } = vi.hoisted(() => ({
   fetchSnapshotForPhoneNumberMock: vi.fn(),
@@ -32,7 +31,6 @@ const {
   startVoiceCallMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   reconcileVoiceCallStatusMock: vi.fn(),
-  syncUsageEventToPolarMock: vi.fn(),
   updateVoiceTransferStateMock: vi.fn(),
 }));
 
@@ -45,7 +43,6 @@ vi.mock("../convex/runtimeClient", () => ({
   startVoiceCall: startVoiceCallMock,
   completeVoiceCall: completeVoiceCallMock,
   reconcileVoiceCallStatus: reconcileVoiceCallStatusMock,
-  syncUsageEventToPolar: syncUsageEventToPolarMock,
   updateVoiceTransferState: updateVoiceTransferStateMock,
 }));
 
@@ -106,9 +103,6 @@ describe("voice routes", () => {
     reconcileVoiceCallStatusMock.mockResolvedValue({
       ignored: false,
       callId: "call_123",
-    });
-    syncUsageEventToPolarMock.mockResolvedValue({
-      synced: true,
     });
     updateVoiceTransferStateMock.mockResolvedValue(undefined);
   });
@@ -212,7 +206,7 @@ describe("voice routes", () => {
     await server.close();
   });
 
-  it("syncs recorded voice usage to Polar after terminal call reconciliation", async () => {
+  it("reconciles terminal call status without requiring a separate billing sync request", async () => {
     const server = createServer();
     const payload = {
       CallSid: "CA123",
@@ -222,7 +216,6 @@ describe("voice routes", () => {
     reconcileVoiceCallStatusMock.mockResolvedValueOnce({
       ignored: false,
       callId: "call_123",
-      usageEventId: "usage_event_123",
     });
 
     const response = await server.inject({
@@ -236,8 +229,10 @@ describe("voice routes", () => {
     });
 
     expect(response.statusCode).toBe(204);
-    expect(syncUsageEventToPolarMock).toHaveBeenCalledWith({
-      usageEventId: "usage_event_123",
+    expect(reconcileVoiceCallStatusMock).toHaveBeenCalledWith({
+      twilioCallSid: "CA123",
+      callStatus: "completed",
+      providerUpdatedAt: expect.any(String),
     });
 
     await server.close();

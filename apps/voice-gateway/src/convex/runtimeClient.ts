@@ -167,24 +167,13 @@ export async function reconcileVoiceCallStatus(input: {
   ignored: boolean;
   reason?: string;
   callId?: string;
-  usageEventId?: string;
 }> {
   return await postJson<{
     ignored: boolean;
     reason?: string;
     callId?: string;
-    usageEventId?: string;
   }>(
     "/voice/call/reconcile-status",
-    input,
-  );
-}
-
-export async function syncUsageEventToPolar(input: {
-  usageEventId: string;
-}): Promise<{ synced: boolean; error?: string }> {
-  return await postJson<{ synced: boolean; error?: string }>(
-    "/billing/usage/sync",
     input,
   );
 }
