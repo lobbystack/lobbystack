@@ -35,6 +35,7 @@ import {
 } from "./_generated/server";
 import { requireCurrentUser, requireMembership } from "./lib/auth";
 import {
+  isAiSmsAddonCheckoutConfigured,
   canPurchaseAiSmsAddon,
   deriveActiveAddonsFromProductIds,
   deriveCloudPlanFromProductIds,
@@ -43,6 +44,7 @@ import {
   getBillingAccount,
   getBillingKey,
   getBillingSnapshot,
+  getBillingUsageMonth,
   getBillingUsageSnapshotData,
   getConfiguredCheckoutPlans,
   getNormalizedAddons,
@@ -248,12 +250,19 @@ function buildBillingStatus(input: {
   recentTransactions: Array<BillingTransactionSummary>;
   hasCustomerPortalAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
+  aiSmsAddonCheckoutConfigured: boolean;
 }): BillingStatus {
   const usage = getBillingUsageSnapshotData({
     plan: input.plan,
     periodKey: input.periodKey,
     usage: input.usage,
   });
+  const aiSmsAddonEligible = canPurchaseAiSmsAddon({
+    plan: input.plan,
+    activeAddons: input.activeAddons,
+  });
+  const canPurchaseConfiguredAiSmsAddon =
+    aiSmsAddonEligible && input.aiSmsAddonCheckoutConfigured;
 
   return {
     plan: input.plan,
@@ -271,16 +280,9 @@ function buildBillingStatus(input: {
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
     hasCustomerPortalAccess: input.hasCustomerPortalAccess,
     hasCheckoutAccess:
-      input.availableCheckoutPlans.length > 0 ||
-      canPurchaseAiSmsAddon({
-        plan: input.plan,
-        activeAddons: input.activeAddons,
-      }),
+      input.availableCheckoutPlans.length > 0 || canPurchaseConfiguredAiSmsAddon,
     availableCheckoutPlans: input.availableCheckoutPlans,
-    canPurchaseAiSmsAddon: canPurchaseAiSmsAddon({
-      plan: input.plan,
-      activeAddons: input.activeAddons,
-    }),
+    canPurchaseAiSmsAddon: canPurchaseConfiguredAiSmsAddon,
     usage,
     recentTransactions: input.recentTransactions,
   };
@@ -906,6 +908,9 @@ export const startCheckout = action({
     if (args.target === "pro" && snapshot.plan !== "free_cloud") {
       throw new Error("Only Free Cloud workspaces can start Pro checkout.");
     }
+    if (args.target === "pro" && !snapshot.availableCheckoutPlans.includes("pro")) {
+      throw new Error("Pro checkout is not configured.");
+    }
     if (args.target === "ai_sms" && !snapshot.canPurchaseAiSmsAddon) {
       throw new Error("AI SMS add-on is only available for eligible Pro workspaces.");
     }
@@ -988,20 +993,27 @@ export const getSnapshotForCheckout = internalQuery({
       v.literal("enterprise"),
     ),
     activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    availableCheckoutPlans: v.array(v.union(v.literal("pro"))),
     canPurchaseAiSmsAddon: v.boolean(),
   }),
   handler: async (ctx, args) => {
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
+    const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
+    const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
 
     return {
       plan: snapshot.plan,
       activeAddons: snapshot.activeAddons,
-      canPurchaseAiSmsAddon: canPurchaseAiSmsAddon({
-        plan: snapshot.plan,
-        activeAddons: snapshot.activeAddons,
-      }),
+      availableCheckoutPlans,
+      canPurchaseAiSmsAddon:
+        siteUrlConfigured &&
+        isAiSmsAddonCheckoutConfigured() &&
+        canPurchaseAiSmsAddon({
+          plan: snapshot.plan,
+          activeAddons: snapshot.activeAddons,
+        }),
     };
   },
 });
@@ -1026,8 +1038,8 @@ export const getStatus = query({
       .withIndex("by_business_id_and_occurred_at", (q) => q.eq("businessId", args.businessId))
       .order("desc")
       .take(10);
-    const availableCheckoutPlans =
-      process.env.SITE_URL?.trim() ? getConfiguredCheckoutPlans() : [];
+    const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
+    const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
 
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
@@ -1049,6 +1061,8 @@ export const getStatus = query({
       })),
       hasCustomerPortalAccess: Boolean(snapshot.account?.polarCustomerId),
       availableCheckoutPlans,
+      aiSmsAddonCheckoutConfigured:
+        siteUrlConfigured && isAiSmsAddonCheckoutConfigured(),
     });
   },
 });
@@ -1135,6 +1149,29 @@ export const upsertUsageEvent = internalMutation({
       .unique();
 
     const deltaQuantity = args.quantity - (existingUsageEvent?.quantity ?? 0);
+    const existingPeriodKey = existingUsageEvent?.periodKey ?? null;
+    const periodChanged =
+      existingPeriodKey !== null && existingPeriodKey !== snapshot.periodKey;
+
+    if (periodChanged && existingUsageEvent) {
+      const previousUsageMonth = await getBillingUsageMonth(ctx, {
+        businessId: args.businessId,
+        periodKey: existingUsageEvent.periodKey,
+      });
+      if (previousUsageMonth) {
+        const previousMonthPatch = buildUsageMonthPatch({
+          plan:
+            previousUsageMonth.planAtSnapshot ??
+            existingUsageEvent.planAtRecordTime ??
+            snapshot.plan,
+          usage: previousUsageMonth,
+          usageKind: args.usageKind,
+          deltaQuantity: -existingUsageEvent.quantity,
+          recordedAt: existingUsageEvent.recordedAt,
+        });
+        await ctx.db.patch(previousUsageMonth._id, previousMonthPatch);
+      }
+    }
 
     if (!snapshot.usage) {
       const monthPatch = buildUsageMonthPatch({
@@ -1150,6 +1187,15 @@ export const upsertUsageEvent = internalMutation({
         periodKey: snapshot.periodKey,
         ...monthPatch,
       });
+    } else if (periodChanged) {
+      const monthPatch = buildUsageMonthPatch({
+        plan: snapshot.plan,
+        usage: snapshot.usage,
+        usageKind: args.usageKind,
+        deltaQuantity: args.quantity,
+        recordedAt: args.recordedAt,
+      });
+      await ctx.db.patch(snapshot.usage._id, monthPatch);
     } else if (deltaQuantity !== 0) {
       const monthPatch = buildUsageMonthPatch({
         plan: snapshot.plan,
@@ -1167,6 +1213,7 @@ export const upsertUsageEvent = internalMutation({
 
     if (existingUsageEvent) {
       await ctx.db.patch(existingUsageEvent._id, {
+        periodKey: snapshot.periodKey,
         quantity: args.quantity,
         planAtRecordTime: snapshot.plan,
         activeAddonsAtRecordTime: snapshot.activeAddons,

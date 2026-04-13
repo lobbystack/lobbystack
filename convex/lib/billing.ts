@@ -104,8 +104,7 @@ export function getBillingUsageSnapshotData(args: {
   const alertSmsSegmentsUsed = args.usage?.alertSmsSegmentsUsed ?? 0;
   const outboundCallAttemptsUsed = args.usage?.outboundCallAttemptsUsed ?? 0;
   const aiSmsSegmentsUsed = args.usage?.aiSmsSegmentsUsed ?? 0;
-  const alertSmsSegmentsIncluded =
-    args.usage?.alertSmsSegmentsIncluded ?? entitlements.alertSmsSegmentsIncluded;
+  const alertSmsSegmentsIncluded = entitlements.alertSmsSegmentsIncluded;
 
   const voiceSecondsRemaining =
     entitlements.voiceSecondsIncluded === null
@@ -214,6 +213,13 @@ export async function getBillingSnapshot(
 
 export function getConfiguredCheckoutPlans(): Array<HostedCheckoutPlanSlug> {
   return process.env.POLAR_PRO_PRODUCT_ID?.trim() ? ["pro"] : [];
+}
+
+export function isAiSmsAddonCheckoutConfigured(): boolean {
+  return Boolean(
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim() &&
+      process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim(),
+  );
 }
 
 export function getProProductId(): string {

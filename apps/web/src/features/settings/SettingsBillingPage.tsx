@@ -324,7 +324,8 @@ export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
                   })}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              {billingStatus.plan === "free_cloud" ? (
+              {billingStatus.plan === "free_cloud" &&
+              billingStatus.availableCheckoutPlans.includes("pro") ? (
                 <Button
                   disabled={checkoutTargetInFlight !== null}
                   onClick={() => void handleStartCheckout("pro")}
