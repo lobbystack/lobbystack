@@ -1,6 +1,6 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { Jimp, JimpMime } from "jimp";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -104,7 +104,14 @@ const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
 const originalFetch = globalThis.fetch;
+const activeHarnesses: Array<TestConvex<typeof schema>> = [];
 let tinyPngBuffer: Buffer;
+
+function createTestHarness(): TestConvex<typeof schema> {
+  const t = convexTest(schema, convexModules);
+  activeHarnesses.push(t);
+  return t;
+}
 
 async function insertBusiness(
   ctx: TestContext,
@@ -251,9 +258,20 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
+afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  while (activeHarnesses.length > 0) {
+    const harness = activeHarnesses.pop();
+    if (harness) {
+      await harness.finishInProgressScheduledFunctions();
+    }
+  }
+});
+
 describe("Twilio SMS delivery flow", () => {
   it("creates one outbound reply and reuses it on duplicate inbound delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-reply",
       status: "queued",
@@ -352,7 +370,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores STOP messages, marks the contact opted out, and suppresses replies", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
@@ -427,7 +445,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores inbound SMS during human handoff and suppresses AI replies", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const { businessId, smsNumber } = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
@@ -489,7 +507,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("clears opt-out on START and resumes reply generation", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-start-reply",
       status: "queued",
@@ -549,7 +567,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("stores inbound MMS attachments without breaking reply delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-mms-reply",
       status: "queued",
@@ -653,7 +671,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("builds a non-empty AI prompt for media-only inbound MMS", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-mms-media-only",
       status: "queued",
@@ -698,7 +716,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("falls back to a fresh storage URL after an attachment token expires", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const subject = "twilio-expired-attachment-token-owner";
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-expired-token",
@@ -779,7 +797,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("repairs legacy external inbound media into previewable stored attachments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const subject = "twilio-legacy-media-repair-owner";
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
@@ -858,7 +876,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("replies from the same inbound business number when multiple SMS numbers are active", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-multi-number-reply",
       status: "queued",
@@ -896,7 +914,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("applies delivered callbacks and ignores stale regressions", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-delivered",
       status: "queued",
@@ -956,7 +974,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("backfills Twilio provider cost when pricing becomes available after delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-delayed-pricing",
       status: "queued",
@@ -1068,7 +1086,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("keeps retrying when Twilio returns cost before numSegments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-cost-before-segments",
       status: "queued",
@@ -1134,7 +1152,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("persists undelivered callbacks as terminal failures", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-status-undelivered",
       status: "queued",
@@ -1189,7 +1207,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("supports backend debug lookups by provider SID and counterparty phone", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-debug-1",
       status: "queued",
@@ -1244,7 +1262,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("sends appointment notifications through Twilio and reconciles delivery", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-1",
       status: "accepted",
@@ -1342,7 +1360,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("keeps a one-segment GSM reminder sendable when only one hosted segment remains", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-gsm-boundary",
       status: "accepted",
@@ -1444,7 +1462,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("blocks a hosted reminder when emoji push the UCS-2 body into a third segment", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const currentPeriodKey = new Date().toISOString().slice(0, 7);
     const serviceName = "Style AAAAAAAAAAAAAAAAA \ud83e\uddf4";
     const expectedBody = buildLocalizedAppointmentNotificationBody({
@@ -1540,7 +1558,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("localizes reminders to the contact's remembered French preference", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-fr-contact",
       status: "accepted",
@@ -1625,7 +1643,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("uses the stored French business locale for booking confirmations with mixed profile text", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-notification-fr-business",
       status: "accepted",
@@ -1717,7 +1735,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("skips the immediate booking confirmation notification for sms-booked appointments", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     const startsAt = new Date(Date.now() + 49 * 60 * 60 * 1000);
     const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
 
@@ -1802,7 +1820,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("creates one fallback booking confirmation when a conversational booking SMS send fails", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
     sendTwilioMessageMock.mockRejectedValueOnce(new Error("Twilio send failed"));
 
     const messageId = await t.run(async (ctx) => {
@@ -1901,7 +1919,7 @@ describe("Twilio SMS delivery flow", () => {
   });
 
   it("creates one fallback booking confirmation when delivery later becomes undelivered", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createTestHarness();
 
     const appointmentId = await t.run(async (ctx) => {
       const businessId = await insertBusiness(ctx, {
