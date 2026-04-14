@@ -19,7 +19,7 @@ vi.mock("react-i18next", () => ({
         "nav:items.analytics": "Analytics",
         "nav:items.agent": "Agent",
         "nav:items.settings": "Settings",
-        "agent:sections.basicSettings.title": "Basic settings",
+        "agent:sections.basicSettings.title": "AI settings",
         "agent:sections.knowledge.title": "Knowledge",
         "agent:sections.services.title": "Services",
         "agent:sections.rules.title": "Rules",
@@ -63,7 +63,7 @@ describe("AppSidebar", () => {
     const headings = screen.getAllByText(/General|Agent|Manage/).map((node) => node.textContent);
 
     expect(headings).toEqual(["General", "Agent", "Manage"]);
-    expect(screen.getByRole("link", { name: "Basic settings" }).getAttribute("href")).toBe("/agent");
+    expect(screen.getByRole("link", { name: "AI settings" }).getAttribute("href")).toBe("/agent");
     expect(screen.getByRole("link", { name: "Knowledge" }).getAttribute("href")).toBe("/agent/knowledge");
     expect(screen.getByRole("link", { name: "Services" }).getAttribute("href")).toBe("/agent/services");
     expect(screen.getByRole("link", { name: "Rules" }).getAttribute("href")).toBe("/agent/rules");

@@ -6,7 +6,7 @@
   },
   "sections": {
     "basicSettings": {
-      "title": "Paramètres de base",
+      "title": "Paramètres IA",
       "description": "Message d'accueil et paramètres de transfert de votre réceptionniste."
     },
     "knowledge": {

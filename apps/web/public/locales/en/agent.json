@@ -6,7 +6,7 @@
   },
   "sections": {
     "basicSettings": {
-      "title": "Basic settings",
+      "title": "AI settings",
       "description": "Greeting and transfer settings for your receptionist."
     },
     "knowledge": {

@@ -11,7 +11,6 @@ type PageHeaderProps = {
 
 export function PageHeader({
   title,
-  description,
   actions,
   className,
 }: PageHeaderProps) {
@@ -22,11 +21,8 @@ export function PageHeader({
         className
       )}
     >
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col">
         <h1 className="type-page-title">{title}</h1>
-        {description ? (
-          <p className="type-page-description max-w-2xl">{description}</p>
-        ) : null}
       </div>
       {actions ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
