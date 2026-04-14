@@ -149,12 +149,12 @@ export function AppSidebar({
                   url: "/agent/rules",
                   icon: AnimatedRulesIcon,
                 },
-                {
-                  title: t("settings:sections.integrations"),
-                  url: "/agent/integrations",
-                  icon: AnimatedIntegrationsIcon,
-                },
               ],
+            },
+            {
+              title: t("settings:sections.integrations"),
+              url: "/integrations",
+              icon: AnimatedIntegrationsIcon,
             },
             {
               title: t("nav:items.settings"),

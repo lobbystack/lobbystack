@@ -78,7 +78,7 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
                 <CreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link to="/agent/integrations" />}>
+              <DropdownMenuItem render={<Link to="/integrations" />}>
                 <Bell />
                 Notifications
               </DropdownMenuItem>

@@ -19,7 +19,12 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
   }
 
   const header =
-    location.pathname === "/settings/appearance"
+    location.pathname === "/integrations"
+      ? {
+          title: t("sections.integrations"),
+          description: t("layout.integrationsDescription"),
+        }
+      : location.pathname === "/settings/appearance"
       ? {
           title: t("appearance.title"),
           description: t("appearance.description"),

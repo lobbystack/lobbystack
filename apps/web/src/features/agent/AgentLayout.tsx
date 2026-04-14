@@ -13,7 +13,7 @@ type AgentLayoutProps = {
 };
 
 export function AgentLayout({ businessId }: AgentLayoutProps) {
-  const { t } = useTranslation(["agent", "settings"]);
+  const { t } = useTranslation("agent");
   const location = useLocation();
   const section = getAgentSectionFromPathname(location.pathname);
   const isBasicSettingsRoute =
@@ -48,11 +48,6 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
     header = {
       title: t("sections.rules.title"),
       description: t("sections.rules.description"),
-    };
-  } else if (section === "integrations") {
-    header = {
-      title: t("settings:sections.integrations"),
-      description: t("settings:layout.integrationsDescription"),
     };
   }
 
