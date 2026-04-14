@@ -254,7 +254,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
             <ItemActions className="w-full sm:w-auto">
               <NativeSelect
                 aria-label={t("agent:fields.defaultLocale.label")}
-                className="w-full sm:w-40"
+                className="w-full sm:w-[9.5ch]"
                 id="agent-default-language"
                 onChange={(event) => {
                   const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");

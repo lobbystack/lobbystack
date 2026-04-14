@@ -151,8 +151,8 @@
     "timeFormat": {
       "label": "Time format",
       "description": "Choose between 24-hour time or AM/PM.",
-      "twentyFourHour": "24-hour format",
-      "ampm": "AM/PM format"
+      "twentyFourHour": "24-hour",
+      "ampm": "AM/PM"
     },
     "theme": {
       "label": "Theme",

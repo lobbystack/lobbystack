@@ -68,7 +68,7 @@ export function SettingsAppearancePage({
             <ItemActions className="w-full sm:w-auto">
               <NativeSelect
                 aria-label={t("common:language.ariaLabel")}
-                className="w-full sm:w-40"
+                className="w-full sm:w-28"
                 onChange={(event) =>
                   void setLocale(event.target.value as SupportedLocale)
                 }
@@ -94,7 +94,7 @@ export function SettingsAppearancePage({
             <ItemActions className="w-full sm:w-auto">
               <NativeSelect
                 aria-label={t("appearance.timeFormat.label")}
-                className="w-full sm:w-40"
+                className="w-full sm:w-28"
                 onChange={(event) =>
                   setTimeFormatPreference(event.target.value as TimeFormatPreference)
                 }
@@ -120,7 +120,7 @@ export function SettingsAppearancePage({
             <ItemActions className="w-full sm:w-auto">
               <NativeSelect
                 aria-label={t("appearance.theme.label")}
-                className="w-full sm:w-40"
+                className="w-full sm:w-28"
                 onChange={(event) => setTheme(event.target.value as ThemeChoice)}
                 value={selectedTheme}
               >
