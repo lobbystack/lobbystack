@@ -138,6 +138,7 @@ export function AppSidebar({
             },
             {
               title: t("nav:items.settings"),
+              activeMatchPrefix: "/settings",
               url: "/settings/usage",
               icon: AnimatedSettingsIcon,
             },

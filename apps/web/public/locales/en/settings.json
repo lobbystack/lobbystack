@@ -10,7 +10,7 @@
     "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
   },
   "sections": {
-    "business": "Account",
+    "business": "Team",
     "appearance": "Preferences",
     "integrations": "Integrations",
     "billing": "Billing",

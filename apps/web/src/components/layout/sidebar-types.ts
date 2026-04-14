@@ -24,6 +24,7 @@ type BaseNavItem = {
 };
 
 type NavLinkItem = BaseNavItem & {
+  activeMatchPrefix?: string;
   url: string;
   items?: never;
 };

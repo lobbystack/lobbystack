@@ -241,9 +241,17 @@ function SidebarMenuCollapsedDropdown({
 }
 
 function checkIsActive(href: string, item: NavItem, mainNav = false) {
+  const pathname = href.split("?")[0];
+  const itemUrl = "url" in item ? item.url : "";
+  const activeMatchPrefix = "url" in item ? item.activeMatchPrefix : undefined;
+
   return (
-    href === ("url" in item ? item.url : "") ||
-    href.split("?")[0] === ("url" in item ? item.url : "") ||
+    href === itemUrl ||
+    pathname === itemUrl ||
+    (Boolean(activeMatchPrefix) &&
+      pathname.startsWith(activeMatchPrefix!) &&
+      (pathname === activeMatchPrefix ||
+        pathname.startsWith(`${activeMatchPrefix}/`))) ||
     ("items" in item && item.items.some((subItem) => subItem.url === href)) ||
     (mainNav &&
       "items" in item &&

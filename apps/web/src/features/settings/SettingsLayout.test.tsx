@@ -15,7 +15,7 @@ vi.mock("react-i18next", () => ({
         "header.title": "Settings",
         "sections.usage": "Usage",
         "sections.billing": "Billing",
-        "sections.business": "Account",
+        "sections.business": "Team",
         "sections.appearance": "Preferences",
         "sections.integrations": "Integrations",
       };
@@ -37,7 +37,7 @@ function renderSettingsShell(initialEntry: string) {
           <Route element={<Navigate replace to="/settings/usage" />} index />
           <Route element={<div>Usage content</div>} path="usage" />
           <Route element={<div>Billing content</div>} path="billing" />
-          <Route element={<div>Account content</div>} path="account" />
+          <Route element={<div>Team content</div>} path="account" />
           <Route element={<div>Appearance content</div>} path="appearance" />
           <Route element={<div>Integrations content</div>} path="integrations" />
         </Route>
@@ -83,7 +83,7 @@ describe("SettingsLayout", () => {
     expect(screen.getByRole("link", { name: "Billing" }).getAttribute("href")).toBe(
       "/settings/billing",
     );
-    expect(screen.getByRole("link", { name: "Account" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe(
       "/settings/account",
     );
     expect(
@@ -97,7 +97,7 @@ describe("SettingsLayout", () => {
       "/settings/integrations",
     );
     expect(
-      screen.getByRole("link", { name: "Account" }).getAttribute("aria-current"),
+      screen.getByRole("link", { name: "Team" }).getAttribute("aria-current"),
     ).toBe(
       "page",
     );
