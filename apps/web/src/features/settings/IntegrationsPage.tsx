@@ -481,8 +481,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="font-semibold">{t("integrations.cards.google.title")}</h2>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2>
+              <p className="type-body-muted line-clamp-2">
                 {t("integrations.cards.google.description")}
               </p>
             </div>
@@ -510,8 +510,8 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               </Button>
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="font-semibold">{t("integrations.cards.microsoft.title")}</h2>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <h2 className="type-section-title text-lg">{t("integrations.cards.microsoft.title")}</h2>
+              <p className="type-body-muted line-clamp-2">
                 {t("integrations.cards.microsoft.description")}
               </p>
             </div>
@@ -536,10 +536,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
             <section className="flex flex-col gap-4 rounded-xl border p-4">
               <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold">
+                <h3 className="type-item-title">
                   {t("integrations.google.connectionSectionTitle")}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="type-body-muted">
                   {t("integrations.google.connectionSectionDescription")}
                 </p>
               </div>
@@ -560,26 +560,26 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               {selectedConnection ? (
                 <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="type-meta">
                       {t("integrations.google.connectedAccount")}
                     </p>
-                    <p className="text-sm">
+                    <p className="type-body">
                       {selectedConnection.externalAccountEmail ??
                         t("integrations.google.connectedAccountUnavailable")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="type-meta">
                       {t("integrations.google.lastSync")}
                     </p>
-                    <p className="text-sm">
+                    <p className="type-body">
                       {formatTimestamp(selectedConnection.lastSyncedAt, i18n.language) ??
                         t("integrations.google.neverSynced")}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed px-4 py-4 text-sm text-muted-foreground">
+                <div className="type-body-muted rounded-xl border border-dashed px-4 py-4">
                   {t("integrations.google.notConnectedDescription")}
                 </div>
               )}
@@ -589,10 +589,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               <>
                 <section className="flex flex-col gap-4 rounded-xl border p-4">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-semibold">
+                    <h3 className="type-item-title">
                       {t("integrations.google.calendarSectionTitle")}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="type-body-muted">
                       {t("integrations.google.calendarSectionDescription")}
                     </p>
                   </div>
@@ -695,20 +695,20 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
                   <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
+                      <p className="type-meta">
                         {t("integrations.google.selectedCalendar")}
                       </p>
-                      <p className="text-sm">
+                      <p className="type-body">
                         {selectedConnection.selectedCalendarSummary ??
                           selectedConnection.selectedCalendarId ??
                           t("integrations.google.noCalendarSelected")}
                       </p>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
+                      <p className="type-meta">
                         {t("integrations.google.lastSyncState")}
                       </p>
-                      <p className="text-sm">
+                      <p className="type-body">
                         {selectedConnection.lastSyncError ??
                           t("integrations.google.lastSyncOk")}
                       </p>
@@ -719,7 +719,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
             ) : null}
 
             <Separator />
-            <p className="text-xs text-muted-foreground">
+            <p className="type-meta">
               {t("integrations.providers.microsoft")}
             </p>
           </div>

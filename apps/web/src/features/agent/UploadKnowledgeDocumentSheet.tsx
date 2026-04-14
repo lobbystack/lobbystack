@@ -279,7 +279,7 @@ export function UploadKnowledgeDocumentSheet({
                     </span>
                   </p>
                   {resolvedFileName ? (
-                    <p className="text-sm font-medium text-foreground">{resolvedFileName}</p>
+                    <p className="type-item-title">{resolvedFileName}</p>
                   ) : null}
                 </div>
               </label>

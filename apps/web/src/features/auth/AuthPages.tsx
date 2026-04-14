@@ -336,18 +336,16 @@ export function ConfirmEmailChangePage() {
     <AuthShell>
       <div className="flex flex-col gap-6 text-center">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {t("confirmEmailChange.title")}
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <h1 className="type-page-title">{t("confirmEmailChange.title")}</h1>
+          <p className="type-page-description">
             {hasConfirmationParams
               ? t("confirmEmailChange.subtitle", { email })
               : t("confirmEmailChange.invalidLink")}
           </p>
         </div>
 
-        {statusMessage ? <p className="text-sm text-muted-foreground">{statusMessage}</p> : null}
-        {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+        {statusMessage ? <p className="type-body-muted">{statusMessage}</p> : null}
+        {errorMessage ? <p className="type-body text-destructive">{errorMessage}</p> : null}
 
         <form className="flex flex-col" onSubmit={handleSubmit}>
           <Button
@@ -362,7 +360,7 @@ export function ConfirmEmailChangePage() {
           </Button>
         </form>
 
-        <Link className="text-sm text-muted-foreground hover:text-foreground" to={returnHref}>
+        <Link className="type-body-muted hover:text-foreground" to={returnHref}>
           {returnLabel}
         </Link>
       </div>

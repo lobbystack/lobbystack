@@ -294,7 +294,7 @@ function CallEventTimeline({
               </div>
               <span
                 className={cn(
-                  "text-xs font-medium whitespace-nowrap",
+                  "type-meta whitespace-nowrap",
                   event.reached
                     ? event.failed
                       ? "text-destructive"
@@ -384,7 +384,7 @@ function TranscriptTab({
             >
               <p
                 className={cn(
-                  "mb-1 text-xs font-medium",
+                  "type-meta mb-1",
                   isCaller
                     ? "text-muted-foreground"
                     : "text-primary/80 dark:text-primary/60",
@@ -495,8 +495,8 @@ function DetailsTab({
         <CardContent>
           {call.followUpTask ? (
             <div className="flex flex-col gap-3">
-              <p className="text-sm font-medium">{call.followUpTask.title}</p>
-              <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+              <p className="type-item-title">{call.followUpTask.title}</p>
+              <p className="type-body-muted whitespace-pre-line">
                 {call.followUpTask.body}
               </p>
               <div className="flex items-center gap-2 pt-1">
@@ -513,7 +513,7 @@ function DetailsTab({
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="type-body-muted">
               {t("detail.details.noFollowUp")}
             </p>
           )}
@@ -625,8 +625,8 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
         </Link>
         <div className="flex flex-col items-center gap-2 py-16 text-center">
           <Phone className="size-8 text-muted-foreground/40" />
-          <p className="font-medium">{t("detail.notFound")}</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="type-empty-title">{t("detail.notFound")}</p>
+          <p className="type-empty-description">
             {t("detail.notFoundDescription")}
           </p>
         </div>
@@ -641,7 +641,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
   ) : call.contactPhone ? (
     <span className="flex items-baseline gap-2">
       {formatPhoneNumberDisplay(call.contactPhone, locale)}
-      <span className="text-base font-medium text-muted-foreground">
+      <span className="type-item-title text-muted-foreground">
         ({t("detail.unknownCaller")})
       </span>
     </span>
@@ -671,7 +671,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col justify-center">
-          <h1 className="text-2xl font-bold tracking-tight">{callerName}</h1>
+          <h1 className="type-page-title text-2xl">{callerName}</h1>
         </div>
 
         <Badge
@@ -792,11 +792,9 @@ function MetadataField({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs font-semibold tracking-wider text-muted-foreground">
-        {label}
-      </span>
+      <span className="type-meta">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="truncate text-sm">{value}</span>
+        <span className="type-body truncate">{value}</span>
         {copyable && (
           <button
             className={cn(

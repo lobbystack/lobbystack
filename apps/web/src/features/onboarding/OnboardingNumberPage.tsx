@@ -315,10 +315,8 @@ export function OnboardingNumberPage({
               <div className="flex size-20 items-center justify-center rounded-full bg-violet-500/15 text-violet-300 shadow-inner shadow-violet-950/40">
                 <Sparkles className="size-9" />
               </div>
-              <CardTitle className="text-4xl font-semibold tracking-tight">
-                {t("number.title")}
-              </CardTitle>
-              <CardDescription className="max-w-md text-base leading-7 text-zinc-300">
+              <CardTitle className="text-4xl font-semibold tracking-tight">{t("number.title")}</CardTitle>
+              <CardDescription className="type-section-description max-w-md text-zinc-300">
                 {t("number.description")}
               </CardDescription>
             </CardHeader>
@@ -392,10 +390,10 @@ export function OnboardingNumberPage({
               {!isLoadingSuggestion && !selectedNumber && !loadError ? (
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-6 text-center">
-                    <div className="text-lg font-medium text-white">
+                    <div className="type-empty-title text-white">
                       {t("number.noSuggestionTitle")}
                     </div>
-                    <div className="mt-2 text-sm leading-6 text-zinc-400">
+                    <div className="type-empty-description mt-2 text-zinc-400">
                       {t("number.noSuggestionDescription")}
                     </div>
                   </div>

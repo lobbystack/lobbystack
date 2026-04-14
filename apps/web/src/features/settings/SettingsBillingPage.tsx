@@ -101,13 +101,9 @@ function BillingSection({
     <section className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            {title}
-          </h2>
+          <h2 className="type-section-title">{title}</h2>
           {description && (
-            <p className="text-[15px] leading-7 text-muted-foreground">
-              {description}
-            </p>
+            <p className="type-section-description">{description}</p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}
@@ -288,7 +284,7 @@ function PlanBreakdown({
     <BorderedItem className="flex flex-col gap-4">
       {/* Plan line */}
       <div className="flex flex-col gap-3">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="type-meta">
           {t("billing.currentPlan.planLabel")}
         </span>
         <div className="flex items-center justify-between">
@@ -310,7 +306,7 @@ function PlanBreakdown({
 
       {/* Included resources */}
       <div className="flex flex-col gap-3">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="type-meta">
           {t("billing.usage.included")}
         </span>
 
@@ -351,7 +347,7 @@ function PlanBreakdown({
       {/* Add-ons in breakdown */}
       {status.aiSmsEnabled && (
         <div className="flex flex-col gap-3">
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="type-meta">
             Add-ons
           </span>
           <PlanLineItem

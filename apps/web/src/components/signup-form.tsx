@@ -50,7 +50,7 @@ export function SignupForm({
               <Rows3 className="size-5" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-xl font-semibold tracking-tight">{t("signup.title")}</h1>
+              <h1 className="type-section-title">{t("signup.title")}</h1>
               <FieldDescription>{t("signup.subtitle")}</FieldDescription>
             </div>
           </div>

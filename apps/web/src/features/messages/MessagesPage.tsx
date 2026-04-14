@@ -898,7 +898,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                                 {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
                               </div>
                               {isFailedOutboundMessage ? (
-                                <p className="pt-2 text-xs font-medium text-destructive">
+                                <p className="type-meta pt-2 text-destructive">
                                   {t("page.deliveryFailed")}
                                 </p>
                               ) : null}
@@ -927,7 +927,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                             type="button"
                           >
                             <span className="h-px w-64 bg-border/60 md:w-96" />
-                            <span className="inline-flex items-center justify-center gap-1.5 text-sm font-medium">
+                            <span className="type-item-title inline-flex items-center justify-center gap-1.5">
                               {t("outcome.label")}
                               <ChevronRight
                                 className={cn(
@@ -976,8 +976,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">{attachment.fileName}</div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="type-item-title truncate">
+                            {attachment.fileName}
+                          </div>
+                          <div className="type-meta">
                             {formatBytes(attachment.byteLength)}
                           </div>
                         </div>

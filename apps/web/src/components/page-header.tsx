@@ -23,13 +23,9 @@ export function PageHeader({
       )}
     >
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+        <h1 className="type-page-title">{title}</h1>
         {description ? (
-          <p className="max-w-2xl text-[15px] leading-7 text-muted-foreground">
-            {description}
-          </p>
+          <p className="type-page-description max-w-2xl">{description}</p>
         ) : null}
       </div>
       {actions ? (

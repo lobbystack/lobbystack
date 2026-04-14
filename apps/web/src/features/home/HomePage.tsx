@@ -309,16 +309,14 @@ export function HomePage({ businessId }: HomePageProps) {
             return (
               <Card key={card.key}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-semibold tracking-tight">
-                    {t(`home.metrics.${card.key}.title`)}
-                  </CardTitle>
+                  <CardTitle>{t(`home.metrics.${card.key}.title`)}</CardTitle>
                   {card.icon}
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-extrabold leading-none tracking-tight">
+                  <div className="type-metric">
                     {card.value.toLocaleString(i18n.language)}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="type-meta">
                     {metric
                       ? formatDelta(metric.deltaPercent)
                       : t("home.metrics.loading")}
@@ -336,7 +334,7 @@ export function HomePage({ businessId }: HomePageProps) {
             className="flex flex-col gap-3 xl:h-full"
           >
             <div className="flex items-center justify-between gap-4 px-1">
-              <h2 className="text-lg font-semibold">{t("home.actionRequired.title")}</h2>
+              <h2 className="type-section-title">{t("home.actionRequired.title")}</h2>
               <Badge variant="outline">
                 {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
               </Badge>
@@ -437,8 +435,8 @@ export function HomePage({ businessId }: HomePageProps) {
               </Card>
             ) : (
               <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
-                <p className="text-sm font-medium">{t("home.actionRequired.emptyTitle")}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p>
+                <p className="type-empty-description mt-2">
                   {t("home.actionRequired.emptyDescription")}
                 </p>
               </div>
@@ -451,7 +449,7 @@ export function HomePage({ businessId }: HomePageProps) {
             className="flex flex-col gap-3 xl:h-full"
           >
             <div className="flex items-center justify-between gap-4 px-1">
-              <h2 className="text-lg font-semibold">{t("home.upcoming.title")}</h2>
+              <h2 className="type-section-title">{t("home.upcoming.title")}</h2>
               <Badge variant="outline">
                 {(summary?.upcoming.length ?? 0).toLocaleString(i18n.language)}
               </Badge>
@@ -469,7 +467,7 @@ export function HomePage({ businessId }: HomePageProps) {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold">
+                            <p className="type-item-title">
                               {appointment.contactName ?? t("home.upcoming.unknownContact")}
                             </p>
                             <Badge variant="outline">
@@ -479,12 +477,12 @@ export function HomePage({ businessId }: HomePageProps) {
                               {getAppointmentSourceLabel(appointment.sourceChannel, t)}
                             </Badge>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
+                          <p className="type-body-muted mt-1">
                             {appointment.serviceName ?? t("home.upcoming.unknownService")}
                           </p>
                         </div>
                         <div className="shrink-0 text-left sm:text-right">
-                          <p className="text-sm font-semibold">
+                          <p className="type-item-title">
                             {formatDateTime(appointment.startsAt, i18n.language, {
                               weekday: "short",
                               month: "short",
@@ -492,7 +490,7 @@ export function HomePage({ businessId }: HomePageProps) {
                               timeZone: appointment.timezone,
                             })}
                           </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
+                          <p className="type-body-muted mt-1">
                             {formatDateTime(appointment.startsAt, i18n.language, {
                               hour: "numeric",
                               minute: "2-digit",
@@ -508,8 +506,8 @@ export function HomePage({ businessId }: HomePageProps) {
               </Card>
             ) : (
               <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
-                <p className="text-sm font-medium">{t("home.upcoming.emptyTitle")}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p>
+                <p className="type-empty-description mt-2">
                   {t("home.upcoming.emptyDescription")}
                 </p>
               </div>
@@ -574,10 +572,10 @@ export function HomePage({ businessId }: HomePageProps) {
                     </Avatar>
                     <div className="flex flex-1 flex-wrap items-center justify-between">
                       <div className="flex flex-col gap-1">
-                        <p className="text-sm leading-none font-medium">
+                        <p className="type-item-title leading-none">
                           {call.contactName ?? t("home.recentCalls.unknownCaller")}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="type-body-muted">
                           {(call.contactPhone
                             ? formatPhoneNumberDisplay(call.contactPhone, i18n.language)
                             : null) ??
@@ -587,7 +585,7 @@ export function HomePage({ businessId }: HomePageProps) {
                             })}
                         </p>
                       </div>
-                      <div className="font-medium">
+                      <div className="type-item-title">
                         {call.durationSeconds
                           ? t("home.recentCalls.durationValue", {
                               value: call.durationSeconds,
