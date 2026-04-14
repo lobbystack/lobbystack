@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
+import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { captureAnalyticsEvent } from "@/lib/analytics";
@@ -347,8 +349,17 @@ function TranscriptTab({
 
   if (transcript === undefined) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      <div className="flex flex-col gap-3 py-4">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            className={`max-w-[80%] rounded-xl px-4 py-3 ${index % 2 === 0 ? "self-start rounded-bl-sm bg-muted" : "self-end rounded-br-sm bg-primary/10 dark:bg-primary/20"}`}
+            key={index}
+          >
+            <Skeleton className="mb-2 h-3 w-20" />
+            <Skeleton className="h-4 w-52" />
+            <Skeleton className="mt-2 h-4 w-36" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -603,16 +614,10 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     return <BusinessSetupCard />;
   }
 
-  // Loading state
   if (call === undefined) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
-  // Not found
   if (call === null) {
     return (
       <div className="flex flex-1 flex-col gap-6">

@@ -114,7 +114,7 @@ function BillingSection({
   action,
 }: {
   title: string;
-  description?: string | undefined;
+  description?: React.ReactNode;
   children: React.ReactNode;
   action?: React.ReactNode;
 }) {
@@ -667,25 +667,172 @@ function TransactionsSection({
 }
 
 // ---------------------------------------------------------------------------
-// Loading skeleton
+// Loading skeletons
 // ---------------------------------------------------------------------------
 
-function BillingPageSkeleton() {
+function PlanSectionSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
+  return (
+    <BillingSection title={t("billing.currentPlan.title")}>
+      <BorderedItem>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Skeleton className="h-9 w-28 rounded-md" />
+          <Skeleton className="h-9 w-36 rounded-md" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function UsageSectionSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
+  return (
+    <BillingSection
+      title={t("billing.usage.title")}
+      description={<Skeleton className="h-4 w-44" />}
+    >
+      <BorderedItem className="flex flex-col gap-5">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            <Skeleton className="h-1.5 w-full rounded-full" />
+          </div>
+        ))}
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function AddonsSectionSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
+  return (
+    <BillingSection
+      title={t("billing.addon.title")}
+      description={t("billing.addon.aiSmsDescription")}
+    >
+      <BorderedItem>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-72" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function SpendingCapSectionSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
+  return (
+    <BillingSection
+      title={t("billing.spendingCap.title")}
+      description={t("billing.spendingCap.description")}
+    >
+      <BorderedItem className="opacity-60">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-10 max-w-xs flex-1 rounded-md" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function TransactionsSectionSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
+  return (
+    <BillingSection
+      title={t("billing.transactions.title")}
+      description={t("billing.transactions.description")}
+    >
+      <div className="overflow-hidden rounded-xl border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.date")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.description")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.amount")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.status")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.invoice")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-40" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </BillingSection>
+  );
+}
+
+function BillingPageSkeleton({
+  t,
+}: {
+  t: ReturnType<typeof useTranslation<"settings">>["t"];
+}) {
   return (
     <div className="flex w-full flex-col gap-10">
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-      </div>
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-40 w-full rounded-xl" />
-      </div>
-      <div className="flex flex-col gap-3">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-16 w-full rounded-xl" />
-      </div>
+      <PlanSectionSkeleton t={t} />
+      <UsageSectionSkeleton t={t} />
+      <AddonsSectionSkeleton t={t} />
+      <SpendingCapSectionSkeleton t={t} />
+      <TransactionsSectionSkeleton t={t} />
     </div>
   );
 }
@@ -701,7 +848,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   });
 
   if (!status) {
-    return <BillingPageSkeleton />;
+    return <BillingPageSkeleton t={t} />;
   }
 
   if (status.plan === "self_host") {

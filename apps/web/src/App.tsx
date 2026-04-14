@@ -7,6 +7,11 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { LoadingScreen } from "@/components/loading-screen";
+import {
+  OnboardingNumberRouteSkeleton,
+  OnboardingVerifyRouteSkeleton,
+  WorkspaceRouteSkeleton,
+} from "@/components/app-route-skeletons";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
@@ -101,6 +106,7 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
+  const isBootstrapLoading = businesses === undefined || currentUser === undefined;
   const previousBusinessIdRef = useRef<string | null>(null);
 
   async function handleSignOut(): Promise<void> {
@@ -109,6 +115,10 @@ function WorkspaceShell() {
   }
 
   useEffect(() => {
+    if (isBootstrapLoading) {
+      return;
+    }
+
     if (!currentUser?._id) {
       return;
     }
@@ -118,17 +128,25 @@ function WorkspaceShell() {
       ...(businessId ? { businessId: String(businessId) } : {}),
       deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
     });
-  }, [businessId, currentUser?._id]);
+  }, [businessId, currentUser?._id, isBootstrapLoading]);
 
   useEffect(() => {
+    if (isBootstrapLoading) {
+      return;
+    }
+
     if (!businessId) {
       return;
     }
 
     trackPageView(location.pathname, businessId ? String(businessId) : undefined);
-  }, [businessId, location.pathname]);
+  }, [businessId, isBootstrapLoading, location.pathname]);
 
   useEffect(() => {
+    if (isBootstrapLoading) {
+      return;
+    }
+
     const nextBusinessId = businessId ? String(businessId) : null;
     const previousBusinessId = previousBusinessIdRef.current;
     previousBusinessIdRef.current = nextBusinessId;
@@ -141,13 +159,10 @@ function WorkspaceShell() {
       businessId: nextBusinessId,
       previousBusinessId,
     });
-  }, [businessId]);
-
-  if (businesses === undefined || currentUser === undefined) {
-    return <LoadingScreen />;
-  }
+  }, [businessId, isBootstrapLoading]);
 
   if (
+    !isBootstrapLoading &&
     activeBusiness?.onboardingStage === "phone_number" &&
     !currentUser?.phoneVerificationTime &&
     location.pathname !== "/onboarding/verify-phone"
@@ -155,11 +170,12 @@ function WorkspaceShell() {
     return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
-  if (activeBusiness?.onboardingStage === "verify_phone") {
+  if (!isBootstrapLoading && activeBusiness?.onboardingStage === "verify_phone") {
     if (location.pathname !== "/onboarding/verify-phone") {
       return <Navigate replace to="/onboarding/verify-phone" />;
     }
   } else if (
+    !isBootstrapLoading &&
     (activeBusiness?.onboardingStage === "phone_number" ||
       activeBusiness?.onboardingStage === "phone_number_claiming") &&
     location.pathname !== "/onboarding/number"
@@ -171,8 +187,9 @@ function WorkspaceShell() {
 
   return (
     <AuthenticatedLayout
-      businessName={activeBusiness?.name ?? "AI Receptionist"}
+      isLoading={isBootstrapLoading}
       onSignOut={() => void handleSignOut()}
+      {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
       {...(
@@ -182,134 +199,138 @@ function WorkspaceShell() {
       )}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
-        <Routes>
-          <Route element={<HomePage {...(businessId ? { businessId } : {})} />} path="/" />
-          <Route element={<CallsPage {...(businessId ? { businessId } : {})} />} path="/calls" />
-          <Route
-            element={<CallDetailPage {...(businessId ? { businessId } : {})} />}
-            path="/calls/:callId"
-          />
-          <Route
-            element={<MessagesPage {...(businessId ? { businessId } : {})} />}
-            path="/messages"
-          />
-          <Route
-            element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
-            path="/analytics"
-          />
-          <Route
-            element={<AgentLayout {...(businessId ? { businessId } : {})} />}
-            path="/agent/*"
-          >
+        {isBootstrapLoading ? (
+          <WorkspaceRouteSkeleton pathname={location.pathname} />
+        ) : (
+          <Routes>
+            <Route element={<HomePage {...(businessId ? { businessId } : {})} />} path="/" />
+            <Route element={<CallsPage {...(businessId ? { businessId } : {})} />} path="/calls" />
             <Route
-              element={
-                businessId ? (
-                  <AgentBasicSettingsPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              index
+              element={<CallDetailPage {...(businessId ? { businessId } : {})} />}
+              path="/calls/:callId"
             />
             <Route
-              element={
-                businessId ? (
-                  <AgentBasicSettingsPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              path="basic-settings"
+              element={<MessagesPage {...(businessId ? { businessId } : {})} />}
+              path="/messages"
             />
             <Route
-              element={
-                businessId ? (
-                  <AgentKnowledgePage businessId={businessId} section="knowledge" />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              path="knowledge"
+              element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
+              path="/analytics"
             />
             <Route
-              element={
-                businessId ? (
-                  <AgentServicesPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              path="services"
-            />
+              element={<AgentLayout {...(businessId ? { businessId } : {})} />}
+              path="/agent/*"
+            >
+              <Route
+                element={
+                  businessId ? (
+                    <AgentBasicSettingsPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/agent" />
+                  )
+                }
+                index
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <AgentBasicSettingsPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/agent" />
+                  )
+                }
+                path="basic-settings"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <AgentKnowledgePage businessId={businessId} section="knowledge" />
+                  ) : (
+                    <Navigate replace to="/agent" />
+                  )
+                }
+                path="knowledge"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <AgentServicesPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/agent" />
+                  )
+                }
+                path="services"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <AgentRulesPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/agent" />
+                  )
+                }
+                path="rules"
+              />
+              <Route
+                element={<Navigate replace to="/integrations" />}
+                path="integrations"
+              />
+              <Route element={<Navigate replace to="/agent" />} path="*" />
+            </Route>
             <Route
-              element={
-                businessId ? (
-                  <AgentRulesPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/agent" />
-                )
-              }
-              path="rules"
-            />
+              element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
+              path="/integrations"
+            >
+              <Route
+                element={
+                  businessId ? (
+                    <IntegrationsPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/integrations" />
+                  )
+                }
+                index
+              />
+            </Route>
+            <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
             <Route
-              element={<Navigate replace to="/integrations" />}
-              path="integrations"
-            />
-            <Route element={<Navigate replace to="/agent" />} path="*" />
-          </Route>
-          <Route
-            element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
-            path="/integrations"
-          >
-            <Route
-              element={
-                businessId ? (
-                  <IntegrationsPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/integrations" />
-                )
-              }
-              index
-            />
-          </Route>
-          <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
-          <Route
-            element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
-            path="/settings/*"
-          >
-            <Route
-              element={
-                businessId ? (
-                  <SettingsBusinessPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              index
-            />
-            <Route
-              element={
-                businessId ? (
-                  <SettingsAppearancePage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              path="appearance"
-            />
-            <Route
-              element={
-                businessId ? (
-                  <SettingsBillingPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              path="billing"
-            />
-          </Route>
-          <Route element={<Navigate replace to="/" />} path="*" />
-        </Routes>
+              element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
+              path="/settings/*"
+            >
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsBusinessPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                index
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsAppearancePage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="appearance"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsBillingPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="billing"
+              />
+            </Route>
+            <Route element={<Navigate replace to="/" />} path="*" />
+          </Routes>
+        )}
       </Main>
     </AuthenticatedLayout>
   );
@@ -327,6 +348,10 @@ function OnboardingNumberRoute() {
   }
 
   useEffect(() => {
+    if (businesses === undefined || currentUser === undefined) {
+      return;
+    }
+
     if (!currentUser?._id || !activeBusiness?._id) {
       return;
     }
@@ -339,7 +364,12 @@ function OnboardingNumberRoute() {
   }, [activeBusiness?._id, currentUser?._id]);
 
   if (businesses === undefined || currentUser === undefined) {
-    return <LoadingScreen />;
+    return (
+      <OnboardingNumberRouteSkeleton
+        {...(currentUser?.email ? { email: currentUser.email } : {})}
+        onSignOut={() => void handleSignOut()}
+      />
+    );
   }
 
   if (!activeBusiness) {
@@ -381,6 +411,10 @@ function OnboardingVerifyPhoneRoute() {
   }
 
   useEffect(() => {
+    if (businesses === undefined || currentUser === undefined) {
+      return;
+    }
+
     if (!currentUser?._id || !activeBusiness?._id) {
       return;
     }
@@ -438,7 +472,12 @@ function OnboardingVerifyPhoneRoute() {
   ]);
 
   if (businesses === undefined || currentUser === undefined) {
-    return <LoadingScreen />;
+    return (
+      <OnboardingVerifyRouteSkeleton
+        {...(currentUser?.email ? { email: currentUser.email } : {})}
+        onSignOut={() => void handleSignOut()}
+      />
+    );
   }
 
   if (!activeBusiness) {

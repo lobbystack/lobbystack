@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
+import { SettingsItemGroupSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Item,
@@ -103,6 +104,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
   const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
+  const isLoadingConfiguration = configuration === undefined;
   useEffect(() => {
     const profile = configuration?.profile;
     if (!profile) {
@@ -210,6 +212,16 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     } finally {
       setIsTransferSaving(false);
     }
+  }
+
+  if (isLoadingConfiguration) {
+    return (
+      <div className="w-full overflow-y-auto pb-12">
+        <div className="flex w-full flex-col gap-8">
+          <SettingsItemGroupSkeleton rows={3} />
+        </div>
+      </div>
+    );
   }
 
   return (

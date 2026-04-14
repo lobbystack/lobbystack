@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Plus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -10,9 +11,10 @@ import type { Team } from "@/components/layout/sidebar-types";
 
 type TeamSwitcherProps = {
   teams: Team[];
+  isLoading?: boolean;
 };
 
-export function TeamSwitcher({ teams }: TeamSwitcherProps) {
+export function TeamSwitcher({ teams, isLoading = false }: TeamSwitcherProps) {
   const activeBusiness = React.useMemo<Team>(
     () =>
       teams[0] ?? {
@@ -25,6 +27,9 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
+        {isLoading ? (
+          <SidebarTeamSkeleton />
+        ) : (
         <SidebarMenuButton
           size="lg"
           className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground"
@@ -45,6 +50,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
             ) : null}
           </div>
         </SidebarMenuButton>
+        )}
       </SidebarMenuItem>
     </SidebarMenu>
   );

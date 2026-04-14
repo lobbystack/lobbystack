@@ -30,6 +30,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -322,9 +323,17 @@ export function OnboardingNumberPage({
             </CardHeader>
             <CardContent className="space-y-6">
               {isLoadingSuggestion ? (
-                <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-8 text-zinc-300">
-                  <LoaderCircle className="size-5 animate-spin" />
-                  <span>{t("number.loading")}</span>
+                <div className="space-y-4">
+                  <Skeleton className="h-5 w-40 rounded-full bg-white/10" />
+                  <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-6 text-center">
+                    <Skeleton className="mx-auto h-4 w-24 bg-white/10" />
+                    <Skeleton className="mx-auto mt-4 h-10 w-56 bg-white/10" />
+                    <Skeleton className="mx-auto mt-3 h-4 w-32 bg-white/10" />
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <Skeleton className="h-12 w-full rounded-md bg-white/10" />
+                    <Skeleton className="h-10 w-full rounded-md bg-white/10" />
+                  </div>
                 </div>
               ) : null}
 

@@ -6,12 +6,13 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AuthenticatedLayoutProps = {
-  businessName: string;
+  businessName?: string;
   children: ReactNode;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  isLoading?: boolean;
 };
 
 function getSidebarDefaultOpen(): boolean {
@@ -33,6 +34,7 @@ export function AuthenticatedLayout({
   operatorAvatar,
   operatorEmail,
   operatorName,
+  isLoading = false,
 }: AuthenticatedLayoutProps) {
   const defaultOpen = getSidebarDefaultOpen();
 
@@ -46,8 +48,9 @@ export function AuthenticatedLayout({
       }
     >
       <AppSidebar
-        businessName={businessName}
+        isLoading={isLoading}
         onSignOut={onSignOut}
+        {...(businessName ? { businessName } : {})}
         {...(operatorAvatar ? { operatorAvatar } : {})}
         {...(operatorEmail ? { operatorEmail } : {})}
         {...(operatorName ? { operatorName } : {})}

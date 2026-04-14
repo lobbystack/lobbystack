@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { DataTablePagination } from "@/components/data-table/pagination";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     pageIndex: 0,
     pageSize: 10,
   });
+  const isLoadingContacts = contacts === undefined;
 
   const rows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -164,70 +166,76 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
+      {isLoadingContacts ? (
+        <TableCardSkeleton columns={5} />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                className="h-12 cursor-pointer data-[state=selected]:bg-muted/40"
-                data-state={selectedContactId === row.original.id ? "selected" : undefined}
-                key={row.id}
-                onClick={() => {
-                  if (selectedContactId === row.original.id) {
-                    return;
-                  }
-                  setSelectedContactId(row.original.id);
-                  captureAnalyticsEvent("web.contacts.contact_opened", {
-                    businessId: businessId ? String(businessId) : undefined,
-                    contactId: String(row.original.id),
-                    messageCount: row.original.messageCount,
-                    callCount: row.original.callCount,
-                    appointmentCount: row.original.appointmentCount,
-                  });
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    className="h-12 cursor-pointer data-[state=selected]:bg-muted/40"
+                    data-state={selectedContactId === row.original.id ? "selected" : undefined}
+                    key={row.id}
+                    onClick={() => {
+                      if (selectedContactId === row.original.id) {
+                        return;
+                      }
+                      setSelectedContactId(row.original.id);
+                      captureAnalyticsEvent("web.contacts.contact_opened", {
+                        businessId: businessId ? String(businessId) : undefined,
+                        contactId: String(row.original.id),
+                        messageCount: row.original.messageCount,
+                        callCount: row.original.callCount,
+                        appointmentCount: row.original.appointmentCount,
+                      });
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
-                  {t("table.empty")}
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination
-        labels={{
-          rowsPerPage: t("pagination.rowsPerPage"),
-          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
-          firstPage: t("pagination.firstPage"),
-          previousPage: t("pagination.previousPage"),
-          nextPage: t("pagination.nextPage"),
-          lastPage: t("pagination.lastPage"),
-          goToPage: (page) => t("pagination.goToPage", { page }),
-        }}
-        table={table}
-      />
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
+                      {t("table.empty")}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("pagination.rowsPerPage"),
+              pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+              firstPage: t("pagination.firstPage"),
+              previousPage: t("pagination.previousPage"),
+              nextPage: t("pagination.nextPage"),
+              lastPage: t("pagination.lastPage"),
+              goToPage: (page) => t("pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+        </>
+      )}
     </div>
   );
 }

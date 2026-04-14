@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { SettingsItemGroupSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,6 +60,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
   const [isSavingBusinessName, setIsSavingBusinessName] = useState(false);
+  const isLoadingConfiguration = configuration === undefined || currentUser === undefined;
+  const configuredBusinessName = configuration?.business?.name ?? "";
+  const displayBusinessName = businessName || configuredBusinessName;
 
   useEffect(() => {
     const nextName = configuration?.business?.name;
@@ -140,6 +144,16 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     }
   }
 
+  if (isLoadingConfiguration) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <div className="w-full">
+          <SettingsItemGroupSkeleton rows={3} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="w-full">
@@ -149,7 +163,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemTitle>{t("account.businessName.label")}</ItemTitle>
               <ItemDescription>{t("account.businessName.description")}</ItemDescription>
               <p className="text-[15px] leading-6 text-foreground">
-                {businessName}
+                {displayBusinessName}
               </p>
               {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
@@ -158,7 +172,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                 onOpenChange={(open) => {
                   setIsBusinessNameDialogOpen(open);
                   if (open) {
-                    setBusinessName(configuration?.business?.name ?? businessName);
+                    setBusinessName(configuredBusinessName || businessName);
                   }
                 }}
                 open={isBusinessNameDialogOpen}

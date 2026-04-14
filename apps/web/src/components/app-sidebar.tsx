@@ -33,11 +33,12 @@ import { cn } from "@/lib/utils";
 import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
-  businessName: string;
+  businessName?: string;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  isLoading?: boolean;
 };
 
 function createAnimatedSidebarIcon(
@@ -95,19 +96,20 @@ export function AppSidebar({
   operatorAvatar,
   operatorEmail,
   operatorName,
+  isLoading = false,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation(["common", "nav", "settings", "agent"]);
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
-        name: operatorName ?? businessName,
+        name: operatorName ?? businessName ?? "",
         email: operatorEmail ?? "",
         ...(operatorAvatar ? { avatar: operatorAvatar } : {}),
       },
       teams: [
         {
-          name: businessName,
+          name: businessName ?? "",
           logo: AnimatedTeamLogo,
         },
       ],
@@ -187,7 +189,7 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
+        <TeamSwitcher isLoading={isLoading} teams={sidebarData.teams} />
       </SidebarHeader>
       <SidebarContent>
         {sidebarData.navGroups.map((group) => (
@@ -195,7 +197,7 @@ export function AppSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser onSignOut={onSignOut} user={sidebarData.user} />
+        <NavUser isLoading={isLoading} onSignOut={onSignOut} user={sidebarData.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

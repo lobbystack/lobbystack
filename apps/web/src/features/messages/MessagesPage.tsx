@@ -28,11 +28,13 @@ import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { SplitPaneSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
@@ -142,6 +144,48 @@ const DOCUMENT_ACCEPT = [
   "text/csv",
 ].join(",");
 const ALL_ATTACHMENT_ACCEPT = [IMAGE_ACCEPT, DOCUMENT_ACCEPT].join(",");
+
+function ThreadPaneSkeleton({ showComposer = true }: { showComposer?: boolean }) {
+  return (
+    <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
+      <div className="min-w-0 flex-none bg-card sm:rounded-t-md">
+        <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 flex-1 gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-4">
+              <Skeleton className="size-9 rounded-full lg:size-11" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-9 w-32 rounded-md" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex min-w-0 size-full flex-1">
+        <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
+          <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className={`max-w-72 rounded-2xl px-3 py-3 ${index % 2 === 0 ? "self-start bg-muted" : "self-end bg-primary/10 dark:bg-primary/20"}`}
+                key={index}
+              >
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="mt-2 h-4 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {showComposer ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-10 w-full rounded-md" />
+          <Skeleton className="h-10 w-24 rounded-md sm:hidden" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function initials(value: string | null, fallback: string): string {
   if (!value) {
@@ -441,6 +485,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     return <BusinessSetupCard />;
   }
 
+  if (conversations === undefined) {
+    return <SplitPaneSkeleton />;
+  }
+
   const isSmsConversation = thread?.conversation.channel === "sms";
   const automationState = thread?.conversation.automationState ?? "ai_active";
   const isHumanHandoff = isSmsConversation && automationState === "human_handoff";
@@ -727,7 +775,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           </label>
         </div>
 
-        <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
+      <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {filteredConversations.map((conversation: ConversationSummary) => {
             const isActive = conversation.id === selectedConversationId;
             const lastPreview = getConversationPreviewText(conversation, t);
@@ -957,7 +1005,22 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <form className="flex w-full flex-none flex-col gap-2" onSubmit={handleSendMessage}>
-                {stagedAttachments.length > 0 ? (
+                {stagedAttachmentsQuery === undefined && isSmsConversation ? (
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: 2 }).map((_, index) => (
+                      <div
+                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2"
+                        key={index}
+                      >
+                        <Skeleton className="size-12 rounded-md" />
+                        <div className="min-w-0 space-y-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : stagedAttachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {stagedAttachments.map((attachment) => (
                       <div
@@ -1044,6 +1107,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               </form>
             </div>
           </>
+        ) : selectedConversationId ? (
+          <ThreadPaneSkeleton showComposer={selectedConversationSummary?.channel === "sms"} />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
             {t("page.selectConversation")}

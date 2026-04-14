@@ -7,6 +7,7 @@ import { ChevronDown, Trash2 } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -200,6 +201,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
   const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
+  const isLoadingKnowledge = knowledge === undefined;
 
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
@@ -385,6 +387,23 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex flex-col gap-4">
+        {isLoadingKnowledge ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div className="rounded-2xl border border-border/70 bg-card p-4" key={index}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : null}
+
         {knowledge && visibleEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
             <p>{t(`agent:sections.${section}.emptyState`)}</p>
@@ -438,24 +457,32 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                 <CollapsibleContent>
                   <div className="px-4 pb-5">
                     {"sourceType" in entry ? (
-                      <Textarea
-                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                        rows={8}
-                        readOnly
-                        value={
-                          entry.status === "error"
-                            ? viewerErrorsByDocumentId[String(entry._id)] ??
-                              entry.error ??
-                              t(`agent:sections.${section}.previewError`)
-                            : loadedViewerText?.trim()
-                              ? loadedViewerText.trim()
-                              : loadingViewerIds.includes(String(entry._id))
-                                ? t(`agent:sections.${section}.previewPending`)
+                      loadingViewerIds.includes(String(entry._id)) &&
+                      !loadedViewerText?.trim() &&
+                      !entry.textContent?.trim() ? (
+                        <div className="space-y-3 rounded-md border border-border/70 p-4">
+                          {Array.from({ length: 6 }).map((_, index) => (
+                            <Skeleton className="h-4 w-full" key={index} />
+                          ))}
+                        </div>
+                      ) : (
+                        <Textarea
+                          className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+                          rows={8}
+                          readOnly
+                          value={
+                            entry.status === "error"
+                              ? viewerErrorsByDocumentId[String(entry._id)] ??
+                                entry.error ??
+                                t(`agent:sections.${section}.previewError`)
+                              : loadedViewerText?.trim()
+                                ? loadedViewerText.trim()
                                 : entry.textContent?.trim()
                                   ? entry.textContent.trim()
                                   : t(`agent:sections.${section}.previewPending`)
-                        }
-                      />
+                          }
+                        />
+                      )
                     ) : (
                       <Textarea
                         className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"

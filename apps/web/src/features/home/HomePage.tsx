@@ -34,6 +34,11 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { PageHeader } from "@/components/page-header";
+import {
+  ChartBlockSkeleton,
+  MetricCardGridSkeleton,
+} from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import {
@@ -260,6 +265,7 @@ export function HomePage({ businessId }: HomePageProps) {
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId, locale } : "skip",
   ) as HomeSummary | undefined;
+  const isLoadingSummary = summary === undefined;
 
   function formatDelta(deltaPercent: number): string {
     if (deltaPercent === 0) {
@@ -302,30 +308,34 @@ export function HomePage({ businessId }: HomePageProps) {
     <div className="flex flex-col gap-6">
       <PageHeader title={t("home.title")} />
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {metricCards.map((card) => {
-            const metric = summary?.kpis[card.key];
+        {isLoadingSummary ? (
+          <MetricCardGridSkeleton />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {metricCards.map((card) => {
+              const metric = summary?.kpis[card.key];
 
-            return (
-              <Card key={card.key}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle>{t(`home.metrics.${card.key}.title`)}</CardTitle>
-                  {card.icon}
-                </CardHeader>
-                <CardContent>
-                  <div className="type-metric">
-                    {card.value.toLocaleString(i18n.language)}
-                  </div>
-                  <p className="type-meta">
-                    {metric
-                      ? formatDelta(metric.deltaPercent)
-                      : t("home.metrics.loading")}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+              return (
+                <Card key={card.key}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle>{t(`home.metrics.${card.key}.title`)}</CardTitle>
+                    {card.icon}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="type-metric">
+                      {card.value.toLocaleString(i18n.language)}
+                    </div>
+                    <p className="type-meta">
+                      {metric
+                        ? formatDelta(metric.deltaPercent)
+                        : t("home.metrics.loading")}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <motion.section
             animate={{ opacity: 1, y: 0 }}
@@ -335,11 +345,39 @@ export function HomePage({ businessId }: HomePageProps) {
           >
             <div className="flex items-center justify-between gap-4 px-1">
               <h2 className="type-section-title">{t("home.actionRequired.title")}</h2>
-              <Badge variant="outline">
-                {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
-              </Badge>
+              {isLoadingSummary ? (
+                <Skeleton className="h-6 w-12 rounded-full" />
+              ) : (
+                <Badge variant="outline">
+                  {(summary?.actionRequired.length ?? 0).toLocaleString(i18n.language)}
+                </Badge>
+              )}
             </div>
-            {summary && summary.actionRequired.length > 0 ? (
+            {isLoadingSummary ? (
+              <Card className="border-border/70">
+                <CardContent>
+                  <ItemGroup>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index}>
+                        <Item className="px-1 py-1" size="sm" variant="default">
+                          <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
+                            <Skeleton className="size-4 rounded-full" />
+                          </ItemMedia>
+                          <ItemContent className="min-w-0">
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-4/5" />
+                              <Skeleton className="h-3 w-1/2" />
+                              <Skeleton className="h-3 w-1/3" />
+                            </div>
+                          </ItemContent>
+                        </Item>
+                        {index < 2 ? <Separator className="mt-4" /> : null}
+                      </div>
+                    ))}
+                  </ItemGroup>
+                </CardContent>
+              </Card>
+            ) : summary && summary.actionRequired.length > 0 ? (
                 <Card className="border-border/70">
                   <CardContent>
                     <ItemGroup>
@@ -450,11 +488,35 @@ export function HomePage({ businessId }: HomePageProps) {
           >
             <div className="flex items-center justify-between gap-4 px-1">
               <h2 className="type-section-title">{t("home.upcoming.title")}</h2>
-              <Badge variant="outline">
-                {(summary?.upcoming.length ?? 0).toLocaleString(i18n.language)}
-              </Badge>
+              {isLoadingSummary ? (
+                <Skeleton className="h-6 w-12 rounded-full" />
+              ) : (
+                <Badge variant="outline">
+                  {(summary?.upcoming.length ?? 0).toLocaleString(i18n.language)}
+                </Badge>
+              )}
             </div>
-            {summary && summary.upcoming.length > 0 ? (
+            {isLoadingSummary ? (
+              <Card className="border-border/70">
+                <CardContent className="flex flex-col gap-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index}>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-3 w-28" />
+                        </div>
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                      {index < 2 ? <Separator className="mt-4" /> : null}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : summary && summary.upcoming.length > 0 ? (
               <Card className="border-border/70">
                 <CardContent className="flex flex-col gap-4">
                   {summary.upcoming.map((appointment, index) => (
@@ -514,91 +576,115 @@ export function HomePage({ businessId }: HomePageProps) {
             )}
           </motion.section>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-          <Card className="col-span-1 lg:col-span-4">
-            <CardHeader>
-              <CardTitle>{t("home.chart.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="ps-2">
-              <ResponsiveContainer height={350} width="100%">
-                <BarChart
-                  data={(summary?.monthlyCalls ?? []).map((item) => ({
-                    name: formatDateTime(item.monthStart, i18n.language, {
-                      month: "short",
-                      timeZone: "UTC",
-                    }),
-                    total: item.total,
-                  }))}
-                >
-                  <XAxis
-                    axisLine={false}
-                    dataKey="name"
-                    fontSize={12}
-                    stroke="#888888"
-                    tickLine={false}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    direction="ltr"
-                    fontSize={12}
-                    stroke="#888888"
-                    tickLine={false}
-                  />
-                  <Bar
-                    className="fill-primary"
-                    dataKey="total"
-                    fill="currentColor"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          <Card className="col-span-1 lg:col-span-3">
-            <CardHeader>
-              <CardTitle>{t("home.recentCalls.title")}</CardTitle>
-              <CardDescription>
-                {t("home.recentCalls.description", {
-                  count: summary?.recentCalls.length ?? 0,
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-6">
-                {(summary?.recentCalls ?? []).map((call) => (
-                  <div className="flex items-center gap-4" key={String(call.id)}>
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback>{initialsFromName(call.contactName)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-1 flex-wrap items-center justify-between">
-                      <div className="flex flex-col gap-1">
-                        <p className="type-item-title leading-none">
-                          {call.contactName ?? t("home.recentCalls.unknownCaller")}
-                        </p>
-                        <p className="type-body-muted">
-                          {(call.contactPhone
-                            ? formatPhoneNumberDisplay(call.contactPhone, i18n.language)
-                            : null) ??
-                            formatDateTime(call.startedAt, i18n.language, {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
-                        </p>
-                      </div>
-                      <div className="type-item-title">
-                        {call.durationSeconds
-                          ? t("home.recentCalls.durationValue", {
-                              value: call.durationSeconds,
-                            })
-                          : call.status}
-                      </div>
+        {isLoadingSummary ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+            <ChartBlockSkeleton height={350} />
+            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <div className="mt-6 flex flex-col gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div className="flex items-center gap-4" key={index}>
+                    <Skeleton className="size-9 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-24" />
                     </div>
+                    <Skeleton className="h-4 w-12" />
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+            <Card className="col-span-1 lg:col-span-4">
+              <CardHeader>
+                <CardTitle>{t("home.chart.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="ps-2">
+                <ResponsiveContainer height={350} width="100%">
+                  <BarChart
+                    data={(summary?.monthlyCalls ?? []).map((item) => ({
+                      name: formatDateTime(item.monthStart, i18n.language, {
+                        month: "short",
+                        timeZone: "UTC",
+                      }),
+                      total: item.total,
+                    }))}
+                  >
+                    <XAxis
+                      axisLine={false}
+                      dataKey="name"
+                      fontSize={12}
+                      stroke="#888888"
+                      tickLine={false}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      direction="ltr"
+                      fontSize={12}
+                      stroke="#888888"
+                      tickLine={false}
+                    />
+                    <Bar
+                      className="fill-primary"
+                      dataKey="total"
+                      fill="currentColor"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card className="col-span-1 lg:col-span-3">
+              <CardHeader>
+                <CardTitle>{t("home.recentCalls.title")}</CardTitle>
+                <CardDescription>
+                  {t("home.recentCalls.description", {
+                    count: summary?.recentCalls.length ?? 0,
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-6">
+                  {(summary?.recentCalls ?? []).map((call) => (
+                    <div className="flex items-center gap-4" key={String(call.id)}>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback>{initialsFromName(call.contactName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-1 flex-wrap items-center justify-between">
+                        <div className="flex flex-col gap-1">
+                          <p className="type-item-title leading-none">
+                            {call.contactName ?? t("home.recentCalls.unknownCaller")}
+                          </p>
+                          <p className="type-body-muted">
+                            {(call.contactPhone
+                              ? formatPhoneNumberDisplay(call.contactPhone, i18n.language)
+                              : null) ??
+                              formatDateTime(call.startedAt, i18n.language, {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                          </p>
+                        </div>
+                        <div className="type-item-title">
+                          {call.durationSeconds
+                            ? t("home.recentCalls.durationValue", {
+                                value: call.durationSeconds,
+                              })
+                            : call.status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
