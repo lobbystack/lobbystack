@@ -101,5 +101,6 @@ describe("SettingsLayout", () => {
     ).toBe(
       "page",
     );
+    expect(screen.getByRole("navigation", { name: "Settings" }).className).not.toContain("-mt-2");
   });
 });

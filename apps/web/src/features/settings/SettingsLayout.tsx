@@ -30,7 +30,7 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
       <PageHeader title={t("header.title")} />
       <nav
         aria-label={t("header.title")}
-        className="-mt-2 overflow-x-auto pb-1"
+        className="overflow-x-auto pb-1"
       >
         <div className="flex min-w-max items-center gap-2">
           {navigationItems.map((item) => (
