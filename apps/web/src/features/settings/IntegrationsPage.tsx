@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction } from "convex/react";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -9,6 +9,10 @@ import { toast } from "sonner";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  invalidateCachedConvexQuery,
+  useCachedConvexQuery,
+} from "@/lib/cached-convex-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -207,9 +211,13 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
   const handledCallbackRef = useRef<string | null>(null);
-  const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
+  const {
+    data: connections,
+    isLoading: isLoadingConnections,
+    refresh: refreshConnections,
+  } = useCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
-  }) as Array<CalendarConnectionListItem> | undefined;
+  });
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
   const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
@@ -244,8 +252,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
-  const isLoadingConnections = connections === undefined;
-
   useEffect(() => {
     const calendar = searchParams.get("calendar");
     const status = searchParams.get("status");
@@ -260,6 +266,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       return;
     }
     handledCallbackRef.current = callbackKey;
+    void refreshConnections();
 
     if (status === "success") {
       captureAnalyticsEvent("web.integration.calendar_connect_completed", {
@@ -280,7 +287,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     nextParams.delete("status");
     nextParams.delete("message");
     setSearchParams(nextParams, { replace: true });
-  }, [businessId, searchParams, setSearchParams, t]);
+  }, [businessId, refreshConnections, searchParams, setSearchParams, t]);
 
   useEffect(() => {
     async function loadCalendars() {
@@ -362,6 +369,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
     try {
       await disconnectGoogleCalendar({ businessId });
+      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
+        businessId,
+      });
+      await refreshConnections();
       captureAnalyticsEvent("web.integration.calendar_disconnect_completed", {
         businessId: String(businessId),
         provider: "google",
@@ -396,6 +407,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         businessId,
         calendarId: selectedCalendarId,
       });
+      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
+        businessId,
+      });
+      await refreshConnections();
       toast.success(t("integrations.google.calendarSaved"));
     } catch (error) {
       captureAnalyticsException(error, {

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { SettingsItemGroupSkeleton } from "@/components/loading-skeletons";
+import {
+  setCachedConvexQuery,
+  useCachedConvexQuery,
+} from "@/lib/cached-convex-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,10 +42,16 @@ type SettingsBusinessPageProps = {
 
 export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const { t } = useTranslation("settings");
-  const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
-    businessId: props.businessId,
-  });
-  const currentUser = useQuery(api.users.current, {});
+  const { data: configuration, isLoading: isLoadingConfigurationData } = useCachedConvexQuery(
+    api.businesses.catalog.getBusinessSettingsAccount,
+    {
+      businessId: props.businessId,
+    },
+  );
+  const { data: currentUser, isLoading: isLoadingCurrentUser } = useCachedConvexQuery(
+    api.users.current,
+    {},
+  );
   const updateBusinessName = useMutation(api.businesses.catalog.updateBusinessName);
   const changeEmail = useAction(api.businesses.catalog.changeEmail);
   const changePassword = useAction(api.businesses.catalog.changePassword);
@@ -60,7 +70,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
   const [isSavingBusinessName, setIsSavingBusinessName] = useState(false);
-  const isLoadingConfiguration = configuration === undefined || currentUser === undefined;
+  const isLoadingConfiguration = isLoadingConfigurationData || isLoadingCurrentUser;
   const configuredBusinessName = configuration?.business?.name ?? "";
   const displayBusinessName = businessName || configuredBusinessName;
 
@@ -88,9 +98,17 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     setBusinessNameStatus(null);
 
     try {
-      await updateBusinessName({
+      const result = await updateBusinessName({
         businessId: props.businessId,
         name: businessName,
+      });
+      setCachedConvexQuery(api.businesses.catalog.getBusinessSettingsAccount, {
+        businessId: props.businessId,
+      }, {
+        business: {
+          _id: props.businessId,
+          name: result.name,
+        },
       });
       setBusinessNameStatus(t("account.businessName.saved"));
       setIsBusinessNameDialogOpen(false);
