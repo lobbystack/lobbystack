@@ -7,20 +7,57 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
 import { captureAnalyticsEvent } from "@/lib/analytics";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
 };
+
+type AgentBasicSettingItemProps = {
+  action: React.ReactNode;
+  description: string;
+  footer: React.ReactNode;
+  status?: React.ReactNode;
+  title: string;
+};
+
+function AgentBasicSettingItem({
+  action,
+  description,
+  footer,
+  status,
+  title,
+}: AgentBasicSettingItemProps) {
+  return (
+    <Item
+      className="grid gap-x-4 gap-y-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+      variant="outline"
+    >
+      <ItemContent>
+        <ItemTitle>{title}</ItemTitle>
+        <ItemDescription>{description}</ItemDescription>
+        {status}
+      </ItemContent>
+      <ItemActions className="w-full justify-end sm:row-span-2 sm:w-auto sm:self-center">
+        {action}
+      </ItemActions>
+      <ItemFooter className="justify-start sm:col-start-1">
+        {footer}
+      </ItemFooter>
+    </Item>
+  );
+}
 
 export function resolveTransferNumberForSave({
   rawInputValue,
@@ -141,40 +178,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     }
   }
 
-  async function saveDefaultLocale(): Promise<void> {
-    if (!persistedProfile) {
-      return;
-    }
-
-    const transferNumberResolution = resolveTransferNumberForSave({
-      rawInputValue: transferNumberInputValue,
-      validTransferNumber: transferNumber,
-    });
-    if (!transferNumberResolution.ok) {
-      setTransferStatus(t(transferNumberResolution.errorKey));
-      setTransferStatusTone("error");
-      return;
-    }
-
-    setIsLocaleSaving(true);
-    setLocaleStatus(null);
-    try {
-      await saveProfile({
-        businessId,
-        defaultLocale,
-        greeting,
-        transferNumber: transferNumberResolution.value,
-      });
-      captureAnalyticsEvent("web.agent.settings_saved", {
-        businessId: String(businessId),
-        setting: "default_locale",
-      });
-      setLocaleStatus(t("agent:actions.saved"));
-    } finally {
-      setIsLocaleSaving(false);
-    }
-  }
-
   async function saveTransferNumber(): Promise<void> {
     if (!persistedProfile) {
       return;
@@ -211,58 +214,85 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }
 
   return (
-    <div className="w-full max-w-xl">
-      <div className="flex flex-col gap-6">
-        <FieldGroup>
-          <Field>
-            <FieldContent>
-              <FieldLabel htmlFor="agent-greeting">
-                {t("agent:fields.greeting.label")}
-              </FieldLabel>
-              <FieldDescription>
-                {t("agent:fields.greeting.hint")}
-              </FieldDescription>
-            </FieldContent>
-            <Input
-              id="agent-greeting"
-              placeholder={t("agent:fields.greeting.placeholder")}
-              value={greeting}
-              onChange={(event) => {
-                setGreeting(event.target.value);
-                setGreetingStatus(null);
-              }}
-            />
-            <div className="flex items-center gap-3">
+    <div className="w-full overflow-y-auto pb-12">
+      <div className="flex w-full flex-col gap-8">
+        <ItemGroup spacing="section">
+          <AgentBasicSettingItem
+            action={(
               <Button
                 disabled={isGreetingSaving || !persistedProfile}
                 onClick={() => void saveGreeting()}
                 type="button"
+                variant="outline"
               >
                 {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
               </Button>
-              {greetingStatus ? (
-                <span className="text-sm text-muted-foreground">{greetingStatus}</span>
-              ) : null}
-            </div>
-          </Field>
+            )}
+            description={t("agent:fields.greeting.hint")}
+            footer={(
+              <Input
+                className="w-full sm:max-w-md"
+                id="agent-greeting"
+                placeholder={t("agent:fields.greeting.placeholder")}
+                value={greeting}
+                onChange={(event) => {
+                  setGreeting(event.target.value);
+                  setGreetingStatus(null);
+                }}
+              />
+            )}
+            status={greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
+            title={t("agent:fields.greeting.label")}
+          />
 
-          <Field>
-            <FieldContent>
-              <FieldLabel htmlFor="agent-default-language">
-                {t("agent:fields.defaultLocale.label")}
-              </FieldLabel>
-              <FieldDescription>
-                {t("agent:fields.defaultLocale.hint")}
-              </FieldDescription>
-            </FieldContent>
-            <div style={{ width: "13ch" }}>
+          <Item variant="outline">
+            <ItemContent>
+              <ItemTitle>{t("agent:fields.defaultLocale.label")}</ItemTitle>
+              <ItemDescription>{t("agent:fields.defaultLocale.hint")}</ItemDescription>
+              {isLocaleSaving ? <ItemDescription>{t("agent:actions.saving")}</ItemDescription> : null}
+              {!isLocaleSaving && localeStatus ? <ItemDescription>{localeStatus}</ItemDescription> : null}
+            </ItemContent>
+            <ItemActions className="w-full sm:w-auto">
               <NativeSelect
                 aria-label={t("agent:fields.defaultLocale.label")}
-                className="w-full"
+                className="w-full sm:w-40"
                 id="agent-default-language"
                 onChange={(event) => {
-                  setDefaultLocale((event.target.value as RuntimeLocale | "") || "en");
+                  const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
+                  setDefaultLocale(nextLocale);
                   setLocaleStatus(null);
+                  void (async () => {
+                    if (!persistedProfile) {
+                      return;
+                    }
+
+                    const transferNumberResolution = resolveTransferNumberForSave({
+                      rawInputValue: transferNumberInputValue,
+                      validTransferNumber: transferNumber,
+                    });
+                    if (!transferNumberResolution.ok) {
+                      setTransferStatus(t(transferNumberResolution.errorKey));
+                      setTransferStatusTone("error");
+                      return;
+                    }
+
+                    setIsLocaleSaving(true);
+                    try {
+                      await saveProfile({
+                        businessId,
+                        defaultLocale: nextLocale,
+                        greeting,
+                        transferNumber: transferNumberResolution.value,
+                      });
+                      captureAnalyticsEvent("web.agent.settings_saved", {
+                        businessId: String(businessId),
+                        setting: "default_locale",
+                      });
+                      setLocaleStatus(t("agent:actions.saved"));
+                    } finally {
+                      setIsLocaleSaving(false);
+                    }
+                  })();
                 }}
                 value={defaultLocale}
               >
@@ -273,32 +303,24 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   {t("common:language.french")}
                 </NativeSelectOption>
               </NativeSelect>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                disabled={isLocaleSaving || !persistedProfile}
-                onClick={() => void saveDefaultLocale()}
-                type="button"
-              >
-                {isLocaleSaving ? t("agent:actions.saving") : t("agent:actions.save")}
-              </Button>
-              {localeStatus ? (
-                <span className="text-sm text-muted-foreground">{localeStatus}</span>
-              ) : null}
-            </div>
-          </Field>
+            </ItemActions>
+          </Item>
 
-          <Field>
-            <FieldContent>
-              <FieldLabel htmlFor="agent-transfer-number">
-                {t("agent:fields.transferNumber.label")}
-              </FieldLabel>
-              <FieldDescription>
-                {t("agent:fields.transferNumber.hint")}
-              </FieldDescription>
-            </FieldContent>
-            <div className="w-full max-w-sm">
+          <AgentBasicSettingItem
+            action={(
+              <Button
+                disabled={isTransferSaving || !persistedProfile}
+                onClick={() => void saveTransferNumber()}
+                type="button"
+                variant="outline"
+              >
+                {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+              </Button>
+            )}
+            description={t("agent:fields.transferNumber.hint")}
+            footer={(
               <PhoneInput
+                className="w-full sm:max-w-md"
                 id="agent-transfer-number"
                 locale={i18n.language}
                 onRawValueChange={(nextRawValue) => {
@@ -313,29 +335,17 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   setTransferStatusTone("success");
                 }}
               />
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                disabled={isTransferSaving || !persistedProfile}
-                onClick={() => void saveTransferNumber()}
-                type="button"
+            )}
+            status={transferStatus ? (
+              <ItemDescription
+                className={transferStatusTone === "error" ? "text-destructive" : undefined}
               >
-                {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
-              </Button>
-              {transferStatus ? (
-                <span
-                  className={
-                    transferStatusTone === "error"
-                      ? "text-sm text-destructive"
-                      : "text-sm text-muted-foreground"
-                  }
-                >
-                  {transferStatus}
-                </span>
-              ) : null}
-            </div>
-          </Field>
-        </FieldGroup>
+                {transferStatus}
+              </ItemDescription>
+            ) : null}
+            title={t("agent:fields.transferNumber.label")}
+          />
+        </ItemGroup>
       </div>
     </div>
   );

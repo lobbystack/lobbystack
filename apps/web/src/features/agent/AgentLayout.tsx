@@ -58,22 +58,24 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        actions={
-          !isBasicSettingsRoute && isKnowledgeRoute ? (
-            <>
-              {section === "knowledge" ? (
-                <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
-              ) : null}
-              <AddKnowledgeSheet businessId={businessId} section={section} />
-            </>
-          ) : undefined
-        }
-        description={header.description}
-        title={header.title}
-      />
-      <div className="w-full">
-        <Outlet />
+      <div className={isBasicSettingsRoute ? "mx-auto flex w-full max-w-3xl flex-col gap-6" : "w-full"}>
+        <PageHeader
+          actions={
+            !isBasicSettingsRoute && isKnowledgeRoute ? (
+              <>
+                {section === "knowledge" ? (
+                  <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
+                ) : null}
+                <AddKnowledgeSheet businessId={businessId} section={section} />
+              </>
+            ) : undefined
+          }
+          description={header.description}
+          title={header.title}
+        />
+        <div className="w-full">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
