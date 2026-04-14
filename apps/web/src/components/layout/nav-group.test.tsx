@@ -43,7 +43,7 @@ describe("NavGroup", () => {
                 title: "Settings",
                 icon: Settings,
                 items: [
-                  { title: "General", url: "/settings/business" },
+                  { title: "General", url: "/settings/account" },
                 ],
               },
             ]}

@@ -66,38 +66,16 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
     );
   }
 
-  if (pathname === "/integrations") {
+  if (pathname === "/integrations" || pathname.startsWith("/settings")) {
     return (
       <div className="flex flex-col gap-6">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <PageHeaderSkeleton
-            description="Calendar and provider connections"
-            title="Integrations"
-          />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <div className="rounded-xl border bg-card p-4" key={index}>
-                <div className="mb-8 flex items-center justify-between gap-3">
-                  <Skeleton className="size-10 rounded-lg" />
-                  <Skeleton className="h-9 w-24 rounded-md" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </div>
+          <PageHeaderSkeleton title="Settings" />
+          <div className="flex gap-2 overflow-hidden">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton className="h-10 w-24 rounded-full" key={index} />
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (pathname.startsWith("/settings")) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <PageHeaderSkeleton description="Workspace settings" title="Settings" />
           <SettingsItemGroupSkeleton rows={3} />
         </div>
       </div>

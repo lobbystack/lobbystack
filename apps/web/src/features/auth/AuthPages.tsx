@@ -302,7 +302,7 @@ export function ConfirmEmailChangePage() {
   const token = searchParams.get("token")?.trim() ?? "";
   const email = searchParams.get("email")?.trim().toLowerCase() ?? "";
   const hasConfirmationParams = token.length > 0 && email.length > 0;
-  const returnHref = auth.isAuthenticated ? "/settings" : "/login";
+  const returnHref = auth.isAuthenticated ? "/settings/usage" : "/login";
   const returnLabel = auth.isAuthenticated
     ? t("confirmEmailChange.backToSettings")
     : t("confirmEmailChange.backToLogin");

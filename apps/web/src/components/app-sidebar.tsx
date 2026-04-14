@@ -9,17 +9,12 @@ import { BookTextIcon } from "@/components/ui/book-text";
 import { BotIcon } from "@/components/ui/bot";
 import { BlocksIcon } from "@/components/ui/blocks";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
-import { CircleDollarSignIcon } from "@/components/ui/circle-dollar-sign";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
-import { FileTextIcon } from "@/components/ui/file-text";
-import { GaugeIcon } from "@/components/ui/gauge";
 import { HomeIcon } from "@/components/ui/home";
 import { IdCardIcon } from "@/components/ui/id-card";
-import { LinkIcon } from "@/components/ui/link";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
 import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
 import { SettingsIcon } from "@/components/ui/settings";
-import { SlidersHorizontalIcon } from "@/components/ui/sliders-horizontal";
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +22,6 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { UserIcon } from "@/components/ui/user";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
 import { cn } from "@/lib/utils";
@@ -66,14 +60,6 @@ function createAnimatedSidebarIcon(
   };
 }
 
-function createStaticSidebarIcon(
-  Icon: React.ComponentType<any>,
-) {
-  return function SidebarIcon({ className }: SidebarIconProps) {
-    return <Icon className={cn("size-4 shrink-0 [&_svg]:size-4", className)} size={16} />;
-  };
-}
-
 const AnimatedHomeIcon = createAnimatedSidebarIcon(HomeIcon);
 const AnimatedMessagesIcon = createAnimatedSidebarIcon(MessageSquareMoreIcon);
 const AnimatedContactsIcon = createAnimatedSidebarIcon(UsersIcon);
@@ -84,11 +70,6 @@ const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
 const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
 const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
-const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
-const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
-const AnimatedBillingIcon = createAnimatedSidebarIcon(CircleDollarSignIcon);
-const AnimatedUsageIcon = createAnimatedSidebarIcon(GaugeIcon);
-const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
@@ -156,35 +137,9 @@ export function AppSidebar({
               ],
             },
             {
-              title: t("settings:sections.integrations"),
-              url: "/integrations",
-              icon: AnimatedIntegrationsIcon,
-            },
-            {
               title: t("nav:items.settings"),
+              url: "/settings/usage",
               icon: AnimatedSettingsIcon,
-              items: [
-                {
-                  title: t("settings:sections.business"),
-                  url: "/settings",
-                  icon: AnimatedBusinessIcon,
-                },
-                {
-                  title: t("settings:sections.appearance"),
-                  url: "/settings/appearance",
-                  icon: AnimatedAppearanceIcon,
-                },
-                {
-                  title: t("settings:sections.billing"),
-                  url: "/settings/billing",
-                  icon: AnimatedBillingIcon,
-                },
-                {
-                  title: t("settings:sections.usage"),
-                  url: "/settings/usage",
-                  icon: AnimatedUsageIcon,
-                },
-              ],
             },
           ],
         },

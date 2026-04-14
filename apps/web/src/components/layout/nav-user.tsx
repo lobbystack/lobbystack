@@ -86,11 +86,11 @@ export function NavUser({ onSignOut, user, isLoading = false }: NavUserProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link to="/settings" />}>
+              <DropdownMenuItem render={<Link to="/settings/billing" />}>
                 <CreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link to="/integrations" />}>
+              <DropdownMenuItem render={<Link to="/settings/integrations" />}>
                 <Bell />
                 Notifications
               </DropdownMenuItem>

@@ -275,40 +275,27 @@ function WorkspaceShell() {
                 path="rules"
               />
               <Route
-                element={<Navigate replace to="/integrations" />}
+                element={<Navigate replace to="/settings/integrations" />}
                 path="integrations"
               />
               <Route element={<Navigate replace to="/agent" />} path="*" />
             </Route>
-            <Route
-              element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
-              path="/integrations"
-            >
-              <Route
-                element={
-                  businessId ? (
-                    <IntegrationsPage businessId={businessId} />
-                  ) : (
-                    <Navigate replace to="/integrations" />
-                  )
-                }
-                index
-              />
-            </Route>
+            <Route element={<Navigate replace to="/settings/integrations" />} path="/integrations" />
             <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
             <Route
               element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
               path="/settings/*"
             >
+              <Route element={<Navigate replace to="/settings/usage" />} index />
               <Route
                 element={
                   businessId ? (
                     <SettingsBusinessPage businessId={businessId} />
                   ) : (
-                    <Navigate replace to="/settings" />
+                    <Navigate replace to="/settings/usage" />
                   )
                 }
-                index
+                path="account"
               />
               <Route
                 element={
@@ -339,6 +326,16 @@ function WorkspaceShell() {
                   )
                 }
                 path="usage"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <IntegrationsPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings/usage" />
+                  )
+                }
+                path="integrations"
               />
             </Route>
             <Route element={<Navigate replace to="/" />} path="*" />
