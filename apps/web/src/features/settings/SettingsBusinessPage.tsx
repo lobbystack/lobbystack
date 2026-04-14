@@ -142,7 +142,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="w-full max-w-xl">
+      <div className="w-full">
         <ItemGroup spacing="section">
           <Item variant="outline">
             <ItemContent>

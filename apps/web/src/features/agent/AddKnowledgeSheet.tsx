@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -24,8 +25,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { AgentSection } from "./sections";
-
 function parseTags(value: string): Array<string> {
   return value
     .split(",")
@@ -38,7 +37,7 @@ export function AddKnowledgeSheet({
   section,
 }: {
   businessId: Id<"businesses">;
-  section: AgentSection;
+  section: KnowledgeSection;
 }) {
   const { t } = useTranslation(["agent", "knowledge"]);
   const upsertKnowledgeSnippet = useMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);

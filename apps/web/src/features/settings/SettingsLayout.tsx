@@ -29,21 +29,18 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
             title: t("sections.billing"),
             description: t("layout.billingDescription"),
           }
-      : location.pathname === "/settings/integrations"
-        ? {
-            title: t("sections.integrations"),
-            description: t("layout.integrationsDescription"),
-          }
-        : {
+      : {
             title: t("sections.business"),
             description: t("layout.businessDescription"),
           };
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader description={header.description} title={header.title} />
-      <div className="w-full">
-        <Outlet />
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <PageHeader description={header.description} title={header.title} />
+        <div className="w-full">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

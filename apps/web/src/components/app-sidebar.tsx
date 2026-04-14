@@ -149,6 +149,11 @@ export function AppSidebar({
                   url: "/agent/rules",
                   icon: AnimatedRulesIcon,
                 },
+                {
+                  title: t("settings:sections.integrations"),
+                  url: "/agent/integrations",
+                  icon: AnimatedIntegrationsIcon,
+                },
               ],
             },
             {
@@ -169,11 +174,6 @@ export function AppSidebar({
                   title: t("settings:sections.billing"),
                   url: "/settings/billing",
                   icon: AnimatedBillingIcon,
-                },
-                {
-                  title: t("settings:sections.integrations"),
-                  url: "/settings/integrations",
-                  icon: AnimatedIntegrationsIcon,
                 },
               ],
             },

@@ -6,6 +6,7 @@ import { ChevronDown, Trash2 } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
+import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +17,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { captureAnalyticsException } from "@/lib/analytics";
-import type { AgentSection } from "./sections";
-
 type AgentKnowledgePageProps = {
   businessId: Id<"businesses">;
-  section: AgentSection;
+  section: KnowledgeSection;
 };
 
 type KnowledgeEntry = Doc<"knowledge_documents"> | Doc<"knowledge_snippets">;

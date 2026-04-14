@@ -26,43 +26,69 @@
       "pro": "Pro",
       "enterprise": "Enterprise"
     },
+    "subscriptionStates": {
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "revoked": "Revoked",
+      "inactive": "Inactive"
+    },
     "actions": {
       "upgradeToPro": "Upgrade to Pro",
       "unlockAiSms": "Unlock AI SMS",
       "manageBilling": "Manage billing",
+      "manageSubscription": "Manage subscription",
       "openingCheckout": "Opening checkout...",
-      "openingPortal": "Opening portal..."
+      "openingPortal": "Opening portal...",
+      "viewInvoice": "View invoice"
     },
     "currentPlan": {
-      "title": "Plan and access",
+      "title": "Your plan",
       "description": "Hosted billing applies only to cloud workspaces. Self-host keeps the full product with your own providers.",
       "planLabel": "Current plan",
-      "monthlyChargeValue": "{{amount}} / month",
+      "monthlyChargeValue": "{{amount}}/mo",
+      "freeLabel": "Free",
       "customPricing": "Custom pricing and usage arrangement.",
       "includedNumberTitle": "Included business numbers",
       "includedNumberValue": "{{count}} included",
       "customIncludedNumbers": "Custom by agreement",
       "billingContactTitle": "Billing contact",
       "billingContactMissing": "No billing contact on file yet.",
-      "subscriptionStateTitle": "Subscription state"
+      "subscriptionStateTitle": "Subscription",
+      "billingPeriod": "Current period resets {{resetAt}}",
+      "selfHostNotice": "Self-hosted workspaces use your own providers. No usage limits or billing apply.",
+      "enterpriseNotice": "Usage and limits are governed by your enterprise agreement.",
+      "freeCloudNotice": "Usage is capped at the included pool each month. Upgrade to Pro for overage billing and higher limits.",
+      "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate."
     },
     "usage": {
-      "title": "Usage this month",
+      "title": "Usage this period",
       "description": "Resets on {{resetAt}}.",
       "voiceTitle": "Voice minutes",
       "voiceValue": "{{minutes}} minutes used",
       "voiceRemaining": "{{minutes}} minutes remaining",
-      "alertSmsTitle": "Alert SMS segments",
+      "alertSmsTitle": "SMS alerts",
       "alertSmsValue": "{{formattedCount}} segments used",
       "alertSmsRemaining": "{{formattedCount}} segments remaining",
-      "outboundAttemptsTitle": "Outbound call attempts",
+      "outboundAttemptsTitle": "Outbound calls",
       "outboundAttemptsValue": "{{formattedCount}} attempts used",
       "outboundAttemptsRemaining": "{{formattedCount}} attempts remaining",
-      "aiSmsTitle": "AI SMS segments",
+      "aiSmsTitle": "AI SMS",
       "aiSmsValue": "{{formattedCount}} segments used",
-      "aiSmsMetered": "Billed separately at metered AI SMS usage.",
-      "aiSmsLocked": "Locked until the AI SMS add-on is active.",
-      "overageEnabled": "Additional usage is billed as overage."
+      "aiSmsMetered": "Metered usage — billed per segment.",
+      "aiSmsLocked": "Activate the AI SMS add-on to unlock.",
+      "overageEnabled": "Additional usage is billed as overage.",
+      "included": "Included",
+      "overage": "Overage",
+      "used": "used",
+      "remaining": "remaining",
+      "of": "of",
+      "unlimited": "Unlimited",
+      "blocked": "Limit reached",
+      "overageCount": "{{count}} over limit",
+      "overageCost": "≈ {{amount}} in overages",
+      "noOverages": "No overages — usage hard-capped at the included pool."
     },
     "catalog": {
       "title": "Hosted offers",
@@ -75,13 +101,42 @@
       "aiSmsAddon": "AI SMS add-on: {{monthly}} per month + {{setup}} one-time setup. AI SMS usage is billed at {{usage}} per segment."
     },
     "addon": {
-      "aiSmsActiveBadge": "AI SMS active"
+      "title": "Add-ons",
+      "aiSmsName": "AI SMS",
+      "aiSmsDescription": "Let your receptionist send conversational SMS replies from your business number.",
+      "aiSmsActiveBadge": "Active",
+      "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
+      "aiSmsSetup": "One-time setup fee: {{amount}}",
+      "aiSmsRequiresPro": "Available on the Pro plan."
+    },
+    "spendingCap": {
+      "title": "Monthly spending cap",
+      "description": "Set a maximum overage spend per billing period. When reached, usage beyond the included pool will be blocked.",
+      "comingSoon": "Coming soon",
+      "placeholder": "e.g. $25.00"
     },
     "transactions": {
-      "title": "Recent billing events",
+      "title": "Transaction history",
       "description": "Orders, refunds, and setup fees synced from Polar.",
-      "empty": "No billing transactions yet.",
-      "invoice": "Invoice"
+      "empty": "No transactions yet.",
+      "columns": {
+        "date": "Date",
+        "description": "Description",
+        "amount": "Amount",
+        "status": "Status",
+        "invoice": "Invoice"
+      },
+      "invoice": "Invoice",
+      "statusLabels": {
+        "paid": "Paid",
+        "pending": "Pending",
+        "refunded": "Refunded",
+        "partially_refunded": "Partial refund"
+      },
+      "kindLabels": {
+        "order": "Order",
+        "refund": "Refund"
+      }
     }
   },
   "appearance": {
@@ -91,7 +146,7 @@
     "saved": "Appearance preferences updated.",
     "language": {
       "label": "Dashboard language",
-      "description": "Choose the language used in the dashboard. This doesn't affect the AI."
+      "description": "Choose the language used in the dashboard."
     },
     "timeFormat": {
       "label": "Time format",

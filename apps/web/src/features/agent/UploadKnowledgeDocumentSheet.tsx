@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -25,8 +26,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics";
-import type { AgentSection } from "./sections";
-
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -81,7 +80,7 @@ export function UploadKnowledgeDocumentSheet({
   section,
 }: {
   businessId: Id<"businesses">;
-  section: AgentSection;
+  section: KnowledgeSection;
 }) {
   const { t } = useTranslation("agent");
   const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);

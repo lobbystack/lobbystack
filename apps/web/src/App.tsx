@@ -252,6 +252,16 @@ function WorkspaceShell() {
               }
               path="rules"
             />
+            <Route
+              element={
+                businessId ? (
+                  <IntegrationsPage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/agent" />
+                )
+              }
+              path="integrations"
+            />
             <Route element={<Navigate replace to="/agent" />} path="*" />
           </Route>
           <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
@@ -278,16 +288,6 @@ function WorkspaceShell() {
                 )
               }
               path="appearance"
-            />
-            <Route
-              element={
-                businessId ? (
-                  <IntegrationsPage businessId={businessId} />
-                ) : (
-                  <Navigate replace to="/settings" />
-                )
-              }
-              path="integrations"
             />
             <Route
               element={

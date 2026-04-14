@@ -13,11 +13,12 @@ type AgentLayoutProps = {
 };
 
 export function AgentLayout({ businessId }: AgentLayoutProps) {
-  const { t } = useTranslation("agent");
+  const { t } = useTranslation(["agent", "settings"]);
   const location = useLocation();
   const section = getAgentSectionFromPathname(location.pathname);
   const isBasicSettingsRoute =
     location.pathname === "/agent/basic-settings" || location.pathname === "/agent";
+  const isKnowledgeRoute = section === "knowledge" || section === "services" || section === "rules";
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -48,13 +49,18 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
       title: t("sections.rules.title"),
       description: t("sections.rules.description"),
     };
+  } else if (section === "integrations") {
+    header = {
+      title: t("settings:sections.integrations"),
+      description: t("settings:layout.integrationsDescription"),
+    };
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          !isBasicSettingsRoute ? (
+          !isBasicSettingsRoute && isKnowledgeRoute ? (
             <>
               {section === "knowledge" ? (
                 <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />

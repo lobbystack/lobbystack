@@ -91,7 +91,7 @@
     "saved": "Préférences d'apparence mises à jour.",
     "language": {
       "label": "Langue du tableau de bord",
-      "description": "Choisissez la langue utilisée dans le tableau de bord. Cela n'affecte pas l'IA."
+      "description": "Choisissez la langue utilisée dans le tableau de bord."
     },
     "timeFormat": {
       "label": "Format de l'heure",
