@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
@@ -11,7 +12,6 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemFooter,
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
@@ -25,36 +25,36 @@ type AgentBasicSettingsPageProps = {
 };
 
 type AgentBasicSettingItemProps = {
-  action: React.ReactNode;
+  action: ReactNode;
   description: string;
-  footer: React.ReactNode;
-  status?: React.ReactNode;
+  field: ReactNode;
+  status?: ReactNode;
   title: string;
 };
 
 function AgentBasicSettingItem({
   action,
   description,
-  footer,
+  field,
   status,
   title,
 }: AgentBasicSettingItemProps) {
   return (
     <Item
-      className="grid gap-x-4 gap-y-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+      className="grid gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
       variant="outline"
     >
       <ItemContent>
         <ItemTitle>{title}</ItemTitle>
         <ItemDescription>{description}</ItemDescription>
-        {status}
+        <div className="pt-2">
+          {field}
+        </div>
+        {status ?? null}
       </ItemContent>
-      <ItemActions className="w-full justify-end sm:row-span-2 sm:w-auto sm:self-center">
+      <ItemActions className="w-full justify-end self-center sm:w-auto">
         {action}
       </ItemActions>
-      <ItemFooter className="justify-start sm:col-start-1">
-        {footer}
-      </ItemFooter>
     </Item>
   );
 }
@@ -103,7 +103,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
   const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
-
   useEffect(() => {
     const profile = configuration?.profile;
     if (!profile) {
@@ -229,7 +228,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </Button>
             )}
             description={t("agent:fields.greeting.hint")}
-            footer={(
+            field={(
               <Input
                 className="w-full sm:max-w-md"
                 id="agent-greeting"
@@ -318,11 +317,13 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </Button>
             )}
             description={t("agent:fields.transferNumber.hint")}
-            footer={(
+            field={(
               <PhoneInput
-                className="w-full sm:max-w-md"
+                className="w-[12ch] min-w-0"
+                containerClassName="w-fit"
                 id="agent-transfer-number"
                 locale={i18n.language}
+                maxLength={18}
                 onRawValueChange={(nextRawValue) => {
                   setTransferNumberInputValue(nextRawValue);
                   setTransferStatus(null);
