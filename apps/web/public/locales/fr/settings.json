@@ -49,6 +49,7 @@
     "usage": {
       "title": "Utilisation ce mois-ci",
       "description": "Réinitialisation le {{resetAt}}.",
+      "knowledgeTitle": "Base de connaissances",
       "voiceTitle": "Minutes vocales",
       "voiceValue": "{{minutes}} minutes utilisées",
       "voiceRemaining": "{{minutes}} minutes restantes",

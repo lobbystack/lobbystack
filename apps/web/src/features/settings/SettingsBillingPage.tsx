@@ -52,6 +52,27 @@ function formatResetDate(iso: string): string {
   });
 }
 
+function formatStorage(bytes: number, referenceBytes?: number | null): string {
+  const normalizedReference = referenceBytes ?? bytes;
+
+  if (normalizedReference >= 1024 * 1024 * 1024) {
+    const gigabytes = bytes / (1024 * 1024 * 1024);
+    return `${gigabytes % 1 === 0 ? gigabytes.toFixed(0) : gigabytes.toFixed(1)} GB`;
+  }
+
+  if (normalizedReference >= 1024 * 1024) {
+    const megabytes = bytes / (1024 * 1024);
+    return `${megabytes % 1 === 0 ? megabytes.toFixed(0) : megabytes.toFixed(1)} MB`;
+  }
+
+  if (normalizedReference >= 1024) {
+    const kilobytes = bytes / 1024;
+    return `${kilobytes % 1 === 0 ? kilobytes.toFixed(0) : kilobytes.toFixed(1)} KB`;
+  }
+
+  return `${bytes} B`;
+}
+
 function formatTransactionDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
@@ -297,6 +318,16 @@ function UsageSection({
         />
 
         <UsageMeterRow
+          label={t("billing.usage.outboundAttemptsTitle")}
+          used={usage.outboundCallAttemptsUsed}
+          included={usage.outboundCallAttemptsIncluded}
+          unit="attempts"
+          blocked={usage.outboundCallAttemptsBlocked}
+          overageRateCents={catalog.outboundCallAttemptOverageRateCents}
+          overageBillable={catalog.overagesBillable}
+        />
+
+        <UsageMeterRow
           label={t("billing.usage.alertSmsTitle")}
           used={usage.alertSmsSegmentsUsed}
           included={usage.alertSmsSegmentsIncluded}
@@ -307,13 +338,14 @@ function UsageSection({
         />
 
         <UsageMeterRow
-          label={t("billing.usage.outboundAttemptsTitle")}
-          used={usage.outboundCallAttemptsUsed}
-          included={usage.outboundCallAttemptsIncluded}
-          unit="attempts"
-          blocked={usage.outboundCallAttemptsBlocked}
-          overageRateCents={catalog.outboundCallAttemptOverageRateCents}
-          overageBillable={catalog.overagesBillable}
+          label={t("billing.usage.knowledgeTitle")}
+          used={usage.knowledgeStorageBytesUsed}
+          included={usage.knowledgeStorageBytesIncluded}
+          unit="storage"
+          blocked={usage.knowledgeStorageBlocked}
+          overageRateCents={null}
+          overageBillable={false}
+          formatValue={formatStorage}
         />
 
         {status.aiSmsEnabled && (
@@ -342,6 +374,7 @@ function UsageMeterRow({
   overageRateCents,
   overageBillable,
   metered,
+  formatValue,
 }: {
   label: string;
   used: number;
@@ -351,6 +384,7 @@ function UsageMeterRow({
   overageRateCents: number | null;
   overageBillable: boolean;
   metered?: boolean;
+  formatValue?: (value: number, referenceValue?: number | null) => string;
 }) {
   const pct = included !== null && included > 0 ? (used / included) * 100 : 0;
   const isOver = included !== null && used > included;
@@ -367,7 +401,9 @@ function UsageMeterRow({
           {label}
         </span>
         <span className="text-[15px] tabular-nums leading-6 text-muted-foreground">
-          {used} {included !== null ? `/ ${included}` : ""} {unit}
+          {formatValue ? formatValue(used, included) : used}
+          {included !== null ? ` / ${formatValue ? formatValue(included, included) : included}` : ""}
+          {!formatValue && ` ${unit}`}
           {metered && " (metered)"}
         </span>
       </div>

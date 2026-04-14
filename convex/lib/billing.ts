@@ -130,6 +130,8 @@ export function getBillingUsageSnapshotData(args: {
   return {
     periodKey: args.periodKey,
     resetAt: getBillingResetAt(args.periodKey),
+    knowledgeStorageBytesUsed: 0,
+    knowledgeStorageBytesIncluded: entitlements.knowledgeStorageBytes,
     voiceSecondsUsed,
     alertSmsSegmentsUsed,
     outboundCallAttemptsUsed,
@@ -155,6 +157,7 @@ export function getBillingUsageSnapshotData(args: {
         ? false
         : args.usage?.outboundCallAttemptsBlocked ??
           outboundCallAttemptsUsed >= entitlements.outboundCallAttemptsIncluded,
+    knowledgeStorageBlocked: false,
   };
 }
 

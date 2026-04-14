@@ -183,6 +183,8 @@ export function getPolarMeteredUsagePayload(
 export type BillingUsageSnapshot = {
   periodKey: string;
   resetAt: string;
+  knowledgeStorageBytesUsed: number;
+  knowledgeStorageBytesIncluded: number | null;
   voiceSecondsUsed: number;
   alertSmsSegmentsUsed: number;
   outboundCallAttemptsUsed: number;
@@ -196,6 +198,7 @@ export type BillingUsageSnapshot = {
   voiceBlocked: boolean;
   alertSmsBlocked: boolean;
   outboundCallAttemptsBlocked: boolean;
+  knowledgeStorageBlocked: boolean;
 };
 
 export type BillingTransactionSummary = {

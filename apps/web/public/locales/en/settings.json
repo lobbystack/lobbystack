@@ -22,7 +22,7 @@
     },
     "planLabels": {
       "selfHost": "Self-host",
-      "freeCloud": "Free Cloud",
+      "freeCloud": "Free",
       "pro": "Pro",
       "enterprise": "Enterprise"
     },
@@ -65,6 +65,7 @@
     "usage": {
       "title": "Usage this period",
       "description": "Resets on {{resetAt}}.",
+      "knowledgeTitle": "Knowledge base",
       "voiceTitle": "Voice minutes",
       "voiceValue": "{{minutes}} minutes used",
       "voiceRemaining": "{{minutes}} minutes remaining",
