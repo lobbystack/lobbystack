@@ -35,14 +35,14 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
         <div className="flex min-w-max items-center gap-2">
           {navigationItems.map((item) => (
             <NavLink
-              className={({ isActive }) =>
-                cn(
-                  "inline-flex h-9 items-center rounded-md px-4 text-sm font-medium whitespace-nowrap transition-colors",
-                  isActive
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
-                )
-              }
+                className={({ isActive }) =>
+                  cn(
+                    "inline-flex h-9 items-center rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                  )
+                }
               key={item.to}
               to={item.to}
             >

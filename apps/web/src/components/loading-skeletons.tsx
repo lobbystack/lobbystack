@@ -52,7 +52,7 @@ export function TableCardSkeleton({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-xl border bg-card">
         <div className="border-b px-4 py-3">
           <div
             className="grid gap-4"
