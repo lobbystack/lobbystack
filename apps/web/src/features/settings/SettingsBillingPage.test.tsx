@@ -206,5 +206,6 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
 
     expect(screen.getByText("billing.usage.voiceTitle")).toBeTruthy();
+    expect(screen.queryByText("billing.usage.paygTitle")).toBeNull();
   });
 });

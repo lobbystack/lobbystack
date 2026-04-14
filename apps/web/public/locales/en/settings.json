@@ -65,8 +65,10 @@
       "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate."
     },
     "usage": {
-      "title": "Usage this period",
+      "title": "Included usage",
       "description": "Resets on {{resetAt}}.",
+      "paygTitle": "Pay-as-you-go usage",
+      "paygDescription": "Additional billable usage in this period. Resets on {{resetAt}}.",
       "knowledgeTitle": "Knowledge base",
       "voiceTitle": "Voice minutes",
       "voiceValue": "{{minutes}} minutes used",

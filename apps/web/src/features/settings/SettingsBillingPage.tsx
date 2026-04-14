@@ -306,76 +306,139 @@ function UsageSection({
   if (plan === "self_host") return null;
 
   return (
-    <BillingSection
-      title={t("billing.usage.title")}
-      description={
-        usage.resetAt
-          ? t("billing.usage.description", {
-              resetAt: formatResetDate(usage.resetAt),
-            })
-          : undefined
-      }
-    >
-      <BorderedItem className="flex flex-col gap-5">
-        <UsageMeterRow
-          label={t("billing.usage.voiceTitle")}
-          used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
-          included={
-            usage.voiceSecondsIncluded !== null
-              ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
-              : null
-          }
-          unit="min"
-          blocked={usage.voiceBlocked}
-          overageRateCents={catalog.voiceOverageRatePerMinuteCents}
-          overageBillable={catalog.overagesBillable}
-        />
-
-        <UsageMeterRow
-          label={t("billing.usage.outboundAttemptsTitle")}
-          used={usage.outboundCallAttemptsUsed}
-          included={usage.outboundCallAttemptsIncluded}
-          unit="attempts"
-          blocked={usage.outboundCallAttemptsBlocked}
-          overageRateCents={catalog.outboundCallAttemptOverageRateCents}
-          overageBillable={catalog.overagesBillable}
-        />
-
-        <UsageMeterRow
-          label={t("billing.usage.alertSmsTitle")}
-          used={usage.alertSmsSegmentsUsed}
-          included={usage.alertSmsSegmentsIncluded}
-          unit="segments"
-          blocked={usage.alertSmsBlocked}
-          overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
-          overageBillable={catalog.overagesBillable}
-        />
-
-        <UsageMeterRow
-          label={t("billing.usage.knowledgeTitle")}
-          used={usage.knowledgeStorageBytesUsed}
-          included={usage.knowledgeStorageBytesIncluded}
-          unit="storage"
-          blocked={usage.knowledgeStorageBlocked}
-          overageRateCents={null}
-          overageBillable={false}
-          formatValue={formatStorage}
-        />
-
-        {status.aiSmsEnabled && (
+    <div className="flex flex-col gap-10">
+      <BillingSection
+        title={t("billing.usage.title")}
+        description={
+          usage.resetAt
+            ? t("billing.usage.description", {
+                resetAt: formatResetDate(usage.resetAt),
+              })
+            : undefined
+        }
+      >
+        <BorderedItem className="flex flex-col gap-5">
           <UsageMeterRow
-            label={t("billing.usage.aiSmsTitle")}
-            used={usage.aiSmsSegmentsUsed}
-            included={null}
-            unit="segments"
-            blocked={false}
-            overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
-            overageBillable
-            metered
+            label={t("billing.usage.voiceTitle")}
+            used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
+            included={
+              usage.voiceSecondsIncluded !== null
+                ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
+                : null
+            }
+            unit="min"
+            blocked={usage.voiceBlocked}
+            overageRateCents={catalog.voiceOverageRatePerMinuteCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
           />
-        )}
-      </BorderedItem>
-    </BillingSection>
+
+          <UsageMeterRow
+            label={t("billing.usage.outboundAttemptsTitle")}
+            used={usage.outboundCallAttemptsUsed}
+            included={usage.outboundCallAttemptsIncluded}
+            unit="attempts"
+            blocked={usage.outboundCallAttemptsBlocked}
+            overageRateCents={catalog.outboundCallAttemptOverageRateCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
+          />
+
+          <UsageMeterRow
+            label={t("billing.usage.alertSmsTitle")}
+            used={usage.alertSmsSegmentsUsed}
+            included={usage.alertSmsSegmentsIncluded}
+            unit="segments"
+            blocked={usage.alertSmsBlocked}
+            overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
+          />
+
+          <UsageMeterRow
+            label={t("billing.usage.knowledgeTitle")}
+            used={usage.knowledgeStorageBytesUsed}
+            included={usage.knowledgeStorageBytesIncluded}
+            unit="storage"
+            blocked={usage.knowledgeStorageBlocked}
+            overageRateCents={null}
+            overageBillable={false}
+            formatValue={formatStorage}
+            mode="included"
+          />
+        </BorderedItem>
+      </BillingSection>
+
+      {(catalog.overagesBillable || status.aiSmsEnabled) && (
+        <BillingSection
+          title={t("billing.usage.paygTitle")}
+          description={
+            usage.resetAt
+              ? t("billing.usage.paygDescription", {
+                  resetAt: formatResetDate(usage.resetAt),
+                })
+              : undefined
+          }
+        >
+          <BorderedItem className="flex flex-col gap-5">
+            {catalog.overagesBillable && (
+              <>
+                <UsageMeterRow
+                  label={t("billing.usage.voiceTitle")}
+                  used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
+                  included={
+                    usage.voiceSecondsIncluded !== null
+                      ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
+                      : null
+                  }
+                  unit="min"
+                  blocked={usage.voiceBlocked}
+                  overageRateCents={catalog.voiceOverageRatePerMinuteCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+
+                <UsageMeterRow
+                  label={t("billing.usage.outboundAttemptsTitle")}
+                  used={usage.outboundCallAttemptsUsed}
+                  included={usage.outboundCallAttemptsIncluded}
+                  unit="attempts"
+                  blocked={usage.outboundCallAttemptsBlocked}
+                  overageRateCents={catalog.outboundCallAttemptOverageRateCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+
+                <UsageMeterRow
+                  label={t("billing.usage.alertSmsTitle")}
+                  used={usage.alertSmsSegmentsUsed}
+                  included={usage.alertSmsSegmentsIncluded}
+                  unit="segments"
+                  blocked={usage.alertSmsBlocked}
+                  overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+              </>
+            )}
+
+            {status.aiSmsEnabled && (
+              <UsageMeterRow
+                label={t("billing.usage.aiSmsTitle")}
+                used={usage.aiSmsSegmentsUsed}
+                included={null}
+                unit="segments"
+                blocked={false}
+                overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
+                overageBillable
+                metered
+                mode="payg"
+              />
+            )}
+          </BorderedItem>
+        </BillingSection>
+      )}
+    </div>
   );
 }
 
@@ -408,6 +471,7 @@ function UsageMeterRow({
   overageBillable,
   metered,
   formatValue,
+  mode = "included",
 }: {
   label: string;
   used: number;
@@ -418,6 +482,7 @@ function UsageMeterRow({
   overageBillable: boolean;
   metered?: boolean;
   formatValue?: (value: number, referenceValue?: number | null) => string;
+  mode?: "included" | "payg";
 }) {
   const pct = included !== null && included > 0 ? (used / included) * 100 : 0;
   const isOver = included !== null && used > included;
@@ -426,6 +491,27 @@ function UsageMeterRow({
     overageBillable && overageRateCents && overageCount > 0
       ? overageCount * overageRateCents
       : 0;
+  const paygUnits = metered ? used : overageCount;
+  const paygCost =
+    overageBillable && overageRateCents ? paygUnits * overageRateCents : 0;
+
+  const valueDisplay =
+    mode === "payg"
+      ? formatValue
+        ? formatValue(paygUnits, included)
+        : paygUnits
+      : formatValue
+        ? formatValue(used, included)
+        : used;
+
+  const totalDisplay =
+    mode === "included"
+      ? included !== null
+        ? formatValue
+          ? formatValue(included, included)
+          : included
+        : null
+      : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -434,15 +520,15 @@ function UsageMeterRow({
           {label}
         </span>
         <span className="text-[15px] tabular-nums leading-6 text-muted-foreground">
-          {formatValue ? formatValue(used, included) : used}
-          {included !== null ? ` / ${formatValue ? formatValue(included, included) : included}` : ""}
+          {valueDisplay}
+          {totalDisplay !== null ? ` / ${totalDisplay}` : ""}
           {!formatValue && ` ${unit}`}
-          {metered && " (metered)"}
+          {mode === "payg" && metered && " (metered)"}
         </span>
       </div>
 
       {/* Thin progress bar */}
-      {included !== null && included > 0 && (
+      {mode === "included" && included !== null && included > 0 && (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
           <div
             className={`h-full rounded-full transition-all duration-700 ease-out ${
@@ -457,8 +543,22 @@ function UsageMeterRow({
         </div>
       )}
 
+      {mode === "payg" && paygCost > 0 && (
+        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
+          {paygUnits} {unit} billable ·{" "}
+          <span className="font-medium text-foreground">
+            ≈ {formatCents(paygCost)}
+          </span>
+        </span>
+      )}
+      {mode === "payg" && paygCost <= 0 && (
+        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
+          {paygUnits} {unit} billable ·{" "}
+          <span className="font-medium text-foreground">≈ $0</span>
+        </span>
+      )}
       {/* Overage note */}
-      {overageCost > 0 && (
+      {mode === "included" && overageCost > 0 && (
         <span className="text-sm tabular-nums leading-6 text-muted-foreground">
           {overageCount} {unit} over included ·{" "}
           <span className="font-medium text-foreground">
@@ -467,7 +567,7 @@ function UsageMeterRow({
           in overages
         </span>
       )}
-      {blocked && (
+      {mode === "included" && blocked && (
         <span className="text-sm leading-6 text-destructive">
           Limit reached — usage paused until next period.
         </span>
@@ -759,22 +859,41 @@ function UsageSectionSkeleton({
   t: BillingTranslation;
 }) {
   return (
-    <BillingSection
-      title={t("billing.usage.title")}
-      description={<Skeleton className="h-4 w-44" />}
-    >
-      <BorderedItem className="flex flex-col gap-5">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-4">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-5 w-24" />
+    <div className="flex flex-col gap-10">
+      <BillingSection
+        title={t("billing.usage.title")}
+        description={<Skeleton className="h-4 w-44" />}
+      >
+        <BorderedItem className="flex flex-col gap-5">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <Skeleton className="h-1.5 w-full rounded-full" />
             </div>
-            <Skeleton className="h-1.5 w-full rounded-full" />
-          </div>
-        ))}
-      </BorderedItem>
-    </BillingSection>
+          ))}
+        </BorderedItem>
+      </BillingSection>
+
+      <BillingSection
+        title={t("billing.usage.paygTitle")}
+        description={<Skeleton className="h-4 w-44" />}
+      >
+        <BorderedItem className="flex flex-col gap-5">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <Skeleton className="h-4 w-40" />
+            </div>
+          ))}
+        </BorderedItem>
+      </BillingSection>
+    </div>
   );
 }
 

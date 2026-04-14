@@ -52,6 +52,8 @@
     "usage": {
       "title": "Utilisation ce mois-ci",
       "description": "Réinitialisation le {{resetAt}}.",
+      "paygTitle": "Utilisation à l'usage",
+      "paygDescription": "Utilisation supplémentaire facturable pour cette période. Réinitialisation le {{resetAt}}.",
       "knowledgeTitle": "Base de connaissances",
       "voiceTitle": "Minutes vocales",
       "voiceValue": "{{minutes}} minutes utilisées",
