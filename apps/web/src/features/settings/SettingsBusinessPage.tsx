@@ -148,7 +148,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             <ItemContent>
               <ItemTitle>{t("account.businessName.label")}</ItemTitle>
               <ItemDescription>{t("account.businessName.description")}</ItemDescription>
-              <p className="text-sm text-foreground">{businessName}</p>
+              <p className="text-[15px] leading-6 text-foreground">
+                {businessName}
+              </p>
               {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
             <ItemActions>
@@ -209,7 +211,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                 <ItemTitle>{t("account.changeEmail.title")}</ItemTitle>
                 <ItemDescription>{t("account.changeEmail.description")}</ItemDescription>
                 {currentUser?.email ? (
-                  <p className="text-sm text-foreground">
+                  <p className="text-[15px] leading-6 text-foreground">
                     {t("account.changeEmail.currentEmail", { email: currentUser.email })}
                   </p>
                 ) : null}
@@ -272,7 +274,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemContent>
                 <ItemTitle>{t("account.changePassword.title")}</ItemTitle>
                 <ItemDescription>{t("account.changePassword.description")}</ItemDescription>
-                <div className="text-lg leading-none text-foreground">••••••••</div>
+                <div className="text-[15px] font-medium leading-6 text-foreground">
+                  ••••••••
+                </div>
                 {passwordStatus ? <ItemDescription>{passwordStatus}</ItemDescription> : null}
               </ItemContent>
               <ItemActions>

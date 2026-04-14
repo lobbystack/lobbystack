@@ -130,7 +130,7 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-content"
       className={cn(
-        "flex flex-1 flex-col gap-1 group-data-[size=xs]/item:gap-0 [&+[data-slot=item-content]]:flex-none",
+        "flex flex-1 flex-col gap-1.5 group-data-[size=xs]/item:gap-0.5 [&+[data-slot=item-content]]:flex-none",
         className
       )}
       {...props}
@@ -143,7 +143,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-title"
       className={cn(
-        "font-heading line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium underline-offset-4",
+        "font-heading line-clamp-2 flex w-fit items-center gap-2 text-base leading-6 font-medium text-foreground underline-offset-4",
         className
       )}
       {...props}
@@ -156,7 +156,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "line-clamp-2 text-left text-sm leading-normal font-normal text-muted-foreground group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+        "line-clamp-3 text-left text-[15px] leading-7 font-normal text-muted-foreground group-data-[size=xs]/item:text-sm [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className
       )}
       {...props}

@@ -98,12 +98,16 @@ function BillingSection({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
           {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-[15px] leading-7 text-muted-foreground">
+              {description}
+            </p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}
@@ -126,7 +130,7 @@ function BorderedItem({
 }) {
   return (
     <div
-      className={`rounded-xl border border-border bg-card px-5 py-4 ${className ?? ""}`}
+      className={`rounded-xl border border-border bg-card px-6 py-5 ${className ?? ""}`}
     >
       {children}
     </div>
@@ -195,7 +199,7 @@ function PlanSection({
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5">
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-[15px] font-medium leading-6 text-foreground">
                 {status.plan === "free_cloud"
                   ? t("billing.currentPlan.freeCloudNotice")
                   : status.plan === "pro"
@@ -206,14 +210,14 @@ function PlanSection({
               </span>
             </div>
             {status.billingContactEmail && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-[15px] leading-6 text-muted-foreground">
                 {status.billingContactEmail}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             {price !== null && (
-              <span className="text-sm font-medium tabular-nums text-foreground">
+              <span className="text-[15px] font-medium tabular-nums text-foreground">
                 {t("billing.currentPlan.monthlyChargeValue", {
                   amount: price,
                 })}
@@ -284,22 +288,20 @@ function PlanBreakdown({
     <BorderedItem className="flex flex-col gap-4">
       {/* Plan line */}
       <div className="flex flex-col gap-3">
-        <span className="text-[11px] font-semibold tracking-widest text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {t("billing.currentPlan.planLabel")}
         </span>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-foreground">
-              {planLabel}
-            </span>
+            <span className="text-[15px] leading-6 text-foreground">{planLabel}</span>
             {plan === "pro" && (
-              <Badge variant="default" className="text-[10px] tracking-wide">
+              <Badge variant="default" className="text-[10px]">
                 Pro
               </Badge>
             )}
           </div>
           {catalog.monthlyChargeCents !== null && (
-            <span className="text-sm font-medium tabular-nums text-foreground">
+            <span className="text-[15px] font-medium tabular-nums text-foreground">
               {formatCents(catalog.monthlyChargeCents)}/mo
             </span>
           )}
@@ -308,7 +310,7 @@ function PlanBreakdown({
 
       {/* Included resources */}
       <div className="flex flex-col gap-3">
-        <span className="text-[11px] font-semibold tracking-widest text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {t("billing.usage.included")}
         </span>
 
@@ -349,7 +351,7 @@ function PlanBreakdown({
       {/* Add-ons in breakdown */}
       {status.aiSmsEnabled && (
         <div className="flex flex-col gap-3">
-          <span className="text-[11px] font-semibold tracking-widest text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             Add-ons
           </span>
           <PlanLineItem
@@ -376,13 +378,15 @@ function PlanLineItem({
   return (
     <div className="flex items-start justify-between">
       <div className="flex flex-col">
-        <span className="text-sm text-foreground">{label}</span>
+        <span className="text-[15px] leading-6 text-foreground">{label}</span>
         {sublabel && (
-          <span className="text-xs text-muted-foreground">{sublabel}</span>
+          <span className="text-sm leading-6 text-muted-foreground">
+            {sublabel}
+          </span>
         )}
       </div>
       {price && (
-        <span className="text-sm tabular-nums text-foreground">{price}</span>
+        <span className="text-[15px] tabular-nums text-foreground">{price}</span>
       )}
     </div>
   );
@@ -498,8 +502,10 @@ function UsageMeterRow({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">{label}</span>
-        <span className="text-sm tabular-nums text-muted-foreground">
+        <span className="text-[15px] font-medium leading-6 text-foreground">
+          {label}
+        </span>
+        <span className="text-[15px] tabular-nums leading-6 text-muted-foreground">
           {used} {included !== null ? `/ ${included}` : ""} {unit}
           {metered && " (metered)"}
         </span>
@@ -523,7 +529,7 @@ function UsageMeterRow({
 
       {/* Overage note */}
       {overageCost > 0 && (
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
           {overageCount} {unit} over included ·{" "}
           <span className="font-medium text-foreground">
             ≈ {formatCents(overageCost)}
@@ -532,7 +538,7 @@ function UsageMeterRow({
         </span>
       )}
       {blocked && (
-        <span className="text-xs text-destructive">
+        <span className="text-sm leading-6 text-destructive">
           Limit reached — usage paused until next period.
         </span>
       )}
@@ -579,7 +585,7 @@ function AddonsSection({
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-[15px] font-medium leading-6 text-foreground">
                 {t("billing.addon.aiSmsName")}
               </span>
               {isActive && (
@@ -591,10 +597,10 @@ function AddonsSection({
                 </Badge>
               )}
             </div>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-[15px] leading-6 text-muted-foreground">
               {t("billing.addon.aiSmsDescription")}
             </span>
-            <span className="mt-1 text-xs tabular-nums text-muted-foreground">
+            <span className="mt-1 text-sm tabular-nums leading-6 text-muted-foreground">
               {t("billing.addon.aiSmsPricing", {
                 monthly: formatCents(
                   billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
@@ -701,19 +707,19 @@ function TransactionsSection({
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
                 {t("billing.transactions.columns.date")}
               </TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
                 {t("billing.transactions.columns.description")}
               </TableHead>
-              <TableHead className="text-right text-xs font-medium text-muted-foreground">
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
                 {t("billing.transactions.columns.amount")}
               </TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
                 {t("billing.transactions.columns.status")}
               </TableHead>
-              <TableHead className="text-right text-xs font-medium text-muted-foreground">
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
                 {t("billing.transactions.columns.invoice")}
               </TableHead>
             </TableRow>
