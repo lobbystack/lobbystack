@@ -167,8 +167,7 @@ function WorkspaceShell() {
     return <Navigate replace to="/onboarding/number" />;
   }
 
-  const usesFixedMain =
-    location.pathname === "/messages" || location.pathname === "/calls";
+  const usesFixedMain = location.pathname === "/messages";
 
   return (
     <AuthenticatedLayout
