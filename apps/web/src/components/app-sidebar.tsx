@@ -6,7 +6,6 @@ import { NavUser } from "@/components/layout/nav-user";
 import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { BookTextIcon } from "@/components/ui/book-text";
-import { BotIcon } from "@/components/ui/bot";
 import { BlocksIcon } from "@/components/ui/blocks";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
@@ -64,7 +63,6 @@ const AnimatedHomeIcon = createAnimatedSidebarIcon(HomeIcon);
 const AnimatedMessagesIcon = createAnimatedSidebarIcon(MessageSquareMoreIcon);
 const AnimatedContactsIcon = createAnimatedSidebarIcon(UsersIcon);
 const AnimatedAnalyticsIcon = createAnimatedSidebarIcon(ChartColumnIncreasingIcon);
-const AnimatedAgentIcon = createAnimatedSidebarIcon(BotIcon);
 const AnimatedBasicSettingsIcon = createAnimatedSidebarIcon(ClipboardCheckIcon);
 const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
 const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
@@ -107,35 +105,34 @@ export function AppSidebar({
           ],
         },
         {
+          title: t("nav:sidebar.agent"),
+          items: [
+            {
+              title: t("agent:sections.basicSettings.title"),
+              url: "/agent",
+              icon: AnimatedBasicSettingsIcon,
+            },
+            {
+              title: t("agent:sections.knowledge.title"),
+              url: "/agent/knowledge",
+              icon: AnimatedKnowledgeIcon,
+            },
+            {
+              title: t("agent:sections.services.title"),
+              url: "/agent/services",
+              icon: AnimatedServicesIcon,
+            },
+            {
+              title: t("agent:sections.rules.title"),
+              url: "/agent/rules",
+              icon: AnimatedRulesIcon,
+            },
+          ],
+        },
+        {
           title: t("nav:sidebar.other"),
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
-            {
-              title: t("nav:items.agent"),
-              icon: AnimatedAgentIcon,
-              items: [
-                {
-                  title: t("agent:sections.basicSettings.title"),
-                  url: "/agent",
-                  icon: AnimatedBasicSettingsIcon,
-                },
-                {
-                  title: t("agent:sections.knowledge.title"),
-                  url: "/agent/knowledge",
-                  icon: AnimatedKnowledgeIcon,
-                },
-                {
-                  title: t("agent:sections.services.title"),
-                  url: "/agent/services",
-                  icon: AnimatedServicesIcon,
-                },
-                {
-                  title: t("agent:sections.rules.title"),
-                  url: "/agent/rules",
-                  icon: AnimatedRulesIcon,
-                },
-              ],
-            },
             {
               title: t("nav:items.settings"),
               activeMatchPrefix: "/settings",

@@ -10,7 +10,8 @@ vi.mock("react-i18next", () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         "nav:sidebar.general": "General",
-        "nav:sidebar.other": "Other",
+        "nav:sidebar.agent": "Agent",
+        "nav:sidebar.other": "Manage",
         "nav:items.home": "Home",
         "nav:items.calls": "Calls",
         "nav:items.messages": "Messages",
@@ -44,6 +45,29 @@ describe("AppSidebar", () => {
         dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  it("groups Agent pages into their own section between General and Manage", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="AI Receptionist"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    const headings = screen.getAllByText(/General|Agent|Manage/).map((node) => node.textContent);
+
+    expect(headings).toEqual(["General", "Agent", "Manage"]);
+    expect(screen.getByRole("link", { name: "Basic settings" }).getAttribute("href")).toBe("/agent");
+    expect(screen.getByRole("link", { name: "Knowledge" }).getAttribute("href")).toBe("/agent/knowledge");
+    expect(screen.getByRole("link", { name: "Services" }).getAttribute("href")).toBe("/agent/services");
+    expect(screen.getByRole("link", { name: "Rules" }).getAttribute("href")).toBe("/agent/rules");
+    expect(screen.queryByRole("button", { name: "Agent" })).toBeNull();
   });
 
   it("links Settings directly to usage and removes the standalone integrations item", () => {
