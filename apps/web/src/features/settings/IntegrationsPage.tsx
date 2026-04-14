@@ -711,6 +711,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     <Button
                       disabled={!selectedConnection}
                       onClick={() => void handleDisconnectGoogle()}
+                      size="sm"
                       type="button"
                       variant="outline"
                     >

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
 import { useTranslation } from "react-i18next";
-import { ArrowUpRight, Lock } from "lucide-react";
+import { ArrowUpRight, Check, Lock } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -94,6 +93,24 @@ function voiceSecondsToMinutes(seconds: number): number {
   return Math.round((seconds / 60) * 10) / 10;
 }
 
+function formatIncludedUsageLine({
+  label,
+  value,
+  unit,
+  fallbackText,
+}: {
+  label: string;
+  value: number | null;
+  unit?: string;
+  fallbackText?: string;
+}) {
+  if (value === null) {
+    return fallbackText ?? `${label}: Unlimited`;
+  }
+
+  return `${value}${unit ? ` ${unit}` : ""} ${label.toLowerCase()}`;
+}
+
 function getPlanLabel(
   plan: BillingPlanSlug,
   t: BillingTranslation,
@@ -102,11 +119,11 @@ function getPlanLabel(
     case "self_host":
       return t("billing.planLabels.selfHost");
     case "free_cloud":
-      return t("billing.planLabels.freeCloud");
+      return t("billing.planLabels.freeCloudCard");
     case "pro":
-      return t("billing.planLabels.pro");
+      return t("billing.planLabels.proCard");
     case "enterprise":
-      return t("billing.planLabels.enterprise");
+      return t("billing.planLabels.enterpriseCard");
     default:
       return plan;
   }
@@ -191,6 +208,41 @@ function PlanSection({
     status.monthlyChargeCents !== null
       ? formatCents(status.monthlyChargeCents)
       : null;
+  const planConfig = billingPlanCatalog[status.plan];
+  const includedItems = [
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedVoiceLabel"),
+      value:
+        planConfig.voiceSecondsIncluded !== null
+          ? voiceSecondsToMinutes(planConfig.voiceSecondsIncluded)
+          : null,
+      unit: "min",
+      fallbackText: t("billing.currentPlan.includedVoiceUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedOutboundLabel"),
+      value: planConfig.outboundCallAttemptsIncluded,
+      unit: "calls",
+      fallbackText: t("billing.currentPlan.includedOutboundUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedSmsLabel"),
+      value: planConfig.alertSmsSegmentsIncluded,
+      unit: "SMS",
+      fallbackText: t("billing.currentPlan.includedSmsUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedStorageLabel"),
+      value:
+        planConfig.knowledgeStorageBytes !== null
+          ? Math.round(
+              (planConfig.knowledgeStorageBytes / (1024 * 1024 * 1024)) * 10,
+            ) / 10
+          : null,
+      unit: "GB",
+      fallbackText: t("billing.currentPlan.includedStorageUnlimited"),
+    }),
+  ];
 
   const canUpgrade =
     status.hasCheckoutAccess &&
@@ -216,7 +268,7 @@ function PlanSection({
     setLoading("portal");
     try {
       const result = await openPortal({ businessId });
-      window.open(result.url, "_blank");
+      window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.portalFailed"));
     } finally {
@@ -227,35 +279,52 @@ function PlanSection({
   return (
     <BillingSection title={t("billing.currentPlan.title")}>
       <BorderedItem>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[15px] font-medium leading-6 text-foreground">
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-3">
+              <span className="text-xl font-medium leading-7 text-foreground">
                 {planLabel}
               </span>
+              <div className="flex flex-col items-start gap-0.5">
+                <div className="flex flex-wrap items-end gap-2">
+                  {price !== null && (
+                    <span className="text-4xl font-semibold tracking-tight text-foreground">
+                      {price}
+                    </span>
+                  )}
+                  <span className="pb-1 text-base text-muted-foreground">
+                    {t("billing.currentPlan.monthlySuffix")}
+                  </span>
+                </div>
+                {status.plan === "pro" && (
+                  <span className="text-base text-muted-foreground">
+                    {t("billing.currentPlan.paygMonthlySuffix")}
+                  </span>
+                )}
+              </div>
+              {status.plan === "free_cloud" ? (
+                <span className="text-[15px] leading-6 text-muted-foreground">
+                  {t("billing.currentPlan.freeCloudNotice")}
+                </span>
+              ) : null}
             </div>
-            {status.plan === "free_cloud" ? (
-              <span className="text-[15px] leading-6 text-muted-foreground">
-                Upgrade to Pro to enable pay-as-you-go and higher limits.
+
+            <div className="flex flex-col gap-4">
+              <span className="text-base font-medium leading-6 text-foreground">
+                {t("billing.currentPlan.includedTitle")}
               </span>
-            ) : status.billingContactEmail ? (
-              <span className="text-[15px] leading-6 text-muted-foreground">
-                {status.billingContactEmail}
-              </span>
-            ) : null}
+              <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                {includedItems.map((item) => (
+                  <div key={item} className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 size-4 text-emerald-500" />
+                    <span className="text-[15px] leading-6 text-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {price !== null && (
-              <span className="text-[15px] font-medium tabular-nums text-foreground">
-                {t("billing.currentPlan.monthlyChargeValue", {
-                  amount: price,
-                })}
-              </span>
-            )}
-          </div>
-        </div>
-        {(canUpgrade || showManageSubscription) && (
-          <div className="mt-3 flex gap-2">
+          {(canUpgrade || showManageSubscription) && (
+            <div className="flex gap-2">
             {canUpgrade && (
               <Button
                 size="sm"
@@ -281,8 +350,9 @@ function PlanSection({
                 <ArrowUpRight className="size-3.5" />
               </Button>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </BorderedItem>
     </BillingSection>
   );
@@ -599,7 +669,7 @@ function AddonsSection({
     setLoading("ai_sms");
     try {
       const result = await startCheckout({ businessId, target: "ai_sms" });
-      window.open(result.url, "_blank");
+      window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
     } finally {
@@ -619,18 +689,25 @@ function AddonsSection({
     }
   }
 
-  const switchControl = (
-    <Switch
+  const enableControl = isActive ? (
+    <Badge
+      variant="outline"
+      className="border-emerald-200 bg-emerald-50 text-[11px] tracking-wide text-emerald-700"
+    >
+      {t("billing.addon.aiSmsActiveBadge")}
+    </Badge>
+  ) : (
+    <Button
+      size="sm"
+      variant="outline"
       aria-label={t("billing.addon.aiSmsName")}
-      checked={isActive}
-      disabled={isActive || loading !== null || !canPurchase}
-      onCheckedChange={(checked) => {
-        if (!checked || !canPurchase || loading !== null || isActive) {
-          return;
-        }
-        void handleAddAiSms();
-      }}
-    />
+      disabled={loading !== null || !canPurchase}
+      onClick={() => void handleAddAiSms()}
+    >
+      {loading === "ai_sms"
+        ? t("billing.actions.openingCheckout")
+        : t("billing.addon.enable")}
+    </Button>
   );
 
   return (
@@ -678,7 +755,7 @@ function AddonsSection({
             {isFreePlanLocked ? (
               <Tooltip>
                 <TooltipTrigger render={<span className="inline-flex" />}>
-                  {switchControl}
+                  {enableControl}
                 </TooltipTrigger>
                 <TooltipContent className="pointer-events-auto gap-1">
                   <span>{t("billing.addon.aiSmsRequiresProPrefix")}</span>
@@ -694,7 +771,7 @@ function AddonsSection({
                 </TooltipContent>
               </Tooltip>
             ) : (
-              switchControl
+              enableControl
             )}
           </div>
         </div>

@@ -25,8 +25,11 @@
     "planLabels": {
       "selfHost": "Self-host",
       "freeCloud": "Free",
+      "freeCloudCard": "Free Plan",
       "pro": "Pro",
-      "enterprise": "Enterprise"
+      "proCard": "Pro Plan",
+      "enterprise": "Enterprise",
+      "enterpriseCard": "Enterprise Plan"
     },
     "subscriptionStates": {
       "active": "Active",
@@ -62,7 +65,18 @@
       "selfHostNotice": "Self-hosted workspaces use your own providers. No usage limits or billing apply.",
       "enterpriseNotice": "Usage and limits are governed by your enterprise agreement.",
       "freeCloudNotice": "Usage is capped at the included pool each month. Upgrade to Pro for overage billing and higher limits.",
-      "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate."
+      "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate.",
+      "monthlySuffix": "/month",
+      "paygMonthlySuffix": "+ pay-as-you-go usage",
+      "includedTitle": "What's included:",
+      "includedStorageLabel": "storage",
+      "includedVoiceLabel": "voice minutes",
+      "includedSmsLabel": "SMS alerts",
+      "includedOutboundLabel": "outbound calls",
+      "includedStorageUnlimited": "Unlimited storage",
+      "includedVoiceUnlimited": "Unlimited voice minutes",
+      "includedSmsUnlimited": "Unlimited SMS alerts",
+      "includedOutboundUnlimited": "Unlimited outbound calls"
     },
     "usage": {
       "title": "Included usage",
@@ -109,6 +123,7 @@
       "title": "Add-ons",
       "aiSmsName": "AI SMS",
       "aiSmsDescription": "Let your receptionist send conversational SMS replies from your business number.",
+      "enable": "Enable",
       "aiSmsActiveBadge": "Active",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "One-time setup fee: {{amount}}",

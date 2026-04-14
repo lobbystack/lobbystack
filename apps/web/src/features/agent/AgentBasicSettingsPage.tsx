@@ -253,6 +253,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               <Button
                 disabled={isLoadingConfiguration || isGreetingSaving || !persistedProfile}
                 onClick={() => void saveGreeting()}
+                size="sm"
                 type="button"
                 variant="outline"
               >
@@ -367,6 +368,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               <Button
                 disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile}
                 onClick={() => void saveTransferNumber()}
+                size="sm"
                 type="button"
                 variant="outline"
               >

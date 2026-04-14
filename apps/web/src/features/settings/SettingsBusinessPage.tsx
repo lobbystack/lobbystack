@@ -191,7 +191,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                 open={isBusinessNameDialogOpen}
               >
                 <DialogTrigger
-                  render={<Button disabled={isLoadingBusinessName} variant="outline" />}
+                  render={<Button disabled={isLoadingBusinessName} size="sm" variant="outline" />}
                 >
                   {t("account.actions.change")}
                 </DialogTrigger>
@@ -251,7 +251,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemActions>
                 <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
                   <DialogTrigger
-                    render={<Button disabled={isLoadingEmail} variant="outline" />}
+                    render={<Button disabled={isLoadingEmail} size="sm" variant="outline" />}
                   >
                     {t("account.actions.change")}
                   </DialogTrigger>
@@ -314,7 +314,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               </ItemContent>
               <ItemActions>
                 <Dialog onOpenChange={setIsPasswordDialogOpen} open={isPasswordDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
+                  <DialogTrigger render={<Button size="sm" variant="outline" />}>
                     {t("account.actions.change")}
                   </DialogTrigger>
                   <DialogContent>

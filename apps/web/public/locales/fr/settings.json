@@ -25,8 +25,11 @@
     "planLabels": {
       "selfHost": "Auto-hébergé",
       "freeCloud": "Gratuit",
+      "freeCloudCard": "Forfait gratuit",
       "pro": "Pro",
-      "enterprise": "Entreprise"
+      "proCard": "Forfait Pro",
+      "enterprise": "Entreprise",
+      "enterpriseCard": "Forfait Entreprise"
     },
     "actions": {
       "upgradeToPro": "Passer à Pro",
@@ -47,7 +50,18 @@
       "customIncludedNumbers": "Personnalisé selon l'entente",
       "billingContactTitle": "Contact de facturation",
       "billingContactMissing": "Aucun contact de facturation pour le moment.",
-      "subscriptionStateTitle": "État de l'abonnement"
+      "subscriptionStateTitle": "État de l'abonnement",
+      "monthlySuffix": "/mois",
+      "paygMonthlySuffix": "+ utilisation à l'usage",
+      "includedTitle": "Ce qui est inclus :",
+      "includedStorageLabel": "de stockage",
+      "includedVoiceLabel": "de minutes vocales",
+      "includedSmsLabel": "d'alertes SMS",
+      "includedOutboundLabel": "d'appels sortants",
+      "includedStorageUnlimited": "Stockage illimité",
+      "includedVoiceUnlimited": "Minutes vocales illimitées",
+      "includedSmsUnlimited": "Alertes SMS illimitées",
+      "includedOutboundUnlimited": "Appels sortants illimités"
     },
     "usage": {
       "title": "Utilisation ce mois-ci",
@@ -84,6 +98,7 @@
       "title": "Modules complémentaires",
       "aiSmsName": "SMS IA",
       "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise.",
+      "enable": "Activer",
       "aiSmsActiveBadge": "SMS IA actifs",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "Frais d'installation uniques : {{amount}}",

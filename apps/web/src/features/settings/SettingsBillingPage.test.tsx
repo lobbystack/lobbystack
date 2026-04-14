@@ -15,6 +15,7 @@ import {
 
 const startCheckoutMock = vi.fn();
 const rememberedQueryMock = vi.mocked(useRememberedConvexQuery);
+const locationAssignMock = vi.fn();
 
 vi.mock("convex/react", () => ({
   useAction: () => startCheckoutMock,
@@ -115,26 +116,33 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     startCheckoutMock.mockReset();
     rememberedQueryMock.mockReset();
     vi.stubGlobal("open", vi.fn());
+    locationAssignMock.mockReset();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...window.location,
+        assign: locationAssignMock,
+      },
+    });
   });
 
-  it("shows a tooltip for the disabled switch on the free plan", async () => {
+  it("shows a tooltip for the disabled enable button on the free plan", async () => {
     const user = userEvent.setup();
 
     renderBillingPage(buildStatus());
 
-    const switchElement = screen.getByRole("switch", {
+    const enableButton = screen.getByRole("button", {
       name: "billing.addon.aiSmsName",
     });
-    expect(switchElement.getAttribute("aria-checked")).toBe("false");
-    expect(switchElement.getAttribute("data-disabled")).not.toBeNull();
+    expect(enableButton.getAttribute("disabled")).not.toBeNull();
 
-    await user.hover(switchElement.parentElement as HTMLElement);
+    await user.hover(enableButton.parentElement as HTMLElement);
 
     expect(await screen.findByText("billing.addon.aiSmsRequiresProPrefix")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.addon.aiSmsRequiresProLink" })).toBeTruthy();
   });
 
-  it("starts AI SMS checkout when an eligible Pro workspace enables the switch", async () => {
+  it("starts AI SMS checkout when an eligible Pro workspace clicks enable", async () => {
     const user = userEvent.setup();
     startCheckoutMock.mockResolvedValue({
       url: "https://example.com/checkout",
@@ -150,21 +158,21 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       }),
     );
 
-    const switchElement = screen.getByRole("switch", {
+    const enableButton = screen.getByRole("button", {
       name: "billing.addon.aiSmsName",
     });
-    expect(switchElement.getAttribute("aria-checked")).toBe("false");
+    expect(enableButton).toBeTruthy();
 
-    await user.click(switchElement);
+    await user.click(enableButton);
 
     expect(startCheckoutMock).toHaveBeenCalledWith({
       businessId,
       target: "ai_sms",
     });
-    expect(window.open).toHaveBeenCalledWith("https://example.com/checkout", "_blank");
+    expect(window.location.assign).toHaveBeenCalledWith("https://example.com/checkout");
   });
 
-  it("renders the add-on switch as checked and disabled once AI SMS is active", () => {
+  it("renders the add-on as active once AI SMS is enabled", () => {
     renderBillingPage(
       buildStatus({
         plan: "pro",
@@ -176,12 +184,25 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       }),
     );
 
-    const switchElement = screen.getByRole("switch", {
-      name: "billing.addon.aiSmsName",
-    });
+    expect(screen.getAllByText("billing.addon.aiSmsActiveBadge").length).toBeGreaterThan(0);
+  });
 
-    expect(switchElement.getAttribute("aria-checked")).toBe("true");
-    expect(switchElement.getAttribute("data-disabled")).not.toBeNull();
+  it("renders the redesigned plan card content for Pro", () => {
+    renderBillingPage(
+      buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        monthlyChargeCents: 1_500,
+        overagesBillable: true,
+        hasCustomerPortalAccess: true,
+        billingContactEmail: "raphael@example.com",
+      }),
+    );
+
+    expect(screen.getByText("$15")).toBeTruthy();
+    expect(screen.getByText("billing.currentPlan.paygMonthlySuffix")).toBeTruthy();
+    expect(screen.getByText("billing.currentPlan.includedTitle")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 
   it("keeps usage off the billing overview page", () => {
