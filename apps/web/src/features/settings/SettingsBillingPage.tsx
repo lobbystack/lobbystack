@@ -190,7 +190,7 @@ function PlanSection({
     setLoading("checkout");
     try {
       const result = await startCheckout({ businessId, target: "pro" });
-      window.open(result.url, "_blank");
+      window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
     } finally {

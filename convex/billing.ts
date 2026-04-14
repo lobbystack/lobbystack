@@ -1141,7 +1141,7 @@ export const startCheckout = action({
     });
 
     if (args.target === "pro" && snapshot.plan !== "free_cloud") {
-      throw new Error("Only Free Cloud workspaces can start Pro checkout.");
+      throw new Error("Only Free workspaces can start Pro checkout.");
     }
     if (args.target === "pro" && !snapshot.availableCheckoutPlans.includes("pro")) {
       throw new Error("Pro checkout is not configured.");
