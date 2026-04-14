@@ -1,7 +1,7 @@
 {
   "appName": "Réceptionniste IA",
   "loading": {
-    "title": "Chargement de l'espace de travail",
+    "title": "Chargement...",
     "description": "Synchronisation de votre console opérateur et des réglages de la réceptionniste."
   },
   "language": {

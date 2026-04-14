@@ -1,7 +1,7 @@
 {
   "appName": "AI Receptionist",
   "loading": {
-    "title": "Loading workspace",
+    "title": "Loading...",
     "description": "Syncing your operator console and receptionist settings."
   },
   "language": {
