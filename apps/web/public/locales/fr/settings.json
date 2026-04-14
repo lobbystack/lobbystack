@@ -30,6 +30,7 @@
       "upgradeToPro": "Passer à Pro",
       "unlockAiSms": "Activer les SMS IA",
       "manageBilling": "Gérer la facturation",
+      "manageSubscription": "Gérer l'abonnement",
       "openingCheckout": "Ouverture du paiement...",
       "openingPortal": "Ouverture du portail..."
     },
@@ -76,7 +77,13 @@
       "aiSmsAddon": "Option SMS IA : {{monthly}} par mois + {{setup}} de mise en service. Les SMS IA sont facturés à {{usage}} par segment."
     },
     "addon": {
-      "aiSmsActiveBadge": "SMS IA actifs"
+      "title": "Modules complémentaires",
+      "aiSmsName": "SMS IA",
+      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise.",
+      "aiSmsActiveBadge": "SMS IA actifs",
+      "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
+      "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
+      "aiSmsRequiresPro": "Disponible avec le forfait Pro."
     },
     "transactions": {
       "title": "Événements de facturation récents",

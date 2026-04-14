@@ -23,6 +23,7 @@ import {
   billingAddonCatalog,
   billingErrorCodes,
   billingPlanCatalog,
+  getBillingMonthlyChargeCents,
   getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
 } from "../packages/shared/src/billing";
@@ -343,7 +344,10 @@ function buildBillingStatus(input: {
       activeAddons: input.activeAddons,
     }),
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
-    monthlyChargeCents: billingPlanCatalog[input.plan].monthlyChargeCents,
+    monthlyChargeCents: getBillingMonthlyChargeCents({
+      plan: input.plan,
+      activeAddons: input.activeAddons,
+    }),
     billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
     billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,

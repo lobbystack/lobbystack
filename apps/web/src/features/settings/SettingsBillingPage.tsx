@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -25,6 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
@@ -173,10 +179,9 @@ function PlanSection({
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
 
   const planLabel = getPlanLabel(status.plan, t);
-  const catalog = billingPlanCatalog[status.plan];
   const price =
-    catalog.monthlyChargeCents !== null
-      ? formatCents(catalog.monthlyChargeCents)
+    status.monthlyChargeCents !== null
+      ? formatCents(status.monthlyChargeCents)
       : null;
 
   const canUpgrade =
@@ -461,6 +466,7 @@ function AddonsSection({
   const [loading, setLoading] = useState(false);
   const isActive = status.aiSmsEnabled;
   const canPurchase = status.canPurchaseAiSmsAddon;
+  const isFreePlanLocked = status.plan === "free_cloud" && !isActive;
 
   async function handleAddAiSms() {
     setLoading(true);
@@ -473,6 +479,20 @@ function AddonsSection({
       setLoading(false);
     }
   }
+
+  const switchControl = (
+    <Switch
+      aria-label={t("billing.addon.aiSmsName")}
+      checked={isActive}
+      disabled={isActive || loading || !canPurchase}
+      onCheckedChange={(checked) => {
+        if (!checked || !canPurchase || loading || isActive) {
+          return;
+        }
+        void handleAddAiSms();
+      }}
+    />
+  );
 
   return (
     <BillingSection
@@ -516,27 +536,17 @@ function AddonsSection({
             </span>
           </div>
           <div className="shrink-0">
-            {isActive ? (
-              <div className="flex h-6 items-center rounded-full bg-primary px-3">
-                <span className="text-xs font-medium text-primary-foreground">
-                  On
-                </span>
-              </div>
-            ) : canPurchase ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={loading}
-                onClick={() => void handleAddAiSms()}
-              >
-                {loading
-                  ? t("billing.actions.openingCheckout")
-                  : t("billing.actions.unlockAiSms")}
-              </Button>
+            {isFreePlanLocked ? (
+              <Tooltip>
+                <TooltipTrigger render={<span className="inline-flex" />}>
+                  {switchControl}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("billing.addon.aiSmsRequiresPro")}
+                </TooltipContent>
+              </Tooltip>
             ) : (
-              <span className="text-xs text-muted-foreground">
-                {t("billing.addon.aiSmsRequiresPro")}
-              </span>
+              switchControl
             )}
           </div>
         </div>
@@ -737,7 +747,7 @@ function AddonsSectionSkeleton({
             <Skeleton className="h-4 w-72" />
             <Skeleton className="h-4 w-56" />
           </div>
-          <Skeleton className="h-9 w-28 rounded-md" />
+          <Skeleton className="h-6 w-10 rounded-full" />
         </div>
       </BorderedItem>
     </BillingSection>

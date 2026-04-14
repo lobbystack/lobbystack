@@ -140,6 +140,23 @@ export const billingAddonCatalog = {
   }
 >;
 
+export function getBillingMonthlyChargeCents(input: {
+  plan: BillingPlanSlug;
+  activeAddons?: Array<BillingAddonSlug>;
+}): number | null {
+  const baseMonthlyChargeCents = billingPlanCatalog[input.plan].monthlyChargeCents;
+  if (baseMonthlyChargeCents === null) {
+    return null;
+  }
+
+  const recurringAddonChargeCents = (input.activeAddons ?? []).reduce<number>(
+    (total, addon) => total + billingAddonCatalog[addon].recurringMonthlyChargeCents,
+    0,
+  );
+
+  return baseMonthlyChargeCents + recurringAddonChargeCents;
+}
+
 export function isHostedBillingPlan(
   plan: BillingPlanSlug,
 ): plan is CloudBillingPlanSlug {
