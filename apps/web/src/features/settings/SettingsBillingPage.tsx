@@ -463,20 +463,32 @@ function AddonsSection({
   t: ReturnType<typeof useTranslation<"settings">>["t"];
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
   const isActive = status.aiSmsEnabled;
   const canPurchase = status.canPurchaseAiSmsAddon;
   const isFreePlanLocked = status.plan === "free_cloud" && !isActive;
 
   async function handleAddAiSms() {
-    setLoading(true);
+    setLoading("ai_sms");
     try {
       const result = await startCheckout({ businessId, target: "ai_sms" });
       window.open(result.url, "_blank");
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
     } finally {
-      setLoading(false);
+      setLoading(null);
+    }
+  }
+
+  async function handleUpgradeToPro() {
+    setLoading("pro");
+    try {
+      const result = await startCheckout({ businessId, target: "pro" });
+      window.location.assign(result.url);
+    } catch {
+      toast.error(t("billing.toast.checkoutFailed"));
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -484,9 +496,9 @@ function AddonsSection({
     <Switch
       aria-label={t("billing.addon.aiSmsName")}
       checked={isActive}
-      disabled={isActive || loading || !canPurchase}
+      disabled={isActive || loading !== null || !canPurchase}
       onCheckedChange={(checked) => {
-        if (!checked || !canPurchase || loading || isActive) {
+        if (!checked || !canPurchase || loading !== null || isActive) {
           return;
         }
         void handleAddAiSms();
@@ -541,8 +553,17 @@ function AddonsSection({
                 <TooltipTrigger render={<span className="inline-flex" />}>
                   {switchControl}
                 </TooltipTrigger>
-                <TooltipContent>
-                  {t("billing.addon.aiSmsRequiresPro")}
+                <TooltipContent className="pointer-events-auto gap-1">
+                  <span>{t("billing.addon.aiSmsRequiresProPrefix")}</span>
+                  <Button
+                    variant="link"
+                    size="xs"
+                    className="h-auto p-0 text-background underline underline-offset-2 hover:text-background/80"
+                    disabled={loading !== null}
+                    onClick={() => void handleUpgradeToPro()}
+                  >
+                    {t("billing.addon.aiSmsRequiresProLink")}
+                  </Button>
                 </TooltipContent>
               </Tooltip>
             ) : (

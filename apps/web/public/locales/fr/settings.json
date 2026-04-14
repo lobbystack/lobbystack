@@ -83,7 +83,8 @@
       "aiSmsActiveBadge": "SMS IA actifs",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
-      "aiSmsRequiresPro": "Disponible avec le forfait Pro."
+      "aiSmsRequiresProPrefix": "Disponible avec le forfait",
+      "aiSmsRequiresProLink": "Pro"
     },
     "transactions": {
       "title": "Événements de facturation récents",

@@ -124,7 +124,8 @@ describe("SettingsBillingPage AI SMS add-on", () => {
 
     await user.hover(switchElement.parentElement as HTMLElement);
 
-    expect(await screen.findByText("billing.addon.aiSmsRequiresPro")).toBeTruthy();
+    expect(await screen.findByText("billing.addon.aiSmsRequiresProPrefix")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "billing.addon.aiSmsRequiresProLink" })).toBeTruthy();
   });
 
   it("starts AI SMS checkout when an eligible Pro workspace enables the switch", async () => {

@@ -108,7 +108,8 @@
       "aiSmsActiveBadge": "Active",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "One-time setup fee: {{amount}}",
-      "aiSmsRequiresPro": "Available on the Pro plan."
+      "aiSmsRequiresProPrefix": "Available on",
+      "aiSmsRequiresProLink": "Pro plan"
     },
     "spendingCap": {
       "title": "Monthly spending cap",
