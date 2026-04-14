@@ -196,20 +196,18 @@ function PlanSection({
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5">
               <span className="text-[15px] font-medium leading-6 text-foreground">
-                {status.plan === "free_cloud"
-                  ? t("billing.currentPlan.freeCloudNotice")
-                  : status.plan === "pro"
-                    ? t("billing.currentPlan.proNotice")
-                    : status.plan === "enterprise"
-                      ? t("billing.currentPlan.enterpriseNotice")
-                      : t("billing.currentPlan.selfHostNotice")}
+                {planLabel}
               </span>
             </div>
-            {status.billingContactEmail && (
+            {status.plan === "free_cloud" ? (
+              <span className="text-[15px] leading-6 text-muted-foreground">
+                Upgrade to Pro to enable pay-as-you-go and higher limits.
+              </span>
+            ) : status.billingContactEmail ? (
               <span className="text-[15px] leading-6 text-muted-foreground">
                 {status.billingContactEmail}
               </span>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             {price !== null && (
@@ -251,140 +249,7 @@ function PlanSection({
           </div>
         )}
       </BorderedItem>
-
-      {/* Plan breakdown — GitBook "Your plan" style */}
-      {status.plan !== "self_host" && (
-        <PlanBreakdown status={status} t={t} />
-      )}
     </BillingSection>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Plan breakdown — matches GitBook's right sidebar "Your plan" summary
-// ---------------------------------------------------------------------------
-
-function PlanBreakdown({
-  status,
-  t,
-}: {
-  status: BillingStatus;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
-}) {
-  const plan = status.plan;
-  const catalog = billingPlanCatalog[plan];
-  const planLabel = getPlanLabel(plan, t);
-
-  const voiceIncluded =
-    catalog.voiceSecondsIncluded !== null
-      ? voiceSecondsToMinutes(catalog.voiceSecondsIncluded)
-      : null;
-
-  return (
-    <BorderedItem className="flex flex-col gap-4">
-      {/* Plan line */}
-      <div className="flex flex-col gap-3">
-        <span className="type-meta">
-          {t("billing.currentPlan.planLabel")}
-        </span>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[15px] leading-6 text-foreground">{planLabel}</span>
-            {plan === "pro" && (
-              <Badge variant="default" className="text-[10px]">
-                Pro
-              </Badge>
-            )}
-          </div>
-          {catalog.monthlyChargeCents !== null && (
-            <span className="text-[15px] font-medium tabular-nums text-foreground">
-              {formatCents(catalog.monthlyChargeCents)}/mo
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Included resources */}
-      <div className="flex flex-col gap-3">
-        <span className="type-meta">
-          {t("billing.usage.included")}
-        </span>
-
-        {voiceIncluded !== null && (
-          <PlanLineItem
-            label={`${voiceIncluded} voice minutes`}
-            sublabel={
-              catalog.voiceOverageRatePerMinuteCents
-                ? `× ${formatCents(catalog.voiceOverageRatePerMinuteCents)}/min overage`
-                : undefined
-            }
-          />
-        )}
-
-        {catalog.alertSmsSegmentsIncluded !== null && (
-          <PlanLineItem
-            label={`${catalog.alertSmsSegmentsIncluded} SMS alert segments`}
-            sublabel={
-              catalog.alertSmsOverageRatePerSegmentCents
-                ? `× ${formatCents(catalog.alertSmsOverageRatePerSegmentCents)}/segment overage`
-                : undefined
-            }
-          />
-        )}
-
-        {catalog.outboundCallAttemptsIncluded !== null && (
-          <PlanLineItem
-            label={`${catalog.outboundCallAttemptsIncluded} outbound call attempts`}
-            sublabel={
-              catalog.outboundCallAttemptOverageRateCents
-                ? `× ${formatCents(catalog.outboundCallAttemptOverageRateCents)}/attempt overage`
-                : undefined
-            }
-          />
-        )}
-      </div>
-
-      {/* Add-ons in breakdown */}
-      {status.aiSmsEnabled && (
-        <div className="flex flex-col gap-3">
-          <span className="type-meta">
-            Add-ons
-          </span>
-          <PlanLineItem
-            label="AI SMS"
-            sublabel={`${formatCents(billingAddonCatalog.ai_sms.recurringMonthlyChargeCents)}/mo + ${formatCents(billingAddonCatalog.ai_sms.usageRatePerSegmentCents)}/segment`}
-            price={`${formatCents(billingAddonCatalog.ai_sms.recurringMonthlyChargeCents)}/mo`}
-          />
-        </div>
-      )}
-
-    </BorderedItem>
-  );
-}
-
-function PlanLineItem({
-  label,
-  sublabel,
-  price,
-}: {
-  label: string;
-  sublabel?: string | undefined;
-  price?: string | undefined;
-}) {
-  return (
-    <div className="flex items-start justify-between">
-      <div className="flex flex-col">
-        <span className="text-[15px] leading-6 text-foreground">{label}</span>
-        {sublabel && (
-          <span className="text-sm leading-6 text-muted-foreground">
-            {sublabel}
-          </span>
-        )}
-      </div>
-      {price && (
-        <span className="text-[15px] tabular-nums text-foreground">{price}</span>
-      )}
-    </div>
   );
 }
 
