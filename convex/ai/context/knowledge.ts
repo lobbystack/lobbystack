@@ -19,6 +19,7 @@ import {
 import { api, internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../../lib/auth";
+import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
   bulkWorkpool,
   getKnowledgeNamespace,
@@ -160,6 +161,43 @@ async function requireKnowledgeAccess(
 
   if (!membership) {
     throw new Error("Unauthorized.");
+  }
+}
+
+function formatKnowledgeStorageLimit(limitBytes: number): string {
+  if (limitBytes >= 1024 * 1024 * 1024) {
+    return `${limitBytes / (1024 * 1024 * 1024)} GB`;
+  }
+
+  return `${limitBytes / (1024 * 1024)} MB`;
+}
+
+async function assertKnowledgeStorageCapacity(
+  ctx: ActionCtx,
+  args: {
+    businessId: Id<"businesses">;
+    additionalBytes: number;
+  },
+): Promise<void> {
+  const billingSnapshot = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
+    businessId: args.businessId,
+  });
+  const limitBytes = getKnowledgeStorageLimitBytes(billingSnapshot.plan);
+  if (limitBytes === null) {
+    return;
+  }
+
+  const currentUsageBytes = await ctx.runQuery(
+    internal.ai.context.knowledge.getKnowledgeStorageUsageBytes,
+    {
+      businessId: args.businessId,
+    },
+  );
+
+  if (currentUsageBytes + args.additionalBytes > limitBytes) {
+    throw new Error(
+      `Knowledge storage limit reached. ${formatKnowledgeStorageLimit(limitBytes)} is included on this plan.`,
+    );
   }
 }
 
@@ -644,6 +682,34 @@ export const getUploadedKnowledgeDocumentMetadata = internalQuery({
   },
 });
 
+export const getKnowledgeStorageUsageBytes = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (
+    ctx: QueryCtx,
+    args: BusinessIdArgs,
+  ): Promise<number> => {
+    let totalBytes = 0;
+
+    for await (const document of ctx.db
+      .query("knowledge_documents")
+      .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))) {
+      if (document.storageId) {
+        const metadata = await ctx.db.system.get("_storage", document.storageId);
+        totalBytes += metadata?.size ?? 0;
+      }
+
+      if (document.extractedTextStorageId) {
+        const metadata = await ctx.db.system.get("_storage", document.extractedTextStorageId);
+        totalBytes += metadata?.size ?? 0;
+      }
+    }
+
+    return totalBytes;
+  },
+});
+
 export const getBusinessDefaultLocale = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -914,6 +980,16 @@ export const finalizeKnowledgeDocumentUpload = action({
     if (!resolvedContentType || !isSupportedKnowledgeDocumentContentType(resolvedContentType)) {
       await ctx.storage.delete(args.storageId);
       throw new Error("Supported document types are PDF, DOCX, TXT, and Markdown.");
+    }
+
+    try {
+      await assertKnowledgeStorageCapacity(ctx, {
+        businessId: args.businessId,
+        additionalBytes: metadata.byteLength,
+      });
+    } catch (error) {
+      await ctx.storage.delete(args.storageId);
+      throw error;
     }
 
     const fallbackExtension = resolvedContentType === "application/pdf"

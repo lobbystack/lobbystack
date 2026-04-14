@@ -53,6 +53,7 @@ export const billingPlanCatalog = {
   self_host: {
     hostedBilling: false,
     monthlyChargeCents: 0,
+    knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
@@ -65,6 +66,7 @@ export const billingPlanCatalog = {
   free_cloud: {
     hostedBilling: true,
     monthlyChargeCents: 0,
+    knowledgeStorageBytes: 100 * 1024 * 1024,
     voiceSecondsIncluded: 600,
     alertSmsSegmentsIncluded: 10,
     outboundCallAttemptsIncluded: 2,
@@ -77,6 +79,7 @@ export const billingPlanCatalog = {
   pro: {
     hostedBilling: true,
     monthlyChargeCents: 1_500,
+    knowledgeStorageBytes: 2 * 1024 * 1024 * 1024,
     voiceSecondsIncluded: 4_800,
     alertSmsSegmentsIncluded: 50,
     outboundCallAttemptsIncluded: 20,
@@ -89,6 +92,7 @@ export const billingPlanCatalog = {
   enterprise: {
     hostedBilling: true,
     monthlyChargeCents: null,
+    knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
@@ -103,6 +107,7 @@ export const billingPlanCatalog = {
   {
     hostedBilling: boolean;
     monthlyChargeCents: number | null;
+    knowledgeStorageBytes: number | null;
     voiceSecondsIncluded: number | null;
     alertSmsSegmentsIncluded: number | null;
     outboundCallAttemptsIncluded: number | null;
@@ -113,6 +118,12 @@ export const billingPlanCatalog = {
     outboundCallAttemptOverageRateCents: number | null;
   }
 >;
+
+export function getKnowledgeStorageLimitBytes(
+  plan: BillingPlanSlug,
+): number | null {
+  return billingPlanCatalog[plan].knowledgeStorageBytes;
+}
 
 export const billingAddonCatalog = {
   ai_sms: {

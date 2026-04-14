@@ -6,6 +6,7 @@ import { getConvexSize, v } from "convex/values";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { internalAction, type ActionCtx } from "../../_generated/server";
+import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
   hasMeaningfulKnowledgeDocumentText,
   normalizeKnowledgeDocumentText,
@@ -23,6 +24,14 @@ const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
 const MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES = 256 * 1024;
 const TRUNCATED_TEXT_SUFFIX = "\n\n...";
+
+function formatKnowledgeStorageLimit(limitBytes: number): string {
+  if (limitBytes >= 1024 * 1024 * 1024) {
+    return `${limitBytes / (1024 * 1024 * 1024)} GB`;
+  }
+
+  return `${limitBytes / (1024 * 1024)} MB`;
+}
 
 function getPreferredOcrLanguages(
   locale: RuntimeLocale | null | undefined,
@@ -177,14 +186,33 @@ async function prepareUploadedKnowledgeDocument(
     });
 
     const contentHash = createHash("sha256").update(normalizedText).digest("hex");
-    extractedTextStorageId =
+    const extractedTextBlob =
       getConvexSize(normalizedText) > MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES
-        ? await ctx.storage.store(
-            new Blob([normalizedText], {
-              type: "text/plain;charset=utf-8",
-            }),
-          )
-        : undefined;
+        ? new Blob([normalizedText], {
+            type: "text/plain;charset=utf-8",
+          })
+        : null;
+    if (extractedTextBlob) {
+      const billingSnapshot = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
+        businessId: document.businessId,
+      });
+      const limitBytes = getKnowledgeStorageLimitBytes(billingSnapshot.plan);
+      if (limitBytes !== null) {
+        const currentUsageBytes = await ctx.runQuery(
+          internal.ai.context.knowledge.getKnowledgeStorageUsageBytes,
+          {
+            businessId: document.businessId,
+          },
+        );
+        if (currentUsageBytes + extractedTextBlob.size > limitBytes) {
+          throw new Error(
+            `Knowledge storage limit reached. ${formatKnowledgeStorageLimit(limitBytes)} is included on this plan.`,
+          );
+        }
+      }
+
+      extractedTextStorageId = await ctx.storage.store(extractedTextBlob);
+    }
     const previewText = extractedTextStorageId
       ? buildKnowledgeDocumentPreviewText(normalizedText)
       : normalizedText;

@@ -75,6 +75,25 @@ function resolveFileContentType(file: File): string {
   return inferContentTypeFromFileName(file.name);
 }
 
+function getUploadErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+): string {
+  if (!(error instanceof Error) || !error.message) {
+    return fallbackMessage;
+  }
+
+  if (
+    error.message === "Documents must be 10 MB or smaller." ||
+    error.message === "Supported document types are PDF, DOCX, TXT, and Markdown." ||
+    error.message.startsWith("Knowledge storage limit reached.")
+  ) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 export function UploadKnowledgeDocumentSheet({
   businessId,
   section,
@@ -194,7 +213,12 @@ export function UploadKnowledgeDocumentSheet({
         contentType,
         operation: "knowledge_document_upload",
       });
-      setErrorMessage(t(`sections.${section}.uploadValidation.uploadFailed`));
+      setErrorMessage(
+        getUploadErrorMessage(
+          error,
+          t(`sections.${section}.uploadValidation.uploadFailed`),
+        ),
+      );
     } finally {
       setIsUploading(false);
     }
