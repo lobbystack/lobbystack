@@ -42,6 +42,8 @@ type SettingsBillingPageProps = {
   businessId: Id<"businesses">;
 };
 
+type BillingTranslation = ReturnType<typeof useTranslation<"settings">>["t"];
+
 // ---------------------------------------------------------------------------
 // Formatters
 // ---------------------------------------------------------------------------
@@ -94,7 +96,7 @@ function voiceSecondsToMinutes(seconds: number): number {
 
 function getPlanLabel(
   plan: BillingPlanSlug,
-  t: ReturnType<typeof useTranslation<"settings">>["t"],
+  t: BillingTranslation,
 ): string {
   switch (plan) {
     case "self_host":
@@ -108,6 +110,12 @@ function getPlanLabel(
     default:
       return plan;
   }
+}
+
+function useBillingStatus(businessId: Id<"businesses">) {
+  return useRememberedConvexQuery(api.billing.getStatus, {
+    businessId,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -172,7 +180,7 @@ function PlanSection({
 }: {
   status: BillingStatus;
   businessId: Id<"businesses">;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
   const openPortal = useAction(api.billing.openPortal);
@@ -289,7 +297,7 @@ function UsageSection({
   t,
 }: {
   status: BillingStatus;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   const usage = status.usage;
   const plan = status.plan;
@@ -366,6 +374,25 @@ function UsageSection({
             metered
           />
         )}
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function UsageUnavailableSection({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection
+      title={t("billing.usage.title")}
+      description={t("billing.currentPlan.selfHostNotice")}
+    >
+      <BorderedItem>
+        <p className="text-[15px] leading-6 text-muted-foreground">
+          {t("billing.currentPlan.selfHostNotice")}
+        </p>
       </BorderedItem>
     </BillingSection>
   );
@@ -460,7 +487,7 @@ function AddonsSection({
 }: {
   status: BillingStatus;
   businessId: Id<"businesses">;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
   const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
@@ -585,7 +612,7 @@ function SpendingCapSection({
   t,
 }: {
   status: BillingStatus;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   if (status.plan !== "pro" && status.plan !== "enterprise") return null;
 
@@ -622,7 +649,7 @@ function TransactionsSection({
   t,
 }: {
   status: BillingStatus;
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   const transactions = status.recentTransactions;
   if (!transactions || transactions.length === 0) return null;
@@ -705,7 +732,7 @@ function TransactionsSection({
 function PlanSectionSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <BillingSection title={t("billing.currentPlan.title")}>
@@ -729,7 +756,7 @@ function PlanSectionSkeleton({
 function UsageSectionSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <BillingSection
@@ -754,7 +781,7 @@ function UsageSectionSkeleton({
 function AddonsSectionSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <BillingSection
@@ -778,7 +805,7 @@ function AddonsSectionSkeleton({
 function SpendingCapSectionSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <BillingSection
@@ -798,7 +825,7 @@ function SpendingCapSectionSkeleton({
 function TransactionsSectionSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <BillingSection
@@ -853,18 +880,29 @@ function TransactionsSectionSkeleton({
   );
 }
 
-function BillingPageSkeleton({
+function BillingOverviewSkeleton({
   t,
 }: {
-  t: ReturnType<typeof useTranslation<"settings">>["t"];
+  t: BillingTranslation;
 }) {
   return (
     <div className="flex w-full flex-col gap-10">
       <PlanSectionSkeleton t={t} />
-      <UsageSectionSkeleton t={t} />
       <AddonsSectionSkeleton t={t} />
       <SpendingCapSectionSkeleton t={t} />
       <TransactionsSectionSkeleton t={t} />
+    </div>
+  );
+}
+
+function BillingUsageSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <UsageSectionSkeleton t={t} />
     </div>
   );
 }
@@ -875,20 +913,15 @@ function BillingPageSkeleton({
 
 export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { t } = useTranslation("settings");
-  const { data: status, isInitialLoading: isLoadingStatus } = useRememberedConvexQuery(
-    api.billing.getStatus,
-    {
-      businessId: props.businessId,
-    },
-  );
+  const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
 
   if (isLoadingStatus || !status) {
-    return <BillingPageSkeleton t={t} />;
+    return <BillingOverviewSkeleton t={t} />;
   }
 
   if (status.plan === "self_host") {
     return (
-      <div className="w-full">
+      <div className="flex w-full flex-col gap-10">
         <PlanSection status={status} businessId={props.businessId} t={t} />
       </div>
     );
@@ -897,10 +930,28 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   return (
     <div className="flex w-full flex-col gap-10">
       <PlanSection status={status} businessId={props.businessId} t={t} />
-      <UsageSection status={status} t={t} />
       <AddonsSection status={status} businessId={props.businessId} t={t} />
       <SpendingCapSection status={status} t={t} />
       <TransactionsSection status={status} t={t} />
+    </div>
+  );
+}
+
+export function SettingsBillingUsagePage(props: SettingsBillingPageProps) {
+  const { t } = useTranslation("settings");
+  const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+
+  if (isLoadingStatus || !status) {
+    return <BillingUsageSkeleton t={t} />;
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-10">
+      {status.plan === "self_host" ? (
+        <UsageUnavailableSection t={t} />
+      ) : (
+        <UsageSection status={status} t={t} />
+      )}
     </div>
   );
 }

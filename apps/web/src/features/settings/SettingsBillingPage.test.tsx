@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -7,7 +8,10 @@ import type { BillingStatus } from "../../../../../packages/shared/src/billing";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
-import { SettingsBillingPage } from "./SettingsBillingPage";
+import {
+  SettingsBillingPage,
+  SettingsBillingUsagePage,
+} from "./SettingsBillingPage";
 
 const startCheckoutMock = vi.fn();
 const rememberedQueryMock = vi.mocked(useRememberedConvexQuery);
@@ -98,9 +102,11 @@ function renderBillingPage(status: BillingStatus) {
   });
 
   return render(
-    <TooltipProvider>
-      <SettingsBillingPage businessId={businessId} />
-    </TooltipProvider>,
+    <MemoryRouter>
+      <TooltipProvider>
+        <SettingsBillingPage businessId={businessId} />
+      </TooltipProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -176,5 +182,29 @@ describe("SettingsBillingPage AI SMS add-on", () => {
 
     expect(switchElement.getAttribute("aria-checked")).toBe("true");
     expect(switchElement.getAttribute("data-disabled")).not.toBeNull();
+  });
+
+  it("keeps usage off the billing overview page", () => {
+    renderBillingPage(buildStatus());
+
+    expect(screen.queryByText("billing.usage.voiceTitle")).toBeNull();
+  });
+
+  it("renders usage on the dedicated usage page", () => {
+    rememberedQueryMock.mockReturnValue({
+      data: buildStatus(),
+      isInitialLoading: false,
+      isRefreshing: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/settings/usage"]}>
+        <TooltipProvider>
+          <SettingsBillingUsagePage businessId={businessId} />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("billing.usage.voiceTitle")).toBeTruthy();
   });
 });

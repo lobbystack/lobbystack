@@ -6,13 +6,15 @@
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
     "integrationsDescription": "Connect your favorite tools and applications.",
-    "billingDescription": "Review hosted usage, plan limits, and SMS add-on access."
+    "billingDescription": "Review your hosted plan, add-ons, and recent billing activity.",
+    "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
   },
   "sections": {
     "business": "Account",
     "appearance": "Preferences",
     "integrations": "Integrations",
-    "billing": "Billing"
+    "billing": "Billing",
+    "usage": "Usage"
   },
   "billing": {
     "toast": {

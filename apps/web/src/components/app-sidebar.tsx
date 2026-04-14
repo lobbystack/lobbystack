@@ -12,6 +12,7 @@ import { BoxIcon } from "@/components/ui/box";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { FileTextIcon } from "@/components/ui/file-text";
+import { GaugeIcon } from "@/components/ui/gauge";
 import { HomeIcon } from "@/components/ui/home";
 import { IdCardIcon } from "@/components/ui/id-card";
 import { LinkIcon } from "@/components/ui/link";
@@ -86,6 +87,7 @@ const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
 const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
 const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
 const AnimatedBillingIcon = createAnimatedSidebarIcon(BoxIcon);
+const AnimatedUsageIcon = createAnimatedSidebarIcon(GaugeIcon);
 const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
@@ -176,6 +178,11 @@ export function AppSidebar({
                   title: t("settings:sections.billing"),
                   url: "/settings/billing",
                   icon: AnimatedBillingIcon,
+                },
+                {
+                  title: t("settings:sections.usage"),
+                  url: "/settings/usage",
+                  icon: AnimatedUsageIcon,
                 },
               ],
             },

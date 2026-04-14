@@ -6,13 +6,15 @@
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
     "integrationsDescription": "Connectez vos outils et applications préférés.",
-    "billingDescription": "Consultez l'utilisation hébergée, les limites du forfait et l'accès au module SMS IA."
+    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité de facturation récente.",
+    "usageDescription": "Suivez l'utilisation hébergée, les limites du forfait et la date de réinitialisation de la période en cours."
   },
   "sections": {
     "business": "Compte",
     "appearance": "Préférences",
     "integrations": "Intégrations",
-    "billing": "Facturation"
+    "billing": "Facturation",
+    "usage": "Utilisation"
   },
   "billing": {
     "toast": {
