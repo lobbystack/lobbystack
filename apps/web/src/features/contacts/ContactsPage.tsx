@@ -7,7 +7,6 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { useQuery } from "convex/react";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +29,7 @@ import {
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type ContactsPageProps = {
   businessId?: Id<"businesses">;
@@ -48,18 +48,16 @@ type ContactRow = {
 
 export function ContactsPage({ businessId }: ContactsPageProps) {
   const { i18n, t } = useTranslation("contacts");
-  const contacts = useQuery(
+  const { data: contacts, isInitialLoading: isLoadingContacts } = useRememberedConvexQuery(
     api.dashboard.contacts.listContacts,
     businessId ? { businessId } : "skip",
-  ) as Array<ContactRow> | undefined;
+  );
   const [searchValue, setSearchValue] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<Id<"contacts"> | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
-  const isLoadingContacts = contacts === undefined;
-
   const rows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     return (contacts ?? []).filter((contact: ContactRow) => {

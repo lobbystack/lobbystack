@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type ChangeEvent,
 } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import {
   ArrowLeft,
   ChevronRight,
@@ -28,7 +28,6 @@ import { useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { SplitPaneSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -39,6 +38,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import { cn } from "@/lib/utils";
 
 type MessagesPageProps = {
@@ -364,10 +364,13 @@ function formatAutomationPausedByline(
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
   const [searchParams, setSearchParams] = useSearchParams();
-  const conversations = useQuery(
+  const {
+    data: conversations,
+    isInitialLoading: isLoadingConversations,
+  } = useRememberedConvexQuery(
     api.dashboard.messages.listConversationSummaries,
     businessId ? { businessId } : "skip",
-  ) as Array<ConversationSummary> | undefined;
+  );
   const sendSmsReply = useAction(api.dashboard.messages.sendSmsReply);
   const pauseConversationAutomation = useAction(api.dashboard.messages.pauseConversationAutomation);
   const repairConversationAttachmentPreviews = useAction(
@@ -397,22 +400,25 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [repairAttemptedConversationIds, setRepairAttemptedConversationIds] = useState<Array<string>>([]);
   const [collapsedSummaryIds, setCollapsedSummaryIds] = useState<Array<string>>([]);
 
-  const thread = useQuery(
+  const {
+    data: thread,
+    isInitialLoading: isInitialThreadLoading,
+  } = useRememberedConvexQuery(
     api.dashboard.messages.getConversationThread,
     businessId && selectedConversationId
       ? { businessId, conversationId: selectedConversationId }
       : "skip",
-  ) as ConversationThread | undefined;
+  );
   const selectedConversationSummary = useMemo(
     () => conversations?.find((conversation) => conversation.id === selectedConversationId) ?? null,
     [conversations, selectedConversationId],
   );
-  const stagedAttachmentsQuery = useQuery(
+  const { data: stagedAttachmentsQuery } = useRememberedConvexQuery(
     api.dashboard.messages.listStagedAttachments,
     businessId && selectedConversationId && selectedConversationSummary?.channel === "sms"
       ? { businessId, conversationId: selectedConversationId }
       : "skip",
-  ) as Array<StagedAttachment> | undefined;
+  );
   const stagedAttachments = stagedAttachmentsQuery ?? [];
 
   const filteredConversations = useMemo(() => {
@@ -485,10 +491,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     return <BusinessSetupCard />;
   }
 
-  if (conversations === undefined) {
-    return <SplitPaneSkeleton />;
-  }
-
+  const isThreadLoading =
+    !isLoadingConversations &&
+    selectedConversationId !== undefined &&
+    isInitialThreadLoading;
   const isSmsConversation = thread?.conversation.channel === "sms";
   const automationState = thread?.conversation.automationState ?? "ai_active";
   const isHumanHandoff = isSmsConversation && automationState === "human_handoff";
@@ -775,63 +781,80 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           </label>
         </div>
 
-      <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
-          {filteredConversations.map((conversation: ConversationSummary) => {
-            const isActive = conversation.id === selectedConversationId;
-            const lastPreview = getConversationPreviewText(conversation, t);
-
-            return (
-              <Fragment key={String(conversation.id)}>
-                <button
-                  className={cn(
-                    "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
-                    isActive && "sm:bg-muted",
-                  )}
-                  onClick={() => {
-                    void selectConversation(conversation.id as Id<"conversations">);
-                  }}
-                  type="button"
-                >
-                  <div className="flex w-full gap-2">
-                    <Avatar>
-                      <AvatarFallback>
-                        {initials(
-                          conversation.contactName,
-                          conversation.contactPhone ?? t("page.unknownShort"),
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
+        <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
+          {isLoadingConversations
+            ? Array.from({ length: 6 }).map((_, index) => (
+                <Fragment key={index}>
+                  <div className="flex w-full gap-2 rounded-md px-2 py-2 text-start text-sm">
+                    <Skeleton className="size-8 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
-                        <span className="block min-w-0 truncate font-semibold">
-                          {conversation.contactName ??
-                            (conversation.contactPhone
-                              ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
-                              : null) ??
-                            t("page.unknownCaller")}
-                        </span>
-                        <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
-                          <span className="inline-flex w-3 justify-center">
-                            <ConversationChannelIcon channel={conversation.channel} />
-                          </span>
-                          <span aria-hidden="true">&bull;</span>
-                          <span>
-                            {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
-                              yesterday: t("page.yesterday"),
-                            })}
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-14" />
+                      </div>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-4/5" />
+                    </div>
+                  </div>
+                  <Separator className="my-1" />
+                </Fragment>
+              ))
+            : filteredConversations.map((conversation: ConversationSummary) => {
+                const isActive = conversation.id === selectedConversationId;
+                const lastPreview = getConversationPreviewText(conversation, t);
+
+                return (
+                  <Fragment key={String(conversation.id)}>
+                    <button
+                      className={cn(
+                        "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
+                        isActive && "sm:bg-muted",
+                      )}
+                      onClick={() => {
+                        void selectConversation(conversation.id as Id<"conversations">);
+                      }}
+                      type="button"
+                    >
+                      <div className="flex w-full gap-2">
+                        <Avatar>
+                          <AvatarFallback>
+                            {initials(
+                              conversation.contactName,
+                              conversation.contactPhone ?? t("page.unknownShort"),
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
+                            <span className="block min-w-0 truncate font-semibold">
+                              {conversation.contactName ??
+                                (conversation.contactPhone
+                                  ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
+                                  : null) ??
+                                t("page.unknownCaller")}
+                            </span>
+                            <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
+                              <span className="inline-flex w-3 justify-center">
+                                <ConversationChannelIcon channel={conversation.channel} />
+                              </span>
+                              <span aria-hidden="true">&bull;</span>
+                              <span>
+                                {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                                  yesterday: t("page.yesterday"),
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
+                            {lastPreview}
                           </span>
                         </div>
                       </div>
-                      <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
-                        {lastPreview}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-                <Separator className="my-1" />
-              </Fragment>
-            );
-          })}
+                    </button>
+                    <Separator className="my-1" />
+                  </Fragment>
+                );
+              })}
         </div>
       </div>
 
@@ -841,7 +864,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
-        {thread ? (
+        {isLoadingConversations || isThreadLoading ? (
+          <ThreadPaneSkeleton showComposer />
+        ) : thread ? (
           <>
             <div className="min-w-0 flex-none bg-card sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useAction, useConvex, useQuery } from "convex/react";
+import { useAction, useConvex } from "convex/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Trash2 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { captureAnalyticsException } from "@/lib/analytics";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 type AgentKnowledgePageProps = {
   businessId: Id<"businesses">;
   section: KnowledgeSection;
@@ -187,10 +188,13 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const { t } = useTranslation(["agent", "knowledge"]);
   const convex = useConvex();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
-  const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
-    businessId,
-    section,
-  });
+  const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(
+    api.ai.context.knowledge.listKnowledge,
+    {
+      businessId,
+      section,
+    },
+  );
   const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
   const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
   const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
@@ -201,8 +205,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
   const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
-  const isLoadingKnowledge = knowledge === undefined;
-
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
     const cacheKey = getViewerCacheKey(document);

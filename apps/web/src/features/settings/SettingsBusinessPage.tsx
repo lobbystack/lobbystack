@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { SettingsItemGroupSkeleton } from "@/components/loading-skeletons";
 import {
   setCachedConvexQuery,
   useCachedConvexQuery,
@@ -27,6 +26,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Item,
   ItemActions,
@@ -70,7 +70,8 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
   const [isSavingBusinessName, setIsSavingBusinessName] = useState(false);
-  const isLoadingConfiguration = isLoadingConfigurationData || isLoadingCurrentUser;
+  const isLoadingBusinessName = isLoadingConfigurationData;
+  const isLoadingEmail = isLoadingCurrentUser;
   const configuredBusinessName = configuration?.business?.name ?? "";
   const displayBusinessName = businessName || configuredBusinessName;
 
@@ -162,16 +163,6 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     }
   }
 
-  if (isLoadingConfiguration) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className="w-full">
-          <SettingsItemGroupSkeleton rows={3} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-1 flex-col">
       <div className="w-full">
@@ -180,9 +171,13 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
             <ItemContent>
               <ItemTitle>{t("account.businessName.label")}</ItemTitle>
               <ItemDescription>{t("account.businessName.description")}</ItemDescription>
-              <p className="text-[15px] leading-6 text-foreground">
-                {displayBusinessName}
-              </p>
+              {isLoadingBusinessName ? (
+                <Skeleton className="h-6 w-48 max-w-full" />
+              ) : (
+                <p className="text-[15px] leading-6 text-foreground">
+                  {displayBusinessName}
+                </p>
+              )}
               {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
             <ItemActions>
@@ -195,7 +190,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                 }}
                 open={isBusinessNameDialogOpen}
               >
-                <DialogTrigger render={<Button variant="outline" />}>
+                <DialogTrigger
+                  render={<Button disabled={isLoadingBusinessName} variant="outline" />}
+                >
                   {t("account.actions.change")}
                 </DialogTrigger>
                 <DialogContent>
@@ -242,7 +239,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemContent>
                 <ItemTitle>{t("account.changeEmail.title")}</ItemTitle>
                 <ItemDescription>{t("account.changeEmail.description")}</ItemDescription>
-                {currentUser?.email ? (
+                {isLoadingEmail ? (
+                  <Skeleton className="h-6 w-64 max-w-full" />
+                ) : currentUser?.email ? (
                   <p className="text-[15px] leading-6 text-foreground">
                     {t("account.changeEmail.currentEmail", { email: currentUser.email })}
                   </p>
@@ -251,7 +250,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               </ItemContent>
               <ItemActions>
                 <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
+                  <DialogTrigger
+                    render={<Button disabled={isLoadingEmail} variant="outline" />}
+                  >
                     {t("account.actions.change")}
                   </DialogTrigger>
                   <DialogContent>

@@ -8,7 +8,6 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { Pause, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +22,7 @@ import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import {
   Table,
   TableBody,
@@ -168,14 +168,17 @@ function formatCallPurpose(
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const calls = useQuery(
+  const rememberedCalls = useRememberedConvexQuery(
     api.voice.runtime.listRecentCalls,
     businessId ? { businessId, limit: 50 } : "skip",
-  ) as Array<CallRow> | undefined;
-  const summary = useQuery(
+  );
+  const calls = rememberedCalls.data as Array<CallRow> | undefined;
+  const isLoadingCalls = rememberedCalls.isInitialLoading;
+  const rememberedSummary = useRememberedConvexQuery(
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId, locale } : "skip",
   );
+  const summary = rememberedSummary.data;
   const [searchValue, setSearchValue] = useState("");
   const [activeRecordingCallId, setActiveRecordingCallId] = useState<Id<"calls"> | null>(null);
   const navigate = useNavigate();
@@ -183,8 +186,6 @@ export function CallsPage({ businessId }: CallsPageProps) {
     pageIndex: 0,
     pageSize: 10,
   });
-  const isLoadingCalls = calls === undefined;
-
   const rows = calls ?? [];
   const filteredRows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import type { TFunction } from "i18next";
 import {
   ArrowLeft,
@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 
@@ -342,12 +343,15 @@ function TranscriptTab({
   callId: Id<"calls">;
 }) {
   const { t } = useTranslation("calls");
-  const transcript = useQuery(api.voice.runtime.getCallTranscript, {
-    businessId,
-    callId,
-  }) as Array<Doc<"transcripts">> | undefined;
+  const rememberedTranscript =
+    useRememberedConvexQuery(api.voice.runtime.getCallTranscript, {
+      businessId,
+      callId,
+    });
+  const transcript = rememberedTranscript.data as Array<Doc<"transcripts">> | undefined;
+  const isLoadingTranscript = rememberedTranscript.isInitialLoading;
 
-  if (transcript === undefined) {
+  if (isLoadingTranscript) {
     return (
       <div className="flex flex-col gap-3 py-4">
         {Array.from({ length: 5 }).map((_, index) => (
@@ -362,6 +366,10 @@ function TranscriptTab({
         ))}
       </div>
     );
+  }
+
+  if (transcript === undefined) {
+    return null;
   }
 
   if (transcript.length === 0) {
@@ -594,12 +602,14 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
   const { i18n, t } = useTranslation("calls");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
 
-  const call = useQuery(
+  const rememberedCall = useRememberedConvexQuery(
     api.voice.runtime.getCallForDashboard,
     businessId && callId
       ? { businessId, callId: callId as Id<"calls"> }
       : "skip",
-  ) as CallRow | null | undefined;
+  );
+  const call = rememberedCall.data as CallRow | null | undefined;
+  const isLoadingCall = rememberedCall.isInitialLoading;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -614,8 +624,12 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     return <BusinessSetupCard />;
   }
 
-  if (call === undefined) {
+  if (isLoadingCall) {
     return <DetailPageSkeleton />;
+  }
+
+  if (call === undefined) {
+    return null;
   }
 
   if (call === null) {

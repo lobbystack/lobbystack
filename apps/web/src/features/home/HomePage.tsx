@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useTranslation } from "react-i18next";
@@ -48,6 +47,7 @@ import {
 } from "@/lib/follow-up-task";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type HomePageProps = {
   businessId?: Id<"businesses">;
@@ -261,11 +261,12 @@ function getActionDisplayTitle(
 export function HomePage({ businessId }: HomePageProps) {
   const { i18n, t } = useTranslation("dashboard");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const summary = useQuery(
+  const rememberedSummary = useRememberedConvexQuery(
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId, locale } : "skip",
-  ) as HomeSummary | undefined;
-  const isLoadingSummary = summary === undefined;
+  );
+  const summary = rememberedSummary.data as HomeSummary | undefined;
+  const isLoadingSummary = rememberedSummary.isInitialLoading;
 
   function formatDelta(deltaPercent: number): string {
     if (deltaPercent === 0) {

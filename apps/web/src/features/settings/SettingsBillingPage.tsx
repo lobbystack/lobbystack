@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, Lock } from "lucide-react";
 
@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -843,11 +844,14 @@ function BillingPageSkeleton({
 
 export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { t } = useTranslation("settings");
-  const status = useQuery(api.billing.getStatus, {
-    businessId: props.businessId,
-  });
+  const { data: status, isInitialLoading: isLoadingStatus } = useRememberedConvexQuery(
+    api.billing.getStatus,
+    {
+      businessId: props.businessId,
+    },
+  );
 
-  if (!status) {
+  if (isLoadingStatus || !status) {
     return <BillingPageSkeleton t={t} />;
   }
 

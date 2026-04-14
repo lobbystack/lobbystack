@@ -1,4 +1,3 @@
-import { useQuery } from "convex/react";
 import {
   CalendarDays,
   Clock3,
@@ -22,6 +21,7 @@ import {
 } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsChart } from "@/features/home/components/analytics-chart";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type AnalyticsProps = {
   businessId: Id<"businesses">;
@@ -74,10 +74,12 @@ function formatDuration(seconds: number): string {
 
 export function Analytics({ businessId }: AnalyticsProps) {
   const { i18n, t } = useTranslation("dashboard");
-  const summary = useQuery(api.dashboard.overview.getAnalyticsSummary, { businessId }) as
-    | AnalyticsSummary
-    | undefined;
-  const isLoadingSummary = summary === undefined;
+  const rememberedSummary = useRememberedConvexQuery(
+    api.dashboard.overview.getAnalyticsSummary,
+    { businessId },
+  );
+  const summary = rememberedSummary.data as AnalyticsSummary | undefined;
+  const isLoadingSummary = rememberedSummary.isInitialLoading;
 
   function formatPercentDelta(deltaPercent: number): string {
     if (deltaPercent === 0) {

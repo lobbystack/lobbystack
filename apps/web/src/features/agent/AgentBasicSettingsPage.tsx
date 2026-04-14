@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import { SettingsItemGroupSkeleton } from "@/components/loading-skeletons";
 import {
   setCachedConvexQuery,
   useCachedConvexQuery,
@@ -23,6 +22,7 @@ import {
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 
 type AgentBasicSettingsPageProps = {
@@ -244,16 +244,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     }
   }
 
-  if (isLoadingConfiguration) {
-    return (
-      <div className="w-full overflow-y-auto pb-12">
-        <div className="flex w-full flex-col gap-8">
-          <SettingsItemGroupSkeleton rows={3} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-8">
@@ -261,7 +251,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
           <AgentBasicSettingItem
             action={(
               <Button
-                disabled={isGreetingSaving || !persistedProfile}
+                disabled={isLoadingConfiguration || isGreetingSaving || !persistedProfile}
                 onClick={() => void saveGreeting()}
                 type="button"
                 variant="outline"
@@ -270,18 +260,22 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </Button>
             )}
             description={t("agent:fields.greeting.hint")}
-            field={(
-              <Input
-                className="w-full sm:max-w-md"
-                id="agent-greeting"
-                placeholder={t("agent:fields.greeting.placeholder")}
-                value={greeting}
-                onChange={(event) => {
-                  setGreeting(event.target.value);
-                  setGreetingStatus(null);
-                }}
-              />
-            )}
+            field={
+              isLoadingConfiguration ? (
+                <Skeleton className="h-10 w-full rounded-md sm:max-w-md" />
+              ) : (
+                <Input
+                  className="w-full sm:max-w-md"
+                  id="agent-greeting"
+                  placeholder={t("agent:fields.greeting.placeholder")}
+                  value={greeting}
+                  onChange={(event) => {
+                    setGreeting(event.target.value);
+                    setGreetingStatus(null);
+                  }}
+                />
+              )
+            }
             status={greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
             title={t("agent:fields.greeting.label")}
           />
@@ -294,80 +288,84 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               {!isLocaleSaving && localeStatus ? <ItemDescription>{localeStatus}</ItemDescription> : null}
             </ItemContent>
             <ItemActions className="w-full sm:w-auto">
-              <NativeSelect
-                aria-label={t("agent:fields.defaultLocale.label")}
-                className="w-full sm:w-[9.5ch]"
-                id="agent-default-language"
-                onChange={(event) => {
-                  const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
-                  setDefaultLocale(nextLocale);
-                  setLocaleStatus(null);
-                  void (async () => {
-                    if (!persistedProfile) {
-                      return;
-                    }
+              {isLoadingConfiguration ? (
+                <Skeleton className="h-10 w-full rounded-md sm:w-[9.5ch]" />
+              ) : (
+                <NativeSelect
+                  aria-label={t("agent:fields.defaultLocale.label")}
+                  className="w-full sm:w-[9.5ch]"
+                  id="agent-default-language"
+                  onChange={(event) => {
+                    const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
+                    setDefaultLocale(nextLocale);
+                    setLocaleStatus(null);
+                    void (async () => {
+                      if (!persistedProfile) {
+                        return;
+                      }
 
-                    const transferNumberResolution = resolveTransferNumberForSave({
-                      rawInputValue: transferNumberInputValue,
-                      validTransferNumber: transferNumber,
-                    });
-                    if (!transferNumberResolution.ok) {
-                      setTransferStatus(t(transferNumberResolution.errorKey));
-                      setTransferStatusTone("error");
-                      return;
-                    }
+                      const transferNumberResolution = resolveTransferNumberForSave({
+                        rawInputValue: transferNumberInputValue,
+                        validTransferNumber: transferNumber,
+                      });
+                      if (!transferNumberResolution.ok) {
+                        setTransferStatus(t(transferNumberResolution.errorKey));
+                        setTransferStatusTone("error");
+                        return;
+                      }
 
-                    setIsLocaleSaving(true);
-                    try {
-                      await saveProfile({
-                        businessId,
-                        defaultLocale: nextLocale,
-                        greeting,
-                        transferNumber: transferNumberResolution.value,
-                      });
-                      setCachedConvexQuery(api.businesses.catalog.getAgentBasicSettings, {
-                        businessId,
-                      }, {
-                        business: configuration?.business
-                          ? {
-                              ...configuration.business,
-                              defaultLocale: nextLocale,
-                            }
-                          : null,
-                        profile: persistedProfile
-                          ? {
-                              _id: persistedProfile._id,
-                              greeting,
-                              transferNumber: transferNumberResolution.value ?? undefined,
-                            }
-                          : null,
-                      });
-                      captureAnalyticsEvent("web.agent.settings_saved", {
-                        businessId: String(businessId),
-                        setting: "default_locale",
-                      });
-                      setLocaleStatus(t("agent:actions.saved"));
-                    } finally {
-                      setIsLocaleSaving(false);
-                    }
-                  })();
-                }}
-                value={defaultLocale}
-              >
-                <NativeSelectOption value="en">
-                  {t("common:language.english")}
-                </NativeSelectOption>
-                <NativeSelectOption value="fr">
-                  {t("common:language.french")}
-                </NativeSelectOption>
-              </NativeSelect>
+                      setIsLocaleSaving(true);
+                      try {
+                        await saveProfile({
+                          businessId,
+                          defaultLocale: nextLocale,
+                          greeting,
+                          transferNumber: transferNumberResolution.value,
+                        });
+                        setCachedConvexQuery(api.businesses.catalog.getAgentBasicSettings, {
+                          businessId,
+                        }, {
+                          business: configuration?.business
+                            ? {
+                                ...configuration.business,
+                                defaultLocale: nextLocale,
+                              }
+                            : null,
+                          profile: persistedProfile
+                            ? {
+                                _id: persistedProfile._id,
+                                greeting,
+                                transferNumber: transferNumberResolution.value ?? undefined,
+                              }
+                            : null,
+                        });
+                        captureAnalyticsEvent("web.agent.settings_saved", {
+                          businessId: String(businessId),
+                          setting: "default_locale",
+                        });
+                        setLocaleStatus(t("agent:actions.saved"));
+                      } finally {
+                        setIsLocaleSaving(false);
+                      }
+                    })();
+                  }}
+                  value={defaultLocale}
+                >
+                  <NativeSelectOption value="en">
+                    {t("common:language.english")}
+                  </NativeSelectOption>
+                  <NativeSelectOption value="fr">
+                    {t("common:language.french")}
+                  </NativeSelectOption>
+                </NativeSelect>
+              )}
             </ItemActions>
           </Item>
 
           <AgentBasicSettingItem
             action={(
               <Button
-                disabled={isTransferSaving || !persistedProfile}
+                disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile}
                 onClick={() => void saveTransferNumber()}
                 type="button"
                 variant="outline"
@@ -376,26 +374,30 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </Button>
             )}
             description={t("agent:fields.transferNumber.hint")}
-            field={(
-              <PhoneInput
-                className="w-[12ch] min-w-0"
-                containerClassName="w-fit"
-                id="agent-transfer-number"
-                locale={i18n.language}
-                maxLength={18}
-                onRawValueChange={(nextRawValue) => {
-                  setTransferNumberInputValue(nextRawValue);
-                  setTransferStatus(null);
-                  setTransferStatusTone("success");
-                }}
-                value={transferNumber || undefined}
-                onChange={(nextValue) => {
-                  setTransferNumber(nextValue ?? "");
-                  setTransferStatus(null);
-                  setTransferStatusTone("success");
-                }}
-              />
-            )}
+            field={
+              isLoadingConfiguration ? (
+                <Skeleton className="h-10 w-32 rounded-md" />
+              ) : (
+                <PhoneInput
+                  className="w-[12ch] min-w-0"
+                  containerClassName="w-fit"
+                  id="agent-transfer-number"
+                  locale={i18n.language}
+                  maxLength={18}
+                  onRawValueChange={(nextRawValue) => {
+                    setTransferNumberInputValue(nextRawValue);
+                    setTransferStatus(null);
+                    setTransferStatusTone("success");
+                  }}
+                  value={transferNumber || undefined}
+                  onChange={(nextValue) => {
+                    setTransferNumber(nextValue ?? "");
+                    setTransferStatus(null);
+                    setTransferStatusTone("success");
+                  }}
+                />
+              )
+            }
             status={transferStatus ? (
               <ItemDescription
                 className={transferStatusTone === "error" ? "text-destructive" : undefined}
