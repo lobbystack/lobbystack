@@ -325,7 +325,7 @@ function ActivityFeedItem({
       )}
     >
       {/* Icon node — sits on top of the vertical line */}
-      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background transition-colors group-hover:bg-muted/60">
+      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background">
         <Icon className="size-3.5 text-muted-foreground" />
       </div>
 
@@ -350,7 +350,7 @@ function ActivityFeedItem({
   if (isCall) {
     return (
       <Link
-        className="group no-underline rounded-xl transition-colors hover:bg-muted/60"
+        className="no-underline cursor-pointer"
         to={`/calls/${item.callId as string}`}
       >
         {content}
