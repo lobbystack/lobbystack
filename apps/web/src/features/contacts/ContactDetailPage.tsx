@@ -195,22 +195,30 @@ function ActivityTab({
   }
 
   return (
-    <div className="flex flex-col gap-1 py-4">
-      {activityFeed.map((item, index) => (
-        <ActivityFeedItem
-          item={item}
-          key={`${item.kind}-${item.timestamp}-${index}`}
-          locale={locale}
-        />
-      ))}
+    <div className="relative py-4">
+      {/* Vertical connecting line */}
+      <div className="absolute left-[11px] top-6 bottom-6 w-px bg-border" />
+
+      <div className="flex flex-col">
+        {activityFeed.map((item, index) => (
+          <ActivityFeedItem
+            isLast={index === activityFeed.length - 1}
+            item={item}
+            key={`${item.kind}-${item.timestamp}-${index}`}
+            locale={locale}
+          />
+        ))}
+      </div>
     </div>
   );
 }
 
 function ActivityFeedItem({
+  isLast,
   item,
   locale,
 }: {
+  isLast: boolean;
   item: ContactDetailData["activityFeed"][number];
   locale: string;
 }) {
@@ -223,18 +231,6 @@ function ActivityFeedItem({
   };
   const Icon = iconMap[item.kind];
 
-  const iconColorMap = {
-    call: "text-blue-500 dark:text-blue-400",
-    message: "text-emerald-500 dark:text-emerald-400",
-    appointment: "text-amber-500 dark:text-amber-400",
-  };
-
-  const bgColorMap = {
-    call: "bg-blue-50 dark:bg-blue-500/10",
-    message: "bg-emerald-50 dark:bg-emerald-500/10",
-    appointment: "bg-amber-50 dark:bg-amber-500/10",
-  };
-
   function renderSummary() {
     switch (item.kind) {
       case "call": {
@@ -244,7 +240,7 @@ function ActivityFeedItem({
         );
         return (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="type-item-title text-sm">
+            <span className="text-sm font-medium text-foreground">
               {t("detail.activity.callInbound")}
             </span>
             <span className="text-sm text-muted-foreground">
@@ -272,7 +268,7 @@ function ActivityFeedItem({
         return (
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="type-item-title text-sm">
+              <span className="text-sm font-medium text-foreground">
                 {t("detail.activity.smsConversation")}
               </span>
               <Badge className="text-[10px]" variant="outline">
@@ -290,7 +286,7 @@ function ActivityFeedItem({
       case "appointment": {
         return (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="type-item-title text-sm">
+            <span className="text-sm font-medium text-foreground">
               {t("detail.activity.appointmentScheduled")}
             </span>
             {item.appointmentServiceName && (
@@ -324,38 +320,39 @@ function ActivityFeedItem({
   const content = (
     <div
       className={cn(
-        "group flex items-start gap-3 rounded-xl px-3 py-3 transition-colors",
-        isCall && "hover:bg-muted/60 cursor-pointer",
+        "group relative flex items-start gap-3 py-2.5 pl-0 pr-2",
+        isCall && "cursor-pointer",
       )}
     >
-      <div
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-xl transition-colors",
-          bgColorMap[item.kind],
-        )}
-      >
-        <Icon className={cn("size-3.5", iconColorMap[item.kind])} />
+      {/* Icon node — sits on top of the vertical line */}
+      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background">
+        <Icon className="size-3.5 text-muted-foreground" />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {renderSummary()}
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-px">
+        <div className="min-w-0 flex-1">{renderSummary()}</div>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatDateTime(item.timestamp, locale, {
+            month: "short",
+            day: "numeric",
+          })}
+          {", "}
+          {formatDateTime(item.timestamp, locale, {
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </span>
       </div>
-      <span className="shrink-0 pt-0.5 text-xs text-muted-foreground">
-        {formatDateTime(item.timestamp, locale, {
-          month: "short",
-          day: "numeric",
-        })}
-        {", "}
-        {formatDateTime(item.timestamp, locale, {
-          hour: "numeric",
-          minute: "2-digit",
-        })}
-      </span>
     </div>
   );
 
   if (isCall) {
     return (
-      <Link className="no-underline" to={`/calls/${item.callId as string}`}>
+      <Link
+        className="no-underline rounded-xl transition-colors hover:bg-muted/60"
+        to={`/calls/${item.callId as string}`}
+      >
         {content}
       </Link>
     );
