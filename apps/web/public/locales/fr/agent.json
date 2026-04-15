@@ -14,8 +14,10 @@
       "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
       "addKnowledge": "Ajouter",
+      "editKnowledge": "Modifier les connaissances",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des politiques ou toute autre information que votre réceptionniste devrait connaître.",
+      "editKnowledgeDescription": "Mettez a jour les informations que votre receptionniste doit utiliser pour repondre aux questions des clients.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",
@@ -63,8 +65,10 @@
       "description": "Détails des services que votre réceptionniste peut utiliser pour expliquer vos offres et aider à réserver le bon rendez-vous.",
       "listTitle": "Services",
       "addKnowledge": "Ajouter un service",
+      "editKnowledge": "Modifier le service",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre réceptionniste devrait mentionner.",
+      "editKnowledgeDescription": "Mettez a jour les details du service que votre receptionniste doit expliquer et utiliser pendant la reservation.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
       "emptyState": "Aucun service ajouté pour le moment.",
@@ -112,8 +116,10 @@
       "description": "Instructions qui guident la manière dont votre réceptionniste doit gérer les appels et les messages.",
       "listTitle": "Règles",
       "addKnowledge": "Ajouter une règle",
+      "editKnowledge": "Modifier la regle",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ce que votre réceptionniste doit faire, comme transférer des appels, poser des questions et envoyer des textos.",
+      "editKnowledgeDescription": "Mettez a jour l instruction que votre receptionniste doit suivre pendant les appels et les suivis.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
       "emptyState": "Aucune règle ajoutée pour le moment.",
@@ -157,6 +163,26 @@
       }
     }
   },
+  "table": {
+    "searchPlaceholder": "Rechercher des elements",
+    "title": "Titre",
+    "preview": "Apercu",
+    "tags": "Mots-cles",
+    "status": "Statut",
+    "added": "Ajoute",
+    "empty": "Aucun element correspondant.",
+    "documentPreviewHint": "Cliquez pour previsualiser ce document.",
+    "documentPreviewUnavailable": "La previsualisation des documents est disponible sur la page Connaissances."
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Premiere page",
+    "previousPage": "Page precedente",
+    "nextPage": "Page suivante",
+    "lastPage": "Derniere page",
+    "goToPage": "Aller a la page {{page}}"
+  },
   "fields": {
     "greeting": {
       "label": "Message d'accueil",
@@ -179,6 +205,7 @@
   },
   "actions": {
     "save": "Enregistrer",
+    "saveChanges": "Enregistrer les modifications",
     "saving": "Enregistrement…",
     "saved": "Modifications enregistrées",
     "delete": "Supprimer",

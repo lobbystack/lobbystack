@@ -14,8 +14,10 @@
       "description": "Information and guidelines your receptionist uses to answer questions.",
       "listTitle": "Knowledge Base",
       "addKnowledge": "Add Knowledge",
+      "editKnowledge": "Edit Knowledge",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "Add opening hours, pricing, policies, or any other information your receptionist should know.",
+      "editKnowledgeDescription": "Update the information your receptionist should use when answering customer questions.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
       "emptyState": "No knowledge added yet.",
@@ -63,8 +65,10 @@
       "description": "Service details your receptionist can use to explain offerings and help book the right appointment.",
       "listTitle": "Services",
       "addKnowledge": "Add Service",
+      "editKnowledge": "Edit Service",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "Add your services, what they include, who they are for, and anything your receptionist should mention.",
+      "editKnowledgeDescription": "Update the service details your receptionist should mention and use while booking.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
       "emptyState": "No services added yet.",
@@ -112,8 +116,10 @@
       "description": "Instructions that guide how your receptionist should handle calls and messages.",
       "listTitle": "Rules",
       "addKnowledge": "Add Rule",
+      "editKnowledge": "Edit Rule",
       "uploadDocument": "Upload Document",
       "addKnowledgeDescription": "What your receptionist should do, like transfer calls, ask questions and send texts.",
+      "editKnowledgeDescription": "Update the instruction your receptionist should follow during calls and follow-up flows.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
       "emptyState": "No rules added yet.",
@@ -157,6 +163,26 @@
       }
     }
   },
+  "table": {
+    "searchPlaceholder": "Search entries",
+    "title": "Title",
+    "preview": "Preview",
+    "tags": "Tags",
+    "status": "Status",
+    "added": "Added",
+    "empty": "No matching entries found.",
+    "documentPreviewHint": "Click to preview this document.",
+    "documentPreviewUnavailable": "Document preview is available on the Knowledge page."
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page",
+    "goToPage": "Go to page {{page}}"
+  },
   "fields": {
     "greeting": {
       "label": "Greeting",
@@ -179,6 +205,7 @@
   },
   "actions": {
     "save": "Save",
+    "saveChanges": "Save changes",
     "saving": "Saving…",
     "saved": "Changes saved",
     "delete": "Delete",

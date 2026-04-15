@@ -1,30 +1,56 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useAction, useConvex } from "convex/react";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type PaginationState,
+} from "@tanstack/react-table";
+import { Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Trash2 } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import { DataTablePagination } from "@/components/data-table/pagination";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { captureAnalyticsException } from "@/lib/analytics";
+import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
+import { cn } from "@/lib/utils";
+
 type AgentKnowledgePageProps = {
   businessId: Id<"businesses">;
   section: KnowledgeSection;
 };
 
-type KnowledgeEntry = Doc<"knowledge_documents"> | Doc<"knowledge_snippets">;
+type KnowledgeDocumentRow = Doc<"knowledge_documents"> & {
+  entryType: "document";
+};
+
+type KnowledgeSnippetRow = Doc<"knowledge_snippets"> & {
+  entryType: "snippet";
+};
+
+type KnowledgeRow = KnowledgeDocumentRow | KnowledgeSnippetRow;
 
 type InlineConfirmDeleteButtonProps = {
   deleting: boolean;
@@ -35,6 +61,19 @@ type InlineConfirmDeleteButtonProps = {
 const fullDocumentTextMemoryCache = new Map<string, string>();
 const VIEWER_TEXT_SESSION_STORAGE_PREFIX = "agent-knowledge-viewer-text:";
 const MAX_PERSISTED_VIEWER_TEXT_BYTES = 512 * 1024;
+
+function isDocumentRow(row: KnowledgeRow): row is KnowledgeDocumentRow {
+  return row.entryType === "document";
+}
+
+function summarizeText(text: string, maxLength = 180): string {
+  const normalized = text.replace(/\s+/gu, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
+}
 
 function getViewerCachePrefix(documentId: string): string {
   return `${VIEWER_TEXT_SESSION_STORAGE_PREFIX}${documentId}:`;
@@ -185,7 +224,8 @@ function InlineConfirmDeleteButton({
 }
 
 export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePageProps) {
-  const { t } = useTranslation(["agent", "knowledge"]);
+  const { i18n, t } = useTranslation(["agent", "knowledge"]);
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const convex = useConvex();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
   const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(
@@ -195,16 +235,44 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       section,
     },
   );
-  const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
-  const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
-  const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
+  const [searchValue, setSearchValue] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
+  const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
+  const [editingSnippet, setEditingSnippet] = useState<KnowledgeSnippetRow | null>(null);
   const [viewerTextByDocumentId, setViewerTextByDocumentId] = useState<Record<string, string>>({});
   const [viewerCacheKeyByDocumentId, setViewerCacheKeyByDocumentId] = useState<Record<string, string>>({});
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
-  const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
+  const documents = useMemo(
+    () =>
+      ((knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>).map((document) => ({
+        ...document,
+        entryType: "document" as const,
+      })),
+    [knowledge?.documents],
+  );
+  const snippets = useMemo(
+    () =>
+      ((knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>).map((snippet) => ({
+        ...snippet,
+        entryType: "snippet" as const,
+      })),
+    [knowledge?.snippets],
+  );
+  const rows = useMemo(
+    () => [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime),
+    [documents, snippets],
+  );
+  const visibleRows = useMemo(
+    () => rows.filter((row) => !optimisticDeletedIds.includes(String(row._id))),
+    [optimisticDeletedIds, rows],
+  );
+
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
     const cacheKey = getViewerCacheKey(document);
@@ -254,7 +322,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           : getDocumentStatusLabel(document.status);
 
       return (
-        <span className="inline-flex min-w-56 items-center gap-3 text-sm text-muted-foreground">
+        <span className="inline-flex min-w-48 items-center gap-3 text-sm text-muted-foreground">
           <span>{label}</span>
           <Progress className="w-24" value={progressValue} />
           <span className="min-w-10 text-right text-xs tabular-nums">
@@ -273,12 +341,207 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     );
   }
 
-  async function handleDelete(entry: KnowledgeEntry): Promise<void> {
-    const entryId = String(entry._id);
+  function getDocumentPreviewSummary(document: KnowledgeDocumentRow): string {
+    const textContent = document.textContent?.trim();
+    if (textContent) {
+      return summarizeText(textContent);
+    }
+
+    if (document.status === "error") {
+      return document.error ?? t(`agent:sections.${section}.previewError`);
+    }
+
+    if (document.status === "queued" || document.status === "indexing") {
+      return t(`agent:sections.${section}.previewPending`);
+    }
+
+    if (section === "knowledge") {
+      return t("agent:table.documentPreviewHint");
+    }
+
+    return t("agent:table.documentPreviewUnavailable");
+  }
+
+  const filteredRows = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+
+    return visibleRows.filter((row) => {
+      const preview = isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content);
+      const haystack = [row.title, preview, row.tags.join(" ")]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return query.length === 0 || haystack.includes(query);
+    });
+  }, [searchValue, visibleRows, section, t]);
+
+  const columns = useMemo<Array<ColumnDef<KnowledgeRow>>>(
+    () => [
+      {
+        accessorFn: (row) => row.title,
+        id: "title",
+        header: () => t("agent:table.title"),
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 line-clamp-1 font-medium">{row.original.title}</span>
+            {isDocumentRow(row.original) ? (
+              <Badge className="shrink-0" variant="outline">
+                {t(`agent:sections.${section}.documentBadge`)}
+              </Badge>
+            ) : null}
+          </div>
+        ),
+        meta: {
+          className: "min-w-64",
+        },
+      },
+      {
+        accessorFn: (row) => (isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content)),
+        id: "preview",
+        header: () => t("agent:table.preview"),
+        cell: ({ row }) => (
+          <span className="block min-w-0 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+            {isDocumentRow(row.original) ? getDocumentPreviewSummary(row.original) : summarizeText(row.original.content)}
+          </span>
+        ),
+        meta: {
+          className: "min-w-80 max-w-0 whitespace-normal",
+        },
+      },
+      {
+        accessorFn: (row) => row.tags.join(" "),
+        id: "tags",
+        header: () => t("agent:table.tags"),
+        cell: ({ row }) => {
+          const [firstTag, ...remainingTags] = row.original.tags;
+          if (!firstTag) {
+            return <span className="text-sm text-muted-foreground">-</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{firstTag}</Badge>
+              {remainingTags.length > 0 ? <Badge variant="outline">+{remainingTags.length}</Badge> : null}
+            </div>
+          );
+        },
+        meta: {
+          className: "w-40 whitespace-normal",
+        },
+      },
+      {
+        accessorFn: (row) =>
+          isDocumentRow(row) ? getDocumentStatusLabel(row.status) : t(`agent:sections.${section}.status.indexed`),
+        id: "status",
+        header: () => t("agent:table.status"),
+        cell: ({ row }) =>
+          isDocumentRow(row.original) ? (
+            renderDocumentStatus(row.original)
+          ) : (
+            <Badge variant="secondary">{t(`agent:sections.${section}.status.indexed`)}</Badge>
+          ),
+        meta: {
+          className: "min-w-56",
+        },
+      },
+      {
+        accessorFn: (row) =>
+          formatDateTime(row._creationTime, locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        id: "added",
+        header: () => <span className="block text-right">{t("agent:table.added")}</span>,
+        cell: ({ row }) => (
+          <span className="block text-right text-sm text-muted-foreground">
+            {formatDateTime(row.original._creationTime, locale, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+        meta: {
+          className: "w-48 text-right",
+        },
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex w-32 justify-end">
+            <InlineConfirmDeleteButton
+              deleting={deletingEntryId === String(row.original._id)}
+              onConfirm={() => {
+                void handleDelete(row.original);
+              }}
+            />
+          </div>
+        ),
+        meta: {
+          className: "w-32 text-right",
+        },
+      },
+    ],
+    [deletingEntryId, locale, section, t],
+  );
+
+  const table = useReactTable({
+    columns,
+    data: filteredRows,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      pagination,
+    },
+  });
+
+  useEffect(() => {
+    setOptimisticDeletedIds((current) =>
+      current.filter((id) => rows.some((row) => String(row._id) === id)),
+    );
+  }, [rows]);
+
+  useEffect(() => {
+    if (expandedDocumentId && !filteredRows.some((row) => String(row._id) === expandedDocumentId)) {
+      setExpandedDocumentId(null);
+    }
+  }, [expandedDocumentId, filteredRows]);
+
+  useEffect(() => {
+    if (editingSnippet && !filteredRows.some((row) => row.entryType === "snippet" && row._id === editingSnippet._id)) {
+      setEditingSnippet(null);
+    }
+  }, [editingSnippet, filteredRows]);
+
+  useEffect(() => {
+    setPagination((current) => {
+      const pageCount = Math.max(1, Math.ceil(filteredRows.length / current.pageSize));
+      if (current.pageIndex <= pageCount - 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        pageIndex: pageCount - 1,
+      };
+    });
+  }, [filteredRows.length]);
+
+  async function handleDelete(row: KnowledgeRow): Promise<void> {
+    const entryId = String(row._id);
     setDeletingEntryId(entryId);
-    setOptimisticDeletedIds((current) => [...current, entryId]);
+    setOptimisticDeletedIds((current) => (current.includes(entryId) ? current : [...current, entryId]));
+    if (row.entryType === "snippet" && editingSnippet?._id === row._id) {
+      setEditingSnippet(null);
+    }
+    if (row.entryType === "document" && expandedDocumentId === entryId) {
+      setExpandedDocumentId(null);
+    }
+
     try {
-      if ("sourceType" in entry) {
+      if (isDocumentRow(row)) {
         clearViewerCacheForDocument(entryId);
         setViewerTextByDocumentId((current) => {
           if (!(entryId in current)) {
@@ -298,15 +561,14 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         });
         await deleteKnowledgeEntry({
           businessId,
-          documentId: entry._id,
+          documentId: row._id,
         });
       } else {
         await deleteKnowledgeEntry({
           businessId,
-          snippetId: entry._id,
+          snippetId: row._id,
         });
       }
-      setOptimisticDeletedIds((current) => current.filter((id) => id !== entryId));
     } catch (error) {
       setOptimisticDeletedIds((current) => current.filter((id) => id !== entryId));
       throw error;
@@ -315,7 +577,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
-  async function loadFullDocumentText(document: Doc<"knowledge_documents">): Promise<void> {
+  async function loadFullDocumentText(document: KnowledgeDocumentRow): Promise<void> {
     const documentId = String(document._id);
     const loadedViewerText = getLoadedViewerText(document);
     const cachedText = readCachedViewerText(getViewerCacheKey(document));
@@ -386,120 +648,187 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
+  function renderDocumentPreview(document: KnowledgeDocumentRow) {
+    const documentId = String(document._id);
+    const loadedViewerText = getLoadedViewerText(document);
+
+    if (
+      loadingViewerIds.includes(documentId) &&
+      !loadedViewerText?.trim() &&
+      !document.textContent?.trim()
+    ) {
+      return (
+        <div className="space-y-3 rounded-md border border-border/70 p-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton className="h-4 w-full" key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Textarea
+        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+        rows={8}
+        readOnly
+        value={
+          document.status === "error"
+            ? viewerErrorsByDocumentId[documentId] ??
+              document.error ??
+              t(`agent:sections.${section}.previewError`)
+            : loadedViewerText?.trim()
+              ? loadedViewerText.trim()
+              : document.textContent?.trim()
+                ? document.textContent.trim()
+                : t(`agent:sections.${section}.previewPending`)
+        }
+      />
+    );
+  }
+
+  const emptyMessage =
+    searchValue.trim().length > 0 ? t("agent:table.empty") : t(`agent:sections.${section}.emptyState`);
+
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        {isLoadingKnowledge ? (
-          Array.from({ length: 3 }).map((_, index) => (
-            <div className="rounded-xl border border-border/70 bg-card p-4" key={index}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-8 w-8 rounded-md" />
-                  <Skeleton className="h-8 w-8 rounded-md" />
-                </div>
-              </div>
-            </div>
-          ))
-        ) : null}
-
-        {knowledge && visibleEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-            <p>{t(`agent:sections.${section}.emptyState`)}</p>
-          </div>
-        ) : null}
-
-        {visibleEntries.map((entry) => (
-          (() => {
-            const loadedViewerText =
-              "sourceType" in entry ? getLoadedViewerText(entry) : undefined;
-
-            return (
-              <Collapsible
-                className="group rounded-xl border border-border/70 bg-card"
-                key={entry._id}
-                onOpenChange={(open) => {
-                  if (open && "sourceType" in entry) {
-                    void loadFullDocumentText(entry);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-2 p-4">
-                  <CollapsibleTrigger className="flex min-w-0 flex-1 items-center outline-none">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <span className="truncate font-semibold">{entry.title}</span>
-                      {"sourceType" in entry ? (
-                        <>
-                          <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                          {renderDocumentStatus(entry)}
-                          {entry.tags?.length && entry.tags[0] ? (
-                            <Badge variant="secondary">{entry.tags[0]}</Badge>
-                          ) : null}
-                        </>
-                      ) : entry.tags?.length && entry.tags[0] ? (
-                        <Badge variant="secondary">{entry.tags[0]}</Badge>
-                      ) : null}
-                    </div>
-                  </CollapsibleTrigger>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <InlineConfirmDeleteButton
-                      deleting={deletingEntryId === String(entry._id)}
-                      onConfirm={() => {
-                        void handleDelete(entry);
-                      }}
-                    />
-                    <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md p-1 outline-none">
-                      <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
-                    </CollapsibleTrigger>
-                  </div>
-                </div>
-                <CollapsibleContent>
-                  <div className="px-4 pb-5">
-                    {"sourceType" in entry ? (
-                      loadingViewerIds.includes(String(entry._id)) &&
-                      !loadedViewerText?.trim() &&
-                      !entry.textContent?.trim() ? (
-                        <div className="space-y-3 rounded-md border border-border/70 p-4">
-                          {Array.from({ length: 6 }).map((_, index) => (
-                            <Skeleton className="h-4 w-full" key={index} />
-                          ))}
-                        </div>
-                      ) : (
-                        <Textarea
-                          className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                          rows={8}
-                          readOnly
-                          value={
-                            entry.status === "error"
-                              ? viewerErrorsByDocumentId[String(entry._id)] ??
-                                entry.error ??
-                                t(`agent:sections.${section}.previewError`)
-                              : loadedViewerText?.trim()
-                                ? loadedViewerText.trim()
-                                : entry.textContent?.trim()
-                                  ? entry.textContent.trim()
-                                  : t(`agent:sections.${section}.previewPending`)
-                          }
-                        />
-                      )
-                    ) : (
-                      <Textarea
-                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                        rows={8}
-                        readOnly
-                        value={entry.content}
-                      />
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })()
-        ))}
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-10"
+          onChange={(event) => setSearchValue(event.target.value)}
+          placeholder={t("agent:table.searchPlaceholder")}
+          value={searchValue}
+        />
       </div>
+
+      {isLoadingKnowledge ? (
+        <TableCardSkeleton columns={6} />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const className =
+                        header.column.columnDef.meta &&
+                        typeof header.column.columnDef.meta === "object" &&
+                        "className" in header.column.columnDef.meta
+                          ? String(header.column.columnDef.meta.className)
+                          : undefined;
+
+                      return (
+                        <TableHead className={className} key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => {
+                  const rowData = row.original;
+                  const rowId = String(rowData._id);
+                  const rowIsInteractive =
+                    rowData.entryType === "snippet" || (section === "knowledge" && rowData.entryType === "document");
+                  const isSelected =
+                    rowData.entryType === "snippet"
+                      ? editingSnippet?._id === rowData._id
+                      : expandedDocumentId === rowId;
+                  const isExpandedDocument = rowData.entryType === "document" && expandedDocumentId === rowId;
+
+                  return (
+                    <Fragment key={row.id}>
+                      <TableRow
+                        className={cn(
+                          rowIsInteractive ? "cursor-pointer data-[state=selected]:bg-muted/40" : "data-[state=selected]:bg-muted/40",
+                        )}
+                        data-state={isSelected ? "selected" : undefined}
+                        onClick={() => {
+                          if (rowData.entryType === "snippet") {
+                            setExpandedDocumentId(null);
+                            setEditingSnippet(rowData);
+                            return;
+                          }
+
+                          if (section !== "knowledge") {
+                            return;
+                          }
+
+                          const nextExpandedId = expandedDocumentId === rowId ? null : rowId;
+                          setEditingSnippet(null);
+                          setExpandedDocumentId(nextExpandedId);
+                          if (nextExpandedId) {
+                            void loadFullDocumentText(rowData);
+                          }
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const className =
+                            cell.column.columnDef.meta &&
+                            typeof cell.column.columnDef.meta === "object" &&
+                            "className" in cell.column.columnDef.meta
+                              ? String(cell.column.columnDef.meta.className)
+                              : undefined;
+
+                          return (
+                            <TableCell className={className} key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                      {rowData.entryType === "document" && section === "knowledge" && isExpandedDocument ? (
+                        <TableRow className="bg-muted/20 hover:bg-muted/20">
+                          <TableCell className="p-4" colSpan={row.getVisibleCells().length}>
+                            {renderDocumentPreview(rowData)}
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={columns.length}>
+                      {emptyMessage}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("agent:pagination.rowsPerPage"),
+              pageOf: (page, total) => t("agent:pagination.pageOf", { page, total }),
+              firstPage: t("agent:pagination.firstPage"),
+              previousPage: t("agent:pagination.previousPage"),
+              nextPage: t("agent:pagination.nextPage"),
+              lastPage: t("agent:pagination.lastPage"),
+              goToPage: (page) => t("agent:pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+        </>
+      )}
+
+      <AddKnowledgeSheet
+        businessId={businessId}
+        mode="edit"
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingSnippet(null);
+          }
+        }}
+        open={editingSnippet !== null}
+        section={section}
+        snippet={editingSnippet}
+      />
     </div>
   );
 }
