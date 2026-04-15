@@ -9,7 +9,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Trash2, UserCheck, UserX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -119,6 +119,7 @@ function ContactRowActionsMenu({
               onToggleBlock();
             }}
           >
+            <UserCheck />
             <span>{t("table.actions.unblockContact")}</span>
           </DropdownMenuItem>
         ) : (
@@ -130,6 +131,7 @@ function ContactRowActionsMenu({
             }}
             variant="destructive"
           >
+            <UserX />
             <span>{t("table.actions.blockContact")}</span>
           </DropdownMenuItem>
         )}

@@ -12,6 +12,8 @@ import {
   Phone,
   Activity,
   User,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -804,6 +806,7 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
           type="button"
           variant={contact.isBlocked ? "outline" : "destructive"}
         >
+          {contact.isBlocked ? <UserCheck className="size-4" /> : <UserX className="size-4" />}
           {contact.isBlocked
             ? t("detail.blocking.unblockAction")
             : t("detail.blocking.blockAction")}
