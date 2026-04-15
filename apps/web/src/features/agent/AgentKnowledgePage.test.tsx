@@ -288,6 +288,9 @@ describe("AgentKnowledgePage", () => {
     expect(screen.getByRole("button", { name: "actions.delete" })).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "actions.delete" }));
+    expect(screen.queryByText("agent:sections.knowledge.editKnowledge")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "agent:actions.delete" }));
 
     await waitFor(() => {
       expect(deleteKnowledgeEntryMock).toHaveBeenCalledWith({
