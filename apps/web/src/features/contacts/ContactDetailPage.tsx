@@ -355,7 +355,7 @@ function ActivityFeedItem({
   if (isCall) {
     return (
       <Link
-        className="no-underline"
+        className="block no-underline"
         to={`/calls/${item.callId as string}`}
       >
         {content}
