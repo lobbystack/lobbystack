@@ -320,12 +320,12 @@ function ActivityFeedItem({
   const content = (
     <div
       className={cn(
-        "group relative flex items-start gap-3 py-2.5 pl-0 pr-2",
+        "relative flex items-start gap-3 py-2.5 pl-0 pr-2",
         isCall && "cursor-pointer",
       )}
     >
       {/* Icon node — sits on top of the vertical line */}
-      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background">
+      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background transition-colors group-hover:bg-muted/60">
         <Icon className="size-3.5 text-muted-foreground" />
       </div>
 
@@ -350,7 +350,7 @@ function ActivityFeedItem({
   if (isCall) {
     return (
       <Link
-        className="no-underline rounded-xl transition-colors hover:bg-muted/60"
+        className="group no-underline rounded-xl transition-colors hover:bg-muted/60"
         to={`/calls/${item.callId as string}`}
       >
         {content}
