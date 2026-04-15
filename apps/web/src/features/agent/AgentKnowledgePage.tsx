@@ -179,7 +179,7 @@ function RowActionsMenu({
       />
       <DropdownMenuContent
         align="end"
-        className="w-44"
+        className="min-w-[9rem] w-auto p-1"
         onClick={(event) => {
           event.stopPropagation();
         }}
@@ -187,6 +187,7 @@ function RowActionsMenu({
         sideOffset={8}
       >
         <DropdownMenuItem
+          className="gap-2.5 px-3 py-2"
           onClick={(event) => {
             event.stopPropagation();
             onDelete();
@@ -372,7 +373,8 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ),
       },
       {
-        accessorFn: (row) => (isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content)),
+        accessorFn: (row) =>
+          isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content),
         id: "preview",
         header: () => t("agent:table.preview"),
         cell: ({ row }) => (
@@ -420,7 +422,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         id: "added",
         header: () => <span className="block text-right">{t("agent:table.added")}</span>,
         cell: ({ row }) => (
-          <span className="block text-right text-sm text-muted-foreground">
+          <span className="block truncate text-right text-sm text-muted-foreground">
             {formatDateTime(row.original._creationTime, locale, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -432,7 +434,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex w-12 justify-end">
+          <div className="flex w-16 justify-end pr-1">
             <RowActionsMenu
               deleting={deletingEntryId === String(row.original._id)}
               onDelete={() => {
@@ -442,7 +444,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           </div>
         ),
         meta: {
-          className: "w-12 text-right",
+          className: "w-16 text-right",
         },
       },
     ],
@@ -668,16 +670,22 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         <TableCardSkeleton columns={6} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
-            <Table>
+          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[34%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[18%]" />
+                <col className="w-[8%]" />
+              </colgroup>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                       const className =
-                        header.column.id === "preview"
-                          ? "min-w-80"
-                          : header.column.id === "added" || header.column.id === "actions"
+                        header.column.id === "added" || header.column.id === "actions"
                             ? "text-right"
                             : header.column.columnDef.meta &&
                                 typeof header.column.columnDef.meta === "object" &&
@@ -734,9 +742,13 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                       >
                         {row.getVisibleCells().map((cell) => {
                           const className =
-                            cell.column.id === "preview"
-                              ? "max-w-0 whitespace-normal"
-                              : cell.column.id === "added" || cell.column.id === "actions"
+                            cell.column.id === "title"
+                              ? "truncate"
+                              : cell.column.id === "preview"
+                                ? "max-w-0 whitespace-normal"
+                                : cell.column.id === "added"
+                                  ? "w-0 max-w-0 text-right whitespace-nowrap"
+                                  : cell.column.id === "actions"
                                 ? "text-right"
                                 : cell.column.columnDef.meta &&
                                     typeof cell.column.columnDef.meta === "object" &&
