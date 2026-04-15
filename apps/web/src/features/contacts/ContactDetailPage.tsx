@@ -195,29 +195,27 @@ function ActivityTab({
   }
 
   return (
-    <div className="relative py-4">
-      {/* Vertical connecting line */}
-      <div className="absolute left-[11px] top-6 bottom-6 w-px bg-border" />
-
-      <div className="flex flex-col">
-        {activityFeed.map((item, index) => (
-          <ActivityFeedItem
-            isLast={index === activityFeed.length - 1}
-            item={item}
-            key={`${item.kind}-${item.timestamp}-${index}`}
-            locale={locale}
-          />
-        ))}
-      </div>
+    <div className="flex flex-col py-4">
+      {activityFeed.map((item, index) => (
+        <ActivityFeedItem
+          isFirst={index === 0}
+          isLast={index === activityFeed.length - 1}
+          item={item}
+          key={`${item.kind}-${item.timestamp}-${index}`}
+          locale={locale}
+        />
+      ))}
     </div>
   );
 }
 
 function ActivityFeedItem({
+  isFirst,
   isLast,
   item,
   locale,
 }: {
+  isFirst: boolean;
   isLast: boolean;
   item: ContactDetailData["activityFeed"][number];
   locale: string;
@@ -320,17 +318,24 @@ function ActivityFeedItem({
   const content = (
     <div
       className={cn(
-        "relative flex items-start gap-3 py-2.5 pl-0 pr-2",
-        isCall && "cursor-pointer",
+        "relative flex items-start gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors",
+        isCall && "cursor-pointer hover:bg-muted/60",
       )}
     >
-      {/* Icon node — sits on top of the vertical line */}
-      <div className="relative z-10 flex size-[23px] shrink-0 items-center justify-center bg-background">
-        <Icon className="size-3.5 text-muted-foreground" />
+      {/* Timeline rail: line segments + icon */}
+      <div className="relative flex w-[23px] shrink-0 flex-col items-center self-stretch">
+        {/* Line above the icon */}
+        <div className={cn("w-px flex-1", isFirst ? "bg-transparent" : "bg-border")} />
+        {/* Icon */}
+        <div className="flex size-[23px] shrink-0 items-center justify-center">
+          <Icon className="size-3.5 text-muted-foreground" />
+        </div>
+        {/* Line below the icon */}
+        <div className={cn("w-px flex-1", isLast ? "bg-transparent" : "bg-border")} />
       </div>
 
       {/* Content */}
-      <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-px">
+      <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
         <div className="min-w-0 flex-1">{renderSummary()}</div>
         <span className="shrink-0 text-xs text-muted-foreground">
           {formatDateTime(item.timestamp, locale, {
@@ -350,7 +355,7 @@ function ActivityFeedItem({
   if (isCall) {
     return (
       <Link
-        className="no-underline cursor-pointer"
+        className="no-underline"
         to={`/calls/${item.callId as string}`}
       >
         {content}
