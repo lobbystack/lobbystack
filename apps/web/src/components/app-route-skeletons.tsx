@@ -24,6 +24,10 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
     return <DetailPageSkeleton />;
   }
 
+  if (pathname.startsWith("/contacts/")) {
+    return <DetailPageSkeleton />;
+  }
+
   if (pathname === "/messages") {
     return <SplitPaneSkeleton />;
   }

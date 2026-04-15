@@ -15,6 +15,67 @@
     "unknownContact": "Unknown contact",
     "empty": "No contacts match the current search."
   },
+  "detail": {
+    "backToList": "Contacts",
+    "unknownContact": "Unknown contact",
+    "notFound": "Contact not found",
+    "notFoundDescription": "This contact may have been removed or you don't have access.",
+    "metadata": {
+      "phone": "Phone",
+      "email": "Email",
+      "firstSeen": "First seen"
+    },
+    "stats": {
+      "calls": "Calls",
+      "messages": "Messages",
+      "appointments": "Appointments",
+      "conversations": "Conversations"
+    },
+    "tabs": {
+      "activity": "Activity",
+      "appointments": "Appointments",
+      "details": "Details"
+    },
+    "activity": {
+      "empty": "No interactions recorded yet.",
+      "callInbound": "Inbound call",
+      "callCompleted": "completed",
+      "callFailed": "failed",
+      "callInProgress": "in progress",
+      "messageSent": "Sent",
+      "messageReceived": "Received",
+      "smsConversation": "SMS",
+      "appointmentScheduled": "Appointment",
+      "withStaff": "with {{staff}}"
+    },
+    "appointments": {
+      "empty": "No appointments for this contact.",
+      "service": "Service",
+      "staff": "Staff",
+      "dateTime": "Date & time",
+      "status": "Status",
+      "syncState": "Calendar",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "pending": "Pending"
+    },
+    "details": {
+      "contactInfoTitle": "Contact information",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "timezone": "Timezone",
+      "preferredLocale": "Preferred language",
+      "smsConsentTitle": "SMS consent",
+      "smsConsentStatus": "Status",
+      "smsConsentUpdatedAt": "Last updated",
+      "smsConsentSource": "Source",
+      "systemTitle": "System",
+      "contactId": "Contact ID",
+      "createdAt": "Created",
+      "notSet": "—"
+    }
+  },
   "pagination": {
     "rowsPerPage": "Rows per page",
     "pageOf": "Page {{page}} of {{total}}",

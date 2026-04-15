@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -53,7 +54,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     businessId ? { businessId } : "skip",
   );
   const [searchValue, setSearchValue] = useState("");
-  const [selectedContactId, setSelectedContactId] = useState<Id<"contacts"> | null>(null);
+  const navigate = useNavigate();
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -186,14 +187,9 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
                   <TableRow
-                    className="h-12 cursor-pointer data-[state=selected]:bg-muted/40"
-                    data-state={selectedContactId === row.original.id ? "selected" : undefined}
+                    className="h-12 cursor-pointer transition-colors hover:bg-muted/40"
                     key={row.id}
                     onClick={() => {
-                      if (selectedContactId === row.original.id) {
-                        return;
-                      }
-                      setSelectedContactId(row.original.id);
                       captureAnalyticsEvent("web.contacts.contact_opened", {
                         businessId: businessId ? String(businessId) : undefined,
                         contactId: String(row.original.id),
@@ -201,6 +197,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                         callCount: row.original.callCount,
                         appointmentCount: row.original.appointmentCount,
                       });
+                      navigate(`/contacts/${row.original.id}`);
                     }}
                   >
                     {row.getVisibleCells().map((cell) => (

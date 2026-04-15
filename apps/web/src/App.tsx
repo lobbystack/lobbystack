@@ -30,6 +30,7 @@ import { AgentServicesPage } from "@/features/agent/AgentServicesPage";
 import { CallDetailPage } from "@/features/calls/CallDetailPage";
 import { CallsPage } from "@/features/calls/CallsPage";
 import { ContactsPage } from "@/features/contacts/ContactsPage";
+import { ContactDetailPage } from "@/features/contacts/ContactDetailPage";
 import { HomePage } from "@/features/home/HomePage";
 import { MessagesPage } from "@/features/messages/MessagesPage";
 import { SettingsLayout } from "@/features/settings/SettingsLayout";
@@ -288,6 +289,10 @@ function WorkspaceShell() {
               path="/integrations"
             />
             <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
+            <Route
+              element={<ContactDetailPage {...(businessId ? { businessId } : {})} />}
+              path="/contacts/:contactId"
+            />
             <Route
               element={<SettingsLayout {...(businessId ? { businessId } : {})} />}
               path="/settings"
