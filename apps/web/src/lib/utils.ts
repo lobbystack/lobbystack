@@ -5,7 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getPageNumbers(currentPage: number, totalPages: number): Array<number | "..."> {
+export function getPageNumbers(
+  currentPage: number,
+  totalPages: number
+): Array<number | "..."> {
   const maxVisiblePages = 5
   const rangeWithDots: Array<number | "..."> = []
 
