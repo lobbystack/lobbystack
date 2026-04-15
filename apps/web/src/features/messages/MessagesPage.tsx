@@ -728,10 +728,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <PageHeader title={t("page.title")} />
-
-      <section className="flex min-h-0 flex-1 gap-6">
+    <section className="flex h-full min-w-0 gap-6">
       <input
         accept={IMAGE_ACCEPT}
         className="hidden"
@@ -763,6 +760,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 sm:static sm:z-auto sm:mx-0 sm:p-0">
+          <PageHeader className="py-0" title={t("page.title")} />
           <div className="relative">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -1135,7 +1133,6 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           </div>
         )}
       </div>
-      </section>
-    </div>
+    </section>
   );
 }
