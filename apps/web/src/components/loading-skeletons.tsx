@@ -165,7 +165,7 @@ export function SplitPaneSkeleton({
           <div className="flex flex-1 flex-col gap-4 py-4">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
-                className={`max-w-72 rounded-2xl px-3 py-3 ${index % 2 === 0 ? "self-start" : "self-end"}`}
+                className={`max-w-72 px-3 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0]" : "self-end rounded-[16px_16px_0_16px]"}`}
                 key={index}
               >
                 <Skeleton className="h-4 w-48" />

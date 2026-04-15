@@ -33,6 +33,18 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Keep the UI on a 4px base grid with an 8px default major rhythm.
 - Use this spacing scale for layout and component spacing: `4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 96, 128`.
 - Prefer Tailwind spacing utilities from that scale. Avoid arbitrary spacing values like `p-[3px]`, `top-[0.3rem]`, or one-off offsets unless geometry or animation truly requires them.
+- Use explicit radius tokens. Avoid bare `rounded` in `apps/web`; pick a named size or an allowed documented exception.
+- Default radius tiers in `apps/web`:
+  - `rounded-sm` for micro affordances and inline chips such as keyboard shortcuts or tiny copy buttons
+  - `rounded-md` for inputs, selects, menu items, search fields, row actions, and other standard controls
+  - `rounded-lg` for compact secondary panels, popovers, and media frames
+  - `rounded-xl` for cards, dialogs, drawers, and primary operator surfaces
+  - `rounded-2xl` for emphasized empty states, upload targets, and other deliberately softened callouts
+  - `rounded-3xl` for auth/onboarding hero surfaces only
+  - `rounded-full` for pill buttons, badges, nav pills, avatars, toggles, progress bars, and circular icon wells
+- Allowed radius exceptions:
+  - `2px` to `4px` only for microscopic geometry such as checkbox corners, chart swatches, and tooltip arrows
+  - asymmetric `16px` message bubbles for threaded conversation UI and transcript/chat surfaces
 - Normalize spacing decisions across the app:
   - icon gap: `8`
   - button horizontal padding: `16`

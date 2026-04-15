@@ -167,7 +167,7 @@ function ThreadPaneSkeleton({ showComposer = true }: { showComposer?: boolean })
           <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
-                className={`max-w-72 rounded-2xl px-3 py-3 ${index % 2 === 0 ? "self-start bg-muted" : "self-end bg-primary/10 dark:bg-primary/20"}`}
+                className={`max-w-72 px-3 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
                 key={index}
               >
                 <Skeleton className="h-4 w-48" />

@@ -356,7 +356,7 @@ function TranscriptTab({
       <div className="flex flex-col gap-3 py-4">
         {Array.from({ length: 5 }).map((_, index) => (
           <div
-            className={`max-w-[80%] rounded-xl px-4 py-3 ${index % 2 === 0 ? "self-start rounded-bl-sm bg-muted" : "self-end rounded-br-sm bg-primary/10 dark:bg-primary/20"}`}
+            className={`max-w-[80%] px-4 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
             key={index}
           >
             <Skeleton className="mb-2 h-3 w-20" />
@@ -395,10 +395,10 @@ function TranscriptTab({
           >
             <div
               className={cn(
-                "max-w-[80%] rounded-xl px-4 py-2.5",
+                "max-w-[80%] px-4 py-2.5",
                 isCaller
-                  ? "rounded-bl-sm bg-muted"
-                  : "rounded-br-sm bg-primary/10 dark:bg-primary/20",
+                  ? "rounded-[16px_16px_16px_0] bg-muted"
+                  : "rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20",
               )}
             >
               <p
@@ -817,7 +817,7 @@ function MetadataField({
         {copyable && (
           <button
             className={cn(
-              "flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground",
+              "flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:text-foreground",
               isCopied && "text-emerald-500 hover:text-emerald-500",
             )}
             onClick={() => onCopy?.(rawValue ?? value, fieldKey)}

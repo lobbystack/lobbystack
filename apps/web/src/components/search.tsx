@@ -23,7 +23,7 @@ export function Search({ className = "", placeholder = "Search" }: SearchProps) 
         size={16}
       />
       <span className="ms-4">{placeholder}</span>
-      <kbd className="pointer-events-none absolute end-1 top-1 hidden h-5 items-center gap-1 rounded border bg-muted px-2 font-mono text-[10px] font-medium opacity-100 select-none group-hover:bg-accent sm:flex">
+      <kbd className="pointer-events-none absolute end-1 top-1 hidden h-5 items-center gap-1 rounded-sm border bg-muted px-2 font-mono text-[10px] font-medium opacity-100 select-none group-hover:bg-accent sm:flex">
         <span className="text-xs">⌘</span>K
       </kbd>
     </Button>
