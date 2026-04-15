@@ -166,6 +166,48 @@ export function formatDateTime(
   ).format(date);
 }
 
+export function formatRelativeTime(
+  value: string | number | Date,
+  locale: string,
+  nowValue: string | number | Date = new Date(),
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const now = nowValue instanceof Date ? nowValue : new Date(nowValue);
+  const diffMs = date.getTime() - now.getTime();
+  const absMs = Math.abs(diffMs);
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+  const weekMs = 7 * dayMs;
+  const monthMs = 30 * dayMs;
+  const yearMs = 365 * dayMs;
+
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+
+  if (absMs < hourMs) {
+    return formatter.format(Math.trunc(diffMs / minuteMs), "minute");
+  }
+
+  if (absMs < dayMs) {
+    return formatter.format(Math.trunc(diffMs / hourMs), "hour");
+  }
+
+  if (absMs < weekMs) {
+    return formatter.format(Math.trunc(diffMs / dayMs), "day");
+  }
+
+  if (absMs < monthMs) {
+    return formatter.format(Math.trunc(diffMs / weekMs), "week");
+  }
+
+  if (absMs < yearMs) {
+    return formatter.format(Math.trunc(diffMs / monthMs), "month");
+  }
+
+  return formatter.format(Math.trunc(diffMs / yearMs), "year");
+}
+
 export function getWeekdayLabels(locale: string): Array<string> {
   const formatter = new Intl.DateTimeFormat(locale, {
     weekday: "long",

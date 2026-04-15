@@ -42,6 +42,8 @@
       "callCompleted": "completed",
       "callFailed": "failed",
       "callInProgress": "in progress",
+      "smsInbound": "Inbound SMS",
+      "smsOutbound": "Outbound SMS",
       "messageSent": "Sent",
       "messageReceived": "Received",
       "smsConversation": "SMS",

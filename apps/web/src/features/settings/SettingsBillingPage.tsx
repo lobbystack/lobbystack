@@ -16,6 +16,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SectionBlock } from "@/components/section-block";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -151,18 +152,13 @@ function BillingSection({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="type-section-title">{title}</h2>
-          {description && (
-            <p className="type-section-description">{description}</p>
-          )}
-        </div>
-        {action && <div className="shrink-0">{action}</div>}
-      </div>
+    <SectionBlock
+      action={action}
+      description={description}
+      title={title}
+    >
       {children}
-    </section>
+    </SectionBlock>
   );
 }
 

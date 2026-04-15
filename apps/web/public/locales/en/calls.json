@@ -120,6 +120,7 @@
       "unknown": "Unknown"
     },
     "events": {
+      "title": "Call events",
       "received": "Received",
       "connected": "Connected",
       "transferred": "Transferred",

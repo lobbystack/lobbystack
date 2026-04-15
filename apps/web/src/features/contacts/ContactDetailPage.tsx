@@ -27,7 +27,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
-import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { formatDateTime, formatRelativeTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -153,19 +153,14 @@ function appointmentStatusVariant(
 // ---------------------------------------------------------------------------
 
 function StatCard({
-  icon: Icon,
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
-        <Icon className="size-4 text-muted-foreground" />
-      </div>
+    <div className="flex items-center rounded-xl border bg-card px-4 py-3">
       <div className="flex flex-col">
         <span className="type-metric text-lg">{value}</span>
         <span className="type-meta">{label}</span>
@@ -195,11 +190,15 @@ function ActivityTab({
   }
 
   return (
-    <div className="flex flex-col py-4">
+    <div className="relative flex flex-col py-4">
+      {activityFeed.length > 1 && (
+        <div
+          aria-hidden="true"
+          className="absolute bottom-[42px] left-[19.5px] top-[42px] w-px bg-border"
+        />
+      )}
       {activityFeed.map((item, index) => (
         <ActivityFeedItem
-          isFirst={index === 0}
-          isLast={index === activityFeed.length - 1}
           item={item}
           key={`${item.kind}-${item.timestamp}-${index}`}
           locale={locale}
@@ -210,17 +209,14 @@ function ActivityTab({
 }
 
 function ActivityFeedItem({
-  isFirst,
-  isLast,
   item,
   locale,
 }: {
-  isFirst: boolean;
-  isLast: boolean;
   item: ContactDetailData["activityFeed"][number];
   locale: string;
 }) {
   const { t } = useTranslation("contacts");
+  const isCall = item.kind === "call" && item.callId;
 
   const iconMap = {
     call: Phone,
@@ -238,7 +234,13 @@ function ActivityFeedItem({
         );
         return (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="text-sm font-medium text-foreground">
+            <span
+              className={cn(
+                "text-sm font-medium text-foreground",
+                isCall &&
+                  "border-b border-dashed border-muted-foreground/40 pb-0.5 transition-colors hover:border-current",
+              )}
+            >
               {t("detail.activity.callInbound")}
             </span>
             <span className="text-sm text-muted-foreground">
@@ -259,26 +261,12 @@ function ActivityFeedItem({
         );
       }
       case "message": {
-        const directionLabel =
+        const smsLabel =
           item.messageDirection === "outbound"
-            ? t("detail.activity.messageSent")
-            : t("detail.activity.messageReceived");
+            ? t("detail.activity.smsOutbound")
+            : t("detail.activity.smsInbound");
         return (
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">
-                {t("detail.activity.smsConversation")}
-              </span>
-              <Badge className="text-[10px]" variant="outline">
-                {directionLabel}
-              </Badge>
-            </div>
-            {item.messageBody && (
-              <p className="line-clamp-1 text-sm text-muted-foreground">
-                {item.messageBody}
-              </p>
-            )}
-          </div>
+          <span className="text-sm font-medium text-foreground">{smsLabel}</span>
         );
       }
       case "appointment": {
@@ -313,40 +301,25 @@ function ActivityFeedItem({
     }
   }
 
-  const isCall = item.kind === "call" && item.callId;
-
   const content = (
     <div
       className={cn(
         "relative flex items-start gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors",
-        isCall && "cursor-pointer hover:bg-muted/60",
+        isCall && "cursor-pointer",
       )}
     >
-      {/* Timeline rail: line segments + icon */}
-      <div className="relative flex w-[23px] shrink-0 flex-col items-center self-stretch">
-        {/* Line above the icon */}
-        <div className={cn("w-px flex-1", isFirst ? "bg-transparent" : "bg-border")} />
-        {/* Icon */}
-        <div className="flex size-[23px] shrink-0 items-center justify-center">
+      {/* Icon lane */}
+      <div className="relative z-10 flex w-[23px] shrink-0 justify-center">
+        <div className="mt-1 flex size-[23px] shrink-0 items-center justify-center rounded-full bg-background">
           <Icon className="size-3.5 text-muted-foreground" />
         </div>
-        {/* Line below the icon */}
-        <div className={cn("w-px flex-1", isLast ? "bg-transparent" : "bg-border")} />
       </div>
 
       {/* Content */}
       <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
         <div className="min-w-0 flex-1">{renderSummary()}</div>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {formatDateTime(item.timestamp, locale, {
-            month: "short",
-            day: "numeric",
-          })}
-          {", "}
-          {formatDateTime(item.timestamp, locale, {
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+          {formatRelativeTime(item.timestamp, locale)}
         </span>
       </div>
     </div>
@@ -758,23 +731,13 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label={t("detail.stats.calls")} value={counts.calls} />
+        <StatCard label={t("detail.stats.messages")} value={counts.messages} />
         <StatCard
-          icon={Phone}
-          label={t("detail.stats.calls")}
-          value={counts.calls}
-        />
-        <StatCard
-          icon={MessageSquare}
-          label={t("detail.stats.messages")}
-          value={counts.messages}
-        />
-        <StatCard
-          icon={Calendar}
           label={t("detail.stats.appointments")}
           value={counts.appointments}
         />
         <StatCard
-          icon={Mail}
           label={t("detail.stats.conversations")}
           value={counts.conversations}
         />
@@ -782,7 +745,7 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
 
       {/* Tabbed content */}
       <Tabs defaultValue="activity">
-        <TabsList variant="line">
+        <TabsList variant="pills">
           <TabsTrigger value="activity">
             <Activity className="size-4" />
             {t("detail.tabs.activity")}

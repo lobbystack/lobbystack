@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation } from "convex/react";
-import type { TFunction } from "i18next";
 import {
   ArrowLeft,
   CheckCircle2,
   Circle,
-  CircleDot,
   Copy,
   FileText,
   Headphones,
@@ -21,14 +19,8 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SectionBlock } from "@/components/section-block";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -134,19 +126,6 @@ export function callReachedConnectedStep(call: CallRow): boolean {
   return true;
 }
 
-function statusBadgeVariant(
-  status: "in_progress" | "completed" | "failed",
-): "default" | "secondary" | "destructive" {
-  switch (status) {
-    case "in_progress":
-      return "secondary";
-    case "completed":
-      return "default";
-    case "failed":
-      return "destructive";
-  }
-}
-
 type CallEvent = {
   key: string;
   labelKey: string;
@@ -216,49 +195,6 @@ function buildCallEvents(call: CallRow): CallEvent[] {
   }
 
   return events;
-}
-
-function formatOutcomeLabel(
-  outcome: CallRow["outcome"],
-  locale: string,
-  t: TFunction<"calls">,
-): string {
-  switch (outcome.kind) {
-    case "booked":
-      return t("outcome.booked", {
-        serviceName: outcome.serviceName ?? t("outcome.genericService"),
-        startsAt: outcome.startsAt
-          ? formatDateTime(outcome.startsAt, locale, {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })
-          : t("outcome.unspecifiedTime"),
-      });
-    case "booking_in_progress":
-      if (outcome.serviceName && outcome.startsAt) {
-        return t("outcome.schedulingWithServiceAndTime", {
-          serviceName: outcome.serviceName,
-          startsAt: formatDateTime(outcome.startsAt, locale, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }),
-        });
-      }
-      if (outcome.serviceName) {
-        return t("outcome.schedulingWithService", {
-          serviceName: outcome.serviceName,
-        });
-      }
-      return t("outcome.scheduling");
-    case "message_taking":
-      return t("outcome.messageTaken");
-    case "summary":
-      return outcome.summary ?? t("outcome.none");
-    case "disposition":
-      return outcome.disposition ?? t("outcome.none");
-    default:
-      return t("outcome.none");
-  }
 }
 
 function truncateId(id: string, maxLength = 16): string {
@@ -353,17 +289,21 @@ function TranscriptTab({
 
   if (isLoadingTranscript) {
     return (
-      <div className="flex flex-col gap-3 py-4">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            className={`max-w-[80%] px-4 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
-            key={index}
-          >
-            <Skeleton className="mb-2 h-3 w-20" />
-            <Skeleton className="h-4 w-52" />
-            <Skeleton className="mt-2 h-4 w-36" />
+      <div className="py-4">
+        <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className={`max-w-[80%] px-4 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
+                key={index}
+              >
+                <Skeleton className="mb-2 h-3 w-20" />
+                <Skeleton className="h-4 w-52" />
+                <Skeleton className="mt-2 h-4 w-36" />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     );
   }
@@ -374,50 +314,58 @@ function TranscriptTab({
 
   if (transcript.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-center">
-        <FileText className="size-8 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">
-          {t("detail.transcript.empty")}
-        </p>
+      <div className="py-4">
+        <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <FileText className="size-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">
+              {t("detail.transcript.empty")}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3 py-4">
-      {transcript.map((segment) => {
-        const isCaller =
-          segment.speaker === "caller" || segment.speaker === "user";
-        return (
-          <div
-            key={segment._id}
-            className={cn("flex", isCaller ? "justify-start" : "justify-end")}
-          >
-            <div
-              className={cn(
-                "max-w-[80%] px-4 py-2.5",
-                isCaller
-                  ? "rounded-[16px_16px_16px_0] bg-muted"
-                  : "rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20",
-              )}
-            >
-              <p
-                className={cn(
-                  "type-meta mb-1",
-                  isCaller
-                    ? "text-muted-foreground"
-                    : "text-primary/80 dark:text-primary/60",
-                )}
+    <div className="py-4">
+      <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
+        <div className="flex flex-col gap-3">
+          {transcript.map((segment) => {
+            const isCaller =
+              segment.speaker === "caller" || segment.speaker === "user";
+            return (
+              <div
+                key={segment._id}
+                className={cn("flex", isCaller ? "justify-start" : "justify-end")}
               >
-                {isCaller
-                  ? t("detail.transcript.caller")
-                  : t("detail.transcript.assistant")}
-              </p>
-              <p className="text-sm leading-relaxed">{segment.text}</p>
-            </div>
-          </div>
-        );
-      })}
+                <div
+                  className={cn(
+                    "max-w-[80%] px-4 py-2.5",
+                    isCaller
+                      ? "rounded-[16px_16px_16px_0] bg-muted"
+                      : "rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20",
+                  )}
+                >
+                  <p
+                    className={cn(
+                      "type-meta mb-1",
+                      isCaller
+                        ? "text-muted-foreground"
+                        : "text-primary/80 dark:text-primary/60",
+                    )}
+                  >
+                    {isCaller
+                      ? t("detail.transcript.caller")
+                      : t("detail.transcript.assistant")}
+                  </p>
+                  <p className="text-sm leading-relaxed">{segment.text}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -494,101 +442,85 @@ function DetailsTab({
 
   return (
     <div className="flex flex-col gap-6 py-4">
-      {/* Outcome */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.outcomeTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed">
-            {formatOutcomeLabel(call.outcome, locale, t)}
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Follow-up task */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.followUpTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {call.followUpTask ? (
-            <div className="flex flex-col gap-3">
-              <p className="type-item-title">{call.followUpTask.title}</p>
-              <p className="type-body-muted whitespace-pre-line">
-                {call.followUpTask.body}
-              </p>
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  disabled={isMarkingDone}
-                  onClick={() => void handleMarkDone(call.followUpTask!.id)}
-                  size="sm"
-                  variant="outline"
-                >
-                  {isMarkingDone
-                    ? t("detail.details.markingDone")
-                    : t("detail.details.markDone")}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <p className="type-body-muted">
-              {t("detail.details.noFollowUp")}
+      <section className="flex flex-col gap-3">
+        <h3 className="type-section-title text-foreground">
+          {t("detail.details.followUpTitle")}
+        </h3>
+        {call.followUpTask ? (
+          <div className="flex flex-col gap-3">
+            <p className="type-item-title">{call.followUpTask.title}</p>
+            <p className="type-body-muted whitespace-pre-line">
+              {call.followUpTask.body}
             </p>
-          )}
-        </CardContent>
-      </Card>
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                disabled={isMarkingDone}
+                onClick={() => void handleMarkDone(call.followUpTask!.id)}
+                size="sm"
+                variant="outline"
+              >
+                {isMarkingDone
+                  ? t("detail.details.markingDone")
+                  : t("detail.details.markDone")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="type-body-muted">
+            {t("detail.details.noFollowUp")}
+          </p>
+        )}
+      </section>
 
       {/* Raw call info */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.callInfoTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">
-              {t("detail.details.twilioCallSid")}
-            </dt>
-            <dd className="truncate font-mono text-xs">
-              {call.twilioCallSid}
-            </dd>
+      <section className="flex flex-col gap-3">
+        <h3 className="type-section-title text-foreground">
+          {t("detail.details.callInfoTitle")}
+        </h3>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
+          <dt className="text-muted-foreground">
+            {t("detail.details.twilioCallSid")}
+          </dt>
+          <dd className="truncate font-mono text-xs">
+            {call.twilioCallSid}
+          </dd>
 
-            {call.gatewaySessionId && (
-              <>
-                <dt className="text-muted-foreground">
-                  {t("detail.details.gatewaySession")}
-                </dt>
-                <dd className="truncate font-mono text-xs">
-                  {call.gatewaySessionId}
-                </dd>
-              </>
-            )}
+          {call.gatewaySessionId && (
+            <>
+              <dt className="text-muted-foreground">
+                {t("detail.details.gatewaySession")}
+              </dt>
+              <dd className="truncate font-mono text-xs">
+                {call.gatewaySessionId}
+              </dd>
+            </>
+          )}
 
-            <dt className="text-muted-foreground">
-              {t("detail.details.disposition")}
-            </dt>
-            <dd>{call.disposition ?? t("detail.details.noDisposition")}</dd>
+          <dt className="text-muted-foreground">
+            {t("detail.details.disposition")}
+          </dt>
+          <dd>{call.disposition ?? t("detail.details.noDisposition")}</dd>
 
-            {call.providerCallStatus && (
-              <>
-                <dt className="text-muted-foreground">
-                  {t("detail.details.providerStatus")}
-                </dt>
-                <dd>{call.providerCallStatus}</dd>
-              </>
-            )}
+          {call.providerCallStatus && (
+            <>
+              <dt className="text-muted-foreground">
+                {t("detail.details.providerStatus")}
+              </dt>
+              <dd>{call.providerCallStatus}</dd>
+            </>
+          )}
 
-            {durationSeconds !== undefined && (
-              <>
-                <dt className="text-muted-foreground">
-                  {t("detail.metadata.duration")}
-                </dt>
-                <dd>{formatDuration(durationSeconds)}</dd>
-              </>
-            )}
-          </dl>
-        </CardContent>
-      </Card>
+          {durationSeconds !== undefined && (
+            <>
+              <dt className="text-muted-foreground">
+                {t("detail.metadata.duration")}
+              </dt>
+              <dd>{formatDuration(durationSeconds)}</dd>
+            </>
+          )}
+        </dl>
+      </section>
     </div>
   );
 }
@@ -653,7 +585,6 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     );
   }
 
-  const status = resolveCallStatus(call);
   const events = buildCallEvents(call);
   const callerName = call.contactName ? (
     call.contactName
@@ -692,16 +623,6 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
         <div className="flex flex-col justify-center">
           <h1 className="type-page-title text-2xl">{callerName}</h1>
         </div>
-
-        <Badge
-          className="w-fit"
-          variant={statusBadgeVariant(status)}
-        >
-          {status === "in_progress" && (
-            <CircleDot className="size-3" />
-          )}
-          {t(`detail.status.${status}`)}
-        </Badge>
       </div>
 
       {/* Metadata row */}
@@ -739,13 +660,15 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
       <Separator />
 
       {/* Call events timeline */}
-      <div className="overflow-hidden rounded-xl border bg-card px-4">
-        <CallEventTimeline events={events} locale={locale} />
-      </div>
+      <SectionBlock title={t("detail.events.title")}>
+        <div className="overflow-hidden rounded-xl border bg-card px-4">
+          <CallEventTimeline events={events} locale={locale} />
+        </div>
+      </SectionBlock>
 
       {/* Tabbed content */}
       <Tabs defaultValue="transcript">
-        <TabsList variant="line">
+        <TabsList variant="pills">
           <TabsTrigger value="transcript">
             <FileText className="size-4" />
             {t("detail.tabs.transcript")}
