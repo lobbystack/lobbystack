@@ -101,7 +101,7 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-6 w-12 rounded-full" />
           </div>
-          <div className="rounded-md border bg-card p-6">
+          <div className="rounded-xl border bg-card p-6">
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
                 <div className="space-y-2" key={index}>
@@ -117,7 +117,7 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-6 w-12 rounded-full" />
           </div>
-          <div className="rounded-md border bg-card p-6">
+          <div className="rounded-xl border bg-card p-6">
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
                 <div className="flex items-center justify-between gap-3" key={index}>
@@ -137,7 +137,7 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
         <ChartBlockSkeleton height={350} />
-        <div className="rounded-md border bg-card p-6 lg:col-span-3">
+        <div className="rounded-xl border bg-card p-6 lg:col-span-3">
           <div className="space-y-2">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-40" />
@@ -204,7 +204,7 @@ export function OnboardingNumberRouteSkeleton({
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <Skeleton className="h-5 w-32 rounded-full bg-white/10" />
-                <div className="rounded-md border border-white/10 bg-black/20 px-6 py-6 text-center">
+                <div className="rounded-xl border border-white/10 bg-black/20 px-6 py-6 text-center">
                   <Skeleton className="mx-auto h-4 w-24 bg-white/10" />
                   <Skeleton className="mx-auto mt-4 h-10 w-56 bg-white/10" />
                   <Skeleton className="mx-auto mt-3 h-4 w-32 bg-white/10" />

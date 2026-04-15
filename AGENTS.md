@@ -35,7 +35,7 @@ Do not edit generated files in `convex/_generated/` by hand.
 - Prefer Tailwind spacing utilities from that scale. Avoid arbitrary spacing values like `p-[3px]`, `top-[0.3rem]`, or one-off offsets unless geometry or animation truly requires them.
 - Use explicit radius tokens. Avoid bare `rounded` in `apps/web`; pick a named size or an allowed documented exception.
 - Default radius tier in `apps/web`:
-  - `rounded-md` for standard operator surfaces and controls, including cards, dialogs, drawers, tables, settings sections, inputs, selects, menu items, search fields, and row actions
+  - `rounded-xl` for standard operator surfaces and controls, including cards, dialogs, drawers, tables, settings sections, inputs, selects, menu items, search fields, and row actions
 - Allowed radius exceptions:
   - `rounded-full` for pill buttons, pill navigation such as settings tabs, badges, avatars, toggles, progress bars, slider thumbs, and circular icon wells
   - `2px` to `4px` only for microscopic geometry such as checkbox corners, chart swatches, and tooltip arrows

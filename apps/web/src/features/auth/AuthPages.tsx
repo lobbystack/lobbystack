@@ -24,7 +24,7 @@ function AuthShell(props: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10">
       <section className="flex w-full items-center justify-center">
-        <div className="w-full max-w-md rounded-md border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
+        <div className="w-full max-w-md rounded-xl border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
           {props.children}
         </div>
       </section>

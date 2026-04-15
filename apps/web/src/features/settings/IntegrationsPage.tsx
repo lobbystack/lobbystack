@@ -461,7 +461,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     <>
       <div className="flex flex-col gap-6">
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <li className="rounded-md border bg-card p-4">
+          <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center">
                 <GoogleCalendarLogo />
@@ -509,7 +509,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
             </div>
           </li>
 
-          <li className="rounded-md border bg-card p-4">
+          <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
                 <MicrosoftCalendarLogo />
@@ -559,7 +559,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           </DialogHeader>
 
           <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
-            <section className="flex flex-col gap-4 rounded-md border p-4">
+            <section className="flex flex-col gap-4 rounded-xl border p-4">
               <div className="flex flex-col gap-1">
                 <h3 className="type-item-title">
                   {t("integrations.google.connectionSectionTitle")}
@@ -583,7 +583,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               </Button>
 
               {selectedConnection ? (
-                <div className="grid gap-3 rounded-md bg-muted/35 p-4 sm:grid-cols-2">
+                <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-1">
                     <p className="type-meta">
                       {t("integrations.google.connectedAccount")}
@@ -604,7 +604,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </div>
                 </div>
               ) : (
-                <div className="type-body-muted rounded-md border border-dashed px-4 py-4">
+                <div className="type-body-muted rounded-xl border border-dashed px-4 py-4">
                   {t("integrations.google.notConnectedDescription")}
                 </div>
               )}
@@ -612,7 +612,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
             {selectedConnection ? (
               <>
-                <section className="flex flex-col gap-4 rounded-md border p-4">
+                <section className="flex flex-col gap-4 rounded-xl border p-4">
                   <div className="flex flex-col gap-1">
                     <h3 className="type-item-title">
                       {t("integrations.google.calendarSectionTitle")}
@@ -720,7 +720,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                   </div>
 
                   {isLoadingCalendars ? (
-                    <div className="grid gap-3 rounded-md bg-muted/35 p-4 sm:grid-cols-2">
+                    <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                       <div className="flex flex-col gap-2">
                         <Skeleton className="h-3 w-24" />
                         <Skeleton className="h-4 w-40" />
@@ -731,7 +731,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid gap-3 rounded-md bg-muted/35 p-4 sm:grid-cols-2">
+                    <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                       <div className="flex flex-col gap-1">
                         <p className="type-meta">
                           {t("integrations.google.selectedCalendar")}

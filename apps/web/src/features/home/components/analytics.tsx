@@ -142,7 +142,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
           <ChartBlockSkeleton />
           <MetricCardGridSkeleton />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            <div className="rounded-md border bg-card p-6 lg:col-span-4">
+            <div className="rounded-xl border bg-card p-6 lg:col-span-4">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />
@@ -159,7 +159,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
                 ))}
               </div>
             </div>
-            <div className="rounded-md border bg-card p-6 lg:col-span-3">
+            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />
