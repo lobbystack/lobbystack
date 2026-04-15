@@ -38,7 +38,7 @@ async function initializeInboundCallRecord(
   server: FastifyInstance,
   payload: Record<string, string>,
   businessId: string,
-): Promise<"ready" | "blocked"> {
+): Promise<"ready" | "quota_blocked" | "contact_blocked"> {
   const callSid = payload.CallSid?.trim();
   const from = payload.From?.trim();
   const to = payload.To?.trim();
@@ -48,13 +48,25 @@ async function initializeInboundCallRecord(
   }
 
   try {
-    await startVoiceCall({
+    const result = await startVoiceCall({
       businessId,
       twilioCallSid: callSid,
       from,
       to,
       startedAt: new Date().toISOString(),
     });
+
+    if (result.blocked) {
+      server.log.info(
+        {
+          businessId,
+          callSid,
+        },
+        "Blocked inbound call because the contact is blocked",
+      );
+      return "contact_blocked";
+    }
+
     return "ready";
   } catch (error) {
     if (
@@ -68,7 +80,7 @@ async function initializeInboundCallRecord(
         },
         "Blocked inbound call because the business has reached its voice quota",
       );
-      return "blocked";
+      return "quota_blocked";
     }
 
     capturePostHogException(error, {
@@ -129,7 +141,7 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
       snapshot.businessId,
     );
 
-    if (initializationState === "blocked") {
+    if (initializationState === "quota_blocked") {
       const blockedTwiml = [
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
         "<Response>",
@@ -140,6 +152,16 @@ export function registerVoiceRoutes(server: FastifyInstance): void {
 
       reply.header("Content-Type", "text/xml");
       return blockedTwiml;
+    }
+
+    if (initializationState === "contact_blocked") {
+      reply.header("Content-Type", "text/xml");
+      return [
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+        "<Response>",
+        "<Hangup />",
+        "</Response>",
+      ].join("");
     }
 
     const streamUrl = new URL("/media-stream", server.runtimeConfig.VOICE_GATEWAY_BASE_URL);

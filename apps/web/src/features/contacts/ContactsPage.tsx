@@ -11,9 +11,11 @@ import {
 } from "@tanstack/react-table";
 import { MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
@@ -50,6 +52,9 @@ type ContactRow = {
   name: string | null;
   phone: string;
   email: string | null;
+  isBlocked: boolean;
+  blockedAt: string | null;
+  blockedByName: string | null;
   messageCount: number;
   callCount: number;
   appointmentCount: number;
@@ -57,11 +62,17 @@ type ContactRow = {
 };
 
 function ContactRowActionsMenu({
+  blocking = false,
   deleting = false,
+  isBlocked,
   onDelete,
+  onToggleBlock,
 }: {
+  blocking?: boolean;
   deleting?: boolean;
+  isBlocked: boolean;
   onDelete: () => void;
+  onToggleBlock: () => void;
 }) {
   const { t } = useTranslation("contacts");
 
@@ -71,7 +82,7 @@ function ContactRowActionsMenu({
         render={
           <Button
             aria-label={t("table.actions.moreOptions")}
-            disabled={deleting}
+            disabled={deleting || blocking}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -100,6 +111,28 @@ function ContactRowActionsMenu({
         side="bottom"
         sideOffset={8}
       >
+        {isBlocked ? (
+          <DropdownMenuItem
+            className="gap-2.5 px-3 py-2"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleBlock();
+            }}
+          >
+            <span>{t("table.actions.unblockContact")}</span>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            className="gap-2.5 px-3 py-2"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleBlock();
+            }}
+            variant="destructive"
+          >
+            <span>{t("table.actions.blockContact")}</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className="gap-2.5 px-3 py-2"
           onClick={(event) => {
@@ -122,10 +155,17 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     api.dashboard.contacts.listContacts,
     businessId ? { businessId } : "skip",
   );
+  const blockContact = useMutation(api.dashboard.contacts.blockContact);
   const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
+  const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
   const [searchValue, setSearchValue] = useState("");
   const navigate = useNavigate();
   const [contactPendingDelete, setContactPendingDelete] = useState<ContactRow | null>(null);
+  const [contactPendingBlockToggle, setContactPendingBlockToggle] = useState<{
+    contact: ContactRow;
+    nextBlockedState: boolean;
+  } | null>(null);
+  const [blockingContactId, setBlockingContactId] = useState<string | null>(null);
   const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -167,6 +207,35 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     }
   }, [businessId, contactPendingDelete, deleteContact]);
 
+  const handleToggleBlock = useCallback(async () => {
+    if (!businessId || !contactPendingBlockToggle) {
+      return;
+    }
+
+    const contactId = String(contactPendingBlockToggle.contact.id);
+    setBlockingContactId(contactId);
+    try {
+      if (contactPendingBlockToggle.nextBlockedState) {
+        await blockContact({
+          businessId,
+          contactId: contactPendingBlockToggle.contact.id,
+        });
+        toast.success(t("table.actions.blockSuccess"));
+      } else {
+        await unblockContact({
+          businessId,
+          contactId: contactPendingBlockToggle.contact.id,
+        });
+        toast.success(t("table.actions.unblockSuccess"));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("table.actions.updateFailed"));
+      throw error;
+    } finally {
+      setBlockingContactId((current) => (current === contactId ? null : current));
+    }
+  }, [blockContact, businessId, contactPendingBlockToggle, t, unblockContact]);
+
   const columns = useMemo<Array<ColumnDef<ContactRow>>>(
     () => [
       {
@@ -174,7 +243,14 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "contact",
         header: () => t("table.contact"),
         cell: ({ row }) => (
-          <span className="font-semibold">{row.original.name ?? t("table.unknownContact")}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">
+              {row.original.name ?? t("table.unknownContact")}
+            </span>
+            {row.original.isBlocked ? (
+              <Badge variant="destructive">{t("table.status.blocked")}</Badge>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -227,9 +303,17 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         cell: ({ row }) => (
           <div className="flex w-16 justify-end pr-1">
             <ContactRowActionsMenu
+              blocking={blockingContactId === String(row.original.id)}
               deleting={deletingContactId === String(row.original.id)}
+              isBlocked={row.original.isBlocked}
               onDelete={() => {
                 setContactPendingDelete(row.original);
+              }}
+              onToggleBlock={() => {
+                setContactPendingBlockToggle({
+                  contact: row.original,
+                  nextBlockedState: !row.original.isBlocked,
+                });
               }}
             />
           </div>
@@ -390,6 +474,38 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
               deletingContactId === String(contactPendingDelete.id)
             }
             title={t("table.actions.deleteTitle")}
+          />
+          <ConfirmActionDialog
+            cancelLabel={t("table.actions.blockCancel")}
+            confirmLabel={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockConfirm")
+                : t("table.actions.unblockConfirm")
+            }
+            confirmVariant={
+              contactPendingBlockToggle?.nextBlockedState ? "destructive" : "default"
+            }
+            description={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockDescription")
+                : t("table.actions.unblockDescription")
+            }
+            onConfirm={handleToggleBlock}
+            onOpenChange={(open) => {
+              if (!open && !blockingContactId) {
+                setContactPendingBlockToggle(null);
+              }
+            }}
+            open={contactPendingBlockToggle !== null}
+            pending={
+              contactPendingBlockToggle !== null &&
+              blockingContactId === String(contactPendingBlockToggle.contact.id)
+            }
+            title={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockTitle")
+                : t("table.actions.unblockTitle")
+            }
           />
         </>
       )}

@@ -2,7 +2,8 @@ import { v } from "convex/values";
 
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
-import { requireMembership } from "../lib/auth";
+import { requireCurrentUser, requireMembership } from "../lib/auth";
+import { isContactBlocked } from "../lib/contactBlocking";
 
 async function getCallsForConversation(
   ctx: QueryCtx,
@@ -12,6 +13,14 @@ async function getCallsForConversation(
     .query("calls")
     .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
     .collect();
+}
+
+function formatOperatorDisplayName(user: Doc<"users"> | null): string | null {
+  if (!user) {
+    return null;
+  }
+
+  return user.displayName ?? user.name ?? user.email ?? null;
 }
 
 export const listContacts = query({
@@ -26,6 +35,15 @@ export const listContacts = query({
       .query("contacts")
       .withIndex("by_business_id_and_phone", (q) => q.eq("businessId", args.businessId))
       .collect();
+    const blockedByUsers = await Promise.all(
+      [...new Set(contacts.map((contact) => contact.operatorBlockedByUserId).filter(Boolean))]
+        .map((userId) => ctx.db.get(userId!)),
+    );
+    const blockedByNameMap = new Map(
+      blockedByUsers
+        .filter((user): user is Doc<"users"> => user !== null)
+        .map((user) => [String(user._id), formatOperatorDisplayName(user)]),
+    );
 
     const rows = await Promise.all(
       contacts.map(async (contact) => {
@@ -73,6 +91,11 @@ export const listContacts = query({
           email: contact.email ?? null,
           timezone: contact.timezone ?? null,
           preferredLocale: contact.preferredLocale ?? null,
+          isBlocked: isContactBlocked(contact),
+          blockedAt: contact.operatorBlockedAt ?? null,
+          blockedByName: contact.operatorBlockedByUserId
+            ? (blockedByNameMap.get(String(contact.operatorBlockedByUserId)) ?? null)
+            : null,
           conversationCount: conversations.length,
           messageCount: allMessages.length,
           callCount: allCalls.length,
@@ -83,6 +106,51 @@ export const listContacts = query({
     );
 
     return rows.sort((left, right) => right.lastInteractionAt - left.lastInteractionAt);
+  },
+});
+
+export const blockContact = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    contactId: v.id("contacts"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    await requireMembership(ctx, args.businessId);
+    const currentUser = await requireCurrentUser(ctx);
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.businessId !== args.businessId) {
+      throw new Error("Contact not found.");
+    }
+
+    await ctx.db.patch(contact._id, {
+      operatorBlockedAt: new Date().toISOString(),
+      operatorBlockedByUserId: currentUser._id,
+    });
+
+    return null;
+  },
+});
+
+export const unblockContact = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    contactId: v.id("contacts"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    await requireMembership(ctx, args.businessId);
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.businessId !== args.businessId) {
+      throw new Error("Contact not found.");
+    }
+
+    await ctx.db.patch(contact._id, {
+      operatorBlockedAt: undefined,
+      operatorBlockedByUserId: undefined,
+    });
+
+    return null;
   },
 });
 
@@ -171,6 +239,9 @@ export const getContactDetail = query({
 
     const allCalls = callsByConversation.flat();
     const allMessages = messagesByConversation.flat();
+    const blockedByUser = contact.operatorBlockedByUserId
+      ? await ctx.db.get(contact.operatorBlockedByUserId)
+      : null;
 
     // Resolve service and staff names for appointments
     const serviceIds = [...new Set(appointments.map((a) => a.serviceId))];
@@ -255,6 +326,9 @@ export const getContactDetail = query({
         email: contact.email ?? null,
         timezone: contact.timezone ?? null,
         preferredLocale: contact.preferredLocale ?? null,
+        isBlocked: isContactBlocked(contact),
+        blockedAt: contact.operatorBlockedAt ?? null,
+        blockedByName: formatOperatorDisplayName(blockedByUser),
         smsConsentStatus: contact.smsConsentStatus ?? null,
         smsConsentUpdatedAt: contact.smsConsentUpdatedAt ?? null,
         smsConsentSource: contact.smsConsentSource ?? null,

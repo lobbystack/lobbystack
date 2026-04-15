@@ -13,7 +13,58 @@
     "messages": "{{count}} messages",
     "calls": "{{count}} appels",
     "unknownContact": "Contact inconnu",
-    "empty": "Aucun contact ne correspond à la recherche."
+    "empty": "Aucun contact ne correspond à la recherche.",
+    "status": {
+      "blocked": "Bloqué"
+    },
+    "actions": {
+      "moreOptions": "Plus d'options",
+      "blockContact": "Bloquer le contact",
+      "unblockContact": "Débloquer le contact",
+      "blockTitle": "Bloquer le contact ?",
+      "blockDescription": "Cela empêchera les nouvelles réponses SMS et raccrochera immédiatement les nouveaux appels entrants de ce contact.",
+      "blockConfirm": "Bloquer le contact",
+      "blockCancel": "Annuler",
+      "blockSuccess": "Contact bloqué.",
+      "unblockTitle": "Débloquer le contact ?",
+      "unblockDescription": "Cela autorisera de nouveau les réponses SMS et les appels entrants pour ce contact.",
+      "unblockConfirm": "Débloquer le contact",
+      "unblockSuccess": "Contact débloqué.",
+      "updateFailed": "Impossible de mettre à jour l'état de blocage.",
+      "deleteContact": "Supprimer le contact",
+      "deleteTitle": "Supprimer le contact ?",
+      "deleteDescription": "Cela supprimera définitivement le contact de votre tableau de bord.",
+      "deleteConfirm": "Supprimer le contact",
+      "deleteCancel": "Annuler"
+    }
+  },
+  "detail": {
+    "blocking": {
+      "badge": "Bloqué",
+      "active": "Actif",
+      "blockAction": "Bloquer le contact",
+      "unblockAction": "Débloquer le contact",
+      "blockTitle": "Bloquer le contact ?",
+      "blockDescription": "Cela empêchera les nouvelles réponses SMS et raccrochera immédiatement les nouveaux appels entrants de ce contact.",
+      "blockConfirm": "Bloquer le contact",
+      "blockSuccess": "Contact bloqué.",
+      "unblockTitle": "Débloquer le contact ?",
+      "unblockDescription": "Cela autorisera de nouveau les réponses SMS et les appels entrants pour ce contact.",
+      "unblockConfirm": "Débloquer le contact",
+      "unblockSuccess": "Contact débloqué.",
+      "blockedAtInline": "Bloqué le {{time}}",
+      "cancel": "Annuler",
+      "updateFailed": "Impossible de mettre à jour l'état de blocage."
+    },
+    "activity": {
+      "callBlocked": "bloqué"
+    },
+    "details": {
+      "blockingTitle": "Blocage du contact",
+      "blockingStatus": "Statut",
+      "blockedAt": "Bloqué le",
+      "blockedBy": "Bloqué par"
+    }
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",

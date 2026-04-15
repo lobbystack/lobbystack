@@ -27,6 +27,10 @@ import {
   normalizeAttachmentFileName,
   resolveAttachmentDeliveryModes,
 } from "../lib/messageAttachments";
+import {
+  BLOCKED_CONTACT_SMS_ERROR_MESSAGE,
+  isContactBlocked,
+} from "../lib/contactBlocking";
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import {
   enqueuePostHogOutboxRecord,
@@ -489,6 +493,10 @@ export const getSmsReplyContext = internalQuery({
 
     if (!contact?.phone) {
       throw new Error("Contact phone number not found.");
+    }
+
+    if (isContactBlocked(contact)) {
+      throw new Error(BLOCKED_CONTACT_SMS_ERROR_MESSAGE);
     }
 
     if (contact.smsConsentStatus === "opted_out") {
@@ -1141,6 +1149,7 @@ export const listConversationSummaries = query({
           contactName: contact?.name ?? null,
           contactPhone: contact?.phone ?? null,
           contactEmail: contact?.email ?? null,
+          isBlocked: isContactBlocked(contact),
           messageCount: messages.length,
           lastMessageBody: latestMessage?.body ?? null,
           lastMessagePreviewKind: getLatestMessagePreviewKind(latestMessage),
@@ -1327,6 +1336,9 @@ export const getConversationThread = query({
         )
         .collect(),
     ]);
+    const blockedByUser = contact?.operatorBlockedByUserId
+      ? await ctx.db.get(contact.operatorBlockedByUserId)
+      : null;
 
     const hydratedMessages = await Promise.all(
       messages.map(async (message) => ({
@@ -1410,6 +1422,9 @@ export const getConversationThread = query({
             name: contact.name ?? null,
             phone: contact.phone,
             email: contact.email ?? null,
+            isBlocked: isContactBlocked(contact),
+            blockedAt: contact.operatorBlockedAt ?? null,
+            blockedByName: formatOperatorDisplayName(blockedByUser),
           }
         : null,
       messages: hydratedMessages,

@@ -31,6 +31,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -52,6 +53,7 @@ type ConversationSummary = {
   contactName: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
+  isBlocked: boolean;
   lastMessageBody: string | null;
   lastMessagePreviewKind: "text" | "attachment_image" | "attachment_file";
   lastMessageAt: number;
@@ -89,6 +91,9 @@ type ConversationThread = {
     name: string | null;
     phone: string | null;
     email: string | null;
+    isBlocked: boolean;
+    blockedAt: string | null;
+    blockedByName: string | null;
   } | null;
   messages: Array<{
     kind: "message";
@@ -499,12 +504,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const isSmsConversation = thread?.conversation.channel === "sms";
   const automationState = thread?.conversation.automationState ?? "ai_active";
   const isHumanHandoff = isSmsConversation && automationState === "human_handoff";
+  const isBlockedContact = Boolean(isSmsConversation && thread?.contact?.isBlocked);
   const pausedByline = thread
     ? formatAutomationPausedByline(thread.conversation, i18n.language, t)
     : null;
   const isSummaryOpen = (summaryId: string) => !collapsedSummaryIds.includes(summaryId);
   const canSendMessage =
     Boolean(isSmsConversation) &&
+    !isBlockedContact &&
     !isSending &&
     !isUploading &&
     (draftMessage.trim().length > 0 || stagedAttachments.length > 0);
@@ -559,7 +566,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     files: FileList | null,
     inputRef: RefObject<HTMLInputElement | null>,
   ) {
-    if (!businessId || !selectedConversationId || !isSmsConversation || !files || files.length === 0) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      !files ||
+      files.length === 0
+    ) {
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -568,7 +582,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     const availableSlots = MAX_ATTACHMENTS - stagedAttachments.length;
     if (availableSlots <= 0) {
-      setErrorMessage(`You can send up to ${MAX_ATTACHMENTS} attachments at a time.`);
+      setErrorMessage(t("page.maxAttachments", { count: MAX_ATTACHMENTS }));
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -577,7 +591,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     const selectedFiles = Array.from(files).slice(0, availableSlots);
     if (selectedFiles.length < files.length) {
-      setErrorMessage(`Only the first ${availableSlots} attachment(s) were added.`);
+      setErrorMessage(t("page.partialAttachmentsAdded", { count: availableSlots }));
     } else {
       setErrorMessage(null);
     }
@@ -669,7 +683,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   async function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!businessId || !selectedConversationId || !isSmsConversation || !canSendMessage) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      !canSendMessage
+    ) {
       return;
     }
 
@@ -701,7 +721,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   async function handleAutomationModeChange(nextState: "ai_active" | "human_handoff") {
-    if (!businessId || !selectedConversationId || !isSmsConversation || automationState === nextState) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      automationState === nextState
+    ) {
       return;
     }
 
@@ -819,13 +845,20 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                         </Avatar>
                         <div className="min-w-0 flex-1">
                           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
-                            <span className="block min-w-0 truncate font-semibold">
-                              {conversation.contactName ??
-                                (conversation.contactPhone
-                                  ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
-                                  : null) ??
-                                t("page.unknownCaller")}
-                            </span>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="block min-w-0 truncate font-semibold">
+                                {conversation.contactName ??
+                                  (conversation.contactPhone
+                                    ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
+                                    : null) ??
+                                  t("page.unknownCaller")}
+                              </span>
+                              {conversation.isBlocked ? (
+                                <Badge className="shrink-0" variant="destructive">
+                                  {t("page.blockedBadge")}
+                                </Badge>
+                              ) : null}
+                            </div>
                             <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
                               <span className="inline-flex w-3 justify-center">
                                 <ConversationChannelIcon channel={conversation.channel} />
@@ -882,13 +915,18 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold lg:text-base">
-                        {thread.contact?.name ??
-                          (thread.contact?.phone
-                            ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
-                            : null) ??
-                          t("page.unknownCaller")}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="block text-sm font-semibold lg:text-base">
+                          {thread.contact?.name ??
+                            (thread.contact?.phone
+                              ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
+                              : null) ??
+                            t("page.unknownCaller")}
+                        </span>
+                        {isBlockedContact ? (
+                          <Badge variant="destructive">{t("page.blockedBadge")}</Badge>
+                        ) : null}
+                      </div>
                       <span className="block max-w-48 line-clamp-1 text-xs text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
                         {(thread.contact?.phone
                           ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
@@ -901,7 +939,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       <Toggle
                         aria-label={t("page.automationHumanHandoff")}
                         className="shrink-0"
-                        disabled={isUpdatingAutomation}
+                        disabled={isUpdatingAutomation || isBlockedContact}
                         onPressedChange={(pressed) => {
                           void handleAutomationModeChange(
                             pressed ? "human_handoff" : "ai_active",
@@ -924,6 +962,35 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="size-2 shrink-0 rounded-full bg-amber-500" />
                   <div className="min-w-0 text-center">
                     <p className="font-medium text-amber-950">{pausedByline}</p>
+                  </div>
+                </div>
+              ) : null}
+              {isBlockedContact ? (
+                <div className="flex min-w-0 items-center justify-center gap-2 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+                  <div className="size-2 shrink-0 rounded-full bg-destructive" />
+                  <div className="min-w-0 text-center">
+                    <p className="font-medium">
+                      {thread.contact?.blockedByName && thread.contact?.blockedAt
+                        ? t("page.blockedDescriptionWithActorAndTime", {
+                            name: thread.contact.blockedByName,
+                            time: formatDateTime(thread.contact.blockedAt, i18n.language, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }),
+                          })
+                        : thread.contact?.blockedByName
+                          ? t("page.blockedDescriptionWithActor", {
+                              name: thread.contact.blockedByName,
+                            })
+                          : thread.contact?.blockedAt
+                            ? t("page.blockedDescriptionWithTime", {
+                                time: formatDateTime(thread.contact.blockedAt, i18n.language, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                }),
+                              })
+                            : t("page.blockedDescription")}
+                    </p>
                   </div>
                 </div>
               ) : null}
@@ -1080,7 +1147,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="flex items-center">
                     <Button
                       className="h-8 rounded-md"
-                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
+                      disabled={
+                        !isSmsConversation ||
+                        isBlockedContact ||
+                        isSending ||
+                        isUploading ||
+                        isUpdatingAutomation
+                      }
                       onClick={() => allAttachmentInputRef.current?.click()}
                       size="icon"
                       type="button"
@@ -1093,10 +1166,18 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     <span className="sr-only">Chat Text Box</span>
                     <input
                       className="h-8 w-full bg-inherit focus-visible:outline-hidden"
-                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
+                      disabled={
+                        !isSmsConversation ||
+                        isBlockedContact ||
+                        isSending ||
+                        isUploading ||
+                        isUpdatingAutomation
+                      }
                       onChange={(event) => setDraftMessage(event.target.value)}
                       placeholder={
-                        thread.conversation.channel === "sms"
+                        isBlockedContact
+                          ? t("page.blockedComposerPlaceholder")
+                          : thread.conversation.channel === "sms"
                           ? t("page.composerPlaceholderSms")
                           : t("page.composerPlaceholderWeb")
                       }
@@ -1115,6 +1196,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   </Button>
                 </div>
                 {errorMessage ? <span className="px-1 text-sm text-destructive">{errorMessage}</span> : null}
+                {isBlockedContact ? (
+                  <span className="px-1 text-sm text-muted-foreground">
+                    {t("page.blockedComposerHint")}
+                  </span>
+                ) : null}
                 <Button
                   className="h-full sm:hidden"
                   disabled={!canSendMessage || isUpdatingAutomation}

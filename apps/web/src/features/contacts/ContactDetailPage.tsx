@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "convex/react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,11 +14,14 @@ import {
   User,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -48,6 +52,9 @@ type ContactDetailData = {
     email: string | null;
     timezone: string | null;
     preferredLocale: string | null;
+    isBlocked: boolean;
+    blockedAt: string | null;
+    blockedByName: string | null;
     smsConsentStatus: string | null;
     smsConsentUpdatedAt: string | null;
     smsConsentSource: string | null;
@@ -113,12 +120,16 @@ function truncateId(id: string, maxLength = 16): string {
 function resolveCallStatusLabel(
   status: string | undefined,
   disposition: string | undefined,
-): "completed" | "failed" | "in_progress" {
+): "blocked" | "completed" | "failed" | "in_progress" {
   if (status === "in_progress" || status === "open") {
     return "in_progress";
   }
 
   const d = (disposition ?? "").trim().toLowerCase();
+  if (d === "contact_blocked") {
+    return "blocked";
+  }
+
   if (
     d.includes("failed") ||
     d.includes("busy") ||
@@ -475,6 +486,43 @@ function DetailsTab({
         </CardContent>
       </Card>
 
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>{t("detail.details.blockingTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
+            <dt className="text-muted-foreground">
+              {t("detail.details.blockingStatus")}
+            </dt>
+            <dd>
+              {contact.isBlocked ? (
+                <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
+              ) : (
+                t("detail.blocking.active")
+              )}
+            </dd>
+
+            <dt className="text-muted-foreground">
+              {t("detail.details.blockedAt")}
+            </dt>
+            <dd>
+              {contact.blockedAt
+                ? formatDateTime(contact.blockedAt, locale, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : t("detail.details.notSet")}
+            </dd>
+
+            <dt className="text-muted-foreground">
+              {t("detail.details.blockedBy")}
+            </dt>
+            <dd>{contact.blockedByName ?? t("detail.details.notSet")}</dd>
+          </dl>
+        </CardContent>
+      </Card>
+
       {/* SMS consent */}
       <Card size="sm">
         <CardHeader>
@@ -616,6 +664,8 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   const { contactId } = useParams<{ contactId: string }>();
   const { i18n, t } = useTranslation("contacts");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  const blockContact = useMutation(api.dashboard.contacts.blockContact);
+  const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
 
   const rememberedDetail = useRememberedConvexQuery(
     api.dashboard.contacts.getContactDetail,
@@ -627,6 +677,8 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   const isLoading = rememberedDetail.isInitialLoading;
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [isUpdatingBlockState, setIsUpdatingBlockState] = useState(false);
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text).then(() => {
@@ -687,6 +739,34 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
     ? formatPhoneNumberDisplay(contact.phone, locale)
     : "—";
 
+  async function handleToggleBlock() {
+    if (!businessId) {
+      return;
+    }
+
+    setIsUpdatingBlockState(true);
+    try {
+      if (contact.isBlocked) {
+        await unblockContact({
+          businessId,
+          contactId: contact.id,
+        });
+        toast.success(t("detail.blocking.unblockSuccess"));
+      } else {
+        await blockContact({
+          businessId,
+          contactId: contact.id,
+        });
+        toast.success(t("detail.blocking.blockSuccess"));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("detail.blocking.updateFailed"));
+      throw error;
+    } finally {
+      setIsUpdatingBlockState(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       {/* Back navigation */}
@@ -699,8 +779,35 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="type-page-title text-2xl">{displayName}</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="type-page-title text-2xl">{displayName}</h1>
+          {contact.isBlocked ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
+              {contact.blockedAt ? (
+                <span className="text-sm text-muted-foreground">
+                  {t("detail.blocking.blockedAtInline", {
+                    time: formatDateTime(contact.blockedAt, locale, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }),
+                  })}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <Button
+          disabled={isUpdatingBlockState}
+          onClick={() => setBlockDialogOpen(true)}
+          type="button"
+          variant={contact.isBlocked ? "outline" : "destructive"}
+        >
+          {contact.isBlocked
+            ? t("detail.blocking.unblockAction")
+            : t("detail.blocking.blockAction")}
+        </Button>
       </div>
 
       {/* Metadata row */}
@@ -772,6 +879,33 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
           <DetailsTab data={data} locale={locale} />
         </TabsContent>
       </Tabs>
+      <ConfirmActionDialog
+        cancelLabel={t("detail.blocking.cancel")}
+        confirmLabel={
+          contact.isBlocked
+            ? t("detail.blocking.unblockConfirm")
+            : t("detail.blocking.blockConfirm")
+        }
+        confirmVariant={contact.isBlocked ? "default" : "destructive"}
+        description={
+          contact.isBlocked
+            ? t("detail.blocking.unblockDescription")
+            : t("detail.blocking.blockDescription")
+        }
+        onConfirm={handleToggleBlock}
+        onOpenChange={(open) => {
+          if (!isUpdatingBlockState) {
+            setBlockDialogOpen(open);
+          }
+        }}
+        open={blockDialogOpen}
+        pending={isUpdatingBlockState}
+        title={
+          contact.isBlocked
+            ? t("detail.blocking.unblockTitle")
+            : t("detail.blocking.blockTitle")
+        }
+      />
     </div>
   );
 }

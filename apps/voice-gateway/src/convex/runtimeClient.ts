@@ -20,6 +20,7 @@ export class RuntimeRequestError extends Error {
 
 type StartCallResponse = {
   callId: string;
+  blocked: boolean;
   conversationId?: string;
   contactId: string;
 };

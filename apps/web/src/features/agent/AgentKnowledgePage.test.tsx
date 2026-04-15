@@ -57,7 +57,7 @@ vi.mock("@/components/ui/dropdown-menu", async () => {
   const ReactModule = await vi.importActual<typeof import("react")>("react");
   const DropdownMenuContext = ReactModule.createContext({
     open: false,
-    setOpen: (_nextOpen: boolean) => undefined,
+    setOpen: (_nextOpen: boolean) => {},
   });
 
   function DropdownMenu({ children }: { children: React.ReactNode }) {
