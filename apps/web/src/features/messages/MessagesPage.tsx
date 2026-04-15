@@ -32,6 +32,7 @@ import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
@@ -763,22 +764,17 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
             className="py-0"
             title={t("page.title")}
           />
-          <label
-            className={cn(
-              "focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring",
-              "flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-3",
-            )}
-          >
-            <SearchIcon className="me-2 stroke-slate-500" size={15} />
-            <span className="sr-only">{t("page.searchPlaceholder")}</span>
-            <input
-              className="w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden"
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label={t("page.searchPlaceholder")}
+              className="pl-10"
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t("page.searchPlaceholder")}
               type="text"
               value={searchValue}
             />
-          </label>
+          </div>
         </div>
 
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
