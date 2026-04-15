@@ -15,6 +15,7 @@ import {
 } from "@/lib/cached-convex-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import {
   Field,
   FieldContent,
@@ -460,6 +461,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   return (
     <>
       <div className="flex flex-col gap-6">
+        <PageHeader title={t("sections.integrations")} />
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">

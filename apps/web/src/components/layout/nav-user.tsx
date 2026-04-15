@@ -90,7 +90,7 @@ export function NavUser({ onSignOut, user, isLoading = false }: NavUserProps) {
                 <CreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link to="/settings/integrations" />}>
+              <DropdownMenuItem render={<Link to="/integrations" />}>
                 <Bell />
                 Notifications
               </DropdownMenuItem>

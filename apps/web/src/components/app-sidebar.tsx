@@ -136,7 +136,6 @@ export function AppSidebar({
             { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
             {
               title: t("settings:sections.integrations"),
-              activeMatchPrefix: "/settings/integrations",
               url: "/integrations",
               icon: AnimatedIntegrationsIcon,
             },

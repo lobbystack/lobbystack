@@ -66,7 +66,16 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
     );
   }
 
-  if (pathname === "/integrations" || pathname.startsWith("/settings")) {
+  if (pathname === "/integrations") {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeaderSkeleton title="Integrations" />
+        <SettingsItemGroupSkeleton rows={3} />
+      </div>
+    );
+  }
+
+  if (pathname.startsWith("/settings")) {
     return (
       <div className="flex flex-col gap-6">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">

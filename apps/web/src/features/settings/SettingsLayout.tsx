@@ -22,7 +22,6 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
     { label: t("sections.billing"), to: "/settings/billing" },
     { label: t("sections.business"), to: "/settings/account" },
     { label: t("sections.appearance"), to: "/settings/appearance" },
-    { label: t("sections.integrations"), to: "/settings/integrations" },
   ] as const;
 
   return (

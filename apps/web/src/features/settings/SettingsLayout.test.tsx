@@ -17,7 +17,6 @@ vi.mock("react-i18next", () => ({
         "sections.billing": "Billing",
         "sections.business": "Team",
         "sections.appearance": "Preferences",
-        "sections.integrations": "Integrations",
       };
 
       return translations[key] ?? key;
@@ -27,19 +26,14 @@ vi.mock("react-i18next", () => ({
 
 function renderSettingsShell(initialEntry: string) {
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
+      <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route
-          element={<Navigate replace to="/settings/integrations" />}
-          path="/integrations"
-        />
-        <Route element={<SettingsLayout businessId={businessId} />} path="/settings/*">
+        <Route element={<SettingsLayout businessId={businessId} />} path="/settings">
           <Route element={<Navigate replace to="/settings/usage" />} index />
           <Route element={<div>Usage content</div>} path="usage" />
           <Route element={<div>Billing content</div>} path="billing" />
           <Route element={<div>Team content</div>} path="account" />
           <Route element={<div>Appearance content</div>} path="appearance" />
-          <Route element={<div>Integrations content</div>} path="integrations" />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -53,19 +47,6 @@ describe("SettingsLayout", () => {
     expect(screen.getByText("Usage content")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Usage" }).getAttribute("aria-current"),
-    ).toBe(
-      "page",
-    );
-  });
-
-  it("redirects legacy integrations route into the settings shell", () => {
-    renderSettingsShell("/integrations");
-
-    expect(screen.getByText("Integrations content")).toBeTruthy();
-    expect(
-      screen
-        .getByRole("link", { name: "Integrations" })
-        .getAttribute("aria-current"),
     ).toBe(
       "page",
     );
@@ -92,15 +73,11 @@ describe("SettingsLayout", () => {
       "/settings/appearance",
     );
     expect(
-      screen.getByRole("link", { name: "Integrations" }).getAttribute("href"),
-    ).toBe(
-      "/settings/integrations",
-    );
-    expect(
       screen.getByRole("link", { name: "Team" }).getAttribute("aria-current"),
     ).toBe(
       "page",
     );
     expect(screen.getByRole("navigation", { name: "Settings" }).className).not.toContain("-mt-2");
+    expect(screen.queryByRole("link", { name: "Integrations" })).toBeNull();
   });
 });
