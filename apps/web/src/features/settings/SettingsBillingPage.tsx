@@ -562,8 +562,6 @@ function UsageMeterRow({
       ? overageCount * overageRateCents
       : 0;
   const paygUnits = metered ? used : overageCount;
-  const paygCost =
-    overageBillable && overageRateCents ? paygUnits * overageRateCents : 0;
 
   const valueDisplay =
     mode === "payg"
@@ -613,20 +611,6 @@ function UsageMeterRow({
         </div>
       )}
 
-      {mode === "payg" && paygCost > 0 && (
-        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
-          {paygUnits} {unit} billable ·{" "}
-          <span className="font-medium text-foreground">
-            ≈ {formatCents(paygCost)}
-          </span>
-        </span>
-      )}
-      {mode === "payg" && paygCost <= 0 && (
-        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
-          {paygUnits} {unit} billable ·{" "}
-          <span className="font-medium text-foreground">≈ $0</span>
-        </span>
-      )}
       {/* Overage note */}
       {mode === "included" && overageCost > 0 && (
         <span className="text-sm tabular-nums leading-6 text-muted-foreground">

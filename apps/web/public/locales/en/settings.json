@@ -122,7 +122,7 @@
     "addon": {
       "title": "Add-ons",
       "aiSmsName": "AI SMS",
-      "aiSmsDescription": "Let your receptionist send conversational SMS replies from your business number.",
+      "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously.",
       "enable": "Enable",
       "aiSmsActiveBadge": "Active",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
