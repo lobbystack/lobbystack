@@ -13,7 +13,15 @@
     "messages": "{{count}} messages",
     "calls": "{{count}} calls",
     "unknownContact": "Unknown contact",
-    "empty": "No contacts match the current search."
+    "empty": "No contacts match the current search.",
+    "actions": {
+      "moreOptions": "More options",
+      "deleteContact": "Delete contact",
+      "deleteTitle": "Delete contact?",
+      "deleteDescription": "This will permanently remove the contact from your dashboard.",
+      "deleteConfirm": "Delete contact",
+      "deleteCancel": "Cancel"
+    }
   },
   "detail": {
     "backToList": "Contacts",

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { query, type QueryCtx } from "../_generated/server";
+import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 
@@ -83,6 +83,24 @@ export const listContacts = query({
     );
 
     return rows.sort((left, right) => right.lastInteractionAt - left.lastInteractionAt);
+  },
+});
+
+export const deleteContact = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    contactId: v.id("contacts"),
+  },
+  handler: async (ctx: MutationCtx, args) => {
+    await requireMembership(ctx, args.businessId);
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.businessId !== args.businessId) {
+      throw new Error("Contact not found.");
+    }
+
+    await ctx.db.delete(args.contactId);
+    return null;
   },
 });
 

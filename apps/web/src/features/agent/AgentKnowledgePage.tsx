@@ -15,6 +15,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
@@ -219,6 +220,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     pageIndex: 0,
     pageSize: 10,
   });
+  const [deleteCandidate, setDeleteCandidate] = useState<KnowledgeRow | null>(null);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
   const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
@@ -438,7 +440,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             <RowActionsMenu
               deleting={deletingEntryId === String(row.original._id)}
               onDelete={() => {
-                void handleDelete(row.original);
+                setDeleteCandidate(row.original);
               }}
             />
           </div>
@@ -794,6 +796,29 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
               goToPage: (page) => t("agent:pagination.goToPage", { page }),
             }}
             table={table}
+          />
+          <ConfirmDeleteDialog
+            cancelLabel={t("agent:actions.deleteCancel")}
+            confirmLabel={t("agent:actions.delete")}
+            description={t("agent:actions.deleteDescription")}
+            onConfirm={async () => {
+              if (!deleteCandidate) {
+                return;
+              }
+
+              await handleDelete(deleteCandidate);
+            }}
+            onOpenChange={(open) => {
+              if (!open && !deletingEntryId) {
+                setDeleteCandidate(null);
+              }
+            }}
+            open={deleteCandidate !== null}
+            pending={
+              deleteCandidate !== null &&
+              deletingEntryId === String(deleteCandidate._id)
+            }
+            title={t("agent:actions.deleteTitle")}
           />
         </>
       )}

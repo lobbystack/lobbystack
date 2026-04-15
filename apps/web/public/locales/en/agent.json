@@ -211,6 +211,9 @@
     "moreOptions": "More options",
     "delete": "Delete",
     "confirmDelete": "Confirm?",
+    "deleteTitle": "Delete entry?",
+    "deleteDescription": "This will permanently remove this entry from the agent workspace.",
+    "deleteCancel": "Cancel",
     "upload": "Upload",
     "uploading": "Uploading…"
   },

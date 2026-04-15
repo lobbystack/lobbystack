@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import {
   flexRender,
@@ -8,16 +9,24 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+import { MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -47,14 +56,77 @@ type ContactRow = {
   lastInteractionAt: number;
 };
 
+function ContactRowActionsMenu({
+  deleting = false,
+  onDelete,
+}: {
+  deleting?: boolean;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation("contacts");
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("table.actions.moreOptions")}
+            disabled={deleting}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            size="icon-sm"
+            title={t("table.actions.moreOptions")}
+            type="button"
+            variant="ghost"
+          >
+            <MoreHorizontal />
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        align="end"
+        className="min-w-[9rem] w-auto p-1"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        side="bottom"
+        sideOffset={8}
+      >
+        <DropdownMenuItem
+          className="gap-2.5 px-3 py-2"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          variant="destructive"
+        >
+          <Trash2 />
+          <span>{t("table.actions.deleteContact")}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function ContactsPage({ businessId }: ContactsPageProps) {
   const { i18n, t } = useTranslation("contacts");
   const { data: contacts, isInitialLoading: isLoadingContacts } = useRememberedConvexQuery(
     api.dashboard.contacts.listContacts,
     businessId ? { businessId } : "skip",
   );
+  const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
   const [searchValue, setSearchValue] = useState("");
   const navigate = useNavigate();
+  const [contactPendingDelete, setContactPendingDelete] = useState<ContactRow | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -66,6 +138,34 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
       return query.length === 0 || haystack.includes(query);
     });
   }, [contacts, searchValue]);
+
+  const openContact = useCallback((row: ContactRow) => {
+    captureAnalyticsEvent("web.contacts.contact_opened", {
+      businessId: businessId ? String(businessId) : undefined,
+      contactId: String(row.id),
+      messageCount: row.messageCount,
+      callCount: row.callCount,
+      appointmentCount: row.appointmentCount,
+    });
+    navigate(`/contacts/${row.id}`);
+  }, [businessId, navigate]);
+
+  const handleDeleteContact = useCallback(async () => {
+    if (!businessId || !contactPendingDelete) {
+      return;
+    }
+
+    const contactId = String(contactPendingDelete.id);
+    setDeletingContactId(contactId);
+    try {
+      await deleteContact({
+        businessId,
+        contactId: contactPendingDelete.id,
+      });
+    } finally {
+      setDeletingContactId((current) => (current === contactId ? null : current));
+    }
+  }, [businessId, contactPendingDelete, deleteContact]);
 
   const columns = useMemo<Array<ColumnDef<ContactRow>>>(
     () => [
@@ -111,15 +211,35 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
             timeStyle: "short",
           }),
         id: "lastInteraction",
-        header: () => t("table.lastInteraction"),
-        cell: ({ row }) =>
-          formatDateTime(row.original.lastInteractionAt, i18n.language, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }),
+        header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
+        cell: ({ row }) => (
+          <span className="block truncate text-right text-sm text-muted-foreground">
+            {formatDateTime(row.original.lastInteractionAt, i18n.language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex w-16 justify-end pr-1">
+            <ContactRowActionsMenu
+              deleting={deletingContactId === String(row.original.id)}
+              onDelete={() => {
+                setContactPendingDelete(row.original);
+              }}
+            />
+          </div>
+        ),
+        meta: {
+          className: "w-16 text-right",
+        },
       },
     ],
-    [i18n.language, t],
+    [deletingContactId, i18n.language, t],
   );
 
   const table = useReactTable({
@@ -166,21 +286,40 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
       </div>
 
       {isLoadingContacts ? (
-        <TableCardSkeleton columns={5} />
+        <TableCardSkeleton columns={6} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
-            <Table>
+          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[16%]" />
+                <col className="w-[24%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
+                <col className="w-[8%]" />
+              </colgroup>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
+                    {headerGroup.headers.map((header) => {
+                      const className =
+                        header.column.id === "lastInteraction" || header.column.id === "actions"
+                          ? "text-right"
+                          : header.column.columnDef.meta &&
+                              typeof header.column.columnDef.meta === "object" &&
+                              "className" in header.column.columnDef.meta
+                            ? String(header.column.columnDef.meta.className)
+                            : undefined;
+
+                      return (
+                        <TableHead className={className} key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -190,26 +329,32 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                     className="h-12 cursor-pointer transition-colors hover:bg-muted/40"
                     key={row.id}
                     onClick={() => {
-                      captureAnalyticsEvent("web.contacts.contact_opened", {
-                        businessId: businessId ? String(businessId) : undefined,
-                        contactId: String(row.original.id),
-                        messageCount: row.original.messageCount,
-                        callCount: row.original.callCount,
-                        appointmentCount: row.original.appointmentCount,
-                      });
-                      navigate(`/contacts/${row.original.id}`);
+                      openContact(row.original);
                     }}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const className =
+                        cell.column.id === "lastInteraction"
+                          ? "w-0 max-w-0 text-right whitespace-nowrap"
+                          : cell.column.id === "actions"
+                            ? "text-right"
+                            : cell.column.columnDef.meta &&
+                                typeof cell.column.columnDef.meta === "object" &&
+                                "className" in cell.column.columnDef.meta
+                              ? String(cell.column.columnDef.meta.className)
+                              : undefined;
+
+                      return (
+                        <TableCell className={className} key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
                 {table.getRowModel().rows.length === 0 ? (
                   <TableRow>
-                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>
                       {t("table.empty")}
                     </TableCell>
                   </TableRow>
@@ -228,6 +373,23 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
               goToPage: (page) => t("pagination.goToPage", { page }),
             }}
             table={table}
+          />
+          <ConfirmDeleteDialog
+            cancelLabel={t("table.actions.deleteCancel")}
+            confirmLabel={t("table.actions.deleteConfirm")}
+            description={t("table.actions.deleteDescription")}
+            onConfirm={handleDeleteContact}
+            onOpenChange={(open) => {
+              if (!open && !deletingContactId) {
+                setContactPendingDelete(null);
+              }
+            }}
+            open={contactPendingDelete !== null}
+            pending={
+              contactPendingDelete !== null &&
+              deletingContactId === String(contactPendingDelete.id)
+            }
+            title={t("table.actions.deleteTitle")}
           />
         </>
       )}
