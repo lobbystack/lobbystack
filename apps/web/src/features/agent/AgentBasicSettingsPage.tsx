@@ -381,8 +381,8 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                 <Skeleton className="h-10 w-32 rounded-md" />
               ) : (
                 <PhoneInput
-                  className="w-[12ch] min-w-0"
-                  containerClassName="w-fit"
+                  className="w-full min-w-0 sm:w-[12ch]"
+                  containerClassName="w-full sm:w-fit"
                   id="agent-transfer-number"
                   locale={i18n.language}
                   maxLength={18}

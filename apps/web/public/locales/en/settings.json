@@ -66,7 +66,7 @@
       "enterpriseNotice": "Usage and limits are governed by your enterprise agreement.",
       "freeCloudNotice": "Usage is capped at the included pool each month. Upgrade to Pro for overage billing and higher limits.",
       "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate.",
-      "monthlySuffix": "/month",
+      "monthlySuffix": "/ month",
       "paygMonthlySuffix": "+ pay-as-you-go usage",
       "includedTitle": "What's included:",
       "includedStorageLabel": "storage",

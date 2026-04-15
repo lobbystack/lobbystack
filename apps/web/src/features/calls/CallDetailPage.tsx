@@ -440,7 +440,7 @@ function RecordingTab({ call }: { call: CallRow }) {
 
   return (
     <div className="py-4">
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <CallRecordingPlayer
           className="px-4 py-3"
           downloadLabel={t("actions.download")}
@@ -739,7 +739,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
       <Separator />
 
       {/* Call events timeline */}
-      <div className="overflow-hidden rounded-xl border bg-card px-4">
+      <div className="overflow-hidden rounded-lg border bg-card px-4">
         <CallEventTimeline events={events} locale={locale} />
       </div>
 

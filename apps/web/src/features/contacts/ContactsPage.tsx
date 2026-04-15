@@ -168,7 +168,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         <TableCardSkeleton columns={5} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-hidden rounded-lg border bg-card">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
