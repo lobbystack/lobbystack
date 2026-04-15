@@ -19,6 +19,7 @@ vi.mock("react-i18next", () => ({
         "nav:items.analytics": "Analytics",
         "nav:items.agent": "Agent",
         "nav:items.settings": "Settings",
+        "settings:sections.integrations": "Integrations",
         "agent:sections.basicSettings.title": "AI settings",
         "agent:sections.knowledge.title": "Knowledge",
         "agent:sections.services.title": "Services",
@@ -70,7 +71,7 @@ describe("AppSidebar", () => {
     expect(screen.queryByRole("button", { name: "Agent" })).toBeNull();
   });
 
-  it("links Settings directly to usage and removes the standalone integrations item", () => {
+  it("places Integrations between Analytics and Settings in the manage section", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
@@ -83,11 +84,14 @@ describe("AppSidebar", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      screen.getByRole("link", { name: "Settings" }).getAttribute("href"),
-    ).toBe(
-      "/settings/usage",
+    const manageLinks = ["Analytics", "Integrations", "Settings"].map((name) =>
+      screen.getByRole("link", { name }),
     );
-    expect(screen.queryByRole("link", { name: "Integrations" })).toBeNull();
+
+    expect(manageLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/analytics",
+      "/integrations",
+      "/settings/usage",
+    ]);
   });
 });

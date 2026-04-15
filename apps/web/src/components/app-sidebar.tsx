@@ -64,6 +64,7 @@ const AnimatedMessagesIcon = createAnimatedSidebarIcon(MessageSquareMoreIcon);
 const AnimatedContactsIcon = createAnimatedSidebarIcon(UsersIcon);
 const AnimatedAnalyticsIcon = createAnimatedSidebarIcon(ChartColumnIncreasingIcon);
 const AnimatedBasicSettingsIcon = createAnimatedSidebarIcon(ClipboardCheckIcon);
+const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
 const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
@@ -133,6 +134,12 @@ export function AppSidebar({
           title: t("nav:sidebar.other"),
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
+            {
+              title: t("settings:sections.integrations"),
+              activeMatchPrefix: "/settings/integrations",
+              url: "/integrations",
+              icon: AnimatedIntegrationsIcon,
+            },
             {
               title: t("nav:items.settings"),
               activeMatchPrefix: "/settings",
