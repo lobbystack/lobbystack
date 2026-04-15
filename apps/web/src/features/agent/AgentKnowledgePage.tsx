@@ -391,7 +391,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       <div className="flex flex-col gap-4">
         {isLoadingKnowledge ? (
           Array.from({ length: 3 }).map((_, index) => (
-            <div className="rounded-lg border border-border/70 bg-card p-4" key={index}>
+            <div className="rounded-md border border-border/70 bg-card p-4" key={index}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Skeleton className="h-5 w-40" />
@@ -407,7 +407,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ) : null}
 
         {knowledge && visibleEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center rounded-md border border-dashed p-12 text-center text-sm text-muted-foreground">
             <p>{t(`agent:sections.${section}.emptyState`)}</p>
           </div>
         ) : null}
@@ -419,7 +419,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
             return (
               <Collapsible
-                className="group rounded-lg border border-border/70 bg-card"
+                className="group rounded-md border border-border/70 bg-card"
                 key={entry._id}
                 onOpenChange={(open) => {
                   if (open && "sourceType" in entry) {

@@ -271,7 +271,7 @@ export function UploadKnowledgeDocumentSheet({
                 type="file"
               />
               <label
-                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-8 text-center transition-colors ${
+                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-8 text-center transition-colors ${
                   isDraggingFile
                     ? "border-foreground/30 bg-muted/40"
                     : "border-border/70 bg-muted/20 hover:bg-muted/30"

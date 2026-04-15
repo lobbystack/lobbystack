@@ -179,7 +179,7 @@ function BorderedItem({
 }) {
   return (
     <div
-      className={`rounded-xl border border-border bg-card px-6 py-5 ${className ?? ""}`}
+      className={`rounded-md border border-border bg-card px-6 py-5 ${className ?? ""}`}
     >
       {children}
     </div>
@@ -820,7 +820,7 @@ function TransactionsSection({
       title={t("billing.transactions.title")}
       description={t("billing.transactions.description")}
     >
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -1012,7 +1012,7 @@ function TransactionsSectionSkeleton({
       title={t("billing.transactions.title")}
       description={t("billing.transactions.description")}
     >
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

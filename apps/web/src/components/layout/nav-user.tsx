@@ -62,7 +62,7 @@ export function NavUser({ onSignOut, user, isLoading = false }: NavUserProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="min-w-56 rounded-lg"
+            className="min-w-56 rounded-md"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >

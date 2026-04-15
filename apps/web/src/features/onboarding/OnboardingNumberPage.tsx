@@ -325,7 +325,7 @@ export function OnboardingNumberPage({
               {isLoadingSuggestion ? (
                 <div className="space-y-4">
                   <Skeleton className="h-5 w-40 rounded-full bg-white/10" />
-                  <div className="rounded-3xl border border-white/10 bg-black/20 px-6 py-6 text-center">
+                  <div className="rounded-md border border-white/10 bg-black/20 px-6 py-6 text-center">
                     <Skeleton className="mx-auto h-4 w-24 bg-white/10" />
                     <Skeleton className="mx-auto mt-4 h-10 w-56 bg-white/10" />
                     <Skeleton className="mx-auto mt-3 h-4 w-32 bg-white/10" />
@@ -345,7 +345,7 @@ export function OnboardingNumberPage({
                       <span>{suggestionLabel}</span>
                     </div>
                   ) : null}
-                  <div className="rounded-3xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center">
+                  <div className="rounded-md border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center">
                     <div className="mb-2 flex items-center justify-center gap-2 text-zinc-400">
                       <Phone className="size-4" />
                       <span className="text-sm uppercase tracking-[0.24em]">
@@ -398,7 +398,7 @@ export function OnboardingNumberPage({
 
               {!isLoadingSuggestion && !selectedNumber && !loadError ? (
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-dashed border-white/10 bg-black/20 px-6 py-6 text-center">
+                  <div className="rounded-md border border-dashed border-white/10 bg-black/20 px-6 py-6 text-center">
                     <div className="type-empty-title text-white">
                       {t("number.noSuggestionTitle")}
                     </div>
@@ -514,7 +514,7 @@ export function OnboardingNumberPage({
               </Button>
             </div>
 
-            <div className="max-h-[26rem] overflow-y-auto rounded-2xl border border-white/10 bg-black/15">
+            <div className="max-h-[26rem] overflow-y-auto rounded-md border border-white/10 bg-black/15">
               {pickerNumbers.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-zinc-400">
                   {t("number.empty")}

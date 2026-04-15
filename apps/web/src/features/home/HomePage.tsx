@@ -473,7 +473,7 @@ export function HomePage({ businessId }: HomePageProps) {
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
+              <div className="rounded-md border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
                 <p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p>
                 <p className="type-empty-description mt-2">
                   {t("home.actionRequired.emptyDescription")}
@@ -568,7 +568,7 @@ export function HomePage({ businessId }: HomePageProps) {
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-2xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
+              <div className="rounded-md border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center">
                 <p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p>
                 <p className="type-empty-description mt-2">
                   {t("home.upcoming.emptyDescription")}
@@ -580,7 +580,7 @@ export function HomePage({ businessId }: HomePageProps) {
         {isLoadingSummary ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
             <ChartBlockSkeleton height={350} />
-            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+            <div className="rounded-md border bg-card p-6 lg:col-span-3">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />

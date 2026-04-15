@@ -229,7 +229,7 @@ export function OnboardingVerifyPhonePage({
               )}
 
               {statusMessage ? (
-                <FieldDescription className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-center text-emerald-100">
+                <FieldDescription className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-center text-emerald-100">
                   {statusMessage}
                 </FieldDescription>
               ) : null}

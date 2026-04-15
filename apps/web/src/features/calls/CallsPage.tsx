@@ -380,7 +380,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
         <TableCardSkeleton columns={5} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-hidden rounded-md border bg-card">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
