@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { useAction, useConvex } from "convex/react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
@@ -9,7 +8,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { Search, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -20,6 +19,12 @@ import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,10 +57,10 @@ type KnowledgeSnippetRow = Doc<"knowledge_snippets"> & {
 
 type KnowledgeRow = KnowledgeDocumentRow | KnowledgeSnippetRow;
 
-type InlineConfirmDeleteButtonProps = {
+type RowActionsMenuProps = {
   deleting: boolean;
   disabled?: boolean;
-  onConfirm: () => void;
+  onDelete: () => void;
 };
 
 const fullDocumentTextMemoryCache = new Map<string, string>();
@@ -139,87 +144,60 @@ function writeCachedViewerText(document: Doc<"knowledge_documents">, text: strin
   }
 }
 
-function InlineConfirmDeleteButton({
+function RowActionsMenu({
   deleting,
   disabled = false,
-  onConfirm,
-}: InlineConfirmDeleteButtonProps) {
+  onDelete,
+}: RowActionsMenuProps) {
   const { t } = useTranslation("agent");
-  const [isConfirming, setIsConfirming] = useState(false);
-
-  useEffect(() => {
-    if (!isConfirming || deleting) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setIsConfirming(false);
-    }, 3000);
-
-    return () => window.clearTimeout(timeout);
-  }, [deleting, isConfirming]);
-
-  useEffect(() => {
-    if (!deleting) {
-      return;
-    }
-
-    setIsConfirming(false);
-  }, [deleting]);
 
   return (
-    <motion.div layout className="overflow-hidden">
-      <AnimatePresence initial={false} mode="wait">
-        {isConfirming ? (
-          <motion.div
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.96, x: 8 }}
-            initial={{ opacity: 0, scale: 0.96, x: 8 }}
-            key="confirm-delete"
-            transition={{ duration: 0.16, ease: "easeOut" }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("actions.moreOptions")}
+            disabled={disabled || deleting}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            size="icon-sm"
+            title={t("actions.moreOptions")}
+            type="button"
+            variant="ghost"
           >
-            <Button
-              disabled={disabled || deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onConfirm();
-              }}
-              size="sm"
-              title={t("actions.confirmDelete")}
-              type="button"
-              variant="destructive"
-            >
-              {t("actions.confirmDelete")}
-            </Button>
-          </motion.div>
-        ) : (
-          <motion.div
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.96, x: -8 }}
-            initial={{ opacity: 0, scale: 0.96, x: -8 }}
-            key="delete-icon"
-            transition={{ duration: 0.16, ease: "easeOut" }}
-          >
-            <Button
-              aria-label={t("actions.delete")}
-              disabled={disabled || deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsConfirming(true);
-              }}
-              size="icon-sm"
-              title={t("actions.delete")}
-              type="button"
-              variant="ghost"
-            >
-              <Trash2 />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            <MoreHorizontal />
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        align="end"
+        className="w-44"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        side="bottom"
+        sideOffset={8}
+      >
+        <DropdownMenuItem
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          variant="destructive"
+        >
+          <Trash2 />
+          <span>{t("actions.delete")}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -322,7 +300,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           : getDocumentStatusLabel(document.status);
 
       return (
-        <span className="inline-flex min-w-48 items-center gap-3 text-sm text-muted-foreground">
+        <span className="inline-flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
           <span>{label}</span>
           <Progress className="w-24" value={progressValue} />
           <span className="min-w-10 text-right text-xs tabular-nums">
@@ -392,9 +370,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             ) : null}
           </div>
         ),
-        meta: {
-          className: "min-w-64",
-        },
       },
       {
         accessorFn: (row) => (isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content)),
@@ -405,9 +380,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             {isDocumentRow(row.original) ? getDocumentPreviewSummary(row.original) : summarizeText(row.original.content)}
           </span>
         ),
-        meta: {
-          className: "min-w-80 max-w-0 whitespace-normal",
-        },
       },
       {
         accessorFn: (row) => row.tags.join(" "),
@@ -426,9 +398,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             </div>
           );
         },
-        meta: {
-          className: "w-40 whitespace-normal",
-        },
       },
       {
         accessorFn: (row) =>
@@ -441,9 +410,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           ) : (
             <Badge variant="secondary">{t(`agent:sections.${section}.status.indexed`)}</Badge>
           ),
-        meta: {
-          className: "min-w-56",
-        },
       },
       {
         accessorFn: (row) =>
@@ -461,25 +427,22 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             })}
           </span>
         ),
-        meta: {
-          className: "w-48 text-right",
-        },
       },
       {
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex w-32 justify-end">
-            <InlineConfirmDeleteButton
+          <div className="flex w-12 justify-end">
+            <RowActionsMenu
               deleting={deletingEntryId === String(row.original._id)}
-              onConfirm={() => {
+              onDelete={() => {
                 void handleDelete(row.original);
               }}
             />
           </div>
         ),
         meta: {
-          className: "w-32 text-right",
+          className: "w-12 text-right",
         },
       },
     ],
@@ -712,11 +675,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                       const className =
-                        header.column.columnDef.meta &&
-                        typeof header.column.columnDef.meta === "object" &&
-                        "className" in header.column.columnDef.meta
-                          ? String(header.column.columnDef.meta.className)
-                          : undefined;
+                        header.column.id === "preview"
+                          ? "min-w-80"
+                          : header.column.id === "added" || header.column.id === "actions"
+                            ? "text-right"
+                            : header.column.columnDef.meta &&
+                                typeof header.column.columnDef.meta === "object" &&
+                                "className" in header.column.columnDef.meta
+                              ? String(header.column.columnDef.meta.className)
+                              : undefined;
 
                       return (
                         <TableHead className={className} key={header.id}>
@@ -744,9 +711,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   return (
                     <Fragment key={row.id}>
                       <TableRow
-                        className={cn(
-                          rowIsInteractive ? "cursor-pointer data-[state=selected]:bg-muted/40" : "data-[state=selected]:bg-muted/40",
-                        )}
+                        className={cn(rowIsInteractive ? "h-12 cursor-pointer data-[state=selected]:bg-muted/40" : "h-12 data-[state=selected]:bg-muted/40")}
                         data-state={isSelected ? "selected" : undefined}
                         onClick={() => {
                           if (rowData.entryType === "snippet") {
@@ -769,11 +734,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                       >
                         {row.getVisibleCells().map((cell) => {
                           const className =
-                            cell.column.columnDef.meta &&
-                            typeof cell.column.columnDef.meta === "object" &&
-                            "className" in cell.column.columnDef.meta
-                              ? String(cell.column.columnDef.meta.className)
-                              : undefined;
+                            cell.column.id === "preview"
+                              ? "max-w-0 whitespace-normal"
+                              : cell.column.id === "added" || cell.column.id === "actions"
+                                ? "text-right"
+                                : cell.column.columnDef.meta &&
+                                    typeof cell.column.columnDef.meta === "object" &&
+                                    "className" in cell.column.columnDef.meta
+                                  ? String(cell.column.columnDef.meta.className)
+                                  : undefined;
 
                           return (
                             <TableCell className={className} key={cell.id}>

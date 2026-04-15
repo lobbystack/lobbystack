@@ -53,6 +53,71 @@ vi.mock("@/components/data-table/pagination", () => ({
   DataTablePagination: () => <div data-testid="pagination" />,
 }));
 
+vi.mock("@/components/ui/dropdown-menu", async () => {
+  const ReactModule = await vi.importActual<typeof import("react")>("react");
+  const DropdownMenuContext = ReactModule.createContext({
+    open: false,
+    setOpen: (_nextOpen: boolean) => undefined,
+  });
+
+  function DropdownMenu({ children }: { children: React.ReactNode }) {
+    const [open, setOpen] = ReactModule.useState(false);
+
+    return (
+      <DropdownMenuContext.Provider value={{ open, setOpen }}>
+        {children}
+      </DropdownMenuContext.Provider>
+    );
+  }
+
+  function DropdownMenuTrigger({
+    render,
+  }: {
+    render: React.ReactElement<React.ComponentProps<"button">>;
+  }) {
+    const { setOpen } = ReactModule.useContext(DropdownMenuContext);
+
+    return ReactModule.cloneElement(render, {
+      onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+        render.props.onClick?.(event);
+        setOpen(true);
+      },
+    });
+  }
+
+  function DropdownMenuContent({ children, ...props }: React.ComponentProps<"div">) {
+    const { open } = ReactModule.useContext(DropdownMenuContext);
+    if (!open) {
+      return null;
+    }
+
+    return <div {...props}>{children}</div>;
+  }
+
+  function DropdownMenuItem({
+    children,
+    onClick,
+    ...props
+  }: React.ComponentProps<"button"> & { variant?: string }) {
+    return (
+      <button
+        {...props}
+        onClick={onClick}
+        type="button"
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+  };
+});
+
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
@@ -217,12 +282,12 @@ describe("AgentKnowledgePage", () => {
     render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "actions.delete" }));
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
 
     expect(screen.queryByText("agent:sections.knowledge.editKnowledge")).toBeNull();
-    expect(screen.getByRole("button", { name: "actions.confirmDelete" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "actions.delete" })).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "actions.confirmDelete" }));
+    await user.click(screen.getByRole("button", { name: "actions.delete" }));
 
     await waitFor(() => {
       expect(deleteKnowledgeEntryMock).toHaveBeenCalledWith({
