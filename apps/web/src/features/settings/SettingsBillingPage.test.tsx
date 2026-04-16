@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -219,6 +219,13 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
 
     expect(screen.getAllByText("billing.addon.aiSmsActiveBadge").length).toBeGreaterThan(0);
+    const activeAddonPrice = screen.getByText("$5");
+    expect(activeAddonPrice).toBeTruthy();
+    expect(
+      within(activeAddonPrice.parentElement as HTMLElement).getByText(
+        "billing.currentPlan.monthlySuffix",
+      ),
+    ).toBeTruthy();
   });
 
   it("renders the redesigned plan card content for Pro", () => {
