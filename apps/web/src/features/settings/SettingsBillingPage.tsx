@@ -256,9 +256,7 @@ function PlanSection({
     status.hasCheckoutAccess &&
     status.availableCheckoutPlans.includes("pro") &&
     status.plan === "free_cloud";
-  const showManageSubscription =
-    status.hasCustomerPortalAccess &&
-    status.plan !== "free_cloud";
+  const showManageSubscription = status.hasCustomerPortalAccess;
 
   async function handleUpgrade() {
     setLoading("checkout");

@@ -17,6 +17,10 @@ type UseRememberedConvexQueryResult<TData> = {
 
 const rememberedQueryData = new Map<string, unknown>();
 
+export function clearRememberedConvexQueries(): void {
+  rememberedQueryData.clear();
+}
+
 function buildRememberedQueryKey<Query extends RememberedQueryReference>(
   query: Query,
   args: FunctionArgs<Query>,

@@ -28,6 +28,11 @@ const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000;
 const queryCache = new Map<string, CacheEntry<unknown>>();
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
+export function clearCachedConvexQueries(): void {
+  queryCache.clear();
+  inFlightRequests.clear();
+}
+
 function buildCacheKey<Query extends CachedQueryReference>(
   query: Query,
   args: FunctionArgs<Query>,

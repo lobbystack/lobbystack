@@ -67,4 +67,47 @@ describe("useCachedConvexQuery", () => {
 
     unmount();
   });
+
+  it("drops cached data after the auth-scoped cache is cleared", async () => {
+    convexQueryMock.mockResolvedValueOnce("workspace-a");
+    const { clearCachedConvexQueries, useCachedConvexQuery } = await import("./cached-convex-query");
+    const queryRef = {} as never;
+
+    function Probe() {
+      const { data, isLoading } = useCachedConvexQuery(
+        queryRef,
+        { businessId: "business-a" } as never,
+      );
+
+      return (
+        <div>
+          <span data-testid="data">{data ?? "empty"}</span>
+          <span data-testid="status">{isLoading ? "loading" : "ready"}</span>
+        </div>
+      );
+    }
+
+    const firstRender = render(<Probe />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data").textContent).toBe("workspace-a");
+      expect(screen.getByTestId("status").textContent).toBe("ready");
+    });
+
+    firstRender.unmount();
+    clearCachedConvexQueries();
+    convexQueryMock.mockResolvedValueOnce("workspace-b");
+
+    const secondRender = render(<Probe />);
+
+    expect(screen.getByTestId("data").textContent).toBe("empty");
+    expect(screen.getByTestId("status").textContent).toBe("loading");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data").textContent).toBe("workspace-b");
+      expect(screen.getByTestId("status").textContent).toBe("ready");
+    });
+
+    secondRender.unmount();
+  });
 });

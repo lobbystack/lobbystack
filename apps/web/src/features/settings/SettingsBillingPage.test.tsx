@@ -239,6 +239,16 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 
+  it("keeps portal access visible for free workspaces with a billing customer", () => {
+    renderBillingPage(
+      buildStatus({
+        hasCustomerPortalAccess: true,
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
+  });
+
   it("keeps usage off the billing overview page", () => {
     renderBillingPage(buildStatus());
 

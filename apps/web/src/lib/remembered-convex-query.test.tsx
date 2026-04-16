@@ -45,4 +45,39 @@ describe("useRememberedConvexQuery", () => {
     expect(screen.getByTestId("data").textContent).toBe("empty");
     expect(screen.getByTestId("status").textContent).toBe("loading");
   });
+
+  it("drops remembered data after the auth-scoped cache is cleared", async () => {
+    useQueryMock.mockReturnValue("workspace-a");
+    const { clearRememberedConvexQueries, useRememberedConvexQuery } = await import(
+      "./remembered-convex-query"
+    );
+    const queryRef = {} as never;
+
+    function Probe() {
+      const { data, isInitialLoading } = useRememberedConvexQuery(
+        queryRef,
+        { businessId: "business-a" } as never,
+      );
+
+      return (
+        <div>
+          <span data-testid="data">{data ?? "empty"}</span>
+          <span data-testid="status">{isInitialLoading ? "loading" : "ready"}</span>
+        </div>
+      );
+    }
+
+    const firstRender = render(<Probe />);
+    expect(screen.getByTestId("data").textContent).toBe("workspace-a");
+    expect(screen.getByTestId("status").textContent).toBe("ready");
+
+    firstRender.unmount();
+    clearRememberedConvexQueries();
+    useQueryMock.mockReturnValue(undefined);
+
+    render(<Probe />);
+
+    expect(screen.getByTestId("data").textContent).toBe("empty");
+    expect(screen.getByTestId("status").textContent).toBe("loading");
+  });
 });

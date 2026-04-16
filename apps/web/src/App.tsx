@@ -49,6 +49,7 @@ import {
   resetAnalyticsIdentity,
   trackPageView,
 } from "@/lib/analytics";
+import { useResetAuthScopedClientStateOnSignOut } from "@/lib/auth-scoped-client-state";
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -522,6 +523,8 @@ function OnboardingVerifyPhoneRoute() {
 }
 
 export default function App() {
+  useResetAuthScopedClientStateOnSignOut();
+
   return (
     <TooltipProvider>
       <BrowserRouter>
