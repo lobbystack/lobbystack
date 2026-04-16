@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "convex/react";
 import {
   type FunctionArgs,
@@ -37,25 +37,13 @@ export function useRememberedConvexQuery<Query extends RememberedQueryReference>
         : buildRememberedQueryKey(query, args),
     [args, query, serializedArgs],
   );
-
-  const [rememberedData, setRememberedData] = useState<
-    FunctionReturnType<Query> | undefined
-  >(() =>
-    cacheKey === null
-      ? undefined
-      : (rememberedQueryData.get(cacheKey) as FunctionReturnType<Query> | undefined),
+  const rememberedData = useMemo(
+    () =>
+      cacheKey === null
+        ? undefined
+        : (rememberedQueryData.get(cacheKey) as FunctionReturnType<Query> | undefined),
+    [cacheKey],
   );
-
-  useEffect(() => {
-    if (cacheKey === null) {
-      setRememberedData(undefined);
-      return;
-    }
-
-    setRememberedData(
-      rememberedQueryData.get(cacheKey) as FunctionReturnType<Query> | undefined,
-    );
-  }, [cacheKey]);
 
   useEffect(() => {
     if (cacheKey === null || liveData === undefined) {
@@ -63,7 +51,6 @@ export function useRememberedConvexQuery<Query extends RememberedQueryReference>
     }
 
     rememberedQueryData.set(cacheKey, liveData);
-    setRememberedData(liveData);
   }, [cacheKey, liveData]);
 
   const data = liveData !== undefined ? liveData : rememberedData;

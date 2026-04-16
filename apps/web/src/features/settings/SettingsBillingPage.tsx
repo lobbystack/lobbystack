@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 // ---------------------------------------------------------------------------
@@ -43,19 +44,28 @@ type SettingsBillingPageProps = {
 };
 
 type BillingTranslation = ReturnType<typeof useTranslation<"settings">>["t"];
+type BillingLocale = string;
 
 // ---------------------------------------------------------------------------
 // Formatters
 // ---------------------------------------------------------------------------
 
-function formatCents(cents: number): string {
-  const dollars = cents / 100;
-  if (dollars === Math.floor(dollars)) return `$${dollars}`;
-  return `$${dollars.toFixed(2)}`;
+function formatCents(
+  cents: number,
+  locale: BillingLocale,
+  currency = "USD",
+): string {
+  const hasFractionalCents = cents % 100 !== 0;
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: hasFractionalCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
 }
 
-function formatResetDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatResetDate(iso: string, locale: BillingLocale): string {
+  return formatDateTime(iso, locale, {
     month: "long",
     day: "numeric",
   });
@@ -82,8 +92,8 @@ function formatStorage(bytes: number, referenceBytes?: number | null): string {
   return `${bytes} B`;
 }
 
-function formatTransactionDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+function formatTransactionDate(iso: string, locale: BillingLocale): string {
+  return formatDateTime(iso, locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -189,10 +199,12 @@ function BorderedItem({
 function PlanSection({
   status,
   businessId,
+  locale,
   t,
 }: {
   status: BillingStatus;
   businessId: Id<"businesses">;
+  locale: BillingLocale;
   t: BillingTranslation;
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
@@ -202,7 +214,7 @@ function PlanSection({
   const planLabel = getPlanLabel(status.plan, t);
   const price =
     status.monthlyChargeCents !== null
-      ? formatCents(status.monthlyChargeCents)
+      ? formatCents(status.monthlyChargeCents, locale)
       : null;
   const planConfig = billingPlanCatalog[status.plan];
   const includedItems = [
@@ -283,14 +295,20 @@ function PlanSection({
               </span>
               <div className="flex flex-col items-start gap-0.5">
                 <div className="flex flex-wrap items-end gap-2">
-                  {price !== null && (
+                  {price !== null ? (
                     <span className="text-4xl font-semibold tracking-tight text-foreground">
                       {price}
                     </span>
+                  ) : (
+                    <span className="text-base text-muted-foreground">
+                      {t("billing.currentPlan.customPricing")}
+                    </span>
                   )}
-                  <span className="pb-1 text-base text-muted-foreground">
-                    {t("billing.currentPlan.monthlySuffix")}
-                  </span>
+                  {price !== null ? (
+                    <span className="pb-1 text-base text-muted-foreground">
+                      {t("billing.currentPlan.monthlySuffix")}
+                    </span>
+                  ) : null}
                 </div>
                 {status.plan === "pro" && (
                   <span className="text-base text-muted-foreground">
@@ -360,9 +378,11 @@ function PlanSection({
 
 function UsageSection({
   status,
+  locale,
   t,
 }: {
   status: BillingStatus;
+  locale: BillingLocale;
   t: BillingTranslation;
 }) {
   const usage = status.usage;
@@ -378,7 +398,7 @@ function UsageSection({
         description={
           usage.resetAt
             ? t("billing.usage.description", {
-                resetAt: formatResetDate(usage.resetAt),
+                resetAt: formatResetDate(usage.resetAt, locale),
               })
             : undefined
         }
@@ -386,6 +406,7 @@ function UsageSection({
         <BorderedItem className="flex flex-col gap-5">
           <UsageMeterRow
             label={t("billing.usage.voiceTitle")}
+            locale={locale}
             used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
             included={
               usage.voiceSecondsIncluded !== null
@@ -401,6 +422,7 @@ function UsageSection({
 
           <UsageMeterRow
             label={t("billing.usage.outboundAttemptsTitle")}
+            locale={locale}
             used={usage.outboundCallAttemptsUsed}
             included={usage.outboundCallAttemptsIncluded}
             unit="attempts"
@@ -412,6 +434,7 @@ function UsageSection({
 
           <UsageMeterRow
             label={t("billing.usage.alertSmsTitle")}
+            locale={locale}
             used={usage.alertSmsSegmentsUsed}
             included={usage.alertSmsSegmentsIncluded}
             unit="segments"
@@ -423,6 +446,7 @@ function UsageSection({
 
           <UsageMeterRow
             label={t("billing.usage.knowledgeTitle")}
+            locale={locale}
             used={usage.knowledgeStorageBytesUsed}
             included={usage.knowledgeStorageBytesIncluded}
             unit="storage"
@@ -438,10 +462,10 @@ function UsageSection({
       {(catalog.overagesBillable || status.aiSmsEnabled) && (
         <BillingSection
           title={t("billing.usage.paygTitle")}
-          description={
-            usage.resetAt
-              ? t("billing.usage.paygDescription", {
-                  resetAt: formatResetDate(usage.resetAt),
+        description={
+          usage.resetAt
+            ? t("billing.usage.paygDescription", {
+                  resetAt: formatResetDate(usage.resetAt, locale),
                 })
               : undefined
           }
@@ -451,6 +475,7 @@ function UsageSection({
               <>
                 <UsageMeterRow
                   label={t("billing.usage.voiceTitle")}
+                  locale={locale}
                   used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
                   included={
                     usage.voiceSecondsIncluded !== null
@@ -466,6 +491,7 @@ function UsageSection({
 
                 <UsageMeterRow
                   label={t("billing.usage.outboundAttemptsTitle")}
+                  locale={locale}
                   used={usage.outboundCallAttemptsUsed}
                   included={usage.outboundCallAttemptsIncluded}
                   unit="attempts"
@@ -477,6 +503,7 @@ function UsageSection({
 
                 <UsageMeterRow
                   label={t("billing.usage.alertSmsTitle")}
+                  locale={locale}
                   used={usage.alertSmsSegmentsUsed}
                   included={usage.alertSmsSegmentsIncluded}
                   unit="segments"
@@ -491,6 +518,7 @@ function UsageSection({
             {status.aiSmsEnabled && (
               <UsageMeterRow
                 label={t("billing.usage.aiSmsTitle")}
+                locale={locale}
                 used={usage.aiSmsSegmentsUsed}
                 included={null}
                 unit="segments"
@@ -529,6 +557,7 @@ function UsageUnavailableSection({
 
 function UsageMeterRow({
   label,
+  locale,
   used,
   included,
   unit,
@@ -540,6 +569,7 @@ function UsageMeterRow({
   mode = "included",
 }: {
   label: string;
+  locale: BillingLocale;
   used: number;
   included: number | null;
   unit: string;
@@ -612,7 +642,7 @@ function UsageMeterRow({
         <span className="text-sm tabular-nums leading-6 text-muted-foreground">
           {overageCount} {unit} over included ·{" "}
           <span className="font-medium text-foreground">
-            ≈ {formatCents(overageCost)}
+            ≈ {formatCents(overageCost, locale)}
           </span>{" "}
           in overages
         </span>
@@ -633,17 +663,25 @@ function UsageMeterRow({
 function AddonsSection({
   status,
   businessId,
+  locale,
   t,
 }: {
   status: BillingStatus;
   businessId: Id<"businesses">;
+  locale: BillingLocale;
   t: BillingTranslation;
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
   const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
   const isActive = status.aiSmsEnabled;
   const canPurchase = status.canPurchaseAiSmsAddon;
-  const isFreePlanLocked = status.plan === "free_cloud" && !isActive;
+  const canUpgradeToPro =
+    status.hasCheckoutAccess &&
+    status.availableCheckoutPlans.includes("pro");
+  const isFreePlanLocked =
+    status.plan === "free_cloud" &&
+    !isActive &&
+    canUpgradeToPro;
 
   async function handleAddAiSms() {
     setLoading("ai_sms");
@@ -658,6 +696,10 @@ function AddonsSection({
   }
 
   async function handleUpgradeToPro() {
+    if (!canUpgradeToPro) {
+      return;
+    }
+
     setLoading("pro");
     try {
       const result = await startCheckout({ businessId, target: "pro" });
@@ -718,15 +760,18 @@ function AddonsSection({
               {t("billing.addon.aiSmsPricing", {
                 monthly: formatCents(
                   billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
+                  locale,
                 ),
                 perSegment: formatCents(
                   billingAddonCatalog.ai_sms.usageRatePerSegmentCents,
+                  locale,
                 ),
               })}
               {" · "}
               {t("billing.addon.aiSmsSetup", {
                 amount: formatCents(
                   billingAddonCatalog.ai_sms.oneTimeSetupChargeCents,
+                  locale,
                 ),
               })}
             </span>
@@ -803,9 +848,11 @@ function SpendingCapSection({
 
 function TransactionsSection({
   status,
+  locale,
   t,
 }: {
   status: BillingStatus;
+  locale: BillingLocale;
   t: BillingTranslation;
 }) {
   const transactions = status.recentTransactions;
@@ -843,14 +890,14 @@ function TransactionsSection({
               return (
                 <TableRow key={tx.sourceId}>
                   <TableCell className="text-sm tabular-nums text-muted-foreground">
-                    {formatTransactionDate(tx.occurredAt)}
+                    {formatTransactionDate(tx.occurredAt, locale)}
                   </TableCell>
                   <TableCell className="text-sm text-foreground">
                     {tx.description ?? "—"}
                   </TableCell>
                   <TableCell className="text-right text-sm tabular-nums font-medium text-foreground">
                     {isRefund ? "−" : ""}
-                    {formatCents(tx.amountCents)}
+                    {formatCents(tx.amountCents, locale, tx.currency.toUpperCase())}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground capitalize">
@@ -1088,7 +1135,8 @@ function BillingUsageSkeleton({
 // ---------------------------------------------------------------------------
 
 export function SettingsBillingPage(props: SettingsBillingPageProps) {
-  const { t } = useTranslation("settings");
+  const { i18n, t } = useTranslation("settings");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
 
   if (isLoadingStatus || !status) {
@@ -1098,23 +1146,39 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   if (status.plan === "self_host") {
     return (
       <div className="flex w-full flex-col gap-10">
-        <PlanSection status={status} businessId={props.businessId} t={t} />
+        <PlanSection
+          status={status}
+          businessId={props.businessId}
+          locale={locale}
+          t={t}
+        />
       </div>
     );
   }
 
   return (
     <div className="flex w-full flex-col gap-10">
-      <PlanSection status={status} businessId={props.businessId} t={t} />
-      <AddonsSection status={status} businessId={props.businessId} t={t} />
+      <PlanSection
+        status={status}
+        businessId={props.businessId}
+        locale={locale}
+        t={t}
+      />
+      <AddonsSection
+        status={status}
+        businessId={props.businessId}
+        locale={locale}
+        t={t}
+      />
       <SpendingCapSection status={status} t={t} />
-      <TransactionsSection status={status} t={t} />
+      <TransactionsSection status={status} locale={locale} t={t} />
     </div>
   );
 }
 
 export function SettingsBillingUsagePage(props: SettingsBillingPageProps) {
-  const { t } = useTranslation("settings");
+  const { i18n, t } = useTranslation("settings");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
 
   if (isLoadingStatus || !status) {
@@ -1126,7 +1190,7 @@ export function SettingsBillingUsagePage(props: SettingsBillingPageProps) {
       {status.plan === "self_host" ? (
         <UsageUnavailableSection t={t} />
       ) : (
-        <UsageSection status={status} t={t} />
+        <UsageSection status={status} locale={locale} t={t} />
       )}
     </div>
   );

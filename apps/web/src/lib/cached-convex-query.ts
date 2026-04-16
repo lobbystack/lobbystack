@@ -107,11 +107,38 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
     [query, serializedArgs],
   );
 
-  const [data, setData] = useState<FunctionReturnType<Query> | undefined>(
-    initialEntry?.data,
-  );
-  const [isLoading, setIsLoading] = useState(() => initialEntry === undefined);
-  const [error, setError] = useState<Error | null>(null);
+  const [state, setState] = useState<{
+    cacheKey: string;
+    data: FunctionReturnType<Query> | undefined;
+    isLoading: boolean;
+    error: Error | null;
+    updatedAt: number | null;
+  }>({
+    cacheKey,
+    data: initialEntry?.data,
+    isLoading: initialEntry === undefined,
+    error: null,
+    updatedAt: initialEntry?.updatedAt ?? null,
+  });
+
+  const visibleState =
+    state.cacheKey === cacheKey
+      ? initialEntry && (state.updatedAt === null || initialEntry.updatedAt > state.updatedAt)
+        ? {
+            cacheKey,
+            data: initialEntry.data,
+            error: null,
+            isLoading: false,
+            updatedAt: initialEntry.updatedAt,
+          }
+        : state
+      : {
+          cacheKey,
+          data: initialEntry?.data,
+          isLoading: initialEntry === undefined,
+          error: null,
+          updatedAt: initialEntry?.updatedAt ?? null,
+        };
 
   const runFetch = useCallback(
     async (force: boolean): Promise<FunctionReturnType<Query>> => {
@@ -119,21 +146,25 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
 
       if (!force && cachedEntry && isFresh(cachedEntry.updatedAt, staleTimeMs)) {
         if (mountedRef.current) {
-          setData(cachedEntry.data);
-          setError(null);
-          setIsLoading(false);
+          setState({
+            cacheKey,
+            data: cachedEntry.data,
+            error: null,
+            isLoading: false,
+            updatedAt: cachedEntry.updatedAt,
+          });
         }
         return cachedEntry.data;
       }
 
       if (mountedRef.current) {
-        if (cachedEntry) {
-          setData(cachedEntry.data);
-          setIsLoading(false);
-        } else {
-          setIsLoading(true);
-        }
-        setError(null);
+        setState({
+          cacheKey,
+          data: cachedEntry?.data,
+          error: null,
+          isLoading: cachedEntry === undefined,
+          updatedAt: cachedEntry?.updatedAt ?? null,
+        });
       }
 
       try {
@@ -141,17 +172,25 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
           convex.query(query, stableArgs),
         );
         if (mountedRef.current) {
-          setData(result);
-          setError(null);
-          setIsLoading(false);
+          setState({
+            cacheKey,
+            data: result,
+            error: null,
+            isLoading: false,
+            updatedAt: Date.now(),
+          });
         }
         return result;
       } catch (fetchError) {
         if (mountedRef.current) {
-          setError(
-            fetchError instanceof Error ? fetchError : new Error("Failed to load data."),
-          );
-          setIsLoading(false);
+          setState({
+            cacheKey,
+            data: cachedEntry?.data,
+            error:
+              fetchError instanceof Error ? fetchError : new Error("Failed to load data."),
+            isLoading: false,
+            updatedAt: cachedEntry?.updatedAt ?? null,
+          });
         }
         throw fetchError;
       }
@@ -173,9 +212,13 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
     return await runFetch(true);
   }, [query, runFetch, stableArgs]);
 
-  if (error && data === undefined) {
-    throw error;
+  if (visibleState.error && visibleState.data === undefined) {
+    throw visibleState.error;
   }
 
-  return { data, isLoading, refresh };
+  return {
+    data: visibleState.data,
+    isLoading: visibleState.isLoading,
+    refresh,
+  };
 }

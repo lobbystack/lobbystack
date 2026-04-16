@@ -23,6 +23,10 @@ vi.mock("convex/react", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    i18n: {
+      resolvedLanguage: "en",
+      language: "en",
+    },
     t: (key: string, options?: Record<string, unknown>) => {
       if (
         key === "billing.currentPlan.monthlyChargeValue" &&
@@ -116,6 +120,15 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     startCheckoutMock.mockReset();
     rememberedQueryMock.mockReset();
     vi.stubGlobal("open", vi.fn());
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+    });
     locationAssignMock.mockReset();
     Object.defineProperty(window, "location", {
       configurable: true,
@@ -140,6 +153,27 @@ describe("SettingsBillingPage AI SMS add-on", () => {
 
     expect(await screen.findByText("billing.addon.aiSmsRequiresProPrefix")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.addon.aiSmsRequiresProLink" })).toBeTruthy();
+  });
+
+  it("does not render the Pro upgrade tooltip action when checkout is unavailable", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage(
+      buildStatus({
+        hasCheckoutAccess: false,
+        availableCheckoutPlans: [],
+      }),
+    );
+
+    const enableButton = screen.getByRole("button", {
+      name: "billing.addon.aiSmsName",
+    });
+    await user.hover(enableButton.parentElement as HTMLElement);
+
+    expect(screen.queryByText("billing.addon.aiSmsRequiresProPrefix")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "billing.addon.aiSmsRequiresProLink" }),
+    ).toBeNull();
   });
 
   it("starts AI SMS checkout when an eligible Pro workspace clicks enable", async () => {
