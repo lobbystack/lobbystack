@@ -81,6 +81,14 @@ function summarizeText(text: string, maxLength = 180): string {
   return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
+function summarizeTableTitle(text: string): string {
+  return summarizeText(text, 32);
+}
+
+function summarizeTablePreview(text: string): string {
+  return summarizeText(text, 72);
+}
+
 function getViewerCachePrefix(documentId: string): string {
   return `${VIEWER_TEXT_SESSION_STORAGE_PREFIX}${documentId}:`;
 }
@@ -347,7 +355,9 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     const query = searchValue.trim().toLowerCase();
 
     return visibleRows.filter((row) => {
-      const preview = isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content);
+      const preview = isDocumentRow(row)
+        ? summarizeTablePreview(getDocumentPreviewSummary(row))
+        : summarizeTablePreview(row.content);
       const haystack = [row.title, preview, row.tags.join(" ")]
         .filter(Boolean)
         .join(" ")
@@ -365,7 +375,12 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         header: () => t("agent:table.title"),
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
-            <span className="min-w-0 line-clamp-1 font-medium">{row.original.title}</span>
+            <span
+              className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
+              title={row.original.title}
+            >
+              {summarizeTableTitle(row.original.title)}
+            </span>
             {isDocumentRow(row.original) ? (
               <Badge className="shrink-0" variant="outline">
                 {t(`agent:sections.${section}.documentBadge`)}
@@ -376,12 +391,21 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       },
       {
         accessorFn: (row) =>
-          isDocumentRow(row) ? getDocumentPreviewSummary(row) : summarizeText(row.content),
+          isDocumentRow(row)
+            ? summarizeTablePreview(getDocumentPreviewSummary(row))
+            : summarizeTablePreview(row.content),
         id: "preview",
         header: () => t("agent:table.preview"),
         cell: ({ row }) => (
-          <span className="block min-w-0 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-            {isDocumentRow(row.original) ? getDocumentPreviewSummary(row.original) : summarizeText(row.original.content)}
+          <span
+            className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
+            title={isDocumentRow(row.original)
+              ? getDocumentPreviewSummary(row.original)
+              : row.original.content}
+          >
+            {isDocumentRow(row.original)
+              ? summarizeTablePreview(getDocumentPreviewSummary(row.original))
+              : summarizeTablePreview(row.original.content)}
           </span>
         ),
       },
@@ -745,9 +769,9 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                         {row.getVisibleCells().map((cell) => {
                           const className =
                             cell.column.id === "title"
-                              ? "truncate"
+                              ? "max-w-0 overflow-hidden"
                               : cell.column.id === "preview"
-                                ? "max-w-0 whitespace-normal"
+                                ? "max-w-0 overflow-hidden"
                                 : cell.column.id === "added"
                                   ? "w-0 max-w-0 text-right whitespace-nowrap"
                                   : cell.column.id === "actions"
