@@ -192,6 +192,10 @@
   @apply text-[15px] leading-6 text-muted-foreground;
 }
 
+@utility type-technical-value {
+  @apply text-sm leading-6 font-mono text-foreground;
+}
+
 @utility type-control {
   @apply text-[15px] leading-6;
 }

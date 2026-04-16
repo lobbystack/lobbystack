@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -12,8 +12,6 @@ import {
   Phone,
   Activity,
   User,
-  UserCheck,
-  UserX,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -21,9 +19,10 @@ import { toast } from "sonner";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
+import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -667,7 +666,9 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   const { i18n, t } = useTranslation("contacts");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const blockContact = useMutation(api.dashboard.contacts.blockContact);
+  const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
   const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
+  const navigate = useNavigate();
 
   const rememberedDetail = useRememberedConvexQuery(
     api.dashboard.contacts.getContactDetail,
@@ -681,6 +682,8 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [isUpdatingBlockState, setIsUpdatingBlockState] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
 
   function copyToClipboard(text: string, field: string) {
     void navigator.clipboard.writeText(text).then(() => {
@@ -769,6 +772,23 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
     }
   }
 
+  async function handleDeleteContact() {
+    if (!businessId) {
+      return;
+    }
+
+    setIsDeletingContact(true);
+    try {
+      await deleteContact({
+        businessId,
+        contactId: contact.id,
+      });
+      navigate("/contacts");
+    } finally {
+      setIsDeletingContact(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       {/* Back navigation */}
@@ -800,17 +820,13 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
             </div>
           ) : null}
         </div>
-        <Button
-          disabled={isUpdatingBlockState}
-          onClick={() => setBlockDialogOpen(true)}
-          type="button"
-          variant={contact.isBlocked ? "outline" : "destructive"}
-        >
-          {contact.isBlocked ? <UserCheck className="size-4" /> : <UserX className="size-4" />}
-          {contact.isBlocked
-            ? t("detail.blocking.unblockAction")
-            : t("detail.blocking.blockAction")}
-        </Button>
+        <ContactActionsMenu
+          blocking={isUpdatingBlockState}
+          deleting={isDeletingContact}
+          isBlocked={contact.isBlocked}
+          onDelete={() => setDeleteDialogOpen(true)}
+          onToggleBlock={() => setBlockDialogOpen(true)}
+        />
       </div>
 
       {/* Metadata row */}
@@ -908,6 +924,20 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
             ? t("detail.blocking.unblockTitle")
             : t("detail.blocking.blockTitle")
         }
+      />
+      <ConfirmDeleteDialog
+        cancelLabel={t("table.actions.deleteCancel")}
+        confirmLabel={t("table.actions.deleteConfirm")}
+        description={t("table.actions.deleteDescription")}
+        onConfirm={handleDeleteContact}
+        onOpenChange={(open) => {
+          if (!isDeletingContact) {
+            setDeleteDialogOpen(open);
+          }
+        }}
+        open={deleteDialogOpen}
+        pending={isDeletingContact}
+        title={t("table.actions.deleteTitle")}
       />
     </div>
   );

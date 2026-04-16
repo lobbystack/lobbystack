@@ -33,6 +33,7 @@
     "pendingTranscript": "Open transcript",
     "listen": "Listen",
     "download": "Download audio",
+    "copy": "Copy",
     "play": "Play",
     "pause": "Pause",
     "audioPending": "Recording pending"

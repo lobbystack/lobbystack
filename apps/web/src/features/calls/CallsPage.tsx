@@ -236,7 +236,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
         id: "purpose",
         header: () => t("table.purpose"),
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
+          <span className="type-body-muted">
             {formatCallPurpose(row.original, i18n.language, t)}
           </span>
         ),
@@ -267,7 +267,11 @@ export function CallsPage({ businessId }: CallsPageProps) {
           const isActive = call._id === activeRecordingCallId;
 
           if (!hasRecording) {
-            return <span className="text-sm text-muted-foreground">{t("actions.audioPending")}</span>;
+            return (
+              <span className="type-body-muted">
+                {t("actions.audioPending")}
+              </span>
+            );
           }
 
           return (

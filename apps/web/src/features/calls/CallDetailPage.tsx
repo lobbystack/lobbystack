@@ -20,6 +20,12 @@ import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SectionBlock } from "@/components/section-block";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -233,7 +239,7 @@ function CallEventTimeline({
               </div>
               <span
                 className={cn(
-                  "type-meta whitespace-nowrap",
+                  "type-body whitespace-nowrap",
                   event.reached
                     ? event.failed
                       ? "text-destructive"
@@ -244,7 +250,7 @@ function CallEventTimeline({
                 {t(event.labelKey)}
               </span>
               {event.timestamp ? (
-                <span className="text-xs text-muted-foreground">
+                <span className="type-meta">
                   {formatDateTime(event.timestamp, locale, {
                     month: "short",
                     day: "numeric",
@@ -256,7 +262,7 @@ function CallEventTimeline({
                   })}
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground">&nbsp;</span>
+                <span className="type-meta">&nbsp;</span>
               )}
             </div>
 
@@ -290,8 +296,8 @@ function TranscriptTab({
   if (isLoadingTranscript) {
     return (
       <div className="py-4">
-        <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
-          <div className="flex flex-col gap-3">
+        <Card size="sm">
+          <CardContent className="flex flex-col gap-3 pt-0">
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 className={`max-w-[80%] px-4 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
@@ -302,8 +308,8 @@ function TranscriptTab({
                 <Skeleton className="mt-2 h-4 w-36" />
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -315,22 +321,24 @@ function TranscriptTab({
   if (transcript.length === 0) {
     return (
       <div className="py-4">
-        <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
+        <Card size="sm">
+          <CardContent className="pt-0">
+            <div className="flex flex-col items-center gap-2 py-16 text-center">
             <FileText className="size-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
+            <p className="type-empty-description">
               {t("detail.transcript.empty")}
             </p>
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="py-4">
-      <div className="overflow-hidden rounded-xl border bg-card px-4 py-3">
-        <div className="flex flex-col gap-3">
+      <Card size="sm">
+        <CardContent className="flex flex-col gap-3 pt-0">
           {transcript.map((segment) => {
             const isCaller =
               segment.speaker === "caller" || segment.speaker === "user";
@@ -359,13 +367,13 @@ function TranscriptTab({
                       ? t("detail.transcript.caller")
                       : t("detail.transcript.assistant")}
                   </p>
-                  <p className="text-sm leading-relaxed">{segment.text}</p>
+                  <p className="type-body">{segment.text}</p>
                 </div>
               </div>
             );
           })}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -377,7 +385,7 @@ function RecordingTab({ call }: { call: CallRow }) {
     return (
       <div className="flex flex-col items-center gap-2 py-16 text-center">
         <Headphones className="size-8 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">
+        <p className="type-empty-description">
           {call.recordingStorageId
             ? t("detail.recording.pending")
             : t("detail.recording.unavailable")}
@@ -388,9 +396,9 @@ function RecordingTab({ call }: { call: CallRow }) {
 
   return (
     <div className="py-4">
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <Card size="sm">
         <CallRecordingPlayer
-          className="px-4 py-3"
+          className="px-4 py-0"
           downloadLabel={t("actions.download")}
           initialDurationSeconds={
             call.recordingDurationMs
@@ -401,7 +409,7 @@ function RecordingTab({ call }: { call: CallRow }) {
           playLabel={t("actions.play")}
           src={call.recordingUrl}
         />
-      </div>
+      </Card>
     </div>
   );
 }
@@ -443,84 +451,90 @@ function DetailsTab({
   return (
     <div className="flex flex-col gap-6 py-4">
       {/* Follow-up task */}
-      <section className="flex flex-col gap-3">
-        <h3 className="type-section-title text-foreground">
-          {t("detail.details.followUpTitle")}
-        </h3>
-        {call.followUpTask ? (
-          <div className="flex flex-col gap-3">
-            <p className="type-item-title">{call.followUpTask.title}</p>
-            <p className="type-body-muted whitespace-pre-line">
-              {call.followUpTask.body}
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <Button
-                disabled={isMarkingDone}
-                onClick={() => void handleMarkDone(call.followUpTask!.id)}
-                size="sm"
-                variant="outline"
-              >
-                {isMarkingDone
-                  ? t("detail.details.markingDone")
-                  : t("detail.details.markDone")}
-              </Button>
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>{t("detail.details.followUpTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {call.followUpTask ? (
+            <div className="flex flex-col gap-3">
+              <p className="type-item-title">{call.followUpTask.title}</p>
+              <p className="type-body-muted whitespace-pre-line">
+                {call.followUpTask.body}
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  disabled={isMarkingDone}
+                  onClick={() => void handleMarkDone(call.followUpTask!.id)}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isMarkingDone
+                    ? t("detail.details.markingDone")
+                    : t("detail.details.markDone")}
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="type-body-muted">
-            {t("detail.details.noFollowUp")}
-          </p>
-        )}
-      </section>
+          ) : (
+            <p className="type-body-muted">
+              {t("detail.details.noFollowUp")}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Raw call info */}
-      <section className="flex flex-col gap-3">
-        <h3 className="type-section-title text-foreground">
-          {t("detail.details.callInfoTitle")}
-        </h3>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-          <dt className="text-muted-foreground">
-            {t("detail.details.twilioCallSid")}
-          </dt>
-          <dd className="truncate font-mono text-xs">
-            {call.twilioCallSid}
-          </dd>
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>{t("detail.details.callInfoTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+            <dt className="type-meta">
+              {t("detail.details.twilioCallSid")}
+            </dt>
+            <dd className="type-technical-value truncate">
+              {call.twilioCallSid}
+            </dd>
 
-          {call.gatewaySessionId && (
-            <>
-              <dt className="text-muted-foreground">
-                {t("detail.details.gatewaySession")}
-              </dt>
-              <dd className="truncate font-mono text-xs">
-                {call.gatewaySessionId}
-              </dd>
-            </>
-          )}
+            {call.gatewaySessionId && (
+              <>
+                <dt className="type-meta">
+                  {t("detail.details.gatewaySession")}
+                </dt>
+                <dd className="type-technical-value truncate">
+                  {call.gatewaySessionId}
+                </dd>
+              </>
+            )}
 
-          <dt className="text-muted-foreground">
-            {t("detail.details.disposition")}
-          </dt>
-          <dd>{call.disposition ?? t("detail.details.noDisposition")}</dd>
+            <dt className="type-meta">
+              {t("detail.details.disposition")}
+            </dt>
+            <dd className="type-body">
+              {call.disposition ?? t("detail.details.noDisposition")}
+            </dd>
 
-          {call.providerCallStatus && (
-            <>
-              <dt className="text-muted-foreground">
-                {t("detail.details.providerStatus")}
-              </dt>
-              <dd>{call.providerCallStatus}</dd>
-            </>
-          )}
+            {call.providerCallStatus && (
+              <>
+                <dt className="type-meta">
+                  {t("detail.details.providerStatus")}
+                </dt>
+                <dd className="type-body">{call.providerCallStatus}</dd>
+              </>
+            )}
 
-          {durationSeconds !== undefined && (
-            <>
-              <dt className="text-muted-foreground">
-                {t("detail.metadata.duration")}
-              </dt>
-              <dd>{formatDuration(durationSeconds)}</dd>
-            </>
-          )}
-        </dl>
-      </section>
+            {durationSeconds !== undefined && (
+              <>
+                <dt className="type-meta">
+                  {t("detail.metadata.duration")}
+                </dt>
+                <dd className="type-body">{formatDuration(durationSeconds)}</dd>
+              </>
+            )}
+          </dl>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -568,7 +582,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     return (
       <div className="flex flex-1 flex-col gap-6">
         <Link
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="type-body-muted inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
           to="/calls"
         >
           <ArrowLeft className="size-4" />
@@ -611,7 +625,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     <div className="flex flex-1 flex-col gap-6">
       {/* Back navigation */}
       <Link
-        className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
         to="/calls"
       >
         <ArrowLeft className="size-4" />
@@ -621,7 +635,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col justify-center">
-          <h1 className="type-page-title text-2xl">{callerName}</h1>
+          <h1 className="type-page-title">{callerName}</h1>
         </div>
       </div>
 
@@ -729,6 +743,7 @@ function MetadataField({
   rawValue?: string;
   value: string;
 }) {
+  const { t } = useTranslation("calls");
   const copyable = Boolean(onCopy);
   const isCopied = copiedField === fieldKey;
 
@@ -740,11 +755,12 @@ function MetadataField({
         {copyable && (
           <button
             className={cn(
-              "flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:text-foreground",
+              "flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground",
               isCopied && "text-emerald-500 hover:text-emerald-500",
             )}
+            aria-label={t("actions.copy")}
             onClick={() => onCopy?.(rawValue ?? value, fieldKey)}
-            title="Copy"
+            title={t("actions.copy")}
             type="button"
           >
             {isCopied ? (
