@@ -59,11 +59,43 @@
     "activity": {
       "callBlocked": "bloqué"
     },
+    "appointments": {
+      "channel": "Canal",
+      "booked": "Réservé",
+      "confirmed": "Confirmé",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "pending": "En attente",
+      "sourceValues": {
+        "voice": "Voix",
+        "sms": "SMS",
+        "dashboard": "Tableau de bord"
+      },
+      "syncStateValues": {
+        "notRequired": "Non requis",
+        "pending": "En attente",
+        "syncing": "Synchronisation",
+        "synced": "Synchronisé",
+        "failed": "Échoué",
+        "drifted": "À vérifier"
+      }
+    },
     "details": {
       "blockingTitle": "Blocage du contact",
       "blockingStatus": "Statut",
       "blockedAt": "Bloqué le",
-      "blockedBy": "Bloqué par"
+      "blockedBy": "Bloqué par",
+      "smsConsentStatusValues": {
+        "subscribed": "Abonné",
+        "optedOut": "Désabonné"
+      },
+      "smsConsentSourceValues": {
+        "twilioStop": "Twilio STOP",
+        "twilioStart": "Twilio START",
+        "keywordStop": "Mot-clé STOP",
+        "keywordStart": "Mot-clé START"
+      },
+      "copy": "Copier"
     }
   },
   "pagination": {

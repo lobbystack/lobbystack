@@ -508,22 +508,6 @@ function DetailsTab({
               </>
             )}
 
-            <dt className="type-meta">
-              {t("detail.details.disposition")}
-            </dt>
-            <dd className="type-body">
-              {call.disposition ?? t("detail.details.noDisposition")}
-            </dd>
-
-            {call.providerCallStatus && (
-              <>
-                <dt className="type-meta">
-                  {t("detail.details.providerStatus")}
-                </dt>
-                <dd className="type-body">{call.providerCallStatus}</dd>
-              </>
-            )}
-
             {durationSeconds !== undefined && (
               <>
                 <dt className="type-meta">

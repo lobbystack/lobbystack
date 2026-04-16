@@ -97,10 +97,26 @@
       "staff": "Staff",
       "dateTime": "Date & time",
       "status": "Status",
+      "channel": "Channel",
       "syncState": "Calendar",
+      "booked": "Booked",
       "confirmed": "Confirmed",
+      "completed": "Completed",
       "cancelled": "Cancelled",
-      "pending": "Pending"
+      "pending": "Pending",
+      "sourceValues": {
+        "voice": "Voice",
+        "sms": "SMS",
+        "dashboard": "Dashboard"
+      },
+      "syncStateValues": {
+        "notRequired": "Not required",
+        "pending": "Pending",
+        "syncing": "Syncing",
+        "synced": "Synced",
+        "failed": "Failed",
+        "drifted": "Needs review"
+      }
     },
     "details": {
       "contactInfoTitle": "Contact information",
@@ -117,6 +133,17 @@
       "smsConsentStatus": "Status",
       "smsConsentUpdatedAt": "Last updated",
       "smsConsentSource": "Source",
+      "smsConsentStatusValues": {
+        "subscribed": "Subscribed",
+        "optedOut": "Opted out"
+      },
+      "smsConsentSourceValues": {
+        "twilioStop": "Twilio STOP",
+        "twilioStart": "Twilio START",
+        "keywordStop": "Keyword STOP",
+        "keywordStart": "Keyword START"
+      },
+      "copy": "Copy",
       "systemTitle": "System",
       "contactId": "Contact ID",
       "createdAt": "Created",

@@ -32,7 +32,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
-import { formatDateTime, formatRelativeTime, resolveLocale } from "@/lib/locale";
+import {
+  formatDateTime,
+  formatRelativeTime,
+  normalizeLocale,
+  resolveLocale,
+} from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import { cn } from "@/lib/utils";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -160,6 +165,129 @@ function appointmentStatusVariant(
   }
 }
 
+function humanizeOperatorValue(value: string): string {
+  return value
+    .trim()
+    .replace(/[_:]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .replace(/^\w/, (char) => char.toUpperCase());
+}
+
+function getAppointmentStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslation<"contacts">>["t"],
+): string {
+  switch (status.toLowerCase()) {
+    case "booked":
+      return t("detail.appointments.booked");
+    case "confirmed":
+      return t("detail.appointments.confirmed");
+    case "completed":
+      return t("detail.appointments.completed");
+    case "cancelled":
+    case "canceled":
+      return t("detail.appointments.cancelled");
+    case "pending":
+      return t("detail.appointments.pending");
+    default:
+      return humanizeOperatorValue(status);
+  }
+}
+
+function getAppointmentSourceLabel(
+  sourceChannel: string,
+  t: ReturnType<typeof useTranslation<"contacts">>["t"],
+): string {
+  switch (sourceChannel.toLowerCase()) {
+    case "voice":
+      return t("detail.appointments.sourceValues.voice");
+    case "sms":
+      return t("detail.appointments.sourceValues.sms");
+    case "dashboard":
+      return t("detail.appointments.sourceValues.dashboard");
+    default:
+      return humanizeOperatorValue(sourceChannel);
+  }
+}
+
+function getCalendarSyncStateLabel(
+  state: string,
+  t: ReturnType<typeof useTranslation<"contacts">>["t"],
+): string {
+  switch (state.toLowerCase()) {
+    case "not_required":
+      return t("detail.appointments.syncStateValues.notRequired");
+    case "pending":
+      return t("detail.appointments.syncStateValues.pending");
+    case "syncing":
+      return t("detail.appointments.syncStateValues.syncing");
+    case "synced":
+    case "synced_mock":
+      return t("detail.appointments.syncStateValues.synced");
+    case "failed":
+      return t("detail.appointments.syncStateValues.failed");
+    case "drifted":
+      return t("detail.appointments.syncStateValues.drifted");
+    default:
+      return humanizeOperatorValue(state);
+  }
+}
+
+function getSmsConsentStatusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslation<"contacts">>["t"],
+): string {
+  switch (status.toLowerCase()) {
+    case "subscribed":
+      return t("detail.details.smsConsentStatusValues.subscribed");
+    case "opted_out":
+      return t("detail.details.smsConsentStatusValues.optedOut");
+    default:
+      return humanizeOperatorValue(status);
+  }
+}
+
+function getSmsConsentSourceLabel(
+  source: string,
+  t: ReturnType<typeof useTranslation<"contacts">>["t"],
+): string {
+  const normalized = source.trim().toUpperCase();
+  if (normalized === "TWILIO_OPT_OUT:STOP") {
+    return t("detail.details.smsConsentSourceValues.twilioStop");
+  }
+  if (normalized === "TWILIO_OPT_OUT:START") {
+    return t("detail.details.smsConsentSourceValues.twilioStart");
+  }
+  if (normalized === "KEYWORD:STOP") {
+    return t("detail.details.smsConsentSourceValues.keywordStop");
+  }
+  if (normalized === "KEYWORD:START") {
+    return t("detail.details.smsConsentSourceValues.keywordStart");
+  }
+
+  return humanizeOperatorValue(source);
+}
+
+function getLocaleDisplayName(
+  value: string,
+  displayLocale: string,
+): string {
+  const normalized = normalizeLocale(value);
+  if (!normalized) {
+    return value;
+  }
+
+  try {
+    const displayNames = new Intl.DisplayNames([displayLocale], {
+      type: "language",
+    });
+    return displayNames.of(normalized) ?? normalized.toUpperCase();
+  } catch {
+    return normalized.toUpperCase();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -174,7 +302,9 @@ function StatCard({
   return (
     <div className="flex items-center rounded-xl border bg-card px-4 py-3">
       <div className="flex flex-col">
-        <span className="type-metric text-lg">{value}</span>
+        <span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">
+          {value}
+        </span>
         <span className="type-meta">{label}</span>
       </div>
     </div>
@@ -194,9 +324,7 @@ function ActivityTab({
     return (
       <div className="flex flex-col items-center gap-2 py-16 text-center">
         <Activity className="size-8 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">
-          {t("detail.activity.empty")}
-        </p>
+        <p className="type-empty-description">{t("detail.activity.empty")}</p>
       </div>
     );
   }
@@ -248,19 +376,19 @@ function ActivityFeedItem({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span
               className={cn(
-                "text-sm font-medium text-foreground",
+                "type-body",
                 isCall &&
                   "border-b border-dashed border-muted-foreground/40 pb-0.5 transition-colors hover:border-current",
               )}
             >
               {t("detail.activity.callInbound")}
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="type-body-muted">
               {formatDuration(item.callDurationSeconds)}
             </span>
             <span
               className={cn(
-                "text-xs font-medium",
+                "type-meta",
                 statusLabel === "completed" &&
                   "text-emerald-600 dark:text-emerald-400",
                 statusLabel === "failed" && "text-destructive",
@@ -277,34 +405,29 @@ function ActivityFeedItem({
           item.messageDirection === "outbound"
             ? t("detail.activity.smsOutbound")
             : t("detail.activity.smsInbound");
-        return (
-          <span className="text-sm font-medium text-foreground">{smsLabel}</span>
-        );
+        return <span className="type-body">{smsLabel}</span>;
       }
       case "appointment": {
         return (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="text-sm font-medium text-foreground">
+            <span className="type-body">
               {t("detail.activity.appointmentScheduled")}
             </span>
             {item.appointmentServiceName && (
-              <span className="text-sm text-muted-foreground">
+              <span className="type-body-muted">
                 {item.appointmentServiceName}
               </span>
             )}
             {item.appointmentStaffName && (
-              <span className="text-sm text-muted-foreground">
+              <span className="type-body-muted">
                 {t("detail.activity.withStaff", {
                   staff: item.appointmentStaffName,
                 })}
               </span>
             )}
             {item.appointmentStatus && (
-              <Badge
-                className="text-[10px]"
-                variant={appointmentStatusVariant(item.appointmentStatus)}
-              >
-                {item.appointmentStatus}
+              <Badge variant={appointmentStatusVariant(item.appointmentStatus)}>
+                {getAppointmentStatusLabel(item.appointmentStatus, t)}
               </Badge>
             )}
           </div>
@@ -330,7 +453,7 @@ function ActivityFeedItem({
       {/* Content */}
       <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-0.5">
         <div className="min-w-0 flex-1">{renderSummary()}</div>
-        <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="type-meta shrink-0">
           {formatRelativeTime(item.timestamp, locale)}
         </span>
       </div>
@@ -364,7 +487,7 @@ function AppointmentsTab({
     return (
       <div className="flex flex-col items-center gap-2 py-16 text-center">
         <Calendar className="size-8 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">
+        <p className="type-empty-description">
           {t("detail.appointments.empty")}
         </p>
       </div>
@@ -384,7 +507,7 @@ function AppointmentsTab({
                 {appointment.serviceName ?? "—"}
               </span>
               {appointment.staffName && (
-                <span className="text-sm text-muted-foreground">
+                <span className="type-body-muted">
                   {t("detail.activity.withStaff", {
                     staff: appointment.staffName,
                   })}
@@ -392,16 +515,16 @@ function AppointmentsTab({
               )}
             </div>
             <Badge variant={appointmentStatusVariant(appointment.status)}>
-              {appointment.status}
+              {getAppointmentStatusLabel(appointment.status, t)}
             </Badge>
           </div>
           <Separator />
-          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-0.5">
               <span className="type-meta">
                 {t("detail.appointments.dateTime")}
               </span>
-              <span>
+              <span className="type-body">
                 {formatDateTime(appointment.startsAt, locale, {
                   dateStyle: "medium",
                   timeStyle: "short",
@@ -412,13 +535,17 @@ function AppointmentsTab({
               <span className="type-meta">
                 {t("detail.appointments.syncState")}
               </span>
-              <span className="capitalize">
-                {appointment.calendarSyncState.replace(/_/g, " ")}
+              <span className="type-body">
+                {getCalendarSyncStateLabel(appointment.calendarSyncState, t)}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="type-meta">Channel</span>
-              <span className="capitalize">{appointment.sourceChannel}</span>
+              <span className="type-meta">
+                {t("detail.appointments.channel")}
+              </span>
+              <span className="type-body">
+                {getAppointmentSourceLabel(appointment.sourceChannel, t)}
+              </span>
             </div>
           </div>
         </div>
@@ -456,33 +583,37 @@ function DetailsTab({
           <CardTitle>{t("detail.details.contactInfoTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">
+          <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+            <dt className="type-meta">
               {t("detail.details.name")}
             </dt>
-            <dd>{contact.name ?? t("detail.details.notSet")}</dd>
+            <dd className="type-body">{contact.name ?? t("detail.details.notSet")}</dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.phone")}
             </dt>
-            <dd className="font-mono text-xs">
+            <dd className="type-technical-value">
               {formatPhoneNumberDisplay(contact.phone, locale)}
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.email")}
             </dt>
-            <dd>{contact.email ?? t("detail.details.notSet")}</dd>
+            <dd className="type-body">{contact.email ?? t("detail.details.notSet")}</dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.timezone")}
             </dt>
-            <dd>{contact.timezone ?? t("detail.details.notSet")}</dd>
+            <dd className="type-body">{contact.timezone ?? t("detail.details.notSet")}</dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.preferredLocale")}
             </dt>
-            <dd>{contact.preferredLocale ?? t("detail.details.notSet")}</dd>
+            <dd className="type-body">
+              {contact.preferredLocale
+                ? getLocaleDisplayName(contact.preferredLocale, locale)
+                : t("detail.details.notSet")}
+            </dd>
           </dl>
         </CardContent>
       </Card>
@@ -492,11 +623,11 @@ function DetailsTab({
           <CardTitle>{t("detail.details.blockingTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">
+          <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+            <dt className="type-meta">
               {t("detail.details.blockingStatus")}
             </dt>
-            <dd>
+            <dd className="type-body">
               {contact.isBlocked ? (
                 <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
               ) : (
@@ -504,10 +635,10 @@ function DetailsTab({
               )}
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.blockedAt")}
             </dt>
-            <dd>
+            <dd className="type-body">
               {contact.blockedAt
                 ? formatDateTime(contact.blockedAt, locale, {
                     dateStyle: "medium",
@@ -516,10 +647,10 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.blockedBy")}
             </dt>
-            <dd>{contact.blockedByName ?? t("detail.details.notSet")}</dd>
+            <dd className="type-body">{contact.blockedByName ?? t("detail.details.notSet")}</dd>
           </dl>
         </CardContent>
       </Card>
@@ -530,18 +661,20 @@ function DetailsTab({
           <CardTitle>{t("detail.details.smsConsentTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">
+          <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+            <dt className="type-meta">
               {t("detail.details.smsConsentStatus")}
             </dt>
-            <dd>
-              {contact.smsConsentStatus ?? t("detail.details.notSet")}
+            <dd className="type-body">
+              {contact.smsConsentStatus
+                ? getSmsConsentStatusLabel(contact.smsConsentStatus, t)
+                : t("detail.details.notSet")}
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.smsConsentUpdatedAt")}
             </dt>
-            <dd>
+            <dd className="type-body">
               {contact.smsConsentUpdatedAt
                 ? formatDateTime(contact.smsConsentUpdatedAt, locale, {
                     dateStyle: "medium",
@@ -550,11 +683,13 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.smsConsentSource")}
             </dt>
-            <dd>
-              {contact.smsConsentSource ?? t("detail.details.notSet")}
+            <dd className="type-body">
+              {contact.smsConsentSource
+                ? getSmsConsentSourceLabel(contact.smsConsentSource, t)
+                : t("detail.details.notSet")}
             </dd>
           </dl>
         </CardContent>
@@ -566,22 +701,23 @@ function DetailsTab({
           <CardTitle>{t("detail.details.systemTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-            <dt className="text-muted-foreground">
+          <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
+            <dt className="type-meta">
               {t("detail.details.contactId")}
             </dt>
             <dd className="flex items-center gap-1.5">
-              <span className="truncate font-mono text-xs">
+              <span className="type-technical-value truncate">
                 {truncateId(contact.id)}
               </span>
               <button
                 className={cn(
-                  "flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:text-foreground",
+                  "flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground",
                   isCopied("contactId") &&
                     "text-emerald-500 hover:text-emerald-500",
                 )}
+                aria-label={t("detail.details.copy")}
                 onClick={() => copyToClipboard(contact.id, "contactId")}
-                title="Copy"
+                title={t("detail.details.copy")}
                 type="button"
               >
                 {isCopied("contactId") ? (
@@ -592,10 +728,10 @@ function DetailsTab({
               </button>
             </dd>
 
-            <dt className="text-muted-foreground">
+            <dt className="type-meta">
               {t("detail.details.createdAt")}
             </dt>
-            <dd>
+            <dd className="type-body">
               {formatDateTime(contact.createdAt, locale, {
                 dateStyle: "medium",
                 timeStyle: "short",
@@ -627,6 +763,7 @@ function MetadataField({
   rawValue?: string;
   value: string;
 }) {
+  const { t } = useTranslation("contacts");
   const copyable = Boolean(onCopy);
   const isCopied = copiedField === fieldKey;
 
@@ -638,11 +775,12 @@ function MetadataField({
         {copyable && (
           <button
             className={cn(
-              "flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/60 transition-colors hover:text-foreground",
+              "flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground",
               isCopied && "text-emerald-500 hover:text-emerald-500",
             )}
+            aria-label={t("detail.details.copy")}
             onClick={() => onCopy?.(rawValue ?? value, fieldKey)}
-            title="Copy"
+            title={t("detail.details.copy")}
             type="button"
           >
             {isCopied ? (
@@ -708,7 +846,7 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
     return (
       <div className="flex flex-1 flex-col gap-6">
         <Link
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="type-body-muted inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
           to="/contacts"
         >
           <ArrowLeft className="size-4" />
@@ -793,7 +931,7 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
     <div className="flex flex-1 flex-col gap-6">
       {/* Back navigation */}
       <Link
-        className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
         to="/contacts"
       >
         <ArrowLeft className="size-4" />
@@ -803,12 +941,12 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="type-page-title text-2xl">{displayName}</h1>
+          <h1 className="type-page-title">{displayName}</h1>
           {contact.isBlocked ? (
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
               {contact.blockedAt ? (
-                <span className="text-sm text-muted-foreground">
+                <span className="type-body-muted">
                   {t("detail.blocking.blockedAtInline", {
                     time: formatDateTime(contact.blockedAt, locale, {
                       dateStyle: "medium",
