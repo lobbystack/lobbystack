@@ -521,7 +521,32 @@ export const startCall = internalMutation({
       .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
       .unique();
 
+    const activeExistingCall: (Doc<"calls"> & { conversationId: Id<"conversations"> }) | null =
+      existingCall &&
+      existingCall.conversationId !== undefined &&
+      existingCall.endedAt === undefined
+        ? (existingCall as Doc<"calls"> & { conversationId: Id<"conversations"> })
+        : null;
+
     if (contact && isContactBlocked(contact)) {
+      if (activeExistingCall) {
+        if (
+          args.gatewaySessionId !== undefined &&
+          activeExistingCall.gatewaySessionId !== args.gatewaySessionId
+        ) {
+          await ctx.db.patch(activeExistingCall._id, {
+            gatewaySessionId: args.gatewaySessionId,
+          });
+        }
+
+        return {
+          callId: activeExistingCall._id,
+          conversationId: activeExistingCall.conversationId,
+          blocked: false,
+          contactId: contact._id,
+        };
+      }
+
       let callId: Id<"calls">;
 
       if (existingCall) {

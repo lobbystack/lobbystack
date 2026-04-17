@@ -735,7 +735,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   const rowData = row.original;
                   const rowId = String(rowData._id);
                   const rowIsInteractive =
-                    rowData.entryType === "snippet" || (section === "knowledge" && rowData.entryType === "document");
+                    rowData.entryType === "snippet" || rowData.entryType === "document";
                   const isSelected =
                     rowData.entryType === "snippet"
                       ? editingSnippet?._id === rowData._id
@@ -751,10 +751,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                           if (rowData.entryType === "snippet") {
                             setExpandedDocumentId(null);
                             setEditingSnippet(rowData);
-                            return;
-                          }
-
-                          if (section !== "knowledge") {
                             return;
                           }
 
@@ -789,7 +785,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                           );
                         })}
                       </TableRow>
-                      {rowData.entryType === "document" && section === "knowledge" && isExpandedDocument ? (
+                      {rowData.entryType === "document" && isExpandedDocument ? (
                         <TableRow className="bg-muted/20 hover:bg-muted/20">
                           <TableCell className="p-4" colSpan={row.getVisibleCells().length}>
                             {renderDocumentPreview(rowData)}

@@ -317,6 +317,72 @@ describe("Contact blocking", () => {
     });
   });
 
+  it("preserves an already-live call when a duplicate start arrives after the contact is blocked", async () => {
+    const { businessId, t, userId } = await seedWorkspace({
+      subject: "contact-block-voice-duplicate-start",
+    });
+    const contactId = await insertContact(t, {
+      businessId,
+      phone: "+14165550199",
+    });
+
+    const initialResult = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-contact-blocked-duplicate-start",
+      from: "+14165550199",
+      to: "+14165550999",
+      startedAt: "2026-04-15T17:00:00.000Z",
+    });
+
+    expect(initialResult.blocked).toBe(false);
+    expect(initialResult.conversationId).toBeDefined();
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(contactId, {
+        operatorBlockedAt: "2026-04-15T17:00:05.000Z",
+        operatorBlockedByUserId: userId,
+      });
+    });
+
+    const duplicateStartResult = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-contact-blocked-duplicate-start",
+      gatewaySessionId: "gateway-session-123",
+      from: "+14165550199",
+      to: "+14165550999",
+      startedAt: "2026-04-15T17:00:06.000Z",
+    });
+
+    expect(duplicateStartResult).toEqual({
+      callId: initialResult.callId,
+      conversationId: initialResult.conversationId,
+      blocked: false,
+      contactId,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(initialResult.callId);
+      const voiceConversations = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_contact_id", (q) =>
+          q.eq("businessId", businessId).eq("contactId", contactId),
+        )
+        .collect();
+
+      expect(call).toMatchObject({
+        _id: initialResult.callId,
+        conversationId: initialResult.conversationId,
+        status: "in_progress",
+        gatewaySessionId: "gateway-session-123",
+      });
+      expect(call?.disposition).toBeUndefined();
+      expect(call?.endedAt).toBeUndefined();
+      expect(
+        voiceConversations.filter((conversation) => conversation.channel === "voice"),
+      ).toHaveLength(1);
+    });
+  });
+
   it("still allows unknown and unblocked contacts to start voice calls", async () => {
     const { authed, businessId, t } = await seedWorkspace({
       subject: "contact-block-voice-allowed",

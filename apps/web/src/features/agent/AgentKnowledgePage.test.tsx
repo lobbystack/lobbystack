@@ -327,4 +327,39 @@ describe("AgentKnowledgePage", () => {
     expect(convexQueryMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith("https://example.com/document.txt");
   });
+
+  it.each(["services", "rules"] as const)(
+    "expands uploaded documents inline on the %s page",
+    async (section) => {
+      useRememberedConvexQueryMock.mockReturnValue({
+        documents: [
+          createDocument({
+            _id: `document-${section}`,
+            section,
+            lastIndexedAt: `2026-04-14T00:00:00.000Z-${section}`,
+          }),
+        ],
+        snippets: [],
+      });
+      convexQueryMock.mockResolvedValue({
+        textContent: "",
+        extractedTextUrl: "https://example.com/document.txt",
+        error: null,
+        status: "indexed",
+      });
+      fetchMock.mockResolvedValue({
+        ok: true,
+        text: async () => "Full document text loaded",
+      });
+
+      render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+
+      const user = userEvent.setup();
+      await user.click(screen.getByText("Clinic Policies"));
+
+      expect(await screen.findByDisplayValue("Full document text loaded")).toBeTruthy();
+      expect(convexQueryMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith("https://example.com/document.txt");
+    },
+  );
 });
