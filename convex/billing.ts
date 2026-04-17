@@ -59,6 +59,14 @@ import {
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
+import { selectSmsSenderPhoneNumber } from "./lib/smsPhoneNumbers";
+import {
+  isSmsComplianceApproved,
+  smsComplianceStatusValidator,
+  smsSenderModeValidator,
+  type SmsComplianceStatus,
+  type SmsSenderMode,
+} from "./lib/smsCompliance";
 import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
 
 type BillingContact = {
@@ -114,6 +122,10 @@ type PricingSummary = {
 type SmsCapabilityPolicy = {
   allowed: boolean;
   senderRole: SmsSenderRole;
+  senderMode: SmsSenderMode;
+  fromPhoneNumber?: string;
+  twilioMessagingServiceSid?: string;
+  complianceStatus?: SmsComplianceStatus;
   errorCode: BillingErrorCode | null;
 };
 
@@ -597,6 +609,19 @@ function reserveVoiceSecondsForStart(args: {
 function getPlatformAlertSmsSenderFromEnv(): string | null {
   const e164 = process.env.TWILIO_ALERT_SMS_FROM?.trim();
   return e164 && e164.length > 0 ? e164 : null;
+}
+
+function resolveApprovedBusinessSmsSender(input: {
+  phoneNumbers: Array<Pick<Doc<"phone_numbers">, "_id" | "e164" | "smsEnabled" | "status">>;
+  approvedPhoneNumberId?: Id<"phone_numbers">;
+}): string | null {
+  const preferredPhoneNumberE164 =
+    input.approvedPhoneNumberId !== undefined
+      ? input.phoneNumbers.find((phoneNumber) => phoneNumber._id === input.approvedPhoneNumberId)
+          ?.e164
+      : undefined;
+
+  return selectSmsSenderPhoneNumber(input.phoneNumbers, preferredPhoneNumberE164);
 }
 
 function getTargetProductIds(target: CheckoutTarget): Array<string> {
@@ -1990,6 +2015,10 @@ export const getSmsCapabilityPolicy = internalQuery({
   returns: v.object({
     allowed: v.boolean(),
     senderRole: v.union(v.literal("platform_alert"), v.literal("business_ai")),
+    senderMode: smsSenderModeValidator,
+    fromPhoneNumber: v.optional(v.string()),
+    twilioMessagingServiceSid: v.optional(v.string()),
+    complianceStatus: v.optional(smsComplianceStatusValidator),
     errorCode: v.union(
       v.literal("voice_limit_reached"),
       v.literal("alert_sms_limit_reached"),
@@ -1999,32 +2028,129 @@ export const getSmsCapabilityPolicy = internalQuery({
     ),
   }),
   handler: async (ctx, args): Promise<SmsCapabilityPolicy> => {
-    const snapshot = await getBillingSnapshot(ctx, {
-      businessId: args.businessId,
-    });
+    const [snapshot, registration, phoneNumbers, platformSender] = await Promise.all([
+      getBillingSnapshot(ctx, {
+        businessId: args.businessId,
+      }),
+      ctx.db
+        .query("sms_compliance_registrations")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .unique(),
+      ctx.db
+        .query("phone_numbers")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+      ctx.db
+        .query("platform_sms_senders")
+        .withIndex("by_role", (q) => q.eq("role", "platform_alert"))
+        .unique(),
+    ]);
     const usage = getBillingUsageSnapshotData({
       plan: snapshot.plan,
       periodKey: snapshot.periodKey,
       usage: snapshot.usage,
     });
+    const aiSmsCommerciallyEnabled = isAiSmsEnabled({
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+    });
+    const businessSenderPhoneNumber = resolveApprovedBusinessSmsSender({
+      phoneNumbers,
+      ...(registration?.approvedPhoneNumberId
+        ? { approvedPhoneNumberId: registration.approvedPhoneNumberId }
+        : {}),
+    });
+    const hostedApprovedMessagingRoute =
+      snapshot.plan !== "self_host" &&
+      aiSmsCommerciallyEnabled &&
+      registration &&
+      isSmsComplianceApproved(registration.status) &&
+      Boolean(registration.twilioMessagingServiceSid) &&
+      Boolean(businessSenderPhoneNumber);
+    const activePlatformSender =
+      platformSender && platformSender.status === "active" && platformSender.smsEnabled
+        ? platformSender.e164
+        : getPlatformAlertSmsSenderFromEnv();
 
     if (args.capability === "alert") {
+      if (snapshot.plan === "self_host") {
+        return {
+          allowed: !usage.alertSmsBlocked,
+          senderRole: "business_ai",
+          senderMode: "business_phone",
+          ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+          ...(registration?.status ? { complianceStatus: registration.status } : {}),
+          errorCode: usage.alertSmsBlocked ? billingErrorCodes.alertSmsLimitReached : null,
+        };
+      }
+
+      if (hostedApprovedMessagingRoute) {
+        return {
+          allowed: !usage.alertSmsBlocked,
+          senderRole: "platform_alert",
+          senderMode: "business_messaging_service",
+          ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+          ...(registration?.twilioMessagingServiceSid
+            ? { twilioMessagingServiceSid: registration.twilioMessagingServiceSid }
+            : {}),
+          ...(registration?.status ? { complianceStatus: registration.status } : {}),
+          errorCode: usage.alertSmsBlocked ? billingErrorCodes.alertSmsLimitReached : null,
+        };
+      }
+
       return {
         allowed: !usage.alertSmsBlocked,
         senderRole: "platform_alert",
+        senderMode: "platform_phone",
+        ...(activePlatformSender ? { fromPhoneNumber: activePlatformSender } : {}),
+        ...(registration?.status ? { complianceStatus: registration.status } : {}),
         errorCode: usage.alertSmsBlocked ? billingErrorCodes.alertSmsLimitReached : null,
       };
     }
 
-    const aiSmsAllowed = isAiSmsEnabled({
-      plan: snapshot.plan,
-      activeAddons: snapshot.activeAddons,
-    });
+    if (!aiSmsCommerciallyEnabled) {
+      return {
+        allowed: false,
+        senderRole: "business_ai",
+        senderMode: snapshot.plan === "self_host" ? "business_phone" : "platform_phone",
+        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(registration?.status ? { complianceStatus: registration.status } : {}),
+        errorCode: billingErrorCodes.aiSmsNotEnabled,
+      };
+    }
+
+    if (snapshot.plan === "self_host") {
+      return {
+        allowed: true,
+        senderRole: "business_ai",
+        senderMode: "business_phone",
+        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(registration?.status ? { complianceStatus: registration.status } : {}),
+        errorCode: null,
+      };
+    }
+
+    if (hostedApprovedMessagingRoute) {
+      return {
+        allowed: true,
+        senderRole: "business_ai",
+        senderMode: "business_messaging_service",
+        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(registration?.twilioMessagingServiceSid
+          ? { twilioMessagingServiceSid: registration.twilioMessagingServiceSid }
+          : {}),
+        ...(registration?.status ? { complianceStatus: registration.status } : {}),
+        errorCode: null,
+      };
+    }
 
     return {
-      allowed: aiSmsAllowed,
+      allowed: false,
       senderRole: "business_ai",
-      errorCode: aiSmsAllowed ? null : billingErrorCodes.aiSmsNotEnabled,
+      senderMode: "platform_phone",
+      ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+      ...(registration?.status ? { complianceStatus: registration.status } : {}),
+      errorCode: null,
     };
   },
 });

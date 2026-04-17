@@ -109,7 +109,8 @@ type OutboundMessageDeliveryContext = {
   conversationId: Id<"conversations">;
   messageId: Id<"messages">;
   body: string;
-  from: string;
+  from?: string;
+  twilioMessagingServiceSid?: string;
   to: string;
   providerMessageSid?: string;
   status: string;
@@ -506,12 +507,16 @@ export const getOutboundMessageDeliveryContext = internalQuery({
     }
 
     if (!smsPolicy.allowed) {
-      throw new Error("AI SMS is not enabled for this workspace.");
+      throw new Error(
+        smsPolicy.complianceStatus && smsPolicy.complianceStatus !== "approved"
+          ? "AI SMS is pending 10DLC approval for this workspace."
+          : "AI SMS is not enabled for this workspace.",
+      );
     }
 
     const senderPhoneNumber = selectSmsSenderPhoneNumber(
       phoneNumbers,
-      message.fromPhoneNumber,
+      message.fromPhoneNumber ?? smsPolicy.fromPhoneNumber ?? undefined,
     );
     if (!senderPhoneNumber) {
       throw new Error(
@@ -524,7 +529,10 @@ export const getOutboundMessageDeliveryContext = internalQuery({
       conversationId: message.conversationId,
       messageId: message._id,
       body: message.body,
-      from: senderPhoneNumber,
+      ...(senderPhoneNumber ? { from: senderPhoneNumber } : {}),
+      ...(smsPolicy.twilioMessagingServiceSid
+        ? { twilioMessagingServiceSid: smsPolicy.twilioMessagingServiceSid }
+        : {}),
       to: contact.phone,
       ...(message.providerMessageSid !== undefined
         ? { providerMessageSid: message.providerMessageSid }
@@ -1026,9 +1034,12 @@ export const sendStoredOutboundMessage = internalAction({
 
       const result = await ctx.runAction(internal.integrations.twilioSms.sendMessage, {
         to: context.to,
-        from: context.from,
         body: outboundBodyParts.join("\n\n"),
         statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+        ...(context.from ? { from: context.from } : {}),
+        ...(context.twilioMessagingServiceSid
+          ? { messagingServiceSid: context.twilioMessagingServiceSid }
+          : {}),
         ...(directMediaUrls.length > 0 ? { mediaUrls: directMediaUrls } : {}),
       });
 

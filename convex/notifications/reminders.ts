@@ -22,7 +22,6 @@ import {
   inferRuntimeLocaleFromBusinessContext,
   normalizeRuntimeLocale,
 } from "../lib/runtimeLocale";
-import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 
 type AppointmentNotificationKind = "appointment_reminder" | "booking_confirmation";
 
@@ -31,7 +30,8 @@ type NotificationDeliveryContext = {
   notificationId: Id<"notifications">;
   appointmentId: Id<"appointments">;
   to: string;
-  from: string;
+  from?: string;
+  twilioMessagingServiceSid?: string;
   kind: AppointmentNotificationKind;
   serviceId: Id<"services">;
   serviceName: string;
@@ -134,7 +134,7 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Appointment not found for notification.");
     }
 
-    const [service, contact, business, profile, phoneNumbers, sender, smsPolicy, billingSnapshot] =
+    const [service, contact, business, profile, smsPolicy] =
       await Promise.all([
       ctx.db.get(appointment.serviceId),
       ctx.db.get(appointment.contactId),
@@ -143,17 +143,9 @@ export const getNotificationDeliveryContext = internalQuery({
         .query("receptionist_profiles")
         .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
         .unique(),
-      ctx.db
-        .query("phone_numbers")
-        .withIndex("by_business_id", (q) => q.eq("businessId", notification.businessId))
-        .collect(),
-      ctx.runQuery(internal.billing.getPlatformAlertSmsSender, {}),
       ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
         businessId: notification.businessId,
         capability: "alert",
-      }),
-      ctx.runQuery(internal.billing.getSnapshotForCheckout, {
-        businessId: notification.businessId,
       }),
     ]);
 
@@ -172,18 +164,13 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Unsupported notification kind.");
     }
 
-    if (!smsPolicy.allowed && billingSnapshot.plan !== "self_host") {
+    if (!smsPolicy.allowed) {
       throw new Error("Alert SMS quota reached. Upgrade to continue sending notifications.");
     }
 
-    const senderPhoneNumber =
-      billingSnapshot.plan === "self_host"
-        ? selectSmsSenderPhoneNumber(phoneNumbers)
-        : sender?.e164 ?? null;
-
-    if (!senderPhoneNumber) {
+    if (!smsPolicy.fromPhoneNumber && !smsPolicy.twilioMessagingServiceSid) {
       throw new Error(
-        billingSnapshot.plan === "self_host"
+        smsPolicy.senderMode === "business_phone"
           ? "At least one active SMS-enabled phone number must be mapped to the business."
           : "Configure the shared alert SMS sender before delivering hosted notifications.",
       );
@@ -204,14 +191,17 @@ export const getNotificationDeliveryContext = internalQuery({
       notificationId: notification._id,
       appointmentId,
       to: contact.phone,
-      from: senderPhoneNumber,
+      ...(smsPolicy.fromPhoneNumber ? { from: smsPolicy.fromPhoneNumber } : {}),
+      ...(smsPolicy.twilioMessagingServiceSid
+        ? { twilioMessagingServiceSid: smsPolicy.twilioMessagingServiceSid }
+        : {}),
       kind: notification.kind,
       serviceId: service._id,
       serviceName: service.name,
       startsAt: appointment.startsAt,
       timezone: appointment.timezone,
       locale,
-      senderRole: billingSnapshot.plan === "self_host" ? "business_ai" : "platform_alert",
+      senderRole: smsPolicy.senderRole,
     };
   },
 });
@@ -459,10 +449,13 @@ export const deliverNotification = internalAction({
       const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
         internal.integrations.twilioSms.sendMessage,
         {
-        to: deliveryContext.to,
-        from: deliveryContext.from,
-        body,
-        statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+          to: deliveryContext.to,
+          body,
+          statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+          ...(deliveryContext.from ? { from: deliveryContext.from } : {}),
+          ...(deliveryContext.twilioMessagingServiceSid
+            ? { messagingServiceSid: deliveryContext.twilioMessagingServiceSid }
+            : {}),
         },
       );
       messageAcceptedByProvider = true;

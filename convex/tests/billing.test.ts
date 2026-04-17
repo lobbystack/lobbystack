@@ -214,6 +214,56 @@ async function seedUsageAnchors(
   };
 }
 
+async function seedBusinessPhoneNumber(
+  ctx: TestContext,
+  input: {
+    businessId: Id<"businesses">;
+    e164?: string;
+    twilioPhoneSid?: string;
+  },
+): Promise<Id<"phone_numbers">> {
+  return await ctx.db.insert("phone_numbers", {
+    businessId: input.businessId,
+    e164: input.e164 ?? "+14165550111",
+    twilioPhoneSid: input.twilioPhoneSid ?? "PN-billing-phone",
+    voiceEnabled: true,
+    smsEnabled: true,
+    status: "active",
+  });
+}
+
+async function seedSmsComplianceRegistration(
+  ctx: TestContext,
+  input: {
+    businessId: Id<"businesses">;
+    status:
+      | "pending_brand_verification"
+      | "pending_review"
+      | "approved"
+      | "failed";
+    approvedPhoneNumberId?: Id<"phone_numbers">;
+    twilioMessagingServiceSid?: string;
+  },
+): Promise<Id<"sms_compliance_registrations">> {
+  return await ctx.db.insert("sms_compliance_registrations", {
+    businessId: input.businessId,
+    status: input.status,
+    customerType: "direct_customer",
+    brandKind: "standard_business",
+    trafficTier: "low_volume",
+    draft: {
+      businessName: "Billing Workspace LLC",
+      websiteUrl: "https://example.com",
+    },
+    ...(input.approvedPhoneNumberId
+      ? { approvedPhoneNumberId: input.approvedPhoneNumberId }
+      : {}),
+    ...(input.twilioMessagingServiceSid
+      ? { twilioMessagingServiceSid: input.twilioMessagingServiceSid }
+      : {}),
+  });
+}
+
 describe("billing", () => {
   it("returns Free Cloud entitlements with no AI SMS and no overages", async () => {
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
@@ -374,9 +424,10 @@ describe("billing", () => {
       monthlyChargeCents: 1_500,
       canPurchaseAiSmsAddon: true,
     });
-    expect(beforePolicy).toEqual({
+    expect(beforePolicy).toMatchObject({
       allowed: false,
       senderRole: "business_ai",
+      senderMode: "platform_phone",
       errorCode: "ai_sms_not_enabled",
     });
 
@@ -407,9 +458,115 @@ describe("billing", () => {
       monthlyChargeCents: 2_000,
       canPurchaseAiSmsAddon: false,
     });
-    expect(afterPolicy).toEqual({
+    expect(afterPolicy).toMatchObject({
+      allowed: false,
+      senderRole: "business_ai",
+      senderMode: "platform_phone",
+      errorCode: null,
+    });
+  });
+
+  it("keeps hosted alerts on the platform sender while AI SMS compliance is pending", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-hosted-pending-compliance",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+      });
+      const phoneNumberId = await seedBusinessPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550122",
+        twilioPhoneSid: "PN-pending-compliance",
+      });
+      await seedSmsComplianceRegistration(ctx, {
+        businessId,
+        status: "pending_review",
+        approvedPhoneNumberId: phoneNumberId,
+      });
+    });
+
+    const alertPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "alert",
+    });
+    const aiPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "ai",
+    });
+
+    expect(alertPolicy).toMatchObject({
+      allowed: true,
+      senderRole: "platform_alert",
+      senderMode: "platform_phone",
+      complianceStatus: "pending_review",
+      errorCode: null,
+    });
+    expect(aiPolicy).toMatchObject({
+      allowed: false,
+      senderRole: "business_ai",
+      senderMode: "platform_phone",
+      complianceStatus: "pending_review",
+      errorCode: null,
+    });
+  });
+
+  it("routes approved hosted AI SMS through the business messaging service", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-hosted-approved-compliance",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+      });
+      const phoneNumberId = await seedBusinessPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550133",
+        twilioPhoneSid: "PN-approved-compliance",
+      });
+      await seedSmsComplianceRegistration(ctx, {
+        businessId,
+        status: "approved",
+        approvedPhoneNumberId: phoneNumberId,
+        twilioMessagingServiceSid: "MG-approved-compliance",
+      });
+    });
+
+    const alertPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "alert",
+    });
+    const aiPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "ai",
+    });
+
+    expect(alertPolicy).toMatchObject({
+      allowed: true,
+      senderRole: "platform_alert",
+      senderMode: "business_messaging_service",
+      fromPhoneNumber: "+14165550133",
+      twilioMessagingServiceSid: "MG-approved-compliance",
+      complianceStatus: "approved",
+      errorCode: null,
+    });
+    expect(aiPolicy).toMatchObject({
       allowed: true,
       senderRole: "business_ai",
+      senderMode: "business_messaging_service",
+      fromPhoneNumber: "+14165550133",
+      twilioMessagingServiceSid: "MG-approved-compliance",
+      complianceStatus: "approved",
       errorCode: null,
     });
   });
@@ -527,9 +684,10 @@ describe("billing", () => {
       alertSmsBlocked: true,
       outboundCallAttemptsBlocked: true,
     });
-    expect(alertPolicy).toEqual({
+    expect(alertPolicy).toMatchObject({
       allowed: false,
       senderRole: "platform_alert",
+      senderMode: "platform_phone",
       errorCode: "alert_sms_limit_reached",
     });
     expect(voicePolicy).toEqual({
@@ -1267,6 +1425,17 @@ describe("billing", () => {
         currentPlan: "pro",
         activeAddons: ["ai_sms"],
       });
+      const phoneNumberId = await seedBusinessPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550144",
+        twilioPhoneSid: "PN-pro-overages",
+      });
+      await seedSmsComplianceRegistration(ctx, {
+        businessId,
+        status: "approved",
+        approvedPhoneNumberId: phoneNumberId,
+        twilioMessagingServiceSid: "MG-pro-overages",
+      });
     });
     const anchors = await t.run(async (ctx: TestContext) => {
       return await seedUsageAnchors(ctx, { businessId });
@@ -1340,14 +1509,18 @@ describe("billing", () => {
       alertSmsBlocked: false,
       outboundCallAttemptsBlocked: false,
     });
-    expect(alertPolicy).toEqual({
+    expect(alertPolicy).toMatchObject({
       allowed: true,
       senderRole: "platform_alert",
+      senderMode: "business_messaging_service",
+      twilioMessagingServiceSid: "MG-pro-overages",
       errorCode: null,
     });
-    expect(aiPolicy).toEqual({
+    expect(aiPolicy).toMatchObject({
       allowed: true,
       senderRole: "business_ai",
+      senderMode: "business_messaging_service",
+      twilioMessagingServiceSid: "MG-pro-overages",
       errorCode: null,
     });
     expect(voicePolicy).toEqual({

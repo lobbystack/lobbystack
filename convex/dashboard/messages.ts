@@ -508,7 +508,11 @@ export const getSmsReplyContext = internalQuery({
       capability: "ai",
     });
     if (!smsPolicy.allowed) {
-      throw new Error("AI SMS add-on required before sending conversational SMS.");
+      throw new Error(
+        smsPolicy.complianceStatus && smsPolicy.complianceStatus !== "approved"
+          ? "Finish 10DLC setup and wait for approval before sending AI SMS."
+          : "AI SMS add-on required before sending conversational SMS.",
+      );
     }
 
     const preferredSenderPhoneNumber = await getPreferredConversationSmsSenderPhoneNumber(
@@ -517,7 +521,7 @@ export const getSmsReplyContext = internalQuery({
     );
     const fromPhoneNumber = selectSmsSenderPhoneNumber(
       phoneNumbers,
-      preferredSenderPhoneNumber ?? undefined,
+      preferredSenderPhoneNumber ?? smsPolicy.fromPhoneNumber ?? undefined,
     );
     if (!fromPhoneNumber) {
       throw new Error(
