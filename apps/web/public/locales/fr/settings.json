@@ -103,11 +103,19 @@
       "used": "utilisés",
       "remaining": "restants",
       "of": "sur",
+      "meteredSuffix": "(mesuré)",
       "unlimited": "Illimité",
       "blocked": "Limite atteinte",
+      "blockedDescription": "Limite atteinte — l'utilisation est suspendue jusqu'à la prochaine période.",
       "overageCount": "{{count}} au-dessus de la limite",
       "overageCost": "≈ {{amount}} de dépassements",
-      "noOverages": "Aucun dépassement — l'utilisation est plafonnée au volume inclus."
+      "noOverages": "Aucun dépassement — l'utilisation est plafonnée au volume inclus.",
+      "overIncludedSummary": "{{count}} {{unit}} au-delà du volume inclus · <amount>≈ {{amount}}</amount> de dépassements",
+      "units": {
+        "voice": "min",
+        "outboundAttempts": "tentatives",
+        "segments": "segments"
+      }
     },
     "catalog": {
       "title": "Offres hébergées",

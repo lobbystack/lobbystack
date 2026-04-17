@@ -103,11 +103,19 @@
       "used": "used",
       "remaining": "remaining",
       "of": "of",
+      "meteredSuffix": "(metered)",
       "unlimited": "Unlimited",
       "blocked": "Limit reached",
+      "blockedDescription": "Limit reached — usage paused until next period.",
       "overageCount": "{{count}} over limit",
       "overageCost": "≈ {{amount}} in overages",
-      "noOverages": "No overages — usage hard-capped at the included pool."
+      "noOverages": "No overages — usage hard-capped at the included pool.",
+      "overIncludedSummary": "{{count}} {{unit}} over included · <amount>≈ {{amount}}</amount> in overages",
+      "units": {
+        "voice": "min",
+        "outboundAttempts": "attempts",
+        "segments": "segments"
+      }
     },
     "catalog": {
       "title": "Hosted offers",

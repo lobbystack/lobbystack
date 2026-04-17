@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAction } from "convex/react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ArrowUpRight, Check, Lock } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -102,6 +102,20 @@ function formatTransactionDate(iso: string, locale: BillingLocale): string {
 
 function voiceSecondsToMinutes(seconds: number): number {
   return Math.round((seconds / 60) * 10) / 10;
+}
+
+function getDisplayedPlanMonthlyChargeCents(status: BillingStatus): number | null {
+  if (status.monthlyChargeCents === null) {
+    return null;
+  }
+
+  const activeAddonChargeCents = status.activeAddons.reduce(
+    (total, addon) =>
+      total + billingAddonCatalog[addon].recurringMonthlyChargeCents,
+    0,
+  );
+
+  return Math.max(status.monthlyChargeCents - activeAddonChargeCents, 0);
 }
 
 function formatIncludedUsageLine({
@@ -212,9 +226,10 @@ function PlanSection({
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
 
   const planLabel = getPlanLabel(status.plan, t);
+  const displayedPlanMonthlyChargeCents = getDisplayedPlanMonthlyChargeCents(status);
   const price =
-    status.monthlyChargeCents !== null
-      ? formatCents(status.monthlyChargeCents, locale)
+    displayedPlanMonthlyChargeCents !== null
+      ? formatCents(displayedPlanMonthlyChargeCents, locale)
       : null;
   const planConfig = billingPlanCatalog[status.plan];
   const includedItems = [
@@ -386,6 +401,9 @@ function UsageSection({
   const usage = status.usage;
   const plan = status.plan;
   const catalog = billingPlanCatalog[plan];
+  const voiceUnit = t("billing.usage.units.voice");
+  const outboundAttemptsUnit = t("billing.usage.units.outboundAttempts");
+  const segmentsUnit = t("billing.usage.units.segments");
 
   if (plan === "self_host") return null;
 
@@ -405,13 +423,14 @@ function UsageSection({
           <UsageMeterRow
             label={t("billing.usage.voiceTitle")}
             locale={locale}
+            t={t}
             used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
             included={
               usage.voiceSecondsIncluded !== null
                 ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
                 : null
             }
-            unit="min"
+            unit={voiceUnit}
             blocked={usage.voiceBlocked}
             overageRateCents={catalog.voiceOverageRatePerMinuteCents}
             overageBillable={catalog.overagesBillable}
@@ -421,9 +440,10 @@ function UsageSection({
           <UsageMeterRow
             label={t("billing.usage.outboundAttemptsTitle")}
             locale={locale}
+            t={t}
             used={usage.outboundCallAttemptsUsed}
             included={usage.outboundCallAttemptsIncluded}
-            unit="attempts"
+            unit={outboundAttemptsUnit}
             blocked={usage.outboundCallAttemptsBlocked}
             overageRateCents={catalog.outboundCallAttemptOverageRateCents}
             overageBillable={catalog.overagesBillable}
@@ -433,9 +453,10 @@ function UsageSection({
           <UsageMeterRow
             label={t("billing.usage.alertSmsTitle")}
             locale={locale}
+            t={t}
             used={usage.alertSmsSegmentsUsed}
             included={usage.alertSmsSegmentsIncluded}
-            unit="segments"
+            unit={segmentsUnit}
             blocked={usage.alertSmsBlocked}
             overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
             overageBillable={catalog.overagesBillable}
@@ -445,6 +466,7 @@ function UsageSection({
           <UsageMeterRow
             label={t("billing.usage.knowledgeTitle")}
             locale={locale}
+            t={t}
             used={usage.knowledgeStorageBytesUsed}
             included={usage.knowledgeStorageBytesIncluded}
             unit="storage"
@@ -460,9 +482,9 @@ function UsageSection({
       {(catalog.overagesBillable || status.aiSmsEnabled) && (
         <BillingSection
           title={t("billing.usage.paygTitle")}
-        description={
-          usage.resetAt
-            ? t("billing.usage.paygDescription", {
+          description={
+            usage.resetAt
+              ? t("billing.usage.paygDescription", {
                   resetAt: formatResetDate(usage.resetAt, locale),
                 })
               : undefined
@@ -474,13 +496,14 @@ function UsageSection({
                 <UsageMeterRow
                   label={t("billing.usage.voiceTitle")}
                   locale={locale}
+                  t={t}
                   used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
                   included={
                     usage.voiceSecondsIncluded !== null
                       ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
                       : null
                   }
-                  unit="min"
+                  unit={voiceUnit}
                   blocked={usage.voiceBlocked}
                   overageRateCents={catalog.voiceOverageRatePerMinuteCents}
                   overageBillable={catalog.overagesBillable}
@@ -490,9 +513,10 @@ function UsageSection({
                 <UsageMeterRow
                   label={t("billing.usage.outboundAttemptsTitle")}
                   locale={locale}
+                  t={t}
                   used={usage.outboundCallAttemptsUsed}
                   included={usage.outboundCallAttemptsIncluded}
-                  unit="attempts"
+                  unit={outboundAttemptsUnit}
                   blocked={usage.outboundCallAttemptsBlocked}
                   overageRateCents={catalog.outboundCallAttemptOverageRateCents}
                   overageBillable={catalog.overagesBillable}
@@ -502,9 +526,10 @@ function UsageSection({
                 <UsageMeterRow
                   label={t("billing.usage.alertSmsTitle")}
                   locale={locale}
+                  t={t}
                   used={usage.alertSmsSegmentsUsed}
                   included={usage.alertSmsSegmentsIncluded}
-                  unit="segments"
+                  unit={segmentsUnit}
                   blocked={usage.alertSmsBlocked}
                   overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
                   overageBillable={catalog.overagesBillable}
@@ -517,9 +542,10 @@ function UsageSection({
               <UsageMeterRow
                 label={t("billing.usage.aiSmsTitle")}
                 locale={locale}
+                t={t}
                 used={usage.aiSmsSegmentsUsed}
                 included={null}
-                unit="segments"
+                unit={segmentsUnit}
                 blocked={false}
                 overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
                 overageBillable
@@ -556,6 +582,7 @@ function UsageUnavailableSection({
 function UsageMeterRow({
   label,
   locale,
+  t,
   used,
   included,
   unit,
@@ -568,6 +595,7 @@ function UsageMeterRow({
 }: {
   label: string;
   locale: BillingLocale;
+  t: BillingTranslation;
   used: number;
   included: number | null;
   unit: string;
@@ -615,7 +643,7 @@ function UsageMeterRow({
           {valueDisplay}
           {totalDisplay !== null ? ` / ${totalDisplay}` : ""}
           {!formatValue && ` ${unit}`}
-          {mode === "payg" && metered && " (metered)"}
+          {mode === "payg" && metered ? ` ${t("billing.usage.meteredSuffix")}` : ""}
         </span>
       </div>
 
@@ -638,16 +666,23 @@ function UsageMeterRow({
       {/* Overage note */}
       {mode === "included" && overageCost > 0 && (
         <span className="text-sm tabular-nums leading-6 text-muted-foreground">
-          {overageCount} {unit} over included ·{" "}
-          <span className="font-medium text-foreground">
-            ≈ {formatCents(overageCost, locale)}
-          </span>{" "}
-          in overages
+          <Trans
+            i18nKey="billing.usage.overIncludedSummary"
+            ns="settings"
+            values={{
+              amount: formatCents(overageCost, locale),
+              count: overageCount,
+              unit,
+            }}
+            components={{
+              amount: <span className="font-medium text-foreground" />,
+            }}
+          />
         </span>
       )}
       {mode === "included" && blocked && (
         <span className="text-sm leading-6 text-destructive">
-          Limit reached — usage paused until next period.
+          {t("billing.usage.blockedDescription")}
         </span>
       )}
     </div>
@@ -916,10 +951,16 @@ function TransactionsSection({
                   <TableCell className="text-right">
                     {tx.invoiceUrl ? (
                       <Button
+                        render={
+                          <a
+                            href={tx.invoiceUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          />
+                        }
                         variant="ghost"
                         size="sm"
                         className="h-auto gap-1 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => window.open(tx.invoiceUrl!, "_blank")}
                       >
                         {t("billing.transactions.invoice")}
                         <ArrowUpRight className="size-3" />

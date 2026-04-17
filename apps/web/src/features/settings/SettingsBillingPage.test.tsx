@@ -219,13 +219,40 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
 
     expect(screen.getAllByText("billing.addon.aiSmsActiveBadge").length).toBeGreaterThan(0);
+    expect(screen.getByText("$15")).toBeTruthy();
     const activeAddonPrice = screen.getByText("$5");
-    expect(activeAddonPrice).toBeTruthy();
     expect(
       within(activeAddonPrice.parentElement as HTMLElement).getByText(
         "billing.currentPlan.monthlySuffix",
       ),
     ).toBeTruthy();
+  });
+
+  it("opens invoice links safely in a new tab", () => {
+    renderBillingPage(
+      buildStatus({
+        recentTransactions: [
+          {
+            amountCents: 2_000,
+            currency: "usd",
+            description: "AI SMS add-on",
+            invoiceUrl: "https://example.com/invoice",
+            kind: "order",
+            occurredAt: "2026-04-15T00:00:00.000Z",
+            sourceId: "tx_123",
+            status: "paid",
+          },
+        ],
+      }),
+    );
+
+    const invoiceLink = screen.getByRole("link", {
+      name: "billing.transactions.invoice",
+    });
+
+    expect(invoiceLink.getAttribute("href")).toBe("https://example.com/invoice");
+    expect(invoiceLink.getAttribute("target")).toBe("_blank");
+    expect(invoiceLink.getAttribute("rel")).toBe("noopener noreferrer");
   });
 
   it("renders the redesigned plan card content for Pro", () => {
