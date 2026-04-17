@@ -351,32 +351,34 @@ function PlanSection({
             </div>
           </div>
           {(canUpgrade || showManageSubscription) && (
-            <div className="flex gap-2">
-            {canUpgrade && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={loading === "checkout"}
-                onClick={() => void handleUpgrade()}
-              >
-                {loading === "checkout"
-                  ? t("billing.actions.openingCheckout")
-                  : t("billing.actions.upgradeToPro")}
-              </Button>
-            )}
-            {showManageSubscription && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={loading === "portal"}
-                onClick={() => void handleManage()}
-              >
-                {loading === "portal"
-                  ? t("billing.actions.openingPortal")
-                  : t("billing.actions.manageSubscription")}
-                <ArrowUpRight className="size-3.5" />
-              </Button>
-            )}
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {canUpgrade && (
+                <Button
+                  className="w-full sm:w-auto"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading === "checkout"}
+                  onClick={() => void handleUpgrade()}
+                >
+                  {loading === "checkout"
+                    ? t("billing.actions.openingCheckout")
+                    : t("billing.actions.upgradeToPro")}
+                </Button>
+              )}
+              {showManageSubscription && (
+                <Button
+                  className="w-full sm:w-auto"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading === "portal"}
+                  onClick={() => void handleManage()}
+                >
+                  {loading === "portal"
+                    ? t("billing.actions.openingPortal")
+                    : t("billing.actions.manageSubscription")}
+                  <ArrowUpRight className="size-3.5" />
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -907,8 +909,8 @@ function TransactionsSection({
       title={t("billing.transactions.title")}
       description={t("billing.transactions.description")}
     >
-      <div className="overflow-hidden rounded-xl border border-border">
-        <Table>
+      <div className="rounded-xl border border-border">
+        <Table className="min-w-[42rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-[13px] font-medium text-muted-foreground">
