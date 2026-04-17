@@ -171,6 +171,77 @@ describe("Contact blocking", () => {
     });
   });
 
+  it("only deletes standalone contacts", async () => {
+    const { authed, businessId, t } = await seedWorkspace({
+      subject: "contact-delete-guard",
+    });
+    const contactWithHistoryId = await insertContact(t, {
+      businessId,
+      phone: "+14165550196",
+    });
+    const standaloneContactId = await insertContact(t, {
+      businessId,
+      phone: "+14165550197",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("conversations", {
+        businessId,
+        contactId: contactWithHistoryId,
+        channel: "sms",
+        status: "open",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Lee",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Initial Consultation",
+        slug: "initial-consultation",
+        durationMinutes: 30,
+        active: true,
+      });
+
+      await ctx.db.insert("appointments", {
+        businessId,
+        contactId: contactWithHistoryId,
+        staffId,
+        serviceId,
+        startsAt: "2026-04-20T15:00:00.000Z",
+        endsAt: "2026-04-20T15:30:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "dashboard",
+        calendarSyncState: "pending",
+      });
+    });
+
+    await expect(
+      authed.mutation(api.dashboard.contacts.deleteContact, {
+        businessId,
+        contactId: contactWithHistoryId,
+      }),
+    ).rejects.toThrow(
+      "This contact can't be deleted because it still has linked conversations or appointments.",
+    );
+
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(contactWithHistoryId)).not.toBeNull();
+    });
+
+    await authed.mutation(api.dashboard.contacts.deleteContact, {
+      businessId,
+      contactId: standaloneContactId,
+    });
+
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(standaloneContactId)).toBeNull();
+    });
+  });
+
   it("blocks known contacts from new voice starts and preserves the blocked disposition during reconciliation", async () => {
     const { businessId, t, userId } = await seedWorkspace({
       subject: "contact-block-voice",

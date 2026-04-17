@@ -108,10 +108,13 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         businessId,
         contactId: contactPendingDelete.id,
       });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("table.actions.deleteFailed"));
+      throw error;
     } finally {
       setDeletingContactId((current) => (current === contactId ? null : current));
     }
-  }, [businessId, contactPendingDelete, deleteContact]);
+  }, [businessId, contactPendingDelete, deleteContact, t]);
 
   const handleToggleBlock = useCallback(async () => {
     if (!businessId || !contactPendingBlockToggle) {

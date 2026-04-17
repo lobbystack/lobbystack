@@ -124,6 +124,7 @@
       "unknown": "Inconnu"
     },
     "events": {
+      "title": "Événements d'appel",
       "received": "Reçu",
       "connected": "Connecté",
       "transferred": "Transféré",

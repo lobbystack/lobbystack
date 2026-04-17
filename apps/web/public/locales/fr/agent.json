@@ -211,6 +211,9 @@
     "moreOptions": "Plus d options",
     "delete": "Supprimer",
     "confirmDelete": "Confirmer ?",
+    "deleteTitle": "Supprimer l'entrée ?",
+    "deleteDescription": "Cela supprimera définitivement cette entrée de l'espace agent.",
+    "deleteCancel": "Annuler",
     "upload": "Téléverser",
     "uploading": "Téléversement…"
   },

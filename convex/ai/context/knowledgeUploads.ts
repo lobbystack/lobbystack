@@ -22,6 +22,7 @@ import {
 
 const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
+const KNOWLEDGE_STORAGE_LIMIT_ERROR_PREFIX = "Knowledge storage limit reached.";
 const MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES = 256 * 1024;
 const TRUNCATED_TEXT_SUFFIX = "\n\n...";
 
@@ -69,6 +70,10 @@ function buildKnowledgeDocumentPreviewText(text: string): string {
   }
 
   return best;
+}
+
+function isKnowledgeStorageLimitErrorMessage(message: string): boolean {
+  return message.startsWith(KNOWLEDGE_STORAGE_LIMIT_ERROR_PREFIX);
 }
 
 async function extractUploadedKnowledgeDocumentText(input: {
@@ -228,15 +233,38 @@ async function prepareUploadedKnowledgeDocument(
       documentId,
     });
   } catch (error) {
-    if (extractedTextStorageId) {
-      await ctx.storage.delete(extractedTextStorageId);
-    }
-
     const message = error instanceof Error ? error.message : "Failed to process this document.";
+    const shouldDiscardStoredFiles = isKnowledgeStorageLimitErrorMessage(message);
     const currentDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
       documentId,
     });
+
+    const storageIdsToDelete = new Map<string, Id<"_storage">>();
+    if (extractedTextStorageId) {
+      storageIdsToDelete.set(String(extractedTextStorageId), extractedTextStorageId);
+    }
+    if (shouldDiscardStoredFiles) {
+      if (currentDocument?.storageId) {
+        storageIdsToDelete.set(String(currentDocument.storageId), currentDocument.storageId);
+      }
+      if (currentDocument?.extractedTextStorageId) {
+        storageIdsToDelete.set(
+          String(currentDocument.extractedTextStorageId),
+          currentDocument.extractedTextStorageId,
+        );
+      }
+    }
+
+    for (const storageId of storageIdsToDelete.values()) {
+      await ctx.storage.delete(storageId);
+    }
+
     if (currentDocument) {
+      if (shouldDiscardStoredFiles) {
+        await ctx.runMutation(internal.ai.context.knowledge.clearKnowledgeDocumentStorage, {
+          documentId,
+        });
+      }
       await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
         documentId,
         status: "error",

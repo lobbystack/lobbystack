@@ -767,6 +767,19 @@ export const setDocumentProcessingProgress = internalMutation({
   },
 });
 
+export const clearKnowledgeDocumentStorage = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+  },
+  handler: async (ctx: MutationCtx, args: DocumentIdArgs) => {
+    await ctx.db.patch(args.documentId, {
+      storageId: undefined,
+      extractedTextStorageId: undefined,
+    });
+    return null;
+  },
+});
+
 export const deleteKnowledgeDocumentRecord = internalMutation({
   args: {
     documentId: v.id("knowledge_documents"),

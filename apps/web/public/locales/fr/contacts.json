@@ -35,10 +35,20 @@
       "deleteTitle": "Supprimer le contact ?",
       "deleteDescription": "Cela supprimera définitivement le contact de votre tableau de bord.",
       "deleteConfirm": "Supprimer le contact",
-      "deleteCancel": "Annuler"
+      "deleteCancel": "Annuler",
+      "deleteFailed": "Impossible de supprimer le contact."
     }
   },
   "detail": {
+    "backToList": "Contacts",
+    "unknownContact": "Contact inconnu",
+    "notFound": "Contact introuvable",
+    "notFoundDescription": "Ce contact a peut-être été supprimé ou vous n'y avez pas accès.",
+    "metadata": {
+      "phone": "Téléphone",
+      "email": "Courriel",
+      "firstSeen": "Première apparition"
+    },
     "blocking": {
       "badge": "Bloqué",
       "active": "Actif",
@@ -57,10 +67,39 @@
       "updateFailed": "Impossible de mettre à jour l'état de blocage."
     },
     "activity": {
-      "callBlocked": "bloqué"
+      "empty": "Aucune interaction enregistrée pour le moment.",
+      "callInbound": "Appel entrant",
+      "callBlocked": "bloqué",
+      "callCompleted": "terminé",
+      "callFailed": "échoué",
+      "callInProgress": "en cours",
+      "smsInbound": "SMS entrant",
+      "smsOutbound": "SMS sortant",
+      "messageSent": "Envoyé",
+      "messageReceived": "Reçu",
+      "smsConversation": "SMS",
+      "appointmentScheduled": "Rendez-vous",
+      "withStaff": "avec {{staff}}"
+    },
+    "stats": {
+      "calls": "Appels",
+      "messages": "Messages",
+      "appointments": "Rendez-vous",
+      "conversations": "Conversations"
+    },
+    "tabs": {
+      "activity": "Activité",
+      "appointments": "Rendez-vous",
+      "details": "Détails"
     },
     "appointments": {
+      "empty": "Aucun rendez-vous pour ce contact.",
+      "service": "Service",
+      "staff": "Personnel",
+      "dateTime": "Date et heure",
+      "status": "Statut",
       "channel": "Canal",
+      "syncState": "Calendrier",
       "booked": "Réservé",
       "confirmed": "Confirmé",
       "completed": "Terminé",
@@ -81,10 +120,20 @@
       }
     },
     "details": {
+      "contactInfoTitle": "Coordonnées",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "Courriel",
+      "timezone": "Fuseau horaire",
+      "preferredLocale": "Langue préférée",
       "blockingTitle": "Blocage du contact",
       "blockingStatus": "Statut",
       "blockedAt": "Bloqué le",
       "blockedBy": "Bloqué par",
+      "smsConsentTitle": "Consentement SMS",
+      "smsConsentStatus": "Statut",
+      "smsConsentUpdatedAt": "Dernière mise à jour",
+      "smsConsentSource": "Source",
       "smsConsentStatusValues": {
         "subscribed": "Abonné",
         "optedOut": "Désabonné"
@@ -95,7 +144,11 @@
         "keywordStop": "Mot-clé STOP",
         "keywordStart": "Mot-clé START"
       },
-      "copy": "Copier"
+      "copy": "Copier",
+      "systemTitle": "Système",
+      "contactId": "ID du contact",
+      "createdAt": "Créé le",
+      "notSet": "—"
     }
   },
   "pagination": {

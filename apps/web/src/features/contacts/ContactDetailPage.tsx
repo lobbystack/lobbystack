@@ -922,6 +922,9 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
         contactId: contact.id,
       });
       navigate("/contacts");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("table.actions.deleteFailed"));
+      throw error;
     } finally {
       setIsDeletingContact(false);
     }

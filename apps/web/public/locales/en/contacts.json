@@ -35,7 +35,8 @@
       "deleteTitle": "Delete contact?",
       "deleteDescription": "This will permanently remove the contact from your dashboard.",
       "deleteConfirm": "Delete contact",
-      "deleteCancel": "Cancel"
+      "deleteCancel": "Cancel",
+      "deleteFailed": "Couldn't delete the contact."
     }
   },
   "detail": {

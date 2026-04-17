@@ -1,9 +1,14 @@
 import { convexTest, type TestConvex } from "convex-test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { extractKnowledgeDocumentTextMock, extractPdfTextWithLocalOcrMock } = vi.hoisted(() => ({
+const {
+  extractKnowledgeDocumentTextMock,
+  extractPdfTextWithLocalOcrMock,
+  getKnowledgeStorageLimitBytesMock,
+} = vi.hoisted(() => ({
   extractKnowledgeDocumentTextMock: vi.fn(),
   extractPdfTextWithLocalOcrMock: vi.fn(),
+  getKnowledgeStorageLimitBytesMock: vi.fn(),
 }));
 
 vi.mock("../lib/node/knowledgeExtraction", async () => {
@@ -18,10 +23,21 @@ vi.mock("../lib/node/knowledgeExtraction", async () => {
   };
 });
 
+vi.mock("../lib/billing", async () => {
+  const actual = await vi.importActual<typeof import("../lib/billing")>("../lib/billing");
+  getKnowledgeStorageLimitBytesMock.mockImplementation(actual.getKnowledgeStorageLimitBytes);
+
+  return {
+    ...actual,
+    getKnowledgeStorageLimitBytes: getKnowledgeStorageLimitBytesMock,
+  };
+});
+
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import * as componentsModule from "../lib/components";
 import { KNOWLEDGE_INDEX_VERSION } from "../lib/components";
+import { getBillingKey } from "../lib/billing";
 import { normalizeKnowledgeDocumentText } from "../lib/knowledgeDocuments";
 import schema from "../schema";
 import { modules } from "../test.setup";
@@ -43,7 +59,11 @@ type RagAddResult = Awaited<ReturnType<typeof componentsModule.rag.add>>;
 
 async function insertBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string },
+  input: {
+    slug: string;
+    name: string;
+    deploymentMode?: "manual" | "cloud" | "development";
+  },
 ): Promise<Id<"businesses">> {
   return await ctx.db.insert("businesses", {
     slug: input.slug,
@@ -51,7 +71,7 @@ async function insertBusiness(
     timezone: "America/Toronto",
     businessType: "service_company",
     defaultLocale: "en",
-    deploymentMode: "manual",
+    deploymentMode: input.deploymentMode ?? "manual",
     status: "active",
   });
 }
@@ -543,6 +563,80 @@ describe("Knowledge coverage", () => {
     expect(storedDocument).toBeNull();
     expect(originalUpload).not.toBeNull();
     expect(remainingStorageIds).toEqual([uploadStorageId]);
+  });
+
+  it("cleans up stored uploads when extracted text exceeds the storage quota", async () => {
+    const t = convexTest(schema, convexModules);
+    const largeExtractedText = normalizeKnowledgeDocumentText("Large quota text. ".repeat(20_000));
+
+    const { documentId, uploadStorageId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-storage-limit-cleanup",
+        name: "Knowledge Storage Limit Cleanup",
+        deploymentMode: "cloud",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Storage Limit Cleanup",
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Billing Owner",
+        lastSyncedAt: "2026-04-15T12:00:00.000Z",
+      });
+
+      const uploadStorageId = await ctx.storage.store(
+        new Blob(["%PDF-1.4"], {
+          type: "application/pdf",
+        }),
+      );
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Quota overflow document",
+        storageId: uploadStorageId,
+        mimeType: "application/pdf",
+        status: "queued",
+        tags: [],
+        importance: 5,
+      });
+
+      return { documentId, uploadStorageId };
+    });
+
+    extractKnowledgeDocumentTextMock.mockResolvedValueOnce(largeExtractedText);
+    getKnowledgeStorageLimitBytesMock.mockImplementationOnce(() => 16 * 1024);
+
+    await t.action(internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument, {
+      documentId,
+    });
+
+    const { originalUpload, remainingStorageIds, storedDocument } = await t.run(async (ctx) => {
+      const originalUpload = await ctx.db.system.get("_storage", uploadStorageId);
+      const remainingStorageIds = (
+        await ctx.db.system.query("_storage").collect()
+      ).map((entry) => entry._id);
+      const storedDocument = await ctx.db.get(documentId);
+
+      return {
+        originalUpload,
+        remainingStorageIds,
+        storedDocument,
+      };
+    });
+
+    expect(storedDocument?.status).toBe("error");
+    expect(storedDocument?.error).toMatch(/^Knowledge storage limit reached\./);
+    expect(storedDocument?.storageId).toBeUndefined();
+    expect(storedDocument?.extractedTextStorageId).toBeUndefined();
+    expect(originalUpload).toBeNull();
+    expect(remainingStorageIds).toEqual([]);
   });
 
   it("marks documents as failed when indexing throws", async () => {

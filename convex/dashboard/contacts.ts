@@ -23,6 +23,9 @@ function formatOperatorDisplayName(user: Doc<"users"> | null): string | null {
   return user.displayName ?? user.name ?? user.email ?? null;
 }
 
+const CONTACT_DELETE_DEPENDENCIES_ERROR =
+  "This contact can't be deleted because it still has linked conversations or appointments.";
+
 export const listContacts = query({
   args: {
     businessId: v.id("businesses"),
@@ -165,6 +168,23 @@ export const deleteContact = mutation({
     const contact = await ctx.db.get(args.contactId);
     if (!contact || contact.businessId !== args.businessId) {
       throw new Error("Contact not found.");
+    }
+
+    const [linkedConversations, linkedAppointments] = await Promise.all([
+      ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_contact_id", (q) =>
+          q.eq("businessId", args.businessId).eq("contactId", contact._id),
+        )
+        .take(1),
+      ctx.db
+        .query("appointments")
+        .withIndex("by_contact_id_and_starts_at", (q) => q.eq("contactId", contact._id))
+        .take(1),
+    ]);
+
+    if (linkedConversations.length > 0 || linkedAppointments.length > 0) {
+      throw new Error(CONTACT_DELETE_DEPENDENCIES_ERROR);
     }
 
     await ctx.db.delete(args.contactId);
