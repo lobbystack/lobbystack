@@ -5,7 +5,14 @@ import {
   type FunctionReturnType,
   getFunctionName,
 } from "convex/server";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 type CachedQueryReference = FunctionReference<"query", "public">;
 
@@ -26,11 +33,39 @@ type UseCachedConvexQueryResult<TData> = {
 
 const DEFAULT_STALE_TIME_MS = 5 * 60 * 1000;
 const queryCache = new Map<string, CacheEntry<unknown>>();
-const inFlightRequests = new Map<string, Promise<unknown>>();
+const inFlightRequests = new Map<
+  string,
+  {
+    id: number;
+    promise: Promise<unknown>;
+  }
+>();
+const cacheListeners = new Set<() => void>();
+let nextRequestId = 0;
+let cacheVersion = 0;
+
+function notifyCacheListeners(): void {
+  cacheVersion += 1;
+  for (const listener of cacheListeners) {
+    listener();
+  }
+}
+
+function subscribeToCache(listener: () => void): () => void {
+  cacheListeners.add(listener);
+  return () => {
+    cacheListeners.delete(listener);
+  };
+}
+
+function getCacheVersion(): number {
+  return cacheVersion;
+}
 
 export function clearCachedConvexQueries(): void {
   queryCache.clear();
   inFlightRequests.clear();
+  notifyCacheListeners();
 }
 
 function buildCacheKey<Query extends CachedQueryReference>(
@@ -56,25 +91,37 @@ function isFresh(updatedAt: number, staleTimeMs: number): boolean {
 async function fetchAndCache<Query extends CachedQueryReference>(
   cacheKey: string,
   fetcher: () => Promise<FunctionReturnType<Query>>,
+  options?: { force?: boolean },
 ): Promise<FunctionReturnType<Query>> {
   const existingRequest = inFlightRequests.get(cacheKey);
-  if (existingRequest) {
-    return existingRequest as Promise<FunctionReturnType<Query>>;
+  if (existingRequest && !options?.force) {
+    return existingRequest.promise as Promise<FunctionReturnType<Query>>;
   }
 
+  const requestId = ++nextRequestId;
   const request = fetcher()
     .then((result) => {
-      queryCache.set(cacheKey, {
-        data: result,
-        updatedAt: Date.now(),
-      });
+      const currentRequest = inFlightRequests.get(cacheKey);
+      if (currentRequest?.id === requestId) {
+        queryCache.set(cacheKey, {
+          data: result,
+          updatedAt: Date.now(),
+        });
+        notifyCacheListeners();
+      }
       return result;
     })
     .finally(() => {
-      inFlightRequests.delete(cacheKey);
+      const currentRequest = inFlightRequests.get(cacheKey);
+      if (currentRequest?.id === requestId) {
+        inFlightRequests.delete(cacheKey);
+      }
     });
 
-  inFlightRequests.set(cacheKey, request);
+  inFlightRequests.set(cacheKey, {
+    id: requestId,
+    promise: request,
+  });
   return request;
 }
 
@@ -87,6 +134,7 @@ export function setCachedConvexQuery<Query extends CachedQueryReference>(
     data,
     updatedAt: Date.now(),
   });
+  notifyCacheListeners();
 }
 
 export function invalidateCachedConvexQuery<Query extends CachedQueryReference>(
@@ -94,6 +142,7 @@ export function invalidateCachedConvexQuery<Query extends CachedQueryReference>(
   args: FunctionArgs<Query>,
 ): void {
   queryCache.delete(buildCacheKey(query, args));
+  notifyCacheListeners();
 }
 
 export function useCachedConvexQuery<Query extends CachedQueryReference>(
@@ -104,12 +153,14 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
   const convex = useConvex();
   const staleTimeMs = options?.staleTimeMs ?? DEFAULT_STALE_TIME_MS;
   const mountedRef = useRef(true);
+  const latestRunFetchIdRef = useRef(0);
   const serializedArgs = JSON.stringify(args);
   const stableArgs = useMemo(() => args, [serializedArgs]);
+  const observedCacheVersion = useSyncExternalStore(subscribeToCache, getCacheVersion);
   const cacheKey = useMemo(() => buildCacheKey(query, stableArgs), [query, serializedArgs]);
-  const initialEntry = useMemo(
+  const cacheEntry = useMemo(
     () => readCacheEntry(query, stableArgs),
-    [query, serializedArgs],
+    [observedCacheVersion, query, serializedArgs],
   );
 
   const [state, setState] = useState<{
@@ -120,37 +171,41 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
     updatedAt: number | null;
   }>({
     cacheKey,
-    data: initialEntry?.data,
-    isLoading: initialEntry === undefined,
+    data: cacheEntry?.data,
+    isLoading: cacheEntry === undefined,
     error: null,
-    updatedAt: initialEntry?.updatedAt ?? null,
+    updatedAt: cacheEntry?.updatedAt ?? null,
   });
 
   const visibleState =
     state.cacheKey === cacheKey
-      ? initialEntry && (state.updatedAt === null || initialEntry.updatedAt > state.updatedAt)
+      ? cacheEntry &&
+        (state.updatedAt === null ||
+          cacheEntry.updatedAt !== state.updatedAt ||
+          cacheEntry.data !== state.data)
         ? {
             cacheKey,
-            data: initialEntry.data,
+            data: cacheEntry.data,
             error: null,
             isLoading: false,
-            updatedAt: initialEntry.updatedAt,
+            updatedAt: cacheEntry.updatedAt,
           }
         : state
       : {
           cacheKey,
-          data: initialEntry?.data,
-          isLoading: initialEntry === undefined,
+          data: cacheEntry?.data,
+          isLoading: cacheEntry === undefined,
           error: null,
-          updatedAt: initialEntry?.updatedAt ?? null,
+          updatedAt: cacheEntry?.updatedAt ?? null,
         };
 
   const runFetch = useCallback(
     async (force: boolean): Promise<FunctionReturnType<Query>> => {
       const cachedEntry = readCacheEntry(query, stableArgs);
+      const runFetchId = ++latestRunFetchIdRef.current;
 
       if (!force && cachedEntry && isFresh(cachedEntry.updatedAt, staleTimeMs)) {
-        if (mountedRef.current) {
+        if (mountedRef.current && latestRunFetchIdRef.current === runFetchId) {
           setState({
             cacheKey,
             data: cachedEntry.data,
@@ -162,7 +217,7 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
         return cachedEntry.data;
       }
 
-      if (mountedRef.current) {
+      if (mountedRef.current && latestRunFetchIdRef.current === runFetchId) {
         setState({
           cacheKey,
           data: cachedEntry?.data,
@@ -175,8 +230,9 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
       try {
         const result = await fetchAndCache<Query>(cacheKey, () =>
           convex.query(query, stableArgs),
+          { force },
         );
-        if (mountedRef.current) {
+        if (mountedRef.current && latestRunFetchIdRef.current === runFetchId) {
           setState({
             cacheKey,
             data: result,
@@ -187,7 +243,7 @@ export function useCachedConvexQuery<Query extends CachedQueryReference>(
         }
         return result;
       } catch (fetchError) {
-        if (mountedRef.current) {
+        if (mountedRef.current && latestRunFetchIdRef.current === runFetchId) {
           setState({
             cacheKey,
             data: cachedEntry?.data,

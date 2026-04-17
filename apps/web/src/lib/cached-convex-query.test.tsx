@@ -20,6 +20,70 @@ describe("useCachedConvexQuery", () => {
     vi.resetModules();
   });
 
+  it("starts a fresh request when refresh is called during an in-flight load", async () => {
+    let resolveInitialQuery: ((value: string) => void) | null = null;
+    const initialQuery = new Promise<string>((resolve) => {
+      resolveInitialQuery = resolve;
+    });
+    let resolveRefreshQuery: ((value: string) => void) | null = null;
+    const refreshQuery = new Promise<string>((resolve) => {
+      resolveRefreshQuery = resolve;
+    });
+
+    convexQueryMock.mockReturnValueOnce(initialQuery);
+    convexQueryMock.mockReturnValueOnce(refreshQuery);
+
+    const { useCachedConvexQuery } = await import("./cached-convex-query");
+    const queryRef = {} as never;
+
+    function Probe() {
+      const { data, isLoading, refresh } = useCachedConvexQuery(
+        queryRef,
+        { businessId: "business-a" } as never,
+      );
+
+      return (
+        <div>
+          <span data-testid="data">{data ?? "empty"}</span>
+          <span data-testid="status">{isLoading ? "loading" : "ready"}</span>
+          <button onClick={() => void refresh()} type="button">
+            Refresh
+          </button>
+        </div>
+      );
+    }
+
+    render(<Probe />);
+
+    await waitFor(() => {
+      expect(convexQueryMock).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Refresh" }).click();
+    });
+
+    await waitFor(() => {
+      expect(convexQueryMock).toHaveBeenCalledTimes(2);
+    });
+
+    await act(async () => {
+      resolveInitialQuery?.("stale-workspace");
+      await initialQuery;
+    });
+
+    expect(screen.getByTestId("data").textContent).toBe("empty");
+    expect(screen.getByTestId("status").textContent).toBe("loading");
+
+    await act(async () => {
+      resolveRefreshQuery?.("fresh-workspace");
+      await refreshQuery;
+    });
+
+    expect(screen.getByTestId("data").textContent).toBe("fresh-workspace");
+    expect(screen.getByTestId("status").textContent).toBe("ready");
+  });
+
   it("clears the previous key's data before the next fetch resolves", async () => {
     convexQueryMock.mockResolvedValueOnce("workspace-a");
     let resolvePendingQuery: ((value: string) => void) | null = null;
@@ -109,5 +173,43 @@ describe("useCachedConvexQuery", () => {
     });
 
     secondRender.unmount();
+  });
+
+  it("re-renders mounted consumers when cached data is updated", async () => {
+    convexQueryMock.mockResolvedValueOnce("workspace-a");
+    const { setCachedConvexQuery, useCachedConvexQuery } = await import("./cached-convex-query");
+    const queryRef = {} as never;
+
+    function Probe() {
+      const { data, isLoading } = useCachedConvexQuery(
+        queryRef,
+        { businessId: "business-a" } as never,
+      );
+
+      return (
+        <div>
+          <span data-testid="data">{data ?? "empty"}</span>
+          <span data-testid="status">{isLoading ? "loading" : "ready"}</span>
+        </div>
+      );
+    }
+
+    render(<Probe />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data").textContent).toBe("workspace-a");
+      expect(screen.getByTestId("status").textContent).toBe("ready");
+    });
+
+    act(() => {
+      setCachedConvexQuery(
+        queryRef,
+        { businessId: "business-a" } as never,
+        "workspace-b" as never,
+      );
+    });
+
+    expect(screen.getByTestId("data").textContent).toBe("workspace-b");
+    expect(screen.getByTestId("status").textContent).toBe("ready");
   });
 });
