@@ -53,6 +53,7 @@ export const billingPlanCatalog = {
   self_host: {
     hostedBilling: false,
     monthlyChargeCents: 0,
+    knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
@@ -65,6 +66,7 @@ export const billingPlanCatalog = {
   free_cloud: {
     hostedBilling: true,
     monthlyChargeCents: 0,
+    knowledgeStorageBytes: 100 * 1024 * 1024,
     voiceSecondsIncluded: 600,
     alertSmsSegmentsIncluded: 10,
     outboundCallAttemptsIncluded: 2,
@@ -77,6 +79,7 @@ export const billingPlanCatalog = {
   pro: {
     hostedBilling: true,
     monthlyChargeCents: 1_500,
+    knowledgeStorageBytes: 2 * 1024 * 1024 * 1024,
     voiceSecondsIncluded: 4_800,
     alertSmsSegmentsIncluded: 50,
     outboundCallAttemptsIncluded: 20,
@@ -89,6 +92,7 @@ export const billingPlanCatalog = {
   enterprise: {
     hostedBilling: true,
     monthlyChargeCents: null,
+    knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
     outboundCallAttemptsIncluded: null,
@@ -103,6 +107,7 @@ export const billingPlanCatalog = {
   {
     hostedBilling: boolean;
     monthlyChargeCents: number | null;
+    knowledgeStorageBytes: number | null;
     voiceSecondsIncluded: number | null;
     alertSmsSegmentsIncluded: number | null;
     outboundCallAttemptsIncluded: number | null;
@@ -113,6 +118,12 @@ export const billingPlanCatalog = {
     outboundCallAttemptOverageRateCents: number | null;
   }
 >;
+
+export function getKnowledgeStorageLimitBytes(
+  plan: BillingPlanSlug,
+): number | null {
+  return billingPlanCatalog[plan].knowledgeStorageBytes;
+}
 
 export const billingAddonCatalog = {
   ai_sms: {
@@ -128,6 +139,23 @@ export const billingAddonCatalog = {
     usageRatePerSegmentCents: number;
   }
 >;
+
+export function getBillingMonthlyChargeCents(input: {
+  plan: BillingPlanSlug;
+  activeAddons?: Array<BillingAddonSlug>;
+}): number | null {
+  const baseMonthlyChargeCents = billingPlanCatalog[input.plan].monthlyChargeCents;
+  if (baseMonthlyChargeCents === null) {
+    return null;
+  }
+
+  const recurringAddonChargeCents = (input.activeAddons ?? []).reduce<number>(
+    (total, addon) => total + billingAddonCatalog[addon].recurringMonthlyChargeCents,
+    0,
+  );
+
+  return baseMonthlyChargeCents + recurringAddonChargeCents;
+}
 
 export function isHostedBillingPlan(
   plan: BillingPlanSlug,
@@ -172,6 +200,8 @@ export function getPolarMeteredUsagePayload(
 export type BillingUsageSnapshot = {
   periodKey: string;
   resetAt: string;
+  knowledgeStorageBytesUsed: number;
+  knowledgeStorageBytesIncluded: number | null;
   voiceSecondsUsed: number;
   alertSmsSegmentsUsed: number;
   outboundCallAttemptsUsed: number;
@@ -185,6 +215,7 @@ export type BillingUsageSnapshot = {
   voiceBlocked: boolean;
   alertSmsBlocked: boolean;
   outboundCallAttemptsBlocked: boolean;
+  knowledgeStorageBlocked: boolean;
 };
 
 export type BillingTransactionSummary = {

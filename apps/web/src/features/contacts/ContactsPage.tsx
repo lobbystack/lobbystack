@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -7,13 +9,17 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { useQuery } from "convex/react";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
+import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +35,7 @@ import {
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type ContactsPageProps = {
   businessId?: Id<"businesses">;
@@ -39,6 +46,9 @@ type ContactRow = {
   name: string | null;
   phone: string;
   email: string | null;
+  isBlocked: boolean;
+  blockedAt: string | null;
+  blockedByName: string | null;
   messageCount: number;
   callCount: number;
   appointmentCount: number;
@@ -47,17 +57,26 @@ type ContactRow = {
 
 export function ContactsPage({ businessId }: ContactsPageProps) {
   const { i18n, t } = useTranslation("contacts");
-  const contacts = useQuery(
+  const { data: contacts, isInitialLoading: isLoadingContacts } = useRememberedConvexQuery(
     api.dashboard.contacts.listContacts,
     businessId ? { businessId } : "skip",
-  ) as Array<ContactRow> | undefined;
+  );
+  const blockContact = useMutation(api.dashboard.contacts.blockContact);
+  const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
+  const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
   const [searchValue, setSearchValue] = useState("");
-  const [selectedContactId, setSelectedContactId] = useState<Id<"contacts"> | null>(null);
+  const navigate = useNavigate();
+  const [contactPendingDelete, setContactPendingDelete] = useState<ContactRow | null>(null);
+  const [contactPendingBlockToggle, setContactPendingBlockToggle] = useState<{
+    contact: ContactRow;
+    nextBlockedState: boolean;
+  } | null>(null);
+  const [blockingContactId, setBlockingContactId] = useState<string | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
-
   const rows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     return (contacts ?? []).filter((contact: ContactRow) => {
@@ -66,6 +85,66 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     });
   }, [contacts, searchValue]);
 
+  const openContact = useCallback((row: ContactRow) => {
+    captureAnalyticsEvent("web.contacts.contact_opened", {
+      businessId: businessId ? String(businessId) : undefined,
+      contactId: String(row.id),
+      messageCount: row.messageCount,
+      callCount: row.callCount,
+      appointmentCount: row.appointmentCount,
+    });
+    navigate(`/contacts/${row.id}`);
+  }, [businessId, navigate]);
+
+  const handleDeleteContact = useCallback(async () => {
+    if (!businessId || !contactPendingDelete) {
+      return;
+    }
+
+    const contactId = String(contactPendingDelete.id);
+    setDeletingContactId(contactId);
+    try {
+      await deleteContact({
+        businessId,
+        contactId: contactPendingDelete.id,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("table.actions.deleteFailed"));
+      throw error;
+    } finally {
+      setDeletingContactId((current) => (current === contactId ? null : current));
+    }
+  }, [businessId, contactPendingDelete, deleteContact, t]);
+
+  const handleToggleBlock = useCallback(async () => {
+    if (!businessId || !contactPendingBlockToggle) {
+      return;
+    }
+
+    const contactId = String(contactPendingBlockToggle.contact.id);
+    setBlockingContactId(contactId);
+    try {
+      if (contactPendingBlockToggle.nextBlockedState) {
+        await blockContact({
+          businessId,
+          contactId: contactPendingBlockToggle.contact.id,
+        });
+        toast.success(t("table.actions.blockSuccess"));
+      } else {
+        await unblockContact({
+          businessId,
+          contactId: contactPendingBlockToggle.contact.id,
+        });
+        toast.success(t("table.actions.unblockSuccess"));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("table.actions.updateFailed"));
+      throw error;
+    } finally {
+      setBlockingContactId((current) => (current === contactId ? null : current));
+    }
+  }, [blockContact, businessId, contactPendingBlockToggle, t, unblockContact]);
+
   const columns = useMemo<Array<ColumnDef<ContactRow>>>(
     () => [
       {
@@ -73,7 +152,14 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "contact",
         header: () => t("table.contact"),
         cell: ({ row }) => (
-          <span className="font-semibold">{row.original.name ?? t("table.unknownContact")}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">
+              {row.original.name ?? t("table.unknownContact")}
+            </span>
+            {row.original.isBlocked ? (
+              <Badge variant="destructive">{t("table.status.blocked")}</Badge>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -110,15 +196,43 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
             timeStyle: "short",
           }),
         id: "lastInteraction",
-        header: () => t("table.lastInteraction"),
-        cell: ({ row }) =>
-          formatDateTime(row.original.lastInteractionAt, i18n.language, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }),
+        header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
+        cell: ({ row }) => (
+          <span className="block truncate text-right text-sm text-muted-foreground">
+            {formatDateTime(row.original.lastInteractionAt, i18n.language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex w-16 justify-end pr-1">
+            <ContactActionsMenu
+              blocking={blockingContactId === String(row.original.id)}
+              deleting={deletingContactId === String(row.original.id)}
+              isBlocked={row.original.isBlocked}
+              onDelete={() => {
+                setContactPendingDelete(row.original);
+              }}
+              onToggleBlock={() => {
+                setContactPendingBlockToggle({
+                  contact: row.original,
+                  nextBlockedState: !row.original.isBlocked,
+                });
+              }}
+            />
+          </div>
+        ),
+        meta: {
+          className: "w-16 text-right",
+        },
       },
     ],
-    [i18n.language, t],
+    [deletingContactId, i18n.language, t],
   );
 
   const table = useReactTable({
@@ -164,70 +278,146 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
+      {isLoadingContacts ? (
+        <TableCardSkeleton columns={6} />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[16%]" />
+                <col className="w-[24%]" />
+                <col className="w-[12%]" />
+                <col className="w-[22%]" />
+                <col className="w-[8%]" />
+              </colgroup>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const className =
+                        header.column.id === "lastInteraction" || header.column.id === "actions"
+                          ? "text-right"
+                          : header.column.columnDef.meta &&
+                              typeof header.column.columnDef.meta === "object" &&
+                              "className" in header.column.columnDef.meta
+                            ? String(header.column.columnDef.meta.className)
+                            : undefined;
+
+                      return (
+                        <TableHead className={className} key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                className="h-12 cursor-pointer data-[state=selected]:bg-muted/40"
-                data-state={selectedContactId === row.original.id ? "selected" : undefined}
-                key={row.id}
-                onClick={() => {
-                  if (selectedContactId === row.original.id) {
-                    return;
-                  }
-                  setSelectedContactId(row.original.id);
-                  captureAnalyticsEvent("web.contacts.contact_opened", {
-                    businessId: businessId ? String(businessId) : undefined,
-                    contactId: String(row.original.id),
-                    messageCount: row.original.messageCount,
-                    callCount: row.original.callCount,
-                    appointmentCount: row.original.appointmentCount,
-                  });
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    className="h-12 cursor-pointer transition-colors hover:bg-muted/40"
+                    key={row.id}
+                    onClick={() => {
+                      openContact(row.original);
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const className =
+                        cell.column.id === "lastInteraction"
+                          ? "w-0 max-w-0 text-right whitespace-nowrap"
+                          : cell.column.id === "actions"
+                            ? "text-right"
+                            : cell.column.columnDef.meta &&
+                                typeof cell.column.columnDef.meta === "object" &&
+                                "className" in cell.column.columnDef.meta
+                              ? String(cell.column.columnDef.meta.className)
+                              : undefined;
+
+                      return (
+                        <TableCell className={className} key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
-                  {t("table.empty")}
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination
-        labels={{
-          rowsPerPage: t("pagination.rowsPerPage"),
-          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
-          firstPage: t("pagination.firstPage"),
-          previousPage: t("pagination.previousPage"),
-          nextPage: t("pagination.nextPage"),
-          lastPage: t("pagination.lastPage"),
-          goToPage: (page) => t("pagination.goToPage", { page }),
-        }}
-        table={table}
-      />
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={6}>
+                      {t("table.empty")}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("pagination.rowsPerPage"),
+              pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+              firstPage: t("pagination.firstPage"),
+              previousPage: t("pagination.previousPage"),
+              nextPage: t("pagination.nextPage"),
+              lastPage: t("pagination.lastPage"),
+              goToPage: (page) => t("pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+          <ConfirmDeleteDialog
+            cancelLabel={t("table.actions.deleteCancel")}
+            confirmLabel={t("table.actions.deleteConfirm")}
+            description={t("table.actions.deleteDescription")}
+            onConfirm={handleDeleteContact}
+            onOpenChange={(open) => {
+              if (!open && !deletingContactId) {
+                setContactPendingDelete(null);
+              }
+            }}
+            open={contactPendingDelete !== null}
+            pending={
+              contactPendingDelete !== null &&
+              deletingContactId === String(contactPendingDelete.id)
+            }
+            title={t("table.actions.deleteTitle")}
+          />
+          <ConfirmActionDialog
+            cancelLabel={t("table.actions.blockCancel")}
+            confirmLabel={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockConfirm")
+                : t("table.actions.unblockConfirm")
+            }
+            confirmVariant={
+              contactPendingBlockToggle?.nextBlockedState ? "destructive" : "default"
+            }
+            description={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockDescription")
+                : t("table.actions.unblockDescription")
+            }
+            onConfirm={handleToggleBlock}
+            onOpenChange={(open) => {
+              if (!open && !blockingContactId) {
+                setContactPendingBlockToggle(null);
+              }
+            }}
+            open={contactPendingBlockToggle !== null}
+            pending={
+              contactPendingBlockToggle !== null &&
+              blockingContactId === String(contactPendingBlockToggle.contact.id)
+            }
+            title={
+              contactPendingBlockToggle?.nextBlockedState
+                ? t("table.actions.blockTitle")
+                : t("table.actions.unblockTitle")
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

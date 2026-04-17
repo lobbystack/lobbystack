@@ -6,19 +6,14 @@ import { NavUser } from "@/components/layout/nav-user";
 import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
 import { BookTextIcon } from "@/components/ui/book-text";
-import { BotIcon } from "@/components/ui/bot";
 import { BlocksIcon } from "@/components/ui/blocks";
-import { BoxIcon } from "@/components/ui/box";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
-import { FileTextIcon } from "@/components/ui/file-text";
 import { HomeIcon } from "@/components/ui/home";
 import { IdCardIcon } from "@/components/ui/id-card";
-import { LinkIcon } from "@/components/ui/link";
 import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
 import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
 import { SettingsIcon } from "@/components/ui/settings";
-import { SlidersHorizontalIcon } from "@/components/ui/sliders-horizontal";
 import {
   Sidebar,
   SidebarContent,
@@ -26,18 +21,18 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { UserIcon } from "@/components/ui/user";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
 import { cn } from "@/lib/utils";
 import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
-  businessName: string;
+  businessName?: string;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  isLoading?: boolean;
 };
 
 function createAnimatedSidebarIcon(
@@ -64,28 +59,16 @@ function createAnimatedSidebarIcon(
   };
 }
 
-function createStaticSidebarIcon(
-  Icon: React.ComponentType<any>,
-) {
-  return function SidebarIcon({ className }: SidebarIconProps) {
-    return <Icon className={cn("size-4 shrink-0 [&_svg]:size-4", className)} size={16} />;
-  };
-}
-
 const AnimatedHomeIcon = createAnimatedSidebarIcon(HomeIcon);
 const AnimatedMessagesIcon = createAnimatedSidebarIcon(MessageSquareMoreIcon);
 const AnimatedContactsIcon = createAnimatedSidebarIcon(UsersIcon);
 const AnimatedAnalyticsIcon = createAnimatedSidebarIcon(ChartColumnIncreasingIcon);
-const AnimatedAgentIcon = createAnimatedSidebarIcon(BotIcon);
 const AnimatedBasicSettingsIcon = createAnimatedSidebarIcon(ClipboardCheckIcon);
+const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedKnowledgeIcon = createAnimatedSidebarIcon(BookTextIcon);
 const AnimatedServicesIcon = createAnimatedSidebarIcon(BlocksIcon);
 const AnimatedRulesIcon = createAnimatedSidebarIcon(WorkflowIcon);
 const AnimatedSettingsIcon = createAnimatedSidebarIcon(SettingsIcon);
-const AnimatedBusinessIcon = createAnimatedSidebarIcon(UserIcon);
-const AnimatedAppearanceIcon = createAnimatedSidebarIcon(SlidersHorizontalIcon);
-const AnimatedBillingIcon = createAnimatedSidebarIcon(BoxIcon);
-const AnimatedIntegrationsIcon = createAnimatedSidebarIcon(LinkIcon);
 const AnimatedTeamLogo = createAnimatedSidebarIcon(IdCardIcon);
 const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
@@ -95,19 +78,20 @@ export function AppSidebar({
   operatorAvatar,
   operatorEmail,
   operatorName,
+  isLoading = false,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation(["common", "nav", "settings", "agent"]);
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
-        name: operatorName ?? businessName,
+        name: operatorName ?? businessName ?? "",
         email: operatorEmail ?? "",
         ...(operatorAvatar ? { avatar: operatorAvatar } : {}),
       },
       teams: [
         {
-          name: businessName,
+          name: businessName ?? "",
           logo: AnimatedTeamLogo,
         },
       ],
@@ -122,60 +106,44 @@ export function AppSidebar({
           ],
         },
         {
+          title: t("nav:sidebar.agent"),
+          items: [
+            {
+              title: t("agent:sections.basicSettings.title"),
+              url: "/agent",
+              icon: AnimatedBasicSettingsIcon,
+            },
+            {
+              title: t("agent:sections.knowledge.title"),
+              url: "/agent/knowledge",
+              icon: AnimatedKnowledgeIcon,
+            },
+            {
+              title: t("agent:sections.services.title"),
+              url: "/agent/services",
+              icon: AnimatedServicesIcon,
+            },
+            {
+              title: t("agent:sections.rules.title"),
+              url: "/agent/rules",
+              icon: AnimatedRulesIcon,
+            },
+          ],
+        },
+        {
           title: t("nav:sidebar.other"),
           items: [
             { title: t("nav:items.analytics"), url: "/analytics", icon: AnimatedAnalyticsIcon },
             {
-              title: t("nav:items.agent"),
-              icon: AnimatedAgentIcon,
-              items: [
-                {
-                  title: t("agent:sections.basicSettings.title"),
-                  url: "/agent",
-                  icon: AnimatedBasicSettingsIcon,
-                },
-                {
-                  title: t("agent:sections.knowledge.title"),
-                  url: "/agent/knowledge",
-                  icon: AnimatedKnowledgeIcon,
-                },
-                {
-                  title: t("agent:sections.services.title"),
-                  url: "/agent/services",
-                  icon: AnimatedServicesIcon,
-                },
-                {
-                  title: t("agent:sections.rules.title"),
-                  url: "/agent/rules",
-                  icon: AnimatedRulesIcon,
-                },
-              ],
+              title: t("settings:sections.integrations"),
+              url: "/integrations",
+              icon: AnimatedIntegrationsIcon,
             },
             {
               title: t("nav:items.settings"),
+              activeMatchPrefix: "/settings",
+              url: "/settings/usage",
               icon: AnimatedSettingsIcon,
-              items: [
-                {
-                  title: t("settings:sections.business"),
-                  url: "/settings",
-                  icon: AnimatedBusinessIcon,
-                },
-                {
-                  title: t("settings:sections.appearance"),
-                  url: "/settings/appearance",
-                  icon: AnimatedAppearanceIcon,
-                },
-                {
-                  title: t("settings:sections.billing"),
-                  url: "/settings/billing",
-                  icon: AnimatedBillingIcon,
-                },
-                {
-                  title: t("settings:sections.integrations"),
-                  url: "/settings/integrations",
-                  icon: AnimatedIntegrationsIcon,
-                },
-              ],
             },
           ],
         },
@@ -187,7 +155,7 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
+        <TeamSwitcher isLoading={isLoading} teams={sidebarData.teams} />
       </SidebarHeader>
       <SidebarContent>
         {sidebarData.navGroups.map((group) => (
@@ -195,7 +163,7 @@ export function AppSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser onSignOut={onSignOut} user={sidebarData.user} />
+        <NavUser isLoading={isLoading} onSignOut={onSignOut} user={sidebarData.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

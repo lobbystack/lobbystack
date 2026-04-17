@@ -10,6 +10,7 @@ type PhoneInputProps = Omit<
   React.ComponentProps<"input">,
   "defaultValue" | "onChange" | "value"
 > & {
+  containerClassName?: string;
   defaultCountry?: Country;
   locale?: string | null;
   onChange?: (value?: string) => void;
@@ -38,6 +39,7 @@ const PhoneNumberTextInput = React.forwardRef<HTMLInputElement, PhoneNumberTextI
 PhoneNumberTextInput.displayName = "PhoneNumberTextInput";
 
 export function PhoneInput({
+  containerClassName,
   defaultCountry,
   disabled,
   locale,
@@ -52,7 +54,7 @@ export function PhoneInput({
   });
 
   return (
-    <div className="w-full">
+    <div className={cn("w-full", containerClassName)}>
       <PhoneNumberInput
         {...props}
         autoComplete={props.autoComplete ?? "tel"}

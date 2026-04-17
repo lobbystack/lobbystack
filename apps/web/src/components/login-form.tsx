@@ -46,11 +46,11 @@ export function LoginForm({
       <form onSubmit={onSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Rows3 className="size-5" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-xl font-semibold tracking-tight">{t("login.title")}</h1>
+              <h1 className="type-section-title">{t("login.title")}</h1>
               <FieldDescription>{t("login.subtitle")}</FieldDescription>
             </div>
           </div>
@@ -73,7 +73,7 @@ export function LoginForm({
               <div className="flex items-center justify-between gap-3">
                 <FieldLabel htmlFor="login-password">{t("login.password")}</FieldLabel>
                 <Link
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                  className="type-meta hover:text-foreground"
                   to="/forgot-password"
                 >
                   {t("login.forgotPassword")}

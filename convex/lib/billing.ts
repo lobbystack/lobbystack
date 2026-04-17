@@ -8,6 +8,7 @@ import type {
 import {
   billingAddonCatalog,
   billingPlanCatalog,
+  getKnowledgeStorageLimitBytes as getSharedKnowledgeStorageLimitBytes,
 } from "../../packages/shared/src/billing";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
@@ -86,12 +87,19 @@ export function isAiSmsEnabled(input: {
 export function getPlanEntitlements(plan: BillingPlanSlug) {
   const config = billingPlanCatalog[plan];
   return {
+    knowledgeStorageBytes: config.knowledgeStorageBytes,
     voiceSecondsIncluded: config.voiceSecondsIncluded,
     alertSmsSegmentsIncluded: config.alertSmsSegmentsIncluded,
     outboundCallAttemptsIncluded: config.outboundCallAttemptsIncluded,
     includedBusinessNumbers: config.includedBusinessNumbers,
     overagesBillable: config.overagesBillable,
   };
+}
+
+export function getKnowledgeStorageLimitBytes(
+  plan: BillingPlanSlug,
+): number | null {
+  return getSharedKnowledgeStorageLimitBytes(plan);
 }
 
 export function getBillingUsageSnapshotData(args: {
@@ -122,6 +130,8 @@ export function getBillingUsageSnapshotData(args: {
   return {
     periodKey: args.periodKey,
     resetAt: getBillingResetAt(args.periodKey),
+    knowledgeStorageBytesUsed: 0,
+    knowledgeStorageBytesIncluded: entitlements.knowledgeStorageBytes,
     voiceSecondsUsed,
     alertSmsSegmentsUsed,
     outboundCallAttemptsUsed,
@@ -147,6 +157,7 @@ export function getBillingUsageSnapshotData(args: {
         ? false
         : args.usage?.outboundCallAttemptsBlocked ??
           outboundCallAttemptsUsed >= entitlements.outboundCallAttemptsIncluded,
+    knowledgeStorageBlocked: false,
   };
 }
 

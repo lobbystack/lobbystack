@@ -179,7 +179,7 @@ export function OnboardingVerifyPhonePage({
               <CardTitle className="text-4xl font-semibold tracking-tight">
                 {isVerifyStep ? t("verifyPhone.verifyTitle") : t("verifyPhone.title")}
               </CardTitle>
-              <CardDescription className="max-w-md text-base leading-7 text-zinc-300">
+              <CardDescription className="type-section-description max-w-md text-zinc-300">
                 {isVerifyStep
                   ? t("verifyPhone.verifyDescription", {
                       phone: formatPhoneNumberDisplay(
@@ -229,7 +229,7 @@ export function OnboardingVerifyPhonePage({
               )}
 
               {statusMessage ? (
-                <FieldDescription className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-100">
+                <FieldDescription className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-center text-emerald-100">
                   {statusMessage}
                 </FieldDescription>
               ) : null}

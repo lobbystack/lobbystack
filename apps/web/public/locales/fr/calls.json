@@ -33,6 +33,7 @@
     "pendingTranscript": "Ouvrir la transcription",
     "listen": "Écouter",
     "download": "Télécharger l'audio",
+    "copy": "Copier",
     "play": "Lecture",
     "pause": "Pause",
     "audioPending": "Enregistrement en attente"
@@ -123,6 +124,7 @@
       "unknown": "Inconnu"
     },
     "events": {
+      "title": "Événements d'appel",
       "received": "Reçu",
       "connected": "Connecté",
       "transferred": "Transféré",

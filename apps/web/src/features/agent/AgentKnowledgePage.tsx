@@ -1,39 +1,93 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { useAction, useConvex, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useAction, useConvex } from "convex/react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+  type ColumnDef,
+  type PaginationState,
+} from "@tanstack/react-table";
+import { MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Trash2 } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
+import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
+import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { DataTablePagination } from "@/components/data-table/pagination";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { captureAnalyticsException } from "@/lib/analytics";
-import type { AgentSection } from "./sections";
+import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
+import { cn } from "@/lib/utils";
 
 type AgentKnowledgePageProps = {
   businessId: Id<"businesses">;
-  section: AgentSection;
+  section: KnowledgeSection;
 };
 
-type KnowledgeEntry = Doc<"knowledge_documents"> | Doc<"knowledge_snippets">;
+type KnowledgeDocumentRow = Doc<"knowledge_documents"> & {
+  entryType: "document";
+};
 
-type InlineConfirmDeleteButtonProps = {
+type KnowledgeSnippetRow = Doc<"knowledge_snippets"> & {
+  entryType: "snippet";
+};
+
+type KnowledgeRow = KnowledgeDocumentRow | KnowledgeSnippetRow;
+
+type RowActionsMenuProps = {
   deleting: boolean;
   disabled?: boolean;
-  onConfirm: () => void;
+  onDelete: () => void;
 };
 
 const fullDocumentTextMemoryCache = new Map<string, string>();
 const VIEWER_TEXT_SESSION_STORAGE_PREFIX = "agent-knowledge-viewer-text:";
 const MAX_PERSISTED_VIEWER_TEXT_BYTES = 512 * 1024;
+
+function isDocumentRow(row: KnowledgeRow): row is KnowledgeDocumentRow {
+  return row.entryType === "document";
+}
+
+function summarizeText(text: string, maxLength = 180): string {
+  const normalized = text.replace(/\s+/gu, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
+function summarizeTableTitle(text: string): string {
+  return summarizeText(text, 32);
+}
+
+function summarizeTablePreview(text: string): string {
+  return summarizeText(text, 72);
+}
 
 function getViewerCachePrefix(documentId: string): string {
   return `${VIEWER_TEXT_SESSION_STORAGE_PREFIX}${documentId}:`;
@@ -99,108 +153,114 @@ function writeCachedViewerText(document: Doc<"knowledge_documents">, text: strin
   }
 }
 
-function InlineConfirmDeleteButton({
+function RowActionsMenu({
   deleting,
   disabled = false,
-  onConfirm,
-}: InlineConfirmDeleteButtonProps) {
+  onDelete,
+}: RowActionsMenuProps) {
   const { t } = useTranslation("agent");
-  const [isConfirming, setIsConfirming] = useState(false);
-
-  useEffect(() => {
-    if (!isConfirming || deleting) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setIsConfirming(false);
-    }, 3000);
-
-    return () => window.clearTimeout(timeout);
-  }, [deleting, isConfirming]);
-
-  useEffect(() => {
-    if (!deleting) {
-      return;
-    }
-
-    setIsConfirming(false);
-  }, [deleting]);
 
   return (
-    <motion.div layout className="overflow-hidden">
-      <AnimatePresence initial={false} mode="wait">
-        {isConfirming ? (
-          <motion.div
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.96, x: 8 }}
-            initial={{ opacity: 0, scale: 0.96, x: 8 }}
-            key="confirm-delete"
-            transition={{ duration: 0.16, ease: "easeOut" }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("actions.moreOptions")}
+            disabled={disabled || deleting}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onMouseDown={(event) => {
+              event.stopPropagation();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            size="icon-sm"
+            title={t("actions.moreOptions")}
+            type="button"
+            variant="ghost"
           >
-            <Button
-              disabled={disabled || deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onConfirm();
-              }}
-              size="sm"
-              title={t("actions.confirmDelete")}
-              type="button"
-              variant="destructive"
-            >
-              {t("actions.confirmDelete")}
-            </Button>
-          </motion.div>
-        ) : (
-          <motion.div
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.96, x: -8 }}
-            initial={{ opacity: 0, scale: 0.96, x: -8 }}
-            key="delete-icon"
-            transition={{ duration: 0.16, ease: "easeOut" }}
-          >
-            <Button
-              aria-label={t("actions.delete")}
-              disabled={disabled || deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsConfirming(true);
-              }}
-              size="icon-sm"
-              title={t("actions.delete")}
-              type="button"
-              variant="ghost"
-            >
-              <Trash2 />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            <MoreHorizontal />
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        align="end"
+        className="min-w-[9rem] w-auto p-1"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        side="bottom"
+        sideOffset={8}
+      >
+        <DropdownMenuItem
+          className="gap-2.5 px-3 py-2"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          variant="destructive"
+        >
+          <Trash2 />
+          <span>{t("actions.delete")}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePageProps) {
-  const { t } = useTranslation(["agent", "knowledge"]);
+  const { i18n, t } = useTranslation(["agent", "knowledge"]);
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const convex = useConvex();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
-  const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, {
-    businessId,
-    section,
+  const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(
+    api.ai.context.knowledge.listKnowledge,
+    {
+      businessId,
+      section,
+    },
+  );
+  const [searchValue, setSearchValue] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
   });
-  const documents = (knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>;
-  const snippets = (knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>;
-  const entries = [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime);
+  const [deleteCandidate, setDeleteCandidate] = useState<KnowledgeRow | null>(null);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
+  const [expandedDocumentId, setExpandedDocumentId] = useState<string | null>(null);
+  const [editingSnippet, setEditingSnippet] = useState<KnowledgeSnippetRow | null>(null);
   const [viewerTextByDocumentId, setViewerTextByDocumentId] = useState<Record<string, string>>({});
   const [viewerCacheKeyByDocumentId, setViewerCacheKeyByDocumentId] = useState<Record<string, string>>({});
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
-  const visibleEntries = entries.filter((entry) => !optimisticDeletedIds.includes(String(entry._id)));
+  const documents = useMemo(
+    () =>
+      ((knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>).map((document) => ({
+        ...document,
+        entryType: "document" as const,
+      })),
+    [knowledge?.documents],
+  );
+  const snippets = useMemo(
+    () =>
+      ((knowledge?.snippets ?? []) as Array<Doc<"knowledge_snippets">>).map((snippet) => ({
+        ...snippet,
+        entryType: "snippet" as const,
+      })),
+    [knowledge?.snippets],
+  );
+  const rows = useMemo(
+    () => [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime),
+    [documents, snippets],
+  );
+  const visibleRows = useMemo(
+    () => rows.filter((row) => !optimisticDeletedIds.includes(String(row._id))),
+    [optimisticDeletedIds, rows],
+  );
 
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
@@ -251,7 +311,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           : getDocumentStatusLabel(document.status);
 
       return (
-        <span className="inline-flex min-w-56 items-center gap-3 text-sm text-muted-foreground">
+        <span className="inline-flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
           <span>{label}</span>
           <Progress className="w-24" value={progressValue} />
           <span className="min-w-10 text-right text-xs tabular-nums">
@@ -270,12 +330,209 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     );
   }
 
-  async function handleDelete(entry: KnowledgeEntry): Promise<void> {
-    const entryId = String(entry._id);
+  function getDocumentPreviewSummary(document: KnowledgeDocumentRow): string {
+    const textContent = document.textContent?.trim();
+    if (textContent) {
+      return summarizeText(textContent);
+    }
+
+    if (document.status === "error") {
+      return document.error ?? t(`agent:sections.${section}.previewError`);
+    }
+
+    if (document.status === "queued" || document.status === "indexing") {
+      return t(`agent:sections.${section}.previewPending`);
+    }
+
+    if (section === "knowledge") {
+      return t("agent:table.documentPreviewHint");
+    }
+
+    return t("agent:table.documentPreviewUnavailable");
+  }
+
+  const filteredRows = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+
+    return visibleRows.filter((row) => {
+      const preview = isDocumentRow(row)
+        ? summarizeTablePreview(getDocumentPreviewSummary(row))
+        : summarizeTablePreview(row.content);
+      const haystack = [row.title, preview, row.tags.join(" ")]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return query.length === 0 || haystack.includes(query);
+    });
+  }, [searchValue, visibleRows, section, t]);
+
+  const columns = useMemo<Array<ColumnDef<KnowledgeRow>>>(
+    () => [
+      {
+        accessorFn: (row) => row.title,
+        id: "title",
+        header: () => t("agent:table.title"),
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
+              title={row.original.title}
+            >
+              {summarizeTableTitle(row.original.title)}
+            </span>
+            {isDocumentRow(row.original) ? (
+              <Badge className="shrink-0" variant="outline">
+                {t(`agent:sections.${section}.documentBadge`)}
+              </Badge>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        accessorFn: (row) =>
+          isDocumentRow(row)
+            ? summarizeTablePreview(getDocumentPreviewSummary(row))
+            : summarizeTablePreview(row.content),
+        id: "preview",
+        header: () => t("agent:table.preview"),
+        cell: ({ row }) => (
+          <span
+            className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
+            title={isDocumentRow(row.original)
+              ? getDocumentPreviewSummary(row.original)
+              : row.original.content}
+          >
+            {isDocumentRow(row.original)
+              ? summarizeTablePreview(getDocumentPreviewSummary(row.original))
+              : summarizeTablePreview(row.original.content)}
+          </span>
+        ),
+      },
+      {
+        accessorFn: (row) => row.tags.join(" "),
+        id: "tags",
+        header: () => t("agent:table.tags"),
+        cell: ({ row }) => {
+          const [firstTag, ...remainingTags] = row.original.tags;
+          if (!firstTag) {
+            return <span className="text-sm text-muted-foreground">-</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{firstTag}</Badge>
+              {remainingTags.length > 0 ? <Badge variant="outline">+{remainingTags.length}</Badge> : null}
+            </div>
+          );
+        },
+      },
+      {
+        accessorFn: (row) =>
+          isDocumentRow(row) ? getDocumentStatusLabel(row.status) : t(`agent:sections.${section}.status.indexed`),
+        id: "status",
+        header: () => t("agent:table.status"),
+        cell: ({ row }) =>
+          isDocumentRow(row.original) ? (
+            renderDocumentStatus(row.original)
+          ) : (
+            <Badge variant="secondary">{t(`agent:sections.${section}.status.indexed`)}</Badge>
+          ),
+      },
+      {
+        accessorFn: (row) =>
+          formatDateTime(row._creationTime, locale, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }),
+        id: "added",
+        header: () => <span className="block text-right">{t("agent:table.added")}</span>,
+        cell: ({ row }) => (
+          <span className="block truncate text-right text-sm text-muted-foreground">
+            {formatDateTime(row.original._creationTime, locale, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex w-16 justify-end pr-1">
+            <RowActionsMenu
+              deleting={deletingEntryId === String(row.original._id)}
+              onDelete={() => {
+                setDeleteCandidate(row.original);
+              }}
+            />
+          </div>
+        ),
+        meta: {
+          className: "w-16 text-right",
+        },
+      },
+    ],
+    [deletingEntryId, locale, section, t],
+  );
+
+  const table = useReactTable({
+    columns,
+    data: filteredRows,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
+    state: {
+      pagination,
+    },
+  });
+
+  useEffect(() => {
+    setOptimisticDeletedIds((current) =>
+      current.filter((id) => rows.some((row) => String(row._id) === id)),
+    );
+  }, [rows]);
+
+  useEffect(() => {
+    if (expandedDocumentId && !filteredRows.some((row) => String(row._id) === expandedDocumentId)) {
+      setExpandedDocumentId(null);
+    }
+  }, [expandedDocumentId, filteredRows]);
+
+  useEffect(() => {
+    if (editingSnippet && !filteredRows.some((row) => row.entryType === "snippet" && row._id === editingSnippet._id)) {
+      setEditingSnippet(null);
+    }
+  }, [editingSnippet, filteredRows]);
+
+  useEffect(() => {
+    setPagination((current) => {
+      const pageCount = Math.max(1, Math.ceil(filteredRows.length / current.pageSize));
+      if (current.pageIndex <= pageCount - 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        pageIndex: pageCount - 1,
+      };
+    });
+  }, [filteredRows.length]);
+
+  async function handleDelete(row: KnowledgeRow): Promise<void> {
+    const entryId = String(row._id);
     setDeletingEntryId(entryId);
-    setOptimisticDeletedIds((current) => [...current, entryId]);
+    setOptimisticDeletedIds((current) => (current.includes(entryId) ? current : [...current, entryId]));
+    if (row.entryType === "snippet" && editingSnippet?._id === row._id) {
+      setEditingSnippet(null);
+    }
+    if (row.entryType === "document" && expandedDocumentId === entryId) {
+      setExpandedDocumentId(null);
+    }
+
     try {
-      if ("sourceType" in entry) {
+      if (isDocumentRow(row)) {
         clearViewerCacheForDocument(entryId);
         setViewerTextByDocumentId((current) => {
           if (!(entryId in current)) {
@@ -295,15 +552,14 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         });
         await deleteKnowledgeEntry({
           businessId,
-          documentId: entry._id,
+          documentId: row._id,
         });
       } else {
         await deleteKnowledgeEntry({
           businessId,
-          snippetId: entry._id,
+          snippetId: row._id,
         });
       }
-      setOptimisticDeletedIds((current) => current.filter((id) => id !== entryId));
     } catch (error) {
       setOptimisticDeletedIds((current) => current.filter((id) => id !== entryId));
       throw error;
@@ -312,7 +568,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
-  async function loadFullDocumentText(document: Doc<"knowledge_documents">): Promise<void> {
+  async function loadFullDocumentText(document: KnowledgeDocumentRow): Promise<void> {
     const documentId = String(document._id);
     const loadedViewerText = getLoadedViewerText(document);
     const cachedText = readCachedViewerText(getViewerCacheKey(document));
@@ -383,95 +639,222 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
+  function renderDocumentPreview(document: KnowledgeDocumentRow) {
+    const documentId = String(document._id);
+    const loadedViewerText = getLoadedViewerText(document);
+
+    if (
+      loadingViewerIds.includes(documentId) &&
+      !loadedViewerText?.trim() &&
+      !document.textContent?.trim()
+    ) {
+      return (
+        <div className="space-y-3 rounded-md border border-border/70 p-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton className="h-4 w-full" key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Textarea
+        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
+        rows={8}
+        readOnly
+        value={
+          document.status === "error"
+            ? viewerErrorsByDocumentId[documentId] ??
+              document.error ??
+              t(`agent:sections.${section}.previewError`)
+            : loadedViewerText?.trim()
+              ? loadedViewerText.trim()
+              : document.textContent?.trim()
+                ? document.textContent.trim()
+                : t(`agent:sections.${section}.previewPending`)
+        }
+      />
+    );
+  }
+
+  const emptyMessage =
+    searchValue.trim().length > 0 ? t("agent:table.empty") : t(`agent:sections.${section}.emptyState`);
+
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        {knowledge && visibleEntries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-            <p>{t(`agent:sections.${section}.emptyState`)}</p>
-          </div>
-        ) : null}
-
-        {visibleEntries.map((entry) => (
-          (() => {
-            const loadedViewerText =
-              "sourceType" in entry ? getLoadedViewerText(entry) : undefined;
-
-            return (
-              <Collapsible
-                className="group rounded-2xl border border-border/70 bg-card"
-                key={entry._id}
-                onOpenChange={(open) => {
-                  if (open && "sourceType" in entry) {
-                    void loadFullDocumentText(entry);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-2 p-4">
-                  <CollapsibleTrigger className="flex min-w-0 flex-1 items-center outline-none">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <span className="truncate font-semibold">{entry.title}</span>
-                      {"sourceType" in entry ? (
-                        <>
-                          <Badge variant="outline">{t(`agent:sections.${section}.documentBadge`)}</Badge>
-                          {renderDocumentStatus(entry)}
-                          {entry.tags?.length && entry.tags[0] ? (
-                            <Badge variant="secondary">{entry.tags[0]}</Badge>
-                          ) : null}
-                        </>
-                      ) : entry.tags?.length && entry.tags[0] ? (
-                        <Badge variant="secondary">{entry.tags[0]}</Badge>
-                      ) : null}
-                    </div>
-                  </CollapsibleTrigger>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <InlineConfirmDeleteButton
-                      deleting={deletingEntryId === String(entry._id)}
-                      onConfirm={() => {
-                        void handleDelete(entry);
-                      }}
-                    />
-                    <CollapsibleTrigger className="inline-flex items-center justify-center rounded-md p-1 outline-none">
-                      <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-open:rotate-180" />
-                    </CollapsibleTrigger>
-                  </div>
-                </div>
-                <CollapsibleContent>
-                  <div className="px-4 pb-5">
-                    {"sourceType" in entry ? (
-                      <Textarea
-                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                        rows={8}
-                        readOnly
-                        value={
-                          entry.status === "error"
-                            ? viewerErrorsByDocumentId[String(entry._id)] ??
-                              entry.error ??
-                              t(`agent:sections.${section}.previewError`)
-                            : loadedViewerText?.trim()
-                              ? loadedViewerText.trim()
-                              : loadingViewerIds.includes(String(entry._id))
-                                ? t(`agent:sections.${section}.previewPending`)
-                                : entry.textContent?.trim()
-                                  ? entry.textContent.trim()
-                                  : t(`agent:sections.${section}.previewPending`)
-                        }
-                      />
-                    ) : (
-                      <Textarea
-                        className="max-h-80 resize-none overflow-y-auto text-sm leading-relaxed"
-                        rows={8}
-                        readOnly
-                        value={entry.content}
-                      />
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })()
-        ))}
+      <div className="relative max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-10"
+          onChange={(event) => setSearchValue(event.target.value)}
+          placeholder={t("agent:table.searchPlaceholder")}
+          value={searchValue}
+        />
       </div>
+
+      {isLoadingKnowledge ? (
+        <TableCardSkeleton columns={6} />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
+            <Table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[34%]" />
+                <col className="w-[10%]" />
+                <col className="w-[12%]" />
+                <col className="w-[18%]" />
+                <col className="w-[8%]" />
+              </colgroup>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const className =
+                        header.column.id === "added" || header.column.id === "actions"
+                            ? "text-right"
+                            : header.column.columnDef.meta &&
+                                typeof header.column.columnDef.meta === "object" &&
+                                "className" in header.column.columnDef.meta
+                              ? String(header.column.columnDef.meta.className)
+                              : undefined;
+
+                      return (
+                        <TableHead className={className} key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => {
+                  const rowData = row.original;
+                  const rowId = String(rowData._id);
+                  const rowIsInteractive =
+                    rowData.entryType === "snippet" || rowData.entryType === "document";
+                  const isSelected =
+                    rowData.entryType === "snippet"
+                      ? editingSnippet?._id === rowData._id
+                      : expandedDocumentId === rowId;
+                  const isExpandedDocument = rowData.entryType === "document" && expandedDocumentId === rowId;
+
+                  return (
+                    <Fragment key={row.id}>
+                      <TableRow
+                        className={cn(rowIsInteractive ? "h-12 cursor-pointer data-[state=selected]:bg-muted/40" : "h-12 data-[state=selected]:bg-muted/40")}
+                        data-state={isSelected ? "selected" : undefined}
+                        onClick={() => {
+                          if (rowData.entryType === "snippet") {
+                            setExpandedDocumentId(null);
+                            setEditingSnippet(rowData);
+                            return;
+                          }
+
+                          const nextExpandedId = expandedDocumentId === rowId ? null : rowId;
+                          setEditingSnippet(null);
+                          setExpandedDocumentId(nextExpandedId);
+                          if (nextExpandedId) {
+                            void loadFullDocumentText(rowData);
+                          }
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const className =
+                            cell.column.id === "title"
+                              ? "max-w-0 overflow-hidden"
+                              : cell.column.id === "preview"
+                                ? "max-w-0 overflow-hidden"
+                                : cell.column.id === "added"
+                                  ? "w-0 max-w-0 text-right whitespace-nowrap"
+                                  : cell.column.id === "actions"
+                                ? "text-right"
+                                : cell.column.columnDef.meta &&
+                                    typeof cell.column.columnDef.meta === "object" &&
+                                    "className" in cell.column.columnDef.meta
+                                  ? String(cell.column.columnDef.meta.className)
+                                  : undefined;
+
+                          return (
+                            <TableCell className={className} key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                      {rowData.entryType === "document" && isExpandedDocument ? (
+                        <TableRow className="bg-muted/20 hover:bg-muted/20">
+                          <TableCell className="p-4" colSpan={row.getVisibleCells().length}>
+                            {renderDocumentPreview(rowData)}
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={columns.length}>
+                      {emptyMessage}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("agent:pagination.rowsPerPage"),
+              pageOf: (page, total) => t("agent:pagination.pageOf", { page, total }),
+              firstPage: t("agent:pagination.firstPage"),
+              previousPage: t("agent:pagination.previousPage"),
+              nextPage: t("agent:pagination.nextPage"),
+              lastPage: t("agent:pagination.lastPage"),
+              goToPage: (page) => t("agent:pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+          <ConfirmDeleteDialog
+            cancelLabel={t("agent:actions.deleteCancel")}
+            confirmLabel={t("agent:actions.delete")}
+            description={t("agent:actions.deleteDescription")}
+            onConfirm={async () => {
+              if (!deleteCandidate) {
+                return;
+              }
+
+              await handleDelete(deleteCandidate);
+            }}
+            onOpenChange={(open) => {
+              if (!open && !deletingEntryId) {
+                setDeleteCandidate(null);
+              }
+            }}
+            open={deleteCandidate !== null}
+            pending={
+              deleteCandidate !== null &&
+              deletingEntryId === String(deleteCandidate._id)
+            }
+            title={t("agent:actions.deleteTitle")}
+          />
+        </>
+      )}
+
+      <AddKnowledgeSheet
+        businessId={businessId}
+        mode="edit"
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingSnippet(null);
+          }
+        }}
+        open={editingSnippet !== null}
+        section={section}
+        snippet={editingSnippet}
+      />
     </div>
   );
 }

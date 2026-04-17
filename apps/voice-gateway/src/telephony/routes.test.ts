@@ -96,6 +96,7 @@ describe("voice routes", () => {
     fetchSnapshotForPhoneNumberMock.mockResolvedValue(snapshot);
     startVoiceCallMock.mockResolvedValue({
       callId: "call_123",
+      blocked: false,
       conversationId: "conversation_123",
       contactId: "contact_123",
     });
@@ -172,6 +173,38 @@ describe("voice routes", () => {
       "This business has reached its voice usage limit. Please try again later.",
     );
     expect(response.body).toContain("<Hangup />");
+    expect(response.body).not.toContain("<Stream");
+
+    await server.close();
+  });
+
+  it("returns a silent hangup when the contact is blocked", async () => {
+    const server = createServer();
+    const payload = {
+      CallSid: "CA123",
+      From: "+14165550123",
+      To: "+14165550000",
+    };
+
+    startVoiceCallMock.mockResolvedValueOnce({
+      callId: "call_123",
+      blocked: true,
+      contactId: "contact_123",
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/twilio/voice/inbound",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-twilio-signature": signTwilioRequest("/twilio/voice/inbound", payload),
+      },
+      payload: new URLSearchParams(payload).toString(),
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain("<Hangup />");
+    expect(response.body).not.toContain("<Say>");
     expect(response.body).not.toContain("<Stream");
 
     await server.close();

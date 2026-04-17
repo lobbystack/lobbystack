@@ -1,4 +1,3 @@
-import { useQuery } from "convex/react";
 import {
   CalendarDays,
   Clock3,
@@ -16,7 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  ChartBlockSkeleton,
+  MetricCardGridSkeleton,
+} from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsChart } from "@/features/home/components/analytics-chart";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type AnalyticsProps = {
   businessId: Id<"businesses">;
@@ -69,9 +74,12 @@ function formatDuration(seconds: number): string {
 
 export function Analytics({ businessId }: AnalyticsProps) {
   const { i18n, t } = useTranslation("dashboard");
-  const summary = useQuery(api.dashboard.overview.getAnalyticsSummary, { businessId }) as
-    | AnalyticsSummary
-    | undefined;
+  const rememberedSummary = useRememberedConvexQuery(
+    api.dashboard.overview.getAnalyticsSummary,
+    { businessId },
+  );
+  const summary = rememberedSummary.data as AnalyticsSummary | undefined;
+  const isLoadingSummary = rememberedSummary.isInitialLoading;
 
   function formatPercentDelta(deltaPercent: number): string {
     if (deltaPercent === 0) {
@@ -129,63 +137,108 @@ export function Analytics({ businessId }: AnalyticsProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("home.analytics.chart.title")}</CardTitle>
-          <CardDescription>{t("home.analytics.chart.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-6">
-          <AnalyticsChart data={summary?.weeklySeries ?? []} />
-        </CardContent>
-      </Card>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <Card key={card.key}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold">{card.title}</CardTitle>
-              <card.icon className="h-4 w-4 text-muted-foreground" />
+      {isLoadingSummary ? (
+        <>
+          <ChartBlockSkeleton />
+          <MetricCardGridSkeleton />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+            <div className="rounded-xl border bg-card p-6 lg:col-span-4">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <div className="mt-6 space-y-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div className="flex items-center justify-between gap-3" key={index}>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-2.5 w-full rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              <div className="mt-6 space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div className="flex items-center justify-between gap-3" key={index}>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-2.5 w-full rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-10" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("home.analytics.chart.title")}</CardTitle>
+              <CardDescription>{t("home.analytics.chart.description")}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-extrabold tracking-tight">{card.value}</div>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
+            <CardContent className="px-6">
+              <AnalyticsChart data={summary?.weeklySeries ?? []} />
             </CardContent>
           </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-        <Card className="col-span-1 lg:col-span-4">
-          <CardHeader>
-            <CardTitle>{t("home.analytics.outcomes.title")}</CardTitle>
-            <CardDescription>{t("home.analytics.outcomes.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SimpleBarList
-              barClass="bg-primary"
-              items={(summary?.outcomes ?? []).map((item) => ({
-                name: t(`home.analytics.outcomes.labels.${item.key}`),
-                value: item.value,
-              }))}
-              valueFormatter={(value) => value.toLocaleString(i18n.language)}
-            />
-          </CardContent>
-        </Card>
-        <Card className="col-span-1 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>{t("home.analytics.channels.title")}</CardTitle>
-            <CardDescription>{t("home.analytics.channels.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SimpleBarList
-              barClass="bg-muted-foreground"
-              items={(summary?.channels ?? []).map((item) => ({
-                name: t(`home.analytics.channels.labels.${item.key}`),
-                value: item.value,
-              }))}
-              valueFormatter={(value) => `${value}%`}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {cards.map((card) => (
+              <Card key={card.key}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle>{card.title}</CardTitle>
+                  <card.icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="type-metric">{card.value}</div>
+                  <p className="type-meta">{card.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
+            <Card className="col-span-1 lg:col-span-4">
+              <CardHeader>
+                <CardTitle>{t("home.analytics.outcomes.title")}</CardTitle>
+                <CardDescription>{t("home.analytics.outcomes.description")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SimpleBarList
+                  barClass="bg-primary"
+                  items={(summary?.outcomes ?? []).map((item) => ({
+                    name: t(`home.analytics.outcomes.labels.${item.key}`),
+                    value: item.value,
+                  }))}
+                  valueFormatter={(value) => value.toLocaleString(i18n.language)}
+                />
+              </CardContent>
+            </Card>
+            <Card className="col-span-1 lg:col-span-3">
+              <CardHeader>
+                <CardTitle>{t("home.analytics.channels.title")}</CardTitle>
+                <CardDescription>{t("home.analytics.channels.description")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SimpleBarList
+                  barClass="bg-muted-foreground"
+                  items={(summary?.channels ?? []).map((item) => ({
+                    name: t(`home.analytics.channels.labels.${item.key}`),
+                    value: item.value,
+                  }))}
+                  valueFormatter={(value) => `${value}%`}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -209,12 +262,14 @@ function SimpleBarList({
         return (
           <li className="flex items-center justify-between gap-3" key={item.name}>
             <div className="min-w-0 flex-1">
-              <div className="mb-1 truncate text-xs text-muted-foreground">{item.name}</div>
+              <div className="type-meta mb-1 truncate">{item.name}</div>
               <div className="h-2.5 w-full rounded-full bg-muted">
                 <div className={`h-2.5 rounded-full ${barClass}`} style={{ width }} />
               </div>
             </div>
-            <div className="ps-2 text-xs font-medium tabular-nums">{valueFormatter(item.value)}</div>
+            <div className="type-meta ps-2 tabular-nums text-foreground">
+              {valueFormatter(item.value)}
+            </div>
           </li>
         );
       })}

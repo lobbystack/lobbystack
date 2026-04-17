@@ -361,6 +361,8 @@ export default defineSchema({
     smsConsentStatus: v.optional(v.string()),
     smsConsentUpdatedAt: v.optional(v.string()),
     smsConsentSource: v.optional(v.string()),
+    operatorBlockedAt: v.optional(v.string()),
+    operatorBlockedByUserId: v.optional(v.id("users")),
   })
     .index("by_business_id_and_phone", ["businessId", "phone"])
     .index("by_business_id_and_email", ["businessId", "email"]),

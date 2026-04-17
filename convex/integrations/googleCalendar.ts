@@ -203,7 +203,7 @@ function buildSettingsRedirectUrl(input: {
   message?: string;
 }): string {
   const { appBaseUrl } = requireGoogleEnv();
-  const url = new URL("/settings/integrations", appBaseUrl);
+  const url = new URL("/integrations", appBaseUrl);
   url.searchParams.set("calendar", "google");
   url.searchParams.set("status", input.status);
   if (input.message) {

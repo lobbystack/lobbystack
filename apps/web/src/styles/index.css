@@ -164,6 +164,62 @@
   padding-inline: 2rem;
 }
 
+@utility type-page-title {
+  @apply font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground;
+}
+
+@utility type-page-description {
+  @apply text-[15px] leading-7 text-muted-foreground;
+}
+
+@utility type-section-title {
+  @apply font-heading text-xl leading-tight font-semibold tracking-tight text-foreground;
+}
+
+@utility type-section-description {
+  @apply text-[15px] leading-7 text-muted-foreground;
+}
+
+@utility type-item-title {
+  @apply font-heading text-base leading-6 font-medium text-foreground;
+}
+
+@utility type-body {
+  @apply text-[15px] leading-6 text-foreground;
+}
+
+@utility type-body-muted {
+  @apply text-[15px] leading-6 text-muted-foreground;
+}
+
+@utility type-technical-value {
+  @apply text-sm leading-6 font-mono text-foreground;
+}
+
+@utility type-control {
+  @apply text-[15px] leading-6;
+}
+
+@utility type-meta {
+  @apply text-xs font-medium text-muted-foreground;
+}
+
+@utility type-table-head {
+  @apply text-[13px] font-medium text-muted-foreground;
+}
+
+@utility type-metric {
+  @apply text-2xl leading-none font-semibold tracking-tight text-foreground;
+}
+
+@utility type-empty-title {
+  @apply text-base leading-6 font-medium text-foreground;
+}
+
+@utility type-empty-description {
+  @apply text-[15px] leading-6 text-muted-foreground;
+}
+
 @utility no-scrollbar {
   &::-webkit-scrollbar {
     display: none;

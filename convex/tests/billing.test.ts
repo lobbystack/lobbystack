@@ -371,6 +371,7 @@ describe("billing", () => {
       plan: "pro",
       aiSmsEnabled: false,
       overagesBillable: true,
+      monthlyChargeCents: 1_500,
       canPurchaseAiSmsAddon: true,
     });
     expect(beforePolicy).toEqual({
@@ -403,6 +404,7 @@ describe("billing", () => {
     expect(afterAddon).toMatchObject({
       plan: "pro",
       aiSmsEnabled: true,
+      monthlyChargeCents: 2_000,
       canPurchaseAiSmsAddon: false,
     });
     expect(afterPolicy).toEqual({

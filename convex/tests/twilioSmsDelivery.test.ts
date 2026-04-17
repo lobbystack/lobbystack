@@ -506,6 +506,74 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("stores inbound SMS for blocked contacts without generating a reply", async () => {
+    const t = createTestHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-contact-blocked",
+        name: "Twilio Contact Blocked",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550129",
+      });
+      const userId = await ctx.db.insert("users", {
+        authSubject: "twilio-contact-blocked-operator",
+        displayName: "Blocked Operator",
+      });
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        phone: "+14165550193",
+        operatorBlockedAt: "2026-04-15T11:00:00.000Z",
+        operatorBlockedByUserId: userId,
+      });
+      await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550129",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-blocked-1",
+      From: "+14165550193",
+      To: smsNumber,
+      Body: "Please reply to me",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]?.direction).toBe("inbound");
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-blocked-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "conversations",
+        status: "processed_no_reply",
+      });
+    });
+  });
+
   it("clears opt-out on START and resumes reply generation", async () => {
     const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
@@ -563,6 +631,77 @@ describe("Twilio SMS delivery flow", () => {
         smsConsentStatus: "subscribed",
         smsConsentSource: "twilio_opt_out:START",
       });
+    });
+  });
+
+  it("keeps a manual contact block in place when START clears carrier opt-out", async () => {
+    const t = createTestHarness();
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-start-manual-block",
+        name: "Twilio Start Manual Block",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550130",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550130",
+      };
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-stop-blocked-1",
+      From: "+14165550194",
+      To: smsNumber,
+      Body: "STOP",
+      OptOutType: "STOP",
+    });
+
+    await t.run(async (ctx) => {
+      const blockerUserId = await ctx.db.insert("users", {
+        authSubject: "twilio-start-blocker",
+        displayName: "Manual Blocker",
+      });
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550194"),
+        )
+        .unique();
+
+      await ctx.db.patch(contact!._id, {
+        operatorBlockedAt: "2026-04-15T13:00:00.000Z",
+        operatorBlockedByUserId: blockerUserId,
+      });
+    });
+
+    await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-start-blocked-1",
+      From: "+14165550194",
+      To: smsNumber,
+      Body: "START",
+      OptOutType: "START",
+    });
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550194"),
+        )
+        .unique();
+      expect(contact).toMatchObject({
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "twilio_opt_out:START",
+      });
+      expect(contact?.operatorBlockedAt).toBe("2026-04-15T13:00:00.000Z");
+      expect(contact?.operatorBlockedByUserId).toBeDefined();
     });
   });
 

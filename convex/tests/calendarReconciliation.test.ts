@@ -363,6 +363,19 @@ afterEach(() => {
 });
 
 describe("calendar reconciliation backend", () => {
+  it("builds Google callback redirects against the integrations route", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const result = await t.action(internal.integrations.googleCalendar.buildCallbackRedirect, {
+      status: "success",
+      message: "Connected",
+    });
+
+    expect(result.redirectUrl).toBe(
+      "https://app.example.com/integrations?calendar=google&status=success&message=Connected",
+    );
+  });
+
   it("marks bookings without a connected calendar as not_required", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, serviceId } = await t.run(async (ctx) => {

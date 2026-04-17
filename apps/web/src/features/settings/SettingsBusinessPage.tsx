@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import {
+  setCachedConvexQuery,
+  useCachedConvexQuery,
+} from "@/lib/cached-convex-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +26,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Item,
   ItemActions,
@@ -37,10 +42,16 @@ type SettingsBusinessPageProps = {
 
 export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const { t } = useTranslation("settings");
-  const configuration = useQuery(api.businesses.catalog.getBusinessConfiguration, {
-    businessId: props.businessId,
-  });
-  const currentUser = useQuery(api.users.current, {});
+  const { data: configuration, isLoading: isLoadingConfigurationData } = useCachedConvexQuery(
+    api.businesses.catalog.getBusinessSettingsAccount,
+    {
+      businessId: props.businessId,
+    },
+  );
+  const { data: currentUser, isLoading: isLoadingCurrentUser } = useCachedConvexQuery(
+    api.users.current,
+    {},
+  );
   const updateBusinessName = useMutation(api.businesses.catalog.updateBusinessName);
   const changeEmail = useAction(api.businesses.catalog.changeEmail);
   const changePassword = useAction(api.businesses.catalog.changePassword);
@@ -59,6 +70,10 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);
   const [isSavingBusinessName, setIsSavingBusinessName] = useState(false);
+  const isLoadingBusinessName = isLoadingConfigurationData;
+  const isLoadingEmail = isLoadingCurrentUser;
+  const configuredBusinessName = configuration?.business?.name ?? "";
+  const displayBusinessName = businessName || configuredBusinessName;
 
   useEffect(() => {
     const nextName = configuration?.business?.name;
@@ -84,9 +99,17 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     setBusinessNameStatus(null);
 
     try {
-      await updateBusinessName({
+      const result = await updateBusinessName({
         businessId: props.businessId,
         name: businessName,
+      });
+      setCachedConvexQuery(api.businesses.catalog.getBusinessSettingsAccount, {
+        businessId: props.businessId,
+      }, {
+        business: {
+          _id: props.businessId,
+          name: result.name,
+        },
       });
       setBusinessNameStatus(t("account.businessName.saved"));
       setIsBusinessNameDialogOpen(false);
@@ -142,13 +165,19 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="w-full max-w-xl">
+      <div className="w-full">
         <ItemGroup spacing="section">
           <Item variant="outline">
             <ItemContent>
               <ItemTitle>{t("account.businessName.label")}</ItemTitle>
               <ItemDescription>{t("account.businessName.description")}</ItemDescription>
-              <p className="text-sm text-foreground">{businessName}</p>
+              {isLoadingBusinessName ? (
+                <Skeleton className="h-6 w-48 max-w-full" />
+              ) : (
+                <p className="text-[15px] leading-6 text-foreground">
+                  {displayBusinessName}
+                </p>
+              )}
               {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
             <ItemActions>
@@ -156,12 +185,14 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
                 onOpenChange={(open) => {
                   setIsBusinessNameDialogOpen(open);
                   if (open) {
-                    setBusinessName(configuration?.business?.name ?? businessName);
+                    setBusinessName(configuredBusinessName || businessName);
                   }
                 }}
                 open={isBusinessNameDialogOpen}
               >
-                <DialogTrigger render={<Button variant="outline" />}>
+                <DialogTrigger
+                  render={<Button disabled={isLoadingBusinessName} size="sm" variant="outline" />}
+                >
                   {t("account.actions.change")}
                 </DialogTrigger>
                 <DialogContent>
@@ -208,8 +239,10 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemContent>
                 <ItemTitle>{t("account.changeEmail.title")}</ItemTitle>
                 <ItemDescription>{t("account.changeEmail.description")}</ItemDescription>
-                {currentUser?.email ? (
-                  <p className="text-sm text-foreground">
+                {isLoadingEmail ? (
+                  <Skeleton className="h-6 w-64 max-w-full" />
+                ) : currentUser?.email ? (
+                  <p className="text-[15px] leading-6 text-foreground">
                     {t("account.changeEmail.currentEmail", { email: currentUser.email })}
                   </p>
                 ) : null}
@@ -217,7 +250,9 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               </ItemContent>
               <ItemActions>
                 <Dialog onOpenChange={setIsEmailDialogOpen} open={isEmailDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
+                  <DialogTrigger
+                    render={<Button disabled={isLoadingEmail} size="sm" variant="outline" />}
+                  >
                     {t("account.actions.change")}
                   </DialogTrigger>
                   <DialogContent>
@@ -272,12 +307,14 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               <ItemContent>
                 <ItemTitle>{t("account.changePassword.title")}</ItemTitle>
                 <ItemDescription>{t("account.changePassword.description")}</ItemDescription>
-                <div className="text-lg leading-none text-foreground">••••••••</div>
+                <div className="text-[15px] font-medium leading-6 text-foreground">
+                  ••••••••
+                </div>
                 {passwordStatus ? <ItemDescription>{passwordStatus}</ItemDescription> : null}
               </ItemContent>
               <ItemActions>
                 <Dialog onOpenChange={setIsPasswordDialogOpen} open={isPasswordDialogOpen}>
-                  <DialogTrigger render={<Button variant="outline" />}>
+                  <DialogTrigger render={<Button size="sm" variant="outline" />}>
                     {t("account.actions.change")}
                   </DialogTrigger>
                   <DialogContent>

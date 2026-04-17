@@ -1,6 +1,7 @@
 import { Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { SidebarUserSkeleton } from "@/components/loading-skeletons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,11 +22,22 @@ import type { User } from "@/components/layout/sidebar-types";
 type NavUserProps = {
   onSignOut: () => void;
   user: User;
+  isLoading?: boolean;
 };
 
-export function NavUser({ onSignOut, user }: NavUserProps) {
+export function NavUser({ onSignOut, user, isLoading = false }: NavUserProps) {
   const { isMobile } = useSidebar();
   const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
+
+  if (isLoading) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarUserSkeleton />
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <SidebarMenu>
@@ -50,7 +62,7 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="min-w-56 rounded-lg"
+            className="min-w-56 rounded-xl"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
@@ -74,11 +86,11 @@ export function NavUser({ onSignOut, user }: NavUserProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link to="/settings" />}>
+              <DropdownMenuItem render={<Link to="/settings/billing" />}>
                 <CreditCard />
                 Billing
               </DropdownMenuItem>
-              <DropdownMenuItem render={<Link to="/settings/integrations" />}>
+              <DropdownMenuItem render={<Link to="/integrations" />}>
                 <Bell />
                 Notifications
               </DropdownMenuItem>

@@ -329,6 +329,61 @@ export const getBusinessConfiguration = query({
   },
 });
 
+export const getBusinessSettingsAccount = query({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.businessId);
+    const business = await ctx.db.get(args.businessId);
+
+    if (!business) {
+      return {
+        business: null,
+      };
+    }
+
+    return {
+      business: {
+        _id: business._id,
+        name: business.name,
+      },
+    };
+  },
+});
+
+export const getAgentBasicSettings = query({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.businessId);
+    const [business, profile] = await Promise.all([
+      ctx.db.get(args.businessId),
+      ctx.db
+        .query("receptionist_profiles")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .unique(),
+    ]);
+
+    return {
+      business: business
+        ? {
+            _id: business._id,
+            defaultLocale: business.defaultLocale,
+          }
+        : null,
+      profile: profile
+        ? {
+            _id: profile._id,
+            greeting: profile.greeting,
+            transferNumber: profile.transferNumber,
+          }
+        : null,
+    };
+  },
+});
+
 export const updateBusinessName = mutation({
   args: {
     businessId: v.id("businesses"),

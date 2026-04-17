@@ -39,7 +39,7 @@ type TestContext = Parameters<TestRunFunction>[0];
 
 async function seedSmsConversation(
   t: ConvexHarness,
-  input: { subject: string; optedOut?: boolean },
+  input: { subject: string; blocked?: boolean; optedOut?: boolean },
 ) {
   const seeded = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
@@ -72,6 +72,12 @@ async function seedSmsConversation(
       phone: "+14165550198",
       name: "Taylor Customer",
       ...(input.optedOut ? { smsConsentStatus: "opted_out" } : {}),
+      ...(input.blocked
+        ? {
+            operatorBlockedAt: "2026-04-15T12:00:00.000Z",
+            operatorBlockedByUserId: userId,
+          }
+        : {}),
     });
     const conversationId = await ctx.db.insert("conversations", {
       businessId,
@@ -832,6 +838,49 @@ describe("Dashboard SMS replies", () => {
 
       expect(messages).toHaveLength(1);
       expect(messages[0]?.direction).toBe("inbound");
+    });
+  });
+
+  it("blocks dashboard SMS replies before Twilio send when the contact is blocked", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-blocked-contact",
+      blocked: true,
+    });
+
+    const attachmentId = await t.run(async (ctx) => {
+      return await storeAttachment(ctx, {
+        content: "pdf-file",
+        contentType: "application/pdf",
+        fileName: "details.pdf",
+        businessId,
+        conversationId,
+        userId,
+      });
+    });
+
+    await expect(
+      authed.action(api.dashboard.messages.sendSmsReply, {
+        businessId,
+        conversationId,
+        body: "",
+        attachmentIds: [attachmentId],
+      }),
+    ).rejects.toThrow("This contact is blocked.");
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+        .collect();
+      const stagedAttachment = await ctx.db.get("message_attachment_uploads", attachmentId);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]?.direction).toBe("inbound");
+      expect(stagedAttachment?.status).toBe("staged");
+      expect(stagedAttachment?.sentMessageId).toBeUndefined();
     });
   });
 

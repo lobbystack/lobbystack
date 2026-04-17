@@ -18,6 +18,7 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
   const section = getAgentSectionFromPathname(location.pathname);
   const isBasicSettingsRoute =
     location.pathname === "/agent/basic-settings" || location.pathname === "/agent";
+  const isKnowledgeRoute = section === "knowledge" || section === "services" || section === "rules";
 
   if (!businessId) {
     return <BusinessSetupCard />;
@@ -51,10 +52,10 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <section className="flex flex-1 flex-col gap-6">
       <PageHeader
         actions={
-          !isBasicSettingsRoute ? (
+          !isBasicSettingsRoute && isKnowledgeRoute ? (
             <>
               {section === "knowledge" ? (
                 <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
@@ -69,6 +70,6 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
       <div className="w-full">
         <Outlet />
       </div>
-    </div>
+    </section>
   );
 }

@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type ChangeEvent,
 } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import {
   ArrowLeft,
   ChevronRight,
@@ -31,12 +31,16 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, formatInboxTimestamp } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import { cn } from "@/lib/utils";
 
 type MessagesPageProps = {
@@ -49,6 +53,7 @@ type ConversationSummary = {
   contactName: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
+  isBlocked: boolean;
   lastMessageBody: string | null;
   lastMessagePreviewKind: "text" | "attachment_image" | "attachment_file";
   lastMessageAt: number;
@@ -86,6 +91,9 @@ type ConversationThread = {
     name: string | null;
     phone: string | null;
     email: string | null;
+    isBlocked: boolean;
+    blockedAt: string | null;
+    blockedByName: string | null;
   } | null;
   messages: Array<{
     kind: "message";
@@ -142,6 +150,48 @@ const DOCUMENT_ACCEPT = [
   "text/csv",
 ].join(",");
 const ALL_ATTACHMENT_ACCEPT = [IMAGE_ACCEPT, DOCUMENT_ACCEPT].join(",");
+
+function ThreadPaneSkeleton({ showComposer = true }: { showComposer?: boolean }) {
+  return (
+    <div className="flex flex-1 flex-col gap-4 rounded-md px-4 pb-4">
+      <div className="min-w-0 flex-none bg-card sm:rounded-t-md">
+        <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 flex-1 gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-4">
+              <Skeleton className="size-9 rounded-full lg:size-11" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-9 w-32 rounded-md" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex min-w-0 size-full flex-1">
+        <div className="relative -me-4 flex min-w-0 flex-1 flex-col overflow-y-hidden">
+          <div className="flex h-40 min-w-0 w-full grow flex-col-reverse justify-start gap-4 overflow-y-auto py-2 pe-4 pb-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className={`max-w-72 px-3 py-3 ${index % 2 === 0 ? "self-start rounded-[16px_16px_16px_0] bg-muted" : "self-end rounded-[16px_16px_0_16px] bg-primary/10 dark:bg-primary/20"}`}
+                key={index}
+              >
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="mt-2 h-4 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {showComposer ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-10 w-full rounded-md" />
+          <Skeleton className="h-10 w-24 rounded-md sm:hidden" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function initials(value: string | null, fallback: string): string {
   if (!value) {
@@ -320,10 +370,13 @@ function formatAutomationPausedByline(
 export function MessagesPage({ businessId }: MessagesPageProps) {
   const { i18n, t } = useTranslation("messages");
   const [searchParams, setSearchParams] = useSearchParams();
-  const conversations = useQuery(
+  const {
+    data: conversations,
+    isInitialLoading: isLoadingConversations,
+  } = useRememberedConvexQuery(
     api.dashboard.messages.listConversationSummaries,
     businessId ? { businessId } : "skip",
-  ) as Array<ConversationSummary> | undefined;
+  );
   const sendSmsReply = useAction(api.dashboard.messages.sendSmsReply);
   const pauseConversationAutomation = useAction(api.dashboard.messages.pauseConversationAutomation);
   const repairConversationAttachmentPreviews = useAction(
@@ -353,22 +406,25 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   const [repairAttemptedConversationIds, setRepairAttemptedConversationIds] = useState<Array<string>>([]);
   const [collapsedSummaryIds, setCollapsedSummaryIds] = useState<Array<string>>([]);
 
-  const thread = useQuery(
+  const {
+    data: thread,
+    isInitialLoading: isInitialThreadLoading,
+  } = useRememberedConvexQuery(
     api.dashboard.messages.getConversationThread,
     businessId && selectedConversationId
       ? { businessId, conversationId: selectedConversationId }
       : "skip",
-  ) as ConversationThread | undefined;
+  );
   const selectedConversationSummary = useMemo(
     () => conversations?.find((conversation) => conversation.id === selectedConversationId) ?? null,
     [conversations, selectedConversationId],
   );
-  const stagedAttachmentsQuery = useQuery(
+  const { data: stagedAttachmentsQuery } = useRememberedConvexQuery(
     api.dashboard.messages.listStagedAttachments,
     businessId && selectedConversationId && selectedConversationSummary?.channel === "sms"
       ? { businessId, conversationId: selectedConversationId }
       : "skip",
-  ) as Array<StagedAttachment> | undefined;
+  );
   const stagedAttachments = stagedAttachmentsQuery ?? [];
 
   const filteredConversations = useMemo(() => {
@@ -441,15 +497,21 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     return <BusinessSetupCard />;
   }
 
+  const isThreadLoading =
+    !isLoadingConversations &&
+    selectedConversationId !== undefined &&
+    isInitialThreadLoading;
   const isSmsConversation = thread?.conversation.channel === "sms";
   const automationState = thread?.conversation.automationState ?? "ai_active";
   const isHumanHandoff = isSmsConversation && automationState === "human_handoff";
+  const isBlockedContact = Boolean(isSmsConversation && thread?.contact?.isBlocked);
   const pausedByline = thread
     ? formatAutomationPausedByline(thread.conversation, i18n.language, t)
     : null;
   const isSummaryOpen = (summaryId: string) => !collapsedSummaryIds.includes(summaryId);
   const canSendMessage =
     Boolean(isSmsConversation) &&
+    !isBlockedContact &&
     !isSending &&
     !isUploading &&
     (draftMessage.trim().length > 0 || stagedAttachments.length > 0);
@@ -504,7 +566,14 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     files: FileList | null,
     inputRef: RefObject<HTMLInputElement | null>,
   ) {
-    if (!businessId || !selectedConversationId || !isSmsConversation || !files || files.length === 0) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      !files ||
+      files.length === 0
+    ) {
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -513,7 +582,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     const availableSlots = MAX_ATTACHMENTS - stagedAttachments.length;
     if (availableSlots <= 0) {
-      setErrorMessage(`You can send up to ${MAX_ATTACHMENTS} attachments at a time.`);
+      setErrorMessage(t("page.maxAttachments", { count: MAX_ATTACHMENTS }));
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -522,7 +591,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
     const selectedFiles = Array.from(files).slice(0, availableSlots);
     if (selectedFiles.length < files.length) {
-      setErrorMessage(`Only the first ${availableSlots} attachment(s) were added.`);
+      setErrorMessage(t("page.partialAttachmentsAdded", { count: availableSlots }));
     } else {
       setErrorMessage(null);
     }
@@ -614,7 +683,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   async function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!businessId || !selectedConversationId || !isSmsConversation || !canSendMessage) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      !canSendMessage
+    ) {
       return;
     }
 
@@ -646,7 +721,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }
 
   async function handleAutomationModeChange(nextState: "ai_active" | "human_handoff") {
-    if (!businessId || !selectedConversationId || !isSmsConversation || automationState === nextState) {
+    if (
+      !businessId ||
+      !selectedConversationId ||
+      !isSmsConversation ||
+      isBlockedContact ||
+      automationState === nextState
+    ) {
       return;
     }
 
@@ -705,85 +786,101 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
 
       <div className="flex min-w-0 w-full flex-col gap-3 sm:w-56 lg:w-72 2xl:w-80">
         <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 sm:static sm:z-auto sm:mx-0 sm:p-0">
-          <PageHeader
-            className="py-0"
-            title={t("page.title")}
-          />
-          <label
-            className={cn(
-              "focus-within:outline-hidden focus-within:ring-1 focus-within:ring-ring",
-              "flex h-10 w-full items-center space-x-0 rounded-md border border-border ps-3",
-            )}
-          >
-            <SearchIcon className="me-2 stroke-slate-500" size={15} />
-            <span className="sr-only">{t("page.searchPlaceholder")}</span>
-            <input
-              className="w-full flex-1 bg-inherit text-sm focus-visible:outline-hidden"
+          <PageHeader className="py-0" title={t("page.title")} />
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label={t("page.searchPlaceholder")}
+              className="pl-10"
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder={t("page.searchPlaceholder")}
               type="text"
               value={searchValue}
             />
-          </label>
+          </div>
         </div>
 
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
-          {filteredConversations.map((conversation: ConversationSummary) => {
-            const isActive = conversation.id === selectedConversationId;
-            const lastPreview = getConversationPreviewText(conversation, t);
-
-            return (
-              <Fragment key={String(conversation.id)}>
-                <button
-                  className={cn(
-                    "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
-                    isActive && "sm:bg-muted",
-                  )}
-                  onClick={() => {
-                    void selectConversation(conversation.id as Id<"conversations">);
-                  }}
-                  type="button"
-                >
-                  <div className="flex w-full gap-2">
-                    <Avatar>
-                      <AvatarFallback>
-                        {initials(
-                          conversation.contactName,
-                          conversation.contactPhone ?? t("page.unknownShort"),
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
+          {isLoadingConversations
+            ? Array.from({ length: 6 }).map((_, index) => (
+                <Fragment key={index}>
+                  <div className="flex w-full gap-2 rounded-md px-2 py-2 text-start text-sm">
+                    <Skeleton className="size-8 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
-                        <span className="block min-w-0 truncate font-semibold">
-                          {conversation.contactName ??
-                            (conversation.contactPhone
-                              ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
-                              : null) ??
-                            t("page.unknownCaller")}
-                        </span>
-                        <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
-                          <span className="inline-flex w-3 justify-center">
-                            <ConversationChannelIcon channel={conversation.channel} />
-                          </span>
-                          <span aria-hidden="true">&bull;</span>
-                          <span>
-                            {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
-                              yesterday: t("page.yesterday"),
-                            })}
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-14" />
+                      </div>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-4/5" />
+                    </div>
+                  </div>
+                  <Separator className="my-1" />
+                </Fragment>
+              ))
+            : filteredConversations.map((conversation: ConversationSummary) => {
+                const isActive = conversation.id === selectedConversationId;
+                const lastPreview = getConversationPreviewText(conversation, t);
+
+                return (
+                  <Fragment key={String(conversation.id)}>
+                    <button
+                      className={cn(
+                        "group hover:bg-accent hover:text-accent-foreground flex w-full rounded-md px-2 py-2 text-start text-sm",
+                        isActive && "sm:bg-muted",
+                      )}
+                      onClick={() => {
+                        void selectConversation(conversation.id as Id<"conversations">);
+                      }}
+                      type="button"
+                    >
+                      <div className="flex w-full gap-2">
+                        <Avatar>
+                          <AvatarFallback>
+                            {initials(
+                              conversation.contactName,
+                              conversation.contactPhone ?? t("page.unknownShort"),
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="block min-w-0 truncate font-semibold">
+                                {conversation.contactName ??
+                                  (conversation.contactPhone
+                                    ? formatPhoneNumberDisplay(conversation.contactPhone, i18n.language)
+                                    : null) ??
+                                  t("page.unknownCaller")}
+                              </span>
+                              {conversation.isBlocked ? (
+                                <Badge className="shrink-0" variant="destructive">
+                                  {t("page.blockedBadge")}
+                                </Badge>
+                              ) : null}
+                            </div>
+                            <div className="justify-self-end flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-muted-foreground group-hover:text-accent-foreground/90">
+                              <span className="inline-flex w-3 justify-center">
+                                <ConversationChannelIcon channel={conversation.channel} />
+                              </span>
+                              <span aria-hidden="true">&bull;</span>
+                              <span>
+                                {formatInboxTimestamp(conversation.lastMessageAt, i18n.language, {
+                                  yesterday: t("page.yesterday"),
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
+                            {lastPreview}
                           </span>
                         </div>
                       </div>
-                      <span className="col-start-2 row-span-2 row-start-2 line-clamp-2 text-ellipsis text-muted-foreground group-hover:text-accent-foreground/90">
-                        {lastPreview}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-                <Separator className="my-1" />
-              </Fragment>
-            );
-          })}
+                    </button>
+                    <Separator className="my-1" />
+                  </Fragment>
+                );
+              })}
         </div>
       </div>
 
@@ -793,7 +890,9 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
           mobileSelectedConversationId && "start-0 flex",
         )}
       >
-        {thread ? (
+        {isLoadingConversations || isThreadLoading ? (
+          <ThreadPaneSkeleton showComposer />
+        ) : thread ? (
           <>
             <div className="min-w-0 flex-none bg-card sm:rounded-t-md">
               <div className="flex min-w-0 flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
@@ -816,13 +915,18 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold lg:text-base">
-                        {thread.contact?.name ??
-                          (thread.contact?.phone
-                            ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
-                            : null) ??
-                          t("page.unknownCaller")}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="block text-sm font-semibold lg:text-base">
+                          {thread.contact?.name ??
+                            (thread.contact?.phone
+                              ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
+                              : null) ??
+                            t("page.unknownCaller")}
+                        </span>
+                        {isBlockedContact ? (
+                          <Badge variant="destructive">{t("page.blockedBadge")}</Badge>
+                        ) : null}
+                      </div>
                       <span className="block max-w-48 line-clamp-1 text-xs text-ellipsis text-muted-foreground lg:max-w-none lg:text-sm">
                         {(thread.contact?.phone
                           ? formatPhoneNumberDisplay(thread.contact.phone, i18n.language)
@@ -835,7 +939,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                       <Toggle
                         aria-label={t("page.automationHumanHandoff")}
                         className="shrink-0"
-                        disabled={isUpdatingAutomation}
+                        disabled={isUpdatingAutomation || isBlockedContact}
                         onPressedChange={(pressed) => {
                           void handleAutomationModeChange(
                             pressed ? "human_handoff" : "ai_active",
@@ -858,6 +962,35 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="size-2 shrink-0 rounded-full bg-amber-500" />
                   <div className="min-w-0 text-center">
                     <p className="font-medium text-amber-950">{pausedByline}</p>
+                  </div>
+                </div>
+              ) : null}
+              {isBlockedContact ? (
+                <div className="flex min-w-0 items-center justify-center gap-2 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+                  <div className="size-2 shrink-0 rounded-full bg-destructive" />
+                  <div className="min-w-0 text-center">
+                    <p className="font-medium">
+                      {thread.contact?.blockedByName && thread.contact?.blockedAt
+                        ? t("page.blockedDescriptionWithActorAndTime", {
+                            name: thread.contact.blockedByName,
+                            time: formatDateTime(thread.contact.blockedAt, i18n.language, {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }),
+                          })
+                        : thread.contact?.blockedByName
+                          ? t("page.blockedDescriptionWithActor", {
+                              name: thread.contact.blockedByName,
+                            })
+                          : thread.contact?.blockedAt
+                            ? t("page.blockedDescriptionWithTime", {
+                                time: formatDateTime(thread.contact.blockedAt, i18n.language, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                }),
+                              })
+                            : t("page.blockedDescription")}
+                    </p>
                   </div>
                 </div>
               ) : null}
@@ -898,7 +1031,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                                 {item.body.trim().length > 0 ? <p>{item.body}</p> : null}
                               </div>
                               {isFailedOutboundMessage ? (
-                                <p className="pt-2 text-xs font-medium text-destructive">
+                                <p className="type-meta pt-2 text-destructive">
                                   {t("page.deliveryFailed")}
                                 </p>
                               ) : null}
@@ -927,7 +1060,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                             type="button"
                           >
                             <span className="h-px w-64 bg-border/60 md:w-96" />
-                            <span className="inline-flex items-center justify-center gap-1.5 text-sm font-medium">
+                            <span className="type-item-title inline-flex items-center justify-center gap-1.5">
                               {t("outcome.label")}
                               <ChevronRight
                                 className={cn(
@@ -957,7 +1090,22 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                 </div>
               </div>
               <form className="flex w-full flex-none flex-col gap-2" onSubmit={handleSendMessage}>
-                {stagedAttachments.length > 0 ? (
+                {stagedAttachmentsQuery === undefined && isSmsConversation ? (
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: 2 }).map((_, index) => (
+                      <div
+                        className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-2"
+                        key={index}
+                      >
+                        <Skeleton className="size-12 rounded-md" />
+                        <div className="min-w-0 space-y-2">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-12" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : stagedAttachments.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {stagedAttachments.map((attachment) => (
                       <div
@@ -976,8 +1124,10 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">{attachment.fileName}</div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="type-item-title truncate">
+                            {attachment.fileName}
+                          </div>
+                          <div className="type-meta">
                             {formatBytes(attachment.byteLength)}
                           </div>
                         </div>
@@ -997,7 +1147,13 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   <div className="flex items-center">
                     <Button
                       className="h-8 rounded-md"
-                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
+                      disabled={
+                        !isSmsConversation ||
+                        isBlockedContact ||
+                        isSending ||
+                        isUploading ||
+                        isUpdatingAutomation
+                      }
                       onClick={() => allAttachmentInputRef.current?.click()}
                       size="icon"
                       type="button"
@@ -1010,10 +1166,18 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                     <span className="sr-only">Chat Text Box</span>
                     <input
                       className="h-8 w-full bg-inherit focus-visible:outline-hidden"
-                      disabled={!isSmsConversation || isSending || isUploading || isUpdatingAutomation}
+                      disabled={
+                        !isSmsConversation ||
+                        isBlockedContact ||
+                        isSending ||
+                        isUploading ||
+                        isUpdatingAutomation
+                      }
                       onChange={(event) => setDraftMessage(event.target.value)}
                       placeholder={
-                        thread.conversation.channel === "sms"
+                        isBlockedContact
+                          ? t("page.blockedComposerPlaceholder")
+                          : thread.conversation.channel === "sms"
                           ? t("page.composerPlaceholderSms")
                           : t("page.composerPlaceholderWeb")
                       }
@@ -1032,6 +1196,11 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
                   </Button>
                 </div>
                 {errorMessage ? <span className="px-1 text-sm text-destructive">{errorMessage}</span> : null}
+                {isBlockedContact ? (
+                  <span className="px-1 text-sm text-muted-foreground">
+                    {t("page.blockedComposerHint")}
+                  </span>
+                ) : null}
                 <Button
                   className="h-full sm:hidden"
                   disabled={!canSendMessage || isUpdatingAutomation}
@@ -1042,6 +1211,8 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
               </form>
             </div>
           </>
+        ) : selectedConversationId ? (
+          <ThreadPaneSkeleton showComposer={selectedConversationSummary?.channel === "sms"} />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
             {t("page.selectConversation")}

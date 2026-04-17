@@ -14,6 +14,7 @@
   "sidebar": {
     "businessSlugFallback": "Console opérateur",
     "general": "Général",
+    "agent": "Agent",
     "other": "Gestion",
     "workspace": "Espace",
     "openSettings": "Ouvrir les réglages",

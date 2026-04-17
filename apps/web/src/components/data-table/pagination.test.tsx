@@ -33,14 +33,18 @@ const columns: Array<ColumnDef<Row>> = [
 ];
 
 function PaginationHarness() {
+  return <PaginationHarnessWithRowCount rowCount={12} />;
+}
+
+function PaginationHarnessWithRowCount({ rowCount }: { rowCount: number }) {
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
     pageSize: 5,
   });
 
   const data = React.useMemo(
-    () => Array.from({ length: 12 }, (_, index) => ({ value: `Row ${index + 1}` })),
-    [],
+    () => Array.from({ length: rowCount }, (_, index) => ({ value: `Row ${index + 1}` })),
+    [rowCount],
   );
 
   const table = useReactTable({
@@ -113,5 +117,13 @@ describe("DataTablePagination", () => {
     expect(screen.queryByText("Row 1")).toBeNull();
     expect(screen.getByText("Row 6")).toBeTruthy();
     expect(screen.getAllByText("Page 2 of 3").length).toBeGreaterThan(0);
+  });
+
+  it("hides pagination when there are 10 or fewer rows", () => {
+    render(<PaginationHarnessWithRowCount rowCount={10} />);
+
+    expect(screen.queryByText("Rows per page")).toBeNull();
+    expect(screen.queryByText("Page 1 of 2")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
   });
 });

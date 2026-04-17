@@ -55,11 +55,11 @@ export function ForgotPasswordForm({
       <form onSubmit={onSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Rows3 className="size-5" />
             </div>
             <div className="flex flex-col gap-2">
-              <h1 className="text-xl font-semibold tracking-tight">
+              <h1 className="type-section-title">
                 {isVerifyStep ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")}
               </h1>
               <FieldDescription>

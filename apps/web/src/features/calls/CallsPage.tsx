@@ -8,7 +8,6 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { Pause, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -17,10 +16,13 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DataTablePagination } from "@/components/data-table/pagination";
+import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import {
   Table,
   TableBody,
@@ -166,14 +168,17 @@ function formatCallPurpose(
 export function CallsPage({ businessId }: CallsPageProps) {
   const { i18n, t } = useTranslation("calls");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const calls = useQuery(
+  const rememberedCalls = useRememberedConvexQuery(
     api.voice.runtime.listRecentCalls,
     businessId ? { businessId, limit: 50 } : "skip",
-  ) as Array<CallRow> | undefined;
-  const summary = useQuery(
+  );
+  const calls = rememberedCalls.data as Array<CallRow> | undefined;
+  const isLoadingCalls = rememberedCalls.isInitialLoading;
+  const rememberedSummary = useRememberedConvexQuery(
     api.dashboard.overview.getHomeSummary,
     businessId ? { businessId, locale } : "skip",
   );
+  const summary = rememberedSummary.data;
   const [searchValue, setSearchValue] = useState("");
   const [activeRecordingCallId, setActiveRecordingCallId] = useState<Id<"calls"> | null>(null);
   const navigate = useNavigate();
@@ -181,7 +186,6 @@ export function CallsPage({ businessId }: CallsPageProps) {
     pageIndex: 0,
     pageSize: 10,
   });
-
   const rows = calls ?? [];
   const filteredRows = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -232,7 +236,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
         id: "purpose",
         header: () => t("table.purpose"),
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
+          <span className="type-body-muted">
             {formatCallPurpose(row.original, i18n.language, t)}
           </span>
         ),
@@ -263,7 +267,11 @@ export function CallsPage({ businessId }: CallsPageProps) {
           const isActive = call._id === activeRecordingCallId;
 
           if (!hasRecording) {
-            return <span className="text-sm text-muted-foreground">{t("actions.audioPending")}</span>;
+            return (
+              <span className="type-body-muted">
+                {t("actions.audioPending")}
+              </span>
+            );
           }
 
           return (
@@ -330,9 +338,13 @@ export function CallsPage({ businessId }: CallsPageProps) {
       <PageHeader
         actions={
           <div className="inline-flex shrink-0 items-center gap-2">
-            <span className="text-base font-semibold leading-none">
-              {summary?.liveCalls?.toLocaleString(i18n.language) ?? "0"}
-            </span>
+            {summary === undefined ? (
+              <Skeleton className="h-6 w-8" />
+            ) : (
+              <span className="text-base font-semibold leading-none">
+                {summary.liveCalls.toLocaleString(i18n.language)}
+              </span>
+            )}
             <span className="relative flex size-2.5 shrink-0">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500/45" />
               <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
@@ -368,84 +380,90 @@ export function CallsPage({ businessId }: CallsPageProps) {
         variant="hidden"
       />
 
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const className =
-                    header.column.id === "purpose"
-                      ? "min-w-80"
-                      : header.column.columnDef.meta &&
-                          typeof header.column.columnDef.meta === "object" &&
-                          "className" in header.column.columnDef.meta
-                        ? String(header.column.columnDef.meta.className)
-                        : undefined;
+      {isLoadingCalls ? (
+        <TableCardSkeleton columns={5} />
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      const className =
+                        header.column.id === "purpose"
+                          ? "min-w-80"
+                          : header.column.columnDef.meta &&
+                              typeof header.column.columnDef.meta === "object" &&
+                              "className" in header.column.columnDef.meta
+                            ? String(header.column.columnDef.meta.className)
+                            : undefined;
+
+                      return (
+                        <TableHead className={className} key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => {
+                  const isActive = row.original._id === activeRecordingCallId;
 
                   return (
-                    <TableHead className={className} key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
+                    <TableRow
+                      className="h-12 cursor-pointer"
+                      data-state={isActive ? "selected" : undefined}
+                      key={row.id}
+                      onClick={() => navigate(`/calls/${row.original._id}`)}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const className =
+                          cell.column.id === "purpose"
+                            ? "max-w-0 whitespace-normal"
+                            : cell.column.columnDef.meta &&
+                                typeof cell.column.columnDef.meta === "object" &&
+                                "className" in cell.column.columnDef.meta
+                              ? String(cell.column.columnDef.meta.className)
+                              : undefined;
+
+                        return (
+                          <TableCell className={className} key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
                   );
                 })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => {
-              const isActive = row.original._id === activeRecordingCallId;
-
-              return (
-                <TableRow
-                  className="h-12 cursor-pointer"
-                  data-state={isActive ? "selected" : undefined}
-                  key={row.id}
-                  onClick={() => navigate(`/calls/${row.original._id}`)}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const className =
-                      cell.column.id === "purpose"
-                        ? "max-w-0 whitespace-normal"
-                        : cell.column.columnDef.meta &&
-                            typeof cell.column.columnDef.meta === "object" &&
-                            "className" in cell.column.columnDef.meta
-                          ? String(cell.column.columnDef.meta.className)
-                          : undefined;
-
-                    return (
-                      <TableCell className={className} key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              );
-            })}
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
-                  {t("table.empty")}
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
-      <DataTablePagination
-        labels={{
-          rowsPerPage: t("pagination.rowsPerPage"),
-          pageOf: (page, total) => t("pagination.pageOf", { page, total }),
-          firstPage: t("pagination.firstPage"),
-          previousPage: t("pagination.previousPage"),
-          nextPage: t("pagination.nextPage"),
-          lastPage: t("pagination.lastPage"),
-          goToPage: (page) => t("pagination.goToPage", { page }),
-        }}
-        table={table}
-      />
+                {table.getRowModel().rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell className="h-24 text-center text-muted-foreground" colSpan={5}>
+                      {t("table.empty")}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <DataTablePagination
+            labels={{
+              rowsPerPage: t("pagination.rowsPerPage"),
+              pageOf: (page, total) => t("pagination.pageOf", { page, total }),
+              firstPage: t("pagination.firstPage"),
+              previousPage: t("pagination.previousPage"),
+              nextPage: t("pagination.nextPage"),
+              lastPage: t("pagination.lastPage"),
+              goToPage: (page) => t("pagination.goToPage", { page }),
+            }}
+            table={table}
+          />
+        </>
+      )}
     </div>
   );
 }

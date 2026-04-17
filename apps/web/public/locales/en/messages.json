@@ -10,6 +10,13 @@
     "attachmentPreviewDocument": "Attachment: Document",
     "selectConversation": "Select a conversation to review the thread.",
     "noChannel": "No contact channel saved.",
+    "blockedBadge": "Blocked",
+    "blockedDescription": "This contact is blocked. New SMS replies are disabled and inbound calls will hang up immediately.",
+    "blockedDescriptionWithActor": "This contact was blocked by {{name}}. New SMS replies are disabled and inbound calls will hang up immediately.",
+    "blockedDescriptionWithTime": "This contact was blocked on {{time}}. New SMS replies are disabled and inbound calls will hang up immediately.",
+    "blockedDescriptionWithActorAndTime": "This contact was blocked by {{name}} on {{time}}. New SMS replies are disabled and inbound calls will hang up immediately.",
+    "blockedComposerPlaceholder": "This contact is blocked.",
+    "blockedComposerHint": "Unblock the contact from Contacts before sending a new SMS reply.",
     "composerPlaceholder": "Type your message...",
     "composerPlaceholderSms": "Reply via SMS...",
     "composerPlaceholderWeb": "Reply via Web...",
@@ -27,6 +34,8 @@
     "send": "Send",
     "sendFailed": "Couldn't send your message.",
     "uploadFailed": "Couldn't upload that attachment.",
+    "maxAttachments": "You can send up to {{count}} attachments at a time.",
+    "partialAttachmentsAdded": "Only the first {{count}} attachment(s) were added.",
     "deliveryFailed": "Failed to send"
   },
   "outcome": {

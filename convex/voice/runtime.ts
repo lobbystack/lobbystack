@@ -34,6 +34,10 @@ import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
+  CONTACT_BLOCKED_CALL_DISPOSITION,
+  isContactBlocked,
+} from "../lib/contactBlocking";
+import {
   ensureSessionForStoredMessage,
   ensureVoiceSessionForCall,
   finalizeVoiceSessionForCall,
@@ -55,7 +59,8 @@ type StartCallArgs = {
 };
 type StartCallResult = {
   callId: Id<"calls">;
-  conversationId: Id<"conversations">;
+  blocked: boolean;
+  conversationId?: Id<"conversations">;
   contactId: Id<"contacts">;
 };
 type AppendTranscriptArgs = {
@@ -511,6 +516,69 @@ export const startCall = internalMutation({
         q.eq("businessId", args.businessId).eq("phone", args.from),
       )
       .unique();
+    const existingCall: Doc<"calls"> | null = await ctx.db
+      .query("calls")
+      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
+      .unique();
+
+    const activeExistingCall: (Doc<"calls"> & { conversationId: Id<"conversations"> }) | null =
+      existingCall &&
+      existingCall.conversationId !== undefined &&
+      existingCall.endedAt === undefined
+        ? (existingCall as Doc<"calls"> & { conversationId: Id<"conversations"> })
+        : null;
+
+    if (contact && isContactBlocked(contact)) {
+      if (activeExistingCall) {
+        if (
+          args.gatewaySessionId !== undefined &&
+          activeExistingCall.gatewaySessionId !== args.gatewaySessionId
+        ) {
+          await ctx.db.patch(activeExistingCall._id, {
+            gatewaySessionId: args.gatewaySessionId,
+          });
+        }
+
+        return {
+          callId: activeExistingCall._id,
+          conversationId: activeExistingCall.conversationId,
+          blocked: false,
+          contactId: contact._id,
+        };
+      }
+
+      let callId: Id<"calls">;
+
+      if (existingCall) {
+        await ctx.db.patch(existingCall._id, {
+          status: "completed",
+          endedAt: args.startedAt,
+          disposition: CONTACT_BLOCKED_CALL_DISPOSITION,
+          ...(args.gatewaySessionId !== undefined
+            ? { gatewaySessionId: args.gatewaySessionId }
+            : {}),
+        });
+        callId = existingCall._id;
+      } else {
+        callId = await ctx.db.insert("calls", {
+          businessId: args.businessId,
+          twilioCallSid: args.twilioCallSid,
+          ...(args.gatewaySessionId !== undefined
+            ? { gatewaySessionId: args.gatewaySessionId }
+            : {}),
+          status: "completed",
+          disposition: CONTACT_BLOCKED_CALL_DISPOSITION,
+          startedAt: args.startedAt,
+          endedAt: args.startedAt,
+        });
+      }
+
+      return {
+        callId,
+        blocked: true,
+        contactId: contact._id,
+      };
+    }
 
     if (!contact) {
       const contactId = await ctx.db.insert("contacts", {
@@ -541,11 +609,6 @@ export const startCall = internalMutation({
         channel: "voice",
         status: "open",
       }));
-
-    const existingCall: Doc<"calls"> | null = await ctx.db
-      .query("calls")
-      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
-      .unique();
 
     let callId: Id<"calls">;
 
@@ -621,6 +684,7 @@ export const startCall = internalMutation({
     return {
       callId,
       conversationId,
+      blocked: false,
       contactId: contact._id,
     };
   },

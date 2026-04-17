@@ -1,565 +1,1249 @@
-import { useEffect, useMemo, useState } from "react";
-import { useAction, useQuery } from "convex/react";
-import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useAction } from "convex/react";
+import { Trans, useTranslation } from "react-i18next";
+import { ArrowUpRight, Check, Lock } from "lucide-react";
 
-import type { BillingStatus, BillingPlanSlug } from "@ai-receptionist/shared";
-import { billingAddonCatalog, billingPlanCatalog } from "@ai-receptionist/shared";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import {
+  billingPlanCatalog,
+  billingAddonCatalog,
+} from "../../../../../packages/shared/src/billing";
+import type {
+  BillingPlanSlug,
+  BillingStatus,
+} from "../../../../../packages/shared/src/billing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { SectionBlock } from "@/components/section-block";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 type SettingsBillingPageProps = {
   businessId: Id<"businesses">;
 };
 
-function formatCurrencyFromCents(
-  cents: number | null,
-  locale: string,
-  currency = "USD",
-): string | null {
-  if (cents === null) {
-    return null;
-  }
+type BillingTranslation = ReturnType<typeof useTranslation<"settings">>["t"];
+type BillingLocale = string;
 
+// ---------------------------------------------------------------------------
+// Formatters
+// ---------------------------------------------------------------------------
+
+function formatCents(
+  cents: number,
+  locale: BillingLocale,
+  currency = "USD",
+): string {
+  const hasFractionalCents = cents % 100 !== 0;
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: hasFractionalCents ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(cents / 100);
 }
 
-function formatCount(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale).format(value);
+function formatResetDate(iso: string, locale: BillingLocale): string {
+  return formatDateTime(iso, locale, {
+    month: "long",
+    day: "numeric",
+  });
 }
 
-function formatVoiceMinutes(seconds: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: seconds % 60 === 0 ? 0 : 1,
-    maximumFractionDigits: seconds % 60 === 0 ? 0 : 1,
-  }).format(seconds / 60);
-}
+function formatStorage(bytes: number, referenceBytes?: number | null): string {
+  const normalizedReference = referenceBytes ?? bytes;
 
-function formatTimestamp(value: string, locale: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  if (normalizedReference >= 1024 * 1024 * 1024) {
+    const gigabytes = bytes / (1024 * 1024 * 1024);
+    return `${gigabytes % 1 === 0 ? gigabytes.toFixed(0) : gigabytes.toFixed(1)} GB`;
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  if (normalizedReference >= 1024 * 1024) {
+    const megabytes = bytes / (1024 * 1024);
+    return `${megabytes % 1 === 0 ? megabytes.toFixed(0) : megabytes.toFixed(1)} MB`;
+  }
+
+  if (normalizedReference >= 1024) {
+    const kilobytes = bytes / 1024;
+    return `${kilobytes % 1 === 0 ? kilobytes.toFixed(0) : kilobytes.toFixed(1)} KB`;
+  }
+
+  return `${bytes} B`;
 }
 
-function getPlanLabel(plan: BillingPlanSlug, t: (key: string) => string): string {
+function formatTransactionDate(iso: string, locale: BillingLocale): string {
+  return formatDateTime(iso, locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function voiceSecondsToMinutes(seconds: number): number {
+  return Math.round((seconds / 60) * 10) / 10;
+}
+
+function getDisplayedPlanMonthlyChargeCents(status: BillingStatus): number | null {
+  if (status.monthlyChargeCents === null) {
+    return null;
+  }
+
+  const activeAddonChargeCents = status.activeAddons.reduce(
+    (total, addon) =>
+      total + billingAddonCatalog[addon].recurringMonthlyChargeCents,
+    0,
+  );
+
+  return Math.max(status.monthlyChargeCents - activeAddonChargeCents, 0);
+}
+
+function formatIncludedUsageLine({
+  label,
+  value,
+  unit,
+  fallbackText,
+}: {
+  label: string;
+  value: number | null;
+  unit?: string;
+  fallbackText?: string;
+}) {
+  if (value === null) {
+    return fallbackText ?? `${label}: Unlimited`;
+  }
+
+  return `${value}${unit ? ` ${unit}` : ""} ${label.toLowerCase()}`;
+}
+
+function getPlanLabel(
+  plan: BillingPlanSlug,
+  t: BillingTranslation,
+): string {
   switch (plan) {
     case "self_host":
       return t("billing.planLabels.selfHost");
     case "free_cloud":
-      return t("billing.planLabels.freeCloud");
+      return t("billing.planLabels.freeCloudCard");
     case "pro":
-      return t("billing.planLabels.pro");
+      return t("billing.planLabels.proCard");
     case "enterprise":
-      return t("billing.planLabels.enterprise");
+      return t("billing.planLabels.enterpriseCard");
+    default:
+      return plan;
   }
 }
 
-function PlanSkeleton() {
-  return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-28 w-full" />
-          <Skeleton className="h-28 w-full" />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-56" />
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </CardContent>
-      </Card>
-    </div>
-  );
+function useBillingStatus(businessId: Id<"businesses">) {
+  return useRememberedConvexQuery(api.billing.getStatus, {
+    businessId,
+  });
 }
 
-function UsageCard(props: {
+// ---------------------------------------------------------------------------
+// Section wrapper — matches GitBook's title + description + content pattern
+// ---------------------------------------------------------------------------
+
+function BillingSection({
+  title,
+  description,
+  children,
+  action,
+}: {
   title: string;
-  value: string;
-  description: string;
-  progressValue?: number | undefined;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border/80 bg-muted/20 p-4">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">{props.title}</p>
-        <p className="text-xl font-semibold tracking-tight text-foreground">{props.value}</p>
-        <p className="text-sm text-muted-foreground">{props.description}</p>
-      </div>
-      {props.progressValue !== undefined ? (
-        <Progress className="mt-4" value={props.progressValue} />
-      ) : null}
+    <SectionBlock
+      action={action}
+      description={description}
+      title={title}
+    >
+      {children}
+    </SectionBlock>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bordered item — the horizontal info + action row used throughout GitBook
+// ---------------------------------------------------------------------------
+
+function BorderedItem({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border border-border bg-card px-6 py-5 ${className ?? ""}`}
+    >
+      {children}
     </div>
   );
 }
 
-export function SettingsBillingPage({ businessId }: SettingsBillingPageProps) {
-  const { i18n, t } = useTranslation("settings");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const billingStatus = useQuery(api.billing.getStatus, {
-    businessId,
-  }) as BillingStatus | undefined;
+// ---------------------------------------------------------------------------
+// Plan section
+// ---------------------------------------------------------------------------
+
+function PlanSection({
+  status,
+  businessId,
+  locale,
+  t,
+}: {
+  status: BillingStatus;
+  businessId: Id<"businesses">;
+  locale: BillingLocale;
+  t: BillingTranslation;
+}) {
   const startCheckout = useAction(api.billing.startCheckout);
   const openPortal = useAction(api.billing.openPortal);
-  const [checkoutTargetInFlight, setCheckoutTargetInFlight] = useState<"pro" | "ai_sms" | null>(
-    null,
-  );
-  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
+  const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
 
-  useEffect(() => {
-    if (searchParams.get("checkout") !== "success") {
-      return;
-    }
+  const planLabel = getPlanLabel(status.plan, t);
+  const displayedPlanMonthlyChargeCents = getDisplayedPlanMonthlyChargeCents(status);
+  const price =
+    displayedPlanMonthlyChargeCents !== null
+      ? formatCents(displayedPlanMonthlyChargeCents, locale)
+      : null;
+  const planConfig = billingPlanCatalog[status.plan];
+  const includedItems = [
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedVoiceLabel"),
+      value:
+        planConfig.voiceSecondsIncluded !== null
+          ? voiceSecondsToMinutes(planConfig.voiceSecondsIncluded)
+          : null,
+      unit: "min",
+      fallbackText: t("billing.currentPlan.includedVoiceUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedOutboundLabel"),
+      value: planConfig.outboundCallAttemptsIncluded,
+      unit: "calls",
+      fallbackText: t("billing.currentPlan.includedOutboundUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedSmsLabel"),
+      value: planConfig.alertSmsSegmentsIncluded,
+      unit: "SMS",
+      fallbackText: t("billing.currentPlan.includedSmsUnlimited"),
+    }),
+    formatIncludedUsageLine({
+      label: t("billing.currentPlan.includedStorageLabel"),
+      value:
+        planConfig.knowledgeStorageBytes !== null
+          ? Math.round(
+              (planConfig.knowledgeStorageBytes / (1024 * 1024 * 1024)) * 10,
+            ) / 10
+          : null,
+      unit: "GB",
+      fallbackText: t("billing.currentPlan.includedStorageUnlimited"),
+    }),
+  ];
 
-    toast.success(t("billing.toast.checkoutSuccess"));
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("checkout");
-    setSearchParams(nextParams, { replace: true });
-  }, [searchParams, setSearchParams, t]);
+  const canUpgrade =
+    status.hasCheckoutAccess &&
+    status.availableCheckoutPlans.includes("pro") &&
+    status.plan === "free_cloud";
+  const showManageSubscription = status.hasCustomerPortalAccess;
 
-  const usageCards = useMemo(() => {
-    if (!billingStatus) {
-      return [];
-    }
-
-    const voiceProgress =
-      billingStatus.usage.voiceSecondsIncluded === null
-        ? undefined
-        : Math.min(
-            100,
-            (billingStatus.usage.voiceSecondsUsed /
-              Math.max(1, billingStatus.usage.voiceSecondsIncluded)) *
-              100,
-          );
-    const alertSmsProgress =
-      billingStatus.usage.alertSmsSegmentsIncluded === null
-        ? undefined
-        : Math.min(
-            100,
-            (billingStatus.usage.alertSmsSegmentsUsed /
-              Math.max(1, billingStatus.usage.alertSmsSegmentsIncluded)) *
-              100,
-          );
-    const outboundAttemptsProgress =
-      billingStatus.usage.outboundCallAttemptsIncluded === null
-        ? undefined
-        : Math.min(
-            100,
-            (billingStatus.usage.outboundCallAttemptsUsed /
-              Math.max(1, billingStatus.usage.outboundCallAttemptsIncluded)) *
-              100,
-          );
-
-    return [
-      {
-        key: "voice",
-        title: t("billing.usage.voiceTitle"),
-        value: t("billing.usage.voiceValue", {
-          minutes: formatVoiceMinutes(billingStatus.usage.voiceSecondsUsed, i18n.language),
-        }),
-        description:
-          billingStatus.usage.voiceSecondsRemaining === null
-            ? t("billing.usage.overageEnabled")
-            : t("billing.usage.voiceRemaining", {
-                minutes: formatVoiceMinutes(
-                  billingStatus.usage.voiceSecondsRemaining,
-                  i18n.language,
-                ),
-              }),
-        progressValue: voiceProgress,
-      },
-      {
-        key: "alert_sms",
-        title: t("billing.usage.alertSmsTitle"),
-        value: t("billing.usage.alertSmsValue", {
-          count: billingStatus.usage.alertSmsSegmentsUsed,
-          formattedCount: formatCount(
-            billingStatus.usage.alertSmsSegmentsUsed,
-            i18n.language,
-          ),
-        }),
-        description:
-          billingStatus.usage.alertSmsSegmentsRemaining === null
-            ? t("billing.usage.overageEnabled")
-            : t("billing.usage.alertSmsRemaining", {
-                count: billingStatus.usage.alertSmsSegmentsRemaining,
-                formattedCount: formatCount(
-                  billingStatus.usage.alertSmsSegmentsRemaining,
-                  i18n.language,
-                ),
-              }),
-        progressValue: alertSmsProgress,
-      },
-      {
-        key: "outbound_attempts",
-        title: t("billing.usage.outboundAttemptsTitle"),
-        value: t("billing.usage.outboundAttemptsValue", {
-          count: billingStatus.usage.outboundCallAttemptsUsed,
-          formattedCount: formatCount(
-            billingStatus.usage.outboundCallAttemptsUsed,
-            i18n.language,
-          ),
-        }),
-        description:
-          billingStatus.usage.outboundCallAttemptsRemaining === null
-            ? t("billing.usage.overageEnabled")
-            : t("billing.usage.outboundAttemptsRemaining", {
-                count: billingStatus.usage.outboundCallAttemptsRemaining,
-                formattedCount: formatCount(
-                  billingStatus.usage.outboundCallAttemptsRemaining,
-                  i18n.language,
-                ),
-              }),
-        progressValue: outboundAttemptsProgress,
-      },
-      {
-        key: "ai_sms",
-        title: t("billing.usage.aiSmsTitle"),
-        value: t("billing.usage.aiSmsValue", {
-          count: billingStatus.usage.aiSmsSegmentsUsed,
-          formattedCount: formatCount(
-            billingStatus.usage.aiSmsSegmentsUsed,
-            i18n.language,
-          ),
-        }),
-        description: billingStatus.aiSmsEnabled
-          ? t("billing.usage.aiSmsMetered")
-          : t("billing.usage.aiSmsLocked"),
-      },
-    ];
-  }, [billingStatus, i18n.language, t]);
-
-  if (!billingStatus) {
-    return <PlanSkeleton />;
-  }
-
-  async function handleStartCheckout(target: "pro" | "ai_sms"): Promise<void> {
-    setCheckoutTargetInFlight(target);
+  async function handleUpgrade() {
+    setLoading("checkout");
     try {
-      const result = await startCheckout({
-        businessId,
-        target,
-      });
+      const result = await startCheckout({ businessId, target: "pro" });
       window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("billing.toast.checkoutFailed"));
+    } catch {
+      toast.error(t("billing.toast.checkoutFailed"));
     } finally {
-      setCheckoutTargetInFlight(null);
+      setLoading(null);
     }
   }
 
-  async function handleOpenPortal(): Promise<void> {
-    setIsOpeningPortal(true);
+  async function handleManage() {
+    setLoading("portal");
     try {
       const result = await openPortal({ businessId });
       window.location.assign(result.url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("billing.toast.portalFailed"));
+    } catch {
+      toast.error(t("billing.toast.portalFailed"));
     } finally {
-      setIsOpeningPortal(false);
+      setLoading(null);
     }
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-12">
-      <Card>
-        <CardHeader className="gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <CardTitle>{t("billing.currentPlan.title")}</CardTitle>
-            <Badge variant="outline">{getPlanLabel(billingStatus.plan, t)}</Badge>
-            {billingStatus.aiSmsEnabled ? (
-              <Badge variant="secondary">{t("billing.addon.aiSmsActiveBadge")}</Badge>
-            ) : null}
+    <BillingSection title={t("billing.currentPlan.title")}>
+      <BorderedItem>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-3">
+              <span className="text-xl font-medium leading-7 text-foreground">
+                {planLabel}
+              </span>
+              <div className="flex flex-col items-start gap-0.5">
+                <div className="flex flex-wrap items-end gap-2">
+                  {price !== null ? (
+                    <span className="text-4xl font-semibold tracking-tight text-foreground">
+                      {price}
+                    </span>
+                  ) : (
+                    <span className="text-base text-muted-foreground">
+                      {t("billing.currentPlan.customPricing")}
+                    </span>
+                  )}
+                  {price !== null ? (
+                    <span className="pb-1 text-base text-muted-foreground">
+                      {t("billing.currentPlan.monthlySuffix")}
+                    </span>
+                  ) : null}
+                </div>
+                {status.plan === "pro" && (
+                  <span className="text-base text-muted-foreground">
+                    {t("billing.currentPlan.paygMonthlySuffix")}
+                  </span>
+                )}
+              </div>
+              {status.plan === "free_cloud" ? (
+                <span className="text-[15px] leading-6 text-muted-foreground">
+                  {t("billing.currentPlan.freeCloudNotice")}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <span className="text-base font-medium leading-6 text-foreground">
+                {t("billing.currentPlan.includedTitle")}
+              </span>
+              <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                {includedItems.map((item) => (
+                  <div key={item} className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 size-4 text-emerald-500" />
+                    <span className="text-[15px] leading-6 text-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <CardDescription>{t("billing.currentPlan.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-[1.25fr_0.95fr]">
-          <div className="rounded-xl border border-border/80 bg-muted/20 p-5">
-            <p className="text-sm text-muted-foreground">{t("billing.currentPlan.planLabel")}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-              {getPlanLabel(billingStatus.plan, t)}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {billingStatus.monthlyChargeCents === null
-                ? t("billing.currentPlan.customPricing")
-                : t("billing.currentPlan.monthlyChargeValue", {
-                    amount:
-                      formatCurrencyFromCents(
-                        billingStatus.monthlyChargeCents,
-                        i18n.language,
-                      ) ?? "$0.00",
-                  })}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {billingStatus.plan === "free_cloud" &&
-              billingStatus.availableCheckoutPlans.includes("pro") ? (
+          {(canUpgrade || showManageSubscription) && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {canUpgrade && (
                 <Button
-                  disabled={checkoutTargetInFlight !== null}
-                  onClick={() => void handleStartCheckout("pro")}
-                  type="button"
+                  className="w-full sm:w-auto"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading === "checkout"}
+                  onClick={() => void handleUpgrade()}
                 >
-                  {checkoutTargetInFlight === "pro"
+                  {loading === "checkout"
                     ? t("billing.actions.openingCheckout")
                     : t("billing.actions.upgradeToPro")}
                 </Button>
-              ) : null}
-              {billingStatus.canPurchaseAiSmsAddon ? (
+              )}
+              {showManageSubscription && (
                 <Button
-                  disabled={checkoutTargetInFlight !== null}
-                  onClick={() => void handleStartCheckout("ai_sms")}
-                  type="button"
+                  className="w-full sm:w-auto"
+                  size="sm"
                   variant="outline"
+                  disabled={loading === "portal"}
+                  onClick={() => void handleManage()}
                 >
-                  {checkoutTargetInFlight === "ai_sms"
-                    ? t("billing.actions.openingCheckout")
-                    : t("billing.actions.unlockAiSms")}
-                </Button>
-              ) : null}
-              {billingStatus.hasCustomerPortalAccess ? (
-                <Button
-                  disabled={isOpeningPortal}
-                  onClick={() => void handleOpenPortal()}
-                  type="button"
-                  variant="outline"
-                >
-                  {isOpeningPortal
+                  {loading === "portal"
                     ? t("billing.actions.openingPortal")
-                    : t("billing.actions.manageBilling")}
+                    : t("billing.actions.manageSubscription")}
+                  <ArrowUpRight className="size-3.5" />
                 </Button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="grid gap-4">
-            <div className="rounded-xl border border-border/80 bg-background/80 p-4">
-              <p className="text-sm font-medium text-foreground">
-                {t("billing.currentPlan.includedNumberTitle")}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {billingStatus.includedBusinessNumbers === null
-                  ? t("billing.currentPlan.customIncludedNumbers")
-                  : t("billing.currentPlan.includedNumberValue", {
-                      count: billingStatus.includedBusinessNumbers,
-                    })}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-background/80 p-4">
-              <p className="text-sm font-medium text-foreground">
-                {t("billing.currentPlan.billingContactTitle")}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {billingStatus.billingContactEmail ??
-                  billingStatus.billingContactName ??
-                  t("billing.currentPlan.billingContactMissing")}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-background/80 p-4">
-              <p className="text-sm font-medium text-foreground">
-                {t("billing.currentPlan.subscriptionStateTitle")}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {billingStatus.subscriptionState}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("billing.usage.title")}</CardTitle>
-          <CardDescription>
-            {t("billing.usage.description", {
-              resetAt: formatTimestamp(billingStatus.usage.resetAt, i18n.language),
-            })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          {usageCards.map(({ key, ...card }) => (
-            <UsageCard key={key} {...card} />
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("billing.catalog.title")}</CardTitle>
-          <CardDescription>{t("billing.catalog.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-xl border border-border/80 bg-muted/20 p-5">
-            <p className="text-lg font-semibold tracking-tight text-foreground">
-              {t("billing.planLabels.selfHost")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("billing.catalog.selfHostDescription")}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/20 p-5">
-            <p className="text-lg font-semibold tracking-tight text-foreground">
-              {t("billing.planLabels.freeCloud")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("billing.catalog.freeCloudDescription")}
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {t("billing.catalog.freeCloudLimits", {
-                voiceMinutes: formatVoiceMinutes(
-                  billingPlanCatalog.free_cloud.voiceSecondsIncluded ?? 0,
-                  i18n.language,
-                ),
-                alertSmsSegments: formatCount(
-                  billingPlanCatalog.free_cloud.alertSmsSegmentsIncluded ?? 0,
-                  i18n.language,
-                ),
-                outboundAttempts: formatCount(
-                  billingPlanCatalog.free_cloud.outboundCallAttemptsIncluded ?? 0,
-                  i18n.language,
-                ),
-              })}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-muted/20 p-5">
-            <p className="text-lg font-semibold tracking-tight text-foreground">
-              {t("billing.planLabels.pro")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("billing.catalog.proDescription", {
-                amount:
-                  formatCurrencyFromCents(
-                    billingPlanCatalog.pro.monthlyChargeCents,
-                    i18n.language,
-                  ) ?? "$15.00",
-              })}
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {t("billing.catalog.proOverages", {
-                voiceRate:
-                  formatCurrencyFromCents(
-                    billingPlanCatalog.pro.voiceOverageRatePerMinuteCents,
-                    i18n.language,
-                  ) ?? "$0.18",
-                alertSmsRate:
-                  formatCurrencyFromCents(
-                    billingPlanCatalog.pro.alertSmsOverageRatePerSegmentCents,
-                    i18n.language,
-                  ) ?? "$0.02",
-                outboundAttemptRate:
-                  formatCurrencyFromCents(
-                    billingPlanCatalog.pro.outboundCallAttemptOverageRateCents,
-                    i18n.language,
-                  ) ?? "$0.02",
-              })}
-            </p>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {t("billing.catalog.aiSmsAddon", {
-                monthly:
-                  formatCurrencyFromCents(
-                    billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
-                    i18n.language,
-                  ) ?? "$5.00",
-                setup:
-                  formatCurrencyFromCents(
-                    billingAddonCatalog.ai_sms.oneTimeSetupChargeCents,
-                    i18n.language,
-                  ) ?? "$19.00",
-                usage:
-                  formatCurrencyFromCents(
-                    billingAddonCatalog.ai_sms.usageRatePerSegmentCents,
-                    i18n.language,
-                  ) ?? "$0.03",
-              })}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("billing.transactions.title")}</CardTitle>
-          <CardDescription>{t("billing.transactions.description")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {billingStatus.recentTransactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t("billing.transactions.empty")}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {billingStatus.recentTransactions.map((transaction) => (
-                <div
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/20 p-4"
-                  key={`${transaction.kind}-${transaction.sourceId}`}
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {transaction.description ?? transaction.status}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatTimestamp(transaction.occurredAt, i18n.language)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm font-medium tabular-nums text-foreground">
-                      {formatCurrencyFromCents(
-                        transaction.amountCents,
-                        i18n.language,
-                        transaction.currency.toUpperCase(),
-                      )}
-                    </p>
-                    {transaction.invoiceUrl ? (
-                      <Button
-                        render={
-                          <a href={transaction.invoiceUrl} rel="noreferrer" target="_blank" />
-                        }
-                        size="sm"
-                        variant="outline"
-                      >
-                        {t("billing.transactions.invoice")}
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Usage section — clean rows with thin inline progress bars
+// ---------------------------------------------------------------------------
+
+function UsageSection({
+  status,
+  locale,
+  t,
+}: {
+  status: BillingStatus;
+  locale: BillingLocale;
+  t: BillingTranslation;
+}) {
+  const usage = status.usage;
+  const plan = status.plan;
+  const catalog = billingPlanCatalog[plan];
+  const voiceUnit = t("billing.usage.units.voice");
+  const outboundAttemptsUnit = t("billing.usage.units.outboundAttempts");
+  const segmentsUnit = t("billing.usage.units.segments");
+
+  if (plan === "self_host") return null;
+
+  return (
+    <div className="flex flex-col gap-10">
+      <BillingSection
+        title={t("billing.usage.title")}
+        description={
+          usage.resetAt
+            ? t("billing.usage.description", {
+                resetAt: formatResetDate(usage.resetAt, locale),
+              })
+            : undefined
+        }
+      >
+        <BorderedItem className="flex flex-col gap-5">
+          <UsageMeterRow
+            label={t("billing.usage.voiceTitle")}
+            locale={locale}
+            t={t}
+            used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
+            included={
+              usage.voiceSecondsIncluded !== null
+                ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
+                : null
+            }
+            unit={voiceUnit}
+            blocked={usage.voiceBlocked}
+            overageRateCents={catalog.voiceOverageRatePerMinuteCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
+          />
+
+          <UsageMeterRow
+            label={t("billing.usage.outboundAttemptsTitle")}
+            locale={locale}
+            t={t}
+            used={usage.outboundCallAttemptsUsed}
+            included={usage.outboundCallAttemptsIncluded}
+            unit={outboundAttemptsUnit}
+            blocked={usage.outboundCallAttemptsBlocked}
+            overageRateCents={catalog.outboundCallAttemptOverageRateCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
+          />
+
+          <UsageMeterRow
+            label={t("billing.usage.alertSmsTitle")}
+            locale={locale}
+            t={t}
+            used={usage.alertSmsSegmentsUsed}
+            included={usage.alertSmsSegmentsIncluded}
+            unit={segmentsUnit}
+            blocked={usage.alertSmsBlocked}
+            overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
+            overageBillable={catalog.overagesBillable}
+            mode="included"
+          />
+
+          <UsageMeterRow
+            label={t("billing.usage.knowledgeTitle")}
+            locale={locale}
+            t={t}
+            used={usage.knowledgeStorageBytesUsed}
+            included={usage.knowledgeStorageBytesIncluded}
+            unit="storage"
+            blocked={usage.knowledgeStorageBlocked}
+            overageRateCents={null}
+            overageBillable={false}
+            formatValue={formatStorage}
+            mode="included"
+          />
+        </BorderedItem>
+      </BillingSection>
+
+      {(catalog.overagesBillable || status.aiSmsEnabled) && (
+        <BillingSection
+          title={t("billing.usage.paygTitle")}
+          description={
+            usage.resetAt
+              ? t("billing.usage.paygDescription", {
+                  resetAt: formatResetDate(usage.resetAt, locale),
+                })
+              : undefined
+          }
+        >
+          <BorderedItem className="flex flex-col gap-5">
+            {catalog.overagesBillable && (
+              <>
+                <UsageMeterRow
+                  label={t("billing.usage.voiceTitle")}
+                  locale={locale}
+                  t={t}
+                  used={voiceSecondsToMinutes(usage.voiceSecondsUsed)}
+                  included={
+                    usage.voiceSecondsIncluded !== null
+                      ? voiceSecondsToMinutes(usage.voiceSecondsIncluded)
+                      : null
+                  }
+                  unit={voiceUnit}
+                  blocked={usage.voiceBlocked}
+                  overageRateCents={catalog.voiceOverageRatePerMinuteCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+
+                <UsageMeterRow
+                  label={t("billing.usage.outboundAttemptsTitle")}
+                  locale={locale}
+                  t={t}
+                  used={usage.outboundCallAttemptsUsed}
+                  included={usage.outboundCallAttemptsIncluded}
+                  unit={outboundAttemptsUnit}
+                  blocked={usage.outboundCallAttemptsBlocked}
+                  overageRateCents={catalog.outboundCallAttemptOverageRateCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+
+                <UsageMeterRow
+                  label={t("billing.usage.alertSmsTitle")}
+                  locale={locale}
+                  t={t}
+                  used={usage.alertSmsSegmentsUsed}
+                  included={usage.alertSmsSegmentsIncluded}
+                  unit={segmentsUnit}
+                  blocked={usage.alertSmsBlocked}
+                  overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
+                  overageBillable={catalog.overagesBillable}
+                  mode="payg"
+                />
+              </>
+            )}
+
+            {status.aiSmsEnabled && (
+              <UsageMeterRow
+                label={t("billing.usage.aiSmsTitle")}
+                locale={locale}
+                t={t}
+                used={usage.aiSmsSegmentsUsed}
+                included={null}
+                unit={segmentsUnit}
+                blocked={false}
+                overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
+                overageBillable
+                metered
+                mode="payg"
+              />
+            )}
+          </BorderedItem>
+        </BillingSection>
+      )}
+    </div>
+  );
+}
+
+function UsageUnavailableSection({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection
+      title={t("billing.usage.title")}
+      description={t("billing.currentPlan.selfHostNotice")}
+    >
+      <BorderedItem>
+        <p className="text-[15px] leading-6 text-muted-foreground">
+          {t("billing.currentPlan.selfHostNotice")}
+        </p>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function UsageMeterRow({
+  label,
+  locale,
+  t,
+  used,
+  included,
+  unit,
+  blocked,
+  overageRateCents,
+  overageBillable,
+  metered,
+  formatValue,
+  mode = "included",
+}: {
+  label: string;
+  locale: BillingLocale;
+  t: BillingTranslation;
+  used: number;
+  included: number | null;
+  unit: string;
+  blocked: boolean;
+  overageRateCents: number | null;
+  overageBillable: boolean;
+  metered?: boolean;
+  formatValue?: (value: number, referenceValue?: number | null) => string;
+  mode?: "included" | "payg";
+}) {
+  const pct = included !== null && included > 0 ? (used / included) * 100 : 0;
+  const isOver = included !== null && used > included;
+  const overageCount = isOver ? used - included : 0;
+  const overageCost =
+    overageBillable && overageRateCents && overageCount > 0
+      ? overageCount * overageRateCents
+      : 0;
+  const paygUnits = metered ? used : overageCount;
+
+  const valueDisplay =
+    mode === "payg"
+      ? formatValue
+        ? formatValue(paygUnits, included)
+        : paygUnits
+      : formatValue
+        ? formatValue(used, included)
+        : used;
+
+  const totalDisplay =
+    mode === "included"
+      ? included !== null
+        ? formatValue
+          ? formatValue(included, included)
+          : included
+        : null
+      : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[15px] font-medium leading-6 text-foreground">
+          {label}
+        </span>
+        <span className="text-[15px] tabular-nums leading-6 text-muted-foreground">
+          {valueDisplay}
+          {totalDisplay !== null ? ` / ${totalDisplay}` : ""}
+          {!formatValue && ` ${unit}`}
+          {mode === "payg" && metered ? ` ${t("billing.usage.meteredSuffix")}` : ""}
+        </span>
+      </div>
+
+      {/* Thin progress bar */}
+      {mode === "included" && included !== null && included > 0 && (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ease-out ${
+              blocked
+                ? "bg-destructive"
+                : isOver
+                  ? "bg-foreground"
+                  : "bg-foreground"
+            }`}
+            style={{ width: `${Math.min(pct, 100)}%` }}
+          />
+        </div>
+      )}
+
+      {/* Overage note */}
+      {mode === "included" && overageCost > 0 && (
+        <span className="text-sm tabular-nums leading-6 text-muted-foreground">
+          <Trans
+            i18nKey="billing.usage.overIncludedSummary"
+            ns="settings"
+            values={{
+              amount: formatCents(overageCost, locale),
+              count: overageCount,
+              unit,
+            }}
+            components={{
+              amount: <span className="font-medium text-foreground" />,
+            }}
+          />
+        </span>
+      )}
+      {mode === "included" && blocked && (
+        <span className="text-sm leading-6 text-destructive">
+          {t("billing.usage.blockedDescription")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Add-ons section — GitBook style with toggle/action
+// ---------------------------------------------------------------------------
+
+function AddonsSection({
+  status,
+  businessId,
+  locale,
+  t,
+}: {
+  status: BillingStatus;
+  businessId: Id<"businesses">;
+  locale: BillingLocale;
+  t: BillingTranslation;
+}) {
+  const startCheckout = useAction(api.billing.startCheckout);
+  const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
+  const isActive = status.aiSmsEnabled;
+  const canPurchase = status.canPurchaseAiSmsAddon;
+  const canUpgradeToPro =
+    status.hasCheckoutAccess &&
+    status.availableCheckoutPlans.includes("pro");
+  const addonMonthlyPrice = formatCents(
+    billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
+    locale,
+  );
+  const isFreePlanLocked =
+    status.plan === "free_cloud" &&
+    !isActive &&
+    canUpgradeToPro;
+
+  async function handleAddAiSms() {
+    setLoading("ai_sms");
+    try {
+      const result = await startCheckout({ businessId, target: "ai_sms" });
+      window.location.assign(result.url);
+    } catch {
+      toast.error(t("billing.toast.checkoutFailed"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleUpgradeToPro() {
+    if (!canUpgradeToPro) {
+      return;
+    }
+
+    setLoading("pro");
+    try {
+      const result = await startCheckout({ businessId, target: "pro" });
+      window.location.assign(result.url);
+    } catch {
+      toast.error(t("billing.toast.checkoutFailed"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const enableControl = isActive ? (
+    <Badge
+      variant="outline"
+      className="border-emerald-200 bg-emerald-50 text-[11px] tracking-wide text-emerald-700"
+    >
+      {t("billing.addon.aiSmsActiveBadge")}
+    </Badge>
+  ) : (
+    <Button
+      size="sm"
+      variant="outline"
+      aria-label={t("billing.addon.aiSmsName")}
+      disabled={loading !== null || !canPurchase}
+      onClick={() => void handleAddAiSms()}
+    >
+      {loading === "ai_sms"
+        ? t("billing.actions.openingCheckout")
+        : t("billing.addon.enable")}
+    </Button>
+  );
+
+  return (
+    <BillingSection
+      title={t("billing.addon.title")}
+      description={t("billing.addon.aiSmsDescription")}
+    >
+      <BorderedItem>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[15px] font-medium leading-6 text-foreground">
+                {t("billing.addon.aiSmsName")}
+              </span>
+              {isActive && (
+                <Badge
+                  variant="default"
+                  className="bg-emerald-600 text-[10px] tracking-wide text-white dark:bg-emerald-500"
+                >
+                  {t("billing.addon.aiSmsActiveBadge")}
+                </Badge>
+              )}
+            </div>
+            <span className="text-[15px] leading-6 text-muted-foreground">
+              {t("billing.addon.aiSmsDescription")}
+            </span>
+            {isActive && (
+              <div className="mt-1 flex flex-wrap items-end gap-2">
+                <span className="text-2xl font-semibold tracking-tight text-foreground">
+                  {addonMonthlyPrice}
+                </span>
+                <span className="pb-0.5 text-sm text-muted-foreground">
+                  {t("billing.currentPlan.monthlySuffix")}
+                </span>
+              </div>
+            )}
+            <span className="text-sm tabular-nums leading-6 text-muted-foreground">
+              {t("billing.addon.aiSmsPricing", {
+                monthly: addonMonthlyPrice,
+                perSegment: formatCents(
+                  billingAddonCatalog.ai_sms.usageRatePerSegmentCents,
+                  locale,
+                ),
+              })}
+              {" · "}
+              {t("billing.addon.aiSmsSetup", {
+                amount: formatCents(
+                  billingAddonCatalog.ai_sms.oneTimeSetupChargeCents,
+                  locale,
+                ),
+              })}
+            </span>
+          </div>
+          <div className="shrink-0">
+            {isFreePlanLocked ? (
+              <Tooltip>
+                <TooltipTrigger render={<span className="inline-flex" />}>
+                  {enableControl}
+                </TooltipTrigger>
+                <TooltipContent className="pointer-events-auto gap-1">
+                  <span>{t("billing.addon.aiSmsRequiresProPrefix")}</span>
+                  <Button
+                    variant="link"
+                    size="xs"
+                    className="h-auto p-0 text-background underline underline-offset-2 hover:text-background/80"
+                    disabled={loading !== null}
+                    onClick={() => void handleUpgradeToPro()}
+                  >
+                    {t("billing.addon.aiSmsRequiresProLink")}
+                  </Button>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              enableControl
+            )}
+          </div>
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Spending cap placeholder
+// ---------------------------------------------------------------------------
+
+function SpendingCapSection({
+  status,
+  t,
+}: {
+  status: BillingStatus;
+  t: BillingTranslation;
+}) {
+  if (status.plan !== "pro" && status.plan !== "enterprise") return null;
+
+  return (
+    <BillingSection
+      title={t("billing.spendingCap.title")}
+      description={t("billing.spendingCap.description")}
+    >
+      <BorderedItem className="opacity-60">
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative max-w-xs flex-1">
+            <Input
+              disabled
+              placeholder={t("billing.spendingCap.placeholder")}
+              className="pr-10"
+            />
+            <Lock className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/40" />
+          </div>
+          <Badge variant="secondary" className="shrink-0 text-[10px] tracking-wide">
+            {t("billing.spendingCap.comingSoon")}
+          </Badge>
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Transaction history
+// ---------------------------------------------------------------------------
+
+function TransactionsSection({
+  status,
+  locale,
+  t,
+}: {
+  status: BillingStatus;
+  locale: BillingLocale;
+  t: BillingTranslation;
+}) {
+  const transactions = status.recentTransactions;
+  if (!transactions || transactions.length === 0) return null;
+
+  return (
+    <BillingSection
+      title={t("billing.transactions.title")}
+      description={t("billing.transactions.description")}
+    >
+      <div className="rounded-xl border border-border">
+        <Table className="min-w-[42rem]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.date")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.description")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.amount")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.status")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.invoice")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.map((tx) => {
+              const isRefund = tx.kind === "refund";
+              return (
+                <TableRow key={tx.sourceId}>
+                  <TableCell className="text-sm tabular-nums text-muted-foreground">
+                    {formatTransactionDate(tx.occurredAt, locale)}
+                  </TableCell>
+                  <TableCell className="text-sm text-foreground">
+                    {tx.description ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right text-sm tabular-nums font-medium text-foreground">
+                    {isRefund ? "−" : ""}
+                    {formatCents(tx.amountCents, locale, tx.currency.toUpperCase())}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground capitalize">
+                      {tx.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {tx.invoiceUrl ? (
+                      <Button
+                        render={
+                          <a
+                            href={tx.invoiceUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                          />
+                        }
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto gap-1 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        {t("billing.transactions.invoice")}
+                        <ArrowUpRight className="size-3" />
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </BillingSection>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeletons
+// ---------------------------------------------------------------------------
+
+function PlanSectionSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection title={t("billing.currentPlan.title")}>
+      <BorderedItem>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Skeleton className="h-9 w-28 rounded-md" />
+          <Skeleton className="h-9 w-36 rounded-md" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function UsageSectionSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <div className="flex flex-col gap-10">
+      <BillingSection
+        title={t("billing.usage.title")}
+        description={<Skeleton className="h-4 w-44" />}
+      >
+        <BorderedItem className="flex flex-col gap-5">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <Skeleton className="h-1.5 w-full rounded-full" />
+            </div>
+          ))}
+        </BorderedItem>
+      </BillingSection>
+
+      <BillingSection
+        title={t("billing.usage.paygTitle")}
+        description={<Skeleton className="h-4 w-44" />}
+      >
+        <BorderedItem className="flex flex-col gap-5">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+              <Skeleton className="h-4 w-40" />
+            </div>
+          ))}
+        </BorderedItem>
+      </BillingSection>
+    </div>
+  );
+}
+
+function AddonsSectionSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection
+      title={t("billing.addon.title")}
+      description={t("billing.addon.aiSmsDescription")}
+    >
+      <BorderedItem>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-72" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-6 w-10 rounded-full" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function SpendingCapSectionSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection
+      title={t("billing.spendingCap.title")}
+      description={t("billing.spendingCap.description")}
+    >
+      <BorderedItem className="opacity-60">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-10 max-w-xs flex-1 rounded-md" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+        </div>
+      </BorderedItem>
+    </BillingSection>
+  );
+}
+
+function TransactionsSectionSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <BillingSection
+      title={t("billing.transactions.title")}
+      description={t("billing.transactions.description")}
+    >
+      <div className="overflow-hidden rounded-xl border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.date")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.description")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.amount")}
+              </TableHead>
+              <TableHead className="text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.status")}
+              </TableHead>
+              <TableHead className="text-right text-[13px] font-medium text-muted-foreground">
+                {t("billing.transactions.columns.invoice")}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-40" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </BillingSection>
+  );
+}
+
+function BillingOverviewSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <PlanSectionSkeleton t={t} />
+      <AddonsSectionSkeleton t={t} />
+      <SpendingCapSectionSkeleton t={t} />
+      <TransactionsSectionSkeleton t={t} />
+    </div>
+  );
+}
+
+function BillingUsageSkeleton({
+  t,
+}: {
+  t: BillingTranslation;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <UsageSectionSkeleton t={t} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
+export function SettingsBillingPage(props: SettingsBillingPageProps) {
+  const { i18n, t } = useTranslation("settings");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+
+  if (isLoadingStatus || !status) {
+    return <BillingOverviewSkeleton t={t} />;
+  }
+
+  if (status.plan === "self_host") {
+    return (
+      <div className="flex w-full flex-col gap-10">
+        <PlanSection
+          status={status}
+          businessId={props.businessId}
+          locale={locale}
+          t={t}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <PlanSection
+        status={status}
+        businessId={props.businessId}
+        locale={locale}
+        t={t}
+      />
+      <AddonsSection
+        status={status}
+        businessId={props.businessId}
+        locale={locale}
+        t={t}
+      />
+      <SpendingCapSection status={status} t={t} />
+      <TransactionsSection status={status} locale={locale} t={t} />
+    </div>
+  );
+}
+
+export function SettingsBillingUsagePage(props: SettingsBillingPageProps) {
+  const { i18n, t } = useTranslation("settings");
+  const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+
+  if (isLoadingStatus || !status) {
+    return <BillingUsageSkeleton t={t} />;
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-10">
+      {status.plan === "self_host" ? (
+        <UsageUnavailableSection t={t} />
+      ) : (
+        <UsageSection status={status} locale={locale} t={t} />
+      )}
     </div>
   );
 }

@@ -1,17 +1,13 @@
-import type { CSSProperties } from "react";
-import {
-  CircleCheckIcon,
-  InfoIcon,
-  Loader2Icon,
-  OctagonXIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
-import { useTheme } from "next-themes";
-import { Toaster as Sonner, type ToasterProps } from "sonner";
+"use client"
+
+import { useTheme } from "next-themes"
+import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-  const resolvedTheme: ToasterProps["theme"] = theme === "light" || theme === "dark" ? theme : "system";
+  const { theme = "system" } = useTheme()
+  const resolvedTheme: ToasterProps["theme"] =
+    theme === "light" || theme === "dark" ? theme : "system"
 
   return (
     <Sonner
@@ -40,7 +36,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
-        } as CSSProperties
+        } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
@@ -49,7 +45,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
-  );
-};
+  )
+}
 
-export { Toaster };
+export { Toaster }

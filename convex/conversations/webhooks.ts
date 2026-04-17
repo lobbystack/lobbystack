@@ -14,6 +14,7 @@ import {
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { getOpenConversationForContact } from "../lib/indexedQueries";
+import { isContactBlocked } from "../lib/contactBlocking";
 import {
   buildLinkOnlyAttachmentText,
   formatAttachmentDisplayName,
@@ -432,12 +433,15 @@ export const ingestInboundSms = internalMutation({
     const nextConsentStatus = consentUpdate?.status ?? existingContact?.smsConsentStatus;
     const automationState =
       conversation?.automationState === "human_handoff" ? "human_handoff" : "ai_active";
+    const contactIsBlocked = isContactBlocked(existingContact);
 
     return {
       conversationId,
       contactId,
       replySuppressed:
-        nextConsentStatus === "opted_out" || automationState === "human_handoff",
+        nextConsentStatus === "opted_out" ||
+        automationState === "human_handoff" ||
+        contactIsBlocked,
       automationState,
     };
   },

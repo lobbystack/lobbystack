@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -25,8 +26,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics";
-import type { AgentSection } from "./sections";
-
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -76,12 +75,31 @@ function resolveFileContentType(file: File): string {
   return inferContentTypeFromFileName(file.name);
 }
 
+function getUploadErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+): string {
+  if (!(error instanceof Error) || !error.message) {
+    return fallbackMessage;
+  }
+
+  if (
+    error.message === "Documents must be 10 MB or smaller." ||
+    error.message === "Supported document types are PDF, DOCX, TXT, and Markdown." ||
+    error.message.startsWith("Knowledge storage limit reached.")
+  ) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 export function UploadKnowledgeDocumentSheet({
   businessId,
   section,
 }: {
   businessId: Id<"businesses">;
-  section: AgentSection;
+  section: KnowledgeSection;
 }) {
   const { t } = useTranslation("agent");
   const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
@@ -195,7 +213,12 @@ export function UploadKnowledgeDocumentSheet({
         contentType,
         operation: "knowledge_document_upload",
       });
-      setErrorMessage(t(`sections.${section}.uploadValidation.uploadFailed`));
+      setErrorMessage(
+        getUploadErrorMessage(
+          error,
+          t(`sections.${section}.uploadValidation.uploadFailed`),
+        ),
+      );
     } finally {
       setIsUploading(false);
     }
@@ -248,7 +271,7 @@ export function UploadKnowledgeDocumentSheet({
                 type="file"
               />
               <label
-                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-8 text-center transition-colors ${
+                className={`flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-6 py-8 text-center transition-colors ${
                   isDraggingFile
                     ? "border-foreground/30 bg-muted/40"
                     : "border-border/70 bg-muted/20 hover:bg-muted/30"
@@ -280,7 +303,7 @@ export function UploadKnowledgeDocumentSheet({
                     </span>
                   </p>
                   {resolvedFileName ? (
-                    <p className="text-sm font-medium text-foreground">{resolvedFileName}</p>
+                    <p className="type-item-title">{resolvedFileName}</p>
                   ) : null}
                 </div>
               </label>

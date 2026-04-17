@@ -24,7 +24,7 @@ function AuthShell(props: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10">
       <section className="flex w-full items-center justify-center">
-        <div className="w-full max-w-md rounded-[2rem] border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
+        <div className="w-full max-w-md rounded-xl border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
           {props.children}
         </div>
       </section>
@@ -302,7 +302,7 @@ export function ConfirmEmailChangePage() {
   const token = searchParams.get("token")?.trim() ?? "";
   const email = searchParams.get("email")?.trim().toLowerCase() ?? "";
   const hasConfirmationParams = token.length > 0 && email.length > 0;
-  const returnHref = auth.isAuthenticated ? "/settings" : "/login";
+  const returnHref = auth.isAuthenticated ? "/settings/usage" : "/login";
   const returnLabel = auth.isAuthenticated
     ? t("confirmEmailChange.backToSettings")
     : t("confirmEmailChange.backToLogin");
@@ -336,18 +336,16 @@ export function ConfirmEmailChangePage() {
     <AuthShell>
       <div className="flex flex-col gap-6 text-center">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            {t("confirmEmailChange.title")}
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <h1 className="type-page-title">{t("confirmEmailChange.title")}</h1>
+          <p className="type-page-description">
             {hasConfirmationParams
               ? t("confirmEmailChange.subtitle", { email })
               : t("confirmEmailChange.invalidLink")}
           </p>
         </div>
 
-        {statusMessage ? <p className="text-sm text-muted-foreground">{statusMessage}</p> : null}
-        {errorMessage ? <p className="text-sm text-destructive">{errorMessage}</p> : null}
+        {statusMessage ? <p className="type-body-muted">{statusMessage}</p> : null}
+        {errorMessage ? <p className="type-body text-destructive">{errorMessage}</p> : null}
 
         <form className="flex flex-col" onSubmit={handleSubmit}>
           <Button
@@ -362,7 +360,7 @@ export function ConfirmEmailChangePage() {
           </Button>
         </form>
 
-        <Link className="text-sm text-muted-foreground hover:text-foreground" to={returnHref}>
+        <Link className="type-body-muted hover:text-foreground" to={returnHref}>
           {returnLabel}
         </Link>
       </div>

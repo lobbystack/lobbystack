@@ -25,7 +25,7 @@ Create these Polar products:
 
 The current hosted pricing model is:
 
-- `Free Cloud`
+- `Free`
   - no Polar subscription
   - `10` voice minutes included
   - `10` Alert SMS segments included

@@ -23,6 +23,8 @@ import {
   billingAddonCatalog,
   billingErrorCodes,
   billingPlanCatalog,
+  getBillingMonthlyChargeCents,
+  getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
 } from "../packages/shared/src/billing";
 import { components, internal } from "./_generated/api";
@@ -317,12 +319,14 @@ function buildBillingStatus(input: {
   hasCustomerPortalAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
   aiSmsAddonCheckoutConfigured: boolean;
+  knowledgeStorageUsageBytes: number;
 }): BillingStatus {
   const usage = getBillingUsageSnapshotData({
     plan: input.plan,
     periodKey: input.periodKey,
     usage: input.usage,
   });
+  const knowledgeStorageBytesIncluded = getKnowledgeStorageLimitBytes(input.plan);
   const aiSmsAddonEligible = canPurchaseAiSmsAddon({
     plan: input.plan,
     activeAddons: input.activeAddons,
@@ -340,7 +344,10 @@ function buildBillingStatus(input: {
       activeAddons: input.activeAddons,
     }),
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
-    monthlyChargeCents: billingPlanCatalog[input.plan].monthlyChargeCents,
+    monthlyChargeCents: getBillingMonthlyChargeCents({
+      plan: input.plan,
+      activeAddons: input.activeAddons,
+    }),
     billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
     billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
@@ -354,7 +361,14 @@ function buildBillingStatus(input: {
       : [],
     canPurchaseAiSmsAddon:
       input.hasBillingManagementAccess && canPurchaseConfiguredAiSmsAddon,
-    usage,
+    usage: {
+      ...usage,
+      knowledgeStorageBytesUsed: input.knowledgeStorageUsageBytes,
+      knowledgeStorageBytesIncluded,
+      knowledgeStorageBlocked:
+        knowledgeStorageBytesIncluded !== null &&
+        input.knowledgeStorageUsageBytes >= knowledgeStorageBytesIncluded,
+    },
     recentTransactions: input.hasBillingManagementAccess ? input.recentTransactions : [],
   };
 }
@@ -1131,7 +1145,7 @@ export const startCheckout = action({
     });
 
     if (args.target === "pro" && snapshot.plan !== "free_cloud") {
-      throw new Error("Only Free Cloud workspaces can start Pro checkout.");
+      throw new Error("Only Free workspaces can start Pro checkout.");
     }
     if (args.target === "pro" && !snapshot.availableCheckoutPlans.includes("pro")) {
       throw new Error("Pro checkout is not configured.");
@@ -1267,6 +1281,12 @@ export const getStatus = query({
           .order("desc")
           .take(10)
       : [];
+    const knowledgeStorageUsageBytes: number = await ctx.runQuery(
+      internal.ai.context.knowledge.getKnowledgeStorageUsageBytes,
+      {
+        businessId: args.businessId,
+      },
+    );
     const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
     const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
 
@@ -1293,6 +1313,7 @@ export const getStatus = query({
       availableCheckoutPlans,
       aiSmsAddonCheckoutConfigured:
         siteUrlConfigured && isAiSmsAddonCheckoutConfigured(),
+      knowledgeStorageUsageBytes,
     });
   },
 });

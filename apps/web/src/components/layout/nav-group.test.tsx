@@ -35,7 +35,7 @@ describe("NavGroup", () => {
                 title: "Agent",
                 icon: Bot,
                 items: [
-                  { title: "Basic Settings", url: "/agent" },
+                  { title: "AI settings", url: "/agent" },
                   { title: "Knowledge", url: "/agent/knowledge" },
                 ],
               },
@@ -43,7 +43,7 @@ describe("NavGroup", () => {
                 title: "Settings",
                 icon: Settings,
                 items: [
-                  { title: "General", url: "/settings/business" },
+                  { title: "General", url: "/settings/account" },
                 ],
               },
             ]}
@@ -54,11 +54,11 @@ describe("NavGroup", () => {
 
     const user = userEvent.setup();
 
-    expect(screen.queryByText("Basic Settings")).toBeNull();
+    expect(screen.queryByText("AI settings")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Agent" }));
 
-    expect(screen.getByText("Basic Settings")).toBeTruthy();
+    expect(screen.getByText("AI settings")).toBeTruthy();
     expect(screen.getByText("Knowledge")).toBeTruthy();
   });
 });

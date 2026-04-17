@@ -13,7 +13,143 @@
     "messages": "{{count}} messages",
     "calls": "{{count}} appels",
     "unknownContact": "Contact inconnu",
-    "empty": "Aucun contact ne correspond à la recherche."
+    "empty": "Aucun contact ne correspond à la recherche.",
+    "status": {
+      "blocked": "Bloqué"
+    },
+    "actions": {
+      "moreOptions": "Plus d'options",
+      "blockContact": "Bloquer le contact",
+      "unblockContact": "Débloquer le contact",
+      "blockTitle": "Bloquer le contact ?",
+      "blockDescription": "Cela empêchera les nouvelles réponses SMS et raccrochera immédiatement les nouveaux appels entrants de ce contact.",
+      "blockConfirm": "Bloquer le contact",
+      "blockCancel": "Annuler",
+      "blockSuccess": "Contact bloqué.",
+      "unblockTitle": "Débloquer le contact ?",
+      "unblockDescription": "Cela autorisera de nouveau les réponses SMS et les appels entrants pour ce contact.",
+      "unblockConfirm": "Débloquer le contact",
+      "unblockSuccess": "Contact débloqué.",
+      "updateFailed": "Impossible de mettre à jour l'état de blocage.",
+      "deleteContact": "Supprimer le contact",
+      "deleteTitle": "Supprimer le contact ?",
+      "deleteDescription": "Cela supprimera définitivement le contact de votre tableau de bord.",
+      "deleteConfirm": "Supprimer le contact",
+      "deleteCancel": "Annuler",
+      "deleteFailed": "Impossible de supprimer le contact."
+    }
+  },
+  "detail": {
+    "backToList": "Contacts",
+    "unknownContact": "Contact inconnu",
+    "notFound": "Contact introuvable",
+    "notFoundDescription": "Ce contact a peut-être été supprimé ou vous n'y avez pas accès.",
+    "metadata": {
+      "phone": "Téléphone",
+      "email": "Courriel",
+      "firstSeen": "Première apparition"
+    },
+    "blocking": {
+      "badge": "Bloqué",
+      "active": "Actif",
+      "blockAction": "Bloquer le contact",
+      "unblockAction": "Débloquer le contact",
+      "blockTitle": "Bloquer le contact ?",
+      "blockDescription": "Cela empêchera les nouvelles réponses SMS et raccrochera immédiatement les nouveaux appels entrants de ce contact.",
+      "blockConfirm": "Bloquer le contact",
+      "blockSuccess": "Contact bloqué.",
+      "unblockTitle": "Débloquer le contact ?",
+      "unblockDescription": "Cela autorisera de nouveau les réponses SMS et les appels entrants pour ce contact.",
+      "unblockConfirm": "Débloquer le contact",
+      "unblockSuccess": "Contact débloqué.",
+      "blockedAtInline": "Bloqué le {{time}}",
+      "cancel": "Annuler",
+      "updateFailed": "Impossible de mettre à jour l'état de blocage."
+    },
+    "activity": {
+      "empty": "Aucune interaction enregistrée pour le moment.",
+      "callInbound": "Appel entrant",
+      "callBlocked": "bloqué",
+      "callCompleted": "terminé",
+      "callFailed": "échoué",
+      "callInProgress": "en cours",
+      "smsInbound": "SMS entrant",
+      "smsOutbound": "SMS sortant",
+      "messageSent": "Envoyé",
+      "messageReceived": "Reçu",
+      "smsConversation": "SMS",
+      "appointmentScheduled": "Rendez-vous",
+      "withStaff": "avec {{staff}}"
+    },
+    "stats": {
+      "calls": "Appels",
+      "messages": "Messages",
+      "appointments": "Rendez-vous",
+      "conversations": "Conversations"
+    },
+    "tabs": {
+      "activity": "Activité",
+      "appointments": "Rendez-vous",
+      "details": "Détails"
+    },
+    "appointments": {
+      "empty": "Aucun rendez-vous pour ce contact.",
+      "service": "Service",
+      "staff": "Personnel",
+      "dateTime": "Date et heure",
+      "status": "Statut",
+      "channel": "Canal",
+      "syncState": "Calendrier",
+      "booked": "Réservé",
+      "confirmed": "Confirmé",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "pending": "En attente",
+      "sourceValues": {
+        "voice": "Voix",
+        "sms": "SMS",
+        "dashboard": "Tableau de bord"
+      },
+      "syncStateValues": {
+        "notRequired": "Non requis",
+        "pending": "En attente",
+        "syncing": "Synchronisation",
+        "synced": "Synchronisé",
+        "failed": "Échoué",
+        "drifted": "À vérifier"
+      }
+    },
+    "details": {
+      "contactInfoTitle": "Coordonnées",
+      "name": "Nom",
+      "phone": "Téléphone",
+      "email": "Courriel",
+      "timezone": "Fuseau horaire",
+      "preferredLocale": "Langue préférée",
+      "blockingTitle": "Blocage du contact",
+      "blockingStatus": "Statut",
+      "blockedAt": "Bloqué le",
+      "blockedBy": "Bloqué par",
+      "smsConsentTitle": "Consentement SMS",
+      "smsConsentStatus": "Statut",
+      "smsConsentUpdatedAt": "Dernière mise à jour",
+      "smsConsentSource": "Source",
+      "smsConsentStatusValues": {
+        "subscribed": "Abonné",
+        "optedOut": "Désabonné"
+      },
+      "smsConsentSourceValues": {
+        "twilioStop": "Twilio STOP",
+        "twilioStart": "Twilio START",
+        "keywordStop": "Mot-clé STOP",
+        "keywordStart": "Mot-clé START"
+      },
+      "copy": "Copier",
+      "systemTitle": "Système",
+      "contactId": "ID du contact",
+      "createdAt": "Créé le",
+      "notSet": "—"
+    }
   },
   "pagination": {
     "rowsPerPage": "Lignes par page",

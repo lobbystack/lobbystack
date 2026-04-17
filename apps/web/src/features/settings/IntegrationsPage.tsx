@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction } from "convex/react";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -8,8 +8,14 @@ import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  invalidateCachedConvexQuery,
+  useCachedConvexQuery,
+} from "@/lib/cached-convex-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 import {
   Field,
   FieldContent,
@@ -206,9 +212,13 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
   const handledCallbackRef = useRef<string | null>(null);
-  const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
+  const {
+    data: connections,
+    isLoading: isLoadingConnections,
+    refresh: refreshConnections,
+  } = useCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
-  }) as Array<CalendarConnectionListItem> | undefined;
+  });
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
   const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
@@ -243,7 +253,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
-
   useEffect(() => {
     const calendar = searchParams.get("calendar");
     const status = searchParams.get("status");
@@ -258,6 +267,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       return;
     }
     handledCallbackRef.current = callbackKey;
+    void refreshConnections();
 
     if (status === "success") {
       captureAnalyticsEvent("web.integration.calendar_connect_completed", {
@@ -278,7 +288,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     nextParams.delete("status");
     nextParams.delete("message");
     setSearchParams(nextParams, { replace: true });
-  }, [businessId, searchParams, setSearchParams, t]);
+  }, [businessId, refreshConnections, searchParams, setSearchParams, t]);
 
   useEffect(() => {
     async function loadCalendars() {
@@ -360,6 +370,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
     try {
       await disconnectGoogleCalendar({ businessId });
+      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
+        businessId,
+      });
+      await refreshConnections();
       captureAnalyticsEvent("web.integration.calendar_disconnect_completed", {
         businessId: String(businessId),
         provider: "google",
@@ -394,6 +408,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         businessId,
         calendarId: selectedCalendarId,
       });
+      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
+        businessId,
+      });
+      await refreshConnections();
       toast.success(t("integrations.google.calendarSaved"));
     } catch (error) {
       captureAnalyticsException(error, {
@@ -443,6 +461,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   return (
     <>
       <div className="flex flex-col gap-6">
+        <PageHeader title={t("sections.integrations")} />
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <li className="rounded-xl border bg-card p-4">
             <div className="mb-8 flex items-center justify-between gap-3">
@@ -450,39 +469,43 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 <GoogleCalendarLogo />
               </div>
               <div className="flex items-center gap-2">
-                {googleHasConnection ? (
+                {!isLoadingConnections && googleHasConnection ? (
                   <InlineConfirmDeleteButton
                     deleting={isDisconnecting}
                     onConfirm={() => void handleDisconnectGoogle()}
                   />
                 ) : null}
-                <Button
-                  className={
-                    googleConnected && !googleNeedsReconnect
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
-                      : undefined
-                  }
-                  disabled={isConnecting}
-                  onClick={() =>
-                    googleConnected && !googleNeedsReconnect
-                      ? openGoogleSheet()
-                      : void handleConnectGoogle()
-                  }
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {googleNeedsReconnect
-                    ? t("integrations.google.reconnect")
-                    : googleConnected
-                      ? t("integrations.actions.connected")
-                    : t("integrations.actions.connect")}
-                </Button>
+                {isLoadingConnections ? (
+                  <Skeleton className="h-9 w-24 rounded-md" />
+                ) : (
+                  <Button
+                    className={
+                      googleConnected && !googleNeedsReconnect
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : undefined
+                    }
+                    disabled={isConnecting}
+                    onClick={() =>
+                      googleConnected && !googleNeedsReconnect
+                        ? openGoogleSheet()
+                        : void handleConnectGoogle()
+                    }
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {googleNeedsReconnect
+                      ? t("integrations.google.reconnect")
+                      : googleConnected
+                        ? t("integrations.actions.connected")
+                        : t("integrations.actions.connect")}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="font-semibold">{t("integrations.cards.google.title")}</h2>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2>
+              <p className="type-body-muted line-clamp-2">
                 {t("integrations.cards.google.description")}
               </p>
             </div>
@@ -493,25 +516,29 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
                 <MicrosoftCalendarLogo />
               </div>
-              <Button
-                className={
-                  microsoftConnected
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
-                    : undefined
-                }
-                disabled
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {microsoftConnected
-                  ? t("integrations.actions.connected")
-                  : t("integrations.actions.connect")}
-              </Button>
+              {isLoadingConnections ? (
+                <Skeleton className="h-9 w-24 rounded-md" />
+              ) : (
+                <Button
+                  className={
+                    microsoftConnected
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      : undefined
+                  }
+                  disabled
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {microsoftConnected
+                    ? t("integrations.actions.connected")
+                    : t("integrations.actions.connect")}
+                </Button>
+              )}
             </div>
             <div className="flex flex-col gap-1">
-              <h2 className="font-semibold">{t("integrations.cards.microsoft.title")}</h2>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <h2 className="type-section-title text-lg">{t("integrations.cards.microsoft.title")}</h2>
+              <p className="type-body-muted line-clamp-2">
                 {t("integrations.cards.microsoft.description")}
               </p>
             </div>
@@ -536,10 +563,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
           <div className="flex max-h-[calc(90vh-7rem)] flex-col gap-6 overflow-y-auto p-6">
             <section className="flex flex-col gap-4 rounded-xl border p-4">
               <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-semibold">
+                <h3 className="type-item-title">
                   {t("integrations.google.connectionSectionTitle")}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="type-body-muted">
                   {t("integrations.google.connectionSectionDescription")}
                 </p>
               </div>
@@ -560,26 +587,26 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               {selectedConnection ? (
                 <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="type-meta">
                       {t("integrations.google.connectedAccount")}
                     </p>
-                    <p className="text-sm">
+                    <p className="type-body">
                       {selectedConnection.externalAccountEmail ??
                         t("integrations.google.connectedAccountUnavailable")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">
+                    <p className="type-meta">
                       {t("integrations.google.lastSync")}
                     </p>
-                    <p className="text-sm">
+                    <p className="type-body">
                       {formatTimestamp(selectedConnection.lastSyncedAt, i18n.language) ??
                         t("integrations.google.neverSynced")}
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed px-4 py-4 text-sm text-muted-foreground">
+                <div className="type-body-muted rounded-xl border border-dashed px-4 py-4">
                   {t("integrations.google.notConnectedDescription")}
                 </div>
               )}
@@ -589,10 +616,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
               <>
                 <section className="flex flex-col gap-4 rounded-xl border p-4">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-semibold">
+                    <h3 className="type-item-title">
                       {t("integrations.google.calendarSectionTitle")}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="type-body-muted">
                       {t("integrations.google.calendarSectionDescription")}
                     </p>
                   </div>
@@ -626,32 +653,32 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                             : t("integrations.google.reconnect")}
                         </FieldDescription>
                       </FieldContent>
-                      <Select
-                        disabled={isLoadingCalendars || calendarOptions.length === 0}
-                        onValueChange={(value) => setSelectedCalendarId(value ?? "")}
-                        value={selectedCalendarId}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder={
-                              isLoadingCalendars
-                                ? t("integrations.google.loadingCalendars")
-                                : t("integrations.google.selectCalendar")
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {calendarOptions.map((calendar) => (
-                            <SelectItem key={calendar.id} value={calendar.id}>
-                              {calendar.primary
-                                ? t("integrations.google.primaryCalendarLabel", {
-                                    summary: calendar.summary,
-                                  })
-                                : calendar.summary}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {isLoadingCalendars ? (
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      ) : (
+                        <Select
+                          disabled={calendarOptions.length === 0}
+                          onValueChange={(value) => setSelectedCalendarId(value ?? "")}
+                          value={selectedCalendarId}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={t("integrations.google.selectCalendar")}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {calendarOptions.map((calendar) => (
+                              <SelectItem key={calendar.id} value={calendar.id}>
+                                {calendar.primary
+                                  ? t("integrations.google.primaryCalendarLabel", {
+                                      summary: calendar.summary,
+                                    })
+                                  : calendar.summary}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </Field>
                   </FieldGroup>
 
@@ -686,6 +713,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     <Button
                       disabled={!selectedConnection}
                       onClick={() => void handleDisconnectGoogle()}
+                      size="sm"
                       type="button"
                       variant="outline"
                     >
@@ -693,33 +721,46 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                     </Button>
                   </div>
 
-                  <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("integrations.google.selectedCalendar")}
-                      </p>
-                      <p className="text-sm">
-                        {selectedConnection.selectedCalendarSummary ??
-                          selectedConnection.selectedCalendarId ??
-                          t("integrations.google.noCalendarSelected")}
-                      </p>
+                  {isLoadingCalendars ? (
+                    <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
+                      <div className="flex flex-col gap-2">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("integrations.google.lastSyncState")}
-                      </p>
-                      <p className="text-sm">
-                        {selectedConnection.lastSyncError ??
-                          t("integrations.google.lastSyncOk")}
-                      </p>
+                  ) : (
+                    <div className="grid gap-3 rounded-xl bg-muted/35 p-4 sm:grid-cols-2">
+                      <div className="flex flex-col gap-1">
+                        <p className="type-meta">
+                          {t("integrations.google.selectedCalendar")}
+                        </p>
+                        <p className="type-body">
+                          {selectedConnection.selectedCalendarSummary ??
+                            selectedConnection.selectedCalendarId ??
+                            t("integrations.google.noCalendarSelected")}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="type-meta">
+                          {t("integrations.google.lastSyncState")}
+                        </p>
+                        <p className="type-body">
+                          {selectedConnection.lastSyncError ??
+                            t("integrations.google.lastSyncOk")}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </section>
               </>
             ) : null}
 
             <Separator />
-            <p className="text-xs text-muted-foreground">
+            <p className="type-meta">
               {t("integrations.providers.microsoft")}
             </p>
           </div>

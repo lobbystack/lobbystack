@@ -10,6 +10,13 @@
     "attachmentPreviewDocument": "Pièce jointe : document",
     "selectConversation": "Sélectionnez une conversation pour afficher le fil.",
     "noChannel": "Aucun canal de contact enregistré.",
+    "blockedBadge": "Bloqué",
+    "blockedDescription": "Ce contact est bloqué. Les nouvelles réponses SMS sont désactivées et les appels entrants raccrocheront immédiatement.",
+    "blockedDescriptionWithActor": "Ce contact a été bloqué par {{name}}. Les nouvelles réponses SMS sont désactivées et les appels entrants raccrocheront immédiatement.",
+    "blockedDescriptionWithTime": "Ce contact a été bloqué le {{time}}. Les nouvelles réponses SMS sont désactivées et les appels entrants raccrocheront immédiatement.",
+    "blockedDescriptionWithActorAndTime": "Ce contact a été bloqué par {{name}} le {{time}}. Les nouvelles réponses SMS sont désactivées et les appels entrants raccrocheront immédiatement.",
+    "blockedComposerPlaceholder": "Ce contact est bloqué.",
+    "blockedComposerHint": "Débloquez le contact depuis Contacts avant d'envoyer une nouvelle réponse SMS.",
     "composerPlaceholder": "Tapez votre message...",
     "composerPlaceholderSms": "Répondre par SMS...",
     "composerPlaceholderWeb": "Répondre via le web...",
@@ -27,6 +34,8 @@
     "send": "Envoyer",
     "sendFailed": "Impossible d'envoyer votre message.",
     "uploadFailed": "Impossible de téléverser cette pièce jointe.",
+    "maxAttachments": "Vous pouvez envoyer jusqu'à {{count}} pièces jointes à la fois.",
+    "partialAttachmentsAdded": "Seules les {{count}} premières pièces jointes ont été ajoutées.",
     "deliveryFailed": "Échec de l'envoi"
   },
   "outcome": {

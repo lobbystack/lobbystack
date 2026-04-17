@@ -1,10 +1,10 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
+import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-
 
 type SettingsLayoutProps = {
   businessId?: Id<"businesses">;
@@ -12,39 +12,47 @@ type SettingsLayoutProps = {
 
 export function SettingsLayout({ businessId }: SettingsLayoutProps) {
   const { t } = useTranslation("settings");
-  const location = useLocation();
 
   if (!businessId) {
     return <BusinessSetupCard />;
   }
 
-  const header =
-    location.pathname === "/settings/appearance"
-      ? {
-          title: t("appearance.title"),
-          description: t("appearance.description"),
-        }
-      : location.pathname === "/settings/billing"
-        ? {
-            title: t("sections.billing"),
-            description: t("layout.billingDescription"),
-          }
-      : location.pathname === "/settings/integrations"
-        ? {
-            title: t("sections.integrations"),
-            description: t("layout.integrationsDescription"),
-          }
-        : {
-            title: t("sections.business"),
-            description: t("layout.businessDescription"),
-          };
+  const navigationItems = [
+    { label: t("sections.usage"), to: "/settings/usage" },
+    { label: t("sections.billing"), to: "/settings/billing" },
+    { label: t("sections.business"), to: "/settings/account" },
+    { label: t("sections.appearance"), to: "/settings/appearance" },
+  ] as const;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader description={header.description} title={header.title} />
+    <section className="flex flex-1 flex-col gap-6">
+      <PageHeader title={t("header.title")} />
+      <nav
+        aria-label={t("header.title")}
+        className="overflow-x-auto pb-1"
+      >
+        <div className="flex min-w-max items-center gap-2">
+          {navigationItems.map((item) => (
+            <NavLink
+                className={({ isActive }) =>
+                  cn(
+                    "inline-flex h-9 items-center rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors",
+                    isActive
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                  )
+                }
+              key={item.to}
+              to={item.to}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
       <div className="w-full">
         <Outlet />
       </div>
-    </div>
+    </section>
   );
 }

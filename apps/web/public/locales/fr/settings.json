@@ -6,13 +6,15 @@
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
     "integrationsDescription": "Connectez vos outils et applications préférés.",
-    "billingDescription": "Consultez l'utilisation hébergée, les limites du forfait et l'accès au module SMS IA."
+    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité de facturation récente.",
+    "usageDescription": "Suivez l'utilisation hébergée, les limites du forfait et la date de réinitialisation de la période en cours."
   },
   "sections": {
-    "business": "Compte",
+    "business": "Équipe",
     "appearance": "Préférences",
     "integrations": "Intégrations",
-    "billing": "Facturation"
+    "billing": "Facturation",
+    "usage": "Utilisation"
   },
   "billing": {
     "toast": {
@@ -22,33 +24,66 @@
     },
     "planLabels": {
       "selfHost": "Auto-hébergé",
-      "freeCloud": "Cloud gratuit",
+      "freeCloud": "Gratuit",
+      "freeCloudCard": "Forfait gratuit",
       "pro": "Pro",
-      "enterprise": "Entreprise"
+      "proCard": "Forfait Pro",
+      "enterprise": "Entreprise",
+      "enterpriseCard": "Forfait Entreprise"
+    },
+    "subscriptionStates": {
+      "active": "Actif",
+      "trialing": "Essai",
+      "past_due": "Paiement en retard",
+      "canceled": "Annulé",
+      "revoked": "Révoqué",
+      "inactive": "Inactif"
     },
     "actions": {
       "upgradeToPro": "Passer à Pro",
       "unlockAiSms": "Activer les SMS IA",
       "manageBilling": "Gérer la facturation",
+      "manageSubscription": "Gérer l'abonnement",
       "openingCheckout": "Ouverture du paiement...",
-      "openingPortal": "Ouverture du portail..."
+      "openingPortal": "Ouverture du portail...",
+      "viewInvoice": "Voir la facture"
     },
     "currentPlan": {
-      "title": "Forfait et accès",
+      "title": "Votre forfait",
       "description": "La facturation hébergée s'applique seulement aux espaces cloud. L'auto-hébergement garde le produit complet avec vos propres fournisseurs.",
       "planLabel": "Forfait actuel",
-      "monthlyChargeValue": "{{amount}} / mois",
-      "customPricing": "Tarification et usage personnalisés.",
+      "monthlyChargeValue": "{{amount}}/mois",
+      "freeLabel": "Gratuit",
+      "customPricing": "Tarification et conditions d'utilisation personnalisées.",
       "includedNumberTitle": "Numéros d'entreprise inclus",
       "includedNumberValue": "{{count}} inclus",
       "customIncludedNumbers": "Personnalisé selon l'entente",
       "billingContactTitle": "Contact de facturation",
       "billingContactMissing": "Aucun contact de facturation pour le moment.",
-      "subscriptionStateTitle": "État de l'abonnement"
+      "subscriptionStateTitle": "État de l'abonnement",
+      "billingPeriod": "La période en cours se réinitialise le {{resetAt}}",
+      "selfHostNotice": "Les espaces auto-hébergés utilisent vos propres fournisseurs. Aucune limite d'utilisation ni facturation ne s'applique.",
+      "enterpriseNotice": "L'utilisation et les limites sont régies par votre entente entreprise.",
+      "freeCloudNotice": "L'utilisation est plafonnée au volume inclus chaque mois. Passez à Pro pour la facturation des dépassements et des limites plus élevées.",
+      "proNotice": "L'utilisation incluse se réinitialise chaque mois. L'utilisation supplémentaire est facturée au tarif de dépassement.",
+      "monthlySuffix": "/mois",
+      "paygMonthlySuffix": "+ utilisation à l'usage",
+      "includedTitle": "Ce qui est inclus :",
+      "includedStorageLabel": "stockage",
+      "includedVoiceLabel": "minutes vocales",
+      "includedSmsLabel": "alertes SMS",
+      "includedOutboundLabel": "appels sortants",
+      "includedStorageUnlimited": "Stockage illimité",
+      "includedVoiceUnlimited": "Minutes vocales illimitées",
+      "includedSmsUnlimited": "Alertes SMS illimitées",
+      "includedOutboundUnlimited": "Appels sortants illimités"
     },
     "usage": {
-      "title": "Utilisation ce mois-ci",
+      "title": "Utilisation incluse",
       "description": "Réinitialisation le {{resetAt}}.",
+      "paygTitle": "Utilisation à l'usage",
+      "paygDescription": "Utilisation supplémentaire facturable pour cette période. Réinitialisation le {{resetAt}}.",
+      "knowledgeTitle": "Base de connaissances",
       "voiceTitle": "Minutes vocales",
       "voiceValue": "{{minutes}} minutes utilisées",
       "voiceRemaining": "{{minutes}} minutes restantes",
@@ -58,11 +93,29 @@
       "outboundAttemptsTitle": "Tentatives d'appel sortant",
       "outboundAttemptsValue": "{{formattedCount}} tentatives utilisées",
       "outboundAttemptsRemaining": "{{formattedCount}} tentatives restantes",
-      "aiSmsTitle": "Segments SMS IA",
+      "aiSmsTitle": "SMS IA",
       "aiSmsValue": "{{formattedCount}} segments utilisés",
-      "aiSmsMetered": "Facturés séparément selon l'usage SMS IA.",
-      "aiSmsLocked": "Verrouillés tant que l'option SMS IA n'est pas active.",
-      "overageEnabled": "L'utilisation supplémentaire est facturée en dépassement."
+      "aiSmsMetered": "Utilisation mesurée, facturée par segment.",
+      "aiSmsLocked": "Activez l'option SMS IA pour débloquer cette fonctionnalité.",
+      "overageEnabled": "L'utilisation supplémentaire est facturée en dépassement.",
+      "included": "Inclus",
+      "overage": "Dépassement",
+      "used": "utilisés",
+      "remaining": "restants",
+      "of": "sur",
+      "meteredSuffix": "(mesuré)",
+      "unlimited": "Illimité",
+      "blocked": "Limite atteinte",
+      "blockedDescription": "Limite atteinte — l'utilisation est suspendue jusqu'à la prochaine période.",
+      "overageCount": "{{count}} au-dessus de la limite",
+      "overageCost": "≈ {{amount}} de dépassements",
+      "noOverages": "Aucun dépassement — l'utilisation est plafonnée au volume inclus.",
+      "overIncludedSummary": "{{count}} {{unit}} au-delà du volume inclus · <amount>≈ {{amount}}</amount> de dépassements",
+      "units": {
+        "voice": "min",
+        "outboundAttempts": "tentatives",
+        "segments": "segments"
+      }
     },
     "catalog": {
       "title": "Offres hébergées",
@@ -75,13 +128,44 @@
       "aiSmsAddon": "Option SMS IA : {{monthly}} par mois + {{setup}} de mise en service. Les SMS IA sont facturés à {{usage}} par segment."
     },
     "addon": {
-      "aiSmsActiveBadge": "SMS IA actifs"
+      "title": "Modules complémentaires",
+      "aiSmsName": "SMS IA",
+      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise.",
+      "enable": "Activer",
+      "aiSmsActiveBadge": "SMS IA actifs",
+      "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
+      "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
+      "aiSmsRequiresProPrefix": "Disponible avec le forfait",
+      "aiSmsRequiresProLink": "Pro"
+    },
+    "spendingCap": {
+      "title": "Plafond mensuel de dépenses",
+      "description": "Définissez un maximum de dépenses de dépassement par période de facturation. Une fois atteint, l'utilisation au-delà du volume inclus sera bloquée.",
+      "comingSoon": "Bientôt disponible",
+      "placeholder": "ex. 25,00 $"
     },
     "transactions": {
-      "title": "Événements de facturation récents",
+      "title": "Historique des transactions",
       "description": "Commandes, remboursements et frais d'activation synchronisés depuis Polar.",
-      "empty": "Aucune transaction de facturation pour le moment.",
-      "invoice": "Facture"
+      "empty": "Aucune transaction pour le moment.",
+      "columns": {
+        "date": "Date",
+        "description": "Description",
+        "amount": "Montant",
+        "status": "Statut",
+        "invoice": "Facture"
+      },
+      "invoice": "Facture",
+      "statusLabels": {
+        "paid": "Payé",
+        "pending": "En attente",
+        "refunded": "Remboursé",
+        "partially_refunded": "Remboursement partiel"
+      },
+      "kindLabels": {
+        "order": "Commande",
+        "refund": "Remboursement"
+      }
     }
   },
   "appearance": {
@@ -91,13 +175,13 @@
     "saved": "Préférences d'apparence mises à jour.",
     "language": {
       "label": "Langue du tableau de bord",
-      "description": "Choisissez la langue utilisée dans le tableau de bord. Cela n'affecte pas l'IA."
+      "description": "Choisissez la langue utilisée dans le tableau de bord."
     },
     "timeFormat": {
       "label": "Format de l'heure",
       "description": "Choisissez entre le format 24 h et le format AM/PM.",
-      "twentyFourHour": "Format 24 h",
-      "ampm": "Format AM/PM"
+      "twentyFourHour": "24 h",
+      "ampm": "AM/PM"
     },
     "theme": {
       "label": "Thème",
@@ -132,10 +216,16 @@
       "connecting": "Redirection...",
       "reconnect": "Reconnecter Google",
       "disconnect": "Déconnecter Google",
+      "disconnecting": "Déconnexion...",
       "connectedSuccess": "Google Calendar a bien été connecté.",
       "disconnectedSuccess": "Google Calendar a bien été déconnecté.",
       "connectFailed": "Impossible de terminer la connexion Google Calendar.",
       "disconnectFailed": "Impossible de déconnecter Google Calendar.",
+      "disconnectConfirmTitle": "Déconnecter Google Calendar ?",
+      "disconnectConfirmDescription": "Cela supprimera la connexion Google Calendar actuelle pour les réservations.",
+      "disconnectConfirm": "Confirmer ?",
+      "disconnectConfirmAction": "Déconnecter Google Calendar",
+      "disconnectCancel": "Annuler",
       "connectedAccount": "Compte connecté",
       "connectedAccountUnavailable": "Compte connecté indisponible",
       "selectedCalendar": "Calendrier sélectionné",
@@ -155,6 +245,7 @@
       "unknownStaff": "Membre de l'équipe inconnu",
       "noConnections": "Aucune connexion Google Calendar n'existe encore.",
       "notConnectedForStaff": "Ce membre de l'équipe n'a pas encore de Google Calendar connecté.",
+      "notConnectedDescription": "Connectez Google Calendar pour commencer à synchroniser les réservations.",
       "noStaff": "Ajoutez un membre réservable de l'équipe avant de connecter Google Calendar.",
       "primaryCalendarLabel": "{{summary}} (Principal)",
       "lastSync": "Dernière synchronisation",
