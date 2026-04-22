@@ -8,6 +8,7 @@ import { internalAction } from "../_generated/server";
 import { buildTwilioSmsInboundWebhookUrl } from "../lib/twilioUrls";
 import {
   assertSmsComplianceDraftReady,
+  isSmsComplianceApproved,
   smsComplianceDraftValidator,
   smsCompliancePendingActionValidator,
   smsComplianceStatusValidator,
@@ -1242,7 +1243,7 @@ export const syncRegistration = internalAction({
       };
     } catch (error) {
       const message = buildTwilioErrorMessage(error);
-      if (args.mode === "refresh") {
+      if (args.mode === "refresh" && isSmsComplianceApproved(context.registration.status)) {
         return {
           status: context.registration.status,
           trafficTier: context.registration.trafficTier,
@@ -1272,6 +1273,9 @@ export const syncRegistration = internalAction({
             ? { pendingAction: context.registration.pendingAction }
             : {}),
         };
+      }
+      if (args.mode === "refresh") {
+        throw error;
       }
       const pendingAction = buildPendingActionFromErrors([message], "manual_review");
       const failureStatus: SmsComplianceStatus =

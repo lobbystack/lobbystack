@@ -869,6 +869,66 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
   });
 
+  it("persists a replacement phone number before refreshing an approved stale sender", async () => {
+    const user = userEvent.setup();
+    const replacementPhoneNumberId = "phone_456" as Id<"phone_numbers">;
+    saveComplianceFormMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "pending_review",
+    });
+    refreshStatusMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "pending_review",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        status: "approved",
+        senderMode: "platform_phone",
+        approvedPhoneNumberId: defaultApprovedPhoneNumberId,
+        availablePhoneNumbers: [
+          {
+            id: replacementPhoneNumberId,
+            e164: "+14165550177",
+          },
+        ],
+      }),
+    });
+
+    const phoneSelectField = screen
+      .getByText("billing.compliance.fields.approvedPhoneNumber")
+      .parentElement;
+    expect(phoneSelectField).toBeTruthy();
+    const phoneSelect = within(phoneSelectField as HTMLElement).getByRole("combobox");
+    expect(phoneSelect.getAttribute("data-disabled")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "billing.compliance.actions.refresh" }),
+    );
+
+    await waitFor(() => {
+      expect(saveComplianceFormMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          approvedPhoneNumberId: replacementPhoneNumberId,
+        }),
+      );
+      expect(refreshStatusMock).toHaveBeenCalledWith({ businessId });
+    });
+    expect(saveComplianceFormMock.mock.invocationCallOrder[0]).toBeLessThan(
+      refreshStatusMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
+  });
+
   it("renders usage on the dedicated usage page", () => {
     mockQueries({
       status: buildStatus(),

@@ -1328,8 +1328,18 @@ function getCompliancePrimaryActionLabel(
   }
 }
 
-function canEditApprovedPhoneNumber(status: SmsComplianceStatus): boolean {
-  return canEditComplianceDraft(status) || status === "pending_brand_verification";
+function canEditApprovedPhoneNumber(compliance: SmsComplianceState): boolean {
+  const hasStaleApprovedPhoneNumber =
+    compliance.approvedPhoneNumberId !== undefined &&
+    !compliance.availablePhoneNumbers.some(
+      (phoneNumber) => phoneNumber.id === compliance.approvedPhoneNumberId,
+    );
+
+  return (
+    canEditComplianceDraft(compliance.status) ||
+    compliance.status === "pending_brand_verification" ||
+    (compliance.status === "approved" && hasStaleApprovedPhoneNumber)
+  );
 }
 
 function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
@@ -1374,7 +1384,7 @@ function AiSmsComplianceSection({
   );
   const [loading, setLoading] = useState<null | "save" | "action">(null);
   const isDraftEditable = canEditComplianceDraft(compliance.status);
-  const canEditPhoneNumber = canEditApprovedPhoneNumber(compliance.status);
+  const canEditPhoneNumber = canEditApprovedPhoneNumber(compliance);
 
   useEffect(() => {
     setForm(buildSmsComplianceFormState(compliance));

@@ -534,4 +534,30 @@ describe("twilioA2p syncRegistration", () => {
     expect(result.failureMessage).toBeUndefined();
     expect(result.pendingAction).toBeUndefined();
   });
+
+  it("rethrows refresh errors when the registration is not approved", async () => {
+    const t = convexTest(schema, convexModules);
+    const { registrationId } = await seedRegistrationContext(t, {
+      registrationStatus: "pending_review",
+      trafficTier: "low_volume",
+      draft: buildValidDraft(),
+      twilioSids: {
+        customerProfileSid: "BU-customer",
+        brandRegistrationSid: "BN-pending",
+        messagingServiceSid: "MG-pending",
+        campaignSid: "QE-pending",
+      },
+    });
+
+    const fixture = createTwilioClientFixture();
+    fixture.mocks.brandFetchMock.mockRejectedValueOnce(new Error("Twilio timeout"));
+    getTwilioClientMock.mockReturnValue(fixture.client);
+
+    await expect(
+      t.action(internal.integrations.twilioA2p.syncRegistration, {
+        registrationId,
+        mode: "refresh",
+      }),
+    ).rejects.toThrow("Twilio timeout");
+  });
 });

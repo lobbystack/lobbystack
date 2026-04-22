@@ -764,6 +764,67 @@ describe("smsCompliance", () => {
     expect(status.approvedPhoneNumberId).not.toBe(inactiveApprovedPhoneNumberId);
   });
 
+  it("allows replacing an approved sender after the current number becomes inactive", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(
+      t,
+      "sms-compliance-approved-number-recovery",
+    );
+
+    const { activeReplacementPhoneNumberId } = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, businessId);
+      const inactiveApprovedPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550187",
+        twilioPhoneSid: "PN-sms-compliance-approved-old",
+      });
+      const activeReplacementPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550188",
+        twilioPhoneSid: "PN-sms-compliance-approved-new",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "approved",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: buildValidDraft(),
+        approvedPhoneNumberId: inactiveApprovedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-sms-compliance-approved-recovery",
+      });
+      await ctx.db.patch(inactiveApprovedPhoneNumberId, {
+        status: "inactive",
+      });
+
+      return { activeReplacementPhoneNumberId };
+    });
+
+    const saved = await authed.mutation(api.smsCompliance.saveComplianceForm, {
+      businessId,
+      trafficTier: "low_volume",
+      approvedPhoneNumberId: activeReplacementPhoneNumberId,
+      draft: buildValidDraft(),
+    });
+    const status = await authed.query(api.smsCompliance.getStatus, { businessId });
+
+    expect(saved).toMatchObject({
+      status: "pending_review",
+    });
+    expect(status).toMatchObject({
+      status: "pending_review",
+      senderMode: "platform_phone",
+      approvedPhoneNumberId: activeReplacementPhoneNumberId,
+      approvedPhoneNumberE164: "+14165550188",
+      aiSmsReady: false,
+      pendingAction: {
+        type: "phone_number_association",
+        message:
+          "Refresh the 10DLC registration to attach the new business phone number to the Messaging Service.",
+      },
+    });
+  });
+
   it("keeps approved registrations approved when refresh throws before syncing", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, "sms-compliance-refresh-approved");
@@ -810,6 +871,51 @@ describe("smsCompliance", () => {
     expect(status.failureCode).toBeUndefined();
     expect(status.failureMessage).toBeUndefined();
     expect(status.pendingAction).toBeUndefined();
+  });
+
+  it("marks pending registrations as failed when refresh throws before syncing", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, "sms-compliance-refresh-failure");
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, businessId);
+      const approvedPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550189",
+        twilioPhoneSid: "PN-sms-compliance-refresh-failure",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "pending_review",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: buildValidDraft(),
+        approvedPhoneNumberId,
+        twilioBrandRegistrationSid: "BN-refresh-failure",
+        twilioMessagingServiceSid: "MG-refresh-failure",
+        twilioCampaignSid: "QE-refresh-failure",
+      });
+    });
+    syncRegistrationMock.mockRejectedValueOnce(new Error("Twilio timeout"));
+
+    const result = await authed.action(api.smsCompliance.refreshStatus, {
+      businessId,
+    });
+    const status = await authed.query(api.smsCompliance.getStatus, { businessId });
+
+    expect(result).toMatchObject({
+      status: "failed",
+    });
+    expect(status).toMatchObject({
+      status: "failed",
+      failureCode: "twilio_sync_failed",
+      failureMessage: "Twilio timeout",
+      pendingAction: {
+        type: "manual_review",
+        message: "Twilio timeout",
+      },
+    });
   });
 
   it("rejects status refreshes from users outside the workspace", async () => {

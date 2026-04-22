@@ -154,6 +154,12 @@ function getPhoneNumberSelectionError(input: {
   return "Choose which active SMS-enabled business phone number should be registered for hosted AI SMS before continuing 10DLC registration.";
 }
 
+function hasOperationalApprovedPhoneNumber(
+  phoneNumber: SmsPhoneNumberDoc | null | undefined,
+): boolean {
+  return Boolean(phoneNumber && phoneNumber.status === "active" && phoneNumber.smsEnabled);
+}
+
 function deriveHostedSenderMode(input: {
   aiSmsCommerciallyEnabled: boolean;
   registration: Doc<"sms_compliance_registrations"> | null;
@@ -212,8 +218,16 @@ function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
   return status === "not_started" || status === "collecting_info" || status === "failed";
 }
 
-function canUpdateApprovedPhoneNumber(status: SmsComplianceStatus): boolean {
-  return canEditComplianceDraft(status) || status === "pending_brand_verification";
+function canUpdateApprovedPhoneNumber(input: {
+  status: SmsComplianceStatus;
+  currentApprovedPhoneNumber?: SmsPhoneNumberDoc | null;
+}): boolean {
+  return (
+    canEditComplianceDraft(input.status) ||
+    input.status === "pending_brand_verification" ||
+    (input.status === "approved" &&
+      !hasOperationalApprovedPhoneNumber(input.currentApprovedPhoneNumber))
+  );
 }
 
 export const assertManagementAccess = internalQuery({
@@ -352,6 +366,10 @@ export const saveComplianceForm = mutation({
   handler: async (ctx, args): Promise<SmsComplianceActionResult> => {
     await requireSmsComplianceManagementAccess(ctx, args.businessId);
     const existingRegistration = await getSmsComplianceRegistration(ctx, args.businessId);
+    const currentApprovedPhoneNumber =
+      existingRegistration?.approvedPhoneNumberId !== undefined
+        ? await ctx.db.get(existingRegistration.approvedPhoneNumberId)
+        : null;
     const approvedPhoneNumber =
       args.approvedPhoneNumberId !== undefined
         ? await ctx.db.get(args.approvedPhoneNumberId)
@@ -369,7 +387,12 @@ export const saveComplianceForm = mutation({
     }
 
     if (existingRegistration) {
-      if (!canUpdateApprovedPhoneNumber(existingRegistration.status)) {
+      if (
+        !canUpdateApprovedPhoneNumber({
+          status: existingRegistration.status,
+          currentApprovedPhoneNumber,
+        })
+      ) {
         throw new Error(
           "10DLC registration can't be edited after submission starts. Refresh status instead.",
         );
@@ -378,7 +401,25 @@ export const saveComplianceForm = mutation({
         args.approvedPhoneNumberId ?? existingRegistration.approvedPhoneNumberId;
 
       if (!canEditComplianceDraft(existingRegistration.status)) {
+        const isRecoveringApprovedSender =
+          existingRegistration.status === "approved" &&
+          !hasOperationalApprovedPhoneNumber(currentApprovedPhoneNumber) &&
+          nextApprovedPhoneNumberId !== undefined &&
+          nextApprovedPhoneNumberId !== existingRegistration.approvedPhoneNumberId;
+
         await ctx.db.patch(existingRegistration._id, {
+          ...(isRecoveringApprovedSender
+            ? {
+                status: "pending_review",
+                pendingAction: {
+                  type: "phone_number_association",
+                  message:
+                    "Refresh the 10DLC registration to attach the new business phone number to the Messaging Service.",
+                },
+                failureCode: undefined,
+                failureMessage: undefined,
+              }
+            : {}),
           ...(nextApprovedPhoneNumberId
             ? { approvedPhoneNumberId: nextApprovedPhoneNumberId }
             : {}),
@@ -386,7 +427,7 @@ export const saveComplianceForm = mutation({
 
         return {
           registrationId: existingRegistration._id,
-          status: existingRegistration.status,
+          status: isRecoveringApprovedSender ? "pending_review" : existingRegistration.status,
         };
       }
 
