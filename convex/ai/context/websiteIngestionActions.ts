@@ -6,7 +6,7 @@ import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import { internalAction, type ActionCtx } from "../../_generated/server";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
-import { bulkWorkpool } from "../../lib/components";
+import { bulkWorkpool, KNOWLEDGE_INDEX_VERSION, rag } from "../../lib/components";
 import { buildKnowledgeDocumentPreviewText } from "../../lib/knowledgeDocuments";
 import {
   buildWebsiteCrawlExcludePatterns,
@@ -45,11 +45,18 @@ type CloudflareCrawlResult = {
   status?: string;
   records?: Array<CloudflareCrawlRecord>;
   cursor?: string;
+  total?: number;
 };
 
 type WebsiteImportSummary = {
   importedDocumentCount: number;
   weak: boolean;
+};
+
+type ImportCloudflareWebsiteCrawlArgs = WebsiteIngestionJobIdArgs & {
+  cloudflareJobId: string;
+  crawlMode: string;
+  commitChanges?: boolean;
 };
 
 type WebsiteDocumentCountSummary = {
@@ -236,15 +243,43 @@ async function loadWebsiteIngestionJobRecord(
   return job;
 }
 
-async function getExistingWebsiteDocument(
+async function listExistingWebsiteDocuments(
   ctx: ActionCtx,
-  args: WebsiteKnowledgeSourceArgs,
-): Promise<Doc<"knowledge_documents"> | null> {
-  const document: Doc<"knowledge_documents"> | null = await ctx.runQuery(
-    internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
-    args,
+  businessId: Id<"businesses">,
+): Promise<Array<Doc<"knowledge_documents">>> {
+  return await ctx.runQuery(
+    internal.ai.context.websiteIngestion.listWebsiteKnowledgeDocumentsForBusiness,
+    {
+      businessId,
+    },
   );
-  return document;
+}
+
+function isIndexedWebsiteDocumentCurrent(document: Doc<"knowledge_documents">): boolean {
+  return (
+    document.status === "indexed" &&
+    !!document.indexedEntryId &&
+    document.indexVersion === KNOWLEDGE_INDEX_VERSION
+  );
+}
+
+async function deleteWebsiteKnowledgeDocument(
+  ctx: ActionCtx,
+  document: Doc<"knowledge_documents">,
+): Promise<void> {
+  if (document.indexedEntryId) {
+    await rag.delete(ctx, { entryId: document.indexedEntryId as never });
+  }
+  if (document.storageId) {
+    await ctx.storage.delete(document.storageId);
+  }
+  if (document.extractedTextStorageId) {
+    await ctx.storage.delete(document.extractedTextStorageId);
+  }
+
+  await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeDocumentRecord, {
+    documentId: document._id,
+  });
 }
 
 async function getWebsiteDocumentCounts(
@@ -290,6 +325,33 @@ async function assertWebsiteStorageCapacity(
       `Knowledge storage limit reached. ${formatKnowledgeStorageLimit(limitBytes)} is included on this plan.`,
     );
   }
+}
+
+async function getKnowledgeDocumentStorageBytes(
+  ctx: ActionCtx,
+  document: Pick<Doc<"knowledge_documents">, "storageId" | "extractedTextStorageId">,
+): Promise<number> {
+  let totalBytes = 0;
+
+  for (const storageId of [document.storageId, document.extractedTextStorageId]) {
+    if (!storageId) {
+      continue;
+    }
+
+    try {
+      const metadata: { byteLength: number } = await ctx.runQuery(
+        internal.ai.context.knowledge.getUploadedKnowledgeDocumentMetadata,
+        {
+          storageId,
+        },
+      );
+      totalBytes += metadata.byteLength;
+    } catch {
+      // Missing storage metadata should not block website cleanup or capacity planning.
+    }
+  }
+
+  return totalBytes;
 }
 
 export const submitCloudflareWebsiteCrawl = internalAction({
@@ -365,14 +427,26 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     websiteIngestionJobId: v.id("website_ingestion_jobs"),
     cloudflareJobId: v.string(),
     crawlMode: v.string(),
+    commitChanges: v.optional(v.boolean()),
   },
   handler: async (
     ctx: ActionCtx,
-    args: WebsiteIngestionJobIdArgs & { cloudflareJobId: string; crawlMode: string },
+    args: ImportCloudflareWebsiteCrawlArgs,
   ): Promise<WebsiteImportSummary> => {
+    const commitChanges = args.commitChanges ?? true;
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+    const existingWebsiteDocuments = await listExistingWebsiteDocuments(ctx, job.businessId);
+    const existingDocumentsBySourceUrl = new Map(
+      existingWebsiteDocuments
+        .filter((document): document is Doc<"knowledge_documents"> & { sourceUrl: string } =>
+          typeof document.sourceUrl === "string",
+        )
+        .map((document) => [document.sourceUrl, document]),
+    );
     let cursor: string | undefined;
     let crawlStatus: string | undefined;
+    let crawlTotal: number | null = null;
+    let sawNonCompletedRecords = false;
     const crawlRecords: Array<CloudflareCrawlRecord> = [];
 
     do {
@@ -380,11 +454,22 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         cloudflareJobId: args.cloudflareJobId,
         ...(cursor !== undefined ? { cursor } : {}),
         limit: 10,
-        status: "completed",
         cacheTTL: 0,
       });
       crawlStatus = result.status ?? crawlStatus;
-      crawlRecords.push(...(result.records ?? []));
+      if (typeof result.total === "number") {
+        crawlTotal = Math.max(crawlTotal ?? 0, result.total);
+      }
+      for (const record of result.records ?? []) {
+        if (
+          record.status !== undefined &&
+          record.status !== "completed" &&
+          record.status !== 200
+        ) {
+          sawNonCompletedRecords = true;
+        }
+        crawlRecords.push(record);
+      }
       cursor = result.cursor;
     } while (cursor);
 
@@ -439,20 +524,46 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       documentId: Id<"knowledge_documents">;
       skipSnapshotRefresh: true;
     }> = [];
+    const importedSourceUrls = new Set<string>();
     let importedDocumentCount = 0;
     let totalMarkdownBytes = 0;
 
     for (const [sourceUrl, candidate] of dedupedRecords) {
+      importedSourceUrls.add(sourceUrl);
       importedDocumentCount += 1;
       totalMarkdownBytes += candidate.byteLength;
+    }
 
+    const canPruneMissingDocuments =
+      crawlTotal !== null && crawlTotal < job.pageLimit && !sawNonCompletedRecords;
+    const staleDocuments =
+      canPruneMissingDocuments && importedSourceUrls.size > 0
+        ? existingWebsiteDocuments.filter(
+            (document) => document.sourceUrl && !importedSourceUrls.has(document.sourceUrl),
+          )
+        : [];
+
+    if (!commitChanges) {
+      return {
+        importedDocumentCount,
+        weak: shouldTriggerBrowserFallback({
+          importedPageCount: importedDocumentCount,
+          totalMarkdownBytes,
+        }),
+      };
+    }
+
+    const staleDocumentReclaimedBytes = (
+      await Promise.all(
+        staleDocuments.map(async (document) => await getKnowledgeDocumentStorageBytes(ctx, document)),
+      )
+    ).reduce((total, byteLength) => total + byteLength, 0);
+
+    for (const [sourceUrl, candidate] of dedupedRecords) {
       const contentHash = await sha256Hex(candidate.markdown);
-      const existingDocument = await getExistingWebsiteDocument(ctx, {
-        businessId: job.businessId,
-        sourceUrl,
-      });
+      const existingDocument = existingDocumentsBySourceUrl.get(sourceUrl) ?? null;
 
-      if (existingDocument?.contentHash === contentHash) {
+      if (existingDocument?.contentHash === contentHash && isIndexedWebsiteDocumentCurrent(existingDocument)) {
         await ctx.runMutation(
           internal.ai.context.websiteIngestion.updateWebsiteKnowledgeDocument,
           {
@@ -465,16 +576,28 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         continue;
       }
 
-      let reclaimedBytes = 0;
-      if (existingDocument?.extractedTextStorageId) {
-        const existingStorageMetadata: { byteLength: number } = await ctx.runQuery(
-          internal.ai.context.knowledge.getUploadedKnowledgeDocumentMetadata,
+      if (existingDocument?.contentHash === contentHash) {
+        await ctx.runMutation(
+          internal.ai.context.websiteIngestion.updateWebsiteKnowledgeDocument,
           {
-            storageId: existingDocument.extractedTextStorageId,
+            documentId: existingDocument._id,
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            title: candidate.title,
+            sourceUrl,
+            status: "queued",
+            processingProgress: 0,
           },
         );
-        reclaimedBytes = existingStorageMetadata.byteLength;
+        documentsToIndex.push({
+          documentId: existingDocument._id,
+          skipSnapshotRefresh: true,
+        });
+        continue;
       }
+
+      const reclaimedBytes =
+        staleDocumentReclaimedBytes +
+        (existingDocument ? await getKnowledgeDocumentStorageBytes(ctx, existingDocument) : 0);
 
       await assertWebsiteStorageCapacity(ctx, {
         businessId: job.businessId,
@@ -538,6 +661,10 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       }
     }
 
+    for (const staleDocument of staleDocuments) {
+      await deleteWebsiteKnowledgeDocument(ctx, staleDocument);
+    }
+
     if (documentsToIndex.length > 0) {
       await bulkWorkpool.enqueueActionBatch(
         ctx,
@@ -571,24 +698,7 @@ export const waitForWebsiteIngestionDocuments = internalAction({
   handler: async (
     ctx: ActionCtx,
     args: WebsiteIngestionJobIdArgs,
-  ): Promise<{ businessId: Id<"businesses">; indexed: number; error: number }> => {
-    const timeoutAt = Date.now() + 90_000;
-
-    while (true) {
-      const counts = await getWebsiteDocumentCounts(ctx, args.websiteIngestionJobId);
-      if (counts.pending === 0) {
-        return {
-          businessId: counts.businessId,
-          indexed: counts.indexed,
-          error: counts.error,
-        };
-      }
-
-      if (Date.now() >= timeoutAt) {
-        throw new Error("Timed out waiting for website knowledge documents to finish indexing.");
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-    }
+  ): Promise<WebsiteDocumentCountSummary> => {
+    return await getWebsiteDocumentCounts(ctx, args.websiteIngestionJobId);
   },
 });

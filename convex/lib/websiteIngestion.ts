@@ -54,12 +54,26 @@ function ensureHttpProtocol(rawUrl: string): string {
   return `https://${trimmed}`;
 }
 
-function buildCanonicalWebsiteUrl(parsed: URL): string {
+function buildCanonicalWebsiteUrl(
+  parsed: URL,
+  options?: {
+    origin?: string;
+  },
+): string {
+  const origin = options?.origin ?? parsed.origin;
   const pathname =
     parsed.pathname && parsed.pathname !== "/"
       ? parsed.pathname.replace(/\/+$/u, "")
       : "/";
-  return pathname === "/" ? `${parsed.origin}/` : `${parsed.origin}${pathname}`;
+  return pathname === "/" ? `${origin}/` : `${origin}${pathname}`;
+}
+
+function buildComparableHostname(hostname: string): string {
+  return hostname.replace(/^www\./u, "").toLowerCase();
+}
+
+function isIpLikeHostname(hostname: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(hostname) || hostname.includes(":");
 }
 
 export function normalizeWebsiteUrl(rawUrl: string): string {
@@ -81,11 +95,14 @@ export function normalizeWebsitePageUrl(rawUrl: string, websiteUrl: string): str
     return null;
   }
 
-  if (parsed.origin !== base.origin) {
+  if (
+    buildComparableHostname(parsed.hostname) !== buildComparableHostname(base.hostname) ||
+    parsed.port !== base.port
+  ) {
     return null;
   }
 
-  return buildCanonicalWebsiteUrl(parsed);
+  return buildCanonicalWebsiteUrl(parsed, { origin: base.origin });
 }
 
 export function normalizeWebsiteMarkdown(markdown: string): string {
@@ -152,26 +169,64 @@ export function shouldTriggerBrowserFallback(input: {
   );
 }
 
+function buildEquivalentWebsiteUrls(websiteUrl: string): Array<string> {
+  const canonicalWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
+  const parsed = new URL(canonicalWebsiteUrl);
+
+  if (parsed.hostname === "localhost" || isIpLikeHostname(parsed.hostname)) {
+    return [canonicalWebsiteUrl];
+  }
+
+  const alternate = new URL(canonicalWebsiteUrl);
+  alternate.hostname = parsed.hostname.startsWith("www.")
+    ? parsed.hostname.slice(4)
+    : `www.${parsed.hostname}`;
+  const alternateWebsiteUrl = buildCanonicalWebsiteUrl(alternate);
+
+  if (alternateWebsiteUrl === canonicalWebsiteUrl) {
+    return [canonicalWebsiteUrl];
+  }
+
+  return [canonicalWebsiteUrl, alternateWebsiteUrl];
+}
+
 export function buildWebsiteCrawlIncludePatterns(websiteUrl: string): Array<string> {
-  const { origin } = new URL(websiteUrl);
-  return [`${origin}/**`];
+  return Array.from(
+    new Set(
+      buildEquivalentWebsiteUrls(websiteUrl).flatMap((candidateWebsiteUrl) => [
+        candidateWebsiteUrl,
+        candidateWebsiteUrl.endsWith("/")
+          ? `${candidateWebsiteUrl}**`
+          : `${candidateWebsiteUrl}/**`,
+      ]),
+    ),
+  );
 }
 
 export function buildWebsiteCrawlExcludePatterns(websiteUrl: string): Array<string> {
-  const { origin } = new URL(websiteUrl);
-  return [
-    `${origin}/**/*account*`,
-    `${origin}/**/*cart*`,
-    `${origin}/**/*checkout*`,
-    `${origin}/**/*legal*`,
-    `${origin}/**/*login*`,
-    `${origin}/**/*privacy*`,
-    `${origin}/**/*search*`,
-    `${origin}/**/*terms*`,
-    `${origin}/**/*wp-admin*`,
-    `${origin}/cdn-cgi/*`,
-    `${origin}/**/feed*`,
-  ];
+  return Array.from(
+    new Set(
+      buildEquivalentWebsiteUrls(websiteUrl).flatMap((candidateWebsiteUrl) => {
+        const excludeBase = candidateWebsiteUrl.endsWith("/")
+          ? candidateWebsiteUrl.slice(0, -1)
+          : candidateWebsiteUrl;
+
+        return [
+          `${excludeBase}/**/*account*`,
+          `${excludeBase}/**/*cart*`,
+          `${excludeBase}/**/*checkout*`,
+          `${excludeBase}/**/*legal*`,
+          `${excludeBase}/**/*login*`,
+          `${excludeBase}/**/*privacy*`,
+          `${excludeBase}/**/*search*`,
+          `${excludeBase}/**/*terms*`,
+          `${excludeBase}/**/*wp-admin*`,
+          `${excludeBase}/cdn-cgi/*`,
+          `${excludeBase}/**/feed*`,
+        ];
+      }),
+    ),
+  );
 }
 
 export function countUtf8Bytes(value: string): number {

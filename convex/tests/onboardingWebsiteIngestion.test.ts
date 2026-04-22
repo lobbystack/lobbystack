@@ -4,14 +4,34 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { normalizeWebsiteMarkdown } from "../lib/websiteIngestion";
+import { KNOWLEDGE_INDEX_VERSION } from "../lib/components";
+import {
+  buildWebsiteCrawlExcludePatterns,
+  buildWebsiteCrawlIncludePatterns,
+  normalizeWebsiteMarkdown,
+  normalizeWebsitePageUrl,
+  normalizeWebsiteUrl,
+} from "../lib/websiteIngestion";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
-const { enqueueActionBatchMock, workflowStartMock } = vi.hoisted(() => ({
-  enqueueActionBatchMock: vi.fn(async () => null),
-  workflowStartMock: vi.fn(async () => null),
-}));
+const { billingLimitBytesRef, enqueueActionBatchMock, ragDeleteMock, workflowStartMock } =
+  vi.hoisted(() => ({
+    billingLimitBytesRef: { value: null as number | null },
+    enqueueActionBatchMock: vi.fn(async () => null),
+    ragDeleteMock: vi.fn(async () => null),
+    workflowStartMock: vi.fn(async () => null),
+  }));
+
+vi.mock("../lib/billing", async () => {
+  const actual = await vi.importActual<typeof import("../lib/billing")>("../lib/billing");
+
+  return {
+    ...actual,
+    getKnowledgeStorageLimitBytes: (plan: Parameters<typeof actual.getKnowledgeStorageLimitBytes>[0]) =>
+      billingLimitBytesRef.value ?? actual.getKnowledgeStorageLimitBytes(plan),
+  };
+});
 
 vi.mock("../lib/components", async () => {
   const actual = await vi.importActual<typeof import("../lib/components")>("../lib/components");
@@ -25,6 +45,10 @@ vi.mock("../lib/components", async () => {
     workflowManager: {
       ...actual.workflowManager,
       start: workflowStartMock,
+    },
+    rag: {
+      ...actual.rag,
+      delete: ragDeleteMock,
     },
   };
 });
@@ -101,11 +125,14 @@ describe("website onboarding and ingestion", () => {
   beforeEach(() => {
     process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
     process.env.CLOUDFLARE_API_TOKEN = "test-token";
+    billingLimitBytesRef.value = null;
 
     workflowStartMock.mockReset();
     enqueueActionBatchMock.mockReset();
+    ragDeleteMock.mockReset();
     workflowStartMock.mockResolvedValue(null);
     enqueueActionBatchMock.mockResolvedValue(null);
+    ragDeleteMock.mockResolvedValue(null);
 
     vi.stubGlobal("fetch", vi.fn());
   });
@@ -159,10 +186,10 @@ describe("website onboarding and ingestion", () => {
 
     const result = await authed.mutation(api.onboarding.websites.submitOnboardingWebsite, {
       businessId,
-      websiteUrl: "example.com/about/?utm_source=test#team",
+      websiteUrl: "example.com/clinic/?utm_source=test#team",
     });
 
-    expect(result.websiteUrl).toBe("https://example.com/about");
+    expect(result.websiteUrl).toBe("https://example.com/clinic");
     expect(workflowStartMock).toHaveBeenCalledTimes(1);
     expect(workflowStartMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -175,14 +202,14 @@ describe("website onboarding and ingestion", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.websiteUrl).toBe("https://example.com/about");
+    expect(business?.websiteUrl).toBe("https://example.com/clinic");
     expect(business?.onboardingStage).toBe("phone_number");
 
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject({
       businessId,
-      websiteUrl: "https://example.com/about",
+      websiteUrl: "https://example.com/clinic",
       provider: "cloudflare_browser_run",
       status: "queued",
       crawlMode: "http",
@@ -234,7 +261,7 @@ describe("website onboarding and ingestion", () => {
     const websiteIngestionJobId = await t.run(async (ctx) => {
       return await ctx.db.insert("website_ingestion_jobs", {
         businessId,
-        websiteUrl: "https://example.com",
+        websiteUrl: "https://example.com/clinic",
         provider: "cloudflare_browser_run",
         status: "queued",
         crawlMode: "http",
@@ -288,7 +315,7 @@ describe("website onboarding and ingestion", () => {
       };
     } & Record<string, unknown>;
     expect(body).toMatchObject({
-      url: "https://example.com",
+      url: "https://example.com/clinic",
       limit: 40,
       depth: 3,
       source: "all",
@@ -301,9 +328,37 @@ describe("website onboarding and ingestion", () => {
       },
     });
     expect(body.options).toMatchObject({
-      includePatterns: ["https://example.com/**"],
+      includePatterns: [
+        "https://example.com/clinic",
+        "https://example.com/clinic/**",
+        "https://www.example.com/clinic",
+        "https://www.example.com/clinic/**",
+      ],
+      excludePatterns: [
+        "https://example.com/clinic/**/*account*",
+        "https://example.com/clinic/**/*cart*",
+        "https://example.com/clinic/**/*checkout*",
+        "https://example.com/clinic/**/*legal*",
+        "https://example.com/clinic/**/*login*",
+        "https://example.com/clinic/**/*privacy*",
+        "https://example.com/clinic/**/*search*",
+        "https://example.com/clinic/**/*terms*",
+        "https://example.com/clinic/**/*wp-admin*",
+        "https://example.com/clinic/cdn-cgi/*",
+        "https://example.com/clinic/**/feed*",
+        "https://www.example.com/clinic/**/*account*",
+        "https://www.example.com/clinic/**/*cart*",
+        "https://www.example.com/clinic/**/*checkout*",
+        "https://www.example.com/clinic/**/*legal*",
+        "https://www.example.com/clinic/**/*login*",
+        "https://www.example.com/clinic/**/*privacy*",
+        "https://www.example.com/clinic/**/*search*",
+        "https://www.example.com/clinic/**/*terms*",
+        "https://www.example.com/clinic/**/*wp-admin*",
+        "https://www.example.com/clinic/cdn-cgi/*",
+        "https://www.example.com/clinic/**/feed*",
+      ],
     });
-    expect(Array.isArray(body.options?.excludePatterns)).toBe(true);
   });
 
   it("retries transient Cloudflare crawl status errors before succeeding", async () => {
@@ -380,6 +435,184 @@ describe("website onboarding and ingestion", () => {
     }
   });
 
+  it("treats submitted indexing records as complete for workflow polling", async () => {
+    const t = createConvexHarness();
+    const subject = "website-indexing-poll-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/",
+        provider: "cloudflare_browser_run",
+        status: "indexing",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 2,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+
+      await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "knowledge",
+        sourceType: "website",
+        sourceUrl: "https://example.com/about",
+        websiteIngestionJobId,
+        title: "About",
+        textContent: "About preview",
+        mimeType: "text/markdown",
+        status: "indexing",
+        processingProgress: 96,
+        tags: [],
+        importance: 85,
+        indexedEntryId: "entry-about",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+      await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "knowledge",
+        sourceType: "website",
+        sourceUrl: "https://example.com/contact",
+        websiteIngestionJobId,
+        title: "Contact",
+        textContent: "Contact preview",
+        mimeType: "text/markdown",
+        status: "error",
+        processingProgress: 0,
+        tags: [],
+        importance: 85,
+        error: "Indexing failed.",
+      });
+
+      return websiteIngestionJobId;
+    });
+
+    const counts = await t.action(
+      internal.ai.context.websiteIngestionActions.waitForWebsiteIngestionDocuments,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    expect(counts).toEqual({
+      businessId,
+      indexed: 1,
+      error: 1,
+      pending: 0,
+    });
+  });
+
+  it("preserves subpath websites when normalizing crawl targets", () => {
+    expect(normalizeWebsiteUrl("https://example.com/clinic/?utm_source=test#team")).toBe(
+      "https://example.com/clinic",
+    );
+    expect(buildWebsiteCrawlIncludePatterns("https://example.com/clinic/")).toEqual([
+      "https://example.com/clinic",
+      "https://example.com/clinic/**",
+      "https://www.example.com/clinic",
+      "https://www.example.com/clinic/**",
+    ]);
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
+      "https://example.com/clinic/**/*login*",
+    );
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
+      "https://www.example.com/clinic/**/*login*",
+    );
+  });
+
+  it("treats apex and www redirects as the same website during page import", () => {
+    expect(normalizeWebsitePageUrl("https://www.example.com/about", "https://example.com/")).toBe(
+      "https://example.com/about",
+    );
+    expect(normalizeWebsitePageUrl("https://example.com/about", "https://www.example.com/")).toBe(
+      "https://www.example.com/about",
+    );
+  });
+
+  it("deduplicates apex and www versions of the same page during import", async () => {
+    const t = createConvexHarness();
+    const subject = "website-hostname-dedupe-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    const markdown = "# About\n" + "hello ".repeat(900);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown,
+              metadata: { title: "About" },
+            },
+            {
+              url: "https://www.example.com/about?ref=nav",
+              status: "completed",
+              markdown,
+              metadata: { title: "About (www)" },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const summary = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-hostname-dedupe-1",
+        crawlMode: "http",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+    expect(enqueueActionBatchMock).toHaveBeenCalledTimes(1);
+
+    const documents = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("knowledge_documents")
+        .withIndex("by_business_id_and_source_type", (q) =>
+          q.eq("businessId", businessId).eq("sourceType", "website"),
+        )
+        .collect();
+    });
+    expect(documents).toHaveLength(1);
+    expect(documents[0]?.sourceUrl).toBe("https://example.com/about");
+  });
+
   it("reuses an existing website document without duplicating or reindexing it when the content hash is unchanged", async () => {
     const t = createConvexHarness();
     const subject = "website-dedupe-owner";
@@ -411,6 +644,8 @@ describe("website onboarding and ingestion", () => {
         tags: [],
         importance: 85,
         contentHash: stableHash,
+        indexedEntryId: "entry-about",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
       });
 
       return await ctx.db.insert("website_ingestion_jobs", {
@@ -496,6 +731,242 @@ describe("website onboarding and ingestion", () => {
     if (documents.length !== 1) {
       throw new Error(`Expected a single website document, received ${documents.length}.`);
     }
+  });
+
+  it("does not mutate website documents while only analyzing a weak crawl", async () => {
+    const t = createConvexHarness();
+    const subject = "website-weak-analysis-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const { aboutDocumentId, contactDocumentId, aboutStorageId, contactStorageId, websiteIngestionJobId } =
+      await t.run(async (ctx) => {
+        const aboutStorageId = await ctx.storage.store(
+          new Blob(["# About\nOriginal copy"], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const contactStorageId = await ctx.storage.store(
+          new Blob(["# Contact\nOriginal contact copy"], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const aboutDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/about",
+          title: "Original About",
+          extractedTextStorageId: aboutStorageId,
+          mimeType: "text/markdown",
+          textContent: "Original about preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: "about-hash",
+          indexedEntryId: "entry-about",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+        const contactDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/contact",
+          title: "Contact",
+          extractedTextStorageId: contactStorageId,
+          mimeType: "text/markdown",
+          textContent: "Original contact preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: "contact-hash",
+          indexedEntryId: "entry-contact",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+        const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+          businessId,
+          websiteUrl: "https://example.com/",
+          provider: "cloudflare_browser_run",
+          status: "crawling",
+          crawlMode: "http",
+          fallbackTriggered: false,
+          pageLimit: 40,
+          depth: 3,
+          importedCount: 0,
+          indexedCount: 0,
+          errorCount: 0,
+        });
+
+        return {
+          aboutDocumentId,
+          contactDocumentId,
+          aboutStorageId,
+          contactStorageId,
+          websiteIngestionJobId,
+        };
+      });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: "# About\n" + "weak ".repeat(30),
+              metadata: {
+                title: "Updated About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const summary = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-weak-1",
+        crawlMode: "http",
+        commitChanges: false,
+      },
+    );
+
+    expect(summary).toMatchObject({
+      importedDocumentCount: 1,
+      weak: true,
+    });
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+    expect(ragDeleteMock).not.toHaveBeenCalled();
+
+    const aboutDocument = await t.run(async (ctx) => await ctx.db.get(aboutDocumentId));
+    expect(aboutDocument?.title).toBe("Original About");
+    expect(String(aboutDocument?.extractedTextStorageId)).toBe(String(aboutStorageId));
+
+    const contactDocument = await t.run(async (ctx) => await ctx.db.get(contactDocumentId));
+    expect(contactDocument?.title).toBe("Contact");
+    expect(String(contactDocument?.extractedTextStorageId)).toBe(String(contactStorageId));
+  });
+
+  it("requeues unchanged website documents when a prior index attempt failed", async () => {
+    const t = createConvexHarness();
+    const subject = "website-retry-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const stableMarkdown = "# About\n" + "hello ".repeat(900);
+    const stableHash = await sha256Hex(normalizeWebsiteMarkdown(stableMarkdown));
+
+    const { existingDocumentId, websiteIngestionJobId } = await t.run(async (ctx) => {
+      const extractedTextStorageId = await ctx.storage.store(
+        new Blob([stableMarkdown], {
+          type: "text/markdown;charset=utf-8",
+        }),
+      );
+      const existingDocumentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "knowledge",
+        sourceType: "website",
+        sourceUrl: "https://example.com/about",
+        title: "About",
+        extractedTextStorageId,
+        mimeType: "text/markdown",
+        textContent: "About preview",
+        status: "error",
+        processingProgress: 100,
+        tags: [],
+        importance: 85,
+        contentHash: stableHash,
+        error: "Indexing failed.",
+      });
+
+      const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+
+      return { existingDocumentId, websiteIngestionJobId };
+    });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: stableMarkdown,
+              metadata: {
+                title: "About Us",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const summary = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-retry-1",
+        crawlMode: "http",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+    expect(enqueueActionBatchMock).toHaveBeenCalledTimes(1);
+    expect(enqueueActionBatchMock).toHaveBeenCalledWith(
+      expect.anything(),
+      internal.ai.context.knowledge.indexKnowledgeDocument,
+      [
+        {
+          documentId: existingDocumentId,
+          skipSnapshotRefresh: true,
+        },
+      ],
+    );
+
+    const updatedDocument = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://example.com/about",
+      },
+    );
+    expect(updatedDocument?.status).toBe("queued");
+    expect(updatedDocument?.error).toBeUndefined();
+    expect(String(updatedDocument?.websiteIngestionJobId)).toBe(
+      String(websiteIngestionJobId),
+    );
   });
 
   it("updates changed website documents in place and enqueues indexing with snapshot refresh suppressed", async () => {
@@ -616,5 +1087,267 @@ describe("website onboarding and ingestion", () => {
       return await ctx.db.system.get("_storage", previousExtractedTextStorageId);
     });
     expect(previousStorage).toBeNull();
+  });
+
+  it("removes stale website documents when the crawl is fully under the page limit", async () => {
+    const t = createConvexHarness();
+    const subject = "website-stale-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const { aboutDocumentId, contactDocumentId, staleStorageId, websiteIngestionJobId } =
+      await t.run(async (ctx) => {
+        const currentMarkdown = "# About\n" + "current ".repeat(900);
+        const aboutStorageId = await ctx.storage.store(
+          new Blob([currentMarkdown], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const staleStorageId = await ctx.storage.store(
+          new Blob(["# Contact\n" + "old ".repeat(900)], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const aboutDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/about",
+          title: "About",
+          extractedTextStorageId: aboutStorageId,
+          mimeType: "text/markdown",
+          textContent: "Current about preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: await sha256Hex(normalizeWebsiteMarkdown(currentMarkdown)),
+          indexedEntryId: "entry-about",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+        const contactDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/contact",
+          title: "Contact",
+          extractedTextStorageId: staleStorageId,
+          mimeType: "text/markdown",
+          textContent: "Old contact preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: await sha256Hex(
+            normalizeWebsiteMarkdown("# Contact\n" + "old ".repeat(900)),
+          ),
+          indexedEntryId: "entry-contact",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+
+        const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+          businessId,
+          websiteUrl: "https://example.com",
+          provider: "cloudflare_browser_run",
+          status: "crawling",
+          crawlMode: "http",
+          fallbackTriggered: false,
+          pageLimit: 40,
+          depth: 3,
+          importedCount: 0,
+          indexedCount: 0,
+          errorCount: 0,
+        });
+
+        return { aboutDocumentId, contactDocumentId, staleStorageId, websiteIngestionJobId };
+      });
+
+    const currentMarkdown = "# About\n" + "current ".repeat(900);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          total: 1,
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: currentMarkdown,
+              metadata: {
+                title: "About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const summary = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-stale-1",
+        crawlMode: "browser",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+    expect(ragDeleteMock).toHaveBeenCalledWith(expect.anything(), {
+      entryId: "entry-contact",
+    });
+
+    const remainingAbout = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://example.com/about",
+      },
+    );
+    expect(String(remainingAbout?._id)).toBe(String(aboutDocumentId));
+    expect(String(remainingAbout?.websiteIngestionJobId)).toBe(String(websiteIngestionJobId));
+
+    const removedContact = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://example.com/contact",
+      },
+    );
+    expect(removedContact).toBeNull();
+
+    const removedContactRecord = await t.run(async (ctx) => {
+      return await ctx.db.get(contactDocumentId);
+    });
+    expect(removedContactRecord).toBeNull();
+
+    const staleStorage = await t.run(async (ctx) => {
+      return await ctx.db.system.get("_storage", staleStorageId);
+    });
+    expect(staleStorage).toBeNull();
+  });
+
+  it("does not reclaim unseen website pages from a crawl that reaches the page limit", async () => {
+    const t = createConvexHarness();
+    const subject = "website-storage-reclaim-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    billingLimitBytesRef.value = 750;
+
+    const { websiteIngestionJobId, existingAboutId, staleContactId } = await t.run(async (ctx) => {
+      const existingAboutMarkdown = "# About\n" + "a".repeat(220);
+      const staleContactMarkdown = "# Contact\n" + "b".repeat(420);
+      const aboutStorageId = await ctx.storage.store(
+        new Blob([existingAboutMarkdown], {
+          type: "text/markdown;charset=utf-8",
+        }),
+      );
+      const contactStorageId = await ctx.storage.store(
+        new Blob([staleContactMarkdown], {
+          type: "text/markdown;charset=utf-8",
+        }),
+      );
+
+      const existingAboutId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "knowledge",
+        sourceType: "website",
+        sourceUrl: "https://example.com/about",
+        title: "About",
+        extractedTextStorageId: aboutStorageId,
+        mimeType: "text/markdown",
+        textContent: "About preview",
+        status: "indexed",
+        processingProgress: 100,
+        tags: [],
+        importance: 85,
+        contentHash: "old-about-hash",
+        indexedEntryId: "entry-about",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+      const staleContactId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        section: "knowledge",
+        sourceType: "website",
+        sourceUrl: "https://example.com/contact",
+        title: "Contact",
+        extractedTextStorageId: contactStorageId,
+        mimeType: "text/markdown",
+        textContent: "Contact preview",
+        status: "indexed",
+        processingProgress: 100,
+        tags: [],
+        importance: 85,
+        contentHash: "old-contact-hash",
+        indexedEntryId: "entry-contact",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+      const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+
+      return { websiteIngestionJobId, existingAboutId, staleContactId };
+    });
+
+    const updatedAboutMarkdown = "# About\n" + "c".repeat(360);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          total: 40,
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: updatedAboutMarkdown,
+              metadata: {
+                title: "Updated About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    await expect(
+      t.action(internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults, {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-storage-1",
+        crawlMode: "browser",
+      }),
+    ).rejects.toThrow("Knowledge storage limit reached.");
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+    expect(ragDeleteMock).not.toHaveBeenCalled();
+
+    const updatedAbout = await t.run(async (ctx) => await ctx.db.get(existingAboutId));
+    expect(updatedAbout?.title).toBe("About");
+
+    const preservedContact = await t.run(async (ctx) => await ctx.db.get(staleContactId));
+    expect(preservedContact).not.toBeNull();
   });
 });

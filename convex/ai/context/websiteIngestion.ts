@@ -80,6 +80,20 @@ export const getWebsiteKnowledgeDocumentBySourceUrl = internalQuery({
   },
 });
 
+export const listWebsiteKnowledgeDocumentsForBusiness = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: QueryCtx, args: { businessId: Id<"businesses"> }) => {
+    return await ctx.db
+      .query("knowledge_documents")
+      .withIndex("by_business_id_and_source_type", (q) =>
+        q.eq("businessId", args.businessId).eq("sourceType", "website"),
+      )
+      .collect();
+  },
+});
+
 export const getWebsiteIngestionDocumentCounts = internalQuery({
   args: {
     websiteIngestionJobId: v.id("website_ingestion_jobs"),
@@ -105,7 +119,10 @@ export const getWebsiteIngestionDocumentCounts = internalQuery({
     let pending = 0;
 
     for (const document of documents) {
-      if (document.status === "indexed") {
+      if (
+        document.status === "indexed" ||
+        (document.status === "indexing" && !!document.indexedEntryId)
+      ) {
         indexed += 1;
       } else if (document.status === "error") {
         error += 1;
