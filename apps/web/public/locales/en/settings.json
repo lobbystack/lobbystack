@@ -176,6 +176,8 @@
       },
       "companyTypes": {
         "private": "Private",
+        "nonProfit": "Non-profit",
+        "government": "Government",
         "public": "Public"
       },
       "trafficTier": {
@@ -191,6 +193,8 @@
         "businessRegistrationIdentifier": "Tax ID type",
         "businessRegistrationNumber": "Tax ID number",
         "companyType": "Company type",
+        "stockExchange": "Stock exchange",
+        "stockTicker": "Stock ticker",
         "brandContactEmail": "Brand contact email (required for public companies)",
         "representativeFirstName": "Authorized representative first name",
         "representativeLastName": "Authorized representative last name",

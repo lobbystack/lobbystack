@@ -165,6 +165,8 @@ type SmsComplianceState = {
     businessRegistrationNumber?: string;
     websiteUrl?: string;
     companyType?: string;
+    stockExchange?: string;
+    stockTicker?: string;
     brandContactEmail?: string;
     campaignDescription?: string;
     messageFlow?: string;
@@ -235,6 +237,8 @@ function buildCompliance(
       businessRegistrationNumber: "12-3456789",
       websiteUrl: "https://example.com",
       companyType: "private",
+      stockExchange: "",
+      stockTicker: "",
       brandContactEmail: "ops@example.com",
       campaignDescription: "Appointment alerts and AI SMS replies.",
       messageFlow: "Customers opt in during online booking and intake forms.",
@@ -866,6 +870,58 @@ describe("SettingsBillingPage AI SMS add-on", () => {
         }),
       );
       expect(resumeRegistrationMock).toHaveBeenCalledWith({ businessId });
+    });
+  });
+
+  it("sends public-company stock metadata when submitting the compliance form", async () => {
+    const user = userEvent.setup();
+    saveComplianceFormMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "collecting_info",
+    });
+    startRegistrationMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "pending_review",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        setupRequired: true,
+        status: "not_started",
+        draft: {
+          ...buildCompliance().draft,
+          companyType: "public",
+          stockExchange: "NASDAQ",
+          stockTicker: "ACME",
+        },
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "billing.compliance.actions.submit" }),
+    );
+
+    await waitFor(() => {
+      expect(saveComplianceFormMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          draft: expect.objectContaining({
+            companyType: "public",
+            stockExchange: "NASDAQ",
+            stockTicker: "ACME",
+          }),
+        }),
+      );
+      expect(startRegistrationMock).toHaveBeenCalledWith({ businessId });
     });
   });
 

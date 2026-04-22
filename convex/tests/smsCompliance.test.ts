@@ -344,6 +344,41 @@ describe("smsCompliance", () => {
     });
   });
 
+  it("rejects public-company submissions that omit stock metadata", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(
+      t,
+      "sms-compliance-public-company-stock-required",
+    );
+
+    const phoneNumberId = await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, businessId);
+      return await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550182",
+        twilioPhoneSid: "PN-sms-compliance-public-company-stock-required",
+      });
+    });
+
+    await authed.mutation(api.smsCompliance.saveComplianceForm, {
+      businessId,
+      trafficTier: "low_volume",
+      approvedPhoneNumberId: phoneNumberId,
+      draft: {
+        ...buildValidDraft(),
+        companyType: "public",
+        brandContactEmail: "investor.relations@example.com",
+      },
+    });
+
+    await expect(
+      authed.action(api.smsCompliance.startRegistration, {
+        businessId,
+      }),
+    ).rejects.toThrow("Stock exchange is required.");
+    expect(syncRegistrationMock).not.toHaveBeenCalled();
+  });
+
   it("rejects draft edits after submission has started", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, "sms-compliance-read-only-after-submit");

@@ -482,6 +482,15 @@ export function assertSmsComplianceDraftReady(
     email: requireText(authorizedRepresentative.email, "Authorized representative email"),
   };
 
+  const publicCompanyStockExchange =
+    companyType === "public"
+      ? requireText(draft.stockExchange, "Stock exchange")
+      : undefined;
+  const publicCompanyStockTicker =
+    companyType === "public"
+      ? requireText(draft.stockTicker, "Stock ticker")
+      : undefined;
+
   if (companyType === "public" && !brandContactEmail) {
     throw new Error("Brand contact email is required for public companies.");
   }
@@ -496,8 +505,8 @@ export function assertSmsComplianceDraftReady(
     socialProfileUrls: normalizeStringArray(draft.socialProfileUrls),
     businessRegionsOfOperation,
     companyType,
-    ...(hasText(draft.stockExchange) ? { stockExchange: draft.stockExchange.trim() } : {}),
-    ...(hasText(draft.stockTicker) ? { stockTicker: draft.stockTicker.trim() } : {}),
+    ...(publicCompanyStockExchange ? { stockExchange: publicCompanyStockExchange } : {}),
+    ...(publicCompanyStockTicker ? { stockTicker: publicCompanyStockTicker } : {}),
     ...(brandContactEmail ? { brandContactEmail } : {}),
     campaignDescription,
     messageFlow,

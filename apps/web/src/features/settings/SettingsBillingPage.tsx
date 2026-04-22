@@ -82,6 +82,8 @@ type SmsComplianceDraft = {
   websiteUrl?: string;
   businessRegionsOfOperation?: string[];
   companyType?: string;
+  stockExchange?: string;
+  stockTicker?: string;
   brandContactEmail?: string;
   campaignDescription?: string;
   messageFlow?: string;
@@ -160,6 +162,8 @@ type SmsComplianceFormState = {
   businessRegistrationNumber: string;
   websiteUrl: string;
   companyType: string;
+  stockExchange: string;
+  stockTicker: string;
   brandContactEmail: string;
   representativeFirstName: string;
   representativeLastName: string;
@@ -195,6 +199,8 @@ const DEFAULT_SMS_COMPLIANCE_FORM_STATE: SmsComplianceFormState = {
   businessRegistrationNumber: "",
   websiteUrl: "",
   companyType: "private",
+  stockExchange: "",
+  stockTicker: "",
   brandContactEmail: "",
   representativeFirstName: "",
   representativeLastName: "",
@@ -461,6 +467,8 @@ function buildSmsComplianceFormState(
     businessRegistrationNumber: draft?.businessRegistrationNumber ?? "",
     websiteUrl: draft?.websiteUrl ?? "",
     companyType: draft?.companyType ?? DEFAULT_SMS_COMPLIANCE_FORM_STATE.companyType,
+    stockExchange: draft?.stockExchange ?? "",
+    stockTicker: draft?.stockTicker ?? "",
     brandContactEmail: draft?.brandContactEmail ?? "",
     representativeFirstName: draft?.authorizedRepresentative?.firstName ?? "",
     representativeLastName: draft?.authorizedRepresentative?.lastName ?? "",
@@ -508,6 +516,12 @@ function buildSmsComplianceDraft(
     businessRegistrationNumber: form.businessRegistrationNumber.trim(),
     websiteUrl: form.websiteUrl.trim(),
     companyType: form.companyType.trim(),
+    ...(form.companyType === "public" && form.stockExchange.trim().length > 0
+      ? { stockExchange: form.stockExchange.trim() }
+      : {}),
+    ...(form.companyType === "public" && form.stockTicker.trim().length > 0
+      ? { stockTicker: form.stockTicker.trim() }
+      : {}),
     ...(form.brandContactEmail.trim().length > 0
       ? { brandContactEmail: form.brandContactEmail.trim() }
       : {}),
@@ -1385,6 +1399,7 @@ function AiSmsComplianceSection({
   const [loading, setLoading] = useState<null | "save" | "action">(null);
   const isDraftEditable = canEditComplianceDraft(compliance.status);
   const canEditPhoneNumber = canEditApprovedPhoneNumber(compliance);
+  const isPublicCompany = form.companyType === "public";
 
   useEffect(() => {
     setForm(buildSmsComplianceFormState(compliance));
@@ -1704,10 +1719,46 @@ function AiSmsComplianceSection({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="private">{t("billing.compliance.companyTypes.private")}</SelectItem>
+                <SelectItem value="non-profit">{t("billing.compliance.companyTypes.nonProfit")}</SelectItem>
+                <SelectItem value="government">{t("billing.compliance.companyTypes.government")}</SelectItem>
                 <SelectItem value="public">{t("billing.compliance.companyTypes.public")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {isPublicCompany && (
+            <>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="sms-compliance-stock-exchange">
+                  {t("billing.compliance.fields.stockExchange")}
+                </Label>
+                <Input
+                  id="sms-compliance-stock-exchange"
+                  value={form.stockExchange}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      stockExchange: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="sms-compliance-stock-ticker">
+                  {t("billing.compliance.fields.stockTicker")}
+                </Label>
+                <Input
+                  id="sms-compliance-stock-ticker"
+                  value={form.stockTicker}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      stockTicker: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="sms-compliance-brand-contact">
               {t("billing.compliance.fields.brandContactEmail")}
