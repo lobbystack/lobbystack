@@ -40,10 +40,7 @@ type RefreshState = {
   phase: RefreshPhase;
   callsCursor?: string;
   notificationsCursor?: string;
-  conversationCursor?: string;
-  activeConversationId?: Id<"conversations">;
   messagesCursor?: string;
-  hasMoreConversations?: boolean;
   outboxCursor?: string;
 };
 
@@ -102,10 +99,7 @@ const refreshStateValidator = v.object({
   phase: refreshPhaseValidator,
   callsCursor: v.optional(v.string()),
   notificationsCursor: v.optional(v.string()),
-  conversationCursor: v.optional(v.string()),
-  activeConversationId: v.optional(v.id("conversations")),
   messagesCursor: v.optional(v.string()),
-  hasMoreConversations: v.optional(v.boolean()),
   outboxCursor: v.optional(v.string()),
 });
 
@@ -627,40 +621,12 @@ async function refreshConversationMessagesBatch(
     state: RefreshState;
   },
 ): Promise<RefreshStepResult> {
-  let activeConversationId = args.state.activeConversationId;
-  let messagesCursor = args.state.messagesCursor;
-  let conversationCursor = args.state.conversationCursor;
-  let hasMoreConversations = args.state.hasMoreConversations ?? false;
-
-  if (!activeConversationId) {
-    const conversationPage = await ctx.db
-      .query("conversations")
-      .withIndex("by_business_id_and_status", (q) => q.eq("businessId", args.businessId))
-      .paginate({
-        numItems: 1,
-        cursor: conversationCursor ?? null,
-      });
-
-    const nextConversation = conversationPage.page[0];
-    if (!nextConversation) {
-      return {
-        done: false,
-        state: { phase: "telemetry" },
-      };
-    }
-
-    activeConversationId = nextConversation._id;
-    messagesCursor = undefined;
-    conversationCursor = conversationPage.isDone ? undefined : conversationPage.continueCursor;
-    hasMoreConversations = !conversationPage.isDone;
-  }
-
   const messagePage = await ctx.db
     .query("messages")
-    .withIndex("by_conversation_id", (q) => q.eq("conversationId", activeConversationId))
+    .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
     .paginate({
       numItems: REFRESH_BATCH_SIZE,
-      cursor: messagesCursor ?? null,
+      cursor: args.state.messagesCursor ?? null,
     });
 
   for (const message of messagePage.page) {
@@ -698,27 +664,14 @@ async function refreshConversationMessagesBatch(
       done: false,
       state: {
         phase: "conversations",
-        ...(conversationCursor ? { conversationCursor } : {}),
-        activeConversationId,
         messagesCursor: messagePage.continueCursor,
-        hasMoreConversations,
       },
-    };
-  }
-
-  if (!hasMoreConversations) {
-    return {
-      done: false,
-      state: { phase: "telemetry" },
     };
   }
 
   return {
     done: false,
-    state: {
-      phase: "conversations",
-      ...(conversationCursor ? { conversationCursor } : {}),
-    },
+    state: { phase: "telemetry" },
   };
 }
 

@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import {
   Collapsible,
@@ -102,7 +102,8 @@ function NavBadge({ children }: { children: ReactNode }) {
 }
 
 function SidebarMenuLink({ item, href }: { item: NavLinkItem; href: string }) {
-  const { setOpenMobile } = useSidebar();
+  const navigate = useNavigate();
+  const { isMobile, setOpenMobile } = useSidebar();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -111,9 +112,16 @@ function SidebarMenuLink({ item, href }: { item: NavLinkItem; href: string }) {
         isActive={checkIsActive(href, item)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        render={<NavLink to={item.url} />}
         tooltip={item.title}
-        onClick={() => setOpenMobile(false)}
+        {...(!isMobile ? { render: <NavLink to={item.url} /> } : {})}
+        onClick={() => {
+          if (!isMobile) {
+            return;
+          }
+
+          navigate(item.url);
+          setOpenMobile(false);
+        }}
       >
         {item.icon ? <item.icon hovered={hovered} /> : null}
         <span>{item.title}</span>
@@ -134,7 +142,8 @@ function SidebarMenuCollapsible({
   isOpen: boolean;
   onToggle: (open: boolean) => void;
 }) {
-  const { setOpenMobile } = useSidebar();
+  const navigate = useNavigate();
+  const { isMobile, setOpenMobile } = useSidebar();
   const [hovered, setHovered] = useState(false);
   const [hoveredSubItemKey, setHoveredSubItemKey] = useState<string | null>(null);
 
@@ -168,8 +177,15 @@ function SidebarMenuCollapsible({
                   isActive={checkIsActive(href, subItem)}
                   onMouseEnter={() => setHoveredSubItemKey(getNavItemKey(subItem, item.title))}
                   onMouseLeave={() => setHoveredSubItemKey(null)}
-                  onClick={() => setOpenMobile(false)}
-                  render={<NavLink to={subItem.url} />}
+                  {...(!isMobile ? { render: <NavLink to={subItem.url} /> } : {})}
+                  onClick={() => {
+                    if (!isMobile) {
+                      return;
+                    }
+
+                    navigate(subItem.url);
+                    setOpenMobile(false);
+                  }}
                 >
                   {subItem.icon ? (
                     <subItem.icon hovered={hoveredSubItemKey === getNavItemKey(subItem, item.title)} />

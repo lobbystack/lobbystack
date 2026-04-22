@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableCard } from "@/components/ui/table";
 
 export function PageHeaderSkeleton({
   title,
@@ -52,7 +53,7 @@ export function TableCardSkeleton({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <TableCard>
         <div className="border-b px-4 py-3">
           <div
             className="grid gap-4"
@@ -79,7 +80,7 @@ export function TableCardSkeleton({
             </div>
           ))}
         </div>
-      </div>
+      </TableCard>
       {showPagination ? (
         <div className="flex items-center justify-between gap-4">
           <Skeleton className="h-8 w-28" />

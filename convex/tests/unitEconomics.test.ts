@@ -157,6 +157,47 @@ describe("unit economics", () => {
     ]);
   });
 
+  it("refreshes sms provider costs across multiple message pages", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "unit-economics-message-pages");
+
+    await t.run(async (ctx) => {
+      const firstConversation = await seedConversation(ctx, businessId);
+      const secondConversation = await seedConversation(ctx, businessId);
+      const nowIso = new Date().toISOString();
+
+      for (let index = 0; index < 55; index += 1) {
+        await ctx.db.insert("messages", {
+          businessId,
+          conversationId:
+            index < 30 ? firstConversation.conversationId : secondConversation.conversationId,
+          direction: "outbound",
+          channel: "sms",
+          body: `Paged unit economics message ${index + 1}`,
+          status: "sent",
+          senderRole: "business_ai",
+          aiGenerated: true,
+          providerCostUsd: 0.01,
+          providerNumSegments: 1,
+          providerUpdatedAt: nowIso,
+        });
+      }
+    });
+
+    await refreshMonthUntilDone(authed, businessId);
+    const summary = await authed.query(api.unitEconomics.getSummary, { businessId });
+
+    expect(summary.rollup).not.toBeNull();
+    expect(summary.rollup?.providerCostUsd).toBe(0.55);
+    expect(summary.rollup?.outboundSmsCount).toBe(55);
+    expect(summary.rollup?.smsThreadCount).toBe(2);
+    expect(summary.rollup?.channelMix).toEqual([
+      { key: "voice", value: 0 },
+      { key: "sms", value: 0.55 },
+      { key: "alerts", value: 0 },
+    ]);
+  });
+
   it("rolls direct AI generation costs together with configured infra allocation", async () => {
     process.env.UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD = "12";
     process.env.UNIT_ECONOMICS_MONTHLY_FLY_COST_USD = "8";

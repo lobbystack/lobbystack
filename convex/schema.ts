@@ -503,6 +503,7 @@ export default defineSchema({
     senderRole: v.optional(smsSenderRoleValidator),
     aiGenerated: v.boolean(),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_conversation_id", ["conversationId"])
     .index("by_conversation_session_id", ["conversationSessionId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),

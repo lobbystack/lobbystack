@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
+  TableCard,
   TableCell,
   TableHead,
   TableHeader,
@@ -696,8 +697,8 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         <TableCardSkeleton columns={6} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
-            <Table className="w-full table-fixed">
+          <TableCard>
+            <Table className="min-w-[60rem] w-full table-fixed">
               <colgroup>
                 <col className="w-[18%]" />
                 <col className="w-[34%]" />
@@ -804,7 +805,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                 ) : null}
               </TableBody>
             </Table>
-          </div>
+          </TableCard>
           <DataTablePagination
             labels={{
               rowsPerPage: t("agent:pagination.rowsPerPage"),

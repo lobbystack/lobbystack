@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { RuntimeLocale } from "@ai-receptionist/shared";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
-import {
-  setCachedConvexQuery,
-  useCachedConvexQuery,
-} from "@/lib/cached-convex-query";
 import { Button } from "@/components/ui/button";
 import {
   Item,
@@ -91,12 +87,10 @@ export function resolveTransferNumberForSave({
 
 export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
   const { i18n, t } = useTranslation(["agent", "common"]);
-  const { data: configuration, isLoading: isLoadingConfiguration } = useCachedConvexQuery(
-    api.businesses.catalog.getAgentBasicSettings,
-    {
-      businessId,
-    },
-  );
+  const configuration = useQuery(api.businesses.catalog.getAgentBasicSettings, {
+    businessId,
+  });
+  const isLoadingConfiguration = configuration === undefined;
   const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const persistedProfile = configuration?.profile;
 
@@ -175,18 +169,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         greeting,
         transferNumber: transferNumberResolution.value,
       });
-      setCachedConvexQuery(api.businesses.catalog.getAgentBasicSettings, {
-        businessId,
-      }, {
-        business: configuration?.business ?? null,
-        profile: persistedProfile
-          ? {
-              _id: persistedProfile._id,
-              greeting,
-              transferNumber: transferNumberResolution.value ?? undefined,
-            }
-          : null,
-      });
       captureAnalyticsEvent("web.agent.settings_saved", {
         businessId: String(businessId),
         setting: "greeting",
@@ -220,18 +202,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         defaultLocale,
         greeting,
         transferNumber: transferNumberResolution.value,
-      });
-      setCachedConvexQuery(api.businesses.catalog.getAgentBasicSettings, {
-        businessId,
-      }, {
-        business: configuration?.business ?? null,
-        profile: persistedProfile
-          ? {
-              _id: persistedProfile._id,
-              greeting,
-              transferNumber: transferNumberResolution.value ?? undefined,
-            }
-          : null,
       });
       captureAnalyticsEvent("web.agent.settings_saved", {
         businessId: String(businessId),
@@ -322,23 +292,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                           defaultLocale: nextLocale,
                           greeting,
                           transferNumber: transferNumberResolution.value,
-                        });
-                        setCachedConvexQuery(api.businesses.catalog.getAgentBasicSettings, {
-                          businessId,
-                        }, {
-                          business: configuration?.business
-                            ? {
-                                ...configuration.business,
-                                defaultLocale: nextLocale,
-                              }
-                            : null,
-                          profile: persistedProfile
-                            ? {
-                                _id: persistedProfile._id,
-                                greeting,
-                                transferNumber: transferNumberResolution.value ?? undefined,
-                              }
-                            : null,
                         });
                         captureAnalyticsEvent("web.agent.settings_saved", {
                           businessId: String(businessId),
