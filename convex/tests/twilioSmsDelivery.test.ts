@@ -115,7 +115,12 @@ function createTestHarness(): TestConvex<typeof schema> {
 
 async function insertBusiness(
   ctx: TestContext,
-  input: { slug: string; name: string; defaultLocale?: "en" | "fr" },
+  input: {
+    slug: string;
+    name: string;
+    defaultLocale?: "en" | "fr";
+    deploymentMode?: "cloud" | "manual";
+  },
 ): Promise<Id<"businesses">> {
   return await ctx.db.insert("businesses", {
     slug: input.slug,
@@ -123,7 +128,7 @@ async function insertBusiness(
     timezone: "America/Toronto",
     businessType: "service_company",
     defaultLocale: input.defaultLocale ?? "en",
-    deploymentMode: "manual",
+    deploymentMode: input.deploymentMode ?? "manual",
     status: "active",
   });
 }
@@ -1049,6 +1054,90 @@ describe("Twilio SMS delivery flow", () => {
       from: "+14165550111",
       body: "Auto-reply: Which line replies?",
       statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+  });
+
+  it("uses the approved business sender once hosted AI SMS is attached to a Messaging Service", async () => {
+    const t = createTestHarness();
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-hosted-approved-reply",
+      status: "queued",
+    });
+
+    const { approvedPhoneNumber, businessId, inboundPhoneNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-hosted-approved-reply",
+        name: "Twilio Hosted Approved Reply",
+        deploymentMode: "cloud",
+      });
+      const approvedPhoneNumberId = await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550112",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550113",
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        subscriptionState: "active",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Hosted Reply Owner",
+        lastSyncedAt: "2026-04-18T12:00:00.000Z",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "approved",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: {
+          businessName: "Twilio Hosted Approved Reply",
+          websiteUrl: "https://example.com",
+        },
+        approvedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-hosted-approved-reply",
+      });
+
+      return {
+        approvedPhoneNumber: "+14165550112",
+        businessId,
+        inboundPhoneNumber: "+14165550113",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-hosted-approved-reply",
+      From: "+14165550186",
+      To: inboundPhoneNumber,
+      Body: "Use the approved sender",
+    });
+
+    expect(response.status).toBe(200);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550186",
+      from: approvedPhoneNumber,
+      messagingServiceSid: "MG-hosted-approved-reply",
+      body: "Auto-reply: Use the approved sender",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!conversation) {
+        throw new Error("Expected hosted approved reply conversation.");
+      }
+      const messages = await fetchConversationMessages(ctx, conversation._id);
+      const outbound = messages.find((message) => message.direction === "outbound");
+      expect(outbound).toMatchObject({
+        fromPhoneNumber: approvedPhoneNumber,
+      });
     });
   });
 

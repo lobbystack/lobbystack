@@ -39,7 +39,12 @@ type TestContext = Parameters<TestRunFunction>[0];
 
 async function seedSmsConversation(
   t: ConvexHarness,
-  input: { subject: string; blocked?: boolean; optedOut?: boolean },
+  input: {
+    subject: string;
+    blocked?: boolean;
+    optedOut?: boolean;
+    deploymentMode?: "cloud" | "manual";
+  },
 ) {
   const seeded = await t.run(async (ctx) => {
     const businessId = await ctx.db.insert("businesses", {
@@ -48,7 +53,7 @@ async function seedSmsConversation(
       timezone: "America/Toronto",
       businessType: "clinic",
       defaultLocale: "en",
-      deploymentMode: "manual",
+      deploymentMode: input.deploymentMode ?? "manual",
       status: "active",
     });
     const userId = await ctx.db.insert("users", {
@@ -260,6 +265,78 @@ describe("Dashboard SMS replies", () => {
       from: "+14165550121",
       body: "Replying from the same number",
       statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+  });
+
+  it("uses the approved business sender for hosted replies after 10DLC approval", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-approved-sender",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx) => {
+      const approvedPhoneNumberId = await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+14165550121",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: `business:${String(businessId)}`,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        subscriptionState: "active",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Dashboard Reply Owner",
+        lastSyncedAt: "2026-04-18T12:00:00.000Z",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "approved",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: {
+          businessName: "Dashboard SMS Reply Business",
+          websiteUrl: "https://example.com",
+        },
+        approvedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-dashboard-approved",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "Earlier reply from the old sender",
+        fromPhoneNumber: "+14165550120",
+        status: "sent",
+        aiGenerated: false,
+      });
+    });
+
+    const result = await authed.action(api.dashboard.messages.sendSmsReply, {
+      businessId,
+      conversationId,
+      body: "Use the approved sender",
+    });
+
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550198",
+      from: "+14165550121",
+      messagingServiceSid: "MG-dashboard-approved",
+      body: "Use the approved sender",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const outbound = await ctx.db.get("messages", result.messageId);
+      expect(outbound).toMatchObject({
+        fromPhoneNumber: "+14165550121",
+      });
     });
   });
 

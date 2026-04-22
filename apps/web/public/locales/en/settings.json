@@ -119,7 +119,7 @@
     },
     "catalog": {
       "title": "Hosted offers",
-      "description": "Alert SMS uses the shared Noncia sender in hosted cloud. AI SMS stays on the customer's own number.",
+      "description": "Hosted workspaces use the shared sender for alerts until AI SMS registration is approved. After approval, both alerts and AI SMS move onto the business number while billing stays split by usage type.",
       "selfHostDescription": "Free forever. Full product, bring your own AI keys, Twilio account, numbers, and compliance setup.",
       "freeCloudDescription": "$0 per month. No overages and no AI SMS.",
       "freeCloudLimits": "Includes {{voiceMinutes}} voice minutes, {{alertSmsSegments}} Alert SMS segments, and {{outboundAttempts}} outbound call attempts per month.",
@@ -130,13 +130,96 @@
     "addon": {
       "title": "Add-ons",
       "aiSmsName": "AI SMS",
-      "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously.",
+      "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously after 10DLC approval.",
+      "aiSmsSetupRequiredDescription": "AI SMS billing is active, but 10DLC registration still needs to be completed before alerts and AI SMS can use the business number.",
+      "aiSmsSetupRequiredNotice": "Alerts stay on the shared hosted sender until approval. AI SMS remains blocked while Twilio reviews the registration.",
       "enable": "Enable",
       "aiSmsActiveBadge": "Active",
+      "aiSmsSetupRequiredBadge": "Setup required",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "One-time setup fee: {{amount}}",
       "aiSmsRequiresProPrefix": "Available on",
       "aiSmsRequiresProLink": "Pro plan"
+    },
+    "compliance": {
+      "title": "AI SMS compliance",
+      "description": "Register your business for A2P 10DLC so hosted alerts and AI replies can use the approved business number.",
+      "cardTitle": "10DLC registration",
+      "routingSummary": "Current sender routing: {{senderMode}}.",
+      "approvedNumber": "Approved business number: {{phoneNumber}}",
+      "senderMode": {
+        "platformPhone": "alerts stay on the shared hosted sender",
+        "businessPhone": "messages send from the business number directly",
+        "businessMessagingService": "alerts and AI SMS send through the approved business Messaging Service"
+      },
+      "status": {
+        "setupRequired": "Setup required",
+        "awaitingVerification": "Awaiting verification",
+        "underReview": "Under review",
+        "approved": "Approved",
+        "failed": "Failed",
+        "suspended": "Suspended"
+      },
+      "actions": {
+        "save": "Save draft",
+        "saving": "Saving...",
+        "submit": "Submit registration",
+        "resume": "Resume registration",
+        "refresh": "Refresh status",
+        "working": "Updating..."
+      },
+      "toast": {
+        "saved": "Saved SMS compliance draft.",
+        "saveFailed": "Unable to save the SMS compliance draft.",
+        "submitted": "Updated SMS compliance registration.",
+        "submitFailed": "Unable to update the SMS compliance registration."
+      },
+      "companyTypes": {
+        "private": "Private",
+        "nonProfit": "Non-profit",
+        "government": "Government",
+        "public": "Public"
+      },
+      "trafficTier": {
+        "lowVolume": "Low volume (recommended)",
+        "mixed": "Mixed / higher volume"
+      },
+      "fields": {
+        "approvedPhoneNumber": "Business number to register",
+        "businessName": "Legal business name",
+        "websiteUrl": "Website URL",
+        "businessType": "Business type",
+        "businessIndustry": "Business industry",
+        "businessRegistrationIdentifier": "Tax ID type",
+        "businessRegistrationNumber": "Tax ID number",
+        "companyType": "Company type",
+        "stockExchange": "Stock exchange",
+        "stockTicker": "Stock ticker",
+        "brandContactEmail": "Brand contact email (required for public companies)",
+        "representativeFirstName": "Authorized representative first name",
+        "representativeLastName": "Authorized representative last name",
+        "representativeBusinessTitle": "Authorized representative title",
+        "representativeJobPosition": "Authorized representative role",
+        "representativePhoneNumber": "Authorized representative phone",
+        "representativeEmail": "Authorized representative email",
+        "addressCustomerName": "Mailing name",
+        "addressStreet": "Street address",
+        "addressStreetSecondary": "Address line 2",
+        "addressCity": "City",
+        "addressRegion": "State / province",
+        "addressPostalCode": "Postal code",
+        "addressIsoCountry": "Country code",
+        "trafficTier": "Traffic profile",
+        "campaignDescription": "Campaign description",
+        "messageFlow": "Opt-in flow",
+        "sampleMessageOne": "Sample message 1",
+        "sampleMessageTwo": "Sample message 2",
+        "optInMessage": "Opt-in confirmation message",
+        "optOutMessage": "Opt-out message",
+        "helpMessage": "Help message",
+        "hasEmbeddedLinks": "Messages include links",
+        "hasEmbeddedPhone": "Messages include phone numbers"
+      }
     },
     "spendingCap": {
       "title": "Monthly spending cap",

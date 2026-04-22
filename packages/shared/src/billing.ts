@@ -235,11 +235,13 @@ export type BillingStatus = {
   subscriptionState: string;
   activeAddons: Array<BillingAddonSlug>;
   aiSmsEnabled: boolean;
+  aiSmsReady: boolean;
   overagesBillable: boolean;
   monthlyChargeCents: number | null;
   billingContactEmail: string | null;
   billingContactName: string | null;
   includedBusinessNumbers: number | null;
+  hasBillingManagementAccess: boolean;
   hasCustomerPortalAccess: boolean;
   hasCheckoutAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;

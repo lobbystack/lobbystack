@@ -5,6 +5,15 @@ import {
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
 } from "./lib/runtimeLocale";
+import {
+  smsComplianceBrandKindValidator,
+  smsComplianceCustomerTypeValidator,
+  smsComplianceDraftValidator,
+  smsCompliancePendingActionValidator,
+  smsComplianceStatusValidator,
+  smsComplianceSubmissionSnapshotValidator,
+  smsComplianceTrafficTierValidator,
+} from "./lib/smsCompliance";
 import { knowledgeSectionValidator } from "./lib/knowledgeSections";
 import { localizedServiceNamesValidator } from "./lib/serviceNames";
 
@@ -243,6 +252,58 @@ export default defineSchema({
   })
     .index("by_role", ["role"])
     .index("by_e164", ["e164"]),
+
+  sms_compliance_registrations: defineTable({
+    businessId: v.id("businesses"),
+    status: smsComplianceStatusValidator,
+    customerType: smsComplianceCustomerTypeValidator,
+    brandKind: smsComplianceBrandKindValidator,
+    trafficTier: smsComplianceTrafficTierValidator,
+    draft: v.optional(smsComplianceDraftValidator),
+    twilioCustomerProfileSid: v.optional(v.string()),
+    twilioBusinessInfoSid: v.optional(v.string()),
+    twilioAuthorizedRepresentativeSid: v.optional(v.string()),
+    twilioAddressSid: v.optional(v.string()),
+    twilioAddressDocumentSid: v.optional(v.string()),
+    twilioTrustProductSid: v.optional(v.string()),
+    twilioMessagingProfileSid: v.optional(v.string()),
+    twilioBrandRegistrationSid: v.optional(v.string()),
+    twilioMessagingServiceSid: v.optional(v.string()),
+    twilioCampaignSid: v.optional(v.string()),
+    approvedPhoneNumberId: v.optional(v.id("phone_numbers")),
+    brandContactEmail: v.optional(v.string()),
+    lastSubmittedAt: v.optional(v.string()),
+    lastSyncedAt: v.optional(v.string()),
+    failureCode: v.optional(v.string()),
+    failureMessage: v.optional(v.string()),
+    pendingAction: v.optional(smsCompliancePendingActionValidator),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_status", ["status"]),
+
+  sms_compliance_submissions: defineTable({
+    registrationId: v.id("sms_compliance_registrations"),
+    businessId: v.id("businesses"),
+    attemptKey: v.string(),
+    status: smsComplianceStatusValidator,
+    trafficTier: smsComplianceTrafficTierValidator,
+    snapshot: smsComplianceSubmissionSnapshotValidator,
+    createdAt: v.string(),
+    submittedAt: v.optional(v.string()),
+    completedAt: v.optional(v.string()),
+    resultStatus: v.optional(smsComplianceStatusValidator),
+    twilioCustomerProfileSid: v.optional(v.string()),
+    twilioTrustProductSid: v.optional(v.string()),
+    twilioBrandRegistrationSid: v.optional(v.string()),
+    twilioMessagingServiceSid: v.optional(v.string()),
+    twilioCampaignSid: v.optional(v.string()),
+    failureCode: v.optional(v.string()),
+    failureMessage: v.optional(v.string()),
+    pendingAction: v.optional(smsCompliancePendingActionValidator),
+  })
+    .index("by_registration_id", ["registrationId"])
+    .index("by_business_id", ["businessId"])
+    .index("by_attempt_key", ["attemptKey"]),
 
   onboarding_phone_verifications: defineTable({
     businessId: v.id("businesses"),

@@ -73,18 +73,26 @@ export const validateWebhookSignature = internalAction({
 export const sendMessage = internalAction({
   args: {
     to: v.string(),
-    from: v.string(),
+    from: v.optional(v.string()),
+    messagingServiceSid: v.optional(v.string()),
     body: v.string(),
     statusCallbackUrl: v.string(),
     mediaUrls: v.optional(v.array(v.string())),
   },
   handler: async (_ctx, args) => {
+    if (!args.from && !args.messagingServiceSid) {
+      throw new Error("Either a Twilio from number or Messaging Service SID is required.");
+    }
+
     const client = getTwilioClient();
     const message = await client.messages.create({
       to: args.to,
-      from: args.from,
       body: args.body,
       statusCallback: args.statusCallbackUrl,
+      ...(args.from ? { from: args.from } : {}),
+      ...(args.messagingServiceSid
+        ? { messagingServiceSid: args.messagingServiceSid }
+        : {}),
       ...(args.mediaUrls && args.mediaUrls.length > 0
         ? { mediaUrl: args.mediaUrls }
         : {}),
