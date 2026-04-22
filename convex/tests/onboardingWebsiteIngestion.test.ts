@@ -18,15 +18,19 @@ import { modules } from "../test.setup";
 
 const {
   billingLimitBytesRef,
+  deleteWebsiteIngestionStorageBlobMock,
   dnsLookupMock,
   enqueueActionBatchMock,
+  failingStorageDeleteIdsRef,
   ragDeleteMock,
   workflowStartMock,
 } =
   vi.hoisted(() => ({
     billingLimitBytesRef: { value: null as number | null },
+    deleteWebsiteIngestionStorageBlobMock: vi.fn(),
     dnsLookupMock: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
     enqueueActionBatchMock: vi.fn(async () => null),
+    failingStorageDeleteIdsRef: { value: new Set<string>() },
     ragDeleteMock: vi.fn(async () => null),
     workflowStartMock: vi.fn(async () => null),
   }));
@@ -62,6 +66,25 @@ vi.mock("../lib/components", async () => {
       ...actual.rag,
       delete: ragDeleteMock,
     },
+  };
+});
+
+vi.mock("../lib/websiteIngestionStorage", async () => {
+  const actual = await vi.importActual<typeof import("../lib/websiteIngestionStorage")>(
+    "../lib/websiteIngestionStorage",
+  );
+
+  deleteWebsiteIngestionStorageBlobMock.mockImplementation(async (ctx, storageId) => {
+    if (failingStorageDeleteIdsRef.value.has(String(storageId))) {
+      throw new Error(`Storage delete failed for ${String(storageId)}`);
+    }
+
+    return await actual.deleteWebsiteIngestionStorageBlob(ctx, storageId);
+  });
+
+  return {
+    ...actual,
+    deleteWebsiteIngestionStorageBlob: deleteWebsiteIngestionStorageBlobMock,
   };
 });
 
@@ -138,7 +161,9 @@ describe("website onboarding and ingestion", () => {
     process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
     process.env.CLOUDFLARE_API_TOKEN = "test-token";
     billingLimitBytesRef.value = null;
+    failingStorageDeleteIdsRef.value = new Set<string>();
 
+    deleteWebsiteIngestionStorageBlobMock.mockClear();
     dnsLookupMock.mockReset();
     dnsLookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
     workflowStartMock.mockReset();
@@ -254,6 +279,40 @@ describe("website onboarding and ingestion", () => {
         websiteUrl: "https://clinic.example.com",
       }),
     ).rejects.toThrow(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBeUndefined();
+    expect(business?.onboardingStage).toBe("website");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(0);
+    expect(workflowStartMock).not.toHaveBeenCalled();
+  });
+
+  it("does not advance onboarding when the hostname does not resolve", async () => {
+    const t = createConvexHarness();
+    const subject = "website-unresolved-host-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    dnsLookupMock.mockRejectedValue(
+      Object.assign(new Error("getaddrinfo ENOTFOUND missing.example"), {
+        code: "ENOTFOUND",
+      }),
+    );
+
+    await expect(
+      authed.action(api.onboarding.websites.submitOnboardingWebsite, {
+        businessId,
+        websiteUrl: "https://missing.example",
+      }),
+    ).rejects.toThrow("Enter a public website URL with a live hostname.");
 
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
@@ -667,6 +726,25 @@ describe("website onboarding and ingestion", () => {
     expect(normalizeWebsitePageUrl("https://example.com/about", "https://www.example.com/")).toBe(
       "https://www.example.com/about",
     );
+  });
+
+  it("does not synthesize apex/www aliases for arbitrary subdomains", () => {
+    expect(buildWebsiteCrawlIncludePatterns("https://clinic.example.com/")).toEqual([
+      "https://clinic.example.com/",
+      "https://clinic.example.com/**",
+    ]);
+    expect(
+      normalizeWebsitePageUrl(
+        "https://www.clinic.example.com/about",
+        "https://clinic.example.com/",
+      ),
+    ).toBeNull();
+    expect(
+      normalizeWebsitePageUrl(
+        "https://clinic.example.com/about",
+        "https://www.clinic.example.com/",
+      ),
+    ).toBeNull();
   });
 
   it("rejects pages outside the configured subpath during page import", () => {
@@ -1238,6 +1316,130 @@ describe("website onboarding and ingestion", () => {
       return await ctx.db.system.get("_storage", previousExtractedTextStorageId);
     });
     expect(previousStorage).toBeNull();
+  });
+
+  it("keeps the new website blob when previous extracted text cleanup fails", async () => {
+    const t = createConvexHarness();
+    const subject = "website-update-cleanup-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const { websiteIngestionJobId, previousExtractedTextStorageId, existingDocumentId } =
+      await t.run(async (ctx) => {
+        const previousExtractedTextStorageId = await ctx.storage.store(
+          new Blob(["# About\nOriginal copy"], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const existingDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/about",
+          title: "About",
+          extractedTextStorageId: previousExtractedTextStorageId,
+          mimeType: "text/markdown",
+          textContent: "Original preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: "old-hash",
+        });
+
+        const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+          businessId,
+          websiteUrl: "https://example.com",
+          provider: "cloudflare_browser_run",
+          status: "crawling",
+          crawlMode: "http",
+          fallbackTriggered: false,
+          pageLimit: 40,
+          depth: 3,
+          importedCount: 0,
+          indexedCount: 0,
+          errorCount: 0,
+        });
+
+        return { websiteIngestionJobId, previousExtractedTextStorageId, existingDocumentId };
+      });
+
+    failingStorageDeleteIdsRef.value = new Set([String(previousExtractedTextStorageId)]);
+
+    const updatedMarkdown = "# About\n" + "updated ".repeat(900);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: updatedMarkdown,
+              metadata: {
+                title: "About the Practice",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const summary = await t.action(
+        internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+        {
+          websiteIngestionJobId,
+          cloudflareJobId: "cf-job-cleanup-failure-1",
+          crawlMode: "browser",
+        },
+      );
+
+      expect(summary).toMatchObject({
+        importedDocumentCount: 1,
+        weak: false,
+      });
+      expect(enqueueActionBatchMock).toHaveBeenCalledTimes(1);
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+
+      const updatedDocument = await t.query(
+        internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+        {
+          businessId,
+          sourceUrl: "https://example.com/about",
+        },
+      );
+      expect(String(updatedDocument?._id)).toBe(String(existingDocumentId));
+      expect(updatedDocument?.status).toBe("queued");
+
+      const nextExtractedTextStorageId = updatedDocument?.extractedTextStorageId;
+      expect(String(nextExtractedTextStorageId)).not.toBe(
+        String(previousExtractedTextStorageId),
+      );
+
+      const previousStorage = await t.run(async (ctx) => {
+        return await ctx.db.system.get("_storage", previousExtractedTextStorageId);
+      });
+      expect(previousStorage).not.toBeNull();
+
+      const nextStorage = await t.run(async (ctx) => {
+        if (!nextExtractedTextStorageId) {
+          return null;
+        }
+        return await ctx.db.system.get("_storage", nextExtractedTextStorageId);
+      });
+      expect(nextStorage).not.toBeNull();
+    } finally {
+      consoleWarnSpy.mockRestore();
+    }
   });
 
   it("removes stale website documents when the crawl is fully under the page limit", async () => {

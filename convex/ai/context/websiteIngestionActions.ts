@@ -10,6 +10,7 @@ import { internalAction, type ActionCtx } from "../../_generated/server";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import { bulkWorkpool, KNOWLEDGE_INDEX_VERSION, rag } from "../../lib/components";
 import { buildKnowledgeDocumentPreviewText } from "../../lib/knowledgeDocuments";
+import { deleteWebsiteIngestionStorageBlob } from "../../lib/websiteIngestionStorage";
 import {
   buildWebsiteCrawlExcludePatterns,
   buildWebsiteCrawlIncludePatterns,
@@ -220,16 +221,17 @@ function isNonPublicResolvedAddress(address: string): boolean {
   );
 }
 
-function isIgnorableDnsLookupError(error: unknown): boolean {
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? String((error as { code?: unknown }).code ?? "")
-      : "";
+function getDnsLookupErrorCode(error: unknown): string {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : "";
+}
+
+function isTransientDnsLookupError(error: unknown): boolean {
+  const code = getDnsLookupErrorCode(error);
 
   return (
     code === "EAI_AGAIN" ||
-    code === "ENODATA" ||
-    code === "ENOTFOUND" ||
     code === "ESERVFAIL" ||
     code === "ETIMEOUT"
   );
@@ -247,11 +249,19 @@ async function assertWebsiteCrawlTargetIsPublic(websiteUrl: string): Promise<voi
       verbatim: true,
     });
 
+    if (resolvedAddresses.length === 0) {
+      throw new Error("Enter a public website URL with a live hostname.");
+    }
+
     if (resolvedAddresses.some((record) => isNonPublicResolvedAddress(record.address))) {
       throw new Error(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
     }
   } catch (error) {
-    if (isIgnorableDnsLookupError(error)) {
+    const code = getDnsLookupErrorCode(error);
+    if (code === "ENODATA" || code === "ENOTFOUND") {
+      throw new Error("Enter a public website URL with a live hostname.");
+    }
+    if (isTransientDnsLookupError(error)) {
       return;
     }
     throw error;
@@ -393,10 +403,10 @@ async function deleteWebsiteKnowledgeDocument(
     await rag.delete(ctx, { entryId: document.indexedEntryId as never });
   }
   if (document.storageId) {
-    await ctx.storage.delete(document.storageId);
+    await deleteWebsiteIngestionStorageBlob(ctx, document.storageId);
   }
   if (document.extractedTextStorageId) {
-    await ctx.storage.delete(document.extractedTextStorageId);
+    await deleteWebsiteIngestionStorageBlob(ctx, document.extractedTextStorageId);
   }
 
   await ctx.runMutation(internal.ai.context.knowledge.deleteKnowledgeDocumentRecord, {
@@ -749,9 +759,9 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         }),
       );
 
-      try {
-        if (existingDocument) {
-          await ctx.runMutation(
+	      try {
+	        if (existingDocument) {
+	          await ctx.runMutation(
             internal.ai.context.websiteIngestion.updateWebsiteKnowledgeDocument,
             {
               documentId: existingDocument._id,
@@ -766,16 +776,12 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
               processingProgress: 0,
             },
           );
-          documentsToIndex.push({
-            documentId: existingDocument._id,
-            skipSnapshotRefresh: true,
-          });
-
-          if (existingDocument.extractedTextStorageId) {
-            await ctx.storage.delete(existingDocument.extractedTextStorageId);
-          }
-        } else {
-          const documentId: Id<"knowledge_documents"> = await ctx.runMutation(
+	          documentsToIndex.push({
+	            documentId: existingDocument._id,
+	            skipSnapshotRefresh: true,
+	          });
+	        } else {
+	          const documentId: Id<"knowledge_documents"> = await ctx.runMutation(
             internal.ai.context.websiteIngestion.createWebsiteKnowledgeDocument,
             {
               businessId: job.businessId,
@@ -791,13 +797,25 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
           documentsToIndex.push({
             documentId,
             skipSnapshotRefresh: true,
-          });
-        }
-      } catch (error) {
-        await ctx.storage.delete(extractedTextStorageId);
-        throw error;
-      }
-    }
+	          });
+	        }
+	      } catch (error) {
+	        await deleteWebsiteIngestionStorageBlob(ctx, extractedTextStorageId);
+	        throw error;
+	      }
+
+	      if (existingDocument?.extractedTextStorageId) {
+	        try {
+	          await deleteWebsiteIngestionStorageBlob(ctx, existingDocument.extractedTextStorageId);
+	        } catch (error) {
+	          const message =
+	            error instanceof Error ? error.message : "Failed to delete outdated website storage.";
+	          console.warn(
+	            `[websiteIngestion] Failed to delete outdated extracted text for ${sourceUrl}: ${message}`,
+	          );
+	        }
+	      }
+	    }
 
     for (const staleDocument of staleDocuments) {
       await deleteWebsiteKnowledgeDocument(ctx, staleDocument);

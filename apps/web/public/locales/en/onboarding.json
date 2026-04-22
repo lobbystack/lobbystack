@@ -1,9 +1,9 @@
 {
   "verifyPhone": {
     "title": "Verify you're real",
-    "description": "Enter your mobile number to receive an SMS verification code. We'll use the verified number to suggest your first business number.",
+    "description": "Enter your mobile number to receive an SMS verification code. We'll use the verified number to tailor the rest of onboarding to your local market.",
     "verifyTitle": "Enter your verification code",
-    "verifyDescription": "We sent a code to {{phone}}. Once it's verified, we'll suggest a business number that matches your local market.",
+    "verifyDescription": "We sent a code to {{phone}}. Once it's verified, you'll be able to import your website before we suggest a business number that matches your local market.",
     "fields": {
       "mobileNumber": "Mobile number",
       "code": "Verification code"
@@ -12,7 +12,7 @@
       "mobileNumber": "+1 581 748 4609",
       "code": "123456"
     },
-    "hint": "Use your personal mobile number in international format so we can match your first business number to the same local market.",
+    "hint": "Use your personal mobile number in international format so we can tailor the rest of onboarding, including your first business number, to the same local market.",
     "sendCode": "Get code",
     "sending": "Sending code...",
     "verifyCode": "Verify code",

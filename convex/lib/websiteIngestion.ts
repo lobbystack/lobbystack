@@ -78,6 +78,17 @@ function normalizeWebsiteHostname(hostname: string): string {
   return hostname.replace(/\.$/u, "").toLowerCase();
 }
 
+function supportsApexAndWwwEquivalence(hostname: string): boolean {
+  const normalizedHostname = normalizeWebsiteHostname(hostname);
+  const comparableHostname = buildComparableHostname(normalizedHostname);
+
+  if (normalizedHostname === "localhost" || isIpLikeHostname(normalizedHostname)) {
+    return false;
+  }
+
+  return comparableHostname.split(".").length === 2;
+}
+
 function stripIpv6Brackets(hostname: string): string {
   return hostname.startsWith("[") && hostname.endsWith("]")
     ? hostname.slice(1, -1)
@@ -123,10 +134,14 @@ export function normalizeWebsitePageUrl(rawUrl: string, websiteUrl: string): str
     return null;
   }
 
-  if (
-    buildComparableHostname(parsed.hostname) !== buildComparableHostname(base.hostname) ||
-    parsed.port !== base.port
-  ) {
+  const normalizedParsedHostname = normalizeWebsiteHostname(parsed.hostname);
+  const normalizedBaseHostname = normalizeWebsiteHostname(base.hostname);
+  const hostnamesMatchDirectly = normalizedParsedHostname === normalizedBaseHostname;
+  const hostnamesMatchViaApexAndWww =
+    supportsApexAndWwwEquivalence(base.hostname) &&
+    buildComparableHostname(parsed.hostname) === buildComparableHostname(base.hostname);
+
+  if ((!hostnamesMatchDirectly && !hostnamesMatchViaApexAndWww) || parsed.port !== base.port) {
     return null;
   }
 
@@ -214,7 +229,7 @@ function buildEquivalentWebsiteUrls(websiteUrl: string): Array<string> {
   const canonicalWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
   const parsed = new URL(canonicalWebsiteUrl);
 
-  if (parsed.hostname === "localhost" || isIpLikeHostname(parsed.hostname)) {
+  if (!supportsApexAndWwwEquivalence(parsed.hostname)) {
     return [canonicalWebsiteUrl];
   }
 

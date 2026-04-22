@@ -1,9 +1,9 @@
 {
   "verifyPhone": {
     "title": "Vérifiez votre identité",
-    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour suggérer votre premier numéro d'entreprise.",
+    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour adapter la suite de l'onboarding à votre marché local.",
     "verifyTitle": "Entrez votre code de vérification",
-    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, nous vous proposerons un numéro d'entreprise correspondant à votre marché local.",
+    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, vous pourrez importer votre site web avant que nous vous proposions un numéro d'entreprise correspondant à votre marché local.",
     "fields": {
       "mobileNumber": "Numéro mobile",
       "code": "Code de vérification"
@@ -12,7 +12,7 @@
       "mobileNumber": "+1 581 748 4609",
       "code": "123456"
     },
-    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions suggérer un premier numéro d'entreprise dans le même marché local.",
+    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions adapter la suite de l'onboarding, y compris votre premier numéro d'entreprise, au même marché local.",
     "sendCode": "Obtenir le code",
     "sending": "Envoi du code...",
     "verifyCode": "Vérifier le code",
