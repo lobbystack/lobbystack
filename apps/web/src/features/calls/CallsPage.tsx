@@ -26,6 +26,7 @@ import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import {
   Table,
   TableBody,
+  TableCard,
   TableCell,
   TableHead,
   TableHeader,
@@ -384,8 +385,8 @@ export function CallsPage({ businessId }: CallsPageProps) {
         <TableCardSkeleton columns={5} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
-            <Table>
+          <TableCard>
+            <Table className="min-w-[56rem]">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -449,7 +450,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
                 ) : null}
               </TableBody>
             </Table>
-          </div>
+          </TableCard>
           <DataTablePagination
             labels={{
               rowsPerPage: t("pagination.rowsPerPage"),

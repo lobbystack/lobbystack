@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
+  TableCard,
   TableCell,
   TableHead,
   TableHeader,
@@ -322,7 +323,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         <TableCardSkeleton columns={6} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <TableCard>
             <Table className="min-w-[52rem] w-full table-fixed">
               <colgroup>
                 <col className="w-[24%]" />
@@ -394,7 +395,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                 ) : null}
               </TableBody>
             </Table>
-          </div>
+          </TableCard>
           <DataTablePagination
             labels={{
               rowsPerPage: t("pagination.rowsPerPage"),

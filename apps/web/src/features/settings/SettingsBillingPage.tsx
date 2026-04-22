@@ -37,6 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
+  TableCard,
   TableCell,
   TableHead,
   TableHeader,
@@ -2187,7 +2188,7 @@ function TransactionsSection({
       title={t("billing.transactions.title")}
       description={t("billing.transactions.description")}
     >
-      <div className="rounded-xl border border-border">
+      <TableCard>
         <Table className="min-w-[42rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -2254,7 +2255,7 @@ function TransactionsSection({
             })}
           </TableBody>
         </Table>
-      </div>
+      </TableCard>
     </BillingSection>
   );
 }
@@ -2410,8 +2411,8 @@ function TransactionsSectionSkeleton({
       title={t("billing.transactions.title")}
       description={t("billing.transactions.description")}
     >
-      <div className="overflow-hidden rounded-xl border border-border">
-        <Table>
+      <TableCard>
+        <Table className="min-w-[42rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-[13px] font-medium text-muted-foreground">
@@ -2453,7 +2454,7 @@ function TransactionsSectionSkeleton({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </TableCard>
     </BillingSection>
   );
 }
