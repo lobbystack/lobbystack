@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import {
-  setCachedConvexQuery,
-  useCachedConvexQuery,
-} from "@/lib/cached-convex-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,16 +38,12 @@ type SettingsBusinessPageProps = {
 
 export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   const { t } = useTranslation("settings");
-  const { data: configuration, isLoading: isLoadingConfigurationData } = useCachedConvexQuery(
-    api.businesses.catalog.getBusinessSettingsAccount,
-    {
-      businessId: props.businessId,
-    },
-  );
-  const { data: currentUser, isLoading: isLoadingCurrentUser } = useCachedConvexQuery(
-    api.users.current,
-    {},
-  );
+  const configuration = useQuery(api.businesses.catalog.getBusinessSettingsAccount, {
+    businessId: props.businessId,
+  });
+  const currentUser = useQuery(api.users.current, {});
+  const isLoadingConfigurationData = configuration === undefined;
+  const isLoadingCurrentUser = currentUser === undefined;
   const updateBusinessName = useMutation(api.businesses.catalog.updateBusinessName);
   const changeEmail = useAction(api.businesses.catalog.changeEmail);
   const changePassword = useAction(api.businesses.catalog.changePassword);
@@ -103,14 +95,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
         businessId: props.businessId,
         name: businessName,
       });
-      setCachedConvexQuery(api.businesses.catalog.getBusinessSettingsAccount, {
-        businessId: props.businessId,
-      }, {
-        business: {
-          _id: props.businessId,
-          name: result.name,
-        },
-      });
+      setBusinessName(result.name);
       setBusinessNameStatus(t("account.businessName.saved"));
       setIsBusinessNameDialogOpen(false);
     } finally {
