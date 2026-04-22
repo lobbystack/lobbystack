@@ -508,16 +508,22 @@ export const getSmsReplyContext = internalQuery({
       capability: "ai",
     });
     if (!smsPolicy.allowed) {
-      throw new Error("AI SMS add-on required before sending conversational SMS.");
+      throw new Error(
+        smsPolicy.complianceStatus && smsPolicy.complianceStatus !== "approved"
+          ? "Finish 10DLC setup and wait for approval before sending AI SMS."
+          : "AI SMS add-on required before sending conversational SMS.",
+      );
     }
 
-    const preferredSenderPhoneNumber = await getPreferredConversationSmsSenderPhoneNumber(
-      ctx,
-      conversation._id,
-    );
+    const preferredSenderPhoneNumber =
+      smsPolicy.senderMode === "business_messaging_service"
+        ? smsPolicy.fromPhoneNumber ?? undefined
+        : (await getPreferredConversationSmsSenderPhoneNumber(ctx, conversation._id)) ??
+          smsPolicy.fromPhoneNumber ??
+          undefined;
     const fromPhoneNumber = selectSmsSenderPhoneNumber(
       phoneNumbers,
-      preferredSenderPhoneNumber ?? undefined,
+      preferredSenderPhoneNumber,
     );
     if (!fromPhoneNumber) {
       throw new Error(

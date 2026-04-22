@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
+  TableCard,
   TableCell,
   TableHead,
   TableHeader,
@@ -152,42 +153,73 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "contact",
         header: () => t("table.contact"),
         cell: ({ row }) => (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className="truncate font-semibold"
+              title={row.original.name ?? t("table.unknownContact")}
+            >
               {row.original.name ?? t("table.unknownContact")}
             </span>
             {row.original.isBlocked ? (
-              <Badge variant="destructive">{t("table.status.blocked")}</Badge>
+              <Badge className="shrink-0" variant="destructive">
+                {t("table.status.blocked")}
+              </Badge>
             ) : null}
           </div>
         ),
+        meta: {
+          className: "min-w-[12rem]",
+        },
       },
       {
         accessorFn: (contact) => [contact.phone, contact.email].filter(Boolean).join(" "),
         id: "channels",
         header: () => t("table.channels"),
         cell: ({ row }) => (
-            <div className="flex flex-wrap items-center gap-2">
-            <span>{formatPhoneNumberDisplay(row.original.phone, i18n.language)}</span>
-            {row.original.email ? <Badge variant="outline">{row.original.email}</Badge> : null}
+          <div className="flex min-w-0 flex-col gap-2">
+            <span
+              className="truncate"
+              title={formatPhoneNumberDisplay(row.original.phone, i18n.language)}
+            >
+              {formatPhoneNumberDisplay(row.original.phone, i18n.language)}
+            </span>
+            {row.original.email ? (
+              <Badge
+                className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                title={row.original.email}
+                variant="outline"
+              >
+                {row.original.email}
+              </Badge>
+            ) : null}
           </div>
         ),
+        meta: {
+          className: "min-w-[11rem]",
+        },
       },
       {
         accessorFn: (contact) => `${contact.messageCount} ${contact.callCount}`,
         id: "activity",
         header: () => t("table.activity"),
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex min-w-0 flex-wrap gap-2 text-sm">
             <Badge variant="secondary">{t("table.messages", { count: row.original.messageCount })}</Badge>
             <Badge variant="secondary">{t("table.calls", { count: row.original.callCount })}</Badge>
           </div>
         ),
+        meta: {
+          className: "min-w-[10rem]",
+        },
       },
       {
         accessorKey: "appointmentCount",
         id: "appointments",
-        header: () => t("table.appointments"),
+        header: () => <span className="block text-center">{t("table.appointments")}</span>,
+        cell: ({ row }) => <span className="block text-center">{row.original.appointmentCount}</span>,
+        meta: {
+          className: "min-w-[7rem] text-center",
+        },
       },
       {
         accessorFn: (contact) =>
@@ -198,13 +230,22 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "lastInteraction",
         header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
         cell: ({ row }) => (
-          <span className="block truncate text-right text-sm text-muted-foreground">
+          <span
+            className="block truncate text-right text-sm text-muted-foreground"
+            title={formatDateTime(row.original.lastInteractionAt, i18n.language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          >
             {formatDateTime(row.original.lastInteractionAt, i18n.language, {
               dateStyle: "medium",
               timeStyle: "short",
             })}
           </span>
         ),
+        meta: {
+          className: "min-w-[11rem] text-right",
+        },
       },
       {
         id: "actions",
@@ -282,14 +323,14 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         <TableCardSkeleton columns={6} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card [&_[data-slot=table-container]]:overflow-x-hidden">
-            <Table className="w-full table-fixed">
+          <TableCard>
+            <Table className="min-w-[52rem] w-full table-fixed">
               <colgroup>
-                <col className="w-[18%]" />
-                <col className="w-[16%]" />
                 <col className="w-[24%]" />
+                <col className="w-[20%]" />
+                <col className="w-[20%]" />
                 <col className="w-[12%]" />
-                <col className="w-[22%]" />
+                <col className="w-[16%]" />
                 <col className="w-[8%]" />
               </colgroup>
               <TableHeader>
@@ -328,9 +369,9 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                     {row.getVisibleCells().map((cell) => {
                       const className =
                         cell.column.id === "lastInteraction"
-                          ? "w-0 max-w-0 text-right whitespace-nowrap"
+                          ? "min-w-[11rem] max-w-0 text-right whitespace-nowrap"
                           : cell.column.id === "actions"
-                            ? "text-right"
+                            ? "w-16 text-right"
                             : cell.column.columnDef.meta &&
                                 typeof cell.column.columnDef.meta === "object" &&
                                 "className" in cell.column.columnDef.meta
@@ -354,7 +395,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                 ) : null}
               </TableBody>
             </Table>
-          </div>
+          </TableCard>
           <DataTablePagination
             labels={{
               rowsPerPage: t("pagination.rowsPerPage"),

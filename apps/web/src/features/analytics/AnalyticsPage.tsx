@@ -15,10 +15,7 @@ type UnitEconomicsRefreshState = {
   phase: "calls" | "notifications" | "conversations" | "telemetry" | "finalize";
   callsCursor?: string;
   notificationsCursor?: string;
-  conversationCursor?: string;
-  activeConversationId?: Id<"conversations">;
   messagesCursor?: string;
-  hasMoreConversations?: boolean;
   outboxCursor?: string;
 };
 

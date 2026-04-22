@@ -1,9 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppSidebar } from "./app-sidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -33,10 +34,11 @@ vi.mock("react-i18next", () => ({
 
 describe("AppSidebar", () => {
   beforeEach(() => {
+    window.innerWidth = 1280;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
-        matches: false,
+        matches: window.innerWidth < 768,
         media: query,
         onchange: null,
         addListener: vi.fn(),
@@ -47,6 +49,20 @@ describe("AppSidebar", () => {
       })),
     });
   });
+
+  function MobileSidebarHarness() {
+    const { toggleSidebar } = useSidebar();
+    const location = useLocation();
+
+    return (
+      <>
+        <button onClick={toggleSidebar} type="button">
+          Open mobile nav
+        </button>
+        <div data-testid="pathname">{location.pathname}</div>
+      </>
+    );
+  }
 
   it("groups Agent pages into their own section between General and Manage", () => {
     render(
@@ -93,5 +109,59 @@ describe("AppSidebar", () => {
       "/integrations",
       "/settings/usage",
     ]);
+  });
+
+  it("supports repeated mobile navigation between general, agent, and manage links", async () => {
+    window.innerWidth = 390;
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <MobileSidebarHarness />
+          <AppSidebar
+            businessName="AI Receptionist"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+          />
+          <Routes>
+            <Route element={<div>Home page</div>} path="/" />
+            <Route element={<div>Rules page</div>} path="/agent/rules" />
+            <Route element={<div>Usage page</div>} path="/settings/usage" />
+          </Routes>
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Open mobile nav" }));
+    await user.click(await screen.findByRole("button", { name: "Rules" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname").textContent).toBe("/agent/rules");
+    });
+    expect(screen.getByText("Rules page")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open mobile nav" }));
+    await user.click(await screen.findByRole("button", { name: "Settings" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname").textContent).toBe("/settings/usage");
+    });
+    expect(screen.getByText("Usage page")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Open mobile nav" }));
+    await user.click(await screen.findByRole("button", { name: "Home" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pathname").textContent).toBe("/");
+    });
+    expect(screen.getByText("Home page")).toBeTruthy();
   });
 });

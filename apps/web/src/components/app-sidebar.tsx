@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 
 import { NavGroup } from "@/components/layout/nav-group";
 import { NavUser } from "@/components/layout/nav-user";
@@ -20,6 +21,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
@@ -82,6 +84,8 @@ export function AppSidebar({
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation(["common", "nav", "settings", "agent"]);
+  const location = useLocation();
+  const { isMobile, setOpenMobile } = useSidebar();
   const sidebarData: SidebarData = React.useMemo(
     () => ({
       user: {
@@ -151,6 +155,15 @@ export function AppSidebar({
     }),
     [businessName, operatorAvatar, operatorEmail, operatorName, t],
   );
+
+  React.useEffect(() => {
+    if (!isMobile) {
+      return;
+    }
+
+    // Keep the mobile sheet from trapping subsequent sidebar clicks after navigation.
+    setOpenMobile(false);
+  }, [isMobile, location.pathname, setOpenMobile]);
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>

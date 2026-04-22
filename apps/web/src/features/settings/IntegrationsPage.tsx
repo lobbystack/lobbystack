@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -9,10 +9,6 @@ import { toast } from "sonner";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  invalidateCachedConvexQuery,
-  useCachedConvexQuery,
-} from "@/lib/cached-convex-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
@@ -212,13 +208,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const { i18n, t } = useTranslation("settings");
   const [searchParams, setSearchParams] = useSearchParams();
   const handledCallbackRef = useRef<string | null>(null);
-  const {
-    data: connections,
-    isLoading: isLoadingConnections,
-    refresh: refreshConnections,
-  } = useCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
+  const connections = useQuery(api.integrations.calendar.listCalendarConnections, {
     businessId,
   });
+  const isLoadingConnections = connections === undefined;
   const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
   const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
   const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
@@ -245,6 +238,10 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const microsoftConnected = (connections ?? []).some(
     (connection) => connection.provider === "microsoft",
   );
+  const selectedConnectionId = selectedConnection?._id ?? null;
+  const selectedConnectionStatus = selectedConnection?.status ?? null;
+  const selectedConnectionCalendarId = selectedConnection?.selectedCalendarId ?? "";
+  const googleCalendarListFailedMessage = t("integrations.google.calendarListFailed");
 
   const [calendarOptions, setCalendarOptions] = useState<Array<GoogleCalendarOption>>([]);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
@@ -267,7 +264,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       return;
     }
     handledCallbackRef.current = callbackKey;
-    void refreshConnections();
 
     if (status === "success") {
       captureAnalyticsEvent("web.integration.calendar_connect_completed", {
@@ -288,13 +284,21 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     nextParams.delete("status");
     nextParams.delete("message");
     setSearchParams(nextParams, { replace: true });
-  }, [businessId, refreshConnections, searchParams, setSearchParams, t]);
+  }, [businessId, searchParams, setSearchParams, t]);
 
   useEffect(() => {
+    if (!googleSheetOpen) {
+      return;
+    }
+
+    let cancelled = false;
+
     async function loadCalendars() {
-      if (!googleSheetOpen || !selectedConnection || selectedConnection.status !== "connected") {
-        setCalendarOptions([]);
-        setSelectedCalendarId(selectedConnection?.selectedCalendarId ?? "");
+      if (!selectedConnection || selectedConnectionStatus !== "connected") {
+        setCalendarOptions((current) => (current.length === 0 ? current : []));
+        setSelectedCalendarId((current) =>
+          current === selectedConnectionCalendarId ? current : selectedConnectionCalendarId,
+        );
         return;
       }
 
@@ -303,36 +307,52 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         const calendars = (await listGoogleCalendars({
           businessId,
         })) as Array<GoogleCalendarOption>;
+        if (cancelled) {
+          return;
+        }
         setCalendarOptions(calendars);
         const selected =
           calendars.find((calendar) => calendar.selected) ??
-          calendars.find((calendar) => calendar.id === selectedConnection.selectedCalendarId) ??
+          calendars.find((calendar) => calendar.id === selectedConnectionCalendarId) ??
           calendars[0];
-        setSelectedCalendarId(selected?.id ?? "");
+        setSelectedCalendarId((current) => {
+          const nextSelectedCalendarId = selected?.id ?? "";
+          return current === nextSelectedCalendarId ? current : nextSelectedCalendarId;
+        });
       } catch (error) {
+        if (cancelled) {
+          return;
+        }
         captureAnalyticsException(error, {
           businessId: String(businessId),
           provider: "google",
           operation: "list_calendars",
         });
-        toast.error(
-          error instanceof Error ? error.message : t("integrations.google.calendarListFailed"),
-        );
+        toast.error(error instanceof Error ? error.message : googleCalendarListFailedMessage);
       } finally {
-        setIsLoadingCalendars(false);
+        if (!cancelled) {
+          setIsLoadingCalendars(false);
+        }
       }
     }
 
     void loadCalendars();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     businessId,
+    googleCalendarListFailedMessage,
     googleSheetOpen,
     listGoogleCalendars,
-    selectedConnection,
-    t,
+    selectedConnectionId,
+    selectedConnectionCalendarId,
+    selectedConnectionStatus,
   ]);
 
   function openGoogleSheet(): void {
+    setSelectedCalendarId(selectedConnectionCalendarId);
     setGoogleSheetOpen(true);
   }
 
@@ -370,10 +390,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
 
     try {
       await disconnectGoogleCalendar({ businessId });
-      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
-        businessId,
-      });
-      await refreshConnections();
       captureAnalyticsEvent("web.integration.calendar_disconnect_completed", {
         businessId: String(businessId),
         provider: "google",
@@ -408,10 +424,6 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
         businessId,
         calendarId: selectedCalendarId,
       });
-      invalidateCachedConvexQuery(api.integrations.calendar.listCalendarConnections, {
-        businessId,
-      });
-      await refreshConnections();
       toast.success(t("integrations.google.calendarSaved"));
     } catch (error) {
       captureAnalyticsException(error, {

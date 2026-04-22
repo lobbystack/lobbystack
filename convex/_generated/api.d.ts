@@ -32,6 +32,7 @@ import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
 import type * as integrations_messageMedia from "../integrations/messageMedia.js";
+import type * as integrations_twilioA2p from "../integrations/twilioA2p.js";
 import type * as integrations_twilioMessageStatus from "../integrations/twilioMessageStatus.js";
 import type * as integrations_twilioSms from "../integrations/twilioSms.js";
 import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebug.js";
@@ -40,6 +41,7 @@ import type * as lib_accountCredentials from "../lib/accountCredentials.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_billing from "../lib/billing.js";
+import type * as lib_billingAccess from "../lib/billingAccess.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_contactBlocking from "../lib/contactBlocking.js";
 import type * as lib_defaultStaff from "../lib/defaultStaff.js";
@@ -66,6 +68,7 @@ import type * as lib_receptionistProfileDefaults from "../lib/receptionistProfil
 import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
 import type * as lib_serviceNameGeneration from "../lib/serviceNameGeneration.js";
 import type * as lib_serviceNames from "../lib/serviceNames.js";
+import type * as lib_smsCompliance from "../lib/smsCompliance.js";
 import type * as lib_smsPhoneNumbers from "../lib/smsPhoneNumbers.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
 import type * as lib_twilioMessageStatus from "../lib/twilioMessageStatus.js";
@@ -80,6 +83,7 @@ import type * as onboarding_phoneVerification from "../onboarding/phoneVerificat
 import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
 import type * as onboarding_websites from "../onboarding/websites.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
+import type * as smsCompliance from "../smsCompliance.js";
 import type * as telemetry_ai from "../telemetry/ai.js";
 import type * as telemetry_posthog from "../telemetry/posthog.js";
 import type * as telemetry_shared from "../telemetry/shared.js";
@@ -119,6 +123,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/calendar": typeof integrations_calendar;
   "integrations/googleCalendar": typeof integrations_googleCalendar;
   "integrations/messageMedia": typeof integrations_messageMedia;
+  "integrations/twilioA2p": typeof integrations_twilioA2p;
   "integrations/twilioMessageStatus": typeof integrations_twilioMessageStatus;
   "integrations/twilioSms": typeof integrations_twilioSms;
   "integrations/twilioSmsDebug": typeof integrations_twilioSmsDebug;
@@ -127,6 +132,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/billing": typeof lib_billing;
+  "lib/billingAccess": typeof lib_billingAccess;
   "lib/components": typeof lib_components;
   "lib/contactBlocking": typeof lib_contactBlocking;
   "lib/defaultStaff": typeof lib_defaultStaff;
@@ -153,6 +159,7 @@ declare const fullApi: ApiFromModules<{
   "lib/runtimeLocale": typeof lib_runtimeLocale;
   "lib/serviceNameGeneration": typeof lib_serviceNameGeneration;
   "lib/serviceNames": typeof lib_serviceNames;
+  "lib/smsCompliance": typeof lib_smsCompliance;
   "lib/smsPhoneNumbers": typeof lib_smsPhoneNumbers;
   "lib/snapshot": typeof lib_snapshot;
   "lib/twilioMessageStatus": typeof lib_twilioMessageStatus;
@@ -167,6 +174,7 @@ declare const fullApi: ApiFromModules<{
   "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
   "onboarding/websites": typeof onboarding_websites;
   "services/localizedNames": typeof services_localizedNames;
+  smsCompliance: typeof smsCompliance;
   "telemetry/ai": typeof telemetry_ai;
   "telemetry/posthog": typeof telemetry_posthog;
   "telemetry/shared": typeof telemetry_shared;
