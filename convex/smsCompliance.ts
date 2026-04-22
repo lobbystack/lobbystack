@@ -960,7 +960,10 @@ export const refreshStatus = action({
           businessId: args.businessId,
         },
       );
-      if (isSmsComplianceApproved(persistedStatus)) {
+      if (
+        isSmsComplianceApproved(persistedStatus) ||
+        persistedStatus === "suspended"
+      ) {
         return {
           registrationId: currentRegistration,
           status: persistedStatus,

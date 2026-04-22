@@ -908,6 +908,61 @@ describe("smsCompliance", () => {
     expect(status.pendingAction).toBeUndefined();
   });
 
+  it("keeps suspended registrations suspended when refresh throws before syncing", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, "sms-compliance-refresh-suspended");
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, businessId);
+      const approvedPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550184",
+        twilioPhoneSid: "PN-sms-compliance-refresh-suspended",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "suspended",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: buildValidDraft(),
+        approvedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-refresh-suspended",
+        failureCode: "brand_suspended",
+        failureMessage: "Twilio suspended this 10DLC brand.",
+        pendingAction: {
+          type: "manual_review",
+          message: "Twilio suspended this 10DLC brand. Contact support before retrying.",
+        },
+      });
+    });
+    syncRegistrationMock.mockRejectedValueOnce(new Error("Twilio timeout"));
+
+    const result = await authed.action(api.smsCompliance.refreshStatus, {
+      businessId,
+    });
+    const status = await authed.query(api.smsCompliance.getStatus, { businessId });
+
+    expect(result).toMatchObject({
+      status: "suspended",
+    });
+    expect(syncRegistrationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "refresh",
+      }),
+    );
+    expect(status).toMatchObject({
+      status: "suspended",
+      twilioMessagingServiceSid: "MG-refresh-suspended",
+      failureCode: "brand_suspended",
+      failureMessage: "Twilio suspended this 10DLC brand.",
+      pendingAction: {
+        type: "manual_review",
+        message: "Twilio suspended this 10DLC brand. Contact support before retrying.",
+      },
+    });
+  });
+
   it("marks pending registrations as failed when refresh throws before syncing", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, "sms-compliance-refresh-failure");
