@@ -265,6 +265,20 @@ function createTwilioClientFixture() {
   const phoneNumbersCreateMock = vi.fn(async (_serviceSid: string, _params?: unknown) => ({}));
 
   const client = {
+    api: {
+      v2010: {
+        account: {
+          addresses: Object.assign(
+            (sid: string) => ({
+              update: (params: unknown) => addressUpdateMock(sid, params),
+            }),
+            {
+              create: addressCreateMock,
+            },
+          ),
+        },
+      },
+    },
     trusthub: {
       v1: {
         customerProfiles: Object.assign(
@@ -288,14 +302,6 @@ function createTwilioClientFixture() {
           }),
           {
             create: endUserCreateMock,
-          },
-        ),
-        addresses: Object.assign(
-          (sid: string) => ({
-            update: (params: unknown) => addressUpdateMock(sid, params),
-          }),
-          {
-            create: addressCreateMock,
           },
         ),
         supportingDocuments: Object.assign(

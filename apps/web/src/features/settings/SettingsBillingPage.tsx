@@ -1329,7 +1329,7 @@ function getCompliancePrimaryActionLabel(
 }
 
 function canEditApprovedPhoneNumber(status: SmsComplianceStatus): boolean {
-  return canEditComplianceDraft(status);
+  return canEditComplianceDraft(status) || status === "pending_brand_verification";
 }
 
 function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
@@ -1374,6 +1374,7 @@ function AiSmsComplianceSection({
   );
   const [loading, setLoading] = useState<null | "save" | "action">(null);
   const isDraftEditable = canEditComplianceDraft(compliance.status);
+  const canEditPhoneNumber = canEditApprovedPhoneNumber(compliance.status);
 
   useEffect(() => {
     setForm(buildSmsComplianceFormState(compliance));
@@ -1406,7 +1407,7 @@ function AiSmsComplianceSection({
   }
 
   async function handleSave() {
-    if (!isDraftEditable) {
+    if (!isDraftEditable && !canEditPhoneNumber) {
       return;
     }
 
@@ -1424,7 +1425,7 @@ function AiSmsComplianceSection({
   async function handlePrimaryAction() {
     setLoading("action");
     try {
-      if (isDraftEditable) {
+      if (isDraftEditable || canEditPhoneNumber) {
         await persistDraft();
       }
 
@@ -1530,10 +1531,6 @@ function AiSmsComplianceSection({
           </div>
         )}
 
-        <fieldset
-          className="contents"
-          disabled={loading !== null || !isDraftEditable}
-        >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label>{t("billing.compliance.fields.approvedPhoneNumber")}</Label>
@@ -1547,7 +1544,7 @@ function AiSmsComplianceSection({
               }
               disabled={
                 loading !== null ||
-                !canEditApprovedPhoneNumber(compliance.status) ||
+                !canEditPhoneNumber ||
                 compliance.availablePhoneNumbers.length === 0
               }
             >
@@ -1565,6 +1562,13 @@ function AiSmsComplianceSection({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <fieldset
+          className="contents"
+          disabled={loading !== null || !isDraftEditable}
+        >
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
             <Label htmlFor="sms-compliance-business-name">
               {t("billing.compliance.fields.businessName")}

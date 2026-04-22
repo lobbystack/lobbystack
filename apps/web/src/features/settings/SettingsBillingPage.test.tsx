@@ -811,6 +811,64 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
   });
 
+  it("allows changing the approved phone number while brand verification is pending", async () => {
+    const user = userEvent.setup();
+    const replacementPhoneNumberId = "phone_456" as Id<"phone_numbers">;
+    saveComplianceFormMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "pending_brand_verification",
+    });
+    resumeRegistrationMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "pending_review",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        status: "pending_brand_verification",
+        approvedPhoneNumberId: defaultApprovedPhoneNumberId,
+        availablePhoneNumbers: [
+          {
+            id: replacementPhoneNumberId,
+            e164: "+14165550177",
+          },
+        ],
+      }),
+    });
+
+    const phoneSelectField = screen
+      .getByText("billing.compliance.fields.approvedPhoneNumber")
+      .parentElement;
+    expect(phoneSelectField).toBeTruthy();
+    const phoneSelect = within(phoneSelectField as HTMLElement).getByRole("combobox");
+    expect(phoneSelect.getAttribute("data-disabled")).toBeNull();
+
+    await user.click(phoneSelect);
+    await user.click(screen.getByRole("option", { name: "+14165550177" }));
+    await user.click(
+      screen.getByRole("button", { name: "billing.compliance.actions.resume" }),
+    );
+
+    await waitFor(() => {
+      expect(saveComplianceFormMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          approvedPhoneNumberId: replacementPhoneNumberId,
+        }),
+      );
+      expect(resumeRegistrationMock).toHaveBeenCalledWith({ businessId });
+    });
+  });
+
   it("renders usage on the dedicated usage page", () => {
     mockQueries({
       status: buildStatus(),

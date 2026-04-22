@@ -651,6 +651,119 @@ describe("smsCompliance", () => {
     });
   });
 
+  it("reports platform routing when the approved sender is no longer active", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(
+      t,
+      "sms-compliance-inactive-approved-sender",
+    );
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, businessId);
+      const approvedPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550184",
+        twilioPhoneSid: "PN-sms-compliance-inactive-approved-sender",
+      });
+      await ctx.db.insert("sms_compliance_registrations", {
+        businessId,
+        status: "approved",
+        customerType: "direct_customer",
+        brandKind: "standard_business",
+        trafficTier: "low_volume",
+        draft: buildValidDraft(),
+        approvedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-sms-compliance-inactive-approved-sender",
+      });
+      await ctx.db.patch(approvedPhoneNumberId, {
+        status: "inactive",
+      });
+    });
+
+    const status = await authed.query(api.smsCompliance.getStatus, { businessId });
+
+    expect(status).toMatchObject({
+      status: "approved",
+      senderMode: "platform_phone",
+      alertsUseBusinessSender: false,
+      aiSmsReady: false,
+      twilioMessagingServiceSid: "MG-sms-compliance-inactive-approved-sender",
+    });
+  });
+
+  it("allows replacing the approved phone number while OTP verification is pending", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(
+      t,
+      "sms-compliance-pending-brand-number-change",
+    );
+
+    const { activeReplacementPhoneNumberId, inactiveApprovedPhoneNumberId } = await t.run(
+      async (ctx: TestContext) => {
+        await seedBillingAccount(ctx, businessId);
+        const inactiveApprovedPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+          businessId,
+          e164: "+14165550185",
+          twilioPhoneSid: "PN-sms-compliance-pending-brand-old",
+        });
+        const activeReplacementPhoneNumberId = await seedSmsPhoneNumber(ctx, {
+          businessId,
+          e164: "+14165550186",
+          twilioPhoneSid: "PN-sms-compliance-pending-brand-new",
+        });
+
+        const registrationId = await ctx.db.insert("sms_compliance_registrations", {
+          businessId,
+          status: "pending_brand_verification",
+          customerType: "direct_customer",
+          brandKind: "standard_business",
+          trafficTier: "low_volume",
+          draft: buildValidDraft(),
+          approvedPhoneNumberId: inactiveApprovedPhoneNumberId,
+          pendingAction: {
+            type: "brand_contact_email_otp",
+            message: "Complete the brand contact email verification code.",
+          },
+        });
+
+        await ctx.db.patch(inactiveApprovedPhoneNumberId, {
+          status: "inactive",
+        });
+
+        return {
+          registrationId,
+          activeReplacementPhoneNumberId,
+          inactiveApprovedPhoneNumberId,
+        };
+      },
+    );
+
+    const saved = await authed.mutation(api.smsCompliance.saveComplianceForm, {
+      businessId,
+      trafficTier: "mixed",
+      approvedPhoneNumberId: activeReplacementPhoneNumberId,
+      draft: {
+        ...buildValidDraft(),
+        businessName: "Ignored Draft Change While OTP Pending",
+      },
+    });
+
+    const status = await authed.query(api.smsCompliance.getStatus, { businessId });
+
+    expect(saved).toMatchObject({
+      status: "pending_brand_verification",
+    });
+    expect(status).toMatchObject({
+      status: "pending_brand_verification",
+      approvedPhoneNumberId: activeReplacementPhoneNumberId,
+      approvedPhoneNumberE164: "+14165550186",
+      draft: expect.objectContaining({
+        businessName: "Acme Clinic LLC",
+      }),
+    });
+    expect(status.approvedPhoneNumberId).not.toBe(inactiveApprovedPhoneNumberId);
+  });
+
   it("keeps approved registrations approved when refresh throws before syncing", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, "sms-compliance-refresh-approved");

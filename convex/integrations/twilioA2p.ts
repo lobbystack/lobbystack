@@ -615,7 +615,7 @@ async function createBusinessAddress(
   client: TwilioClientLike,
   draft: CompletedSmsComplianceDraft,
 ): Promise<string> {
-  const resource = await (client as any).trusthub.v1.addresses.create({
+  const resource = await (client as any).api.v2010.account.addresses.create({
     ...buildBusinessAddressParams(draft),
     isoCountry: draft.address.isoCountry,
   });
@@ -632,7 +632,7 @@ async function updateBusinessAddress(
   addressSid: string,
   draft: CompletedSmsComplianceDraft,
 ): Promise<void> {
-  await (client as any).trusthub.v1.addresses(addressSid).update(
+  await (client as any).api.v2010.account.addresses(addressSid).update(
     buildBusinessAddressParams(draft),
   );
 }

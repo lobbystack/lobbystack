@@ -157,13 +157,16 @@ function getPhoneNumberSelectionError(input: {
 function deriveHostedSenderMode(input: {
   aiSmsCommerciallyEnabled: boolean;
   registration: Doc<"sms_compliance_registrations"> | null;
+  approvedPhoneNumber: SmsPhoneNumberDoc | null;
 }): "platform_phone" | "business_messaging_service" {
   if (
     input.aiSmsCommerciallyEnabled &&
     input.registration &&
     isSmsComplianceApproved(input.registration.status) &&
     input.registration.twilioMessagingServiceSid &&
-    input.registration.approvedPhoneNumberId
+    input.approvedPhoneNumber &&
+    input.approvedPhoneNumber.status === "active" &&
+    input.approvedPhoneNumber.smsEnabled
   ) {
     return "business_messaging_service";
   }
@@ -207,6 +210,10 @@ async function requireSmsComplianceManagementAccess(
 
 function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
   return status === "not_started" || status === "collecting_info" || status === "failed";
+}
+
+function canUpdateApprovedPhoneNumber(status: SmsComplianceStatus): boolean {
+  return canEditComplianceDraft(status) || status === "pending_brand_verification";
 }
 
 export const assertManagementAccess = internalQuery({
@@ -266,18 +273,19 @@ export const getStatus = query({
       activeAddons: snapshot.activeAddons,
     });
     const applicable = snapshot.plan !== "self_host" && aiSmsCommerciallyEnabled;
+    const approvedPhoneNumber =
+      registration?.approvedPhoneNumberId !== undefined
+        ? phoneNumbers.find((phoneNumber) => phoneNumber._id === registration.approvedPhoneNumberId) ??
+          null
+        : null;
     const senderMode: SmsSenderMode =
       snapshot.plan === "self_host"
         ? "business_phone"
         : deriveHostedSenderMode({
             aiSmsCommerciallyEnabled,
             registration,
+            approvedPhoneNumber,
           });
-    const approvedPhoneNumber =
-      registration?.approvedPhoneNumberId !== undefined
-        ? phoneNumbers.find((phoneNumber) => phoneNumber._id === registration.approvedPhoneNumberId) ??
-          null
-        : null;
     const availablePhoneNumbers = getEligibleSmsPhoneNumbers(phoneNumbers).map((phoneNumber) => ({
       id: phoneNumber._id,
       e164: phoneNumber.e164,
@@ -361,13 +369,26 @@ export const saveComplianceForm = mutation({
     }
 
     if (existingRegistration) {
-      if (!canEditComplianceDraft(existingRegistration.status)) {
+      if (!canUpdateApprovedPhoneNumber(existingRegistration.status)) {
         throw new Error(
           "10DLC registration can't be edited after submission starts. Refresh status instead.",
         );
       }
       const nextApprovedPhoneNumberId =
         args.approvedPhoneNumberId ?? existingRegistration.approvedPhoneNumberId;
+
+      if (!canEditComplianceDraft(existingRegistration.status)) {
+        await ctx.db.patch(existingRegistration._id, {
+          ...(nextApprovedPhoneNumberId
+            ? { approvedPhoneNumberId: nextApprovedPhoneNumberId }
+            : {}),
+        });
+
+        return {
+          registrationId: existingRegistration._id,
+          status: existingRegistration.status,
+        };
+      }
 
       await ctx.db.patch(existingRegistration._id, {
         draft: args.draft,
