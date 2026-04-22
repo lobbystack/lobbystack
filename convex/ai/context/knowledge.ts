@@ -66,6 +66,9 @@ type PreviewKnowledgeArgs = {
   prompt: string;
 };
 type DocumentIdArgs = { documentId: Id<"knowledge_documents"> };
+type IndexKnowledgeDocumentArgs = DocumentIdArgs & {
+  skipSnapshotRefresh?: boolean;
+};
 type SnippetIdArgs = { snippetId: Id<"knowledge_snippets"> };
 type DeleteKnowledgeEntryArgs =
   | {
@@ -204,6 +207,9 @@ async function assertKnowledgeStorageCapacity(
 async function indexKnowledgeDocumentById(
   ctx: ActionCtx,
   documentId: Id<"knowledge_documents">,
+  options?: {
+    skipSnapshotRefresh?: boolean;
+  },
 ): Promise<null> {
   const document = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
     documentId,
@@ -298,9 +304,11 @@ async function indexKnowledgeDocumentById(
         latencyMs: Date.now() - startedAt,
       },
     });
-    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
-      businessId: document.businessId,
-    });
+    if (!options?.skipSnapshotRefresh) {
+      await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+        businessId: document.businessId,
+      });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to index this document.";
     await enqueuePostHogEventBestEffort(ctx, {
@@ -1181,9 +1189,14 @@ export const deleteKnowledgeEntry = action({
 export const indexKnowledgeDocument = internalAction({
   args: {
     documentId: v.id("knowledge_documents"),
+    skipSnapshotRefresh: v.optional(v.boolean()),
   },
-  handler: async (ctx: ActionCtx, args: DocumentIdArgs) => {
-    return await indexKnowledgeDocumentById(ctx, args.documentId);
+  handler: async (ctx: ActionCtx, args: IndexKnowledgeDocumentArgs) => {
+    return await indexKnowledgeDocumentById(ctx, args.documentId, {
+      ...(args.skipSnapshotRefresh !== undefined
+        ? { skipSnapshotRefresh: args.skipSnapshotRefresh }
+        : {}),
+    });
   },
 });
 

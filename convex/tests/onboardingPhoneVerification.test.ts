@@ -421,7 +421,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("website");
 
     const currentUser = await authed.query(api.users.current, {});
     expect(currentUser?.phone).toBe("+15817484609");
@@ -574,7 +574,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("website");
 
     const attempt = await t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
       businessId,

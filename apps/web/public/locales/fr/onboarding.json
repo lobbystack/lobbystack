@@ -25,6 +25,24 @@
     "verifyFailed": "Impossible de vérifier ce code pour le moment. Veuillez réessayer.",
     "signedInAs": "Connecté comme {{email}}"
   },
+  "website": {
+    "title": "Importez votre site web",
+    "description": "Ajoutez le site public de votre entreprise pour que nous commencions à construire votre base de connaissances en arrière-plan avant que vous choisissiez votre numéro professionnel.",
+    "fields": {
+      "url": "Site web de l'entreprise"
+    },
+    "placeholders": {
+      "url": "https://exemple.com"
+    },
+    "hint": "Nous analyserons des pages publiques comme les services, l'à-propos, la FAQ, les horaires et les coordonnées. Vous pouvez passer cette étape si vous n'avez pas encore de site web.",
+    "submit": "Importer le site",
+    "submitting": "Importation du site...",
+    "skip": "Passer pour l'instant",
+    "skipping": "Passage...",
+    "submitFailed": "Impossible de démarrer l'importation du site pour le moment. Veuillez réessayer.",
+    "skipFailed": "Impossible de passer cette étape pour le moment. Veuillez réessayer.",
+    "signedInAs": "Connecté comme {{email}}"
+  },
   "number": {
     "title": "Voici votre nouveau numéro",
     "description": "Nous avons choisi un numéro local Twilio en utilisant votre numéro mobile vérifié comme signal principal. Vous pouvez le conserver ou en choisir un autre.",

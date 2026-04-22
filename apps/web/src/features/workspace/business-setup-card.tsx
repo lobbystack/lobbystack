@@ -61,7 +61,7 @@ export function BusinessSetupCard() {
 
     try {
       await bootstrapBusiness({ name, slug, timezone, businessType });
-      void navigate("/onboarding/verify-phone");
+      void navigate("/");
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : t("setup.failed"));
     } finally {

@@ -64,5 +64,23 @@
     "selected": "Selected",
     "backToSuggested": "Back to suggested number",
     "signedInAs": "Signed in as {{email}}"
+  },
+  "website": {
+    "title": "Import your website",
+    "description": "Add your public company website so we can start building your knowledge base in the background before you pick your business number.",
+    "fields": {
+      "url": "Website URL"
+    },
+    "placeholders": {
+      "url": "https://example.com"
+    },
+    "hint": "We'll crawl public pages like services, about, FAQ, hours, and contact details. You can skip this if you do not have a website yet.",
+    "submit": "Import website",
+    "submitting": "Starting import...",
+    "skip": "Skip for now",
+    "skipping": "Skipping...",
+    "submitFailed": "We couldn't start the website import right now. Please try again.",
+    "skipFailed": "We couldn't skip this step right now. Please try again.",
+    "signedInAs": "Signed in as {{email}}"
   }
 }

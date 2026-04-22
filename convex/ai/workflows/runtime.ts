@@ -3,6 +3,10 @@ import { internalMutation } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../integrations/calendar";
 import { workflowManager, runtimeCrons } from "../../lib/components";
+import {
+  WEBSITE_CRAWL_BROWSER_MODE,
+  WEBSITE_CRAWL_HTTP_MODE,
+} from "../../lib/websiteIngestion";
 import { enqueuePostHogOutboxRecord, serializePostHogEvent } from "../../telemetry/posthog";
 import {
   getPostHogBusinessGroupKey,
@@ -47,6 +51,179 @@ export const appointmentCalendarSyncWorkflow = workflowManager.define({
       { appointmentId: args.appointmentId },
       { retry: true },
     );
+    return null;
+  },
+});
+
+export const importWebsiteKnowledgeWorkflow = workflowManager.define({
+  args: {
+    websiteIngestionJobId: v.id("website_ingestion_jobs"),
+  },
+  returns: v.null(),
+  handler: async (step, args): Promise<null> => {
+    const startedAt = new Date().toISOString();
+    await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+      websiteIngestionJobId: args.websiteIngestionJobId,
+      status: "crawling",
+      crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+      startedAt,
+      lastError: null,
+    });
+
+    const initialCrawl = await step.runAction(
+      internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+      {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        render: false,
+      },
+      { retry: true },
+    );
+
+    await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+      websiteIngestionJobId: args.websiteIngestionJobId,
+      status: "crawling",
+      cloudflareJobId: initialCrawl.cloudflareJobId,
+      crawlMode: initialCrawl.crawlMode,
+    });
+
+    let crawlStatus = await step.runAction(
+      internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+      {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        cloudflareJobId: initialCrawl.cloudflareJobId,
+      },
+      { retry: true },
+    );
+
+    while (crawlStatus.status === "running") {
+      crawlStatus = await step.runAction(
+        internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+        {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          cloudflareJobId: initialCrawl.cloudflareJobId,
+        },
+        { retry: true, runAfter: 5_000 },
+      );
+    }
+
+    if (crawlStatus.status !== "completed") {
+      await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        status: "failed",
+        lastError: `Website crawl ended with status ${crawlStatus.status}.`,
+        completedAt: new Date().toISOString(),
+      });
+      return null;
+    }
+
+    let importSummary = await step.runAction(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        cloudflareJobId: initialCrawl.cloudflareJobId,
+        crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+      },
+      { retry: true },
+    );
+
+    if (importSummary.weak) {
+      await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        status: "crawling",
+        crawlMode: WEBSITE_CRAWL_BROWSER_MODE,
+        fallbackTriggered: true,
+        lastError: null,
+      });
+
+      const browserCrawl = await step.runAction(
+        internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+        {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          render: true,
+        },
+        { retry: true },
+      );
+
+      await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        status: "crawling",
+        cloudflareJobId: browserCrawl.cloudflareJobId,
+        crawlMode: browserCrawl.crawlMode,
+      });
+
+      crawlStatus = await step.runAction(
+        internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+        {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          cloudflareJobId: browserCrawl.cloudflareJobId,
+        },
+        { retry: true },
+      );
+
+      while (crawlStatus.status === "running") {
+        crawlStatus = await step.runAction(
+          internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            cloudflareJobId: browserCrawl.cloudflareJobId,
+          },
+          { retry: true, runAfter: 5_000 },
+        );
+      }
+
+      if (crawlStatus.status !== "completed") {
+        await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          status: "failed",
+          lastError: `Website crawl fallback ended with status ${crawlStatus.status}.`,
+          completedAt: new Date().toISOString(),
+        });
+        return null;
+      }
+
+      importSummary = await step.runAction(
+        internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+        {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          cloudflareJobId: browserCrawl.cloudflareJobId,
+          crawlMode: WEBSITE_CRAWL_BROWSER_MODE,
+        },
+        { retry: true },
+      );
+    }
+
+    if (importSummary.importedDocumentCount === 0) {
+      await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        status: "failed",
+        lastError: "We couldn't import any public website pages from this site.",
+        completedAt: new Date().toISOString(),
+      });
+      return null;
+    }
+
+    const indexingCounts = await step.runAction(
+      internal.ai.context.websiteIngestionActions.waitForWebsiteIngestionDocuments,
+      {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+      },
+      { retry: true },
+    );
+
+    await step.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: indexingCounts.businessId,
+    });
+
+    await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+      websiteIngestionJobId: args.websiteIngestionJobId,
+      status: indexingCounts.indexed > 0 ? "completed" : "failed",
+      indexedCount: indexingCounts.indexed,
+      errorCount: indexingCounts.error,
+      lastError:
+        indexingCounts.indexed > 0 ? null : "Website pages were imported but failed to index.",
+      completedAt: new Date().toISOString(),
+    });
+
     return null;
   },
 });

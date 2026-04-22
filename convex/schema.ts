@@ -151,6 +151,7 @@ export default defineSchema({
     name: v.string(),
     timezone: v.string(),
     defaultLocale: v.optional(runtimeLocaleValidator),
+    websiteUrl: v.optional(v.string()),
     onboardingStage: v.optional(v.string()),
     businessType: v.string(),
     deploymentMode: v.string(),
@@ -285,11 +286,34 @@ export default defineSchema({
     transferNumber: v.optional(v.string()),
   }).index("by_business_id", ["businessId"]),
 
+  website_ingestion_jobs: defineTable({
+    businessId: v.id("businesses"),
+    websiteUrl: v.string(),
+    provider: v.string(),
+    status: v.string(),
+    cloudflareJobId: v.optional(v.string()),
+    crawlMode: v.string(),
+    fallbackTriggered: v.boolean(),
+    pageLimit: v.number(),
+    depth: v.number(),
+    importedCount: v.number(),
+    indexedCount: v.number(),
+    errorCount: v.number(),
+    lastError: v.optional(v.string()),
+    startedAt: v.optional(v.string()),
+    completedAt: v.optional(v.string()),
+  })
+    .index("by_business_id", ["businessId"])
+    .index("by_business_id_and_status", ["businessId", "status"])
+    .index("by_business_id_and_website_url", ["businessId", "websiteUrl"]),
+
   knowledge_documents: defineTable({
     businessId: v.id("businesses"),
     section: v.optional(knowledgeSectionValidator),
     sourceType: v.string(),
     title: v.string(),
+    sourceUrl: v.optional(v.string()),
+    websiteIngestionJobId: v.optional(v.id("website_ingestion_jobs")),
     storageId: v.optional(v.id("_storage")),
     extractedTextStorageId: v.optional(v.id("_storage")),
     mimeType: v.optional(v.string()),
@@ -305,7 +329,9 @@ export default defineSchema({
     error: v.optional(v.string()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
-    .index("by_business_id_and_source_type", ["businessId", "sourceType"]),
+    .index("by_business_id_and_source_type", ["businessId", "sourceType"])
+    .index("by_business_id_and_source_url", ["businessId", "sourceUrl"])
+    .index("by_website_ingestion_job_id", ["websiteIngestionJobId"]),
 
   knowledge_snippets: defineTable({
     businessId: v.id("businesses"),

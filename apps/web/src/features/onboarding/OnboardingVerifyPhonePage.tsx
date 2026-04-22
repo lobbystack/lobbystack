@@ -125,7 +125,7 @@ export function OnboardingVerifyPhonePage({
         captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
           businessId: String(businessId),
         });
-        void navigate("/onboarding/number");
+        void navigate("/onboarding/website");
         return;
       }
 

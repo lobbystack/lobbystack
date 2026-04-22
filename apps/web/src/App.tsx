@@ -43,6 +43,7 @@ import {
 } from "@/features/settings/SettingsBillingPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
+import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
 import {
   captureAnalyticsEvent,
   identifyOperator,
@@ -178,6 +179,10 @@ function WorkspaceShell() {
   if (!isBootstrapLoading && activeBusiness?.onboardingStage === "verify_phone") {
     if (location.pathname !== "/onboarding/verify-phone") {
       return <Navigate replace to="/onboarding/verify-phone" />;
+    }
+  } else if (!isBootstrapLoading && activeBusiness?.onboardingStage === "website") {
+    if (location.pathname !== "/onboarding/website") {
+      return <Navigate replace to="/onboarding/website" />;
     }
   } else if (
     !isBootstrapLoading &&
@@ -404,6 +409,59 @@ function OnboardingNumberRoute() {
   );
 }
 
+function OnboardingWebsiteRoute() {
+  const { signOut } = useAuthActions();
+  const currentUser = useQuery(api.users.current, {});
+  const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
+  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+
+  async function handleSignOut(): Promise<void> {
+    resetAnalyticsIdentity();
+    await signOut();
+  }
+
+  useEffect(() => {
+    if (businesses === undefined || currentUser === undefined) {
+      return;
+    }
+
+    if (!currentUser?._id || !activeBusiness?._id) {
+      return;
+    }
+
+    identifyOperator({
+      userId: String(currentUser._id),
+      businessId: String(activeBusiness._id),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [activeBusiness?._id, currentUser?._id]);
+
+  if (businesses === undefined || currentUser === undefined) {
+    return (
+      <OnboardingNumberRouteSkeleton
+        {...(currentUser?.email ? { email: currentUser.email } : {})}
+        onSignOut={() => void handleSignOut()}
+      />
+    );
+  }
+
+  if (!activeBusiness) {
+    return <Navigate replace to="/" />;
+  }
+
+  if (activeBusiness.onboardingStage !== "website") {
+    return <Navigate replace to="/" />;
+  }
+
+  return (
+    <OnboardingWebsitePage
+      businessId={activeBusiness._id}
+      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
+      onSignOut={() => void handleSignOut()}
+    />
+  );
+}
+
 function OnboardingVerifyPhoneRoute() {
   const { signOut } = useAuthActions();
   const navigate = useNavigate();
@@ -460,7 +518,7 @@ function OnboardingVerifyPhoneRoute() {
     })
       .then(() => {
         if (!cancelled) {
-          navigate("/onboarding/number", { replace: true });
+          navigate("/onboarding/website", { replace: true });
         }
       })
       .catch(() => {
@@ -561,6 +619,14 @@ export default function App() {
               </RequireAuth>
             }
             path="/onboarding/verify-phone"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingWebsiteRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/website"
           />
           <Route
             element={
