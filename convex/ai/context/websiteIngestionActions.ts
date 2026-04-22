@@ -43,6 +43,7 @@ type CloudflareCrawlRecord = {
   status?: string | number;
   markdown?: string;
   metadata?: {
+    status?: number;
     title?: string;
   };
 };
@@ -300,6 +301,11 @@ function buildWebsiteDocumentTitle(input: {
   return lastSegment
     .replace(/[-_]+/gu, " ")
     .replace(/\b\w/gu, (value) => value.toUpperCase());
+}
+
+function hasSuccessfulCloudflarePageResponse(record: CloudflareCrawlRecord): boolean {
+  const pageStatus = record.metadata?.status;
+  return pageStatus === undefined || (pageStatus >= 200 && pageStatus < 300);
 }
 
 function formatKnowledgeStorageLimit(limitBytes: number): string {
@@ -642,6 +648,9 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       ) {
         continue;
       }
+      if (!hasSuccessfulCloudflarePageResponse(record)) {
+        continue;
+      }
 
       const pageUrl = normalizeWebsitePageUrl(record.url, job.websiteUrl);
       if (!pageUrl) {
@@ -672,12 +681,32 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       documentId: Id<"knowledge_documents">;
       skipSnapshotRefresh: true;
     }> = [];
-    const importedSourceUrls = new Set<string>();
+    const crawledSourceUrls = new Set<string>();
     let importedDocumentCount = 0;
     let totalMarkdownBytes = 0;
 
+    for (const record of crawlRecords) {
+      if (
+        !record.url ||
+        (record.status !== undefined &&
+          record.status !== "completed" &&
+          record.status !== 200)
+      ) {
+        continue;
+      }
+      if (!hasSuccessfulCloudflarePageResponse(record)) {
+        continue;
+      }
+
+      const pageUrl = normalizeWebsitePageUrl(record.url, job.websiteUrl);
+      if (!pageUrl) {
+        continue;
+      }
+
+      crawledSourceUrls.add(pageUrl);
+    }
+
     for (const [sourceUrl, candidate] of dedupedRecords) {
-      importedSourceUrls.add(sourceUrl);
       importedDocumentCount += 1;
       totalMarkdownBytes += candidate.byteLength;
     }
@@ -685,9 +714,9 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     const canPruneMissingDocuments =
       crawlTotal !== null && crawlTotal < job.pageLimit && !sawNonCompletedRecords;
     const staleDocuments =
-      canPruneMissingDocuments && importedSourceUrls.size > 0
+      canPruneMissingDocuments && crawledSourceUrls.size > 0
         ? existingWebsiteDocuments.filter(
-            (document) => document.sourceUrl && !importedSourceUrls.has(document.sourceUrl),
+            (document) => document.sourceUrl && !crawledSourceUrls.has(document.sourceUrl),
           )
         : [];
 

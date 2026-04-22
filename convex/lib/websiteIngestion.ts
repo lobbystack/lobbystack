@@ -44,6 +44,16 @@ const LOW_SIGNAL_PATH_SEGMENTS = new Set([
   "wp-admin",
 ]);
 
+const COMMON_SECOND_LEVEL_PUBLIC_SUFFIXES = new Set([
+  "ac",
+  "co",
+  "com",
+  "edu",
+  "gov",
+  "net",
+  "org",
+]);
+
 const LOW_SIGNAL_PREFIXES = ["/cdn-cgi/"];
 const LOW_SIGNAL_EXTENSIONS =
   /\.(?:avif|bmp|css|csv|doc|docx|gif|ico|jpeg|jpg|js|json|map|mov|mp3|mp4|pdf|png|ppt|pptx|svg|ts|txt|webm|webp|woff|woff2|xls|xlsx|xml|zip)$/iu;
@@ -81,12 +91,26 @@ function normalizeWebsiteHostname(hostname: string): string {
 function supportsApexAndWwwEquivalence(hostname: string): boolean {
   const normalizedHostname = normalizeWebsiteHostname(hostname);
   const comparableHostname = buildComparableHostname(normalizedHostname);
+  const labels = comparableHostname.split(".");
 
   if (normalizedHostname === "localhost" || isIpLikeHostname(normalizedHostname)) {
     return false;
   }
 
-  return comparableHostname.split(".").length === 2;
+  if (labels.length === 2) {
+    return true;
+  }
+
+  if (
+    labels.length === 3 &&
+    labels[2]?.length === 2 &&
+    labels[1] &&
+    COMMON_SECOND_LEVEL_PUBLIC_SUFFIXES.has(labels[1])
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function stripIpv6Brackets(hostname: string): string {
