@@ -11,17 +11,29 @@ import {
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
   normalizeWebsiteUrl,
+  WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../lib/websiteIngestion";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
-const { billingLimitBytesRef, enqueueActionBatchMock, ragDeleteMock, workflowStartMock } =
+const {
+  billingLimitBytesRef,
+  dnsLookupMock,
+  enqueueActionBatchMock,
+  ragDeleteMock,
+  workflowStartMock,
+} =
   vi.hoisted(() => ({
     billingLimitBytesRef: { value: null as number | null },
+    dnsLookupMock: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
     enqueueActionBatchMock: vi.fn(async () => null),
     ragDeleteMock: vi.fn(async () => null),
     workflowStartMock: vi.fn(async () => null),
   }));
+
+vi.mock("node:dns/promises", () => ({
+  lookup: dnsLookupMock,
+}));
 
 vi.mock("../lib/billing", async () => {
   const actual = await vi.importActual<typeof import("../lib/billing")>("../lib/billing");
@@ -127,6 +139,8 @@ describe("website onboarding and ingestion", () => {
     process.env.CLOUDFLARE_API_TOKEN = "test-token";
     billingLimitBytesRef.value = null;
 
+    dnsLookupMock.mockReset();
+    dnsLookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
     workflowStartMock.mockReset();
     enqueueActionBatchMock.mockReset();
     ragDeleteMock.mockReset();
@@ -249,6 +263,21 @@ describe("website onboarding and ingestion", () => {
     expect(jobs).toHaveLength(0);
   });
 
+  it("rejects localhost and direct IP website URLs during onboarding submission", async () => {
+    expect(() => normalizeWebsiteUrl("http://localhost:3000")).toThrow(
+      WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
+    );
+    expect(() => normalizeWebsiteUrl("https://127.0.0.1:8000")).toThrow(
+      WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
+    );
+    expect(() => normalizeWebsiteUrl("https://[::1]:8000")).toThrow(
+      WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
+    );
+    expect(() => normalizeWebsiteUrl("https://clinic.home.arpa")).toThrow(
+      WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
+    );
+  });
+
   it("submits Cloudflare crawl jobs with the expected request shape", async () => {
     const t = createConvexHarness();
     const subject = "website-crawl-owner";
@@ -359,6 +388,76 @@ describe("website onboarding and ingestion", () => {
         "https://www.example.com/clinic/**/feed*",
       ],
     });
+  });
+
+  it("rejects crawl submission for stored localhost targets before calling Cloudflare", async () => {
+    const t = createConvexHarness();
+    const subject = "website-localhost-block-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "http://127.0.0.1:3000/",
+        provider: "cloudflare_browser_run",
+        status: "queued",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    await expect(
+      t.action(internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl, {
+        websiteIngestionJobId,
+        render: false,
+      }),
+    ).rejects.toThrow(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects crawl submission when DNS resolves a hostname to a private address", async () => {
+    const t = createConvexHarness();
+    const subject = "website-private-dns-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://clinic.example.com/",
+        provider: "cloudflare_browser_run",
+        status: "queued",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    dnsLookupMock.mockResolvedValue([{ address: "192.168.1.20", family: 4 }]);
+
+    await expect(
+      t.action(internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl, {
+        websiteIngestionJobId,
+        render: false,
+      }),
+    ).rejects.toThrow(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("retries transient Cloudflare crawl status errors before succeeding", async () => {
@@ -534,6 +633,24 @@ describe("website onboarding and ingestion", () => {
     expect(normalizeWebsitePageUrl("https://example.com/about", "https://www.example.com/")).toBe(
       "https://www.example.com/about",
     );
+  });
+
+  it("rejects pages outside the configured subpath during page import", () => {
+    expect(
+      normalizeWebsitePageUrl("https://example.com/clinic/about", "https://example.com/clinic"),
+    ).toBe("https://example.com/clinic/about");
+    expect(
+      normalizeWebsitePageUrl(
+        "https://www.example.com/clinic/contact?ref=nav",
+        "https://example.com/clinic",
+      ),
+    ).toBe("https://example.com/clinic/contact");
+    expect(
+      normalizeWebsitePageUrl("https://example.com/about", "https://example.com/clinic"),
+    ).toBeNull();
+    expect(
+      normalizeWebsitePageUrl("https://example.com/clinic-and-spa", "https://example.com/clinic"),
+    ).toBeNull();
   });
 
   it("deduplicates apex and www versions of the same page during import", async () => {

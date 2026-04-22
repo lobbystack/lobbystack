@@ -8,6 +8,8 @@ export const WEBSITE_CRAWL_PAGE_LIMIT = 40;
 export const WEBSITE_CRAWL_DEPTH = 3;
 export const WEBSITE_CRAWL_HTTP_MODE = "http";
 export const WEBSITE_CRAWL_BROWSER_MODE = "browser";
+export const WEBSITE_PUBLIC_URL_ERROR_MESSAGE =
+  "Enter a public website URL. Localhost, local network addresses, and direct IP addresses are not supported. Use a tunnel URL for local testing.";
 
 const IMPORTANT_PATH_SEGMENTS = new Set([
   "about",
@@ -72,14 +74,40 @@ function buildComparableHostname(hostname: string): string {
   return hostname.replace(/^www\./u, "").toLowerCase();
 }
 
-function isIpLikeHostname(hostname: string): boolean {
-  return /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(hostname) || hostname.includes(":");
+function normalizeWebsiteHostname(hostname: string): string {
+  return hostname.replace(/\.$/u, "").toLowerCase();
+}
+
+function stripIpv6Brackets(hostname: string): string {
+  return hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1)
+    : hostname;
+}
+
+export function isIpLikeHostname(hostname: string): boolean {
+  const normalizedHostname = stripIpv6Brackets(normalizeWebsiteHostname(hostname));
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/u.test(normalizedHostname) || normalizedHostname.includes(":");
+}
+
+export function isDirectlyBlockedWebsiteHostname(hostname: string): boolean {
+  const normalizedHostname = normalizeWebsiteHostname(hostname);
+  return (
+    normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
+    normalizedHostname.endsWith(".local") ||
+    normalizedHostname.endsWith(".localdomain") ||
+    normalizedHostname.endsWith(".home.arpa") ||
+    isIpLikeHostname(normalizedHostname)
+  );
 }
 
 export function normalizeWebsiteUrl(rawUrl: string): string {
   const parsed = new URL(ensureHttpProtocol(rawUrl));
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error("Enter a valid website URL that starts with http or https.");
+  }
+  if (isDirectlyBlockedWebsiteHostname(parsed.hostname)) {
+    throw new Error(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
   }
 
   return buildCanonicalWebsiteUrl(parsed);
@@ -98,6 +126,19 @@ export function normalizeWebsitePageUrl(rawUrl: string, websiteUrl: string): str
   if (
     buildComparableHostname(parsed.hostname) !== buildComparableHostname(base.hostname) ||
     parsed.port !== base.port
+  ) {
+    return null;
+  }
+
+  const normalizedBasePath =
+    base.pathname && base.pathname !== "/" ? base.pathname.replace(/\/+$/u, "") : "/";
+  const normalizedPagePath =
+    parsed.pathname && parsed.pathname !== "/" ? parsed.pathname.replace(/\/+$/u, "") : "/";
+
+  if (
+    normalizedBasePath !== "/" &&
+    normalizedPagePath !== normalizedBasePath &&
+    !normalizedPagePath.startsWith(`${normalizedBasePath}/`)
   ) {
     return null;
   }

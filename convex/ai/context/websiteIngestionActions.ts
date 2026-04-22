@@ -1,5 +1,7 @@
 "use node";
 
+import { lookup } from "node:dns/promises";
+
 import { v } from "convex/values";
 
 import { internal } from "../../_generated/api";
@@ -13,6 +15,7 @@ import {
   buildWebsiteCrawlIncludePatterns,
   computeWebsiteDocumentImportance,
   countUtf8Bytes,
+  isDirectlyBlockedWebsiteHostname,
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
   shouldImportWebsitePage,
@@ -21,6 +24,7 @@ import {
   WEBSITE_CRAWL_DEPTH,
   WEBSITE_CRAWL_HTTP_MODE,
   WEBSITE_CRAWL_PAGE_LIMIT,
+  WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../../lib/websiteIngestion";
 
 type WebsiteIngestionJobIdArgs = {
@@ -134,6 +138,123 @@ async function readCloudflareResult<T>(response: Response): Promise<T> {
   }
 
   return payload.result;
+}
+
+function parseIpv4Address(address: string): [number, number, number, number] | null {
+  const parts = address.split(".");
+  if (parts.length !== 4) {
+    return null;
+  }
+
+  const bytes = parts.map((part) => {
+    if (!/^\d{1,3}$/u.test(part)) {
+      return null;
+    }
+    const value = Number.parseInt(part, 10);
+    return value >= 0 && value <= 255 ? value : null;
+  });
+
+  if (bytes.some((byte) => byte === null)) {
+    return null;
+  }
+
+  return bytes as [number, number, number, number];
+}
+
+function isNonPublicResolvedIpv4Address(address: string): boolean {
+  const bytes = parseIpv4Address(address);
+  if (!bytes) {
+    return false;
+  }
+
+  const [first, second] = bytes;
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    first >= 224
+  );
+}
+
+function isNonPublicResolvedIpv6Address(address: string): boolean {
+  const normalizedAddress = address.toLowerCase();
+  if (normalizedAddress === "::" || normalizedAddress === "::1") {
+    return true;
+  }
+  if (normalizedAddress.includes("%")) {
+    return true;
+  }
+  if (normalizedAddress.startsWith("::ffff:")) {
+    return isNonPublicResolvedIpv4Address(normalizedAddress.slice(7));
+  }
+
+  const firstHextetText = normalizedAddress
+    .split(":")
+    .find((segment) => segment.length > 0);
+  if (!firstHextetText) {
+    return false;
+  }
+
+  const firstHextet = Number.parseInt(firstHextetText, 16);
+  if (Number.isNaN(firstHextet)) {
+    return false;
+  }
+
+  return (
+    (firstHextet >= 0xfc00 && firstHextet <= 0xfdff) ||
+    (firstHextet >= 0xfe80 && firstHextet <= 0xfebf) ||
+    (firstHextet >= 0xff00 && firstHextet <= 0xffff)
+  );
+}
+
+function isNonPublicResolvedAddress(address: string): boolean {
+  return (
+    isNonPublicResolvedIpv4Address(address) ||
+    isNonPublicResolvedIpv6Address(address)
+  );
+}
+
+function isIgnorableDnsLookupError(error: unknown): boolean {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : "";
+
+  return (
+    code === "EAI_AGAIN" ||
+    code === "ENODATA" ||
+    code === "ENOTFOUND" ||
+    code === "ESERVFAIL" ||
+    code === "ETIMEOUT"
+  );
+}
+
+async function assertWebsiteCrawlTargetIsPublic(websiteUrl: string): Promise<void> {
+  const parsed = new URL(websiteUrl);
+  if (isDirectlyBlockedWebsiteHostname(parsed.hostname)) {
+    throw new Error(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+  }
+
+  try {
+    const resolvedAddresses = await lookup(parsed.hostname, {
+      all: true,
+      verbatim: true,
+    });
+
+    if (resolvedAddresses.some((record) => isNonPublicResolvedAddress(record.address))) {
+      throw new Error(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+    }
+  } catch (error) {
+    if (isIgnorableDnsLookupError(error)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 function isRetriableCloudflareCrawlError(error: unknown): boolean {
@@ -364,6 +485,7 @@ export const submitCloudflareWebsiteCrawl = internalAction({
     args: WebsiteIngestionJobIdArgs & { render: boolean },
   ): Promise<{ cloudflareJobId: string; crawlMode: string }> => {
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+    await assertWebsiteCrawlTargetIsPublic(job.websiteUrl);
     const { accountId, apiToken } = requireCloudflareCredentials();
     const response = await fetch(
       getCloudflareCrawlEndpoint({
