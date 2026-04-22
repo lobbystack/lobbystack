@@ -39,6 +39,7 @@ import type * as lib_accountCredentials from "../lib/accountCredentials.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_billing from "../lib/billing.js";
+import type * as lib_billingAccess from "../lib/billingAccess.js";
 import type * as lib_components from "../lib/components.js";
 import type * as lib_contactBlocking from "../lib/contactBlocking.js";
 import type * as lib_defaultStaff from "../lib/defaultStaff.js";
@@ -125,6 +126,7 @@ declare const fullApi: ApiFromModules<{
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/billing": typeof lib_billing;
+  "lib/billingAccess": typeof lib_billingAccess;
   "lib/components": typeof lib_components;
   "lib/contactBlocking": typeof lib_contactBlocking;
   "lib/defaultStaff": typeof lib_defaultStaff;

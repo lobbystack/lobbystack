@@ -183,6 +183,7 @@
         "mixed": "Mixed / higher volume"
       },
       "fields": {
+        "approvedPhoneNumber": "Business number to register",
         "businessName": "Legal business name",
         "websiteUrl": "Website URL",
         "businessType": "Business type",

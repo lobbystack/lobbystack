@@ -29,6 +29,7 @@ type TwilioRegistrationContext = {
   phoneNumber: Doc<"phone_numbers">;
   trafficTier: Doc<"sms_compliance_registrations">["trafficTier"];
   twilioUsecaseCode: string;
+  previousCompletedSubmission?: Doc<"sms_compliance_submissions">;
 };
 
 type TwilioEvaluationSummary = {
@@ -129,6 +130,14 @@ function getStringArray(resource: unknown, key: string): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function areStringArraysEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((entry, index) => entry === right[index]);
+}
+
 function normalizeTwilioErrors(resource: unknown): string[] {
   const errors = getStringArray(resource, "errors");
   if (errors.length > 0) {
@@ -210,6 +219,103 @@ function buildMessagingProfileAttributes(
     ...(draft.stockTicker ? { stock_ticker: draft.stockTicker } : {}),
     ...(draft.brandContactEmail ? { brand_contact_email: draft.brandContactEmail } : {}),
   };
+}
+
+function buildBusinessAddressParams(
+  draft: CompletedSmsComplianceDraft,
+): Record<string, string> {
+  return {
+    friendlyName: `${draft.businessName} Mailing Address`,
+    customerName: draft.address.customerName,
+    street: draft.address.street,
+    ...(draft.address.streetSecondary
+      ? { streetSecondary: draft.address.streetSecondary }
+      : {}),
+    city: draft.address.city,
+    region: draft.address.region,
+    postalCode: draft.address.postalCode,
+  };
+}
+
+function buildMessagingServiceParams(
+  context: TwilioRegistrationContext,
+): Record<string, boolean | string> {
+  return {
+    friendlyName: `${context.business.name} AI SMS`,
+    stickySender: true,
+    useInboundWebhookOnNumber: true,
+    inboundRequestUrl: buildTwilioSmsInboundWebhookUrl(),
+    inboundMethod: "POST",
+  };
+}
+
+function buildCampaignUpdateParams(
+  draft: CompletedSmsComplianceDraft,
+): Record<string, boolean | string | string[]> {
+  return {
+    ageGated: false,
+    description: draft.campaignDescription,
+    directLending: false,
+    hasEmbeddedLinks: draft.hasEmbeddedLinks,
+    hasEmbeddedPhone: draft.hasEmbeddedPhone,
+    messageFlow: draft.messageFlow,
+    messageSamples: draft.sampleMessages,
+  };
+}
+
+function buildCampaignCreateParams(input: {
+  brandRegistrationSid: string;
+  draft: CompletedSmsComplianceDraft;
+  usecaseCode: string;
+}): Record<string, boolean | string | string[]> {
+  return {
+    brandRegistrationSid: input.brandRegistrationSid,
+    ...buildCampaignUpdateParams(input.draft),
+    usAppToPersonUsecase: input.usecaseCode,
+    subscriberOptIn: true,
+    subscriberOptOut: true,
+    subscriberHelp: true,
+    ...(input.draft.optInMessage ? { optInMessage: input.draft.optInMessage } : {}),
+    optOutMessage: input.draft.optOutMessage,
+    helpMessage: input.draft.helpMessage,
+    ...(input.draft.optInKeywords.length > 0
+      ? { optInKeywords: input.draft.optInKeywords }
+      : {}),
+    ...(input.draft.optOutKeywords.length > 0
+      ? { optOutKeywords: input.draft.optOutKeywords }
+      : {}),
+    ...(input.draft.helpKeywords.length > 0
+      ? { helpKeywords: input.draft.helpKeywords }
+      : {}),
+  };
+}
+
+function getPreviousCompletedDraft(
+  context: TwilioRegistrationContext,
+): CompletedSmsComplianceDraft | undefined {
+  const previousDraft = context.previousCompletedSubmission?.snapshot.draft;
+  if (!previousDraft) {
+    return undefined;
+  }
+
+  return assertSmsComplianceDraftReady(previousDraft);
+}
+
+function hasImmutableCampaignConfigChanges(input: {
+  currentDraft: CompletedSmsComplianceDraft;
+  currentTrafficTier: Doc<"sms_compliance_registrations">["trafficTier"];
+  previousDraft: CompletedSmsComplianceDraft;
+  previousTrafficTier: Doc<"sms_compliance_submissions">["trafficTier"];
+}): boolean {
+  return (
+    input.currentTrafficTier !== input.previousTrafficTier ||
+    (input.currentDraft.optInMessage ?? "") !== (input.previousDraft.optInMessage ?? "") ||
+    input.currentDraft.optOutMessage !== input.previousDraft.optOutMessage ||
+    input.currentDraft.helpMessage !== input.previousDraft.helpMessage ||
+    !areStringArraysEqual(input.currentDraft.optInKeywords, input.previousDraft.optInKeywords) ||
+    !areStringArraysEqual(input.currentDraft.optOutKeywords, input.previousDraft.optOutKeywords) ||
+    !areStringArraysEqual(input.currentDraft.helpKeywords, input.previousDraft.helpKeywords)
+  );
 }
 
 function buildTwilioErrorMessage(error: unknown): string {
@@ -463,6 +569,18 @@ async function createBusinessInformationEndUser(
   return sid;
 }
 
+async function updateBusinessInformationEndUser(
+  client: TwilioClientLike,
+  context: TwilioRegistrationContext,
+  businessInfoSid: string,
+  draft: CompletedSmsComplianceDraft,
+): Promise<void> {
+  await (client as any).trusthub.v1.endUsers(businessInfoSid).update({
+    friendlyName: `${context.business.name} Business Information`,
+    attributes: buildBusinessInformationAttributes(draft),
+  });
+}
+
 async function createAuthorizedRepresentativeEndUser(
   client: TwilioClientLike,
   context: TwilioRegistrationContext,
@@ -481,20 +599,24 @@ async function createAuthorizedRepresentativeEndUser(
   return sid;
 }
 
+async function updateAuthorizedRepresentativeEndUser(
+  client: TwilioClientLike,
+  context: TwilioRegistrationContext,
+  authorizedRepresentativeSid: string,
+  draft: CompletedSmsComplianceDraft,
+): Promise<void> {
+  await (client as any).trusthub.v1.endUsers(authorizedRepresentativeSid).update({
+    friendlyName: `${context.business.name} Authorized Representative`,
+    attributes: buildAuthorizedRepresentativeAttributes(draft),
+  });
+}
+
 async function createBusinessAddress(
   client: TwilioClientLike,
   draft: CompletedSmsComplianceDraft,
 ): Promise<string> {
   const resource = await (client as any).trusthub.v1.addresses.create({
-    friendlyName: `${draft.businessName} Mailing Address`,
-    customerName: draft.address.customerName,
-    street: draft.address.street,
-    ...(draft.address.streetSecondary
-      ? { streetSecondary: draft.address.streetSecondary }
-      : {}),
-    city: draft.address.city,
-    region: draft.address.region,
-    postalCode: draft.address.postalCode,
+    ...buildBusinessAddressParams(draft),
     isoCountry: draft.address.isoCountry,
   });
 
@@ -503,6 +625,16 @@ async function createBusinessAddress(
     throw new Error("Twilio did not return a mailing address SID.");
   }
   return sid;
+}
+
+async function updateBusinessAddress(
+  client: TwilioClientLike,
+  addressSid: string,
+  draft: CompletedSmsComplianceDraft,
+): Promise<void> {
+  await (client as any).trusthub.v1.addresses(addressSid).update(
+    buildBusinessAddressParams(draft),
+  );
 }
 
 async function createCustomerProfileAddressDocument(
@@ -525,6 +657,20 @@ async function createCustomerProfileAddressDocument(
   return sid;
 }
 
+async function updateCustomerProfileAddressDocument(
+  client: TwilioClientLike,
+  context: TwilioRegistrationContext,
+  addressDocumentSid: string,
+  addressSid: string,
+): Promise<void> {
+  await (client as any).trusthub.v1.supportingDocuments(addressDocumentSid).update({
+    friendlyName: `${context.business.name} Customer Profile Address`,
+    attributes: {
+      address_sids: addressSid,
+    },
+  });
+}
+
 async function createMessagingProfileEndUser(
   client: TwilioClientLike,
   context: TwilioRegistrationContext,
@@ -541,6 +687,18 @@ async function createMessagingProfileEndUser(
     throw new Error("Twilio did not return a messaging profile SID.");
   }
   return sid;
+}
+
+async function updateMessagingProfileEndUser(
+  client: TwilioClientLike,
+  context: TwilioRegistrationContext,
+  messagingProfileSid: string,
+  draft: CompletedSmsComplianceDraft,
+): Promise<void> {
+  await (client as any).trusthub.v1.endUsers(messagingProfileSid).update({
+    friendlyName: `${context.business.name} A2P Messaging Profile`,
+    attributes: buildMessagingProfileAttributes(draft),
+  });
 }
 
 async function createTrustProduct(
@@ -672,23 +830,41 @@ async function fetchBrandRegistration(
   return normalizeBrand(resource);
 }
 
+async function resubmitBrandRegistration(
+  client: TwilioClientLike,
+  brandRegistrationSid: string,
+): Promise<TwilioBrandSummary> {
+  await maybePauseForTwilioRateLimit();
+
+  const resource = await (client as any).messaging.v1
+    .brandRegistrations(brandRegistrationSid)
+    .update();
+  return normalizeBrand(resource);
+}
+
 async function createMessagingService(
   client: TwilioClientLike,
   context: TwilioRegistrationContext,
 ): Promise<string> {
-  const resource = await (client as any).messaging.v1.services.create({
-    friendlyName: `${context.business.name} AI SMS`,
-    stickySender: true,
-    useInboundWebhookOnNumber: true,
-    inboundRequestUrl: buildTwilioSmsInboundWebhookUrl(),
-    inboundMethod: "POST",
-  });
+  const resource = await (client as any).messaging.v1.services.create(
+    buildMessagingServiceParams(context),
+  );
 
   const sid = getString(resource, "sid");
   if (!sid) {
     throw new Error("Twilio did not return a Messaging Service SID.");
   }
   return sid;
+}
+
+async function updateMessagingService(
+  client: TwilioClientLike,
+  context: TwilioRegistrationContext,
+  messagingServiceSid: string,
+): Promise<void> {
+  await (client as any).messaging.v1
+    .services(messagingServiceSid)
+    .update(buildMessagingServiceParams(context));
 }
 
 async function createCampaign(
@@ -704,32 +880,47 @@ async function createCampaign(
 
   const resource = await (client as any).messaging.v1
     .services(input.messagingServiceSid)
-    .usAppToPerson.create({
-      brandRegistrationSid: input.brandRegistrationSid,
-      description: input.draft.campaignDescription,
-      messageFlow: input.draft.messageFlow,
-      messageSamples: input.draft.sampleMessages,
-      usAppToPersonUsecase: input.usecaseCode,
-      hasEmbeddedLinks: input.draft.hasEmbeddedLinks,
-      hasEmbeddedPhone: input.draft.hasEmbeddedPhone,
-      subscriberOptIn: true,
-      subscriberOptOut: true,
-      subscriberHelp: true,
-      ...(input.draft.optInMessage ? { optInMessage: input.draft.optInMessage } : {}),
-      optOutMessage: input.draft.optOutMessage,
-      helpMessage: input.draft.helpMessage,
-      ...(input.draft.optInKeywords.length > 0
-        ? { optInKeywords: input.draft.optInKeywords }
-        : {}),
-      ...(input.draft.optOutKeywords.length > 0
-        ? { optOutKeywords: input.draft.optOutKeywords }
-        : {}),
-      ...(input.draft.helpKeywords.length > 0
-        ? { helpKeywords: input.draft.helpKeywords }
-        : {}),
-    });
+    .usAppToPerson.create(
+      buildCampaignCreateParams({
+        brandRegistrationSid: input.brandRegistrationSid,
+        draft: input.draft,
+        usecaseCode: input.usecaseCode,
+      }),
+    );
 
   return normalizeCampaign(resource);
+}
+
+async function updateCampaign(
+  client: TwilioClientLike,
+  input: {
+    messagingServiceSid: string;
+    campaignSid: string;
+    draft: CompletedSmsComplianceDraft;
+  },
+): Promise<TwilioCampaignSummary> {
+  await maybePauseForTwilioRateLimit();
+
+  const resource = await (client as any).messaging.v1
+    .services(input.messagingServiceSid)
+    .usAppToPerson(input.campaignSid)
+    .update(buildCampaignUpdateParams(input.draft));
+  return normalizeCampaign(resource);
+}
+
+async function deleteCampaign(
+  client: TwilioClientLike,
+  input: {
+    messagingServiceSid: string;
+    campaignSid: string;
+  },
+): Promise<void> {
+  await maybePauseForTwilioRateLimit();
+
+  await (client as any).messaging.v1
+    .services(input.messagingServiceSid)
+    .usAppToPerson(input.campaignSid)
+    .remove();
 }
 
 async function fetchCampaign(
@@ -817,6 +1008,7 @@ export const syncRegistration = internalAction({
       registrationId: args.registrationId,
     })) as unknown as TwilioRegistrationContext;
     const draft = assertSmsComplianceDraftReady(context.registration.draft);
+    const previousCompletedDraft = getPreviousCompletedDraft(context);
     const now = new Date().toISOString();
 
     let customerProfileSid = context.registration.twilioCustomerProfileSid;
@@ -842,6 +1034,8 @@ export const syncRegistration = internalAction({
         }
         if (!businessInfoSid) {
           businessInfoSid = await createBusinessInformationEndUser(client, context, draft);
+        } else {
+          await updateBusinessInformationEndUser(client, context, businessInfoSid, draft);
         }
         await assignObjectToCustomerProfile(client, customerProfileSid, businessInfoSid);
         if (!authorizedRepresentativeSid) {
@@ -850,19 +1044,39 @@ export const syncRegistration = internalAction({
             context,
             draft,
           );
+        } else {
+          await updateAuthorizedRepresentativeEndUser(
+            client,
+            context,
+            authorizedRepresentativeSid,
+            draft,
+          );
         }
         await assignObjectToCustomerProfile(
           client,
           customerProfileSid,
           authorizedRepresentativeSid,
         );
-        if (!addressSid) {
+        const shouldRecreateAddress =
+          Boolean(addressSid) &&
+          Boolean(previousCompletedDraft) &&
+          previousCompletedDraft!.address.isoCountry !== draft.address.isoCountry;
+        if (!addressSid || shouldRecreateAddress) {
           addressSid = await createBusinessAddress(client, draft);
+        } else {
+          await updateBusinessAddress(client, addressSid, draft);
         }
         if (!addressDocumentSid) {
           addressDocumentSid = await createCustomerProfileAddressDocument(
             client,
             context,
+            addressSid,
+          );
+        } else {
+          await updateCustomerProfileAddressDocument(
+            client,
+            context,
+            addressDocumentSid,
             addressSid,
           );
         }
@@ -883,6 +1097,8 @@ export const syncRegistration = internalAction({
         }
         if (!messagingProfileSid) {
           messagingProfileSid = await createMessagingProfileEndUser(client, context, draft);
+        } else {
+          await updateMessagingProfileEndUser(client, context, messagingProfileSid, draft);
         }
         await assignObjectToTrustProduct(client, trustProductSid, messagingProfileSid);
         await assignObjectToTrustProduct(client, trustProductSid, customerProfileSid);
@@ -898,32 +1114,81 @@ export const syncRegistration = internalAction({
             lowVolume: context.trafficTier === "low_volume",
           });
           brandRegistrationSid = brand.sid;
+        } else if (brandRegistrationSid && trustProductEvaluation.status !== "noncompliant") {
+          brand = await fetchBrandRegistration(client, brandRegistrationSid);
+          if (brand.status === "FAILED") {
+            brand = await resubmitBrandRegistration(client, brandRegistrationSid);
+          }
         }
 
         if (!messagingServiceSid) {
           messagingServiceSid = await createMessagingService(client, context);
+        } else {
+          await updateMessagingService(client, context, messagingServiceSid);
         }
 
         if (
           brandRegistrationSid &&
           messagingServiceSid &&
-          !campaignSid &&
           trustProductEvaluation.status !== "noncompliant"
         ) {
-          campaign = await createCampaign(client, {
-            messagingServiceSid,
-            brandRegistrationSid,
-            draft,
-            usecaseCode: context.twilioUsecaseCode,
-          });
-          campaignSid = campaign.sid;
+          if (!campaignSid) {
+            campaign = await createCampaign(client, {
+              messagingServiceSid,
+              brandRegistrationSid,
+              draft,
+              usecaseCode: context.twilioUsecaseCode,
+            });
+            campaignSid = campaign.sid;
+          } else {
+            const existingCampaign = await fetchCampaign(client, messagingServiceSid, campaignSid);
+            const recreateFailedCampaign =
+              existingCampaign?.campaignStatus === "FAILED" &&
+              Boolean(previousCompletedDraft) &&
+              Boolean(context.previousCompletedSubmission) &&
+              hasImmutableCampaignConfigChanges({
+                currentDraft: draft,
+                currentTrafficTier: context.trafficTier,
+                previousDraft: previousCompletedDraft!,
+                previousTrafficTier: context.previousCompletedSubmission!.trafficTier,
+              });
+
+            if (recreateFailedCampaign) {
+              await deleteCampaign(client, {
+                messagingServiceSid,
+                campaignSid,
+              });
+              campaign = await createCampaign(client, {
+                messagingServiceSid,
+                brandRegistrationSid,
+                draft,
+                usecaseCode: context.twilioUsecaseCode,
+              });
+              campaignSid = campaign.sid;
+            } else if (existingCampaign) {
+              campaign = await updateCampaign(client, {
+                messagingServiceSid,
+                campaignSid,
+                draft,
+              });
+              campaignSid = campaign.sid ?? campaignSid;
+            } else {
+              campaign = await createCampaign(client, {
+                messagingServiceSid,
+                brandRegistrationSid,
+                draft,
+                usecaseCode: context.twilioUsecaseCode,
+              });
+              campaignSid = campaign.sid;
+            }
+          }
         }
       }
 
-      if (brandRegistrationSid) {
+      if (!brand && brandRegistrationSid) {
         brand = await fetchBrandRegistration(client, brandRegistrationSid);
       }
-      if (messagingServiceSid) {
+      if (!campaign && messagingServiceSid) {
         campaign = await fetchCampaign(client, messagingServiceSid, campaignSid);
       }
 
@@ -977,6 +1242,37 @@ export const syncRegistration = internalAction({
       };
     } catch (error) {
       const message = buildTwilioErrorMessage(error);
+      if (args.mode === "refresh") {
+        return {
+          status: context.registration.status,
+          trafficTier: context.registration.trafficTier,
+          ...(context.registration.draft ? { draft: context.registration.draft } : {}),
+          ...(customerProfileSid ? { twilioCustomerProfileSid: customerProfileSid } : {}),
+          ...(businessInfoSid ? { twilioBusinessInfoSid: businessInfoSid } : {}),
+          ...(authorizedRepresentativeSid
+            ? { twilioAuthorizedRepresentativeSid: authorizedRepresentativeSid }
+            : {}),
+          ...(addressSid ? { twilioAddressSid: addressSid } : {}),
+          ...(addressDocumentSid ? { twilioAddressDocumentSid: addressDocumentSid } : {}),
+          ...(trustProductSid ? { twilioTrustProductSid: trustProductSid } : {}),
+          ...(messagingProfileSid ? { twilioMessagingProfileSid: messagingProfileSid } : {}),
+          ...(brandRegistrationSid ? { twilioBrandRegistrationSid: brandRegistrationSid } : {}),
+          ...(messagingServiceSid ? { twilioMessagingServiceSid: messagingServiceSid } : {}),
+          ...(campaignSid ? { twilioCampaignSid: campaignSid } : {}),
+          approvedPhoneNumberId: context.phoneNumber._id,
+          ...(draft.brandContactEmail ? { brandContactEmail: draft.brandContactEmail } : {}),
+          lastSyncedAt: context.registration.lastSyncedAt ?? now,
+          ...(context.registration.failureCode
+            ? { failureCode: context.registration.failureCode }
+            : {}),
+          ...(context.registration.failureMessage
+            ? { failureMessage: context.registration.failureMessage }
+            : {}),
+          ...(context.registration.pendingAction
+            ? { pendingAction: context.registration.pendingAction }
+            : {}),
+        };
+      }
       const pendingAction = buildPendingActionFromErrors([message], "manual_review");
       const failureStatus: SmsComplianceStatus =
         pendingAction?.type === "brand_contact_email_otp"

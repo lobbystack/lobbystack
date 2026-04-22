@@ -280,6 +280,7 @@ describe("billing", () => {
     expect(status).toMatchObject({
       plan: "free_cloud",
       aiSmsEnabled: false,
+      aiSmsReady: false,
       overagesBillable: false,
       monthlyChargeCents: 0,
       includedBusinessNumbers: 0,
@@ -312,6 +313,7 @@ describe("billing", () => {
     expect(status).toMatchObject({
       plan: "self_host",
       aiSmsEnabled: true,
+      aiSmsReady: true,
       overagesBillable: false,
       monthlyChargeCents: 0,
       hasCheckoutAccess: false,
@@ -420,6 +422,7 @@ describe("billing", () => {
     expect(beforeAddon).toMatchObject({
       plan: "pro",
       aiSmsEnabled: false,
+      aiSmsReady: false,
       overagesBillable: true,
       monthlyChargeCents: 1_500,
       canPurchaseAiSmsAddon: true,
@@ -455,6 +458,7 @@ describe("billing", () => {
     expect(afterAddon).toMatchObject({
       plan: "pro",
       aiSmsEnabled: true,
+      aiSmsReady: false,
       monthlyChargeCents: 2_000,
       canPurchaseAiSmsAddon: false,
     });
@@ -518,7 +522,7 @@ describe("billing", () => {
 
   it("routes approved hosted AI SMS through the business messaging service", async () => {
     const t = convexTest(schema, convexModules);
-    const { businessId } = await seedWorkspace(t, {
+    const { authed, businessId } = await seedWorkspace(t, {
       subject: "billing-hosted-approved-compliance",
       deploymentMode: "cloud",
     });
@@ -550,6 +554,7 @@ describe("billing", () => {
       businessId,
       capability: "ai",
     });
+    const status = await authed.query(api.billing.getStatus, { businessId });
 
     expect(alertPolicy).toMatchObject({
       allowed: true,
@@ -569,6 +574,72 @@ describe("billing", () => {
       complianceStatus: "approved",
       errorCode: null,
     });
+    expect(status).toMatchObject({
+      aiSmsEnabled: true,
+      aiSmsReady: true,
+    });
+  });
+
+  it("falls back to the platform route when the approved business sender is no longer active", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-hosted-inactive-approved-sender",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+      });
+      const approvedPhoneNumberId = await seedBusinessPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550134",
+        twilioPhoneSid: "PN-inactive-approved-sender",
+      });
+      await seedBusinessPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550135",
+        twilioPhoneSid: "PN-active-alternate-sender",
+      });
+      await seedSmsComplianceRegistration(ctx, {
+        businessId,
+        status: "approved",
+        approvedPhoneNumberId,
+        twilioMessagingServiceSid: "MG-inactive-approved-sender",
+      });
+      await ctx.db.patch(approvedPhoneNumberId, {
+        status: "inactive",
+      });
+    });
+
+    const alertPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "alert",
+    });
+    const aiPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId,
+      capability: "ai",
+    });
+
+    expect(alertPolicy).toMatchObject({
+      allowed: true,
+      senderRole: "platform_alert",
+      senderMode: "platform_phone",
+      complianceStatus: "approved",
+      errorCode: null,
+    });
+    expect(alertPolicy.twilioMessagingServiceSid).toBeUndefined();
+    expect(aiPolicy).toMatchObject({
+      allowed: false,
+      senderRole: "business_ai",
+      senderMode: "platform_phone",
+      complianceStatus: "approved",
+      errorCode: null,
+    });
+    expect(aiPolicy.fromPhoneNumber).toBeUndefined();
+    expect(aiPolicy.twilioMessagingServiceSid).toBeUndefined();
   });
 
   it("recomputes alert sms entitlement from the current plan after an upgrade", async () => {

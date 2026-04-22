@@ -91,6 +91,7 @@ vi.mock("sonner", () => ({
 }));
 
 const businessId = "business_123" as Id<"businesses">;
+const defaultApprovedPhoneNumberId = "phone_123" as Id<"phone_numbers">;
 
 function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
   return {
@@ -99,11 +100,13 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     subscriptionState: "inactive",
     activeAddons: [],
     aiSmsEnabled: false,
+    aiSmsReady: false,
     overagesBillable: false,
     monthlyChargeCents: 0,
     billingContactEmail: null,
     billingContactName: null,
     includedBusinessNumbers: 0,
+    hasBillingManagementAccess: true,
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,
     availableCheckoutPlans: ["pro"],
@@ -150,6 +153,10 @@ type SmsComplianceState = {
     | "failed"
     | "suspended";
   trafficTier: "low_volume" | "mixed";
+  availablePhoneNumbers: Array<{
+    id: Id<"phone_numbers">;
+    e164: string;
+  }>;
   draft?: {
     businessName?: string;
     businessType?: string;
@@ -191,6 +198,7 @@ type SmsComplianceState = {
   };
   failureCode?: string;
   failureMessage?: string;
+  approvedPhoneNumberId?: Id<"phone_numbers">;
   approvedPhoneNumberE164?: string;
   twilioMessagingServiceSid?: string;
 };
@@ -213,6 +221,12 @@ function buildCompliance(
     senderMode: "platform_phone",
     status: "not_started",
     trafficTier: "low_volume",
+    availablePhoneNumbers: [
+      {
+        id: defaultApprovedPhoneNumberId,
+        e164: "+14165550166",
+      },
+    ],
     draft: {
       businessName: "Acme Clinic LLC",
       businessType: "Corporation",
@@ -272,8 +286,16 @@ function mockQueries(input: {
   compliance?: SmsComplianceState;
   campaignOptions?: SmsComplianceCampaignOption[];
 }) {
-  rememberedQueryMock.mockImplementation((reference: unknown) => {
+  rememberedQueryMock.mockImplementation((reference: unknown, args?: unknown) => {
     const functionName = getFunctionName(reference as never);
+
+    if (args === "skip") {
+      return {
+        data: undefined,
+        isInitialLoading: false,
+        isRefreshing: false,
+      };
+    }
 
     if (functionName === "billing:getStatus") {
       return {
@@ -460,6 +482,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
         subscriptionState: "active",
         activeAddons: ["ai_sms"],
         aiSmsEnabled: true,
+        aiSmsReady: true,
         monthlyChargeCents: 2_000,
         overagesBillable: true,
       }),
@@ -596,6 +619,33 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("Twilio is reviewing your campaign.")).toBeTruthy();
   });
 
+  it("hides the hosted AI SMS compliance section for non-admin members", () => {
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+        hasBillingManagementAccess: false,
+        hasCheckoutAccess: false,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        setupRequired: true,
+      }),
+    });
+
+    expect(screen.queryByText("billing.compliance.title")).toBeNull();
+    expect(screen.queryByText("billing.compliance.cardTitle")).toBeNull();
+    expect(screen.queryByText("billing.addon.aiSmsActiveBadge")).toBeNull();
+    expect(screen.getAllByText("billing.addon.aiSmsSetupRequiredBadge").length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it("saves the compliance draft before starting registration", async () => {
     const user = userEvent.setup();
     saveComplianceFormMock.mockResolvedValue({
@@ -633,6 +683,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
         expect.objectContaining({
           businessId,
           trafficTier: "low_volume",
+          approvedPhoneNumberId: defaultApprovedPhoneNumberId,
           draft: expect.objectContaining({
             businessName: "Acme Clinic LLC",
             campaignDescription: "Appointment alerts and AI SMS replies.",
@@ -646,12 +697,53 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
   });
 
-  it("saves the compliance draft before refreshing an in-review registration", async () => {
+  it("falls back to the only active phone number when the saved approved sender is stale", async () => {
     const user = userEvent.setup();
+    const replacementPhoneNumberId = "phone_456" as Id<"phone_numbers">;
     saveComplianceFormMock.mockResolvedValue({
       registrationId: "registration_123",
-      status: "pending_review",
+      status: "collecting_info",
     });
+
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        setupRequired: true,
+        status: "not_started",
+        approvedPhoneNumberId: defaultApprovedPhoneNumberId,
+        availablePhoneNumbers: [
+          {
+            id: replacementPhoneNumberId,
+            e164: "+14165550177",
+          },
+        ],
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "billing.compliance.actions.save" }),
+    );
+
+    await waitFor(() => {
+      expect(saveComplianceFormMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          approvedPhoneNumberId: replacementPhoneNumberId,
+        }),
+      );
+    });
+  });
+
+  it("refreshes an in-review registration without resaving the draft", async () => {
+    const user = userEvent.setup();
     refreshStatusMock.mockResolvedValue({
       registrationId: "registration_123",
       status: "pending_review",
@@ -678,11 +770,44 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
 
     await waitFor(() => {
-      expect(saveComplianceFormMock).toHaveBeenCalledTimes(1);
+      expect(saveComplianceFormMock).not.toHaveBeenCalled();
       expect(refreshStatusMock).toHaveBeenCalledWith({ businessId });
     });
-    expect(saveComplianceFormMock.mock.invocationCallOrder[0]).toBeLessThan(
-      refreshStatusMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+  });
+
+  it("shows an error toast instead of success when refresh returns a failed status", async () => {
+    const user = userEvent.setup();
+    refreshStatusMock.mockResolvedValue({
+      registrationId: "registration_123",
+      status: "failed",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        plan: "pro",
+        subscriptionState: "active",
+        activeAddons: ["ai_sms"],
+        aiSmsEnabled: true,
+        monthlyChargeCents: 2_000,
+        overagesBillable: true,
+      }),
+      compliance: buildCompliance({
+        applicable: true,
+        aiSmsCommerciallyEnabled: true,
+        status: "pending_review",
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: "billing.compliance.actions.refresh" }),
+    );
+
+    await waitFor(() => {
+      expect(refreshStatusMock).toHaveBeenCalledWith({ businessId });
+      expect(toastErrorMock).toHaveBeenCalledWith("billing.compliance.toast.submitFailed");
+    });
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      "billing.compliance.toast.submitted",
     );
   });
 

@@ -13,6 +13,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { requireMembership } from "./lib/auth";
+import { requireBillingManagementAccess } from "./lib/billingAccess";
 import { getBillingSnapshot, isAiSmsEnabled } from "./lib/billing";
 import {
   assertSmsComplianceDraftReady,
@@ -48,6 +49,10 @@ type SmsComplianceStatusView = {
   customerType: "direct_customer";
   brandKind: "standard_business";
   trafficTier: SmsComplianceTrafficTier;
+  availablePhoneNumbers: Array<{
+    id: Id<"phone_numbers">;
+    e164: string;
+  }>;
   draft?: SmsComplianceDraft;
   pendingAction?: NonNullable<Doc<"sms_compliance_registrations">["pendingAction"]>;
   failureCode?: string;
@@ -102,13 +107,19 @@ async function getSmsComplianceRegistration(
     .unique();
 }
 
+function getEligibleSmsPhoneNumbers(
+  phoneNumbers: Array<SmsPhoneNumberDoc>,
+): Array<SmsPhoneNumberDoc> {
+  return phoneNumbers.filter(
+    (phoneNumber) => phoneNumber.status === "active" && phoneNumber.smsEnabled,
+  );
+}
+
 function selectActiveSmsPhoneNumber(
   phoneNumbers: Array<SmsPhoneNumberDoc>,
   preferredPhoneNumberId?: Id<"phone_numbers">,
 ): SmsPhoneNumberDoc | null {
-  const eligiblePhoneNumbers = phoneNumbers.filter(
-    (phoneNumber) => phoneNumber.status === "active" && phoneNumber.smsEnabled,
-  );
+  const eligiblePhoneNumbers = getEligibleSmsPhoneNumbers(phoneNumbers);
   if (eligiblePhoneNumbers.length === 0) {
     return null;
   }
@@ -120,9 +131,27 @@ function selectActiveSmsPhoneNumber(
     if (preferredPhoneNumber) {
       return preferredPhoneNumber;
     }
+
+    return null;
   }
 
-  return eligiblePhoneNumbers[0] ?? null;
+  return eligiblePhoneNumbers.length === 1 ? eligiblePhoneNumbers[0] ?? null : null;
+}
+
+function getPhoneNumberSelectionError(input: {
+  phoneNumbers: Array<SmsPhoneNumberDoc>;
+  preferredPhoneNumberId?: Id<"phone_numbers">;
+}): string {
+  const eligiblePhoneNumbers = getEligibleSmsPhoneNumbers(input.phoneNumbers);
+  if (eligiblePhoneNumbers.length === 0) {
+    return "At least one active SMS-enabled phone number must be mapped to the business.";
+  }
+
+  if (input.preferredPhoneNumberId) {
+    return "The selected business phone number must remain active and SMS-enabled before continuing 10DLC registration.";
+  }
+
+  return "Choose which active SMS-enabled business phone number should be registered for hosted AI SMS before continuing 10DLC registration.";
 }
 
 function deriveHostedSenderMode(input: {
@@ -168,6 +197,29 @@ function createDefaultRegistration(
   };
 }
 
+async function requireSmsComplianceManagementAccess(
+  ctx: Pick<QueryCtx, "auth" | "db"> | Pick<MutationCtx, "auth" | "db">,
+  businessId: Id<"businesses">,
+): Promise<void> {
+  const membership = await requireMembership(ctx, businessId);
+  requireBillingManagementAccess(membership.role);
+}
+
+function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
+  return status === "not_started" || status === "collecting_info" || status === "failed";
+}
+
+export const assertManagementAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
+    return null;
+  },
+});
+
 export const getStatus = query({
   args: {
     businessId: v.id("businesses"),
@@ -183,6 +235,12 @@ export const getStatus = query({
     customerType: smsComplianceCustomerTypeValidator,
     brandKind: smsComplianceBrandKindValidator,
     trafficTier: smsComplianceTrafficTierValidator,
+    availablePhoneNumbers: v.array(
+      v.object({
+        id: v.id("phone_numbers"),
+        e164: v.string(),
+      }),
+    ),
     draft: v.optional(smsComplianceDraftValidator),
     pendingAction: v.optional(smsCompliancePendingActionValidator),
     failureCode: v.optional(v.string()),
@@ -192,7 +250,7 @@ export const getStatus = query({
     twilioMessagingServiceSid: v.optional(v.string()),
   }),
   handler: async (ctx, args): Promise<SmsComplianceStatusView> => {
-    await requireMembership(ctx, args.businessId);
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
 
     const [snapshot, registration, phoneNumbers] = await Promise.all([
       getBillingSnapshot(ctx, { businessId: args.businessId }),
@@ -220,6 +278,10 @@ export const getStatus = query({
         ? phoneNumbers.find((phoneNumber) => phoneNumber._id === registration.approvedPhoneNumberId) ??
           null
         : null;
+    const availablePhoneNumbers = getEligibleSmsPhoneNumbers(phoneNumbers).map((phoneNumber) => ({
+      id: phoneNumber._id,
+      e164: phoneNumber.e164,
+    }));
 
     return {
       applicable,
@@ -240,6 +302,7 @@ export const getStatus = query({
       customerType: registration?.customerType ?? "direct_customer",
       brandKind: registration?.brandKind ?? "standard_business",
       trafficTier: registration?.trafficTier ?? "low_volume",
+      availablePhoneNumbers,
       ...(registration?.draft ? { draft: registration.draft } : {}),
       ...(registration?.pendingAction ? { pendingAction: registration.pendingAction } : {}),
       ...(registration?.failureCode ? { failureCode: registration.failureCode } : {}),
@@ -272,28 +335,48 @@ export const saveComplianceForm = mutation({
     businessId: v.id("businesses"),
     trafficTier: smsComplianceTrafficTierValidator,
     draft: smsComplianceDraftValidator,
+    approvedPhoneNumberId: v.optional(v.id("phone_numbers")),
   },
   returns: v.object({
     registrationId: v.id("sms_compliance_registrations"),
     status: smsComplianceStatusValidator,
   }),
   handler: async (ctx, args): Promise<SmsComplianceActionResult> => {
-    await requireMembership(ctx, args.businessId);
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
     const existingRegistration = await getSmsComplianceRegistration(ctx, args.businessId);
+    const approvedPhoneNumber =
+      args.approvedPhoneNumberId !== undefined
+        ? await ctx.db.get(args.approvedPhoneNumberId)
+        : null;
+    if (
+      args.approvedPhoneNumberId !== undefined &&
+      (!approvedPhoneNumber ||
+        approvedPhoneNumber.businessId !== args.businessId ||
+        approvedPhoneNumber.status !== "active" ||
+        !approvedPhoneNumber.smsEnabled)
+    ) {
+      throw new Error(
+        "Select an active SMS-enabled business phone number before saving 10DLC registration.",
+      );
+    }
 
     if (existingRegistration) {
-      const nextStatus: SmsComplianceStatus =
-        existingRegistration.status === "approved" ||
-        existingRegistration.status === "pending_review" ||
-        existingRegistration.status === "pending_brand_verification" ||
-        existingRegistration.status === "submitting"
-          ? existingRegistration.status
-          : "collecting_info";
+      if (!canEditComplianceDraft(existingRegistration.status)) {
+        throw new Error(
+          "10DLC registration can't be edited after submission starts. Refresh status instead.",
+        );
+      }
+      const nextApprovedPhoneNumberId =
+        args.approvedPhoneNumberId ?? existingRegistration.approvedPhoneNumberId;
 
       await ctx.db.patch(existingRegistration._id, {
         draft: args.draft,
         trafficTier: args.trafficTier,
-        status: nextStatus,
+        status: "collecting_info",
+        failureCode: undefined,
+        failureMessage: undefined,
+        pendingAction: undefined,
+        ...(nextApprovedPhoneNumberId ? { approvedPhoneNumberId: nextApprovedPhoneNumberId } : {}),
         ...(args.draft.brandContactEmail
           ? { brandContactEmail: args.draft.brandContactEmail.trim() }
           : {}),
@@ -301,7 +384,7 @@ export const saveComplianceForm = mutation({
 
       return {
         registrationId: existingRegistration._id,
-        status: nextStatus,
+        status: "collecting_info",
       };
     }
 
@@ -310,6 +393,9 @@ export const saveComplianceForm = mutation({
       status: "collecting_info",
       draft: args.draft,
       trafficTier: args.trafficTier,
+      ...(args.approvedPhoneNumberId
+        ? { approvedPhoneNumberId: args.approvedPhoneNumberId }
+        : {}),
       ...(args.draft.brandContactEmail
         ? { brandContactEmail: args.draft.brandContactEmail.trim() }
         : {}),
@@ -333,7 +419,7 @@ export const beginSubmissionAttempt = internalMutation({
     attemptKey: v.optional(v.string()),
   }),
   handler: async (ctx, args): Promise<BeginSubmissionAttemptResult> => {
-    await requireMembership(ctx, args.businessId);
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
 
     const [snapshot, existingRegistration, phoneNumbers] = await Promise.all([
       getBillingSnapshot(ctx, { businessId: args.businessId }),
@@ -362,7 +448,12 @@ export const beginSubmissionAttempt = internalMutation({
     );
     if (!activePhoneNumber) {
       throw new Error(
-        "At least one active SMS-enabled phone number must be mapped to the business.",
+        getPhoneNumberSelectionError({
+          phoneNumbers,
+          ...(existingRegistration?.approvedPhoneNumberId
+            ? { preferredPhoneNumberId: existingRegistration.approvedPhoneNumberId }
+            : {}),
+        }),
       );
     }
     if (!activePhoneNumber.twilioPhoneSid) {
@@ -546,11 +637,15 @@ export const getTwilioRegistrationContext = internalQuery({
       throw new Error("SMS compliance registration not found.");
     }
 
-    const [business, phoneNumbers] = await Promise.all([
+    const [business, phoneNumbers, submissions] = await Promise.all([
       ctx.db.get(registration.businessId),
       ctx.db
         .query("phone_numbers")
         .withIndex("by_business_id", (q) => q.eq("businessId", registration.businessId))
+        .collect(),
+      ctx.db
+        .query("sms_compliance_submissions")
+        .withIndex("by_registration_id", (q) => q.eq("registrationId", args.registrationId))
         .collect(),
     ]);
     if (!business) {
@@ -563,12 +658,21 @@ export const getTwilioRegistrationContext = internalQuery({
     );
     if (!activePhoneNumber) {
       throw new Error(
-        "At least one active SMS-enabled phone number must be mapped to the business.",
+        getPhoneNumberSelectionError({
+          phoneNumbers,
+          ...(registration.approvedPhoneNumberId
+            ? { preferredPhoneNumberId: registration.approvedPhoneNumberId }
+            : {}),
+        }),
       );
     }
     if (!activePhoneNumber.twilioPhoneSid) {
       throw new Error("The approved business phone number is missing a Twilio phone SID.");
     }
+
+    const previousCompletedSubmission = submissions
+      .filter((submission) => submission.resultStatus !== undefined)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
 
     return {
       business,
@@ -576,6 +680,7 @@ export const getTwilioRegistrationContext = internalQuery({
       phoneNumber: activePhoneNumber,
       trafficTier: registration.trafficTier,
       twilioUsecaseCode: getCampaignUsecaseForTrafficTier(registration.trafficTier),
+      ...(previousCompletedSubmission ? { previousCompletedSubmission } : {}),
     };
   },
 });
@@ -669,6 +774,9 @@ export const startRegistration = action({
     status: smsComplianceStatusValidator,
   }),
   handler: async (ctx, args): Promise<SmsComplianceActionResult> => {
+    await ctx.runQuery(internal.smsCompliance.assertManagementAccess, {
+      businessId: args.businessId,
+    });
     const attempt: BeginSubmissionAttemptResult = await ctx.runMutation(
       internal.smsCompliance.beginSubmissionAttempt,
       {
@@ -715,6 +823,9 @@ export const resumeRegistration = action({
     status: smsComplianceStatusValidator,
   }),
   handler: async (ctx, args): Promise<SmsComplianceActionResult> => {
+    await ctx.runQuery(internal.smsCompliance.assertManagementAccess, {
+      businessId: args.businessId,
+    });
     const attempt: BeginSubmissionAttemptResult = await ctx.runMutation(
       internal.smsCompliance.beginSubmissionAttempt,
       {
@@ -761,6 +872,9 @@ export const refreshStatus = action({
     status: smsComplianceStatusValidator,
   }),
   handler: async (ctx, args): Promise<SmsComplianceActionResult> => {
+    await ctx.runQuery(internal.smsCompliance.assertManagementAccess, {
+      businessId: args.businessId,
+    });
     const currentRegistration: Id<"sms_compliance_registrations"> | null = await ctx.runQuery(
       internal.smsCompliance.getRegistrationIdForBusiness,
       {
@@ -778,6 +892,19 @@ export const refreshStatus = action({
         mode: "refresh",
       });
     } catch (error) {
+      const persistedStatus: SmsComplianceStatus = await ctx.runQuery(
+        internal.smsCompliance.getRegistrationStatusForBusiness,
+        {
+          businessId: args.businessId,
+        },
+      );
+      if (isSmsComplianceApproved(persistedStatus)) {
+        return {
+          registrationId: currentRegistration,
+          status: persistedStatus,
+        };
+      }
+
       return await handleA2pSyncFailure(ctx, {
         registrationId: currentRegistration,
         error,
@@ -792,6 +919,7 @@ export const getRegistrationIdForBusiness = internalQuery({
   },
   returns: v.union(v.id("sms_compliance_registrations"), v.null()),
   handler: async (ctx, args) => {
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
     const registration = await getSmsComplianceRegistration(ctx, args.businessId);
     return registration?._id ?? null;
   },
@@ -803,6 +931,7 @@ export const getRegistrationStatusForBusiness = internalQuery({
   },
   returns: smsComplianceStatusValidator,
   handler: async (ctx, args): Promise<SmsComplianceStatus> => {
+    await requireSmsComplianceManagementAccess(ctx, args.businessId);
     const registration = await getSmsComplianceRegistration(ctx, args.businessId);
     return registration?.status ?? "not_started";
   },

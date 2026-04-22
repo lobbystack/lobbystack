@@ -122,6 +122,10 @@ type SmsComplianceState = {
   senderMode: "platform_phone" | "business_phone" | "business_messaging_service";
   status: SmsComplianceStatus;
   trafficTier: "low_volume" | "mixed";
+  availablePhoneNumbers: Array<{
+    id: Id<"phone_numbers">;
+    e164: string;
+  }>;
   draft?: SmsComplianceDraft;
   pendingAction?: {
     type:
@@ -135,6 +139,7 @@ type SmsComplianceState = {
   };
   failureCode?: string;
   failureMessage?: string;
+  approvedPhoneNumberId?: Id<"phone_numbers">;
   approvedPhoneNumberE164?: string;
   twilioMessagingServiceSid?: string;
 };
@@ -147,6 +152,7 @@ type SmsComplianceCampaignOption = {
 
 type SmsComplianceFormState = {
   trafficTier: "low_volume" | "mixed";
+  approvedPhoneNumberId: string;
   businessName: string;
   businessType: string;
   businessIndustry: string;
@@ -181,6 +187,7 @@ type SmsComplianceFormState = {
 
 const DEFAULT_SMS_COMPLIANCE_FORM_STATE: SmsComplianceFormState = {
   trafficTier: "low_volume",
+  approvedPhoneNumberId: "",
   businessName: "",
   businessType: "Corporation",
   businessIndustry: "TECHNOLOGY",
@@ -212,6 +219,73 @@ const DEFAULT_SMS_COMPLIANCE_FORM_STATE: SmsComplianceFormState = {
   hasEmbeddedLinks: false,
   hasEmbeddedPhone: false,
 };
+
+const SMS_COMPLIANCE_BUSINESS_TYPE_OPTIONS = [
+  "Co-operative",
+  "Corporation",
+  "Limited Liability Corporation",
+  "Non-profit Corporation",
+  "Partnership",
+] as const;
+
+const SMS_COMPLIANCE_BUSINESS_INDUSTRY_OPTIONS = [
+  "AGRICULTURE",
+  "AUTOMOTIVE",
+  "BANKING",
+  "CONSTRUCTION",
+  "CONSUMER",
+  "EDUCATION",
+  "ELECTRONICS",
+  "ENGINEERING",
+  "ENERGY",
+  "FAST_MOVING_CONSUMER_GOODS",
+  "FINANCIAL",
+  "FINTECH",
+  "FOOD_AND_BEVERAGE",
+  "GOVERNMENT",
+  "HEALTHCARE",
+  "HOSPITALITY",
+  "INSURANCE",
+  "JEWELRY",
+  "LEGAL",
+  "MANUFACTURING",
+  "MEDIA",
+  "NOT_FOR_PROFIT",
+  "OIL_AND_GAS",
+  "ONLINE",
+  "PROFESSIONAL_SERVICES",
+  "RAW_MATERIALS",
+  "REAL_ESTATE",
+  "RELIGION",
+  "RETAIL",
+  "TECHNOLOGY",
+  "TELECOMMUNICATIONS",
+  "TRANSPORTATION",
+  "TRAVEL",
+] as const;
+
+const SMS_COMPLIANCE_REGISTRATION_IDENTIFIER_OPTIONS = [
+  "EIN",
+  "DUNS",
+  "CBN",
+  "CN",
+  "ACN",
+  "CIN",
+  "VAT",
+  "VATRN",
+  "RN",
+  "Other",
+] as const;
+
+const SMS_COMPLIANCE_JOB_POSITION_OPTIONS = [
+  "Director",
+  "GM",
+  "VP",
+  "CEO",
+  "CFO",
+  "General Counsel",
+  "Other",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Formatters
@@ -327,14 +401,32 @@ function useBillingStatus(businessId: Id<"businesses">) {
   });
 }
 
-function useSmsComplianceStatus(businessId: Id<"businesses">) {
-  return useRememberedConvexQuery(api.smsCompliance.getStatus, {
-    businessId,
-  });
+function useSmsComplianceStatus(
+  businessId: Id<"businesses">,
+  enabled: boolean,
+) {
+  return useRememberedConvexQuery(
+    api.smsCompliance.getStatus,
+    enabled ? { businessId } : "skip",
+  );
 }
 
 function useSmsComplianceCampaignOptions() {
   return useRememberedConvexQuery(api.smsCompliance.getCampaignOptions, {});
+}
+
+function formatSmsComplianceOptionLabel(value: string): string {
+  if (/^[A-Z0-9]+$/.test(value)) {
+    return value;
+  }
+
+  return value
+    .toLowerCase()
+    .split(/[_ ]+/)
+    .map((part) =>
+      part.length > 0 ? `${part[0]!.toUpperCase()}${part.slice(1)}` : part,
+    )
+    .join(" ");
 }
 
 function buildSmsComplianceFormState(
@@ -342,10 +434,23 @@ function buildSmsComplianceFormState(
 ): SmsComplianceFormState {
   const draft = compliance?.draft;
   const sampleMessages = draft?.sampleMessages ?? [];
+  const approvedPhoneNumberId =
+    compliance?.approvedPhoneNumberId &&
+    compliance.availablePhoneNumbers.some(
+      (phoneNumber) => phoneNumber.id === compliance.approvedPhoneNumberId,
+    )
+      ? compliance.approvedPhoneNumberId
+      : undefined;
+  const defaultApprovedPhoneNumberId =
+    approvedPhoneNumberId ??
+    (compliance?.availablePhoneNumbers.length === 1
+      ? compliance.availablePhoneNumbers[0]?.id
+      : undefined);
 
   return {
     ...DEFAULT_SMS_COMPLIANCE_FORM_STATE,
     trafficTier: compliance?.trafficTier ?? "low_volume",
+    approvedPhoneNumberId: defaultApprovedPhoneNumberId ?? "",
     businessName: draft?.businessName ?? "",
     businessType: draft?.businessType ?? DEFAULT_SMS_COMPLIANCE_FORM_STATE.businessType,
     businessIndustry:
@@ -988,26 +1093,20 @@ function UsageMeterRow({
 
 function AddonsSection({
   status,
-  compliance,
   businessId,
   locale,
   t,
 }: {
   status: BillingStatus;
-  compliance?: SmsComplianceState;
   businessId: Id<"businesses">;
   locale: BillingLocale;
   t: BillingTranslation;
 }) {
   const startCheckout = useAction(api.billing.startCheckout);
   const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
-  const isOperational =
-    status.aiSmsEnabled &&
-    (status.plan === "self_host" || compliance?.status === "approved");
+  const isOperational = status.aiSmsReady;
   const setupRequired =
-    status.aiSmsEnabled &&
-    status.plan !== "self_host" &&
-    compliance?.status !== "approved";
+    status.aiSmsEnabled && !status.aiSmsReady && status.plan !== "self_host";
   const canPurchase = status.canPurchaseAiSmsAddon;
   const canUpgradeToPro =
     status.hasCheckoutAccess &&
@@ -1229,6 +1328,18 @@ function getCompliancePrimaryActionLabel(
   }
 }
 
+function canEditApprovedPhoneNumber(status: SmsComplianceStatus): boolean {
+  return canEditComplianceDraft(status);
+}
+
+function canEditComplianceDraft(status: SmsComplianceStatus): boolean {
+  return status === "not_started" || status === "collecting_info" || status === "failed";
+}
+
+function isSuccessfulComplianceActionStatus(status: SmsComplianceStatus): boolean {
+  return status !== "failed" && status !== "suspended";
+}
+
 function getComplianceSenderModeCopy(
   senderMode: SmsComplianceState["senderMode"],
   t: BillingTranslation,
@@ -1262,6 +1373,7 @@ function AiSmsComplianceSection({
     buildSmsComplianceFormState(compliance),
   );
   const [loading, setLoading] = useState<null | "save" | "action">(null);
+  const isDraftEditable = canEditComplianceDraft(compliance.status);
 
   useEffect(() => {
     setForm(buildSmsComplianceFormState(compliance));
@@ -1287,10 +1399,17 @@ function AiSmsComplianceSection({
       businessId,
       trafficTier: form.trafficTier,
       draft: buildSmsComplianceDraft(form),
+      ...(form.approvedPhoneNumberId
+        ? { approvedPhoneNumberId: form.approvedPhoneNumberId as Id<"phone_numbers"> }
+        : {}),
     });
   }
 
   async function handleSave() {
+    if (!isDraftEditable) {
+      return;
+    }
+
     setLoading("save");
     try {
       await persistDraft();
@@ -1305,21 +1424,34 @@ function AiSmsComplianceSection({
   async function handlePrimaryAction() {
     setLoading("action");
     try {
-      await persistDraft();
+      if (isDraftEditable) {
+        await persistDraft();
+      }
+
+      let result:
+        | {
+            registrationId: Id<"sms_compliance_registrations">;
+            status: SmsComplianceStatus;
+          }
+        | undefined;
 
       if (compliance.status === "pending_brand_verification") {
-        await resumeRegistration({ businessId });
+        result = await resumeRegistration({ businessId });
       } else if (
         compliance.status === "pending_review" ||
         compliance.status === "approved" ||
         compliance.status === "suspended"
       ) {
-        await refreshRegistration({ businessId });
+        result = await refreshRegistration({ businessId });
       } else {
-        await startRegistration({ businessId });
+        result = await startRegistration({ businessId });
       }
 
-      toast.success(t("billing.compliance.toast.submitted"));
+      if (result && isSuccessfulComplianceActionStatus(result.status)) {
+        toast.success(t("billing.compliance.toast.submitted"));
+      } else {
+        toast.error(t("billing.compliance.toast.submitFailed"));
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, t("billing.compliance.toast.submitFailed")));
     } finally {
@@ -1363,7 +1495,7 @@ function AiSmsComplianceSection({
             <Button
               variant="outline"
               onClick={() => void handleSave()}
-              disabled={loading !== null}
+              disabled={loading !== null || !isDraftEditable}
             >
               {loading === "save" ? t("billing.compliance.actions.saving") : t("billing.compliance.actions.save")}
             </Button>
@@ -1398,7 +1530,41 @@ function AiSmsComplianceSection({
           </div>
         )}
 
+        <fieldset
+          className="contents"
+          disabled={loading !== null || !isDraftEditable}
+        >
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label>{t("billing.compliance.fields.approvedPhoneNumber")}</Label>
+            <Select
+              value={form.approvedPhoneNumberId}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  approvedPhoneNumberId: value ?? current.approvedPhoneNumberId,
+                }))
+              }
+              disabled={
+                loading !== null ||
+                !canEditApprovedPhoneNumber(compliance.status) ||
+                compliance.availablePhoneNumbers.length === 0
+              }
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={t("billing.compliance.fields.approvedPhoneNumber")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {compliance.availablePhoneNumbers.map((phoneNumber) => (
+                  <SelectItem key={phoneNumber.id} value={phoneNumber.id}>
+                    {phoneNumber.e164}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="sms-compliance-business-name">
               {t("billing.compliance.fields.businessName")}
@@ -1424,43 +1590,74 @@ function AiSmsComplianceSection({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sms-compliance-business-type">
-              {t("billing.compliance.fields.businessType")}
-            </Label>
-            <Input
-              id="sms-compliance-business-type"
+            <Label>{t("billing.compliance.fields.businessType")}</Label>
+            <Select
               value={form.businessType}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, businessType: event.target.value }))
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sms-compliance-business-industry">
-              {t("billing.compliance.fields.businessIndustry")}
-            </Label>
-            <Input
-              id="sms-compliance-business-industry"
-              value={form.businessIndustry}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, businessIndustry: event.target.value }))
-              }
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sms-compliance-tax-id-type">
-              {t("billing.compliance.fields.businessRegistrationIdentifier")}
-            </Label>
-            <Input
-              id="sms-compliance-tax-id-type"
-              value={form.businessRegistrationIdentifier}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  businessRegistrationIdentifier: event.target.value,
+                  businessType: value ?? current.businessType,
                 }))
               }
-            />
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SMS_COMPLIANCE_BUSINESS_TYPE_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatSmsComplianceOptionLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>{t("billing.compliance.fields.businessIndustry")}</Label>
+            <Select
+              value={form.businessIndustry}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  businessIndustry: value ?? current.businessIndustry,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SMS_COMPLIANCE_BUSINESS_INDUSTRY_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatSmsComplianceOptionLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>{t("billing.compliance.fields.businessRegistrationIdentifier")}</Label>
+            <Select
+              value={form.businessRegistrationIdentifier}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  businessRegistrationIdentifier:
+                    value ?? current.businessRegistrationIdentifier,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SMS_COMPLIANCE_REGISTRATION_IDENTIFIER_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatSmsComplianceOptionLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="sms-compliance-tax-id-number">
@@ -1572,13 +1769,11 @@ function AiSmsComplianceSection({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["Director", "GM", "VP", "CEO", "CFO", "General Counsel", "Other"].map(
-                  (value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ),
-                )}
+                {SMS_COMPLIANCE_JOB_POSITION_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatSmsComplianceOptionLabel(value)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -1863,6 +2058,7 @@ function AiSmsComplianceSection({
             </Label>
           </div>
         </div>
+        </fieldset>
       </BorderedItem>
     </BillingSection>
   );
@@ -2233,7 +2429,16 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { i18n, t } = useTranslation("settings");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
-  const { data: compliance } = useSmsComplianceStatus(props.businessId);
+  const shouldFetchCompliance = Boolean(
+    status &&
+      status.hasBillingManagementAccess &&
+      status.plan !== "self_host" &&
+      status.aiSmsEnabled,
+  );
+  const { data: compliance } = useSmsComplianceStatus(
+    props.businessId,
+    shouldFetchCompliance,
+  );
 
   if (isLoadingStatus || !status) {
     return <BillingOverviewSkeleton t={t} />;
@@ -2262,12 +2467,11 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
       />
       <AddonsSection
         status={status}
-        {...(compliance ? { compliance } : {})}
         businessId={props.businessId}
         locale={locale}
         t={t}
       />
-      {status.aiSmsEnabled && compliance && (
+      {status.hasBillingManagementAccess && status.aiSmsEnabled && compliance && (
         <AiSmsComplianceSection
           businessId={props.businessId}
           compliance={compliance}

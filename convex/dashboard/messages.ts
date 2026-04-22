@@ -515,13 +515,15 @@ export const getSmsReplyContext = internalQuery({
       );
     }
 
-    const preferredSenderPhoneNumber = await getPreferredConversationSmsSenderPhoneNumber(
-      ctx,
-      conversation._id,
-    );
+    const preferredSenderPhoneNumber =
+      smsPolicy.senderMode === "business_messaging_service"
+        ? smsPolicy.fromPhoneNumber ?? undefined
+        : (await getPreferredConversationSmsSenderPhoneNumber(ctx, conversation._id)) ??
+          smsPolicy.fromPhoneNumber ??
+          undefined;
     const fromPhoneNumber = selectSmsSenderPhoneNumber(
       phoneNumbers,
-      preferredSenderPhoneNumber ?? smsPolicy.fromPhoneNumber ?? undefined,
+      preferredSenderPhoneNumber,
     );
     if (!fromPhoneNumber) {
       throw new Error(

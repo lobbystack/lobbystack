@@ -59,6 +59,10 @@ import {
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
+import {
+  hasBillingManagementAccess,
+  requireBillingManagementAccess,
+} from "./lib/billingAccess";
 import { selectSmsSenderPhoneNumber } from "./lib/smsPhoneNumbers";
 import {
   isSmsComplianceApproved,
@@ -132,12 +136,6 @@ type SmsCapabilityPolicy = {
 type UsageSyncTelemetryEventName =
   | "ops.billing.usage_sync_failed"
   | "ops.billing.usage_sync_recovered";
-
-const BILLING_ADMIN_ROLES = new Set([
-  "business_owner",
-  "business_admin",
-  "owner",
-]);
 
 const USAGE_SYNC_RETRY_DELAYS_MS = [
   30_000,
@@ -322,6 +320,7 @@ function buildBillingStatus(input: {
   billingKey: string;
   plan: BillingPlanSlug;
   activeAddons: Array<BillingAddonSlug>;
+  aiSmsReady: boolean;
   subscriptionState: string;
   contact: BillingContact;
   usage: Doc<"billing_usage_months"> | null;
@@ -355,6 +354,7 @@ function buildBillingStatus(input: {
       plan: input.plan,
       activeAddons: input.activeAddons,
     }),
+    aiSmsReady: input.aiSmsReady,
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
     monthlyChargeCents: getBillingMonthlyChargeCents({
       plan: input.plan,
@@ -363,6 +363,7 @@ function buildBillingStatus(input: {
     billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
     billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
     includedBusinessNumbers: billingPlanCatalog[input.plan].includedBusinessNumbers,
+    hasBillingManagementAccess: input.hasBillingManagementAccess,
     hasCustomerPortalAccess:
       input.hasBillingManagementAccess && input.hasCustomerPortalAccess,
     hasCheckoutAccess:
@@ -383,16 +384,6 @@ function buildBillingStatus(input: {
     },
     recentTransactions: input.hasBillingManagementAccess ? input.recentTransactions : [],
   };
-}
-
-function hasBillingManagementAccess(role: string): boolean {
-  return BILLING_ADMIN_ROLES.has(role);
-}
-
-function requireBillingManagementAccess(role: string): void {
-  if (!hasBillingManagementAccess(role)) {
-    throw new Error("Billing management requires admin access.");
-  }
 }
 
 function shouldSyncUsageEvent(args: {
@@ -615,13 +606,20 @@ function resolveApprovedBusinessSmsSender(input: {
   phoneNumbers: Array<Pick<Doc<"phone_numbers">, "_id" | "e164" | "smsEnabled" | "status">>;
   approvedPhoneNumberId?: Id<"phone_numbers">;
 }): string | null {
-  const preferredPhoneNumberE164 =
-    input.approvedPhoneNumberId !== undefined
-      ? input.phoneNumbers.find((phoneNumber) => phoneNumber._id === input.approvedPhoneNumberId)
-          ?.e164
-      : undefined;
+  if (input.approvedPhoneNumberId === undefined) {
+    return null;
+  }
 
-  return selectSmsSenderPhoneNumber(input.phoneNumbers, preferredPhoneNumberE164);
+  const approvedPhoneNumber = input.phoneNumbers.find(
+    (phoneNumber) => phoneNumber._id === input.approvedPhoneNumberId,
+  );
+  if (!approvedPhoneNumber) {
+    return null;
+  }
+
+  return approvedPhoneNumber.status === "active" && approvedPhoneNumber.smsEnabled
+    ? approvedPhoneNumber.e164
+    : null;
 }
 
 function getTargetProductIds(target: CheckoutTarget): Array<string> {
@@ -1289,6 +1287,10 @@ export const getStatus = query({
     const snapshot = await getBillingSnapshot(ctx, {
       businessId: args.businessId,
     });
+    const aiSmsEnabled = isAiSmsEnabled({
+      plan: snapshot.plan,
+      activeAddons: snapshot.activeAddons,
+    });
     const contact = hasManagementAccess
       ? await resolveBillingContact(ctx, {
           businessId: args.businessId,
@@ -1312,6 +1314,32 @@ export const getStatus = query({
         businessId: args.businessId,
       },
     );
+    const [registration, phoneNumbers] = aiSmsEnabled && snapshot.plan !== "self_host"
+      ? await Promise.all([
+          ctx.db
+            .query("sms_compliance_registrations")
+            .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+            .unique(),
+          ctx.db
+            .query("phone_numbers")
+            .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+            .collect(),
+        ])
+      : [null, []];
+    const aiSmsReady =
+      snapshot.plan === "self_host" ||
+      (aiSmsEnabled &&
+        registration !== null &&
+        isSmsComplianceApproved(registration.status) &&
+        Boolean(registration.twilioMessagingServiceSid) &&
+        Boolean(
+          resolveApprovedBusinessSmsSender({
+            phoneNumbers,
+            ...(registration.approvedPhoneNumberId
+              ? { approvedPhoneNumberId: registration.approvedPhoneNumberId }
+              : {}),
+          }),
+        ));
     const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
     const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
 
@@ -1319,6 +1347,7 @@ export const getStatus = query({
       billingKey: getBillingKey(args.businessId),
       plan: snapshot.plan,
       activeAddons: snapshot.activeAddons,
+      aiSmsReady,
       subscriptionState: snapshot.account?.subscriptionState ?? "inactive",
       contact,
       usage: snapshot.usage,
@@ -2054,7 +2083,8 @@ export const getSmsCapabilityPolicy = internalQuery({
       plan: snapshot.plan,
       activeAddons: snapshot.activeAddons,
     });
-    const businessSenderPhoneNumber = resolveApprovedBusinessSmsSender({
+    const activeBusinessSenderPhoneNumber = selectSmsSenderPhoneNumber(phoneNumbers);
+    const approvedBusinessSenderPhoneNumber = resolveApprovedBusinessSmsSender({
       phoneNumbers,
       ...(registration?.approvedPhoneNumberId
         ? { approvedPhoneNumberId: registration.approvedPhoneNumberId }
@@ -2066,7 +2096,7 @@ export const getSmsCapabilityPolicy = internalQuery({
       registration &&
       isSmsComplianceApproved(registration.status) &&
       Boolean(registration.twilioMessagingServiceSid) &&
-      Boolean(businessSenderPhoneNumber);
+      Boolean(approvedBusinessSenderPhoneNumber);
     const activePlatformSender =
       platformSender && platformSender.status === "active" && platformSender.smsEnabled
         ? platformSender.e164
@@ -2078,7 +2108,9 @@ export const getSmsCapabilityPolicy = internalQuery({
           allowed: !usage.alertSmsBlocked,
           senderRole: "business_ai",
           senderMode: "business_phone",
-          ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+          ...(activeBusinessSenderPhoneNumber
+            ? { fromPhoneNumber: activeBusinessSenderPhoneNumber }
+            : {}),
           ...(registration?.status ? { complianceStatus: registration.status } : {}),
           errorCode: usage.alertSmsBlocked ? billingErrorCodes.alertSmsLimitReached : null,
         };
@@ -2089,7 +2121,9 @@ export const getSmsCapabilityPolicy = internalQuery({
           allowed: !usage.alertSmsBlocked,
           senderRole: "platform_alert",
           senderMode: "business_messaging_service",
-          ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+          ...(approvedBusinessSenderPhoneNumber
+            ? { fromPhoneNumber: approvedBusinessSenderPhoneNumber }
+            : {}),
           ...(registration?.twilioMessagingServiceSid
             ? { twilioMessagingServiceSid: registration.twilioMessagingServiceSid }
             : {}),
@@ -2113,7 +2147,9 @@ export const getSmsCapabilityPolicy = internalQuery({
         allowed: false,
         senderRole: "business_ai",
         senderMode: snapshot.plan === "self_host" ? "business_phone" : "platform_phone",
-        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(activeBusinessSenderPhoneNumber
+          ? { fromPhoneNumber: activeBusinessSenderPhoneNumber }
+          : {}),
         ...(registration?.status ? { complianceStatus: registration.status } : {}),
         errorCode: billingErrorCodes.aiSmsNotEnabled,
       };
@@ -2124,7 +2160,9 @@ export const getSmsCapabilityPolicy = internalQuery({
         allowed: true,
         senderRole: "business_ai",
         senderMode: "business_phone",
-        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(activeBusinessSenderPhoneNumber
+          ? { fromPhoneNumber: activeBusinessSenderPhoneNumber }
+          : {}),
         ...(registration?.status ? { complianceStatus: registration.status } : {}),
         errorCode: null,
       };
@@ -2135,7 +2173,9 @@ export const getSmsCapabilityPolicy = internalQuery({
         allowed: true,
         senderRole: "business_ai",
         senderMode: "business_messaging_service",
-        ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+        ...(approvedBusinessSenderPhoneNumber
+          ? { fromPhoneNumber: approvedBusinessSenderPhoneNumber }
+          : {}),
         ...(registration?.twilioMessagingServiceSid
           ? { twilioMessagingServiceSid: registration.twilioMessagingServiceSid }
           : {}),
@@ -2148,7 +2188,9 @@ export const getSmsCapabilityPolicy = internalQuery({
       allowed: false,
       senderRole: "business_ai",
       senderMode: "platform_phone",
-      ...(businessSenderPhoneNumber ? { fromPhoneNumber: businessSenderPhoneNumber } : {}),
+      ...(approvedBusinessSenderPhoneNumber
+        ? { fromPhoneNumber: approvedBusinessSenderPhoneNumber }
+        : {}),
       ...(registration?.status ? { complianceStatus: registration.status } : {}),
       errorCode: null,
     };

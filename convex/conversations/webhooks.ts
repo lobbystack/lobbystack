@@ -514,9 +514,13 @@ export const getOutboundMessageDeliveryContext = internalQuery({
       );
     }
 
+    const preferredSenderPhoneNumber =
+      smsPolicy.senderMode === "business_messaging_service"
+        ? smsPolicy.fromPhoneNumber ?? undefined
+        : message.fromPhoneNumber ?? smsPolicy.fromPhoneNumber ?? undefined;
     const senderPhoneNumber = selectSmsSenderPhoneNumber(
       phoneNumbers,
-      message.fromPhoneNumber ?? smsPolicy.fromPhoneNumber ?? undefined,
+      preferredSenderPhoneNumber,
     );
     if (!senderPhoneNumber) {
       throw new Error(
@@ -1221,13 +1225,17 @@ export const handleTwilioSmsInbound = internalAction({
       body: args.body,
       ...(normalizedMedia ? { media: normalizedMedia } : {}),
     });
+    const replyFromPhoneNumber =
+      smsPolicy.senderMode === "business_messaging_service"
+        ? smsPolicy.fromPhoneNumber ?? phoneNumber.e164
+        : phoneNumber.e164;
     const messageId: Id<"messages"> = await ctx.runMutation(
       internal.conversations.webhooks.reserveOutboundAiMessage,
       {
         businessId: phoneNumber.businessId,
         conversationId,
         channel: "sms",
-        fromPhoneNumber: phoneNumber.e164,
+        fromPhoneNumber: replyFromPhoneNumber,
         senderRole: "business_ai",
       },
     );
