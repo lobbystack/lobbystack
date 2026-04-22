@@ -59,6 +59,9 @@ type WebsiteDocumentCountSummary = {
   pending: number;
 };
 
+const CLOUDFLARE_CRAWL_MAX_ATTEMPTS = 5;
+const CLOUDFLARE_CRAWL_RETRY_DELAY_MS = 1_000;
+
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest))
@@ -126,6 +129,20 @@ async function readCloudflareResult<T>(response: Response): Promise<T> {
   return payload.result;
 }
 
+function isRetriableCloudflareCrawlError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    /Durable Object exceeded its CPU time limit and was reset/iu.test(message) ||
+    /Cloudflare crawl request failed with status (408|429|500|502|503|504)/iu.test(message) ||
+    /fetch failed/iu.test(message)
+  );
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function buildWebsiteDocumentTitle(input: {
   pageUrl: string;
   title: string | undefined;
@@ -162,24 +179,43 @@ async function fetchCloudflareCrawlResult(input: {
   cacheTTL?: number;
 }): Promise<CloudflareCrawlResult> {
   const { accountId, apiToken } = requireCloudflareCredentials();
-  const response = await fetch(
-    getCloudflareCrawlEndpoint({
-      accountId,
-      cloudflareJobId: input.cloudflareJobId,
-      ...(input.cursor !== undefined ? { cursor: input.cursor } : {}),
-      ...(input.limit !== undefined ? { limit: input.limit } : {}),
-      ...(input.status !== undefined ? { status: input.status } : {}),
-      ...(input.cacheTTL !== undefined ? { cacheTTL: input.cacheTTL } : {}),
-    }),
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-      },
-    },
-  );
+  let lastError: unknown;
 
-  return await readCloudflareResult<CloudflareCrawlResult>(response);
+  for (let attempt = 1; attempt <= CLOUDFLARE_CRAWL_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(
+        getCloudflareCrawlEndpoint({
+          accountId,
+          cloudflareJobId: input.cloudflareJobId,
+          ...(input.cursor !== undefined ? { cursor: input.cursor } : {}),
+          ...(input.limit !== undefined ? { limit: input.limit } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.cacheTTL !== undefined ? { cacheTTL: input.cacheTTL } : {}),
+        }),
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiToken}`,
+          },
+        },
+      );
+
+      return await readCloudflareResult<CloudflareCrawlResult>(response);
+    } catch (error) {
+      lastError = error;
+
+      if (
+        attempt === CLOUDFLARE_CRAWL_MAX_ATTEMPTS ||
+        !isRetriableCloudflareCrawlError(error)
+      ) {
+        throw error;
+      }
+
+      await sleep(CLOUDFLARE_CRAWL_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Cloudflare crawl request failed.");
 }
 
 async function loadWebsiteIngestionJobRecord(

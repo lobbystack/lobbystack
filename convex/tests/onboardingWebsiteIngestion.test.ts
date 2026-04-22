@@ -306,6 +306,80 @@ describe("website onboarding and ingestion", () => {
     expect(Array.isArray(body.options?.excludePatterns)).toBe(true);
   });
 
+  it("retries transient Cloudflare crawl status errors before succeeding", async () => {
+    const t = createConvexHarness();
+    const subject = "website-crawl-status-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          errors: [
+            {
+              message: "Durable Object exceeded its CPU time limit and was reset.",
+            },
+          ],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "running",
+            records: [],
+          },
+        }),
+      } as Response);
+
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(((handler: TimerHandler) => {
+        if (typeof handler === "function") {
+          handler();
+        }
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as unknown as typeof setTimeout);
+
+    try {
+      const result = await t.action(
+        internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+        {
+          websiteIngestionJobId,
+          cloudflareJobId: "cf-job-status-1",
+        },
+      );
+
+      expect(result).toEqual({ status: "running" });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
   it("reuses an existing website document without duplicating or reindexing it when the content hash is unchanged", async () => {
     const t = createConvexHarness();
     const subject = "website-dedupe-owner";
