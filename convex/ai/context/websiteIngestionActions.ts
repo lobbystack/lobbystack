@@ -18,6 +18,7 @@ import {
   isDirectlyBlockedWebsiteHostname,
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
+  normalizeWebsiteUrl,
   shouldImportWebsitePage,
   shouldTriggerBrowserFallback,
   WEBSITE_CRAWL_BROWSER_MODE,
@@ -474,6 +475,21 @@ async function getKnowledgeDocumentStorageBytes(
 
   return totalBytes;
 }
+
+export const preflightWebsiteCrawlTarget = internalAction({
+  args: {
+    websiteUrl: v.string(),
+  },
+  handler: async (
+    _ctx: ActionCtx,
+    args: { websiteUrl: string },
+  ): Promise<string> => {
+    const websiteUrl = normalizeWebsiteUrl(args.websiteUrl);
+    requireCloudflareCredentials();
+    await assertWebsiteCrawlTargetIsPublic(websiteUrl);
+    return websiteUrl;
+  },
+});
 
 export const submitCloudflareWebsiteCrawl = internalAction({
   args: {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Globe, LoaderCircle, LogOut } from "lucide-react";
@@ -37,7 +37,7 @@ export function OnboardingWebsitePage({
 }: OnboardingWebsitePageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
-  const submitOnboardingWebsite = useMutation(api.onboarding.websites.submitOnboardingWebsite);
+  const submitOnboardingWebsite = useAction(api.onboarding.websites.submitOnboardingWebsite);
   const skipOnboardingWebsite = useMutation(api.onboarding.websites.skipOnboardingWebsite);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState<string | null>(null);

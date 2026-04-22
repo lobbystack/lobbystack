@@ -198,7 +198,7 @@ describe("website onboarding and ingestion", () => {
     });
     const authed = t.withIdentity({ subject });
 
-    const result = await authed.mutation(api.onboarding.websites.submitOnboardingWebsite, {
+    const result = await authed.action(api.onboarding.websites.submitOnboardingWebsite, {
       businessId,
       websiteUrl: "example.com/clinic/?utm_source=test#team",
     });
@@ -234,6 +234,36 @@ describe("website onboarding and ingestion", () => {
       indexedCount: 0,
       errorCount: 0,
     });
+  });
+
+  it("does not advance onboarding when website preflight fails", async () => {
+    const t = createConvexHarness();
+    const subject = "website-preflight-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    dnsLookupMock.mockResolvedValue([{ address: "192.168.1.20", family: 4 }]);
+
+    await expect(
+      authed.action(api.onboarding.websites.submitOnboardingWebsite, {
+        businessId,
+        websiteUrl: "https://clinic.example.com",
+      }),
+    ).rejects.toThrow(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBeUndefined();
+    expect(business?.onboardingStage).toBe("website");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(0);
+    expect(workflowStartMock).not.toHaveBeenCalled();
   });
 
   it("allows skipping the website step without creating an ingestion job", async () => {
@@ -356,38 +386,33 @@ describe("website onboarding and ingestion", () => {
         includeSubdomains: false,
       },
     });
-    expect(body.options).toMatchObject({
-      includePatterns: [
-        "https://example.com/clinic",
-        "https://example.com/clinic/**",
-        "https://www.example.com/clinic",
-        "https://www.example.com/clinic/**",
-      ],
-      excludePatterns: [
-        "https://example.com/clinic/**/*account*",
-        "https://example.com/clinic/**/*cart*",
-        "https://example.com/clinic/**/*checkout*",
-        "https://example.com/clinic/**/*legal*",
-        "https://example.com/clinic/**/*login*",
-        "https://example.com/clinic/**/*privacy*",
-        "https://example.com/clinic/**/*search*",
-        "https://example.com/clinic/**/*terms*",
-        "https://example.com/clinic/**/*wp-admin*",
+    expect(body.options?.includePatterns).toEqual([
+      "https://example.com/clinic",
+      "https://example.com/clinic/**",
+      "https://www.example.com/clinic",
+      "https://www.example.com/clinic/**",
+    ]);
+    expect(body.options?.excludePatterns).toEqual(
+      expect.arrayContaining([
+        "https://example.com/clinic/login",
+        "https://example.com/clinic/login/**",
+        "https://example.com/clinic/**/login",
+        "https://example.com/clinic/**/login/**",
+        "https://example.com/clinic/search",
+        "https://example.com/clinic/search/**",
+        "https://example.com/clinic/**/search",
+        "https://example.com/clinic/**/search/**",
         "https://example.com/clinic/cdn-cgi/*",
-        "https://example.com/clinic/**/feed*",
-        "https://www.example.com/clinic/**/*account*",
-        "https://www.example.com/clinic/**/*cart*",
-        "https://www.example.com/clinic/**/*checkout*",
-        "https://www.example.com/clinic/**/*legal*",
-        "https://www.example.com/clinic/**/*login*",
-        "https://www.example.com/clinic/**/*privacy*",
-        "https://www.example.com/clinic/**/*search*",
-        "https://www.example.com/clinic/**/*terms*",
-        "https://www.example.com/clinic/**/*wp-admin*",
+        "https://www.example.com/clinic/login",
+        "https://www.example.com/clinic/login/**",
+        "https://www.example.com/clinic/**/login",
+        "https://www.example.com/clinic/**/login/**",
         "https://www.example.com/clinic/cdn-cgi/*",
-        "https://www.example.com/clinic/**/feed*",
-      ],
-    });
+      ]),
+    );
+    expect(body.options?.excludePatterns).not.toContain(
+      "https://example.com/clinic/**/*search*",
+    );
   });
 
   it("rejects crawl submission for stored localhost targets before calling Cloudflare", async () => {
@@ -602,9 +627,9 @@ describe("website onboarding and ingestion", () => {
 
     expect(counts).toEqual({
       businessId,
-      indexed: 1,
+      indexed: 0,
       error: 1,
-      pending: 0,
+      pending: 1,
     });
   });
 
@@ -619,10 +644,19 @@ describe("website onboarding and ingestion", () => {
       "https://www.example.com/clinic/**",
     ]);
     expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
-      "https://example.com/clinic/**/*login*",
+      "https://example.com/clinic/login",
     );
     expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
-      "https://www.example.com/clinic/**/*login*",
+      "https://example.com/clinic/**/login/**",
+    );
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
+      "https://www.example.com/clinic/login",
+    );
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
+      "https://www.example.com/clinic/**/login/**",
+    );
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).not.toContain(
+      "https://example.com/clinic/**/*search*",
     );
   });
 

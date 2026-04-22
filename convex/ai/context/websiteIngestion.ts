@@ -119,10 +119,7 @@ export const getWebsiteIngestionDocumentCounts = internalQuery({
     let pending = 0;
 
     for (const document of documents) {
-      if (
-        document.status === "indexed" ||
-        (document.status === "indexing" && !!document.indexedEntryId)
-      ) {
+      if (document.status === "indexed") {
         indexed += 1;
       } else if (document.status === "error") {
         error += 1;

@@ -231,6 +231,18 @@ function buildEquivalentWebsiteUrls(websiteUrl: string): Array<string> {
   return [canonicalWebsiteUrl, alternateWebsiteUrl];
 }
 
+function buildExactSegmentExcludePatterns(
+  excludeBase: string,
+  pathSegment: string,
+): Array<string> {
+  return [
+    `${excludeBase}/${pathSegment}`,
+    `${excludeBase}/${pathSegment}/**`,
+    `${excludeBase}/**/${pathSegment}`,
+    `${excludeBase}/**/${pathSegment}/**`,
+  ];
+}
+
 export function buildWebsiteCrawlIncludePatterns(websiteUrl: string): Array<string> {
   return Array.from(
     new Set(
@@ -253,17 +265,20 @@ export function buildWebsiteCrawlExcludePatterns(websiteUrl: string): Array<stri
           : candidateWebsiteUrl;
 
         return [
-          `${excludeBase}/**/*account*`,
-          `${excludeBase}/**/*cart*`,
-          `${excludeBase}/**/*checkout*`,
-          `${excludeBase}/**/*legal*`,
-          `${excludeBase}/**/*login*`,
-          `${excludeBase}/**/*privacy*`,
-          `${excludeBase}/**/*search*`,
-          `${excludeBase}/**/*terms*`,
-          `${excludeBase}/**/*wp-admin*`,
+          ...buildExactSegmentExcludePatterns(excludeBase, "account"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "accounts"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "cart"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "checkout"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "feed"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "legal"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "login"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "privacy"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "search"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "sign-in"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "signin"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "terms"),
+          ...buildExactSegmentExcludePatterns(excludeBase, "wp-admin"),
           `${excludeBase}/cdn-cgi/*`,
-          `${excludeBase}/**/feed*`,
         ];
       }),
     ),

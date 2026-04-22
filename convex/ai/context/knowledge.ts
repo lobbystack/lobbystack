@@ -268,14 +268,14 @@ async function indexKnowledgeDocumentById(
       ],
     });
 
-    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
-      documentId,
-      status: result.status === "ready" ? "indexed" : "indexing",
-      indexedEntryId: String(result.entryId),
-      indexVersion: KNOWLEDGE_INDEX_VERSION,
-      processingProgress: result.status === "ready" ? 100 : 96,
-    });
     if (result.status === "ready") {
+      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+        documentId,
+        status: "indexed",
+        indexedEntryId: String(result.entryId),
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+        processingProgress: 100,
+      });
       await enqueuePostHogEventBestEffort(ctx, {
         eventName: "knowledge.document_indexed",
         businessId: document.businessId,
@@ -287,6 +287,24 @@ async function indexKnowledgeDocumentById(
           section: document.section,
         },
       });
+    } else {
+      const latestDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
+        documentId,
+      });
+
+      if (
+        latestDocument &&
+        (latestDocument.status !== "indexed" ||
+          !latestDocument.indexedEntryId ||
+          latestDocument.indexVersion !== KNOWLEDGE_INDEX_VERSION)
+      ) {
+        await ctx.scheduler.runAfter(1_000, internal.ai.context.knowledge.indexKnowledgeDocument, {
+          documentId,
+          ...(options?.skipSnapshotRefresh !== undefined
+            ? { skipSnapshotRefresh: options.skipSnapshotRefresh }
+            : {}),
+        });
+      }
     }
     await enqueuePostHogEventBestEffort(ctx, {
       eventName: "ai.embedding.completed",
@@ -304,7 +322,7 @@ async function indexKnowledgeDocumentById(
         latencyMs: Date.now() - startedAt,
       },
     });
-    if (!options?.skipSnapshotRefresh) {
+    if (result.status === "ready" && !options?.skipSnapshotRefresh) {
       await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
         businessId: document.businessId,
       });
