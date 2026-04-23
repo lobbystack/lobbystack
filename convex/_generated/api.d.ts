@@ -76,6 +76,7 @@ import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
 import type * as lib_twilioUrls from "../lib/twilioUrls.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
 import type * as lib_websiteIngestion from "../lib/websiteIngestion.js";
+import type * as lib_websiteIngestionStorage from "../lib/websiteIngestionStorage.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
 import type * as onboarding_abuse from "../onboarding/abuse.js";
 import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
@@ -167,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   "lib/twilioUrls": typeof lib_twilioUrls;
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
   "lib/websiteIngestion": typeof lib_websiteIngestion;
+  "lib/websiteIngestionStorage": typeof lib_websiteIngestionStorage;
   "notifications/reminders": typeof notifications_reminders;
   "onboarding/abuse": typeof onboarding_abuse;
   "onboarding/phoneNumbers": typeof onboarding_phoneNumbers;

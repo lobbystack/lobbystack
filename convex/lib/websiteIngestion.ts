@@ -8,6 +8,7 @@ export const WEBSITE_CRAWL_PAGE_LIMIT = 40;
 export const WEBSITE_CRAWL_DEPTH = 3;
 export const WEBSITE_CRAWL_HTTP_MODE = "http";
 export const WEBSITE_CRAWL_BROWSER_MODE = "browser";
+export const WEBSITE_CRAWL_PATTERN_LIMIT = 100;
 export const WEBSITE_PUBLIC_URL_ERROR_MESSAGE =
   "Enter a public website URL. Localhost, local network addresses, and direct IP addresses are not supported. Use a tunnel URL for local testing.";
 
@@ -296,32 +297,40 @@ export function buildWebsiteCrawlIncludePatterns(websiteUrl: string): Array<stri
 }
 
 export function buildWebsiteCrawlExcludePatterns(websiteUrl: string): Array<string> {
-  return Array.from(
-    new Set(
-      buildEquivalentWebsiteUrls(websiteUrl).flatMap((candidateWebsiteUrl) => {
-        const excludeBase = candidateWebsiteUrl.endsWith("/")
-          ? candidateWebsiteUrl.slice(0, -1)
-          : candidateWebsiteUrl;
+  const patterns = new Set<string>();
 
-        return [
-          ...buildExactSegmentExcludePatterns(excludeBase, "account"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "accounts"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "cart"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "checkout"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "feed"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "legal"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "login"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "privacy"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "search"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "sign-in"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "signin"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "terms"),
-          ...buildExactSegmentExcludePatterns(excludeBase, "wp-admin"),
-          `${excludeBase}/cdn-cgi/*`,
-        ];
-      }),
-    ),
-  );
+  for (const candidateWebsiteUrl of buildEquivalentWebsiteUrls(websiteUrl)) {
+    const excludeBase = candidateWebsiteUrl.endsWith("/")
+      ? candidateWebsiteUrl.slice(0, -1)
+      : candidateWebsiteUrl;
+
+    const candidatePatterns = [
+      ...buildExactSegmentExcludePatterns(excludeBase, "account"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "accounts"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "cart"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "checkout"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "feed"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "legal"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "login"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "privacy"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "search"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "sign-in"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "signin"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "terms"),
+      ...buildExactSegmentExcludePatterns(excludeBase, "wp-admin"),
+      `${excludeBase}/cdn-cgi/*`,
+    ];
+
+    if (patterns.size + candidatePatterns.length > WEBSITE_CRAWL_PATTERN_LIMIT) {
+      break;
+    }
+
+    for (const pattern of candidatePatterns) {
+      patterns.add(pattern);
+    }
+  }
+
+  return Array.from(patterns);
 }
 
 export function countUtf8Bytes(value: string): number {

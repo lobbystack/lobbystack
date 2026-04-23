@@ -11,6 +11,7 @@ import {
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
   normalizeWebsiteUrl,
+  WEBSITE_CRAWL_PATTERN_LIMIT,
   WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../lib/websiteIngestion";
 import schema from "../schema";
@@ -23,6 +24,7 @@ const {
   enqueueActionBatchMock,
   failingStorageDeleteIdsRef,
   ragDeleteMock,
+  workflowCancelMock,
   workflowStartMock,
 } =
   vi.hoisted(() => ({
@@ -32,7 +34,8 @@ const {
     enqueueActionBatchMock: vi.fn(async () => null),
     failingStorageDeleteIdsRef: { value: new Set<string>() },
     ragDeleteMock: vi.fn(async () => null),
-    workflowStartMock: vi.fn(async () => null),
+    workflowCancelMock: vi.fn(async () => null),
+    workflowStartMock: vi.fn(async () => "workflow-test-id"),
   }));
 
 vi.mock("node:dns/promises", () => ({
@@ -60,6 +63,7 @@ vi.mock("../lib/components", async () => {
     },
     workflowManager: {
       ...actual.workflowManager,
+      cancel: workflowCancelMock,
       start: workflowStartMock,
     },
     rag: {
@@ -166,10 +170,12 @@ describe("website onboarding and ingestion", () => {
     deleteWebsiteIngestionStorageBlobMock.mockClear();
     dnsLookupMock.mockReset();
     dnsLookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
+    workflowCancelMock.mockReset();
     workflowStartMock.mockReset();
     enqueueActionBatchMock.mockReset();
     ragDeleteMock.mockReset();
-    workflowStartMock.mockResolvedValue(null);
+    workflowCancelMock.mockResolvedValue(null);
+    workflowStartMock.mockResolvedValue("workflow-test-id");
     enqueueActionBatchMock.mockResolvedValue(null);
     ragDeleteMock.mockResolvedValue(null);
 
@@ -259,6 +265,129 @@ describe("website onboarding and ingestion", () => {
       indexedCount: 0,
       errorCount: 0,
     });
+  });
+
+  it("starts a website ingestion job from the knowledge dashboard without changing onboarding", async () => {
+    const t = createConvexHarness();
+    const subject = "website-dashboard-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(api.ai.context.websiteIngestion.submitWebsiteIngestion, {
+      businessId,
+      websiteUrl: "example.com/faq/?utm_source=test#top",
+    });
+
+    expect(result.websiteUrl).toBe("https://example.com/faq");
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+    expect(workflowStartMock).toHaveBeenCalledWith(
+      expect.anything(),
+      internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+      {
+        websiteIngestionJobId: result.websiteIngestionJobId,
+      },
+    );
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBe("https://example.com/faq");
+    expect(business?.onboardingStage).toBe("phone_number");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({
+      businessId,
+      websiteUrl: "https://example.com/faq",
+      provider: "cloudflare_browser_run",
+      status: "queued",
+      crawlMode: "http",
+      fallbackTriggered: false,
+      pageLimit: 40,
+      depth: 3,
+      importedCount: 0,
+      indexedCount: 0,
+      errorCount: 0,
+    });
+  });
+
+  it("allows deleting a failed website ingestion job with no imported documents", async () => {
+    const t = createConvexHarness();
+    const subject = "website-delete-failed-job-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "failed",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        lastError: "Cloudflare request failed",
+      });
+    });
+
+    await authed.mutation(api.ai.context.websiteIngestion.deleteWebsiteIngestionJob, {
+      businessId,
+      websiteIngestionJobId,
+    });
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(0);
+  });
+
+  it("allows canceling an active website ingestion job with no imported documents", async () => {
+    const t = createConvexHarness();
+    const subject = "website-cancel-active-job-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        workflowId: "workflow-123",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    await authed.mutation(api.ai.context.websiteIngestion.cancelWebsiteIngestionJob, {
+      businessId,
+      websiteIngestionJobId,
+    });
+
+    expect(workflowCancelMock).toHaveBeenCalledWith(expect.anything(), "workflow-123");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.status).toBe("canceled");
   });
 
   it("does not advance onboarding when website preflight fails", async () => {
@@ -462,12 +591,13 @@ describe("website onboarding and ingestion", () => {
         "https://example.com/clinic/**/search",
         "https://example.com/clinic/**/search/**",
         "https://example.com/clinic/cdn-cgi/*",
-        "https://www.example.com/clinic/login",
-        "https://www.example.com/clinic/login/**",
-        "https://www.example.com/clinic/**/login",
-        "https://www.example.com/clinic/**/login/**",
-        "https://www.example.com/clinic/cdn-cgi/*",
       ]),
+    );
+    expect(body.options?.excludePatterns).not.toContain(
+      "https://www.example.com/clinic/login",
+    );
+    expect(body.options?.excludePatterns?.length).toBeLessThanOrEqual(
+      WEBSITE_CRAWL_PATTERN_LIMIT,
     );
     expect(body.options?.excludePatterns).not.toContain(
       "https://example.com/clinic/**/*search*",
@@ -611,11 +741,391 @@ describe("website onboarding and ingestion", () => {
         },
       );
 
-      expect(result).toEqual({ status: "running" });
+      expect(result).toEqual({
+        status: "running",
+        finished: 0,
+        total: null,
+        skipped: 0,
+      });
       expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
       setTimeoutSpy.mockRestore();
     }
+  });
+
+  it("treats fully processed crawl jobs as completed and records progress", async () => {
+    const t = createConvexHarness();
+    const subject = "website-crawl-progress-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const startedAt = new Date(Date.now() - 5 * 60 * 1_000).toISOString();
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-status-complete-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt,
+      });
+    });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "running",
+          finished: 31,
+          skipped: 3,
+          total: 34,
+          records: [],
+        },
+      }),
+    } as Response);
+
+    const beforeStatusCheck = Date.now();
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-status-complete-1",
+      },
+    );
+
+    expect(result).toEqual({
+      status: "completed",
+      finished: 34,
+      total: 34,
+      skipped: 3,
+    });
+
+    const job = await t.query(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId,
+    });
+    expect(job).toMatchObject({
+      crawlFinishedCount: 34,
+      crawlTotalCount: 34,
+    });
+    expect(Date.parse(String(job?.lastProgressAt))).toBeGreaterThanOrEqual(beforeStatusCheck - 1_000);
+  });
+
+  it("allows import when Cloudflare still reports running but all pages are already processed", async () => {
+    const t = createConvexHarness();
+    const subject = "website-import-after-processed-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-import-processed-1",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+      });
+    });
+
+    const aboutMarkdown = "# About\n" + "current ".repeat(900);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "running",
+          finished: 34,
+          skipped: 23,
+          total: 34,
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: aboutMarkdown,
+              metadata: {
+                status: 200,
+                title: "About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-import-processed-1",
+        crawlMode: "http",
+        commitChanges: false,
+      },
+    );
+
+    expect(result).toEqual({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+  });
+
+  it("requests terminal crawl results without a limit parameter", async () => {
+    const t = createConvexHarness();
+    const subject = "website-import-full-results-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-import-full-results-1",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+      });
+    });
+
+    const aboutMarkdown = "# About\n" + "current ".repeat(900);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          finished: 1,
+          skipped: 0,
+          total: 1,
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: aboutMarkdown,
+              metadata: {
+                status: 200,
+                title: "About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-import-full-results-1",
+        crawlMode: "http",
+        commitChanges: false,
+      },
+    );
+
+    expect(result).toEqual({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+    expect(String(fetchMock.mock.calls[0]?.[0] ?? "")).not.toContain("limit=");
+  });
+
+  it("reconciles a completed crawl into indexing when the provider finished first", async () => {
+    const t = createConvexHarness();
+    const subject = "website-reconcile-completed-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-reconcile-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+        lastProgressAt: new Date().toISOString(),
+      });
+    });
+
+    const aboutMarkdown = "# About\n" + "current ".repeat(900);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            finished: 1,
+            total: 1,
+            skipped: 0,
+            records: [],
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            total: 1,
+            finished: 1,
+            skipped: 0,
+            records: [
+              {
+                url: "https://example.com/about",
+                status: "completed",
+                markdown: aboutMarkdown,
+                metadata: {
+                  status: 200,
+                  title: "About",
+                },
+              },
+            ],
+          },
+        }),
+      } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.reconcileWebsiteIngestionJob,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    expect(result).toEqual({ status: "indexing" });
+    expect(enqueueActionBatchMock).toHaveBeenCalledTimes(1);
+
+    const job = await t.query(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId,
+    });
+    expect(job).toMatchObject({
+      status: "indexing",
+      importedCount: 1,
+      crawlFinishedCount: 1,
+      crawlTotalCount: 1,
+    });
+
+    const websiteDocument = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://example.com/about",
+      },
+    );
+    expect(websiteDocument?.status).toBe("queued");
+  });
+
+  it("fails a crawl that stops making progress for too long", async () => {
+    const t = createConvexHarness();
+    const subject = "website-stalled-crawl-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const staleProgressAt = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-stalled-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: staleProgressAt,
+        lastProgressAt: staleProgressAt,
+        crawlFinishedCount: 1,
+        crawlTotalCount: 40,
+      });
+    });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "running",
+          finished: 1,
+          total: 40,
+          skipped: 0,
+          records: [
+            {
+              url: "https://example.com",
+              status: "completed",
+              markdown: "# Home",
+              metadata: {
+                status: 200,
+                title: "Home",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.reconcileWebsiteIngestionJob,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    expect(result).toEqual({ status: "failed" });
+
+    const job = await t.query(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId,
+    });
+    expect(job?.status).toBe("failed");
+    expect(job?.lastError).toBe("Website crawl ended with status stalled.");
   });
 
   it("treats submitted indexing records as complete for workflow polling", async () => {
@@ -708,15 +1218,13 @@ describe("website onboarding and ingestion", () => {
     expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
       "https://example.com/clinic/**/login/**",
     );
-    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).not.toContain(
       "https://www.example.com/clinic/login",
-    );
-    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toContain(
-      "https://www.example.com/clinic/**/login/**",
     );
     expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).not.toContain(
       "https://example.com/clinic/**/*search*",
     );
+    expect(buildWebsiteCrawlExcludePatterns("https://example.com/clinic/")).toHaveLength(53);
   });
 
   it("treats apex and www redirects as the same website during page import", () => {

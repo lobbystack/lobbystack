@@ -74,7 +74,7 @@ export function AddKnowledgeSheet({
       : t(`agent:sections.${section}.addKnowledgeDescription`);
   const submitLabel = mode === "edit" ? t("agent:actions.saveChanges") : t("agent:actions.save");
   const trigger = useMemo(() => {
-    if (mode !== "create") {
+    if (mode !== "create" || isControlled) {
       return null;
     }
 
@@ -84,7 +84,7 @@ export function AddKnowledgeSheet({
         {t(`agent:sections.${section}.addKnowledge`)}
       </Button>
     );
-  }, [mode, section, t]);
+  }, [isControlled, mode, section, t]);
 
   useEffect(() => {
     if (!isDialogOpen) {

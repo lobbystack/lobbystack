@@ -1,5 +1,6 @@
-import { useAction, useConvex } from "convex/react";
+import { useAction, useConvex, useMutation } from "convex/react";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -8,15 +9,24 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { FileText, Globe, MoreHorizontal, Search, Text, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import type { KnowledgeSection } from "../../../../../convex/lib/knowledgeSections";
 import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
+import type { AgentLayoutOutletContext } from "./AgentLayout";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
+import {
+  DATA_TABLE_ROW_ACCESSORY_CELL_CLASS,
+  DATA_TABLE_ROW_ACCESSORY_COLGROUP_CLASS,
+  DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
+  DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS,
+  DataTableRowAccessory,
+  DataTableRowActions,
+} from "@/components/data-table/row-controls";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +39,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -57,9 +68,18 @@ type KnowledgeSnippetRow = Doc<"knowledge_snippets"> & {
   entryType: "snippet";
 };
 
-type KnowledgeRow = KnowledgeDocumentRow | KnowledgeSnippetRow;
+type WebsiteIngestionJobRow = Doc<"website_ingestion_jobs"> & {
+  entryType: "websiteIngestionJob";
+  documentCount: number;
+  indexedDocumentCount: number;
+  errorDocumentCount: number;
+  pendingDocumentCount: number;
+};
+
+type KnowledgeRow = KnowledgeDocumentRow | KnowledgeSnippetRow | WebsiteIngestionJobRow;
 
 type RowActionsMenuProps = {
+  actionLabel?: string;
   deleting: boolean;
   disabled?: boolean;
   onDelete: () => void;
@@ -71,6 +91,26 @@ const MAX_PERSISTED_VIEWER_TEXT_BYTES = 512 * 1024;
 
 function isDocumentRow(row: KnowledgeRow): row is KnowledgeDocumentRow {
   return row.entryType === "document";
+}
+
+function isWebsiteIngestionJobRow(row: KnowledgeRow): row is WebsiteIngestionJobRow {
+  return row.entryType === "websiteIngestionJob";
+}
+
+function isSnippetRow(row: KnowledgeRow): row is KnowledgeSnippetRow {
+  return row.entryType === "snippet";
+}
+
+function isWebsiteDocument(document: KnowledgeDocumentRow): boolean {
+  return document.sourceType === "website";
+}
+
+function isKnowledgeDocumentActive(document: KnowledgeDocumentRow): boolean {
+  return document.active !== false;
+}
+
+function isKnowledgeEntryActive(row: KnowledgeDocumentRow | KnowledgeSnippetRow): boolean {
+  return isDocumentRow(row) ? isKnowledgeDocumentActive(row) : row.active;
 }
 
 function summarizeText(text: string, maxLength = 180): string {
@@ -155,6 +195,7 @@ function writeCachedViewerText(document: Doc<"knowledge_documents">, text: strin
 }
 
 function RowActionsMenu({
+  actionLabel,
   deleting,
   disabled = false,
   onDelete,
@@ -205,7 +246,7 @@ function RowActionsMenu({
           variant="destructive"
         >
           <Trash2 />
-          <span>{t("actions.delete")}</span>
+          <span>{actionLabel ?? t("actions.delete")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -214,15 +255,28 @@ function RowActionsMenu({
 
 export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePageProps) {
   const { i18n, t } = useTranslation(["agent", "knowledge"]);
+  const outletContext = useOutletContext<AgentLayoutOutletContext | null>();
+  const headerActions = outletContext?.headerActions;
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const convex = useConvex();
   const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
+  const setKnowledgeEntryActive = useAction(api.ai.context.knowledge.setKnowledgeEntryActive);
+  const deleteWebsiteIngestionJob = useMutation(
+    api.ai.context.websiteIngestion.deleteWebsiteIngestionJob,
+  );
+  const cancelWebsiteIngestionJob = useMutation(
+    api.ai.context.websiteIngestion.cancelWebsiteIngestionJob,
+  );
   const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(
     api.ai.context.knowledge.listKnowledge,
     {
       businessId,
       section,
     },
+  );
+  const { data: websiteIngestionJobs } = useRememberedConvexQuery(
+    api.ai.context.websiteIngestion.listWebsiteIngestionJobs,
+    section === "knowledge" ? { businessId } : "skip",
   );
   const [searchValue, setSearchValue] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({
@@ -238,6 +292,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const [viewerCacheKeyByDocumentId, setViewerCacheKeyByDocumentId] = useState<Record<string, string>>({});
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
+  const [togglingEntryIds, setTogglingEntryIds] = useState<string[]>([]);
   const documents = useMemo(
     () =>
       ((knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>).map((document) => ({
@@ -254,9 +309,34 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       })),
     [knowledge?.snippets],
   );
+  const pendingWebsiteIngestionRows = useMemo(
+    () =>
+      ((websiteIngestionJobs ?? []) as Array<
+        Doc<"website_ingestion_jobs"> & {
+          documentCount: number;
+          indexedDocumentCount: number;
+          errorDocumentCount: number;
+          pendingDocumentCount: number;
+        }
+      >)
+        .filter(
+          (job) =>
+            job.documentCount === 0 &&
+            job.status !== "completed" &&
+            job.status !== "canceled",
+        )
+        .map((job) => ({
+          ...job,
+          entryType: "websiteIngestionJob" as const,
+        })),
+    [websiteIngestionJobs],
+  );
   const rows = useMemo(
-    () => [...documents, ...snippets].sort((left, right) => right._creationTime - left._creationTime),
-    [documents, snippets],
+    () =>
+      [...pendingWebsiteIngestionRows, ...documents, ...snippets].sort(
+        (left, right) => right._creationTime - left._creationTime,
+      ),
+    [documents, pendingWebsiteIngestionRows, snippets],
   );
   const visibleRows = useMemo(
     () => rows.filter((row) => !optimisticDeletedIds.includes(String(row._id))),
@@ -285,50 +365,129 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }));
   }
 
-  function getDocumentStatusLabel(status: Doc<"knowledge_documents">["status"]): string {
-    switch (status) {
-      case "queued":
-        return t(`agent:sections.${section}.status.queued`);
-      case "indexing":
-        return t(`agent:sections.${section}.status.indexing`);
-      case "indexed":
-        return t(`agent:sections.${section}.status.indexed`);
-      case "error":
-        return t(`agent:sections.${section}.status.error`);
-      default:
-        return status;
+  function buildWebsiteIngestionRowTitle(job: WebsiteIngestionJobRow): string {
+    try {
+      const parsed = new URL(job.websiteUrl);
+      const hostname = parsed.hostname.replace(/^www\./u, "");
+      const pathname =
+        parsed.pathname && parsed.pathname !== "/"
+          ? parsed.pathname.replace(/\/+$/u, "")
+          : "";
+      return `${hostname}${pathname}`;
+    } catch {
+      return job.websiteUrl;
     }
   }
 
-  function renderDocumentStatus(document: Doc<"knowledge_documents">) {
-    if (document.status === "queued" || document.status === "indexing") {
-      const progressValue = Math.max(
-        0,
-        Math.min(100, Math.round(document.processingProgress ?? (document.status === "indexing" ? 92 : 0))),
-      );
-      const label =
-        document.status === "queued"
-          ? t(`agent:sections.${section}.status.analyzing`)
-          : getDocumentStatusLabel(document.status);
+  function getWebsiteIngestionJobProgressValue(job: WebsiteIngestionJobRow): number {
+    switch (job.status) {
+      case "queued":
+        return 8;
+      case "crawling": {
+        const finishedCount =
+          typeof job.crawlFinishedCount === "number" ? job.crawlFinishedCount : null;
+        const totalCount =
+          typeof job.crawlTotalCount === "number" ? job.crawlTotalCount : null;
 
-      return (
-        <span className="inline-flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
-          <span>{label}</span>
-          <Progress className="w-24" value={progressValue} />
-          <span className="min-w-10 text-right text-xs tabular-nums">
+        if (finishedCount !== null && totalCount !== null && totalCount > 0) {
+          return Math.max(8, Math.min(99, Math.round((finishedCount / totalCount) * 100)));
+        }
+
+        return 12;
+      }
+      case "indexing":
+        return 72;
+      case "failed":
+        return 100;
+      default:
+        return 12;
+    }
+  }
+
+  function getWebsiteIngestionJobPreviewSummary(job: WebsiteIngestionJobRow): string {
+    if (job.status === "failed") {
+      return t("agent:sections.knowledge.websiteImport.previewFailed");
+    }
+
+    return t("agent:sections.knowledge.websiteImport.previewPending");
+  }
+
+  function isDocumentProcessing(document: KnowledgeDocumentRow): boolean {
+    return document.status === "queued" || document.status === "indexing";
+  }
+
+  function getDocumentProgressValue(document: KnowledgeDocumentRow): number {
+    return Math.max(
+      0,
+      Math.min(100, Math.round(document.processingProgress ?? (document.status === "indexing" ? 92 : 0))),
+    );
+  }
+
+  function renderWebsiteIngestionJobMarker() {
+    return (
+      <span
+        aria-label={t("agent:sections.knowledge.websiteImport.badge")}
+        className="inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground"
+        title={t("agent:sections.knowledge.websiteImport.badge")}
+      >
+        <Globe className="size-4" />
+      </span>
+    );
+  }
+
+  function renderDocumentMarker() {
+    return (
+      <span
+        aria-label={t(`agent:sections.${section}.documentBadge`)}
+        className="inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground"
+        title={t(`agent:sections.${section}.documentBadge`)}
+      >
+        <FileText className="size-4" />
+      </span>
+    );
+  }
+
+  function renderSnippetMarker() {
+    return (
+      <span
+        aria-label={t(`agent:sections.${section}.textBadge`)}
+        className="inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground"
+        title={t(`agent:sections.${section}.textBadge`)}
+      >
+        <Text className="size-4" />
+      </span>
+    );
+  }
+
+  function renderInProgressPreview(progressValue: number) {
+    return (
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Progress className="w-full [&_[data-slot=progress-track]]:h-1.5" value={progressValue} />
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {progressValue}%
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderWebsiteIngestionJobPreview(job: WebsiteIngestionJobRow) {
+    const summary = getWebsiteIngestionJobPreviewSummary(job);
+
+    if (job.status === "failed") {
+      return (
+        <span
+          className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-destructive/80"
+          title={summary}
+        >
+          {summarizeTablePreview(summary)}
         </span>
       );
     }
 
-    return (
-      <Badge
-        variant={document.status === "error" ? "destructive" : document.status === "indexed" ? "secondary" : "outline"}
-      >
-        {getDocumentStatusLabel(document.status)}
-      </Badge>
-    );
+    const progressValue = getWebsiteIngestionJobProgressValue(job);
+    return renderInProgressPreview(progressValue);
   }
 
   function getDocumentPreviewSummary(document: KnowledgeDocumentRow): string {
@@ -358,8 +517,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     return visibleRows.filter((row) => {
       const preview = isDocumentRow(row)
         ? summarizeTablePreview(getDocumentPreviewSummary(row))
-        : summarizeTablePreview(row.content);
-      const haystack = [row.title, preview, row.tags.join(" ")]
+        : isWebsiteIngestionJobRow(row)
+          ? summarizeTablePreview(getWebsiteIngestionJobPreviewSummary(row))
+          : summarizeTablePreview(row.content);
+      const haystack = [
+        isWebsiteIngestionJobRow(row) ? buildWebsiteIngestionRowTitle(row) : row.title,
+        preview,
+        isWebsiteIngestionJobRow(row) ? "" : row.tags.join(" "),
+        isWebsiteIngestionJobRow(row) ? row.websiteUrl : "",
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -371,22 +537,33 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const columns = useMemo<Array<ColumnDef<KnowledgeRow>>>(
     () => [
       {
-        accessorFn: (row) => row.title,
+        accessorFn: (row) =>
+          isWebsiteIngestionJobRow(row) ? buildWebsiteIngestionRowTitle(row) : row.title,
         id: "title",
         header: () => t("agent:table.title"),
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
+            {isDocumentRow(row.original) ? (
+              isWebsiteDocument(row.original) ? renderWebsiteIngestionJobMarker() : renderDocumentMarker()
+            ) : isWebsiteIngestionJobRow(row.original) ? (
+              renderWebsiteIngestionJobMarker()
+            ) : isSnippetRow(row.original) ? (
+              renderSnippetMarker()
+            ) : null}
             <span
               className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
-              title={row.original.title}
+              title={
+                isWebsiteIngestionJobRow(row.original)
+                  ? buildWebsiteIngestionRowTitle(row.original)
+                  : row.original.title
+              }
             >
-              {summarizeTableTitle(row.original.title)}
+              {summarizeTableTitle(
+                isWebsiteIngestionJobRow(row.original)
+                  ? buildWebsiteIngestionRowTitle(row.original)
+                  : row.original.title,
+              )}
             </span>
-            {isDocumentRow(row.original) ? (
-              <Badge className="shrink-0" variant="outline">
-                {t(`agent:sections.${section}.documentBadge`)}
-              </Badge>
-            ) : null}
           </div>
         ),
       },
@@ -394,27 +571,40 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         accessorFn: (row) =>
           isDocumentRow(row)
             ? summarizeTablePreview(getDocumentPreviewSummary(row))
-            : summarizeTablePreview(row.content),
+            : isWebsiteIngestionJobRow(row)
+              ? summarizeTablePreview(getWebsiteIngestionJobPreviewSummary(row))
+              : summarizeTablePreview(row.content),
         id: "preview",
         header: () => t("agent:table.preview"),
-        cell: ({ row }) => (
-          <span
-            className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
-            title={isDocumentRow(row.original)
-              ? getDocumentPreviewSummary(row.original)
-              : row.original.content}
-          >
-            {isDocumentRow(row.original)
-              ? summarizeTablePreview(getDocumentPreviewSummary(row.original))
-              : summarizeTablePreview(row.original.content)}
-          </span>
-        ),
+        cell: ({ row }) =>
+          isWebsiteIngestionJobRow(row.original) ? (
+            renderWebsiteIngestionJobPreview(row.original)
+          ) : (
+            isDocumentRow(row.original) && isDocumentProcessing(row.original) ? (
+              renderInProgressPreview(getDocumentProgressValue(row.original))
+            ) : (
+              <span
+                className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
+                title={isDocumentRow(row.original)
+                  ? getDocumentPreviewSummary(row.original)
+                  : row.original.content}
+              >
+                {isDocumentRow(row.original)
+                  ? summarizeTablePreview(getDocumentPreviewSummary(row.original))
+                  : summarizeTablePreview(row.original.content)}
+              </span>
+            )
+          ),
       },
       {
-        accessorFn: (row) => row.tags.join(" "),
+        accessorFn: (row) => (isWebsiteIngestionJobRow(row) ? "" : row.tags.join(" ")),
         id: "tags",
         header: () => t("agent:table.tags"),
         cell: ({ row }) => {
+          if (isWebsiteIngestionJobRow(row.original)) {
+            return <span className="text-sm text-muted-foreground">-</span>;
+          }
+
           const [firstTag, ...remainingTags] = row.original.tags;
           if (!firstTag) {
             return <span className="text-sm text-muted-foreground">-</span>;
@@ -427,18 +617,6 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             </div>
           );
         },
-      },
-      {
-        accessorFn: (row) =>
-          isDocumentRow(row) ? getDocumentStatusLabel(row.status) : t(`agent:sections.${section}.status.indexed`),
-        id: "status",
-        header: () => t("agent:table.status"),
-        cell: ({ row }) =>
-          isDocumentRow(row.original) ? (
-            renderDocumentStatus(row.original)
-          ) : (
-            <Badge variant="secondary">{t(`agent:sections.${section}.status.indexed`)}</Badge>
-          ),
       },
       {
         accessorFn: (row) =>
@@ -458,24 +636,86 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ),
       },
       {
+        accessorFn: (row) =>
+          isWebsiteIngestionJobRow(row)
+            ? ""
+            : isDocumentRow(row)
+              ? isKnowledgeDocumentActive(row)
+              : row.active,
+        id: "active",
+        header: () => null,
+        cell: ({ row }) => {
+          const toggleableRow =
+            isDocumentRow(row.original) || isSnippetRow(row.original) ? row.original : null;
+
+          if (!toggleableRow) {
+            return (
+              <DataTableRowAccessory>
+                <span className="block w-6 text-center text-sm text-muted-foreground">-</span>
+              </DataTableRowAccessory>
+            );
+          }
+
+          const checked = isKnowledgeEntryActive(toggleableRow);
+          const rowId = String(toggleableRow._id);
+          const disabled = togglingEntryIds.includes(rowId);
+
+          return (
+            <DataTableRowAccessory>
+              <div
+                className="flex justify-end"
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <Switch
+                  aria-label={checked ? t("agent:actions.deactivateEntry") : t("agent:actions.activateEntry")}
+                  checked={checked}
+                  disabled={disabled}
+                  onCheckedChange={(nextChecked) => {
+                    void handleSetEntryActive(toggleableRow, nextChecked);
+                  }}
+                  size="sm"
+                  title={checked ? t("agent:actions.deactivateEntry") : t("agent:actions.activateEntry")}
+                />
+              </div>
+            </DataTableRowAccessory>
+          );
+        },
+        meta: {
+          className: DATA_TABLE_ROW_ACCESSORY_CELL_CLASS,
+        },
+      },
+      {
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex w-16 justify-end pr-1">
-            <RowActionsMenu
-              deleting={deletingEntryId === String(row.original._id)}
-              onDelete={() => {
-                setDeleteCandidate(row.original);
-              }}
-            />
-          </div>
+          <DataTableRowActions>
+            {!isWebsiteIngestionJobRow(row.original) || row.original.status !== "completed" ? (
+              <RowActionsMenu
+                deleting={deletingEntryId === String(row.original._id)}
+                {...(isWebsiteIngestionJobRow(row.original) && row.original.status !== "failed"
+                  ? { actionLabel: t("agent:actions.cancelImport") }
+                  : {})}
+                onDelete={() => {
+                  setDeleteCandidate(row.original);
+                }}
+              />
+            ) : null}
+          </DataTableRowActions>
         ),
         meta: {
-          className: "w-16 text-right",
+          className: DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
         },
       },
     ],
-    [deletingEntryId, locale, section, t],
+    [deletingEntryId, locale, section, t, togglingEntryIds],
   );
 
   const table = useReactTable({
@@ -555,10 +795,20 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           businessId,
           documentId: row._id,
         });
-      } else {
+      } else if (isSnippetRow(row)) {
         await deleteKnowledgeEntry({
           businessId,
           snippetId: row._id,
+        });
+      } else if (row.status !== "failed") {
+        await cancelWebsiteIngestionJob({
+          businessId,
+          websiteIngestionJobId: row._id,
+        });
+      } else if (row.status === "failed") {
+        await deleteWebsiteIngestionJob({
+          businessId,
+          websiteIngestionJobId: row._id,
         });
       }
     } catch (error) {
@@ -568,6 +818,43 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       setDeletingEntryId(null);
     }
   }
+
+  async function handleSetEntryActive(
+    row: KnowledgeDocumentRow | KnowledgeSnippetRow,
+    nextActive: boolean,
+  ): Promise<void> {
+    const entryId = String(row._id);
+    setTogglingEntryIds((current) => [...current, entryId]);
+
+    try {
+      if (isDocumentRow(row)) {
+        await setKnowledgeEntryActive({
+          businessId,
+          documentId: row._id,
+          active: nextActive,
+        });
+      } else {
+        await setKnowledgeEntryActive({
+          businessId,
+          snippetId: row._id,
+          active: nextActive,
+        });
+      }
+    } catch (error) {
+      captureAnalyticsException(error, {
+        source: "agent-knowledge-toggle-active",
+        entryId,
+        section,
+      });
+    } finally {
+      setTogglingEntryIds((current) => current.filter((candidateId) => candidateId !== entryId));
+    }
+  }
+
+  const isCancelingWebsiteImport =
+    deleteCandidate !== null &&
+    isWebsiteIngestionJobRow(deleteCandidate) &&
+    deleteCandidate.status !== "failed";
 
   async function loadFullDocumentText(document: KnowledgeDocumentRow): Promise<void> {
     const documentId = String(document._id);
@@ -683,14 +970,19 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          className="pl-10"
-          onChange={(event) => setSearchValue(event.target.value)}
-          placeholder={t("agent:table.searchPlaceholder")}
-          value={searchValue}
-        />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative max-w-sm flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-10"
+            onChange={(event) => setSearchValue(event.target.value)}
+            placeholder={t("agent:table.searchPlaceholder")}
+            value={searchValue}
+          />
+        </div>
+        {headerActions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">{headerActions}</div>
+        ) : null}
       </div>
 
       {isLoadingKnowledge ? (
@@ -701,11 +993,11 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             <Table className="min-w-[60rem] w-full table-fixed">
               <colgroup>
                 <col className="w-[18%]" />
-                <col className="w-[34%]" />
+                <col className="w-[38%]" />
                 <col className="w-[10%]" />
-                <col className="w-[12%]" />
                 <col className="w-[18%]" />
-                <col className="w-[8%]" />
+                <col className={DATA_TABLE_ROW_ACCESSORY_COLGROUP_CLASS} />
+                <col className={DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS} />
               </colgroup>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -746,12 +1038,22 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   return (
                     <Fragment key={row.id}>
                       <TableRow
-                        className={cn(rowIsInteractive ? "h-12 cursor-pointer data-[state=selected]:bg-muted/40" : "h-12 data-[state=selected]:bg-muted/40")}
+                        className={cn(
+                          rowIsInteractive
+                            ? "h-12 cursor-pointer data-[state=selected]:bg-muted/40"
+                            : (isWebsiteIngestionJobRow(rowData) && rowData.status !== "failed") ||
+                                (isDocumentRow(rowData) && isDocumentProcessing(rowData))
+                              ? "h-16 data-[state=selected]:bg-muted/40"
+                              : "h-12 data-[state=selected]:bg-muted/40",
+                        )}
                         data-state={isSelected ? "selected" : undefined}
                         onClick={() => {
                           if (rowData.entryType === "snippet") {
                             setExpandedDocumentId(null);
                             setEditingSnippet(rowData);
+                            return;
+                          }
+                          if (rowData.entryType !== "document") {
                             return;
                           }
 
@@ -772,12 +1074,12 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                                 : cell.column.id === "added"
                                   ? "w-0 max-w-0 text-right whitespace-nowrap"
                                   : cell.column.id === "actions"
-                                ? "text-right"
-                                : cell.column.columnDef.meta &&
-                                    typeof cell.column.columnDef.meta === "object" &&
-                                    "className" in cell.column.columnDef.meta
-                                  ? String(cell.column.columnDef.meta.className)
-                                  : undefined;
+                                    ? DATA_TABLE_ROW_ACTIONS_CELL_CLASS
+                                    : cell.column.columnDef.meta &&
+                                        typeof cell.column.columnDef.meta === "object" &&
+                                        "className" in cell.column.columnDef.meta
+                                      ? String(cell.column.columnDef.meta.className)
+                                      : undefined;
 
                           return (
                             <TableCell className={className} key={cell.id}>
@@ -820,8 +1122,16 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           />
           <ConfirmDeleteDialog
             cancelLabel={t("agent:actions.deleteCancel")}
-            confirmLabel={t("agent:actions.delete")}
-            description={t("agent:actions.deleteDescription")}
+            confirmLabel={
+              isCancelingWebsiteImport
+                ? t("agent:actions.cancelImport")
+                : t("agent:actions.delete")
+            }
+            description={
+              isCancelingWebsiteImport
+                ? t("agent:actions.cancelImportDescription")
+                : t("agent:actions.deleteDescription")
+            }
             onConfirm={async () => {
               if (!deleteCandidate) {
                 return;
@@ -839,7 +1149,11 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
               deleteCandidate !== null &&
               deletingEntryId === String(deleteCandidate._id)
             }
-            title={t("agent:actions.deleteTitle")}
+            title={
+              isCancelingWebsiteImport
+                ? t("agent:actions.cancelImportTitle")
+                : t("agent:actions.deleteTitle")
+            }
           />
         </>
       )}

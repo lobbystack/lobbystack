@@ -49,9 +49,12 @@ type CloudflareCrawlRecord = {
 };
 
 type CloudflareCrawlResult = {
+  id?: string;
   status?: string;
+  finished?: number;
+  skipped?: number;
   records?: Array<CloudflareCrawlRecord>;
-  cursor?: string;
+  cursor?: string | number;
   total?: number;
 };
 
@@ -75,6 +78,8 @@ type WebsiteDocumentCountSummary = {
 
 const CLOUDFLARE_CRAWL_MAX_ATTEMPTS = 5;
 const CLOUDFLARE_CRAWL_RETRY_DELAY_MS = 1_000;
+const WEBSITE_CRAWL_STALL_WINDOW_MS = 30 * 60 * 1_000;
+const WEBSITE_CRAWL_HARD_TIMEOUT_MS = 2 * 60 * 60 * 1_000;
 
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -100,7 +105,7 @@ function requireCloudflareCredentials(): {
 function getCloudflareCrawlEndpoint(input: {
   accountId: string;
   cloudflareJobId?: string;
-  cursor?: string;
+  cursor?: string | number;
   limit?: number;
   status?: string;
   cacheTTL?: number;
@@ -109,7 +114,7 @@ function getCloudflareCrawlEndpoint(input: {
   const url = new URL(input.cloudflareJobId ? `${baseUrl}/${input.cloudflareJobId}` : baseUrl);
 
   if (input.cursor !== undefined) {
-    url.searchParams.set("cursor", input.cursor);
+    url.searchParams.set("cursor", String(input.cursor));
   }
   if (input.limit !== undefined) {
     url.searchParams.set("limit", String(input.limit));
@@ -283,6 +288,28 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function parseIsoTimestamp(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getCloudflareProcessedPageCount(input: {
+  finished?: number | undefined;
+  skipped?: number | undefined;
+  total?: number | null;
+}): number {
+  const rawProcessedCount = Math.max(0, (input.finished ?? 0) + (input.skipped ?? 0));
+  if (typeof input.total === "number" && input.total > 0) {
+    return Math.min(input.total, rawProcessedCount);
+  }
+
+  return rawProcessedCount;
+}
+
 function buildWebsiteDocumentTitle(input: {
   pageUrl: string;
   title: string | undefined;
@@ -399,6 +426,10 @@ function isIndexedWebsiteDocumentCurrent(document: Doc<"knowledge_documents">): 
     !!document.indexedEntryId &&
     document.indexVersion === KNOWLEDGE_INDEX_VERSION
   );
+}
+
+function isKnowledgeDocumentActive(document: Pick<Doc<"knowledge_documents">, "active">): boolean {
+  return document.active !== false;
 }
 
 async function deleteWebsiteKnowledgeDocument(
@@ -563,15 +594,57 @@ export const getCloudflareWebsiteCrawlJobStatus = internalAction({
   handler: async (
     ctx: ActionCtx,
     args: WebsiteIngestionJobIdArgs & { cloudflareJobId: string },
-  ): Promise<{ status: string }> => {
-    await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+  ): Promise<{ status: string; finished: number; total: number | null; skipped: number }> => {
+    const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
     const result = await fetchCloudflareCrawlResult({
       cloudflareJobId: args.cloudflareJobId,
       limit: 1,
       cacheTTL: 0,
     });
+
+    const finished = result.finished ?? 0;
+    const skipped = result.skipped ?? 0;
+    const total = typeof result.total === "number" ? result.total : null;
+    const processedCount = getCloudflareProcessedPageCount({
+      finished,
+      skipped,
+      total,
+    });
+    const nowIso = new Date().toISOString();
+    const previousProcessedCount = job.crawlFinishedCount ?? 0;
+    const progressAdvanced = processedCount > previousProcessedCount;
+    const nextLastProgressAt = progressAdvanced
+      ? nowIso
+      : (job.lastProgressAt ?? job.startedAt ?? nowIso);
+
+    await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+      websiteIngestionJobId: args.websiteIngestionJobId,
+      crawlFinishedCount: processedCount,
+      ...(total !== null ? { crawlTotalCount: total } : {}),
+      ...(progressAdvanced || !job.lastProgressAt ? { lastProgressAt: nextLastProgressAt } : {}),
+    });
+
+    const startedAtMs = parseIsoTimestamp(job.startedAt) ?? Date.now();
+    const lastProgressAtMs = parseIsoTimestamp(nextLastProgressAt) ?? startedAtMs;
+    const elapsedMs = Date.now() - startedAtMs;
+    const stalledForMs = Date.now() - lastProgressAtMs;
+
+    let status = result.status ?? "errored";
+    if (total !== null && total > 0 && processedCount >= total) {
+      status = "completed";
+    } else if (status === "running") {
+      if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
+        status = "stalled";
+      } else if (elapsedMs >= WEBSITE_CRAWL_HARD_TIMEOUT_MS) {
+        status = "timed_out";
+      }
+    }
+
     return {
-      status: result.status ?? "errored",
+      status,
+      finished: processedCount,
+      total,
+      skipped,
     };
   },
 });
@@ -598,22 +671,34 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         .map((document) => [document.sourceUrl, document]),
     );
     let cursor: string | undefined;
+    const seenCursors = new Set<string>();
     let crawlStatus: string | undefined;
     let crawlTotal: number | null = null;
+    let crawlProcessedCount = 0;
     let sawNonCompletedRecords = false;
     const crawlRecords: Array<CloudflareCrawlRecord> = [];
 
     do {
+      // Cloudflare recommends fetching terminal crawl results without a limit so the
+      // provider can return the full dataset and only paginate when the payload exceeds
+      // its response-size threshold.
       const result = await fetchCloudflareCrawlResult({
         cloudflareJobId: args.cloudflareJobId,
         ...(cursor !== undefined ? { cursor } : {}),
-        limit: 10,
         cacheTTL: 0,
       });
       crawlStatus = result.status ?? crawlStatus;
       if (typeof result.total === "number") {
         crawlTotal = Math.max(crawlTotal ?? 0, result.total);
       }
+      crawlProcessedCount = Math.max(
+        crawlProcessedCount,
+        getCloudflareProcessedPageCount({
+          finished: result.finished,
+          skipped: result.skipped,
+          total: typeof result.total === "number" ? result.total : crawlTotal,
+        }),
+      );
       for (const record of result.records ?? []) {
         if (
           record.status !== undefined &&
@@ -624,10 +709,28 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         }
         crawlRecords.push(record);
       }
-      cursor = result.cursor;
+      const nextCursor =
+        result.cursor === undefined || result.cursor === null
+          ? undefined
+          : String(result.cursor).trim();
+      if (!nextCursor) {
+        cursor = undefined;
+        continue;
+      }
+      if (seenCursors.has(nextCursor)) {
+        throw new Error(
+          "Website crawl results could not be fully read because Cloudflare repeated a pagination cursor.",
+        );
+      }
+      seenCursors.add(nextCursor);
+      cursor = nextCursor;
     } while (cursor);
 
-    if (crawlStatus !== "completed") {
+    const crawlCompleted =
+      crawlStatus === "completed" ||
+      (crawlTotal !== null && crawlTotal > 0 && crawlProcessedCount >= crawlTotal);
+
+    if (!crawlCompleted) {
       throw new Error(`Website crawl job is ${crawlStatus ?? "not ready"} and cannot be imported.`);
     }
 
@@ -739,6 +842,7 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     for (const [sourceUrl, candidate] of dedupedRecords) {
       const contentHash = await sha256Hex(candidate.markdown);
       const existingDocument = existingDocumentsBySourceUrl.get(sourceUrl) ?? null;
+      const existingDocumentIsActive = existingDocument ? isKnowledgeDocumentActive(existingDocument) : false;
 
       if (existingDocument?.contentHash === contentHash && isIndexedWebsiteDocumentCurrent(existingDocument)) {
         await ctx.runMutation(
@@ -761,14 +865,20 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
             websiteIngestionJobId: args.websiteIngestionJobId,
             title: candidate.title,
             sourceUrl,
-            status: "queued",
-            processingProgress: 0,
+            ...(existingDocumentIsActive
+              ? {
+                  status: "queued",
+                  processingProgress: 0,
+                }
+              : {}),
           },
         );
-        documentsToIndex.push({
-          documentId: existingDocument._id,
-          skipSnapshotRefresh: true,
-        });
+        if (existingDocumentIsActive) {
+          documentsToIndex.push({
+            documentId: existingDocument._id,
+            skipSnapshotRefresh: true,
+          });
+        }
         continue;
       }
 
@@ -801,14 +911,20 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
               extractedTextStorageId,
               contentHash,
               importance: computeWebsiteDocumentImportance(sourceUrl),
-              status: "queued",
-              processingProgress: 0,
+              ...(existingDocumentIsActive
+                ? {
+                    status: "queued",
+                    processingProgress: 0,
+                  }
+                : {}),
             },
           );
-	          documentsToIndex.push({
-	            documentId: existingDocument._id,
-	            skipSnapshotRefresh: true,
-	          });
+	          if (existingDocumentIsActive) {
+	            documentsToIndex.push({
+	              documentId: existingDocument._id,
+	              skipSnapshotRefresh: true,
+	            });
+	          }
 	        } else {
 	          const documentId: Id<"knowledge_documents"> = await ctx.runMutation(
             internal.ai.context.websiteIngestion.createWebsiteKnowledgeDocument,
@@ -885,5 +1001,280 @@ export const waitForWebsiteIngestionDocuments = internalAction({
     args: WebsiteIngestionJobIdArgs,
   ): Promise<WebsiteDocumentCountSummary> => {
     return await getWebsiteDocumentCounts(ctx, args.websiteIngestionJobId);
+  },
+});
+
+function isTerminalWebsiteIngestionStatus(status: string): boolean {
+  return status === "completed" || status === "failed" || status === "canceled";
+}
+
+async function markWebsiteIngestionJobFailed(
+  ctx: ActionCtx,
+  websiteIngestionJobId: Id<"website_ingestion_jobs">,
+  message: string,
+): Promise<void> {
+  await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+    websiteIngestionJobId,
+    status: "failed",
+    lastError: message,
+    completedAt: new Date().toISOString(),
+  });
+}
+
+async function finalizeWebsiteIngestionJobIndexing(
+  ctx: ActionCtx,
+  websiteIngestionJobId: Id<"website_ingestion_jobs">,
+): Promise<WebsiteDocumentCountSummary> {
+  const indexingCounts = await getWebsiteDocumentCounts(ctx, websiteIngestionJobId);
+
+  if (indexingCounts.pending > 0) {
+    return indexingCounts;
+  }
+
+  await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+    businessId: indexingCounts.businessId,
+  });
+
+  await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+    websiteIngestionJobId,
+    status: indexingCounts.indexed > 0 ? "completed" : "failed",
+    indexedCount: indexingCounts.indexed,
+    errorCount: indexingCounts.error,
+    lastError:
+      indexingCounts.indexed > 0 ? null : "Website pages were imported but failed to index.",
+    completedAt: new Date().toISOString(),
+  });
+
+  return indexingCounts;
+}
+
+export const reconcileWebsiteIngestionJob = internalAction({
+  args: {
+    websiteIngestionJobId: v.id("website_ingestion_jobs"),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: WebsiteIngestionJobIdArgs,
+  ): Promise<{ status: string }> => {
+    const nowIso = new Date().toISOString();
+
+    try {
+      const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+
+      if (isTerminalWebsiteIngestionStatus(job.status)) {
+        return { status: job.status };
+      }
+
+      if (job.status === "indexing") {
+        const indexingCounts = await finalizeWebsiteIngestionJobIndexing(ctx, args.websiteIngestionJobId);
+        return {
+          status: indexingCounts.pending > 0 ? "indexing" : indexingCounts.indexed > 0 ? "completed" : "failed",
+        };
+      }
+
+      if (job.status === "queued" || !job.cloudflareJobId) {
+        const crawl = await ctx.runAction(
+          internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            render: job.crawlMode === WEBSITE_CRAWL_BROWSER_MODE || job.fallbackTriggered,
+          },
+        );
+
+        await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          status: "crawling",
+          cloudflareJobId: crawl.cloudflareJobId,
+          crawlMode: crawl.crawlMode,
+          startedAt: job.startedAt ?? nowIso,
+          lastProgressAt: nowIso,
+          crawlFinishedCount: 0,
+          crawlTotalCount: 0,
+          lastError: null,
+        });
+
+        return { status: "crawling" };
+      }
+
+      const crawlStatus = await ctx.runAction(
+        internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+        {
+          websiteIngestionJobId: args.websiteIngestionJobId,
+          cloudflareJobId: job.cloudflareJobId,
+        },
+      );
+
+      const previousFinished = job.crawlFinishedCount ?? 0;
+      const progressAdvanced = crawlStatus.finished > previousFinished;
+      const nextLastProgressAt = progressAdvanced
+        ? nowIso
+        : (job.lastProgressAt ?? job.startedAt ?? nowIso);
+
+      await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+        websiteIngestionJobId: args.websiteIngestionJobId,
+        crawlFinishedCount: crawlStatus.finished,
+        ...(crawlStatus.total !== null ? { crawlTotalCount: crawlStatus.total } : {}),
+        ...(progressAdvanced ? { lastProgressAt: nowIso } : {}),
+      });
+
+      const startedAtMs = parseIsoTimestamp(job.startedAt) ?? Date.now();
+      const lastProgressAtMs = parseIsoTimestamp(nextLastProgressAt) ?? startedAtMs;
+      const elapsedMs = Date.now() - startedAtMs;
+      const stalledForMs = Date.now() - lastProgressAtMs;
+      const crawlCompleted =
+        crawlStatus.status === "completed" ||
+        (crawlStatus.total !== null &&
+          crawlStatus.total > 0 &&
+          crawlStatus.finished >= crawlStatus.total);
+
+      if (!crawlCompleted) {
+        if (crawlStatus.status === "running") {
+          if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
+            await markWebsiteIngestionJobFailed(
+              ctx,
+              args.websiteIngestionJobId,
+              "Website crawl stopped making progress before completion. Please retry the import.",
+            );
+            return { status: "failed" };
+          }
+
+          if (elapsedMs >= WEBSITE_CRAWL_HARD_TIMEOUT_MS) {
+            await markWebsiteIngestionJobFailed(
+              ctx,
+              args.websiteIngestionJobId,
+              "Website crawl exceeded the maximum allowed runtime. Please retry the import.",
+            );
+            return { status: "failed" };
+          }
+
+          return { status: "crawling" };
+        }
+
+        await markWebsiteIngestionJobFailed(
+          ctx,
+          args.websiteIngestionJobId,
+          `Website crawl ended with status ${crawlStatus.status}.`,
+        );
+        return { status: "failed" };
+      }
+
+      let importSummary: WebsiteImportSummary;
+
+      if (job.crawlMode === WEBSITE_CRAWL_HTTP_MODE && !job.fallbackTriggered) {
+        const dryRunSummary = await ctx.runAction(
+          internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            cloudflareJobId: job.cloudflareJobId,
+            crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+            commitChanges: false,
+          },
+        );
+
+        if (dryRunSummary.weak) {
+          const browserCrawl = await ctx.runAction(
+            internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+            {
+              websiteIngestionJobId: args.websiteIngestionJobId,
+              render: true,
+            },
+          );
+
+          await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            status: "crawling",
+            cloudflareJobId: browserCrawl.cloudflareJobId,
+            crawlMode: browserCrawl.crawlMode,
+            fallbackTriggered: true,
+            crawlFinishedCount: 0,
+            crawlTotalCount: 0,
+            lastProgressAt: nowIso,
+            lastError: null,
+          });
+
+          return { status: "crawling" };
+        }
+
+        importSummary = await ctx.runAction(
+          internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            cloudflareJobId: job.cloudflareJobId,
+            crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+            commitChanges: true,
+          },
+        );
+      } else {
+        importSummary = await ctx.runAction(
+          internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            cloudflareJobId: job.cloudflareJobId,
+            crawlMode: job.crawlMode,
+            commitChanges: true,
+          },
+        );
+      }
+
+      if (importSummary.importedDocumentCount === 0) {
+        await markWebsiteIngestionJobFailed(
+          ctx,
+          args.websiteIngestionJobId,
+          "We couldn't import any public website pages from this site.",
+        );
+        return { status: "failed" };
+      }
+
+      const indexingCounts = await finalizeWebsiteIngestionJobIndexing(ctx, args.websiteIngestionJobId);
+
+      return {
+        status: indexingCounts.pending > 0 ? "indexing" : indexingCounts.indexed > 0 ? "completed" : "failed",
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Website import failed unexpectedly.";
+
+      await markWebsiteIngestionJobFailed(ctx, args.websiteIngestionJobId, message);
+      return { status: "failed" };
+    }
+  },
+});
+
+export const reconcileActiveWebsiteIngestionJobs = internalAction({
+  args: {},
+  handler: async (_ctx: ActionCtx): Promise<{ reconciledCount: number }> => {
+    const ctx = _ctx;
+    const activeJobs = (
+      await Promise.all(
+        ["queued", "crawling", "indexing"].map(async (status) =>
+          await ctx.runQuery(internal.ai.context.websiteIngestion.listWebsiteIngestionJobsByStatus, {
+            status,
+          }),
+        ),
+      )
+    ).flat();
+
+    let reconciledCount = 0;
+
+    for (const job of activeJobs) {
+      if (job.workflowId) {
+        continue;
+      }
+
+      try {
+        await ctx.runAction(internal.ai.context.websiteIngestionActions.reconcileWebsiteIngestionJob, {
+          websiteIngestionJobId: job._id,
+        });
+        reconciledCount += 1;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown website ingestion reconciliation failure.";
+        console.warn(
+          `[websiteIngestion] Failed to reconcile ${String(job._id)} (${job.websiteUrl}): ${message}`,
+        );
+      }
+    }
+
+    return { reconciledCount };
   },
 });

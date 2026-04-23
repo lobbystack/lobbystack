@@ -352,6 +352,7 @@ export default defineSchema({
     websiteUrl: v.string(),
     provider: v.string(),
     status: v.string(),
+    workflowId: v.optional(v.string()),
     cloudflareJobId: v.optional(v.string()),
     crawlMode: v.string(),
     fallbackTriggered: v.boolean(),
@@ -360,10 +361,14 @@ export default defineSchema({
     importedCount: v.number(),
     indexedCount: v.number(),
     errorCount: v.number(),
+    crawlFinishedCount: v.optional(v.number()),
+    crawlTotalCount: v.optional(v.number()),
+    lastProgressAt: v.optional(v.string()),
     lastError: v.optional(v.string()),
     startedAt: v.optional(v.string()),
     completedAt: v.optional(v.string()),
   })
+    .index("by_status", ["status"])
     .index("by_business_id", ["businessId"])
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_website_url", ["businessId", "websiteUrl"]),
@@ -371,6 +376,7 @@ export default defineSchema({
   knowledge_documents: defineTable({
     businessId: v.id("businesses"),
     section: v.optional(knowledgeSectionValidator),
+    active: v.optional(v.boolean()),
     sourceType: v.string(),
     title: v.string(),
     sourceUrl: v.optional(v.string()),

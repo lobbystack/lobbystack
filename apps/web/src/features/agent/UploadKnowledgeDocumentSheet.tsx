@@ -97,9 +97,13 @@ function getUploadErrorMessage(
 export function UploadKnowledgeDocumentSheet({
   businessId,
   section,
+  open,
+  onOpenChange,
 }: {
   businessId: Id<"businesses">;
   section: KnowledgeSection;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
   const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
@@ -107,7 +111,8 @@ export function UploadKnowledgeDocumentSheet({
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
   );
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState("");
@@ -116,6 +121,7 @@ export function UploadKnowledgeDocumentSheet({
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isDialogOpen = isControlled ? open : internalOpen;
   const resolvedFileName = useMemo(() => selectedFile?.name ?? "", [selectedFile]);
 
   function resetState(): void {
@@ -147,6 +153,13 @@ export function UploadKnowledgeDocumentSheet({
     event.preventDefault();
     setIsDraggingFile(false);
     handleSelectedFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
+  function setDialogOpen(nextOpen: boolean): void {
+    onOpenChange?.(nextOpen);
+    if (!isControlled) {
+      setInternalOpen(nextOpen);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -204,7 +217,7 @@ export function UploadKnowledgeDocumentSheet({
         contentType,
       });
 
-      setIsDialogOpen(false);
+      setDialogOpen(false);
       resetState();
     } catch (error) {
       captureAnalyticsException(error, {
@@ -227,21 +240,23 @@ export function UploadKnowledgeDocumentSheet({
   return (
     <Dialog
       onOpenChange={(open) => {
-        setIsDialogOpen(open);
+        setDialogOpen(open);
         if (!open) {
           resetState();
         }
       }}
       open={isDialogOpen}
     >
-      <DialogTrigger
-        render={
-          <Button variant="secondary">
-            <Upload data-icon="inline-start" />
-            {t("actions.upload")}
-          </Button>
-        }
-      />
+      {!isControlled ? (
+        <DialogTrigger
+          render={
+            <Button variant="secondary">
+              <Upload data-icon="inline-start" />
+              {t("actions.upload")}
+            </Button>
+          }
+        />
+      ) : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t(`sections.${section}.uploadDocument`)}</DialogTitle>

@@ -258,7 +258,6 @@ export const importWebsiteKnowledgeWorkflow = workflowManager.define({
         completedAt: new Date().toISOString(),
       });
     }
-
     return null;
   },
 });

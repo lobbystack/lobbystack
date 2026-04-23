@@ -1,15 +1,20 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
-import { UploadKnowledgeDocumentSheet } from "./UploadKnowledgeDocumentSheet";
+import { KnowledgeActionsMenu } from "./KnowledgeActionsMenu";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { getAgentSectionFromPathname } from "./sections";
 
 type AgentLayoutProps = {
   businessId?: Id<"businesses">;
+};
+
+type AgentLayoutOutletContext = {
+  headerActions?: ReactNode;
 };
 
 export function AgentLayout({ businessId }: AgentLayoutProps) {
@@ -51,25 +56,26 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
     };
   }
 
+  const headerActions =
+    !isBasicSettingsRoute && isKnowledgeRoute ? (
+      <>
+        {section === "knowledge" ? (
+          <KnowledgeActionsMenu businessId={businessId} />
+        ) : null}
+        {section !== "knowledge" ? (
+          <AddKnowledgeSheet businessId={businessId} section={section} />
+        ) : null}
+      </>
+    ) : undefined;
+
   return (
     <section className="flex flex-1 flex-col gap-6">
-      <PageHeader
-        actions={
-          !isBasicSettingsRoute && isKnowledgeRoute ? (
-            <>
-              {section === "knowledge" ? (
-                <UploadKnowledgeDocumentSheet businessId={businessId} section={section} />
-              ) : null}
-              <AddKnowledgeSheet businessId={businessId} section={section} />
-            </>
-          ) : undefined
-        }
-        description={header.description}
-        title={header.title}
-      />
+      <PageHeader description={header.description} title={header.title} />
       <div className="w-full">
-        <Outlet />
+        <Outlet context={{ headerActions } satisfies AgentLayoutOutletContext} />
       </div>
     </section>
   );
 }
+
+export type { AgentLayoutOutletContext };

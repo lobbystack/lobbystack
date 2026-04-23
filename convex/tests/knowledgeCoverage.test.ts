@@ -837,8 +837,19 @@ describe("Knowledge coverage", () => {
         status: "indexed",
         tags: [],
         importance: 5,
+        active: true,
         indexedEntryId: "entry-current",
         indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+      await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Inactive Document",
+        textContent: "Inactive documents should not reindex.",
+        status: "indexed",
+        tags: [],
+        importance: 3,
+        active: false,
       });
 
       const staleSnippetId = await ctx.db.insert("knowledge_snippets", {
@@ -876,6 +887,7 @@ describe("Knowledge coverage", () => {
         status: "queued",
         tags: [],
         importance: 9,
+        active: true,
       });
       await ctx.db.insert("knowledge_snippets", {
         businessId: otherBusinessId,
@@ -1252,6 +1264,159 @@ describe("Knowledge coverage", () => {
         documentId,
       }),
     ).rejects.toThrow();
+  });
+
+  it("toggles knowledge entry activity without removing dashboard rows", async () => {
+    const t = convexTest(schema, convexModules);
+    const subject = "knowledge-active-owner";
+
+    const { businessId, documentId, snippetId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-active",
+        name: "Knowledge Active",
+      });
+
+      const userId = await ctx.db.insert("users", {
+        authSubject: subject,
+      });
+      await ctx.db.insert("business_memberships", {
+        businessId,
+        userId,
+        role: "business_owner",
+        status: "active",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Active",
+      });
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Active Document",
+        textContent: "This document starts active.",
+        status: "indexed",
+        tags: [],
+        importance: 5,
+        active: true,
+        indexedEntryId: "entry-document-active",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+      const snippetId = await ctx.db.insert("knowledge_snippets", {
+        businessId,
+        title: "Active Snippet",
+        content: "This snippet starts active.",
+        tags: [],
+        priority: 10,
+        active: true,
+        indexedEntryId: "entry-snippet-active",
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+      });
+
+      return { businessId, documentId, snippetId };
+    });
+
+    const asKnowledgeOwner = t.withIdentity({ subject });
+    const ragDeleteSpy = vi.spyOn(componentsModule.rag, "delete").mockResolvedValue(undefined);
+    const enqueueActionSpy = vi
+      .spyOn(componentsModule.bulkWorkpool, "enqueueAction")
+      .mockResolvedValue("work-id" as never);
+
+    try {
+      await asKnowledgeOwner.action(api.ai.context.knowledge.setKnowledgeEntryActive, {
+        businessId,
+        documentId,
+        active: false,
+      });
+      await asKnowledgeOwner.action(api.ai.context.knowledge.setKnowledgeEntryActive, {
+        businessId,
+        snippetId,
+        active: false,
+      });
+
+      const inactiveList: KnowledgeListResult = await asKnowledgeOwner.query(
+        api.ai.context.knowledge.listKnowledge,
+        {
+          businessId,
+        },
+      );
+      expect(inactiveList.documents).toEqual([
+        expect.objectContaining({
+          _id: documentId,
+          active: false,
+        }),
+      ]);
+      expect(inactiveList.snippets).toEqual([
+        expect.objectContaining({
+          _id: snippetId,
+          active: false,
+        }),
+      ]);
+
+      expect(ragDeleteSpy).toHaveBeenCalledWith(expect.anything(), {
+        entryId: "entry-document-active",
+      });
+      expect(ragDeleteSpy).toHaveBeenCalledWith(expect.anything(), {
+        entryId: "entry-snippet-active",
+      });
+
+      const inactiveReindexState = await t.query(
+        internal.ai.context.knowledge.getKnowledgeEntriesNeedingReindex,
+        { businessId },
+      );
+      expect(inactiveReindexState.documentIds).toEqual([]);
+      expect(inactiveReindexState.snippetIds).toEqual([]);
+
+      await asKnowledgeOwner.action(api.ai.context.knowledge.setKnowledgeEntryActive, {
+        businessId,
+        documentId,
+        active: true,
+      });
+      await asKnowledgeOwner.action(api.ai.context.knowledge.setKnowledgeEntryActive, {
+        businessId,
+        snippetId,
+        active: true,
+      });
+
+      const reactivatedList: KnowledgeListResult = await asKnowledgeOwner.query(
+        api.ai.context.knowledge.listKnowledge,
+        {
+          businessId,
+        },
+      );
+      expect(reactivatedList.documents).toEqual([
+        expect.objectContaining({
+          _id: documentId,
+          active: true,
+        }),
+      ]);
+      expect(reactivatedList.snippets).toEqual([
+        expect.objectContaining({
+          _id: snippetId,
+          active: true,
+        }),
+      ]);
+
+      expect(enqueueActionSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(),
+        internal.ai.context.knowledge.indexKnowledgeDocument,
+        {
+          documentId,
+        },
+      );
+      expect(enqueueActionSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.anything(),
+        internal.ai.context.knowledge.indexKnowledgeSnippet,
+        {
+          snippetId,
+        },
+      );
+    } finally {
+      ragDeleteSpy.mockRestore();
+      enqueueActionSpy.mockRestore();
+    }
   });
 
   it("keeps knowledge sections isolated in list results", async () => {
