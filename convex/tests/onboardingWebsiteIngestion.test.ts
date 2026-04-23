@@ -969,7 +969,7 @@ describe("website onboarding and ingestion", () => {
     expect(Date.parse(String(job?.lastProgressAt))).toBeGreaterThanOrEqual(beforeStatusCheck - 1_000);
   });
 
-  it("treats capped browser fallback crawls as completed with one page left queued", async () => {
+  it("keeps capped browser fallback crawls running during the partial-completion grace window", async () => {
     const t = createConvexHarness();
     const subject = "website-browser-partial-progress-owner";
     const { businessId } = await seedBusinessOwner({
@@ -1001,7 +1001,7 @@ describe("website onboarding and ingestion", () => {
       json: async () => ({
         success: true,
         result: {
-          status: "running",
+          status: "completed",
           finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
           skipped: 0,
           total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
@@ -1015,6 +1015,66 @@ describe("website onboarding and ingestion", () => {
       {
         websiteIngestionJobId,
         cloudflareJobId: "cf-job-browser-partial-progress-1",
+      },
+    );
+
+    expect(result).toEqual({
+      status: "running",
+      finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+      total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+      skipped: 0,
+    });
+  });
+
+  it("treats capped browser fallback crawls as completed after one page stalls past the grace window", async () => {
+    const t = createConvexHarness();
+    const subject = "website-browser-partial-stalled-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const staleProgressAt = new Date(Date.now() - 6 * 60 * 1_000).toISOString();
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-browser-partial-stalled-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        crawlFinishedCount: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+        startedAt: staleProgressAt,
+        lastProgressAt: staleProgressAt,
+      });
+    });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+          skipped: 0,
+          total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+          records: [],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-browser-partial-stalled-1",
       },
     );
 
@@ -1102,6 +1162,7 @@ describe("website onboarding and ingestion", () => {
       onboardingStage: "phone_number",
       subject,
     });
+    const staleProgressAt = new Date(Date.now() - 6 * 60 * 1_000).toISOString();
 
     const websiteIngestionJobId = await t.run(async (ctx) => {
       return await ctx.db.insert("website_ingestion_jobs", {
@@ -1117,7 +1178,8 @@ describe("website onboarding and ingestion", () => {
         importedCount: 0,
         indexedCount: 0,
         errorCount: 0,
-        startedAt: new Date().toISOString(),
+        startedAt: staleProgressAt,
+        lastProgressAt: staleProgressAt,
       });
     });
 

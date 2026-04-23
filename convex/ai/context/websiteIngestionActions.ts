@@ -79,6 +79,7 @@ const CLOUDFLARE_CRAWL_MAX_ATTEMPTS = 5;
 const CLOUDFLARE_CRAWL_RETRY_DELAY_MS = 1_000;
 const WEBSITE_CRAWL_STALL_WINDOW_MS = 30 * 60 * 1_000;
 const WEBSITE_CRAWL_HARD_TIMEOUT_MS = 2 * 60 * 60 * 1_000;
+const WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS = 5 * 60 * 1_000;
 
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -335,6 +336,7 @@ function hasSuccessfulCloudflarePageResponse(record: CloudflareCrawlRecord): boo
 }
 
 function isAcceptablePartialBrowserCrawl(input: {
+  allowPartial?: boolean;
   expectedPageLimit: number;
   crawlMode: string;
   processedCount: number;
@@ -355,6 +357,10 @@ function isAcceptablePartialBrowserCrawl(input: {
     return false;
   }
 
+  if (input.allowPartial !== true) {
+    return false;
+  }
+
   if (!input.records) {
     return true;
   }
@@ -364,7 +370,7 @@ function isAcceptablePartialBrowserCrawl(input: {
     return record.status === "completed" || record.status === 200;
   }).length;
 
-  return returnedRecordCount >= input.total && completedRecordCount > 0;
+  return returnedRecordCount >= input.processedCount && completedRecordCount > 0;
 }
 
 function formatKnowledgeStorageLimit(limitBytes: number): string {
@@ -709,21 +715,33 @@ export const getCloudflareWebsiteCrawlJobStatus = internalAction({
     const stalledForMs = Date.now() - lastProgressAtMs;
 
     let status = result.status ?? "errored";
-    if (
-      (total !== null && total > 0 && processedCount >= total) ||
-      isAcceptablePartialBrowserCrawl({
-        expectedPageLimit: expectedBrowserCrawlBudget.pageLimit,
-        crawlMode: job.crawlMode,
-        processedCount,
-        total,
-      })
-    ) {
+    const fullyProcessed = total !== null && total > 0 && processedCount >= total;
+    const partiallyCompleteAfterGrace = isAcceptablePartialBrowserCrawl({
+      allowPartial: stalledForMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS,
+      expectedPageLimit: expectedBrowserCrawlBudget.pageLimit,
+      crawlMode: job.crawlMode,
+      processedCount,
+      total,
+    });
+
+    if (fullyProcessed || partiallyCompleteAfterGrace) {
       status = "completed";
-    } else if (status === "running") {
-      if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
-        status = "stalled";
-      } else if (elapsedMs >= WEBSITE_CRAWL_HARD_TIMEOUT_MS) {
-        status = "timed_out";
+    } else {
+      if (
+        status === "completed" &&
+        job.crawlMode === WEBSITE_CRAWL_BROWSER_MODE &&
+        total !== null &&
+        processedCount < total
+      ) {
+        status = "running";
+      }
+
+      if (status === "running") {
+        if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
+          status = "stalled";
+        } else if (elapsedMs >= WEBSITE_CRAWL_HARD_TIMEOUT_MS) {
+          status = "timed_out";
+        }
       }
     }
 
@@ -813,10 +831,33 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       cursor = nextCursor;
     } while (cursor);
 
+    const crawlFullyProcessed =
+      crawlTotal !== null && crawlTotal > 0 && crawlProcessedCount >= crawlTotal;
+    const returnedAllExpectedRecords =
+      crawlTotal !== null && crawlTotal > 0 && crawlRecords.length >= crawlTotal;
+    const returnedRecordsAreTerminal =
+      crawlRecords.length > 0 &&
+      crawlRecords.every((record) => {
+        return (
+          record.status === undefined ||
+          record.status === "completed" ||
+          typeof record.status === "number"
+        );
+      });
+    const importLastProgressAtMs =
+      parseIsoTimestamp(job.lastProgressAt ?? job.startedAt) ?? Date.now();
+    const shouldWaitForMissingBrowserRecords =
+      args.crawlMode === WEBSITE_CRAWL_BROWSER_MODE && job.fallbackTriggered === true;
     const crawlCompleted =
-      crawlStatus === "completed" ||
-      (crawlTotal !== null && crawlTotal > 0 && crawlProcessedCount >= crawlTotal) ||
+      (crawlStatus === "completed" &&
+        (!shouldWaitForMissingBrowserRecords ||
+          crawlTotal === null ||
+          crawlFullyProcessed ||
+          (returnedAllExpectedRecords && returnedRecordsAreTerminal))) ||
+      crawlFullyProcessed ||
       isAcceptablePartialBrowserCrawl({
+        allowPartial:
+          Date.now() - importLastProgressAtMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS,
         expectedPageLimit: resolveWebsiteCrawlBudget({
           render: true,
           pageLimit: job.pageLimit,
