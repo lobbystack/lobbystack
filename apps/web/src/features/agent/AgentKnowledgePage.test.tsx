@@ -24,6 +24,10 @@ vi.mock("convex/react", () => ({
       return setKnowledgeEntryActiveMock;
     }
 
+    if (functionName === "ai/context/websiteIngestion:cancelWebsiteIngestionJob") {
+      return cancelWebsiteIngestionJobMock;
+    }
+
     return deleteKnowledgeEntryMock;
   },
   useConvex: () => ({
@@ -634,6 +638,40 @@ describe("AgentKnowledgePage", () => {
     expect(screen.getByText("Changelog")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
     expect(screen.queryByLabelText("agent:sections.knowledge.documentBadge")).toBeNull();
+  });
+
+  it.each([
+    {
+      section: "services" as const,
+      snippet: createSnippet({
+        _id: "snippet-service-1",
+        section: "services",
+        title: "Front-desk service",
+      }),
+      title: "Front-desk service",
+    },
+    {
+      section: "rules" as const,
+      snippet: createSnippet({
+        _id: "snippet-rule-1",
+        section: "rules",
+        title: "After-hours rule",
+      }),
+      title: "After-hours rule",
+    },
+  ])("does not show title markers for $section rows", ({ section, snippet, title }) => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [snippet],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.queryByLabelText(`agent:sections.${section}.textBadge`)).toBeNull();
+    expect(screen.queryByLabelText(`agent:sections.${section}.documentBadge`)).toBeNull();
   });
 
   it("allows deleting a failed website import row from the row actions menu", async () => {

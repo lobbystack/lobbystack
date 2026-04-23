@@ -11,6 +11,8 @@ import {
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
   normalizeWebsiteUrl,
+  WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH,
+  WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
   WEBSITE_CRAWL_PATTERN_LIMIT,
   WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../lib/websiteIngestion";
@@ -370,6 +372,7 @@ describe("website onboarding and ingestion", () => {
         provider: "cloudflare_browser_run",
         status: "crawling",
         workflowId: "workflow-123",
+        cloudflareJobId: "cf-job-cancel-1",
         crawlMode: "http",
         fallbackTriggered: false,
         pageLimit: 40,
@@ -380,16 +383,74 @@ describe("website onboarding and ingestion", () => {
       });
     });
 
-    await authed.mutation(api.ai.context.websiteIngestion.cancelWebsiteIngestionJob, {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: vi.fn(async () => ({ success: true })),
+    } as unknown as Response);
+
+    await authed.action(api.ai.context.websiteIngestion.cancelWebsiteIngestionJob, {
       businessId,
       websiteIngestionJobId,
     });
 
     expect(workflowCancelMock).toHaveBeenCalledWith(expect.anything(), "workflow-123");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/browser-rendering/crawl/"),
+      expect.objectContaining({
+        method: "DELETE",
+      }),
+    );
 
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]?.status).toBe("canceled");
+  });
+
+  it("marks active website imports canceled when the workflow already stopped", async () => {
+    const t = createConvexHarness();
+    const subject = "website-cancel-stopped-workflow-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        workflowId: "workflow-already-stopped",
+        cloudflareJobId: "cf-job-cancel-stopped-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: vi.fn(async () => ({ success: true })),
+    } as unknown as Response);
+    workflowCancelMock.mockRejectedValueOnce(new Error("Workflow not running: [object Object]"));
+
+    await authed.action(api.ai.context.websiteIngestion.cancelWebsiteIngestionJob, {
+      businessId,
+      websiteIngestionJobId,
+    });
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.status).toBe("canceled");
+    expect(jobs[0]?.completedAt).toBeTruthy();
+    expect(jobs[0]?.lastError).toBeUndefined();
   });
 
   it("does not advance onboarding when website preflight fails", async () => {
@@ -669,6 +730,62 @@ describe("website onboarding and ingestion", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("caps browser-render fallback crawls to a smaller page budget", async () => {
+    const t = createConvexHarness();
+    const subject = "website-browser-budget-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com/clinic",
+        provider: "cloudflare_browser_run",
+        status: "queued",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: "cf-job-browser-budget-1",
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+      {
+        websiteIngestionJobId,
+        render: true,
+      },
+    );
+
+    expect(result).toEqual({
+      cloudflareJobId: "cf-job-browser-budget-1",
+      crawlMode: "browser",
+    });
+    const [, requestInit] = fetchMock.mock.calls[0] ?? [];
+    const body = JSON.parse(String(requestInit?.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      limit: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+      depth: WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH,
+      render: true,
+    });
+    expect(body).not.toHaveProperty("rejectResourceTypes");
+  });
+
   it("rejects crawl submission when DNS resolves a hostname to a private address", async () => {
     const t = createConvexHarness();
     const subject = "website-private-dns-owner";
@@ -852,6 +969,63 @@ describe("website onboarding and ingestion", () => {
     expect(Date.parse(String(job?.lastProgressAt))).toBeGreaterThanOrEqual(beforeStatusCheck - 1_000);
   });
 
+  it("treats capped browser fallback crawls as completed with one page left queued", async () => {
+    const t = createConvexHarness();
+    const subject = "website-browser-partial-progress-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-browser-partial-progress-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+      });
+    });
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "running",
+          finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+          skipped: 0,
+          total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+          records: [],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.getCloudflareWebsiteCrawlJobStatus,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-browser-partial-progress-1",
+      },
+    );
+
+    expect(result).toEqual({
+      status: "completed",
+      finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+      total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+      skipped: 0,
+    });
+  });
+
   it("allows import when Cloudflare still reports running but all pages are already processed", async () => {
     const t = createConvexHarness();
     const subject = "website-import-after-processed-owner";
@@ -910,6 +1084,87 @@ describe("website onboarding and ingestion", () => {
         websiteIngestionJobId,
         cloudflareJobId: "cf-job-import-processed-1",
         crawlMode: "http",
+        commitChanges: false,
+      },
+    );
+
+    expect(result).toEqual({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+  });
+
+  it("allows capped browser fallback import with one queued page", async () => {
+    const t = createConvexHarness();
+    const subject = "website-import-browser-partial-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-import-browser-partial-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+      });
+    });
+
+    const aboutMarkdown = "# About\n" + "current ".repeat(900);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "running",
+          finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 1,
+          skipped: 0,
+          total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+          records: [
+            {
+              url: "https://example.com/",
+              status: "queued",
+            },
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: aboutMarkdown,
+              metadata: {
+                status: 200,
+                title: "About",
+              },
+            },
+            ...Array.from({ length: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT - 2 }, (_, index) => ({
+              url: `https://example.com/section-${index}`,
+              status: "completed",
+              markdown: "\u200b",
+              metadata: {
+                status: 200,
+                title: `Section ${index}`,
+              },
+            })),
+          ],
+        },
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-import-browser-partial-1",
+        crawlMode: "browser",
         commitChanges: false,
       },
     );
@@ -1181,6 +1436,8 @@ describe("website onboarding and ingestion", () => {
       cloudflareJobId: "cf-job-browser-1",
       crawlMode: "browser",
       fallbackTriggered: true,
+      pageLimit: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+      depth: WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH,
       importedCount: 0,
       indexedCount: 0,
       errorCount: 0,
@@ -1194,9 +1451,13 @@ describe("website onboarding and ingestion", () => {
       "https://api.cloudflare.com/client/v4/accounts/test-account/browser-rendering/crawl",
     );
     const browserSubmitBody = JSON.parse(String(browserSubmitCall?.[1]?.body ?? "{}")) as {
+      depth?: number;
+      limit?: number;
       render?: boolean;
     };
     expect(browserSubmitBody.render).toBe(true);
+    expect(browserSubmitBody.limit).toBe(WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT);
+    expect(browserSubmitBody.depth).toBe(WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH);
   });
 
   it("fails a crawl that stops making progress for too long", async () => {

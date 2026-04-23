@@ -83,6 +83,19 @@ type SubmitWebsiteIngestionResult = {
 
 const ACTIVE_WEBSITE_INGESTION_STATUSES = ["queued", "crawling", "indexing"] as const;
 
+async function cancelWorkflowIfRunning(ctx: MutationCtx, workflowId: string): Promise<void> {
+  try {
+    await workflowManager.cancel(ctx, workflowId as WorkflowId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("Workflow not running")) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 async function assertWebsiteIngestionAccess(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
@@ -260,7 +273,7 @@ export const deleteWebsiteIngestionJob = mutation({
     }
 
     if (job.workflowId) {
-      await workflowManager.cancel(ctx, job.workflowId as WorkflowId);
+      await cancelWorkflowIfRunning(ctx, job.workflowId);
     }
 
     await ctx.db.delete(args.websiteIngestionJobId);
@@ -268,7 +281,7 @@ export const deleteWebsiteIngestionJob = mutation({
   },
 });
 
-export const cancelWebsiteIngestionJob = mutation({
+export const cancelWebsiteIngestionJobAfterAccess = internalMutation({
   args: {
     businessId: v.id("businesses"),
     websiteIngestionJobId: v.id("website_ingestion_jobs"),
@@ -277,8 +290,6 @@ export const cancelWebsiteIngestionJob = mutation({
     ctx: MutationCtx,
     args: DeleteWebsiteIngestionJobArgs,
   ): Promise<null> => {
-    await requireMembership(ctx, args.businessId);
-
     const job = await ctx.db.get(args.websiteIngestionJobId);
     if (!job || job.businessId !== args.businessId) {
       throw new Error("Website import not found.");
@@ -300,7 +311,7 @@ export const cancelWebsiteIngestionJob = mutation({
     }
 
     if (job.workflowId) {
-      await workflowManager.cancel(ctx, job.workflowId as WorkflowId);
+      await cancelWorkflowIfRunning(ctx, job.workflowId);
     }
 
     await ctx.db.patch(args.websiteIngestionJobId, {
@@ -310,6 +321,43 @@ export const cancelWebsiteIngestionJob = mutation({
     });
 
     return null;
+  },
+});
+
+export const cancelWebsiteIngestionJob = action({
+  args: {
+    businessId: v.id("businesses"),
+    websiteIngestionJobId: v.id("website_ingestion_jobs"),
+  },
+  handler: async (ctx: ActionCtx, args: DeleteWebsiteIngestionJobArgs): Promise<null> => {
+    await assertWebsiteIngestionAccess(ctx, args.businessId);
+
+    const job = await ctx.runQuery(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId: args.websiteIngestionJobId,
+    });
+    if (!job || job.businessId !== args.businessId) {
+      throw new Error("Website import not found.");
+    }
+
+    if (job.status === "failed" || job.status === "completed" || job.status === "canceled") {
+      throw new Error("Only active website imports can be canceled.");
+    }
+
+    if (job.cloudflareJobId) {
+      try {
+        await ctx.runAction(internal.ai.context.websiteIngestionActions.cancelCloudflareWebsiteCrawlJob, {
+          cloudflareJobId: job.cloudflareJobId,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown Cloudflare crawl cancel failure.";
+        console.warn(
+          `[websiteIngestion] Failed to cancel Cloudflare crawl ${job.cloudflareJobId} for ${String(job._id)}: ${message}`,
+        );
+      }
+    }
+
+    return await ctx.runMutation(internal.ai.context.websiteIngestion.cancelWebsiteIngestionJobAfterAccess, args);
   },
 });
 

@@ -20,12 +20,11 @@ import {
   normalizeWebsiteMarkdown,
   normalizeWebsitePageUrl,
   normalizeWebsiteUrl,
+  resolveWebsiteCrawlBudget,
   shouldImportWebsitePage,
   shouldTriggerBrowserFallback,
   WEBSITE_CRAWL_BROWSER_MODE,
-  WEBSITE_CRAWL_DEPTH,
   WEBSITE_CRAWL_HTTP_MODE,
-  WEBSITE_CRAWL_PAGE_LIMIT,
   WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../../lib/websiteIngestion";
 
@@ -335,6 +334,39 @@ function hasSuccessfulCloudflarePageResponse(record: CloudflareCrawlRecord): boo
   return pageStatus === undefined || (pageStatus >= 200 && pageStatus < 300);
 }
 
+function isAcceptablePartialBrowserCrawl(input: {
+  expectedPageLimit: number;
+  crawlMode: string;
+  processedCount: number;
+  records?: Array<CloudflareCrawlRecord>;
+  total: number | null;
+}): boolean {
+  if (
+    input.crawlMode !== WEBSITE_CRAWL_BROWSER_MODE ||
+    input.total === null ||
+    input.total <= 1 ||
+    input.total > input.expectedPageLimit
+  ) {
+    return false;
+  }
+
+  const remainingCount = input.total - input.processedCount;
+  if (remainingCount !== 1) {
+    return false;
+  }
+
+  if (!input.records) {
+    return true;
+  }
+
+  const returnedRecordCount = input.records.length;
+  const completedRecordCount = input.records.filter((record) => {
+    return record.status === "completed" || record.status === 200;
+  }).length;
+
+  return returnedRecordCount >= input.total && completedRecordCount > 0;
+}
+
 function formatKnowledgeStorageLimit(limitBytes: number): string {
   if (limitBytes >= 1024 * 1024 * 1024) {
     return `${limitBytes / (1024 * 1024 * 1024)} GB`;
@@ -548,6 +580,11 @@ export const submitCloudflareWebsiteCrawl = internalAction({
     args: WebsiteIngestionJobIdArgs & { render: boolean },
   ): Promise<{ cloudflareJobId: string; crawlMode: string }> => {
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+    const crawlBudget = resolveWebsiteCrawlBudget({
+      render: args.render,
+      pageLimit: job.pageLimit,
+      depth: job.depth,
+    });
     await assertWebsiteCrawlTargetIsPublic(job.websiteUrl);
     const { accountId, apiToken } = requireCloudflareCredentials();
     const response = await fetch(
@@ -562,8 +599,8 @@ export const submitCloudflareWebsiteCrawl = internalAction({
         },
         body: JSON.stringify({
           url: job.websiteUrl,
-          limit: job.pageLimit || WEBSITE_CRAWL_PAGE_LIMIT,
-          depth: job.depth || WEBSITE_CRAWL_DEPTH,
+          limit: crawlBudget.pageLimit,
+          depth: crawlBudget.depth,
           source: "all",
           formats: ["markdown"],
           crawlPurposes: ["ai-input"],
@@ -583,6 +620,43 @@ export const submitCloudflareWebsiteCrawl = internalAction({
       cloudflareJobId,
       crawlMode: args.render ? WEBSITE_CRAWL_BROWSER_MODE : WEBSITE_CRAWL_HTTP_MODE,
     };
+  },
+});
+
+export const cancelCloudflareWebsiteCrawlJob = internalAction({
+  args: {
+    cloudflareJobId: v.string(),
+  },
+  handler: async (_ctx: ActionCtx, args: { cloudflareJobId: string }): Promise<null> => {
+    const { accountId, apiToken } = requireCloudflareCredentials();
+    const response = await fetch(
+      getCloudflareCrawlEndpoint({
+        accountId,
+        cloudflareJobId: args.cloudflareJobId,
+      }),
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | {
+          errors?: Array<{ message?: string }>;
+          messages?: Array<{ message?: string }>;
+        }
+        | null;
+      const message =
+        payload?.errors?.map((error) => error.message).find(Boolean) ??
+        payload?.messages?.map((item) => item.message).find(Boolean) ??
+        `Cloudflare crawl cancel request failed with status ${response.status}.`;
+      throw new Error(message);
+    }
+
+    return null;
   },
 });
 
@@ -616,6 +690,11 @@ export const getCloudflareWebsiteCrawlJobStatus = internalAction({
     const nextLastProgressAt = progressAdvanced
       ? nowIso
       : (job.lastProgressAt ?? job.startedAt ?? nowIso);
+    const expectedBrowserCrawlBudget = resolveWebsiteCrawlBudget({
+      render: true,
+      pageLimit: job.pageLimit,
+      depth: job.depth,
+    });
 
     await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
       websiteIngestionJobId: args.websiteIngestionJobId,
@@ -630,7 +709,15 @@ export const getCloudflareWebsiteCrawlJobStatus = internalAction({
     const stalledForMs = Date.now() - lastProgressAtMs;
 
     let status = result.status ?? "errored";
-    if (total !== null && total > 0 && processedCount >= total) {
+    if (
+      (total !== null && total > 0 && processedCount >= total) ||
+      isAcceptablePartialBrowserCrawl({
+        expectedPageLimit: expectedBrowserCrawlBudget.pageLimit,
+        crawlMode: job.crawlMode,
+        processedCount,
+        total,
+      })
+    ) {
       status = "completed";
     } else if (status === "running") {
       if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
@@ -728,7 +815,18 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
 
     const crawlCompleted =
       crawlStatus === "completed" ||
-      (crawlTotal !== null && crawlTotal > 0 && crawlProcessedCount >= crawlTotal);
+      (crawlTotal !== null && crawlTotal > 0 && crawlProcessedCount >= crawlTotal) ||
+      isAcceptablePartialBrowserCrawl({
+        expectedPageLimit: resolveWebsiteCrawlBudget({
+          render: true,
+          pageLimit: job.pageLimit,
+          depth: job.depth,
+        }).pageLimit,
+        crawlMode: args.crawlMode,
+        processedCount: crawlProcessedCount,
+        records: crawlRecords,
+        total: crawlTotal,
+      });
 
     if (!crawlCompleted) {
       throw new Error(`Website crawl job is ${crawlStatus ?? "not ready"} and cannot be imported.`);
@@ -1172,6 +1270,11 @@ export const reconcileWebsiteIngestionJob = internalAction({
         );
 
         if (dryRunSummary.weak) {
+          const browserCrawlBudget = resolveWebsiteCrawlBudget({
+            render: true,
+            pageLimit: job.pageLimit,
+            depth: job.depth,
+          });
           const browserCrawl = await ctx.runAction(
             internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
             {
@@ -1186,6 +1289,8 @@ export const reconcileWebsiteIngestionJob = internalAction({
             cloudflareJobId: browserCrawl.cloudflareJobId,
             crawlMode: browserCrawl.crawlMode,
             fallbackTriggered: true,
+            pageLimit: browserCrawlBudget.pageLimit,
+            depth: browserCrawlBudget.depth,
             crawlFinishedCount: 0,
             crawlTotalCount: 0,
             lastProgressAt: nowIso,

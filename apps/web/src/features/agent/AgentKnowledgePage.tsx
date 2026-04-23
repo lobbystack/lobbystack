@@ -284,7 +284,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const deleteWebsiteIngestionJob = useMutation(
     api.ai.context.websiteIngestion.deleteWebsiteIngestionJob,
   );
-  const cancelWebsiteIngestionJob = useMutation(
+  const cancelWebsiteIngestionJob = useAction(
     api.ai.context.websiteIngestion.cancelWebsiteIngestionJob,
   );
   const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(
@@ -362,6 +362,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     () => rows.filter((row) => !optimisticDeletedIds.includes(String(row._id))),
     [optimisticDeletedIds, rows],
   );
+  const showKnowledgeTitleMarkers = section === "knowledge";
 
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
@@ -644,33 +645,41 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           isWebsiteIngestionJobRow(row) ? buildWebsiteIngestionRowTitle(row) : row.title,
         id: "title",
         header: () => t("agent:table.title"),
-        cell: ({ row }) => (
-          <div className="flex min-w-0 items-center gap-2">
-            {section === "knowledge"
-              ? isDocumentRow(row.original) ? (
-                isWebsiteDocument(row.original) ? renderWebsiteIngestionJobMarker() : renderDocumentMarker()
-              ) : isWebsiteIngestionJobRow(row.original) ? (
-                renderWebsiteIngestionJobMarker()
-              ) : isSnippetRow(row.original) ? (
-                renderSnippetMarker()
-              ) : null
-              : null}
+        cell: ({ row }) => {
+          const title = isWebsiteIngestionJobRow(row.original)
+            ? buildWebsiteIngestionRowTitle(row.original)
+            : row.original.title;
+          const titleMarker = showKnowledgeTitleMarkers
+            ? isDocumentRow(row.original)
+              ? isWebsiteDocument(row.original)
+                ? renderWebsiteIngestionJobMarker()
+                : renderDocumentMarker()
+              : isWebsiteIngestionJobRow(row.original)
+                ? renderWebsiteIngestionJobMarker()
+                : isSnippetRow(row.original)
+                  ? renderSnippetMarker()
+                  : null
+            : null;
+
+          return titleMarker ? (
+            <div className="flex min-w-0 items-center gap-2">
+              {titleMarker}
+              <span
+                className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
+                title={title}
+              >
+                {summarizeTableTitle(title)}
+              </span>
+            </div>
+          ) : (
             <span
               className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
-              title={
-                isWebsiteIngestionJobRow(row.original)
-                  ? buildWebsiteIngestionRowTitle(row.original)
-                  : row.original.title
-              }
+              title={title}
             >
-              {summarizeTableTitle(
-                isWebsiteIngestionJobRow(row.original)
-                  ? buildWebsiteIngestionRowTitle(row.original)
-                  : row.original.title,
-              )}
+              {summarizeTableTitle(title)}
             </span>
-          </div>
-        ),
+          );
+        },
       },
       {
         accessorFn: (row) =>

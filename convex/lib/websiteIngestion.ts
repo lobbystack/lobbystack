@@ -8,6 +8,8 @@ export const WEBSITE_CRAWL_PAGE_LIMIT = 40;
 export const WEBSITE_CRAWL_DEPTH = 3;
 export const WEBSITE_CRAWL_HTTP_MODE = "http";
 export const WEBSITE_CRAWL_BROWSER_MODE = "browser";
+export const WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT = 12;
+export const WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH = 2;
 export const WEBSITE_CRAWL_PATTERN_LIMIT = 100;
 export const WEBSITE_PUBLIC_URL_ERROR_MESSAGE =
   "Enter a public website URL. Localhost, local network addresses, and direct IP addresses are not supported. Use a tunnel URL for local testing.";
@@ -248,6 +250,27 @@ export function shouldTriggerBrowserFallback(input: {
     input.importedPageCount === 0 ||
     (input.importedPageCount < 3 && input.totalMarkdownBytes < 4 * 1024)
   );
+}
+
+export function resolveWebsiteCrawlBudget(input: {
+  render: boolean;
+  pageLimit?: number | null;
+  depth?: number | null;
+}): { pageLimit: number; depth: number } {
+  const requestedPageLimit = input.pageLimit ?? WEBSITE_CRAWL_PAGE_LIMIT;
+  const requestedDepth = input.depth ?? WEBSITE_CRAWL_DEPTH;
+
+  if (!input.render) {
+    return {
+      pageLimit: requestedPageLimit,
+      depth: requestedDepth,
+    };
+  }
+
+  return {
+    pageLimit: Math.min(requestedPageLimit, WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT),
+    depth: Math.min(requestedDepth, WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH),
+  };
 }
 
 function buildEquivalentWebsiteUrls(websiteUrl: string): Array<string> {
