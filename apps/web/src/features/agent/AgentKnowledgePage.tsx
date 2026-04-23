@@ -528,22 +528,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
   function renderDocumentStatus(document: KnowledgeDocumentRow) {
     if (document.status === "queued" || document.status === "indexing") {
-      const progressValue = Math.max(
-        0,
-        Math.min(100, Math.round(document.processingProgress ?? (document.status === "indexing" ? 92 : 0))),
-      );
-      const label =
-        document.status === "queued"
-          ? t(`agent:sections.${section}.status.analyzing`)
-          : getDocumentStatusLabel(document.status);
-
-      return (
-        <span className="inline-flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
-          <span>{label}</span>
-          <Progress className="w-24" value={progressValue} />
-          <span className="min-w-10 text-right text-xs tabular-nums">{progressValue}%</span>
-        </span>
-      );
+      return <Badge variant="outline">{getDocumentStatusLabel(document.status)}</Badge>;
     }
 
     return (

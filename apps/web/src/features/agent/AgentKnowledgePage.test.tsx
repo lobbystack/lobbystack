@@ -591,7 +591,9 @@ describe("AgentKnowledgePage", () => {
 
     expect(screen.getByText("Clinic Policies")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.documentBadge")).toBeTruthy();
-    expect(screen.getAllByText("18%")).toHaveLength(2);
+    expect(screen.getAllByText("18%")).toHaveLength(1);
+    expect(screen.getByText("agent:sections.knowledge.status.indexing")).toBeTruthy();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
     expect(screen.queryByText("agent:sections.knowledge.previewPending")).toBeNull();
   });
 
