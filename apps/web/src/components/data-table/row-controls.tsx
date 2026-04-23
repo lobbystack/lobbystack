@@ -34,7 +34,7 @@ function DataTableRowActions({
 }) {
   return (
     <div
-      className={cn("flex w-16 translate-x-2 justify-end pr-0", className)}
+      className={cn("flex w-16 justify-end pr-0", className)}
       data-slot="data-table-row-actions"
     >
       {children}
