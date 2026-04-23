@@ -1088,6 +1088,117 @@ describe("website onboarding and ingestion", () => {
     expect(websiteDocument?.status).toBe("queued");
   });
 
+  it("falls back to a browser crawl when the completed HTTP crawl is too weak", async () => {
+    const t = createConvexHarness();
+    const subject = "website-reconcile-browser-fallback-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-http-1",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+        lastProgressAt: new Date().toISOString(),
+      });
+    });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            finished: 1,
+            total: 1,
+            skipped: 0,
+            records: [],
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            total: 1,
+            finished: 1,
+            skipped: 0,
+            records: [
+              {
+                url: "https://example.com/about",
+                status: "completed",
+                markdown: "# About\n" + "weak ".repeat(30),
+                metadata: {
+                  status: 200,
+                  title: "About",
+                },
+              },
+            ],
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: "cf-job-browser-1",
+        }),
+      } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.reconcileWebsiteIngestionJob,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    expect(result).toEqual({ status: "crawling" });
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+    expect(ragDeleteMock).not.toHaveBeenCalled();
+
+    const job = await t.query(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId,
+    });
+    expect(job).toMatchObject({
+      status: "crawling",
+      cloudflareJobId: "cf-job-browser-1",
+      crawlMode: "browser",
+      fallbackTriggered: true,
+      importedCount: 0,
+      indexedCount: 0,
+      errorCount: 0,
+      crawlFinishedCount: 0,
+      crawlTotalCount: 0,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const browserSubmitCall = fetchMock.mock.calls[2];
+    expect(String(browserSubmitCall?.[0] ?? "")).toBe(
+      "https://api.cloudflare.com/client/v4/accounts/test-account/browser-rendering/crawl",
+    );
+    const browserSubmitBody = JSON.parse(String(browserSubmitCall?.[1]?.body ?? "{}")) as {
+      render?: boolean;
+    };
+    expect(browserSubmitBody.render).toBe(true);
+  });
+
   it("fails a crawl that stops making progress for too long", async () => {
     const t = createConvexHarness();
     const subject = "website-stalled-crawl-owner";
