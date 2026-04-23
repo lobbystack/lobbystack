@@ -67,6 +67,7 @@ type WebsiteIngestionListItem = Doc<"website_ingestion_jobs"> & {
 type SubmitWebsiteIngestionArgs = {
   businessId: Id<"businesses">;
   websiteUrl: string;
+  nextOnboardingStage?: "phone_number";
 };
 
 type DeleteWebsiteIngestionJobArgs = {
@@ -175,6 +176,7 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
   args: {
     businessId: v.id("businesses"),
     websiteUrl: v.string(),
+    nextOnboardingStage: v.optional(v.literal("phone_number")),
   },
   handler: async (
     ctx: MutationCtx,
@@ -196,21 +198,27 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
       errorCount: 0,
     });
 
-    await ctx.db.patch(args.businessId, {
-      websiteUrl: args.websiteUrl,
-    });
+    try {
+      const workflowId = await workflowManager.start(
+        ctx,
+        internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+        {
+          websiteIngestionJobId,
+        },
+      );
 
-    const workflowId = await workflowManager.start(
-      ctx,
-      internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
-      {
-        websiteIngestionJobId,
-      },
-    );
+      await ctx.db.patch(websiteIngestionJobId, {
+        workflowId,
+      });
 
-    await ctx.db.patch(websiteIngestionJobId, {
-      workflowId,
-    });
+      await ctx.db.patch(args.businessId, {
+        websiteUrl: args.websiteUrl,
+        ...(args.nextOnboardingStage ? { onboardingStage: args.nextOnboardingStage } : {}),
+      });
+    } catch (error) {
+      await ctx.db.delete(websiteIngestionJobId);
+      throw error;
+    }
 
     return {
       status: "submitted",

@@ -61,6 +61,7 @@
     "dev:convex": "convex dev",
     "dev:web": "pnpm --filter @ai-receptionist/web dev",
     "dev:voice": "pnpm --filter @ai-receptionist/voice-gateway dev",
+    "dev:onboarding:website": "tsx scripts/prepare-onboarding-website.ts",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && pnpm typecheck:convex",
     "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",

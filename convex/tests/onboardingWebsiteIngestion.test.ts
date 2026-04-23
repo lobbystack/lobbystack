@@ -257,6 +257,7 @@ describe("website onboarding and ingestion", () => {
       websiteUrl: "https://example.com/clinic",
       provider: "cloudflare_browser_run",
       status: "queued",
+      workflowId: "workflow-test-id",
       crawlMode: "http",
       fallbackTriggered: false,
       pageLimit: 40,
@@ -305,6 +306,7 @@ describe("website onboarding and ingestion", () => {
       websiteUrl: "https://example.com/faq",
       provider: "cloudflare_browser_run",
       status: "queued",
+      workflowId: "workflow-test-id",
       crawlMode: "http",
       fallbackTriggered: false,
       pageLimit: 40,
@@ -452,6 +454,35 @@ describe("website onboarding and ingestion", () => {
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(0);
     expect(workflowStartMock).not.toHaveBeenCalled();
+  });
+
+  it("does not advance onboarding or keep a queued job when workflow start fails", async () => {
+    const t = createConvexHarness();
+    const subject = "website-workflow-failure-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "website",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    workflowStartMock.mockRejectedValueOnce(new Error("Workflow start failed."));
+
+    await expect(
+      authed.action(api.onboarding.websites.submitOnboardingWebsite, {
+        businessId,
+        websiteUrl: "example.com/clinic",
+      }),
+    ).rejects.toThrow("Workflow start failed.");
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.websiteUrl).toBeUndefined();
+    expect(business?.onboardingStage).toBe("website");
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(0);
   });
 
   it("allows skipping the website step without creating an ingestion job", async () => {

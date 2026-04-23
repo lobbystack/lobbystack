@@ -11,13 +11,6 @@ import {
   type MutationCtx,
 } from "../_generated/server";
 import { requireMembership } from "../lib/auth";
-import { workflowManager } from "../lib/components";
-import {
-  WEBSITE_CRAWL_DEPTH,
-  WEBSITE_CRAWL_HTTP_MODE,
-  WEBSITE_CRAWL_PAGE_LIMIT,
-  WEBSITE_INGESTION_PROVIDER,
-} from "../lib/websiteIngestion";
 
 type BusinessIdArgs = {
   businessId: Id<"businesses">;
@@ -87,38 +80,14 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
   ): Promise<SubmitOnboardingWebsiteResult> => {
     await requireBusinessInWebsiteStage(ctx, args.businessId);
 
-    const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
-      businessId: args.businessId,
-      websiteUrl: args.websiteUrl,
-      provider: WEBSITE_INGESTION_PROVIDER,
-      status: "queued",
-      crawlMode: WEBSITE_CRAWL_HTTP_MODE,
-      fallbackTriggered: false,
-      pageLimit: WEBSITE_CRAWL_PAGE_LIMIT,
-      depth: WEBSITE_CRAWL_DEPTH,
-      importedCount: 0,
-      indexedCount: 0,
-      errorCount: 0,
-    });
-
-    await ctx.db.patch(args.businessId, {
-      websiteUrl: args.websiteUrl,
-      onboardingStage: "phone_number",
-    });
-
-    await workflowManager.start(
-      ctx,
-      internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+    return await ctx.runMutation(
+      internal.ai.context.websiteIngestion.submitWebsiteIngestionAfterPreflight,
       {
-        websiteIngestionJobId,
+        businessId: args.businessId,
+        websiteUrl: args.websiteUrl,
+        nextOnboardingStage: "phone_number",
       },
     );
-
-    return {
-      status: "submitted",
-      websiteUrl: args.websiteUrl,
-      websiteIngestionJobId,
-    };
   },
 });
 
