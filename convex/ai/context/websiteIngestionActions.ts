@@ -80,6 +80,8 @@ const CLOUDFLARE_CRAWL_RETRY_DELAY_MS = 1_000;
 const WEBSITE_CRAWL_STALL_WINDOW_MS = 30 * 60 * 1_000;
 const WEBSITE_CRAWL_HARD_TIMEOUT_MS = 2 * 60 * 60 * 1_000;
 const WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS = 5 * 60 * 1_000;
+const WEBSITE_CRAWL_RESULTS_NOT_READY_MESSAGE =
+  "Website crawl results are still becoming available.";
 
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
@@ -846,30 +848,35 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       });
     const importLastProgressAtMs =
       parseIsoTimestamp(job.lastProgressAt ?? job.startedAt) ?? Date.now();
-    const shouldWaitForMissingBrowserRecords =
+    const shouldWaitForCompleteBrowserRecords =
       args.crawlMode === WEBSITE_CRAWL_BROWSER_MODE && job.fallbackTriggered === true;
+    const partialBrowserCrawlCompleted = isAcceptablePartialBrowserCrawl({
+      allowPartial:
+        Date.now() - importLastProgressAtMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS,
+      expectedPageLimit: resolveWebsiteCrawlBudget({
+        render: true,
+        pageLimit: job.pageLimit,
+        depth: job.depth,
+      }).pageLimit,
+      crawlMode: args.crawlMode,
+      processedCount: crawlProcessedCount,
+      records: crawlRecords,
+      total: crawlTotal,
+    });
+    const providerCrawlCompleted =
+      crawlStatus === "completed" || crawlFullyProcessed || partialBrowserCrawlCompleted;
+    const crawlResultsReady =
+      !shouldWaitForCompleteBrowserRecords ||
+      crawlTotal === null ||
+      (returnedAllExpectedRecords && returnedRecordsAreTerminal) ||
+      partialBrowserCrawlCompleted;
     const crawlCompleted =
-      (crawlStatus === "completed" &&
-        (!shouldWaitForMissingBrowserRecords ||
-          crawlTotal === null ||
-          crawlFullyProcessed ||
-          (returnedAllExpectedRecords && returnedRecordsAreTerminal))) ||
-      crawlFullyProcessed ||
-      isAcceptablePartialBrowserCrawl({
-        allowPartial:
-          Date.now() - importLastProgressAtMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS,
-        expectedPageLimit: resolveWebsiteCrawlBudget({
-          render: true,
-          pageLimit: job.pageLimit,
-          depth: job.depth,
-        }).pageLimit,
-        crawlMode: args.crawlMode,
-        processedCount: crawlProcessedCount,
-        records: crawlRecords,
-        total: crawlTotal,
-      });
+      providerCrawlCompleted && crawlResultsReady;
 
     if (!crawlCompleted) {
+      if (providerCrawlCompleted && !crawlResultsReady) {
+        throw new Error(WEBSITE_CRAWL_RESULTS_NOT_READY_MESSAGE);
+      }
       throw new Error(`Website crawl job is ${crawlStatus ?? "not ready"} and cannot be imported.`);
     }
 
@@ -1379,6 +1386,10 @@ export const reconcileWebsiteIngestionJob = internalAction({
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Website import failed unexpectedly.";
+
+      if (message === WEBSITE_CRAWL_RESULTS_NOT_READY_MESSAGE) {
+        return { status: "crawling" };
+      }
 
       await markWebsiteIngestionJobFailed(ctx, args.websiteIngestionJobId, message);
       return { status: "failed" };

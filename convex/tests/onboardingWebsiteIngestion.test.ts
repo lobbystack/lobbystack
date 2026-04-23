@@ -1405,6 +1405,106 @@ describe("website onboarding and ingestion", () => {
     expect(websiteDocument?.status).toBe("queued");
   });
 
+  it("keeps browser fallback crawling when counters finish before result records are available", async () => {
+    const t = createConvexHarness();
+    const subject = "website-reconcile-browser-results-lag-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://example.com",
+        provider: "cloudflare_browser_run",
+        status: "crawling",
+        cloudflareJobId: "cf-job-reconcile-browser-results-lag-1",
+        crawlMode: "browser",
+        fallbackTriggered: true,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+        startedAt: new Date().toISOString(),
+        lastProgressAt: new Date().toISOString(),
+      });
+    });
+
+    const aboutMarkdown = "# About\n" + "current ".repeat(900);
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+            total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+            skipped: 0,
+            records: [
+              {
+                url: "https://example.com/about",
+                status: "completed",
+                markdown: aboutMarkdown,
+                metadata: {
+                  status: 200,
+                  title: "About",
+                },
+              },
+            ],
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            status: "completed",
+            finished: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+            total: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+            skipped: 0,
+            records: [
+              {
+                url: "https://example.com/about",
+                status: "completed",
+                markdown: aboutMarkdown,
+                metadata: {
+                  status: 200,
+                  title: "About",
+                },
+              },
+            ],
+          },
+        }),
+      } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.reconcileWebsiteIngestionJob,
+      {
+        websiteIngestionJobId,
+      },
+    );
+
+    expect(result).toEqual({ status: "crawling" });
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+
+    const job = await t.query(internal.ai.context.websiteIngestion.getWebsiteIngestionJobRecord, {
+      websiteIngestionJobId,
+    });
+    expect(job).toMatchObject({
+      status: "crawling",
+      importedCount: 0,
+      indexedCount: 0,
+      crawlFinishedCount: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+      crawlTotalCount: WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT,
+    });
+  });
+
   it("falls back to a browser crawl when the completed HTTP crawl is too weak", async () => {
     const t = createConvexHarness();
     const subject = "website-reconcile-browser-fallback-owner";
