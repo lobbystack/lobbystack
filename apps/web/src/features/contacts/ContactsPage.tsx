@@ -21,6 +21,7 @@ import { DataTablePagination } from "@/components/data-table/pagination";
 import {
   DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
   DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS,
+  DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS,
   DataTableRowActions,
 } from "@/components/data-table/row-controls";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
@@ -233,10 +234,14 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
             timeStyle: "short",
           }),
         id: "lastInteraction",
-        header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
+        header: () => (
+          <span className={`relative block text-right ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}>
+            {t("table.lastInteraction")}
+          </span>
+        ),
         cell: ({ row }) => (
           <span
-            className="block truncate text-right text-sm text-muted-foreground"
+            className={`relative block truncate text-right text-sm text-muted-foreground ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}
             title={formatDateTime(row.original.lastInteractionAt, i18n.language, {
               dateStyle: "medium",
               timeStyle: "short",

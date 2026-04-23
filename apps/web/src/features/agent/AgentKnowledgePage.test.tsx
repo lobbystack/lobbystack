@@ -66,28 +66,6 @@ vi.mock("@/components/data-table/pagination", () => ({
   DataTablePagination: () => <div data-testid="pagination" />,
 }));
 
-vi.mock("@/components/ui/switch", () => ({
-  Switch: ({
-    checked,
-    disabled,
-    onCheckedChange,
-    ...props
-  }: {
-    checked?: boolean;
-    disabled?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-  } & React.ComponentProps<"button">) => (
-    <button
-      {...props}
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onCheckedChange?.(!checked)}
-      role="switch"
-      type="button"
-    />
-  ),
-}));
-
 vi.mock("@/components/ui/dropdown-menu", async () => {
   const ReactModule = await vi.importActual<typeof import("react")>("react");
   const DropdownMenuContext = ReactModule.createContext({
@@ -145,11 +123,16 @@ vi.mock("@/components/ui/dropdown-menu", async () => {
     );
   }
 
+  function DropdownMenuSeparator(props: React.ComponentProps<"div">) {
+    return <div {...props} />;
+  }
+
   return {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
   };
 });
 
@@ -330,9 +313,9 @@ describe("AgentKnowledgePage", () => {
       expect(screen.getByPlaceholderText("agent:table.searchPlaceholder")).toBeTruthy();
       expect(screen.getByText("agent:table.title")).toBeTruthy();
       expect(screen.getByText("agent:table.preview")).toBeTruthy();
-      expect(screen.getByText("agent:table.tags")).toBeTruthy();
-      expect(screen.queryByText("agent:table.status")).toBeNull();
-      expect(screen.queryByText("agent:table.active")).toBeNull();
+      expect(screen.getByText("agent:table.status")).toBeTruthy();
+      expect(screen.queryByText("agent:table.tags")).toBeNull();
+      expect(screen.queryByRole("switch")).toBeNull();
       expect(screen.getByText("agent:table.added")).toBeTruthy();
       expect(screen.getByText(`agent:sections.${section}.emptyState`)).toBeTruthy();
       expect(screen.getByTestId("pagination")).toBeTruthy();
@@ -386,7 +369,7 @@ describe("AgentKnowledgePage", () => {
     });
   });
 
-  it("toggles snippet activity from the shared switch column", async () => {
+  it("toggles snippet activity from the row actions menu", async () => {
     mockAgentKnowledgeQueries({
       knowledge: {
         documents: [],
@@ -398,7 +381,8 @@ describe("AgentKnowledgePage", () => {
     render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("switch", { name: "agent:actions.deactivateEntry" }));
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.disable" }));
 
     await waitFor(() => {
       expect(setKnowledgeEntryActiveMock).toHaveBeenCalledWith({
@@ -407,27 +391,6 @@ describe("AgentKnowledgePage", () => {
         active: false,
       });
     });
-  });
-
-  it("renders separate shared trailing accessory and actions cells", () => {
-    mockAgentKnowledgeQueries({
-      knowledge: {
-        documents: [],
-        snippets: [createSnippet()],
-      },
-    });
-
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
-
-    const row = screen.getByText("Hours").closest("tr");
-    expect(row).toBeTruthy();
-
-    const trailingSlots = Array.from(
-      row?.querySelectorAll("[data-slot='data-table-row-accessory'], [data-slot='data-table-row-actions']") ??
-        [],
-    ).map((element) => element.getAttribute("data-slot"));
-
-    expect(trailingSlots).toEqual(["data-table-row-accessory", "data-table-row-actions"]);
   });
 
   it("keeps delete actions from opening the snippet edit dialog", async () => {
@@ -624,12 +587,11 @@ describe("AgentKnowledgePage", () => {
 
     expect(screen.getByText("Clinic Policies")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.documentBadge")).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "agent:actions.deactivateEntry" })).toBeTruthy();
-    expect(screen.getByText("18%")).toBeTruthy();
+    expect(screen.getAllByText("18%")).toHaveLength(2);
     expect(screen.queryByText("agent:sections.knowledge.previewPending")).toBeNull();
   });
 
-  it("toggles document activity from the shared switch column", async () => {
+  it("toggles document activity from the row actions menu", async () => {
     mockAgentKnowledgeQueries({
       knowledge: {
         documents: [createDocument()],
@@ -641,7 +603,8 @@ describe("AgentKnowledgePage", () => {
     render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("switch", { name: "agent:actions.deactivateEntry" }));
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.disable" }));
 
     await waitFor(() => {
       expect(setKnowledgeEntryActiveMock).toHaveBeenCalledWith({

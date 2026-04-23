@@ -9,7 +9,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { FileText, Globe, MoreHorizontal, Search, Text, Trash2 } from "lucide-react";
+import { FileText, Globe, MoreHorizontal, Pause, Play, Search, Text, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -20,11 +20,9 @@ import type { AgentLayoutOutletContext } from "./AgentLayout";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
 import {
-  DATA_TABLE_ROW_ACCESSORY_CELL_CLASS,
-  DATA_TABLE_ROW_ACCESSORY_COLGROUP_CLASS,
   DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
   DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS,
-  DataTableRowAccessory,
+  DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS,
   DataTableRowActions,
 } from "@/components/data-table/row-controls";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
@@ -34,12 +32,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -82,6 +80,10 @@ type RowActionsMenuProps = {
   actionLabel?: string;
   deleting: boolean;
   disabled?: boolean;
+  onToggleActive?: () => void;
+  toggleActiveDisabled?: boolean;
+  toggleActiveLabel?: string;
+  toggleActiveVariant?: "enable" | "disable";
   onDelete: () => void;
 };
 
@@ -198,6 +200,10 @@ function RowActionsMenu({
   actionLabel,
   deleting,
   disabled = false,
+  onToggleActive,
+  toggleActiveDisabled = false,
+  toggleActiveLabel,
+  toggleActiveVariant,
   onDelete,
 }: RowActionsMenuProps) {
   const { t } = useTranslation("agent");
@@ -230,13 +236,27 @@ function RowActionsMenu({
       />
       <DropdownMenuContent
         align="end"
-        className="min-w-[9rem] w-auto p-1"
+        className="min-w-0 w-fit p-1"
         onClick={(event) => {
           event.stopPropagation();
         }}
         side="bottom"
         sideOffset={8}
       >
+        {onToggleActive && toggleActiveLabel ? (
+          <DropdownMenuItem
+            className="gap-2.5 px-3 py-2"
+            disabled={toggleActiveDisabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleActive();
+            }}
+          >
+            {toggleActiveVariant === "enable" ? <Play /> : <Pause />}
+            <span>{toggleActiveLabel}</span>
+          </DropdownMenuItem>
+        ) : null}
+        {onToggleActive && toggleActiveLabel ? <DropdownMenuSeparator /> : null}
         <DropdownMenuItem
           className="gap-2.5 px-3 py-2"
           onClick={(event) => {
@@ -490,6 +510,89 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     return renderInProgressPreview(progressValue);
   }
 
+  function getDocumentStatusLabel(status: KnowledgeDocumentRow["status"]): string {
+    switch (status) {
+      case "queued":
+        return t(`agent:sections.${section}.status.queued`);
+      case "indexing":
+        return t(`agent:sections.${section}.status.indexing`);
+      case "indexed":
+        return t(`agent:sections.${section}.status.indexed`);
+      case "error":
+        return t(`agent:sections.${section}.status.error`);
+      default:
+        return status;
+    }
+  }
+
+  function renderDocumentStatus(document: KnowledgeDocumentRow) {
+    if (document.status === "queued" || document.status === "indexing") {
+      const progressValue = Math.max(
+        0,
+        Math.min(100, Math.round(document.processingProgress ?? (document.status === "indexing" ? 92 : 0))),
+      );
+      const label =
+        document.status === "queued"
+          ? t(`agent:sections.${section}.status.analyzing`)
+          : getDocumentStatusLabel(document.status);
+
+      return (
+        <span className="inline-flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">
+          <span>{label}</span>
+          <Progress className="w-24" value={progressValue} />
+          <span className="min-w-10 text-right text-xs tabular-nums">{progressValue}%</span>
+        </span>
+      );
+    }
+
+    return (
+      <Badge
+        variant={
+          document.status === "error"
+            ? "destructive"
+            : document.status === "indexed"
+              ? "secondary"
+              : "outline"
+        }
+      >
+        {getDocumentStatusLabel(document.status)}
+      </Badge>
+    );
+  }
+
+  function renderWebsiteIngestionJobStatus(job: WebsiteIngestionJobRow) {
+    if (job.status === "failed") {
+      return <Badge variant="destructive">{t("agent:sections.knowledge.websiteImport.status.failed")}</Badge>;
+    }
+
+    if (job.status === "completed") {
+      return <Badge variant="secondary">{t("agent:sections.knowledge.status.indexed")}</Badge>;
+    }
+
+    return <Badge variant="outline">{t("agent:sections.knowledge.websiteImport.status.inProgress")}</Badge>;
+  }
+
+  function getEntryToggleActionLabel(row: KnowledgeDocumentRow | KnowledgeSnippetRow): string {
+    const active = isKnowledgeEntryActive(row);
+    return active ? t("agent:actions.disable") : t("agent:actions.enable");
+  }
+
+  function renderEntryStatus(row: KnowledgeRow) {
+    if (isWebsiteIngestionJobRow(row)) {
+      return renderWebsiteIngestionJobStatus(row);
+    }
+
+    if (!isKnowledgeEntryActive(row)) {
+      return <Badge variant="outline">{t("agent:table.disabled")}</Badge>;
+    }
+
+    if (isDocumentRow(row)) {
+      return renderDocumentStatus(row);
+    }
+
+    return <Badge variant="secondary">{t(`agent:sections.${section}.status.indexed`)}</Badge>;
+  }
+
   function getDocumentPreviewSummary(document: KnowledgeDocumentRow): string {
     const textContent = document.textContent?.trim();
     if (textContent) {
@@ -597,26 +700,19 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           ),
       },
       {
-        accessorFn: (row) => (isWebsiteIngestionJobRow(row) ? "" : row.tags.join(" ")),
-        id: "tags",
-        header: () => t("agent:table.tags"),
-        cell: ({ row }) => {
-          if (isWebsiteIngestionJobRow(row.original)) {
-            return <span className="text-sm text-muted-foreground">-</span>;
-          }
-
-          const [firstTag, ...remainingTags] = row.original.tags;
-          if (!firstTag) {
-            return <span className="text-sm text-muted-foreground">-</span>;
-          }
-
-          return (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{firstTag}</Badge>
-              {remainingTags.length > 0 ? <Badge variant="outline">+{remainingTags.length}</Badge> : null}
-            </div>
-          );
-        },
+        accessorFn: (row) =>
+          isWebsiteIngestionJobRow(row)
+            ? row.status
+            : isDocumentRow(row)
+              ? isKnowledgeEntryActive(row)
+                ? row.status
+                : "disabled"
+              : row.active
+                ? "indexed"
+                : "disabled",
+        id: "status",
+        header: () => t("agent:table.status"),
+        cell: ({ row }) => renderEntryStatus(row.original),
       },
       {
         accessorFn: (row) =>
@@ -625,9 +721,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
             timeStyle: "short",
           }),
         id: "added",
-        header: () => <span className="block text-right">{t("agent:table.added")}</span>,
+        header: () => (
+          <span className={`relative block text-right ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}>
+            {t("agent:table.added")}
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="block truncate text-right text-sm text-muted-foreground">
+          <span
+            className={`relative block truncate text-right text-sm text-muted-foreground ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}
+          >
             {formatDateTime(row.original._creationTime, locale, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -636,80 +738,38 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ),
       },
       {
-        accessorFn: (row) =>
-          isWebsiteIngestionJobRow(row)
-            ? ""
-            : isDocumentRow(row)
-              ? isKnowledgeDocumentActive(row)
-              : row.active,
-        id: "active",
-        header: () => null,
-        cell: ({ row }) => {
-          const toggleableRow =
-            isDocumentRow(row.original) || isSnippetRow(row.original) ? row.original : null;
-
-          if (!toggleableRow) {
-            return (
-              <DataTableRowAccessory>
-                <span className="block w-6 text-center text-sm text-muted-foreground">-</span>
-              </DataTableRowAccessory>
-            );
-          }
-
-          const checked = isKnowledgeEntryActive(toggleableRow);
-          const rowId = String(toggleableRow._id);
-          const disabled = togglingEntryIds.includes(rowId);
-
-          return (
-            <DataTableRowAccessory>
-              <div
-                className="flex justify-end"
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-                onMouseDown={(event) => {
-                  event.stopPropagation();
-                }}
-                onPointerDown={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <Switch
-                  aria-label={checked ? t("agent:actions.deactivateEntry") : t("agent:actions.activateEntry")}
-                  checked={checked}
-                  disabled={disabled}
-                  onCheckedChange={(nextChecked) => {
-                    void handleSetEntryActive(toggleableRow, nextChecked);
-                  }}
-                  size="sm"
-                  title={checked ? t("agent:actions.deactivateEntry") : t("agent:actions.activateEntry")}
-                />
-              </div>
-            </DataTableRowAccessory>
-          );
-        },
-        meta: {
-          className: DATA_TABLE_ROW_ACCESSORY_CELL_CLASS,
-        },
-      },
-      {
         id: "actions",
         header: () => null,
-        cell: ({ row }) => (
-          <DataTableRowActions>
-            {!isWebsiteIngestionJobRow(row.original) || row.original.status !== "completed" ? (
-              <RowActionsMenu
-                deleting={deletingEntryId === String(row.original._id)}
-                {...(isWebsiteIngestionJobRow(row.original) && row.original.status !== "failed"
-                  ? { actionLabel: t("agent:actions.cancelImport") }
+        cell: ({ row }) => {
+          const rowData = row.original;
+          const toggleableRow = isDocumentRow(rowData) || isSnippetRow(rowData) ? rowData : null;
+
+          return (
+            <DataTableRowActions>
+              {!isWebsiteIngestionJobRow(rowData) || rowData.status !== "completed" ? (
+                <RowActionsMenu
+                  deleting={deletingEntryId === String(rowData._id)}
+                  {...(toggleableRow
+                    ? {
+                      onToggleActive: () => {
+                        void handleSetEntryActive(toggleableRow, !isKnowledgeEntryActive(toggleableRow));
+                      },
+                      toggleActiveDisabled: togglingEntryIds.includes(String(rowData._id)),
+                      toggleActiveLabel: getEntryToggleActionLabel(toggleableRow),
+                      toggleActiveVariant: isKnowledgeEntryActive(toggleableRow) ? "disable" : "enable",
+                    }
                   : {})}
-                onDelete={() => {
-                  setDeleteCandidate(row.original);
-                }}
-              />
-            ) : null}
-          </DataTableRowActions>
-        ),
+                  {...(isWebsiteIngestionJobRow(rowData) && rowData.status !== "failed"
+                    ? { actionLabel: t("agent:actions.cancelImport") }
+                    : {})}
+                  onDelete={() => {
+                    setDeleteCandidate(rowData);
+                  }}
+                />
+              ) : null}
+            </DataTableRowActions>
+          );
+        },
         meta: {
           className: DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
         },
@@ -986,17 +1046,16 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       </div>
 
       {isLoadingKnowledge ? (
-        <TableCardSkeleton columns={6} />
+        <TableCardSkeleton columns={5} />
       ) : (
         <>
           <TableCard>
             <Table className="min-w-[60rem] w-full table-fixed">
               <colgroup>
                 <col className="w-[18%]" />
-                <col className="w-[38%]" />
-                <col className="w-[10%]" />
+                <col className="w-[42%]" />
+                <col className="w-[14%]" />
                 <col className="w-[18%]" />
-                <col className={DATA_TABLE_ROW_ACCESSORY_COLGROUP_CLASS} />
                 <col className={DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS} />
               </colgroup>
               <TableHeader>
