@@ -646,13 +646,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         header: () => t("agent:table.title"),
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
-            {isDocumentRow(row.original) ? (
-              isWebsiteDocument(row.original) ? renderWebsiteIngestionJobMarker() : renderDocumentMarker()
-            ) : isWebsiteIngestionJobRow(row.original) ? (
-              renderWebsiteIngestionJobMarker()
-            ) : isSnippetRow(row.original) ? (
-              renderSnippetMarker()
-            ) : null}
+            {section === "knowledge"
+              ? isDocumentRow(row.original) ? (
+                isWebsiteDocument(row.original) ? renderWebsiteIngestionJobMarker() : renderDocumentMarker()
+              ) : isWebsiteIngestionJobRow(row.original) ? (
+                renderWebsiteIngestionJobMarker()
+              ) : isSnippetRow(row.original) ? (
+                renderSnippetMarker()
+              ) : null
+              : null}
             <span
               className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-medium"
               title={

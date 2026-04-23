@@ -6,7 +6,7 @@ const DATA_TABLE_ROW_ACCESSORY_COLGROUP_CLASS = "w-6";
 const DATA_TABLE_ROW_ACCESSORY_CELL_CLASS = "w-6 pr-0 text-right";
 const DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS = "w-[8%]";
 const DATA_TABLE_ROW_ACTIONS_CELL_CLASS = "w-16 text-right";
-const DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS = "translate-x-10";
+const DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS = "translate-x-12";
 
 function DataTableRowAccessory({
   children,
