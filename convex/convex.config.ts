@@ -9,6 +9,7 @@ import workpool from "@convex-dev/workpool/convex.config";
 import actionRetrier from "@convex-dev/action-retrier/convex.config";
 import crons from "@convex-dev/crons/convex.config";
 import polar from "@convex-dev/polar/convex.config";
+import firecrawlScrape from "convex-firecrawl-scrape/convex.config.js";
 
 const app = defineApp();
 
@@ -23,5 +24,6 @@ app.use(workpool, { name: "bulkWorkpool" });
 app.use(actionRetrier);
 app.use(crons);
 app.use(polar);
+app.use(firecrawlScrape);
 
 export default app;

@@ -1,0 +1,1609 @@
+# Hetzner Dokploy Baseline
+Generated: $(date -u)
+
+
+===== system =====
+ Static hostname: ubuntu-2gb-ash-1
+       Icon name: computer-vm
+         Chassis: vm
+      Machine ID: 2e032d80e55a4d17b04d4a82e4da7e2a
+         Boot ID: 9c1f81dff5a4457a95aabeb70ede613d
+  Virtualization: kvm
+Operating System: Ubuntu 22.04.5 LTS
+          Kernel: Linux 5.15.0-173-generic
+    Architecture: x86-64
+ Hardware Vendor: Hetzner
+  Hardware Model: vServer
+
+UTC: Fri Apr 24 02:09:34 UTC 2026
+
+Uptime:
+ 02:09:34 up  1:11,  0 users,  load average: 0.00, 0.04, 0.15
+
+OS release:
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+
+Kernel:
+Linux ubuntu-2gb-ash-1 5.15.0-173-generic #183-Ubuntu SMP Fri Mar 6 13:29:34 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+
+IP addresses:
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             87.99.142.16/32 metric 100 2a01:4ff:f4:62bf::1/64 fe80::9000:7ff:fe69:2f8b/64 
+tailscale0       UNKNOWN        100.118.244.124/32 fd7a:115c:a1e0::e301:f4b6/128 fe80::acfc:3373:fca0:744d/64 
+docker_gwbridge  UP             172.18.0.1/16 fe80::5c22:5cff:fe3b:c8fb/64 
+docker0          UP             172.17.0.1/16 fe80::b4fb:4bff:fe7f:84a6/64 
+br-7f05052c93e4  DOWN           172.19.0.1/16 fe80::ac80:32ff:fe10:7171/64 
+vetha925fa2@if10 UP             fe80::4cf2:31ff:fe79:2429/64 
+veth43efb3c@if3  UP             fe80::b00e:b5ff:fea9:315a/64 
+veth96b4c63@if29 UP             fe80::c44:bfff:fe41:b9c2/64 
+veth040bcc5@if31 UP             fe80::4c14:bdff:fe65:7726/64 
+veth7457adb@if35 UP             fe80::f013:daff:feef:dac1/64 
+br-3e888ae9a116  DOWN           172.20.0.1/16 fe80::a078:b4ff:fe05:945/64 
+
+Routes:
+default via 172.31.1.1 dev eth0 proto dhcp src 87.99.142.16 metric 100 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+172.18.0.0/16 dev docker_gwbridge proto kernel scope link src 172.18.0.1 
+172.19.0.0/16 dev br-7f05052c93e4 proto kernel scope link src 172.19.0.1 linkdown 
+172.20.0.0/16 dev br-3e888ae9a116 proto kernel scope link src 172.20.0.1 linkdown 
+172.31.1.1 dev eth0 proto dhcp scope link src 87.99.142.16 metric 100 
+185.12.64.1 via 172.31.1.1 dev eth0 proto dhcp src 87.99.142.16 metric 100 
+185.12.64.2 via 172.31.1.1 dev eth0 proto dhcp src 87.99.142.16 metric 100 
+::1 dev lo proto kernel metric 256 pref medium
+2a01:4ff:f4:62bf::/64 dev eth0 proto kernel metric 256 pref medium
+fd7a:115c:a1e0::e301:f4b6 dev tailscale0 proto kernel metric 256 pref medium
+fe80::/64 dev eth0 proto kernel metric 256 pref medium
+fe80::/64 dev tailscale0 proto kernel metric 256 pref medium
+fe80::/64 dev vetha925fa2 proto kernel metric 256 pref medium
+fe80::/64 dev docker_gwbridge proto kernel metric 256 pref medium
+fe80::/64 dev br-7f05052c93e4 proto kernel metric 256 linkdown pref medium
+fe80::/64 dev veth43efb3c proto kernel metric 256 pref medium
+fe80::/64 dev docker0 proto kernel metric 256 pref medium
+fe80::/64 dev veth96b4c63 proto kernel metric 256 pref medium
+fe80::/64 dev veth040bcc5 proto kernel metric 256 pref medium
+fe80::/64 dev veth7457adb proto kernel metric 256 pref medium
+fe80::/64 dev br-3e888ae9a116 proto kernel metric 256 linkdown pref medium
+default via fe80::1 dev eth0 proto static metric 1024 onlink pref medium
+
+===== listeners =====
+Netid State  Recv-Q Send-Q               Local Address:Port  Peer Address:PortProcess                                                                                                                  
+udp   UNCONN 0      0                          0.0.0.0:443        0.0.0.0:*    users:(("docker-proxy",pid=28238,fd=8)) ino:118146 sk:1 cgroup:/system.slice/docker.service <->                         
+udp   UNCONN 0      0                          0.0.0.0:41641      0.0.0.0:*    users:(("tailscaled",pid=752,fd=19)) ino:119338 sk:2 fwmark:0x80000 cgroup:/system.slice/tailscaled.service <->         
+udp   UNCONN 0      0                          0.0.0.0:4789       0.0.0.0:*    ino:20634 sk:3 cgroup:/system.slice/docker.service <->                                                                  
+udp   UNCONN 0      0                    127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=695,fd=13)) uid:102 ino:17823 sk:4 cgroup:/system.slice/systemd-resolved.service <->      
+udp   UNCONN 0      0                87.99.142.16%eth0:68         0.0.0.0:*    users:(("systemd-network",pid=693,fd=18)) uid:101 ino:17049 sk:5 cgroup:/system.slice/systemd-networkd.service <->      
+udp   UNCONN 0      0                             [::]:443           [::]:*    users:(("docker-proxy",pid=28244,fd=8)) ino:118147 sk:6 cgroup:/system.slice/docker.service v6only:1 <->                
+udp   UNCONN 0      0                             [::]:41641         [::]:*    users:(("tailscaled",pid=752,fd=18)) ino:120069 sk:7 fwmark:0x80000 cgroup:/system.slice/tailscaled.service v6only:1 <->
+udp   UNCONN 0      0                                *:7946             *:*    users:(("dockerd",pid=845,fd=29)) ino:20539 sk:8 cgroup:/system.slice/docker.service v6only:0 <->                       
+tcp   LISTEN 0      4096                       0.0.0.0:3000       0.0.0.0:*    users:(("docker-proxy",pid=8642,fd=8)) ino:47246 sk:9 cgroup:/system.slice/docker.service <->                           
+tcp   LISTEN 0      4096                       0.0.0.0:80         0.0.0.0:*    users:(("docker-proxy",pid=28194,fd=8)) ino:118060 sk:a cgroup:/system.slice/docker.service <->                         
+tcp   LISTEN 0      4096               100.118.244.124:54366      0.0.0.0:*    users:(("tailscaled",pid=752,fd=23)) ino:19915 sk:b cgroup:/system.slice/tailscaled.service <->                         
+tcp   LISTEN 0      128                        0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=786,fd=3)) ino:18263 sk:c cgroup:/system.slice/ssh.service <->                                       
+tcp   LISTEN 0      4096                 127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=695,fd=14)) uid:102 ino:17824 sk:d cgroup:/system.slice/systemd-resolved.service <->      
+tcp   LISTEN 0      4096                       0.0.0.0:443        0.0.0.0:*    users:(("docker-proxy",pid=28217,fd=8)) ino:117488 sk:e cgroup:/system.slice/docker.service <->                         
+tcp   LISTEN 0      4096                             *:7946             *:*    users:(("dockerd",pid=845,fd=28)) ino:20537 sk:f cgroup:/system.slice/docker.service v6only:0 <->                       
+tcp   LISTEN 0      4096                          [::]:3000          [::]:*    users:(("docker-proxy",pid=8647,fd=8)) ino:47247 sk:10 cgroup:/system.slice/docker.service v6only:1 <->                 
+tcp   LISTEN 0      4096                          [::]:80            [::]:*    users:(("docker-proxy",pid=28201,fd=8)) ino:118061 sk:11 cgroup:/system.slice/docker.service v6only:1 <->               
+tcp   LISTEN 0      128                           [::]:22            [::]:*    users:(("sshd",pid=786,fd=4)) ino:18265 sk:12 cgroup:/system.slice/ssh.service v6only:1 <->                             
+tcp   LISTEN 0      4096                             *:2377             *:*    users:(("dockerd",pid=845,fd=20)) ino:20173 sk:13 cgroup:/system.slice/docker.service v6only:0 <->                      
+tcp   LISTEN 0      4096   [fd7a:115c:a1e0::e301:f4b6]:33061         [::]:*    users:(("tailscaled",pid=752,fd=24)) ino:19917 sk:14 cgroup:/system.slice/tailscaled.service v6only:1 <->               
+tcp   LISTEN 0      4096                          [::]:443           [::]:*    users:(("docker-proxy",pid=28223,fd=8)) ino:117489 sk:15 cgroup:/system.slice/docker.service v6only:1 <->               
+
+===== tailscale =====
+● tailscaled.service - Tailscale node agent
+     Loaded: loaded (/lib/systemd/system/tailscaled.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-04-24 00:57:43 UTC; 1h 11min ago
+       Docs: https://tailscale.com/docs/
+   Main PID: 752 (tailscaled)
+     Status: "Connected; morencyr@github; 100.118.244.124 fd7a:115c:a1e0::e301:f4b6"
+      Tasks: 10 (limit: 2249)
+     Memory: 40.3M
+        CPU: 3.788s
+     CGroup: /system.slice/tailscaled.service
+             └─752 /usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+
+Apr 24 02:04:29 ubuntu-2gb-ash-1 tailscaled[752]: derphttp.Client.Recv: connecting to derp-21 (tor)
+Apr 24 02:04:29 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: derp-21 connected; connGen=1
+Apr 24 02:04:41 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: closing connection to derp-1 (idle), age 1m15s
+Apr 24 02:04:41 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: 2 active derp conns: derp-21=cr12s,wr12s derp-27=cr1h7m0s,wr1h5m0s
+Apr 24 02:05:41 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: closing connection to derp-21 (idle), age 1m12s
+Apr 24 02:05:41 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: 1 active derp conns: derp-27=cr1h8m0s,wr1h6m0s
+Apr 24 02:07:47 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: adding connection to derp-21 for [prkCX]
+Apr 24 02:07:47 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: 2 active derp conns: derp-21=cr0s,wr0s derp-27=cr1h10m0s,wr1h8m0s
+Apr 24 02:07:47 ubuntu-2gb-ash-1 tailscaled[752]: derphttp.Client.Recv: connecting to derp-21 (tor)
+Apr 24 02:07:47 ubuntu-2gb-ash-1 tailscaled[752]: magicsock: derp-21 connected; connGen=1
+100.118.244.124  ubuntu-2gb-ash-1      morencyr@  linux  -                           
+100.116.122.44   raphaels-macbook-pro  morencyr@  macOS  idle, tx 3143736 rx 485176  
+100.118.244.124
+fd7a:115c:a1e0::e301:f4b6
+
+===== docker =====
+● docker.service - Docker Application Container Engine
+     Loaded: loaded (/lib/systemd/system/docker.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-04-24 00:57:46 UTC; 1h 11min ago
+TriggeredBy: ● docker.socket
+       Docs: https://docs.docker.com
+   Main PID: 845 (dockerd)
+      Tasks: 76
+     Memory: 97.7M
+        CPU: 2min 54.831s
+     CGroup: /system.slice/docker.service
+             ├─  845 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+             ├─ 8642 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 3000 -container-ip 172.18.0.3 -container-port 3000 -use-listen-fd
+             ├─ 8647 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 3000 -container-ip 172.18.0.3 -container-port 3000 -use-listen-fd
+             ├─28194 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 80 -container-ip 172.17.0.2 -container-port 80 -use-listen-fd
+             ├─28201 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 80 -container-ip 172.17.0.2 -container-port 80 -use-listen-fd
+             ├─28217 /usr/bin/docker-proxy -proto tcp -host-ip 0.0.0.0 -host-port 443 -container-ip 172.17.0.2 -container-port 443 -use-listen-fd
+             ├─28223 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 443 -container-ip 172.17.0.2 -container-port 443 -use-listen-fd
+             ├─28238 /usr/bin/docker-proxy -proto udp -host-ip 0.0.0.0 -host-port 443 -container-ip 172.17.0.2 -container-port 443 -use-listen-fd
+             └─28244 /usr/bin/docker-proxy -proto udp -host-ip :: -host-port 443 -container-ip 172.17.0.2 -container-port 443 -use-listen-fd
+
+Apr 24 01:59:20 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:20.829330685Z" level=info msg="stopping restart-manager" container=2d703b08833bf680402ff29eb1e1611443a472e0b9d4368d86b43d7e01471e8c
+Apr 24 01:59:20 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:20.830531927Z" level=info msg="stopping restart-manager" container=7a4fb94926db8946ec00e8ac0736f07a4c5cb8807cdad09c82307ee925b9e797
+Apr 24 01:59:20 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:20.834474089Z" level=info msg="stopping restart-manager" container=95701a5b3e34fb1971b5a7afa07cc5c339462221e2cbc39d50f7794ac698ef8a
+Apr 24 01:59:20 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:20.889840367Z" level=info msg="received task-delete event from containerd" container=2d703b08833bf680402ff29eb1e1611443a472e0b9d4368d86b43d7e01471e8c module=libcontainerd namespace=moby topic=/tasks/delete type="*events.TaskDelete"
+Apr 24 01:59:21 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:21.042133245Z" level=info msg="received task-delete event from containerd" container=7a4fb94926db8946ec00e8ac0736f07a4c5cb8807cdad09c82307ee925b9e797 module=libcontainerd namespace=moby topic=/tasks/delete type="*events.TaskDelete"
+Apr 24 01:59:22 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T01:59:22.894161847Z" level=info msg="received task-delete event from containerd" container=95701a5b3e34fb1971b5a7afa07cc5c339462221e2cbc39d50f7794ac698ef8a module=libcontainerd namespace=moby topic=/tasks/delete type="*events.TaskDelete"
+Apr 24 02:02:47 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T02:02:47.125285564Z" level=info msg="NetworkDB stats ubuntu-2gb-ash-1(3cc4a26028c5) - netID:rkj8def2410jhpddmsjw0uldw leaving:false netPeers:1 entries:1 Queue qLen:0+0 netMsg/s:0"
+Apr 24 02:02:47 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T02:02:47.125408014Z" level=info msg="NetworkDB stats ubuntu-2gb-ash-1(3cc4a26028c5) - netID:vstpg84u8j99otmuivbn1sdc4 leaving:false netPeers:1 entries:11 Queue qLen:0+0 netMsg/s:0"
+Apr 24 02:07:47 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T02:07:47.324640606Z" level=info msg="NetworkDB stats ubuntu-2gb-ash-1(3cc4a26028c5) - netID:rkj8def2410jhpddmsjw0uldw leaving:false netPeers:1 entries:1 Queue qLen:0+0 netMsg/s:0"
+Apr 24 02:07:47 ubuntu-2gb-ash-1 dockerd[845]: time="2026-04-24T02:07:47.324713563Z" level=info msg="NetworkDB stats ubuntu-2gb-ash-1(3cc4a26028c5) - netID:vstpg84u8j99otmuivbn1sdc4 leaving:false netPeers:1 entries:9 Queue qLen:0+0 netMsg/s:0"
+Client: Docker Engine - Community
+ Version:           29.3.0
+ API version:       1.54
+ Go version:        go1.25.7
+ Git commit:        5927d80
+ Built:             Thu Mar  5 14:25:35 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          29.3.0
+  API version:      1.54 (minimum version 1.40)
+  Go version:       go1.25.7
+  Git commit:       83bca51
+  Built:            Thu Mar  5 14:25:35 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.2
+  GitCommit:        301b2dac98f15c27117da5c8af12118a041a31d9
+ runc:
+  Version:          1.3.4
+  GitCommit:        v1.3.4-0-gd6d73eb8
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+NAMES                                          IMAGE                     STATUS                      PORTS
+dokploy.1.uatpexsnqxveu65z5kfu0nqii            dokploy/dokploy:v0.29.1   Up 32 minutes (healthy)     0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+dokploy-redis.1.rbbqy0v2m2z1qs2fn1gltnkor      redis:7                   Up About an hour            6379/tcp
+dokploy-postgres.1.jcpu6bnnvv1rtru680kmzy40r   postgres:16               Up About an hour            5432/tcp
+dokploy.1.ae5qpbc1czu0fs1zh0ioxo7ta            dokploy/dokploy:v0.28.8   Exited (1) 33 minutes ago   
+dokploy-redis.1.vbvu7fun8i1xjm69wfo7w9oq7      redis:7                   Exited (0) 4 weeks ago      
+dokploy.1.za7v2ltjsd33ibtmwl59xkqgm            dokploy/dokploy:v0.28.8   Exited (1) 4 weeks ago      
+dokploy-postgres.1.64vq5kkwonsiq9rfqmkyn3a68   postgres:16               Exited (0) 4 weeks ago      
+dokploy-postgres.1.tvd3bu1y9be972uebzkofy8il   postgres:16               Exited (0) 4 weeks ago      
+dokploy.1.mngeflf0fvxt70bczuyu70sev            dokploy/dokploy:v0.28.8   Exited (1) 4 weeks ago      
+dokploy-redis.1.wg8ywjf8vocc6ox9yu86lb7tc      redis:7                   Exited (0) 4 weeks ago      
+dokploy.1.982kwggriw52qykocykzt381e            dokploy/dokploy:v0.28.8   Exited (1) 4 weeks ago      
+dokploy-redis.1.fsg17y59zwt6lmildpiywab0a      redis:7                   Exited (0) 4 weeks ago      
+dokploy-postgres.1.66xwqwztimmvq1garak4qaljc   postgres:16               Exited (0) 4 weeks ago      
+dokploy-traefik                                traefik:v3.6.7            Up About an hour            0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp, 0.0.0.0:443->443/udp, [::]:443->443/udp
+dokploy-redis.1.p2f0958bv688883bisf3j3opj      redis:7                   Exited (0) 4 weeks ago      
+dokploy-postgres.1.p40x78dd11hhl05dd3uvx9z0p   postgres:16               Exited (0) 4 weeks ago      
+NETWORK ID     NAME                               DRIVER    SCOPE
+7f05052c93e4   ai-receptionist-convex-jatgzd      bridge    local
+3e888ae9a116   ai-receptionist-openpanel-jmjp6h   bridge    local
+1dc4098e68cc   bridge                             bridge    local
+b20f4ba1ec0d   docker_gwbridge                    bridge    local
+vstpg84u8j99   dokploy-network                    overlay   swarm
+341b8750a6bc   host                               host      local
+rkj8def2410j   ingress                            overlay   swarm
+e3152b4a581c   none                               null      local
+ID             NAME               MODE         REPLICAS   IMAGE                     PORTS
+xqa74y45evmd   dokploy            replicated   1/1        dokploy/dokploy:v0.29.1   
+5ttylm1cq4l7   dokploy-postgres   replicated   1/1        postgres:16               
+p0yimo97dmej   dokploy-redis      replicated   1/1        redis:7                   
+ID                            HOSTNAME           STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+ec0c59q0rq4eevaehyh1if52f *   ubuntu-2gb-ash-1   Ready     Active         Leader           29.3.0
+NAME      SERVICES
+
+===== firewall =====
+Status: active
+Logging: on (low)
+Default: deny (incoming), allow (outgoing), deny (routed)
+New profiles: skip
+
+To                         Action      From
+--                         ------      ----
+22/tcp (OpenSSH)           ALLOW IN    Anywhere                  
+80/tcp                     ALLOW IN    Anywhere                  
+443/tcp                    ALLOW IN    Anywhere                  
+3000/tcp                   ALLOW IN    Anywhere                  
+22/tcp (OpenSSH (v6))      ALLOW IN    Anywhere (v6)             
+80/tcp (v6)                ALLOW IN    Anywhere (v6)             
+443/tcp (v6)               ALLOW IN    Anywhere (v6)             
+3000/tcp (v6)              ALLOW IN    Anywhere (v6)             
+
+● ufw.service - Uncomplicated firewall
+     Loaded: loaded (/lib/systemd/system/ufw.service; enabled; vendor preset: enabled)
+     Active: active (exited) since Fri 2026-04-24 00:57:40 UTC; 1h 11min ago
+       Docs: man:ufw(8)
+    Process: 580 ExecStart=/lib/ufw/ufw-init start quiet (code=exited, status=0/SUCCESS)
+   Main PID: 580 (code=exited, status=0/SUCCESS)
+        CPU: 41ms
+
+Apr 24 00:57:39 ubuntu-2gb-ash-1 systemd[1]: Starting Uncomplicated firewall...
+Apr 24 00:57:40 ubuntu-2gb-ash-1 systemd[1]: Finished Uncomplicated firewall.
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N DOCKER
+-N DOCKER-BRIDGE
+-N DOCKER-CT
+-N DOCKER-FORWARD
+-N DOCKER-INTERNAL
+-N DOCKER-USER
+-N ts-forward
+-N ts-input
+-N ufw-after-forward
+-N ufw-after-input
+-N ufw-after-logging-forward
+-N ufw-after-logging-input
+-N ufw-after-logging-output
+-N ufw-after-output
+-N ufw-before-forward
+-N ufw-before-input
+-N ufw-before-logging-forward
+-N ufw-before-logging-input
+-N ufw-before-logging-output
+-N ufw-before-output
+-N ufw-logging-allow
+-N ufw-logging-deny
+-N ufw-not-local
+-N ufw-reject-forward
+-N ufw-reject-input
+-N ufw-reject-output
+-N ufw-skip-to-policy-forward
+-N ufw-skip-to-policy-input
+-N ufw-skip-to-policy-output
+-N ufw-track-forward
+-N ufw-track-input
+-N ufw-track-output
+-N ufw-user-forward
+-N ufw-user-input
+-N ufw-user-limit
+-N ufw-user-limit-accept
+-N ufw-user-logging-forward
+-N ufw-user-logging-input
+-N ufw-user-logging-output
+-N ufw-user-output
+-A INPUT -j ts-input
+-A INPUT -j ufw-before-logging-input
+-A INPUT -j ufw-before-input
+-A INPUT -j ufw-after-input
+-A INPUT -j ufw-after-logging-input
+-A INPUT -j ufw-reject-input
+-A INPUT -j ufw-track-input
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j ts-forward
+-A FORWARD -j DOCKER-FORWARD
+-A FORWARD -j ufw-before-logging-forward
+-A FORWARD -j ufw-before-forward
+-A FORWARD -j ufw-after-forward
+-A FORWARD -j ufw-after-logging-forward
+-A FORWARD -j ufw-reject-forward
+-A FORWARD -j ufw-track-forward
+-A OUTPUT -j ufw-before-logging-output
+-A OUTPUT -j ufw-before-output
+-A OUTPUT -j ufw-after-output
+-A OUTPUT -j ufw-after-logging-output
+-A OUTPUT -j ufw-reject-output
+-A OUTPUT -j ufw-track-output
+-A DOCKER -d 172.17.0.2/32 ! -i docker0 -o docker0 -p udp -m udp --dport 443 -j ACCEPT
+-A DOCKER -d 172.17.0.2/32 ! -i docker0 -o docker0 -p tcp -m tcp --dport 443 -j ACCEPT
+-A DOCKER -d 172.17.0.2/32 ! -i docker0 -o docker0 -p tcp -m tcp --dport 80 -j ACCEPT
+-A DOCKER -d 172.18.0.3/32 ! -i docker_gwbridge -o docker_gwbridge -p tcp -m tcp --dport 3000 -j ACCEPT
+-A DOCKER ! -i docker_gwbridge -o docker_gwbridge -j DROP
+-A DOCKER ! -i br-7f05052c93e4 -o br-7f05052c93e4 -j DROP
+-A DOCKER ! -i docker0 -o docker0 -j DROP
+-A DOCKER ! -i br-3e888ae9a116 -o br-3e888ae9a116 -j DROP
+-A DOCKER-BRIDGE -o docker_gwbridge -j DOCKER
+-A DOCKER-BRIDGE -o br-7f05052c93e4 -j DOCKER
+-A DOCKER-BRIDGE -o docker0 -j DOCKER
+-A DOCKER-BRIDGE -o br-3e888ae9a116 -j DOCKER
+-A DOCKER-CT -o docker_gwbridge -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o br-7f05052c93e4 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o docker0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-CT -o br-3e888ae9a116 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A DOCKER-FORWARD -i docker_gwbridge -o docker_gwbridge -j DROP
+-A DOCKER-FORWARD -i docker_gwbridge ! -o docker_gwbridge -j ACCEPT
+-A DOCKER-FORWARD -i br-7f05052c93e4 -j ACCEPT
+-A DOCKER-FORWARD -i docker0 -j ACCEPT
+-A DOCKER-FORWARD -i br-3e888ae9a116 -j ACCEPT
+-A ts-forward -i tailscale0 -j MARK --set-xmark 0x40000/0xff0000
+-A ts-forward -m mark --mark 0x40000/0xff0000 -j ACCEPT
+-A ts-forward -s 100.64.0.0/10 -o tailscale0 -j DROP
+-A ts-forward -o tailscale0 -j ACCEPT
+-A ts-input -s 100.118.244.124/32 -i lo -j ACCEPT
+-A ts-input -s 100.115.92.0/23 ! -i tailscale0 -j RETURN
+-A ts-input -s 100.64.0.0/10 ! -i tailscale0 -j DROP
+-A ts-input -i tailscale0 -j ACCEPT
+-A ts-input -p udp -m udp --dport 41641 -j ACCEPT
+-A ufw-after-input -p udp -m udp --dport 137 -j ufw-skip-to-policy-input
+-A ufw-after-input -p udp -m udp --dport 138 -j ufw-skip-to-policy-input
+-A ufw-after-input -p tcp -m tcp --dport 139 -j ufw-skip-to-policy-input
+-A ufw-after-input -p tcp -m tcp --dport 445 -j ufw-skip-to-policy-input
+-A ufw-after-input -p udp -m udp --dport 67 -j ufw-skip-to-policy-input
+-A ufw-after-input -p udp -m udp --dport 68 -j ufw-skip-to-policy-input
+-A ufw-after-input -m addrtype --dst-type BROADCAST -j ufw-skip-to-policy-input
+-A ufw-after-logging-forward -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw-after-logging-input -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw-before-forward -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw-before-forward -p icmp -m icmp --icmp-type 3 -j ACCEPT
+-A ufw-before-forward -p icmp -m icmp --icmp-type 11 -j ACCEPT
+-A ufw-before-forward -p icmp -m icmp --icmp-type 12 -j ACCEPT
+-A ufw-before-forward -p icmp -m icmp --icmp-type 8 -j ACCEPT
+-A ufw-before-forward -j ufw-user-forward
+-A ufw-before-input -i lo -j ACCEPT
+-A ufw-before-input -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw-before-input -m conntrack --ctstate INVALID -j ufw-logging-deny
+-A ufw-before-input -m conntrack --ctstate INVALID -j DROP
+-A ufw-before-input -p icmp -m icmp --icmp-type 3 -j ACCEPT
+-A ufw-before-input -p icmp -m icmp --icmp-type 11 -j ACCEPT
+-A ufw-before-input -p icmp -m icmp --icmp-type 12 -j ACCEPT
+-A ufw-before-input -p icmp -m icmp --icmp-type 8 -j ACCEPT
+-A ufw-before-input -p udp -m udp --sport 67 --dport 68 -j ACCEPT
+-A ufw-before-input -j ufw-not-local
+-A ufw-before-input -d 224.0.0.251/32 -p udp -m udp --dport 5353 -j ACCEPT
+-A ufw-before-input -d 239.255.255.250/32 -p udp -m udp --dport 1900 -j ACCEPT
+-A ufw-before-input -j ufw-user-input
+-A ufw-before-output -o lo -j ACCEPT
+-A ufw-before-output -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw-before-output -j ufw-user-output
+-A ufw-logging-allow -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW ALLOW] "
+-A ufw-logging-deny -m conntrack --ctstate INVALID -m limit --limit 3/min --limit-burst 10 -j RETURN
+-A ufw-logging-deny -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw-not-local -m addrtype --dst-type LOCAL -j RETURN
+-A ufw-not-local -m addrtype --dst-type MULTICAST -j RETURN
+-A ufw-not-local -m addrtype --dst-type BROADCAST -j RETURN
+-A ufw-not-local -m limit --limit 3/min --limit-burst 10 -j ufw-logging-deny
+-A ufw-not-local -j DROP
+-A ufw-skip-to-policy-forward -j DROP
+-A ufw-skip-to-policy-input -j DROP
+-A ufw-skip-to-policy-output -j ACCEPT
+-A ufw-track-output -p tcp -m conntrack --ctstate NEW -j ACCEPT
+-A ufw-track-output -p udp -m conntrack --ctstate NEW -j ACCEPT
+-A ufw-user-input -p tcp -m tcp --dport 22 -m comment --comment "\'dapp_OpenSSH\'" -j ACCEPT
+-A ufw-user-input -p tcp -m tcp --dport 80 -j ACCEPT
+-A ufw-user-input -p tcp -m tcp --dport 443 -j ACCEPT
+-A ufw-user-input -p tcp -m tcp --dport 3000 -j ACCEPT
+-A ufw-user-limit -m limit --limit 3/min -j LOG --log-prefix "[UFW LIMIT BLOCK] "
+-A ufw-user-limit -j REJECT --reject-with icmp-port-unreachable
+-A ufw-user-limit-accept -j ACCEPT
+-N DOCKER-USER
+-P PREROUTING ACCEPT
+-P INPUT ACCEPT
+-P OUTPUT ACCEPT
+-P POSTROUTING ACCEPT
+-N DOCKER
+-N ts-postrouting
+-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+-A OUTPUT ! -d 127.0.0.0/8 -m addrtype --dst-type LOCAL -j DOCKER
+-A POSTROUTING -s 172.20.0.0/16 ! -o br-3e888ae9a116 -j MASQUERADE
+-A POSTROUTING -s 172.17.0.0/16 ! -o docker0 -j MASQUERADE
+-A POSTROUTING -s 172.19.0.0/16 ! -o br-7f05052c93e4 -j MASQUERADE
+-A POSTROUTING -s 172.18.0.0/16 ! -o docker_gwbridge -j MASQUERADE
+-A POSTROUTING -j ts-postrouting
+-A DOCKER ! -i docker_gwbridge -p tcp -m tcp --dport 3000 -j DNAT --to-destination 172.18.0.3:3000
+-A DOCKER ! -i docker0 -p tcp -m tcp --dport 80 -j DNAT --to-destination 172.17.0.2:80
+-A DOCKER ! -i docker0 -p tcp -m tcp --dport 443 -j DNAT --to-destination 172.17.0.2:443
+-A DOCKER ! -i docker0 -p udp -m udp --dport 443 -j DNAT --to-destination 172.17.0.2:443
+-A ts-postrouting -m mark --mark 0x40000/0xff0000 -j MASQUERADE
+-P INPUT DROP
+-P FORWARD DROP
+-P OUTPUT ACCEPT
+-N DOCKER
+-N DOCKER-BRIDGE
+-N DOCKER-CT
+-N DOCKER-FORWARD
+-N DOCKER-INTERNAL
+-N DOCKER-USER
+-N ts-forward
+-N ts-input
+-N ufw6-after-forward
+-N ufw6-after-input
+-N ufw6-after-logging-forward
+-N ufw6-after-logging-input
+-N ufw6-after-logging-output
+-N ufw6-after-output
+-N ufw6-before-forward
+-N ufw6-before-input
+-N ufw6-before-logging-forward
+-N ufw6-before-logging-input
+-N ufw6-before-logging-output
+-N ufw6-before-output
+-N ufw6-logging-allow
+-N ufw6-logging-deny
+-N ufw6-reject-forward
+-N ufw6-reject-input
+-N ufw6-reject-output
+-N ufw6-skip-to-policy-forward
+-N ufw6-skip-to-policy-input
+-N ufw6-skip-to-policy-output
+-N ufw6-track-forward
+-N ufw6-track-input
+-N ufw6-track-output
+-N ufw6-user-forward
+-N ufw6-user-input
+-N ufw6-user-limit
+-N ufw6-user-limit-accept
+-N ufw6-user-logging-forward
+-N ufw6-user-logging-input
+-N ufw6-user-logging-output
+-N ufw6-user-output
+-A INPUT -j ts-input
+-A INPUT -j ufw6-before-logging-input
+-A INPUT -j ufw6-before-input
+-A INPUT -j ufw6-after-input
+-A INPUT -j ufw6-after-logging-input
+-A INPUT -j ufw6-reject-input
+-A INPUT -j ufw6-track-input
+-A FORWARD -j DOCKER-USER
+-A FORWARD -j ts-forward
+-A FORWARD -j DOCKER-FORWARD
+-A FORWARD -j ufw6-before-logging-forward
+-A FORWARD -j ufw6-before-forward
+-A FORWARD -j ufw6-after-forward
+-A FORWARD -j ufw6-after-logging-forward
+-A FORWARD -j ufw6-reject-forward
+-A FORWARD -j ufw6-track-forward
+-A OUTPUT -j ufw6-before-logging-output
+-A OUTPUT -j ufw6-before-output
+-A OUTPUT -j ufw6-after-output
+-A OUTPUT -j ufw6-after-logging-output
+-A OUTPUT -j ufw6-reject-output
+-A OUTPUT -j ufw6-track-output
+-A DOCKER-FORWARD -j DOCKER-CT
+-A DOCKER-FORWARD -j DOCKER-INTERNAL
+-A DOCKER-FORWARD -j DOCKER-BRIDGE
+-A ts-forward -i tailscale0 -j MARK --set-xmark 0x40000/0xff0000
+-A ts-forward -m mark --mark 0x40000/0xff0000 -j ACCEPT
+-A ts-forward -o tailscale0 -j ACCEPT
+-A ts-input -s fd7a:115c:a1e0::e301:f4b6/128 -i lo -j ACCEPT
+-A ts-input -i tailscale0 -j ACCEPT
+-A ts-input -p udp -m udp --dport 41641 -j ACCEPT
+-A ufw6-after-input -p udp -m udp --dport 137 -j ufw6-skip-to-policy-input
+-A ufw6-after-input -p udp -m udp --dport 138 -j ufw6-skip-to-policy-input
+-A ufw6-after-input -p tcp -m tcp --dport 139 -j ufw6-skip-to-policy-input
+-A ufw6-after-input -p tcp -m tcp --dport 445 -j ufw6-skip-to-policy-input
+-A ufw6-after-input -p udp -m udp --dport 546 -j ufw6-skip-to-policy-input
+-A ufw6-after-input -p udp -m udp --dport 547 -j ufw6-skip-to-policy-input
+-A ufw6-after-logging-forward -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw6-after-logging-input -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw6-before-forward -m rt --rt-type 0 -j DROP
+-A ufw6-before-forward -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 1 -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 2 -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 3 -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 4 -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 128 -j ACCEPT
+-A ufw6-before-forward -p ipv6-icmp -m icmp6 --icmpv6-type 129 -j ACCEPT
+-A ufw6-before-forward -j ufw6-user-forward
+-A ufw6-before-input -i lo -j ACCEPT
+-A ufw6-before-input -m rt --rt-type 0 -j DROP
+-A ufw6-before-input -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 129 -j ACCEPT
+-A ufw6-before-input -m conntrack --ctstate INVALID -j ufw6-logging-deny
+-A ufw6-before-input -m conntrack --ctstate INVALID -j DROP
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 1 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 2 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 3 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 4 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 128 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 133 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 134 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 135 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 136 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 141 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 142 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 130 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 131 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 132 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 143 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 148 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 149 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 151 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 152 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 153 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 144 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 145 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 146 -j ACCEPT
+-A ufw6-before-input -p ipv6-icmp -m icmp6 --icmpv6-type 147 -j ACCEPT
+-A ufw6-before-input -s fe80::/10 -d fe80::/10 -p udp -m udp --sport 547 --dport 546 -j ACCEPT
+-A ufw6-before-input -d ff02::fb/128 -p udp -m udp --dport 5353 -j ACCEPT
+-A ufw6-before-input -d ff02::f/128 -p udp -m udp --dport 1900 -j ACCEPT
+-A ufw6-before-input -j ufw6-user-input
+-A ufw6-before-output -o lo -j ACCEPT
+-A ufw6-before-output -m rt --rt-type 0 -j DROP
+-A ufw6-before-output -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 1 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 2 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 3 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 4 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 128 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 129 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 133 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 136 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 135 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 134 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 141 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 142 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 130 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 131 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 132 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 143 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 148 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -p ipv6-icmp -m icmp6 --icmpv6-type 149 -m hl --hl-eq 255 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 151 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 152 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-output -s fe80::/10 -p ipv6-icmp -m icmp6 --icmpv6-type 153 -m hl --hl-eq 1 -j ACCEPT
+-A ufw6-before-output -j ufw6-user-output
+-A ufw6-logging-allow -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW ALLOW] "
+-A ufw6-logging-deny -m conntrack --ctstate INVALID -m limit --limit 3/min --limit-burst 10 -j RETURN
+-A ufw6-logging-deny -m limit --limit 3/min --limit-burst 10 -j LOG --log-prefix "[UFW BLOCK] "
+-A ufw6-skip-to-policy-forward -j DROP
+-A ufw6-skip-to-policy-input -j DROP
+-A ufw6-skip-to-policy-output -j ACCEPT
+-A ufw6-track-output -p tcp -m conntrack --ctstate NEW -j ACCEPT
+-A ufw6-track-output -p udp -m conntrack --ctstate NEW -j ACCEPT
+-A ufw6-user-input -p tcp -m tcp --dport 22 -m comment --comment "\'dapp_OpenSSH\'" -j ACCEPT
+-A ufw6-user-input -p tcp -m tcp --dport 80 -j ACCEPT
+-A ufw6-user-input -p tcp -m tcp --dport 443 -j ACCEPT
+-A ufw6-user-input -p tcp -m tcp --dport 3000 -j ACCEPT
+-A ufw6-user-limit -m limit --limit 3/min -j LOG --log-prefix "[UFW LIMIT BLOCK] "
+-A ufw6-user-limit -j REJECT --reject-with icmp6-port-unreachable
+-A ufw6-user-limit-accept -j ACCEPT
+-P PREROUTING ACCEPT
+-P INPUT ACCEPT
+-P OUTPUT ACCEPT
+-P POSTROUTING ACCEPT
+-N DOCKER
+-N ts-postrouting
+-A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+-A OUTPUT ! -d ::1/128 -m addrtype --dst-type LOCAL -j DOCKER
+-A POSTROUTING -j ts-postrouting
+-A ts-postrouting -m mark --mark 0x40000/0xff0000 -j MASQUERADE
+table ip filter {
+	chain ufw-before-logging-input {
+	}
+
+	chain ufw-before-logging-output {
+	}
+
+	chain ufw-before-logging-forward {
+	}
+
+	chain ufw-before-input {
+		iifname "lo" counter packets 8555 bytes 941529 accept
+		ct state related,established counter packets 252 bytes 42925 accept
+		ct state invalid counter packets 0 bytes 0 jump ufw-logging-deny
+		ct state invalid counter packets 0 bytes 0 drop
+		meta l4proto icmp icmp type destination-unreachable counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type time-exceeded counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type parameter-problem counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type echo-request counter packets 0 bytes 0 accept
+		meta l4proto udp udp sport 67 udp dport 68 counter packets 0 bytes 0 accept
+		counter packets 7 bytes 432 jump ufw-not-local
+		meta l4proto udp ip daddr 224.0.0.251 udp dport 5353 counter packets 0 bytes 0 accept
+		meta l4proto udp ip daddr 239.255.255.250 udp dport 1900 counter packets 0 bytes 0 accept
+		counter packets 7 bytes 432 jump ufw-user-input
+	}
+
+	chain ufw-before-output {
+		oifname "lo" counter packets 8555 bytes 941529 accept
+		ct state related,established counter packets 4074 bytes 3401258 accept
+		counter packets 1109 bytes 92560 jump ufw-user-output
+	}
+
+	chain ufw-before-forward {
+		ct state related,established counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type destination-unreachable counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type time-exceeded counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type parameter-problem counter packets 0 bytes 0 accept
+		meta l4proto icmp icmp type echo-request counter packets 0 bytes 0 accept
+		counter packets 0 bytes 0 jump ufw-user-forward
+	}
+
+	chain ufw-after-input {
+		meta l4proto udp udp dport 137 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		meta l4proto udp udp dport 138 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		meta l4proto tcp tcp dport 139 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		meta l4proto tcp tcp dport 445 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		meta l4proto udp udp dport 67 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		meta l4proto udp udp dport 68 counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+		fib daddr type broadcast counter packets 0 bytes 0 jump ufw-skip-to-policy-input
+	}
+
+	chain ufw-after-output {
+	}
+
+	chain ufw-after-forward {
+	}
+
+	chain ufw-after-logging-input {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw-after-logging-output {
+	}
+
+	chain ufw-after-logging-forward {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw-reject-input {
+	}
+
+	chain ufw-reject-output {
+	}
+
+	chain ufw-reject-forward {
+	}
+
+	chain ufw-track-input {
+	}
+
+	chain ufw-track-output {
+		meta l4proto tcp ct state new counter packets 8 bytes 480 accept
+		meta l4proto udp ct state new counter packets 1093 bytes 91760 accept
+	}
+
+	chain ufw-track-forward {
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy drop;
+		counter packets 12713 bytes 1719180 jump ts-input
+		counter packets 8894 bytes 990886 jump ufw-before-logging-input
+		counter packets 8894 bytes 990886 jump ufw-before-input
+		counter packets 80 bytes 6000 jump ufw-after-input
+		counter packets 80 bytes 6000 jump ufw-after-logging-input
+		counter packets 80 bytes 6000 jump ufw-reject-input
+		counter packets 80 bytes 6000 jump ufw-track-input
+	}
+
+	chain OUTPUT {
+		type filter hook output priority filter; policy accept;
+		counter packets 13818 bytes 4441347 jump ufw-before-logging-output
+		counter packets 13818 bytes 4441347 jump ufw-before-output
+		counter packets 1189 bytes 98560 jump ufw-after-output
+		counter packets 1189 bytes 98560 jump ufw-after-logging-output
+		counter packets 1189 bytes 98560 jump ufw-reject-output
+		counter packets 1189 bytes 98560 jump ufw-track-output
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy drop;
+		counter packets 145138 bytes 32044616 jump DOCKER-USER
+		counter packets 145138 bytes 32044616 jump ts-forward
+		counter packets 140717 bytes 28726928 jump DOCKER-FORWARD
+		counter packets 0 bytes 0 jump ufw-before-logging-forward
+		counter packets 0 bytes 0 jump ufw-before-forward
+		counter packets 0 bytes 0 jump ufw-after-forward
+		counter packets 0 bytes 0 jump ufw-after-logging-forward
+		counter packets 0 bytes 0 jump ufw-reject-forward
+		counter packets 0 bytes 0 jump ufw-track-forward
+	}
+
+	chain ufw-logging-deny {
+		ct state invalid limit rate 3/minute burst 10 packets counter packets 0 bytes 0 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw-logging-allow {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW ALLOW] "
+	}
+
+	chain ufw-skip-to-policy-input {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw-skip-to-policy-output {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain ufw-skip-to-policy-forward {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw-not-local {
+		fib daddr type local counter packets 7 bytes 432 return
+		fib daddr type multicast counter packets 0 bytes 0 return
+		fib daddr type broadcast counter packets 0 bytes 0 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 jump ufw-logging-deny
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw-user-input {
+		meta l4proto tcp tcp dport 22  counter packets 3 bytes 192 accept
+		meta l4proto tcp tcp dport 80 counter packets 4 bytes 240 accept
+		meta l4proto tcp tcp dport 443 counter packets 0 bytes 0 accept
+		meta l4proto tcp tcp dport 3000 counter packets 0 bytes 0 accept
+	}
+
+	chain ufw-user-output {
+	}
+
+	chain ufw-user-forward {
+	}
+
+	chain ufw-user-logging-input {
+	}
+
+	chain ufw-user-logging-output {
+	}
+
+	chain ufw-user-logging-forward {
+	}
+
+	chain ufw-user-limit {
+		limit rate 3/minute counter packets 0 bytes 0 log prefix "[UFW LIMIT BLOCK] "
+		counter packets 0 bytes 0 reject
+	}
+
+	chain ufw-user-limit-accept {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain DOCKER {
+		iifname != "docker0" oifname "docker0" meta l4proto udp ip daddr 172.17.0.2 udp dport 443 counter packets 0 bytes 0 accept
+		iifname != "docker0" oifname "docker0" meta l4proto tcp ip daddr 172.17.0.2 tcp dport 443 counter packets 1 bytes 64 accept
+		iifname != "docker0" oifname "docker0" meta l4proto tcp ip daddr 172.17.0.2 tcp dport 80 counter packets 5 bytes 244 accept
+		iifname != "docker_gwbridge" oifname "docker_gwbridge" meta l4proto tcp ip daddr 172.18.0.3 tcp dport 3000 counter packets 0 bytes 0 accept
+		iifname != "docker_gwbridge" oifname "docker_gwbridge" counter packets 0 bytes 0 drop
+		iifname != "br-7f05052c93e4" oifname "br-7f05052c93e4" counter packets 0 bytes 0 drop
+		iifname != "docker0" oifname "docker0" counter packets 0 bytes 0 drop
+		iifname != "br-3e888ae9a116" oifname "br-3e888ae9a116" counter packets 0 bytes 0 drop
+	}
+
+	chain DOCKER-FORWARD {
+		counter packets 140717 bytes 28726928 jump DOCKER-CT
+		counter packets 1515 bytes 5904540 jump DOCKER-INTERNAL
+		counter packets 1515 bytes 5904540 jump DOCKER-BRIDGE
+		iifname "docker_gwbridge" oifname "docker_gwbridge" counter packets 0 bytes 0 drop
+		iifname "docker_gwbridge" oifname != "docker_gwbridge" counter packets 221 bytes 27913 accept
+		iifname "br-7f05052c93e4" counter packets 92 bytes 13224 accept
+		iifname "docker0" counter packets 28 bytes 27009 accept
+		iifname "br-3e888ae9a116" counter packets 1132 bytes 5834002 accept
+	}
+
+	chain DOCKER-BRIDGE {
+		oifname "docker_gwbridge" counter packets 0 bytes 0 jump DOCKER
+		oifname "br-7f05052c93e4" counter packets 7 bytes 360 jump DOCKER
+		oifname "docker0" counter packets 6 bytes 308 jump DOCKER
+		oifname "br-3e888ae9a116" counter packets 204 bytes 12224 jump DOCKER
+	}
+
+	chain DOCKER-CT {
+		oifname "docker_gwbridge" ct state related,established counter packets 543 bytes 1971836 accept
+		oifname "br-7f05052c93e4" ct state related,established counter packets 90 bytes 125052 accept
+		oifname "docker0" ct state related,established counter packets 28 bytes 1676 accept
+		oifname "br-3e888ae9a116" ct state related,established counter packets 138541 bytes 20723824 accept
+	}
+
+	chain DOCKER-INTERNAL {
+	}
+
+	chain ts-input {
+		iifname "lo" ip saddr 100.118.244.124 counter packets 0 bytes 0 accept
+		iifname != "tailscale0" ip saddr 100.115.92.0/23 counter packets 0 bytes 0 return
+		iifname != "tailscale0" ip saddr 100.64.0.0/10 counter packets 0 bytes 0 drop
+		iifname "tailscale0" counter packets 13 bytes 832 accept
+		meta l4proto udp udp dport 41641 counter packets 3915 bytes 740816 accept
+	}
+
+	chain ts-forward {
+		iifname "tailscale0" counter packets 2057 bytes 385336 meta mark set mark and 0xff00ffff xor 0x40000 
+		mark and 0xff0000 == 0x40000 counter packets 2057 bytes 385336 accept
+		oifname "tailscale0" ip saddr 100.64.0.0/10 counter packets 0 bytes 0 drop
+		oifname "tailscale0" counter packets 2364 bytes 2932352 accept
+	}
+
+	chain DOCKER-USER {
+	}
+}
+table ip6 filter {
+	chain ufw6-before-logging-input {
+	}
+
+	chain ufw6-before-logging-output {
+	}
+
+	chain ufw6-before-logging-forward {
+	}
+
+	chain ufw6-before-input {
+		iifname "lo" counter packets 0 bytes 0 accept
+		rt type 0 counter packets 0 bytes 0 drop
+		ct state related,established counter packets 134524 bytes 2340415292 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-reply counter packets 0 bytes 0 accept
+		ct state invalid counter packets 0 bytes 0 jump ufw6-logging-deny
+		ct state invalid counter packets 0 bytes 0 drop
+		meta l4proto ipv6-icmp icmpv6 type destination-unreachable counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type packet-too-big counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type time-exceeded counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type parameter-problem counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-request counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-router-solicit ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-router-advert ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-neighbor-solicit ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-neighbor-advert ip6 hoplimit 255 counter packets 58 bytes 3720 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto udp ip6 saddr fe80::/10 ip6 daddr fe80::/10 udp sport 547 udp dport 546 counter packets 0 bytes 0 accept
+		meta l4proto udp ip6 daddr ff02::fb udp dport 5353 counter packets 0 bytes 0 accept
+		meta l4proto udp ip6 daddr ff02::f udp dport 1900 counter packets 0 bytes 0 accept
+		counter packets 0 bytes 0 jump ufw6-user-input
+	}
+
+	chain ufw6-before-output {
+		oifname "lo" counter packets 0 bytes 0 accept
+		rt type 0 counter packets 0 bytes 0 drop
+		ct state related,established counter packets 42248 bytes 4475649 accept
+		meta l4proto ipv6-icmp icmpv6 type destination-unreachable counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type packet-too-big counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type time-exceeded counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type parameter-problem counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-request counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-reply counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-router-solicit ip6 hoplimit 255 counter packets 152 bytes 8424 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-neighbor-advert ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-neighbor-solicit ip6 hoplimit 255 counter packets 79 bytes 5688 accept
+		meta l4proto ipv6-icmp icmpv6 type nd-router-advert ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  counter packets 39 bytes 3184 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type  ip6 hoplimit 255 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp ip6 saddr fe80::/10 icmpv6 type  ip6 hoplimit 1 counter packets 0 bytes 0 accept
+		counter packets 878 bytes 74456 jump ufw6-user-output
+	}
+
+	chain ufw6-before-forward {
+		rt type 0 counter packets 0 bytes 0 drop
+		ct state related,established counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type destination-unreachable counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type packet-too-big counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type time-exceeded counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type parameter-problem counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-request counter packets 0 bytes 0 accept
+		meta l4proto ipv6-icmp icmpv6 type echo-reply counter packets 0 bytes 0 accept
+		counter packets 0 bytes 0 jump ufw6-user-forward
+	}
+
+	chain ufw6-after-input {
+		meta l4proto udp udp dport 137 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		meta l4proto udp udp dport 138 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		meta l4proto tcp tcp dport 139 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		meta l4proto tcp tcp dport 445 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		meta l4proto udp udp dport 546 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+		meta l4proto udp udp dport 547 counter packets 0 bytes 0 jump ufw6-skip-to-policy-input
+	}
+
+	chain ufw6-after-output {
+	}
+
+	chain ufw6-after-forward {
+	}
+
+	chain ufw6-after-logging-input {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw6-after-logging-output {
+	}
+
+	chain ufw6-after-logging-forward {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw6-reject-input {
+	}
+
+	chain ufw6-reject-output {
+	}
+
+	chain ufw6-reject-forward {
+	}
+
+	chain ufw6-track-input {
+	}
+
+	chain ufw6-track-output {
+		meta l4proto tcp ct state new counter packets 389 bytes 31120 accept
+		meta l4proto udp ct state new counter packets 447 bytes 39924 accept
+	}
+
+	chain ufw6-track-forward {
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy drop;
+		counter packets 135124 bytes 2340456624 jump ts-input
+		counter packets 134582 bytes 2340419012 jump ufw6-before-logging-input
+		counter packets 134582 bytes 2340419012 jump ufw6-before-input
+		counter packets 0 bytes 0 jump ufw6-after-input
+		counter packets 0 bytes 0 jump ufw6-after-logging-input
+		counter packets 0 bytes 0 jump ufw6-reject-input
+		counter packets 0 bytes 0 jump ufw6-track-input
+	}
+
+	chain OUTPUT {
+		type filter hook output priority filter; policy accept;
+		counter packets 43396 bytes 4567401 jump ufw6-before-logging-output
+		counter packets 43396 bytes 4567401 jump ufw6-before-output
+		counter packets 878 bytes 74456 jump ufw6-after-output
+		counter packets 878 bytes 74456 jump ufw6-after-logging-output
+		counter packets 878 bytes 74456 jump ufw6-reject-output
+		counter packets 878 bytes 74456 jump ufw6-track-output
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy drop;
+		counter packets 0 bytes 0 jump DOCKER-USER
+		counter packets 0 bytes 0 jump ts-forward
+		counter packets 0 bytes 0 jump DOCKER-FORWARD
+		counter packets 0 bytes 0 jump ufw6-before-logging-forward
+		counter packets 0 bytes 0 jump ufw6-before-forward
+		counter packets 0 bytes 0 jump ufw6-after-forward
+		counter packets 0 bytes 0 jump ufw6-after-logging-forward
+		counter packets 0 bytes 0 jump ufw6-reject-forward
+		counter packets 0 bytes 0 jump ufw6-track-forward
+	}
+
+	chain ufw6-logging-deny {
+		ct state invalid limit rate 3/minute burst 10 packets counter packets 0 bytes 0 return
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW BLOCK] "
+	}
+
+	chain ufw6-logging-allow {
+		limit rate 3/minute burst 10 packets counter packets 0 bytes 0 log prefix "[UFW ALLOW] "
+	}
+
+	chain ufw6-skip-to-policy-input {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw6-skip-to-policy-output {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain ufw6-skip-to-policy-forward {
+		counter packets 0 bytes 0 drop
+	}
+
+	chain ufw6-user-input {
+		meta l4proto tcp tcp dport 22  counter packets 0 bytes 0 accept
+		meta l4proto tcp tcp dport 80 counter packets 0 bytes 0 accept
+		meta l4proto tcp tcp dport 443 counter packets 0 bytes 0 accept
+		meta l4proto tcp tcp dport 3000 counter packets 0 bytes 0 accept
+	}
+
+	chain ufw6-user-output {
+	}
+
+	chain ufw6-user-forward {
+	}
+
+	chain ufw6-user-logging-input {
+	}
+
+	chain ufw6-user-logging-output {
+	}
+
+	chain ufw6-user-logging-forward {
+	}
+
+	chain ufw6-user-limit {
+		limit rate 3/minute counter packets 0 bytes 0 log prefix "[UFW LIMIT BLOCK] "
+		counter packets 0 bytes 0 reject
+	}
+
+	chain ufw6-user-limit-accept {
+		counter packets 0 bytes 0 accept
+	}
+
+	chain ts-input {
+		iifname "lo" ip6 saddr fd7a:115c:a1e0::e301:f4b6 counter packets 0 bytes 0 accept
+		iifname "tailscale0" counter packets 0 bytes 0 accept
+		meta l4proto udp udp dport 41641 counter packets 591 bytes 54372 accept
+	}
+
+	chain ts-forward {
+		iifname "tailscale0" counter packets 0 bytes 0 meta mark set mark and 0xff00ffff xor 0x40000 
+		mark and 0xff0000 == 0x40000 counter packets 0 bytes 0 accept
+		oifname "tailscale0" counter packets 0 bytes 0 accept
+	}
+
+	chain DOCKER {
+	}
+
+	chain DOCKER-FORWARD {
+		counter packets 0 bytes 0 jump DOCKER-CT
+		counter packets 0 bytes 0 jump DOCKER-INTERNAL
+		counter packets 0 bytes 0 jump DOCKER-BRIDGE
+	}
+
+	chain DOCKER-BRIDGE {
+	}
+
+	chain DOCKER-CT {
+	}
+
+	chain DOCKER-INTERNAL {
+	}
+
+	chain DOCKER-USER {
+	}
+}
+table ip nat {
+	chain DOCKER {
+		iifname != "docker_gwbridge" meta l4proto tcp tcp dport 3000 counter packets 87 bytes 5568 dnat to 172.18.0.3:3000
+		iifname != "docker0" meta l4proto tcp tcp dport 80 counter packets 5 bytes 244 dnat to 172.17.0.2:80
+		iifname != "docker0" meta l4proto tcp tcp dport 443 counter packets 1 bytes 64 dnat to 172.17.0.2:443
+		iifname != "docker0" meta l4proto udp udp dport 443 counter packets 0 bytes 0 dnat to 172.17.0.2:443
+	}
+
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		fib daddr type local counter packets 167 bytes 10376 jump DOCKER
+	}
+
+	chain OUTPUT {
+		type nat hook output priority -100; policy accept;
+		ip daddr != 127.0.0.0/8 fib daddr type local counter packets 1 bytes 60 jump DOCKER
+	}
+
+	chain ts-postrouting {
+		mark and 0xff0000 == 0x40000 counter packets 105 bytes 6720 masquerade 
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		oifname != "br-3e888ae9a116" ip saddr 172.20.0.0/16 counter packets 1 bytes 60 masquerade 
+		oifname != "docker0" ip saddr 172.17.0.0/16 counter packets 1 bytes 60 masquerade 
+		oifname != "br-7f05052c93e4" ip saddr 172.19.0.0/16 counter packets 2 bytes 120 masquerade 
+		oifname != "docker_gwbridge" ip saddr 172.18.0.0/16 counter packets 18 bytes 1080 masquerade 
+		counter packets 1762 bytes 137900 jump ts-postrouting
+	}
+}
+table ip6 nat {
+	chain ts-postrouting {
+		mark and 0xff0000 == 0x40000 counter packets 0 bytes 0 masquerade  
+	}
+
+	chain DOCKER {
+	}
+
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		fib daddr type local counter packets 0 bytes 0 jump DOCKER
+	}
+
+	chain OUTPUT {
+		type nat hook output priority -100; policy accept;
+		ip6 daddr != ::1 fib daddr type local counter packets 0 bytes 0 jump DOCKER
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		counter packets 784 bytes 66448 jump ts-postrouting
+	}
+}
+table ip mangle {
+	chain PREROUTING {
+		type filter hook prerouting priority mangle; policy accept;
+		ct state related,established counter packets 156788 bytes 33682357 meta mark set ct mark and 0xff0000
+	}
+
+	chain OUTPUT {
+		type route hook output priority mangle; policy accept;
+		ct state new mark and 0xff0000 != 0x0 counter packets 1056 bytes 89225 ct mark set mark and 0xff0000
+	}
+}
+table ip6 mangle {
+	chain PREROUTING {
+		type filter hook prerouting priority mangle; policy accept;
+		ct state related,established counter packets 135057 bytes 2340451999 meta mark set ct mark and 0xff0000
+	}
+
+	chain OUTPUT {
+		type route hook output priority mangle; policy accept;
+		ct state new mark and 0xff0000 != 0x0 counter packets 370 bytes 32440 ct mark set mark and 0xff0000
+	}
+}
+table ip raw {
+	chain PREROUTING {
+		type filter hook prerouting priority raw; policy accept;
+		iifname != "docker_gwbridge" ip daddr 172.18.0.2 counter packets 0 bytes 0 drop
+		iifname != "docker0" ip daddr 172.17.0.2 counter packets 0 bytes 0 drop
+		iifname != "docker_gwbridge" ip daddr 172.18.0.4 counter packets 0 bytes 0 drop
+		iifname != "docker_gwbridge" ip daddr 172.18.0.5 counter packets 0 bytes 0 drop
+		iifname != "docker_gwbridge" ip daddr 172.18.0.3 counter packets 0 bytes 0 drop
+	}
+}
+
+===== ssh =====
+● ssh.service - OpenBSD Secure Shell server
+     Loaded: loaded (/lib/systemd/system/ssh.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-04-24 00:57:42 UTC; 1h 11min ago
+       Docs: man:sshd(8)
+             man:sshd_config(5)
+    Process: 749 ExecStartPre=/usr/sbin/sshd -t (code=exited, status=0/SUCCESS)
+   Main PID: 786 (sshd)
+      Tasks: 1 (limit: 2249)
+     Memory: 10.2M
+        CPU: 91ms
+     CGroup: /system.slice/ssh.service
+             └─786 "sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups"
+
+Apr 24 00:57:42 ubuntu-2gb-ash-1 systemd[1]: Starting OpenBSD Secure Shell server...
+Apr 24 00:57:42 ubuntu-2gb-ash-1 sshd[786]: Server listening on 0.0.0.0 port 22.
+Apr 24 00:57:42 ubuntu-2gb-ash-1 sshd[786]: Server listening on :: port 22.
+Apr 24 00:57:42 ubuntu-2gb-ash-1 systemd[1]: Started OpenBSD Secure Shell server.
+Apr 24 02:04:41 ubuntu-2gb-ash-1 sshd[29522]: Connection closed by authenticating user root 74.59.229.65 port 59092 [preauth]
+Apr 24 02:07:13 ubuntu-2gb-ash-1 sshd[29886]: Accepted publickey for raphael from 74.59.229.65 port 59146 ssh2: ED25519 SHA256:FAipdBuFmJm2VlJ0uzmKFtti6E+Tg3p9pwMGsCzXQPw
+Apr 24 02:07:13 ubuntu-2gb-ash-1 sshd[29886]: pam_unix(sshd:session): session opened for user raphael(uid=1000) by (uid=0)
+Apr 24 02:07:14 ubuntu-2gb-ash-1 sshd[29886]: pam_unix(sshd:session): session closed for user raphael
+Apr 24 02:08:02 ubuntu-2gb-ash-1 sshd[30162]: Accepted publickey for raphael from 74.59.229.65 port 59171 ssh2: ED25519 SHA256:FAipdBuFmJm2VlJ0uzmKFtti6E+Tg3p9pwMGsCzXQPw
+Apr 24 02:08:02 ubuntu-2gb-ash-1 sshd[30162]: pam_unix(sshd:session): session opened for user raphael(uid=1000) by (uid=0)
+usepam yes
+permitrootlogin no
+pubkeyauthentication yes
+passwordauthentication no
+kbdinteractiveauthentication no
+x11forwarding yes
+allowtcpforwarding yes
+authenticationmethods any
+permitopen any
+
+sshd config non-comment lines:
+/etc/ssh/sshd_config
+/etc/ssh/sshd_config:12:Include /etc/ssh/sshd_config.d/*.conf
+/etc/ssh/sshd_config:62:KbdInteractiveAuthentication no
+/etc/ssh/sshd_config:85:UsePAM yes
+/etc/ssh/sshd_config:90:X11Forwarding yes
+/etc/ssh/sshd_config:94:PrintMotd no
+/etc/ssh/sshd_config:112:AcceptEnv LANG LC_*
+/etc/ssh/sshd_config:115:Subsystem	sftp	/usr/lib/openssh/sftp-server
+/etc/ssh/sshd_config:123:PermitRootLogin no
+/etc/ssh/sshd_config:124:PasswordAuthentication no
+/etc/ssh/sshd_config:125:PubkeyAuthentication yes
+
+===== users =====
+raphael:1000:1000:/home/raphael:/bin/bash
+sudo:x:27:raphael
+docker:x:999:
+adm:x:4:syslog
+systemd-journal:x:101:
+
+sudoers non-comment lines:
+/etc/sudoers
+/etc/sudoers:9:Defaults	env_reset
+/etc/sudoers:10:Defaults	mail_badpass
+/etc/sudoers:11:Defaults	secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+/etc/sudoers:12:Defaults	use_pty
+/etc/sudoers:44:root	ALL=(ALL:ALL) ALL
+/etc/sudoers:47:%admin ALL=(ALL) ALL
+/etc/sudoers:50:%sudo	ALL=(ALL:ALL) ALL
+/etc/sudoers:54:@includedir /etc/sudoers.d
+/etc/sudoers.d/90-cloud-init-users
+/etc/sudoers.d/90-cloud-init-users:4:root ALL=(ALL) NOPASSWD:ALL
+/etc/sudoers.d/README
+
+===== timers-cron =====
+NEXT                        LEFT          LAST                        PASSED             UNIT                           ACTIVATES
+Fri 2026-04-24 02:29:15 UTC 19min left    Fri 2026-03-20 17:28:32 UTC 1 month 3 days ago fstrim.timer                   fstrim.service
+Fri 2026-04-24 02:33:45 UTC 24min left    Fri 2026-03-20 17:28:32 UTC 1 month 3 days ago motd-news.timer                motd-news.service
+Fri 2026-04-24 06:49:22 UTC 4h 39min left Fri 2026-04-24 01:51:58 UTC 17min ago          apt-daily-upgrade.timer        apt-daily-upgrade.service
+Fri 2026-04-24 08:07:43 UTC 5h 58min left Fri 2026-03-20 17:28:32 UTC 1 month 3 days ago man-db.timer                   man-db.service
+Fri 2026-04-24 08:59:36 UTC 6h left       Fri 2026-03-20 18:17:39 UTC 1 month 3 days ago apt-daily.timer                apt-daily.service
+Sat 2026-04-25 00:00:00 UTC 21h left      n/a                         n/a                dpkg-db-backup.timer           dpkg-db-backup.service
+Sat 2026-04-25 00:00:00 UTC 21h left      Fri 2026-04-24 00:57:42 UTC 1h 11min ago       logrotate.timer                logrotate.service
+Sat 2026-04-25 01:02:51 UTC 22h left      Fri 2026-04-24 01:02:51 UTC 1h 6min ago        update-notifier-download.timer update-notifier-download.service
+Sat 2026-04-25 01:12:43 UTC 23h left      Fri 2026-04-24 01:12:43 UTC 56min ago          systemd-tmpfiles-clean.timer   systemd-tmpfiles-clean.service
+Sun 2026-04-26 03:10:40 UTC 2 days left   Fri 2026-04-24 00:57:46 UTC 1h 11min ago       e2scrub_all.timer              e2scrub_all.service
+Wed 2026-04-29 02:22:36 UTC 5 days left   Fri 2026-03-20 17:28:32 UTC 1 month 3 days ago update-notifier-motd.timer     update-notifier-motd.service
+n/a                         n/a           n/a                         n/a                apport-autoreport.timer        apport-autoreport.service
+n/a                         n/a           n/a                         n/a                snapd.snap-repair.timer        snapd.snap-repair.service
+n/a                         n/a           n/a                         n/a                ua-timer.timer                 ua-timer.service
+
+14 timers listed.
+/etc/cron.d/.placeholder
+/etc/cron.d/e2scrub_all
+/etc/cron.daily/man-db
+/etc/cron.daily/.placeholder
+/etc/cron.daily/apt-compat
+/etc/cron.daily/dpkg
+/etc/cron.daily/logrotate
+/etc/cron.daily/apport
+/etc/cron.hourly/.placeholder
+/etc/cron.weekly/man-db
+/etc/cron.weekly/.placeholder
+/etc/cron.monthly/.placeholder
+
+===== packages =====
+acl
+acpid
+adduser
+apparmor
+apport
+apt
+apt-utils
+at
+base-files
+base-passwd
+bash
+bash-completion
+bcache-tools
+bind9-dnsutils
+bsdutils
+btrfs-progs
+busybox-static
+ca-certificates
+cloud-guest-utils
+cloud-init
+command-not-found
+console-setup
+containerd.io
+cpio
+cron
+cryptsetup
+cryptsetup-initramfs
+curl
+dash
+dbus
+debconf
+debconf-i18n
+diffutils
+dirmngr
+dmidecode
+docker-buildx-plugin
+docker-ce
+docker-ce-cli
+docker-ce-rootless-extras
+docker-compose-plugin
+docker-model-plugin
+dosfstools
+e2fsprogs
+eatmydata
+ed
+efibootmgr
+ethtool
+fail2ban
+fdisk
+findutils
+friendly-recovery
+gdisk
+gnupg2
+grep
+grub-efi-amd64
+grub-efi-amd64-bin
+grub-efi-amd64-signed
+grub-pc-bin
+gzip
+hc-utils
+hdparm
+hostname
+htop
+info
+init
+iproute2
+iptables
+iputils-ping
+iputils-tracepath
+irqbalance
+isc-dhcp-client
+kbd
+kmod
+less
+libdebconfclient0
+libflashrom1
+libftdi1-2
+libpam-systemd
+linux-image-virtual
+locales
+login
+logrotate
+lsb-release
+lshw
+lsof
+lvm2
+man-db
+manpages
+mawk
+mdadm
+media-types
+mount
+mtr-tiny
+multipath-tools
+nano
+ncurses-base
+ncurses-bin
+net-tools
+netbase
+netcat-openbsd
+netplan.io
+nftables
+open-iscsi
+openssh-client
+openssh-server
+parted
+passwd
+pciutils
+plymouth
+plymouth-theme-ubuntu-text
+pollinate
+procps
+psmisc
+python3
+qemu-guest-agent
+rsync
+rsyslog
+sensible-utils
+shim-signed
+snapd
+software-properties-common
+ssh-import-id
+strace
+sudo
+systemd
+systemd-sysv
+sysvinit-utils
+tailscale
+tailscale-archive-keyring
+tcpdump
+time
+tzdata
+ubuntu-advantage-tools
+ubuntu-drivers-common
+ubuntu-keyring
+ubuntu-release-upgrader-core
+ubuntu-server
+udev
+ufw
+unattended-upgrades
+update-manager-core
+usbutils
+usrmerge
+uuid-runtime
+vim
+vim-tiny
+wget
+whiptail
+xfsprogs
+xz-utils
+Listing...
+enabled
+enabled
+enabled
+enabled
+
+===== dokploy-traefik =====
+Dokploy paths:
+/etc/dokploy/monitoring/dokploy/memory.json
+/etc/dokploy/monitoring/dokploy/block.json
+/etc/dokploy/monitoring/dokploy/cpu.json
+/etc/dokploy/monitoring/dokploy/network.json
+/etc/dokploy/monitoring/dokploy/disk.json
+/etc/dokploy/traefik/dynamic/dokploy.yml
+/etc/dokploy/traefik/dynamic/middlewares.yml
+/etc/dokploy/traefik/traefik.yml
+
+Traefik YAML content excluding acme.json:
+/etc/dokploy/traefik/dynamic/dokploy.yml
+--- /etc/dokploy/traefik/dynamic/dokploy.yml
+http:
+  routers:
+    dokploy-router-app:
+      rule: Host(`dokploy.docker.localhost`) && PathPrefix(`/`)
+      service: dokploy-service-app
+      entryPoints:
+        - web
+  services:
+    dokploy-service-app:
+      loadBalancer:
+        servers:
+          - url: http://dokploy:3000
+        passHostHeader: true
+/etc/dokploy/traefik/dynamic/middlewares.yml
+--- /etc/dokploy/traefik/dynamic/middlewares.yml
+http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+/etc/dokploy/traefik/traefik.yml
+--- /etc/dokploy/traefik/traefik.yml
+global:
+  sendAnonymousUsage: false
+providers:
+  swarm:
+    exposedByDefault: false
+    watch: true
+  docker:
+    exposedByDefault: false
+    watch: true
+    network: dokploy-network
+  file:
+    directory: /etc/dokploy/traefik/dynamic
+    watch: true
+entryPoints:
+  web:
+    address: :80
+  websecure:
+    address: :443
+    http3:
+      advertisedPort: 443
+    http:
+      tls:
+        certResolver: letsencrypt
+api:
+  insecure: true
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: test@localhost.com
+      storage: /etc/dokploy/traefik/dynamic/acme.json
+      httpChallenge:
+        entryPoint: web
+
+Docker compose related Dokploy files:
+
+===== security-services =====
+● fail2ban.service - Fail2Ban Service
+     Loaded: loaded (/lib/systemd/system/fail2ban.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-04-24 00:57:42 UTC; 1h 11min ago
+       Docs: man:fail2ban(1)
+   Main PID: 739 (fail2ban-server)
+      Tasks: 5 (limit: 2249)
+     Memory: 7.6M
+        CPU: 1.557s
+     CGroup: /system.slice/fail2ban.service
+             └─739 /usr/bin/python3 /usr/bin/fail2ban-server -xf start
+
+Apr 24 00:57:42 ubuntu-2gb-ash-1 systemd[1]: Started Fail2Ban Service.
+Apr 24 00:57:43 ubuntu-2gb-ash-1 fail2ban-server[739]: Server ready
+
+● unattended-upgrades.service - Unattended Upgrades Shutdown
+     Loaded: loaded (/lib/systemd/system/unattended-upgrades.service; enabled; vendor preset: enabled)
+     Active: active (running) since Fri 2026-04-24 00:57:43 UTC; 1h 11min ago
+       Docs: man:unattended-upgrade(8)
+   Main PID: 822 (unattended-upgr)
+      Tasks: 2 (limit: 2249)
+     Memory: 1.6M
+        CPU: 55ms
+     CGroup: /system.slice/unattended-upgrades.service
+             └─822 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+
+Apr 24 00:57:43 ubuntu-2gb-ash-1 systemd[1]: Started Unattended Upgrades Shutdown.
+
+● apparmor.service - Load AppArmor profiles
+     Loaded: loaded (/lib/systemd/system/apparmor.service; enabled; vendor preset: enabled)
+     Active: active (exited) since Fri 2026-04-24 00:57:39 UTC; 1h 11min ago
+       Docs: man:apparmor(7)
+             https://gitlab.com/apparmor/apparmor/wikis/home/
+    Process: 565 ExecStart=/lib/apparmor/apparmor.systemd reload (code=exited, status=0/SUCCESS)
+   Main PID: 565 (code=exited, status=0/SUCCESS)
+        CPU: 57ms
+
+Apr 24 00:57:39 ubuntu-2gb-ash-1 systemd[1]: Starting Load AppArmor profiles...
+Apr 24 00:57:39 ubuntu-2gb-ash-1 apparmor.systemd[565]: Restarting AppArmor
+Apr 24 00:57:39 ubuntu-2gb-ash-1 apparmor.systemd[565]: Reloading AppArmor profiles
+Apr 24 00:57:39 ubuntu-2gb-ash-1 apparmor.systemd[599]: Skipping profile in /etc/apparmor.d/disable: usr.sbin.rsyslogd
+Apr 24 00:57:39 ubuntu-2gb-ash-1 systemd[1]: Finished Load AppArmor profiles.
+apparmor module is loaded.
+24 profiles are loaded.
+24 profiles are in enforce mode.
+   /usr/bin/man
+   /usr/lib/NetworkManager/nm-dhcp-client.action
+   /usr/lib/NetworkManager/nm-dhcp-helper
+   /usr/lib/connman/scripts/dhclient-script
+   /usr/lib/snapd/snap-confine
+   /usr/lib/snapd/snap-confine//mount-namespace-capture-helper
+   /{,usr/}sbin/dhclient
+   docker-default
+   lsb_release
+   man_filter
+   man_groff
+   nvidia_modprobe
+   nvidia_modprobe//kmod
+   tcpdump
+   ubuntu_pro_apt_news
+   ubuntu_pro_esm_cache
+   ubuntu_pro_esm_cache//apt_methods
+   ubuntu_pro_esm_cache//apt_methods_gpgv
+   ubuntu_pro_esm_cache//cloud_id
+   ubuntu_pro_esm_cache//dpkg
+   ubuntu_pro_esm_cache//ps
+   ubuntu_pro_esm_cache//ubuntu_distro_info
+   ubuntu_pro_esm_cache_systemctl
+   ubuntu_pro_esm_cache_systemd_detect_virt
+0 profiles are in complain mode.
+0 profiles are in kill mode.
+0 profiles are in unconfined mode.
+34 processes have profiles defined.
+34 processes are in enforce mode.
+   /usr/local/bin/traefik (1277) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1723) docker-default
+   /usr/local/bin/redis-server (1741) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1935) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1936) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1942) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1943) docker-default
+   /usr/lib/postgresql/16/bin/postgres (1944) docker-default
+   /usr/local/bin/node (8592) docker-default
+   /usr/bin/dash (8695) docker-default
+   /usr/local/bin/node (8708) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8735) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8736) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8737) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8740) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8741) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8742) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8743) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8768) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8769) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8771) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8772) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8773) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8774) docker-default
+   /usr/lib/postgresql/16/bin/postgres (8940) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9066) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9067) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9068) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9069) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9070) docker-default
+   /usr/lib/postgresql/16/bin/postgres (9575) docker-default
+   /usr/lib/postgresql/16/bin/postgres (14623) docker-default
+   /usr/lib/postgresql/16/bin/postgres (14624) docker-default
+   /usr/lib/postgresql/16/bin/postgres (14625) docker-default
+0 processes are in complain mode.
+0 processes are unconfined but have a profile defined.
+0 processes are in mixed mode.
+0 processes are in kill mode.

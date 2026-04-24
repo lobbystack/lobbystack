@@ -3,13 +3,16 @@ import {
   normalizeKnowledgeDocumentText,
 } from "./knowledgeDocuments";
 
-export const WEBSITE_INGESTION_PROVIDER = "cloudflare_browser_run";
+export const WEBSITE_INGESTION_PROVIDER = "firecrawl";
 export const WEBSITE_CRAWL_PAGE_LIMIT = 40;
 export const WEBSITE_CRAWL_DEPTH = 3;
+export const WEBSITE_CRAWL_FIRECRAWL_MODE = "firecrawl";
 export const WEBSITE_CRAWL_HTTP_MODE = "http";
 export const WEBSITE_CRAWL_BROWSER_MODE = "browser";
 export const WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT = 12;
 export const WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH = 2;
+export const WEBSITE_CRAWL_PRIORITY_PAGE_LIMIT = 2;
+export const WEBSITE_CRAWL_PRIORITY_DEPTH = 1;
 export const WEBSITE_CRAWL_PATTERN_LIMIT = 100;
 export const WEBSITE_PUBLIC_URL_ERROR_MESSAGE =
   "Enter a public website URL. Localhost, local network addresses, and direct IP addresses are not supported. Use a tunnel URL for local testing.";
@@ -24,12 +27,17 @@ const IMPORTANT_PATH_SEGMENTS = new Set([
   "hours",
   "location",
   "locations",
+  "menu",
+  "menus",
   "pricing",
   "price",
   "service",
   "services",
   "team",
 ]);
+
+const PRIORITY_CRAWL_LOCALE_PREFIXES = ["", "en", "fr"] as const;
+const PRIORITY_CRAWL_PATH_SEGMENTS = ["menu", "menu.html", "menus", "menus.html"] as const;
 
 const LOW_SIGNAL_PATH_SEGMENTS = new Set([
   "account",
@@ -317,6 +325,42 @@ export function buildWebsiteCrawlIncludePatterns(websiteUrl: string): Array<stri
       ]),
     ),
   );
+}
+
+export function buildPriorityWebsiteCrawlTargets(websiteUrl: string): Array<string> {
+  const canonicalWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
+  const parsed = new URL(canonicalWebsiteUrl);
+  const baseSegments =
+    parsed.pathname === "/" ? [] : parsed.pathname.split("/").filter(Boolean);
+
+  // Avoid appending priority paths beneath a concrete file path such as /about.html.
+  if (baseSegments.at(-1)?.includes(".")) {
+    return [];
+  }
+
+  const targets = new Set<string>();
+
+  for (const localePrefix of PRIORITY_CRAWL_LOCALE_PREFIXES) {
+    for (const pathSegment of PRIORITY_CRAWL_PATH_SEGMENTS) {
+      const target = new URL(parsed.origin);
+      const targetSegments = [...baseSegments];
+
+      if (localePrefix) {
+        targetSegments.push(localePrefix);
+      }
+      targetSegments.push(pathSegment);
+      target.pathname = `/${targetSegments.join("/")}`;
+
+      const normalizedTarget = buildCanonicalWebsiteUrl(target, {
+        origin: parsed.origin,
+      });
+      if (normalizedTarget !== canonicalWebsiteUrl) {
+        targets.add(normalizedTarget);
+      }
+    }
+  }
+
+  return Array.from(targets);
 }
 
 export function buildWebsiteCrawlExcludePatterns(websiteUrl: string): Array<string> {

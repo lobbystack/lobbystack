@@ -353,7 +353,16 @@ export default defineSchema({
     provider: v.string(),
     status: v.string(),
     workflowId: v.optional(v.string()),
+    providerJobId: v.optional(v.string()),
     cloudflareJobId: v.optional(v.string()),
+    firecrawlScrapeJobs: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          jobId: v.string(),
+        }),
+      ),
+    ),
     crawlMode: v.string(),
     fallbackTriggered: v.boolean(),
     pageLimit: v.number(),

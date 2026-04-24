@@ -18,6 +18,7 @@ import { workflowManager } from "../../lib/components";
 import { requireMembership } from "../../lib/auth";
 import {
   WEBSITE_CRAWL_DEPTH,
+  WEBSITE_CRAWL_FIRECRAWL_MODE,
   WEBSITE_CRAWL_HTTP_MODE,
   WEBSITE_CRAWL_PAGE_LIMIT,
   WEBSITE_INGESTION_PROVIDER,
@@ -34,7 +35,9 @@ type WebsiteKnowledgeSourceArgs = {
 
 type PatchWebsiteIngestionJobArgs = WebsiteIngestionJobIdArgs & {
   status?: string;
+  providerJobId?: string;
   cloudflareJobId?: string;
+  firecrawlScrapeJobs?: Array<{ url: string; jobId: string }>;
   crawlMode?: string;
   fallbackTriggered?: boolean;
   pageLimit?: number;
@@ -202,7 +205,7 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
       websiteUrl: args.websiteUrl,
       provider: WEBSITE_INGESTION_PROVIDER,
       status: "queued",
-      crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+      crawlMode: WEBSITE_CRAWL_FIRECRAWL_MODE,
       fallbackTriggered: false,
       pageLimit: WEBSITE_CRAWL_PAGE_LIMIT,
       depth: WEBSITE_CRAWL_DEPTH,
@@ -343,7 +346,19 @@ export const cancelWebsiteIngestionJob = action({
       throw new Error("Only active website imports can be canceled.");
     }
 
-    if (job.cloudflareJobId) {
+    if (job.provider === WEBSITE_INGESTION_PROVIDER && job.providerJobId) {
+      try {
+        await ctx.runAction(internal.ai.context.websiteIngestionActions.cancelFirecrawlWebsiteCrawlJob, {
+          providerJobId: job.providerJobId,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown Firecrawl crawl cancel failure.";
+        console.warn(
+          `[websiteIngestion] Failed to cancel Firecrawl crawl ${job.providerJobId} for ${String(job._id)}: ${message}`,
+        );
+      }
+    } else if (job.cloudflareJobId) {
       try {
         await ctx.runAction(internal.ai.context.websiteIngestionActions.cancelCloudflareWebsiteCrawlJob, {
           cloudflareJobId: job.cloudflareJobId,
@@ -503,7 +518,16 @@ export const patchWebsiteIngestionJob = internalMutation({
   args: {
     websiteIngestionJobId: v.id("website_ingestion_jobs"),
     status: v.optional(v.string()),
+    providerJobId: v.optional(v.string()),
     cloudflareJobId: v.optional(v.string()),
+    firecrawlScrapeJobs: v.optional(
+      v.array(
+        v.object({
+          url: v.string(),
+          jobId: v.string(),
+        }),
+      ),
+    ),
     crawlMode: v.optional(v.string()),
     fallbackTriggered: v.optional(v.boolean()),
     pageLimit: v.optional(v.number()),
@@ -524,8 +548,14 @@ export const patchWebsiteIngestionJob = internalMutation({
     if (args.status !== undefined) {
       patch.status = args.status;
     }
+    if (args.providerJobId !== undefined) {
+      patch.providerJobId = args.providerJobId;
+    }
     if (args.cloudflareJobId !== undefined) {
       patch.cloudflareJobId = args.cloudflareJobId;
+    }
+    if (args.firecrawlScrapeJobs !== undefined) {
+      patch.firecrawlScrapeJobs = args.firecrawlScrapeJobs;
     }
     if (args.crawlMode !== undefined) {
       patch.crawlMode = args.crawlMode;

@@ -444,6 +444,17 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         return 12;
       }
       case "indexing":
+        if (
+          typeof job.crawlFinishedCount === "number" &&
+          typeof job.crawlTotalCount === "number" &&
+          job.crawlTotalCount > 0
+        ) {
+          return Math.max(
+            72,
+            Math.min(99, Math.round((job.crawlFinishedCount / job.crawlTotalCount) * 100)),
+          );
+        }
+
         return 72;
       case "failed":
         return 100;

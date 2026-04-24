@@ -6,6 +6,7 @@ import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { KNOWLEDGE_INDEX_VERSION } from "../lib/components";
 import {
+  buildPriorityWebsiteCrawlTargets,
   buildWebsiteCrawlExcludePatterns,
   buildWebsiteCrawlIncludePatterns,
   normalizeWebsiteMarkdown,
@@ -99,6 +100,7 @@ type ConvexHarness = TestConvex<typeof schema>;
 const convexModules = modules;
 const originalCloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const originalCloudflareApiToken = process.env.CLOUDFLARE_API_TOKEN;
+const originalFirecrawlApiKey = process.env.FIRECRAWL_API_KEY;
 
 function createConvexHarness() {
   const t = convexTest(schema, convexModules);
@@ -166,6 +168,7 @@ describe("website onboarding and ingestion", () => {
   beforeEach(() => {
     process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
     process.env.CLOUDFLARE_API_TOKEN = "test-token";
+    process.env.FIRECRAWL_API_KEY = "test-firecrawl-key";
     billingLimitBytesRef.value = null;
     failingStorageDeleteIdsRef.value = new Set<string>();
 
@@ -191,6 +194,7 @@ describe("website onboarding and ingestion", () => {
   afterAll(() => {
     process.env.CLOUDFLARE_ACCOUNT_ID = originalCloudflareAccountId;
     process.env.CLOUDFLARE_API_TOKEN = originalCloudflareApiToken;
+    process.env.FIRECRAWL_API_KEY = originalFirecrawlApiKey;
   });
 
   it("starts already verified users at the website step during business bootstrap", async () => {
@@ -257,10 +261,10 @@ describe("website onboarding and ingestion", () => {
     expect(jobs[0]).toMatchObject({
       businessId,
       websiteUrl: "https://example.com/clinic",
-      provider: "cloudflare_browser_run",
+      provider: "firecrawl",
       status: "queued",
       workflowId: "workflow-test-id",
-      crawlMode: "http",
+      crawlMode: "firecrawl",
       fallbackTriggered: false,
       pageLimit: 40,
       depth: 3,
@@ -306,10 +310,10 @@ describe("website onboarding and ingestion", () => {
     expect(jobs[0]).toMatchObject({
       businessId,
       websiteUrl: "https://example.com/faq",
-      provider: "cloudflare_browser_run",
+      provider: "firecrawl",
       status: "queued",
       workflowId: "workflow-test-id",
-      crawlMode: "http",
+      crawlMode: "firecrawl",
       fallbackTriggered: false,
       pageLimit: 40,
       depth: 3,
@@ -693,6 +697,81 @@ describe("website onboarding and ingestion", () => {
     );
     expect(body.options?.excludePatterns).not.toContain(
       "https://example.com/clinic/**/*search*",
+    );
+  });
+
+  it("submits targeted priority crawls against a specific page URL", async () => {
+    const t = createConvexHarness();
+    const subject = "website-priority-crawl-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const websiteIngestionJobId = await t.run(async (ctx) => {
+      return await ctx.db.insert("website_ingestion_jobs", {
+        businessId,
+        websiteUrl: "https://bostonpizza.com/",
+        provider: "cloudflare_browser_run",
+        status: "queued",
+        crawlMode: "http",
+        fallbackTriggered: false,
+        pageLimit: 40,
+        depth: 3,
+        importedCount: 0,
+        indexedCount: 0,
+        errorCount: 0,
+      });
+    });
+
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: "cf-job-priority-1",
+      }),
+    } as Response);
+
+    const result = await t.action(
+      internal.ai.context.websiteIngestionActions.submitCloudflareWebsiteCrawl,
+      {
+        websiteIngestionJobId,
+        render: false,
+        crawlTargetUrl: "https://bostonpizza.com/en/menu.html",
+        pageLimit: 2,
+        depth: 1,
+      },
+    );
+
+    expect(result).toEqual({
+      cloudflareJobId: "cf-job-priority-1",
+      crawlMode: "http",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] ?? [];
+    const body = JSON.parse(String(requestInit?.body ?? "{}")) as {
+      depth?: number;
+      limit?: number;
+      url?: string;
+      options?: {
+        includePatterns?: string[];
+        excludePatterns?: string[];
+      };
+    };
+
+    expect(body.url).toBe("https://bostonpizza.com/en/menu.html");
+    expect(body.limit).toBe(2);
+    expect(body.depth).toBe(1);
+    expect(body.options?.includePatterns).toEqual([
+      "https://bostonpizza.com/en/menu.html",
+      "https://bostonpizza.com/en/menu.html/**",
+      "https://www.bostonpizza.com/en/menu.html",
+      "https://www.bostonpizza.com/en/menu.html/**",
+    ]);
+    expect(body.options?.excludePatterns).toContain(
+      "https://bostonpizza.com/en/menu.html/login",
     );
   });
 
@@ -2147,6 +2226,24 @@ describe("website onboarding and ingestion", () => {
     expect(
       normalizeWebsitePageUrl("https://example.com/clinic-and-spa", "https://example.com/clinic"),
     ).toBeNull();
+  });
+
+  it("builds priority crawl targets for menu-style pages", () => {
+    expect(buildPriorityWebsiteCrawlTargets("https://bostonpizza.com/")).toEqual([
+      "https://bostonpizza.com/menu",
+      "https://bostonpizza.com/menu.html",
+      "https://bostonpizza.com/menus",
+      "https://bostonpizza.com/menus.html",
+      "https://bostonpizza.com/en/menu",
+      "https://bostonpizza.com/en/menu.html",
+      "https://bostonpizza.com/en/menus",
+      "https://bostonpizza.com/en/menus.html",
+      "https://bostonpizza.com/fr/menu",
+      "https://bostonpizza.com/fr/menu.html",
+      "https://bostonpizza.com/fr/menus",
+      "https://bostonpizza.com/fr/menus.html",
+    ]);
+    expect(buildPriorityWebsiteCrawlTargets("https://example.com/about.html")).toEqual([]);
   });
 
   it("deduplicates apex and www versions of the same page during import", async () => {
