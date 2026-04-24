@@ -59,6 +59,7 @@ type CloudflareCrawlResult = {
 
 type WebsiteImportSummary = {
   importedDocumentCount: number;
+  resultsReady: boolean;
   weak: boolean;
 };
 
@@ -335,6 +336,15 @@ function buildWebsiteDocumentTitle(input: {
 function hasSuccessfulCloudflarePageResponse(record: CloudflareCrawlRecord): boolean {
   const pageStatus = record.metadata?.status;
   return pageStatus === undefined || (pageStatus >= 200 && pageStatus < 300);
+}
+
+function isTerminalCloudflareCrawlRecordStatus(status: CloudflareCrawlRecord["status"]): boolean {
+  return (
+    status === undefined ||
+    status === "completed" ||
+    status === "cancelled" ||
+    typeof status === "number"
+  );
 }
 
 function isAcceptablePartialBrowserCrawl(input: {
@@ -783,6 +793,7 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     let crawlTotal: number | null = null;
     let crawlProcessedCount = 0;
     let sawNonCompletedRecords = false;
+    let resultPaginationIncomplete = false;
     const crawlRecords: Array<CloudflareCrawlRecord> = [];
 
     do {
@@ -825,9 +836,9 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
         continue;
       }
       if (seenCursors.has(nextCursor)) {
-        throw new Error(
-          "Website crawl results could not be fully read because Cloudflare repeated a pagination cursor.",
-        );
+        resultPaginationIncomplete = true;
+        cursor = undefined;
+        break;
       }
       seenCursors.add(nextCursor);
       cursor = nextCursor;
@@ -839,17 +850,17 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
       crawlTotal !== null && crawlTotal > 0 && crawlRecords.length >= crawlTotal;
     const returnedRecordsAreTerminal =
       crawlRecords.length > 0 &&
-      crawlRecords.every((record) => {
-        return (
-          record.status === undefined ||
-          record.status === "completed" ||
-          typeof record.status === "number"
-        );
-      });
+      crawlRecords.every((record) => isTerminalCloudflareCrawlRecordStatus(record.status));
     const importLastProgressAtMs =
       parseIsoTimestamp(job.lastProgressAt ?? job.startedAt) ?? Date.now();
     const shouldWaitForCompleteBrowserRecords =
       args.crawlMode === WEBSITE_CRAWL_BROWSER_MODE && job.fallbackTriggered === true;
+    const browserResultsSettledAfterGrace =
+      shouldWaitForCompleteBrowserRecords &&
+      Date.now() - importLastProgressAtMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS &&
+      crawlFullyProcessed &&
+      crawlRecords.length > 0 &&
+      returnedRecordsAreTerminal;
     const partialBrowserCrawlCompleted = isAcceptablePartialBrowserCrawl({
       allowPartial:
         Date.now() - importLastProgressAtMs >= WEBSITE_CRAWL_PARTIAL_COMPLETION_GRACE_MS,
@@ -865,17 +876,25 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     });
     const providerCrawlCompleted =
       crawlStatus === "completed" || crawlFullyProcessed || partialBrowserCrawlCompleted;
+    const paginationBlockedIncompleteResults =
+      resultPaginationIncomplete && !returnedAllExpectedRecords && !browserResultsSettledAfterGrace;
     const crawlResultsReady =
-      !shouldWaitForCompleteBrowserRecords ||
-      crawlTotal === null ||
-      (returnedAllExpectedRecords && returnedRecordsAreTerminal) ||
-      partialBrowserCrawlCompleted;
+      !paginationBlockedIncompleteResults &&
+      (!shouldWaitForCompleteBrowserRecords ||
+        crawlTotal === null ||
+        (returnedAllExpectedRecords && returnedRecordsAreTerminal) ||
+        browserResultsSettledAfterGrace ||
+        partialBrowserCrawlCompleted);
     const crawlCompleted =
       providerCrawlCompleted && crawlResultsReady;
 
     if (!crawlCompleted) {
       if (providerCrawlCompleted && !crawlResultsReady) {
-        throw new Error(WEBSITE_CRAWL_RESULTS_NOT_READY_MESSAGE);
+        return {
+          importedDocumentCount: 0,
+          resultsReady: false,
+          weak: false,
+        };
       }
       throw new Error(`Website crawl job is ${crawlStatus ?? "not ready"} and cannot be imported.`);
     }
@@ -972,6 +991,7 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
     if (!commitChanges) {
       return {
         importedDocumentCount,
+        resultsReady: true,
         weak: shouldTriggerBrowserFallback({
           importedPageCount: importedDocumentCount,
           totalMarkdownBytes,
@@ -1130,6 +1150,7 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
 
     return {
       importedDocumentCount,
+      resultsReady: true,
       weak: shouldTriggerBrowserFallback({
         importedPageCount: importedDocumentCount,
         totalMarkdownBytes,
@@ -1317,6 +1338,10 @@ export const reconcileWebsiteIngestionJob = internalAction({
           },
         );
 
+        if (dryRunSummary.resultsReady === false) {
+          return { status: "crawling" };
+        }
+
         if (dryRunSummary.weak) {
           const browserCrawlBudget = resolveWebsiteCrawlBudget({
             render: true,
@@ -1367,6 +1392,10 @@ export const reconcileWebsiteIngestionJob = internalAction({
             commitChanges: true,
           },
         );
+      }
+
+      if (importSummary.resultsReady === false) {
+        return { status: "crawling" };
       }
 
       if (importSummary.importedDocumentCount === 0) {

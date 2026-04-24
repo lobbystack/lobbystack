@@ -13,6 +13,8 @@ import {
   getPostHogDistinctIdForBusinessSystem,
 } from "../../telemetry/shared";
 
+const WEBSITE_CRAWL_RESULTS_POLL_DELAY_MS = 5_000;
+
 export const refreshBusinessContextSnapshotWorkflow = workflowManager.define({
   args: {
     businessId: v.id("businesses"),
@@ -128,6 +130,19 @@ export const importWebsiteKnowledgeWorkflow = workflowManager.define({
         { retry: true },
       );
 
+      while (importSummary.resultsReady === false) {
+        importSummary = await step.runAction(
+          internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+          {
+            websiteIngestionJobId: args.websiteIngestionJobId,
+            cloudflareJobId: initialCrawl.cloudflareJobId,
+            crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+            commitChanges: false,
+          },
+          { retry: true, runAfter: WEBSITE_CRAWL_RESULTS_POLL_DELAY_MS },
+        );
+      }
+
       if (importSummary.weak) {
         await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
           websiteIngestionJobId: args.websiteIngestionJobId,
@@ -193,6 +208,19 @@ export const importWebsiteKnowledgeWorkflow = workflowManager.define({
           },
           { retry: true },
         );
+
+        while (importSummary.resultsReady === false) {
+          importSummary = await step.runAction(
+            internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+            {
+              websiteIngestionJobId: args.websiteIngestionJobId,
+              cloudflareJobId: browserCrawl.cloudflareJobId,
+              crawlMode: WEBSITE_CRAWL_BROWSER_MODE,
+              commitChanges: true,
+            },
+            { retry: true, runAfter: WEBSITE_CRAWL_RESULTS_POLL_DELAY_MS },
+          );
+        }
       } else {
         importSummary = await step.runAction(
           internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
@@ -204,6 +232,19 @@ export const importWebsiteKnowledgeWorkflow = workflowManager.define({
           },
           { retry: true },
         );
+
+        while (importSummary.resultsReady === false) {
+          importSummary = await step.runAction(
+            internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+            {
+              websiteIngestionJobId: args.websiteIngestionJobId,
+              cloudflareJobId: initialCrawl.cloudflareJobId,
+              crawlMode: WEBSITE_CRAWL_HTTP_MODE,
+              commitChanges: true,
+            },
+            { retry: true, runAfter: WEBSITE_CRAWL_RESULTS_POLL_DELAY_MS },
+          );
+        }
       }
 
       if (importSummary.importedDocumentCount === 0) {
