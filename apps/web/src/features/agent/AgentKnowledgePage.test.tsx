@@ -597,6 +597,53 @@ describe("AgentKnowledgePage", () => {
     expect(screen.queryByText("agent:sections.knowledge.previewPending")).toBeNull();
   });
 
+  it("keeps existing documents readable while they are being reindexed", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            status: "indexing",
+            processingProgress: 18,
+            textContent: "Existing document content remains visible.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Existing document content remains visible.")).toBeTruthy();
+    expect(screen.getByText("agent:sections.knowledge.status.indexing")).toBeTruthy();
+    expect(screen.queryByText("18%")).toBeNull();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
+  });
+
+  it("does not show per-page progress for website documents after import", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            sourceType: "website",
+            sourceUrl: "https://example.com/page-tree",
+            title: "Page Tree",
+            status: "indexing",
+            processingProgress: 0,
+            textContent: "Imported website page content is already available.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Imported website page content is already available.")).toBeTruthy();
+    expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
+  });
+
   it("toggles document activity from the row actions menu", async () => {
     mockAgentKnowledgeQueries({
       knowledge: {

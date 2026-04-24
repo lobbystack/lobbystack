@@ -437,6 +437,18 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     return document.status === "queued" || document.status === "indexing";
   }
 
+  function shouldRenderDocumentProcessingPreview(document: KnowledgeDocumentRow): boolean {
+    if (!isDocumentProcessing(document) || !isKnowledgeEntryActive(document)) {
+      return false;
+    }
+
+    if (isWebsiteDocument(document)) {
+      return false;
+    }
+
+    return !document.textContent?.trim();
+  }
+
   function getDocumentProgressValue(document: KnowledgeDocumentRow): number {
     return Math.max(
       0,
@@ -679,7 +691,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
           isWebsiteIngestionJobRow(row.original) ? (
             renderWebsiteIngestionJobPreview(row.original)
           ) : (
-            isDocumentRow(row.original) && isDocumentProcessing(row.original) ? (
+            isDocumentRow(row.original) && shouldRenderDocumentProcessingPreview(row.original) ? (
               renderInProgressPreview(getDocumentProgressValue(row.original))
             ) : (
               <span
