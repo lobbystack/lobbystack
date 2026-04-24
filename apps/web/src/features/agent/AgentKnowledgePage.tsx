@@ -313,6 +313,9 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const [loadingViewerIds, setLoadingViewerIds] = useState<string[]>([]);
   const [viewerErrorsByDocumentId, setViewerErrorsByDocumentId] = useState<Record<string, string>>({});
   const [togglingEntryIds, setTogglingEntryIds] = useState<string[]>([]);
+  const [websiteIngestionProgressByJobId, setWebsiteIngestionProgressByJobId] = useState<
+    Record<string, number>
+  >({});
   const documents = useMemo(
     () =>
       ((knowledge?.documents ?? []) as Array<Doc<"knowledge_documents">>).map((document) => ({
@@ -364,6 +367,30 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   );
   const showKnowledgeTitleMarkers = section === "knowledge";
 
+  useEffect(() => {
+    setWebsiteIngestionProgressByJobId((current) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+
+      for (const job of pendingWebsiteIngestionRows) {
+        const jobId = String(job._id);
+        const rawProgress = getRawWebsiteIngestionJobProgressValue(job);
+        const progress = Math.max(current[jobId] ?? rawProgress, rawProgress);
+        next[jobId] = progress;
+
+        if (current[jobId] !== progress) {
+          changed = true;
+        }
+      }
+
+      if (Object.keys(current).length !== Object.keys(next).length) {
+        changed = true;
+      }
+
+      return changed ? next : current;
+    });
+  }, [pendingWebsiteIngestionRows]);
+
   function getLoadedViewerText(document: Doc<"knowledge_documents">): string | undefined {
     const documentId = String(document._id);
     const cacheKey = getViewerCacheKey(document);
@@ -400,7 +427,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     }
   }
 
-  function getWebsiteIngestionJobProgressValue(job: WebsiteIngestionJobRow): number {
+  function getRawWebsiteIngestionJobProgressValue(job: WebsiteIngestionJobRow): number {
     switch (job.status) {
       case "queued":
         return 8;
@@ -423,6 +450,11 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
       default:
         return 12;
     }
+  }
+
+  function getWebsiteIngestionJobProgressValue(job: WebsiteIngestionJobRow): number {
+    const rawProgress = getRawWebsiteIngestionJobProgressValue(job);
+    return Math.max(websiteIngestionProgressByJobId[String(job._id)] ?? rawProgress, rawProgress);
   }
 
   function getWebsiteIngestionJobPreviewSummary(job: WebsiteIngestionJobRow): string {

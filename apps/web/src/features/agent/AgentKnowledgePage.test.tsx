@@ -542,6 +542,47 @@ describe("AgentKnowledgePage", () => {
     expect(screen.queryByText("100%")).toBeNull();
   });
 
+  it("keeps website crawl progress from moving backward as more pages are discovered", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-monotonic",
+          crawlFinishedCount: 20,
+          crawlTotalCount: 40,
+        }),
+      ],
+    });
+
+    const { rerender } = render(
+      <AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />,
+    );
+
+    expect(screen.getByText("50%")).toBeTruthy();
+
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-monotonic",
+          crawlFinishedCount: 21,
+          crawlTotalCount: 70,
+        }),
+      ],
+    });
+
+    rerender(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("50%")).toBeTruthy();
+    expect(screen.queryByText("30%")).toBeNull();
+  });
+
   it("allows canceling an in-progress website import from the row actions menu", async () => {
     mockAgentKnowledgeQueries({
       knowledge: {
