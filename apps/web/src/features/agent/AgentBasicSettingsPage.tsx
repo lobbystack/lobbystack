@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
-import type { RuntimeLocale } from "@ai-receptionist/shared";
+import type { RuntimeLocale } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";

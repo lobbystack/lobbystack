@@ -4,7 +4,7 @@ This repo uses Polar for hosted cloud billing.
 
 The integration is intentionally hosted and backend-driven:
 
-- checkout creation stays in [convex/billing.ts](/Users/raphael/Coding/ai-receptionist/convex/billing.ts)
+- checkout creation stays in [convex/billing.ts](/convex/billing.ts)
 - customer self-service uses Polar customer sessions instead of custom billing UI
 - subscription and transaction state are synchronized from Polar webhooks
 - metered usage is emitted from backend usage events, never from the client
@@ -99,7 +99,7 @@ This repo does not assume Stripe-style restricted API keys exist in Polar. Until
 
 ## Webhook routing
 
-Polar routes are registered from [convex/http.ts](/Users/raphael/Coding/ai-receptionist/convex/http.ts) through [convex/billing.ts](/Users/raphael/Coding/ai-receptionist/convex/billing.ts).
+Polar routes are registered from [convex/http.ts](/convex/http.ts) through [convex/billing.ts](/convex/billing.ts).
 
 Use the Convex HTTP endpoint:
 

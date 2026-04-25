@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot, SmsConversationInput } from "@ai-receptionist/shared";
+import type { BusinessContextSnapshot, SmsConversationInput } from "@lobbystack/shared";
 
 export type OutboundSmsMessage = {
   to: string;

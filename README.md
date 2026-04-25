@@ -1,4 +1,4 @@
-# AI Receptionist
+# LobbyStack
 
 Open-source AI receptionist software for clinics, repair shops, salons, and service businesses. The product is cloud-first, self-hostable from day one, and keeps one shared core codebase across hosted and self-hosted deployments.
 
@@ -30,7 +30,7 @@ docker/
 5. Seed demo data with `pnpm seed:demo`.
 
 Mock providers are part of the default development path so contributors can exercise flows without live Twilio, OpenAI, calendar, or email credentials.
-Password reset and email-change confirmation use the official Convex Resend component. Setup and local verification steps live in [docs/providers/resend.md](/Users/raphael/Coding/ai-receptionist/docs/providers/resend.md).
+Password reset and email-change confirmation use the official Convex Resend component. Setup and local verification steps live in [docs/providers/resend.md](/docs/providers/resend.md).
 Polar billing setup and the expected recurring-plus-metered product shape live in [docs/providers/polar.md](docs/providers/polar.md).
 These auth email flows also require `SITE_URL` on the Convex deployment so Convex Auth can build the correct reset and confirmation links.
 
@@ -43,4 +43,4 @@ These auth email flows also require `SITE_URL` on the Convex deployment so Conve
 
 ## Status
 
-This repository is being bootstrapped around the MVP architecture. See [docs/architecture/overview.md](/Users/raphael/Coding/ai-receptionist/docs/architecture/overview.md), the ADRs in [docs/adr](/Users/raphael/Coding/ai-receptionist/docs/adr), the execution methodology in [docs/tracking/linear-methodology.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/linear-methodology.md), and current progress in [docs/tracking/mvp-status.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/mvp-status.md).
+This repository is being bootstrapped around the MVP architecture. See [docs/architecture/overview.md](/docs/architecture/overview.md), the ADRs in [docs/adr](/docs/adr), the execution methodology in [docs/tracking/linear-methodology.md](/docs/tracking/linear-methodology.md), and current progress in [docs/tracking/mvp-status.md](/docs/tracking/mvp-status.md).

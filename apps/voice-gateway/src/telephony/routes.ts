@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import {
   billingErrorCodes,
   demoBusinessId,
-} from "@ai-receptionist/shared";
+} from "@lobbystack/shared";
 
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {

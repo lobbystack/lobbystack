@@ -58,7 +58,7 @@ if (!fs.existsSync(assetsDir)) {
 
 process.env.POSTHOG_CLI_HOST ||= readOptionalEnv("VITE_POSTHOG_UI_HOST") ?? "https://us.posthog.com";
 
-const releaseName = readOptionalEnv("POSTHOG_RELEASE_NAME") ?? "@ai-receptionist/web";
+const releaseName = readOptionalEnv("POSTHOG_RELEASE_NAME") ?? "@lobbystack/web";
 const releaseVersion = resolveReleaseVersion();
 
 runPostHogCli(["sourcemap", "inject", "--directory", assetsDir]);

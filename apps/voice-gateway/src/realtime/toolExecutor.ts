@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 import { z } from "zod";
 
 import {
@@ -174,13 +174,13 @@ export async function executeVoiceTool(input: {
 }): Promise<ExecutedToolResult> {
   const startedAt = Date.now();
   const attributes = {
-    "ai_receptionist.business_id": input.businessId,
-    ...(input.callId ? { "ai_receptionist.call_id": input.callId } : {}),
+    "lobbystack.business_id": input.businessId,
+    ...(input.callId ? { "lobbystack.call_id": input.callId } : {}),
     ...(input.conversationId
-      ? { "ai_receptionist.conversation_id": input.conversationId }
+      ? { "lobbystack.conversation_id": input.conversationId }
       : {}),
-    "ai_receptionist.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
-    "ai_receptionist.tool_name": input.toolName,
+    "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
+    "lobbystack.tool_name": input.toolName,
   };
 
   try {

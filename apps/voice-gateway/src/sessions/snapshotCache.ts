@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 export function createSnapshotCache(): {
   get: (businessId: string) => BusinessContextSnapshot | null;

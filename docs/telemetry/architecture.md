@@ -214,15 +214,15 @@ PostHog includes these KPI-era assets:
 
 - action: `Meaningful First Usage`
 - dashboards:
-  - `AI Receptionist - Product KPIs`
-  - `AI Receptionist - Operator Workflow`
-  - `AI Receptionist - Messaging`
-  - `AI Receptionist - Voice & Booking Outcomes`
-  - `AI Receptionist - Analytics Health`
+  - `LobbyStack - Product KPIs`
+  - `LobbyStack - Operator Workflow`
+  - `LobbyStack - Messaging`
+  - `LobbyStack - Voice & Booking Outcomes`
+  - `LobbyStack - Analytics Health`
 
 This phase adds PostHog-first runtime assets:
 
-- `AI Receptionist - Runtime Health`
-- `AI Receptionist - Voice Gateway Operations`
-- `AI Receptionist - AI Runtime`
-- `AI Receptionist - Telemetry Delivery Health`
+- `LobbyStack - Runtime Health`
+- `LobbyStack - Voice Gateway Operations`
+- `LobbyStack - AI Runtime`
+- `LobbyStack - Telemetry Delivery Health`

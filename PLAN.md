@@ -1,4 +1,4 @@
-# AI Receptionist MVP Plan, Updated For Convex Components And Low-Latency Voice
+# LobbyStack MVP Plan, Updated For Convex Components And Low-Latency Voice
 
 ## 1. Executive Summary
 - Build one pnpm monorepo with `apps/web`, `apps/voice-gateway`, root `convex/`, and shared packages. `Convex` remains the main backend and source of truth; the voice gateway remains a narrow live-call runtime.

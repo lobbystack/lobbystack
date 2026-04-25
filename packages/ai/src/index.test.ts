@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { demoSnapshot } from "@ai-receptionist/shared";
+import { demoSnapshot } from "@lobbystack/shared";
 
 import { buildVoiceSystemPrompt } from "./index";
 

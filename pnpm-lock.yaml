@@ -126,19 +126,19 @@ importers:
 
   apps/voice-gateway:
     dependencies:
-      '@ai-receptionist/ai':
+      '@lobbystack/ai':
         specifier: workspace:*
         version: link:../../packages/ai
-      '@ai-receptionist/config':
+      '@lobbystack/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@ai-receptionist/providers':
+      '@lobbystack/providers':
         specifier: workspace:*
         version: link:../../packages/providers
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@ai-receptionist/telemetry':
+      '@lobbystack/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
       '@fastify/formbody':
@@ -184,16 +184,16 @@ importers:
 
   apps/web:
     dependencies:
-      '@ai-receptionist/ai':
+      '@lobbystack/ai':
         specifier: workspace:*
         version: link:../../packages/ai
-      '@ai-receptionist/config':
+      '@lobbystack/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@ai-receptionist/telemetry':
+      '@lobbystack/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
       '@base-ui/react':
@@ -335,13 +335,13 @@ importers:
 
   packages/ai:
     dependencies:
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../shared
 
   packages/config:
     dependencies:
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -350,7 +350,7 @@ importers:
 
   packages/domain:
     dependencies:
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../shared
       luxon:
@@ -363,7 +363,7 @@ importers:
 
   packages/providers:
     dependencies:
-      '@ai-receptionist/shared':
+      '@lobbystack/shared':
         specifier: workspace:*
         version: link:../shared
 

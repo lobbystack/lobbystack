@@ -3,7 +3,7 @@ import type {
   AvailabilitySlot,
   ClosureWindow,
   HoursWindow,
-} from "@ai-receptionist/shared";
+} from "@lobbystack/shared";
 import { DateTime } from "luxon";
 
 type ExistingAppointment = {

@@ -53,7 +53,7 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
    - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
 8. Validate browser source maps:
-   - deploy with `pnpm --filter @ai-receptionist/web deploy:cloudflare` or `preview:cloudflare`
+   - deploy with `pnpm --filter @lobbystack/web deploy:cloudflare` or `preview:cloudflare`
    - confirm the matching release exists in PostHog symbol sets
    - confirm browser stack traces resolve to source files instead of minified bundles
 
@@ -142,10 +142,10 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 
 Validate these runtime dashboards:
 
-- `AI Receptionist - Runtime Health`
-- `AI Receptionist - Voice Gateway Operations`
-- `AI Receptionist - AI Runtime`
-- `AI Receptionist - Telemetry Delivery Health`
+- `LobbyStack - Runtime Health`
+- `LobbyStack - Voice Gateway Operations`
+- `LobbyStack - AI Runtime`
+- `LobbyStack - Telemetry Delivery Health`
 
 Each dashboard should load from saved trend or SQL insights without ad hoc query edits.
 
@@ -186,9 +186,9 @@ Validate these alert policies in PostHog:
 
 These checks should be run before review:
 
-- `pnpm --filter @ai-receptionist/telemetry test`
-- `pnpm --filter @ai-receptionist/web typecheck`
-- `pnpm --filter @ai-receptionist/voice-gateway typecheck`
+- `pnpm --filter @lobbystack/telemetry test`
+- `pnpm --filter @lobbystack/web typecheck`
+- `pnpm --filter @lobbystack/voice-gateway typecheck`
 - `pnpm typecheck:convex`
 
 Provider validation in real PostHog still requires live credentials and runtime traffic.

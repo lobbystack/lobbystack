@@ -20,8 +20,8 @@ Convex remains the main backend. Only the voice gateway is deployed here.
 
 ## First Deploy
 
-1. Pick a globally unique app name, for example `ai-receptionist-voice-dev-raphael`.
-2. Edit [`fly.voice-gateway.toml`](/Users/raphael/Coding/ai-receptionist/fly.voice-gateway.toml) and replace:
+1. Pick a globally unique app name, for example `lobbystack-voice-dev-raphael`.
+2. Edit [`fly.voice-gateway.toml`](/fly.voice-gateway.toml) and replace:
 
 ```toml
 app = "replace-with-your-fly-app-name"

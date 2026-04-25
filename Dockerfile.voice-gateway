@@ -10,8 +10,8 @@ WORKDIR /app
 COPY . .
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @ai-receptionist/voice-gateway... build
-RUN pnpm deploy --filter @ai-receptionist/voice-gateway --prod --legacy /prod/voice-gateway
+RUN pnpm --filter @lobbystack/voice-gateway... build
+RUN pnpm deploy --filter @lobbystack/voice-gateway --prod --legacy /prod/voice-gateway
 
 FROM node:20-bookworm-slim AS runtime
 

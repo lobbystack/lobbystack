@@ -1,5 +1,5 @@
 {
-  "name": "@ai-receptionist/shared",
+  "name": "@lobbystack/shared",
   "version": "0.1.0",
   "private": true,
   "type": "module",

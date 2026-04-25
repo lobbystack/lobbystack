@@ -1,5 +1,5 @@
 {
-  "name": "ai-receptionist",
+  "name": "lobbystack",
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@10.30.3",
@@ -61,8 +61,8 @@
   "scripts": {
     "dev": "concurrently -n convex,web,voice \"pnpm dev:convex\" \"pnpm dev:web\" \"pnpm dev:voice\"",
     "dev:convex": "convex dev",
-    "dev:web": "pnpm --filter @ai-receptionist/web dev",
-    "dev:voice": "pnpm --filter @ai-receptionist/voice-gateway dev",
+    "dev:web": "pnpm --filter @lobbystack/web dev",
+    "dev:voice": "pnpm --filter @lobbystack/voice-gateway dev",
     "dev:onboarding:website": "tsx scripts/prepare-onboarding-website.ts",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && pnpm typecheck:convex",

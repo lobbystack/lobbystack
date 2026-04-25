@@ -1,4 +1,4 @@
-import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
+import { loadVoiceGatewayEnv } from "@lobbystack/config";
 
 import {
   recordRecordingUploadFailure,
@@ -226,7 +226,7 @@ export async function uploadVoiceRecording(input: {
 
   if (!response.ok) {
     recordRecordingUploadFailure({
-      "ai_receptionist.call_id": input.callId,
+      "lobbystack.call_id": input.callId,
     });
     throw new Error(await response.text());
   }
