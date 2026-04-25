@@ -118,6 +118,7 @@ const FIRECRAWL_PROGRESS_TOTAL = 100;
 const FIRECRAWL_DISCOVERY_PROGRESS_MAX = 68;
 const FIRECRAWL_SCRAPE_PROGRESS_MAX = 90;
 const FIRECRAWL_INDEXING_PROGRESS_VALUE = 92;
+const FIRECRAWL_SCRAPE_TTL_MS = 3 * 24 * 60 * 60 * 1_000;
 
 const HIGH_PRIORITY_WEBSITE_SELECTION_SEGMENTS = new Set([
   "about",
@@ -726,7 +727,7 @@ async function ensureFirecrawlScrapeJobs(
       apiKey: requireFirecrawlApiKey(),
       options: {
         formats: ["markdown"],
-        ttlMs: 0,
+        ttlMs: FIRECRAWL_SCRAPE_TTL_MS,
         force: true,
         onlyMainContent: true,
         waitFor: FIRECRAWL_SCRAPE_WAIT_FOR_MS,
@@ -1217,12 +1218,9 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
       documentId: Id<"knowledge_documents">;
       skipSnapshotRefresh: true;
     }> = [];
-    const staleDocuments =
-      crawledSourceUrls.size > 0
-        ? existingWebsiteDocuments.filter(
-            (document) => document.sourceUrl && !crawledSourceUrls.has(document.sourceUrl),
-          )
-        : [];
+    // Firecrawl discovery is intentionally bounded, so a missing URL may simply
+    // be outside this crawl window rather than deleted from the source website.
+    const staleDocuments: Array<Doc<"knowledge_documents">> = [];
     const staleDocumentReclaimedBytes = (
       await Promise.all(
         staleDocuments.map(async (document) => await getKnowledgeDocumentStorageBytes(ctx, document)),
