@@ -660,6 +660,28 @@ describe("AgentKnowledgePage", () => {
     expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
   });
 
+  it("sanitizes markdown preview text for documents", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            status: "indexed",
+            textContent:
+              "Welcome guide [![CallRail logo](https://main--dotcom-prod.netlify.app/assets/svg/logo.svg)](https://callrail.com) includes phone number tracking.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.queryByText(/!\[CallRail logo\]/)).toBeNull();
+    expect(
+      screen.getByText("Welcome guide CallRail logo includes phone number tracking."),
+    ).toBeTruthy();
+  });
+
   it("does not show per-page progress for website documents after import", () => {
     mockAgentKnowledgeQueries({
       knowledge: {

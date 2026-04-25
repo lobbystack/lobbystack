@@ -124,6 +124,15 @@ function summarizeText(text: string, maxLength = 180): string {
   return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
+function sanitizePreviewText(text: string): string {
+  return text
+    .replace(/!\[([^\]]*?)\]\((?:[^)\s]+(?:\s+["'][^"']*["'])?)\)/gu, "$1")
+    .replace(/\[([^\]]+)\]\((?:[^)\n]+)\)/gu, "$1")
+    .replace(/<[^>\s]+>/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 function summarizeTableTitle(text: string): string {
   return summarizeText(text, 32);
 }
@@ -635,7 +644,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   }
 
   function getDocumentPreviewSummary(document: KnowledgeDocumentRow): string {
-    const textContent = document.textContent?.trim();
+    const textContent = sanitizePreviewText(document.textContent?.trim() ?? "");
     if (textContent) {
       return summarizeText(textContent);
     }
@@ -663,7 +672,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         ? summarizeTablePreview(getDocumentPreviewSummary(row))
         : isWebsiteIngestionJobRow(row)
           ? summarizeTablePreview(getWebsiteIngestionJobPreviewSummary(row))
-          : summarizeTablePreview(row.content);
+          : summarizeTablePreview(sanitizePreviewText(row.content));
       const haystack = [
         isWebsiteIngestionJobRow(row) ? buildWebsiteIngestionRowTitle(row) : row.title,
         preview,
@@ -741,11 +750,11 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                 className="block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
                 title={isDocumentRow(row.original)
                   ? getDocumentPreviewSummary(row.original)
-                  : row.original.content}
+                  : sanitizePreviewText(row.original.content)}
               >
                 {isDocumentRow(row.original)
                   ? summarizeTablePreview(getDocumentPreviewSummary(row.original))
-                  : summarizeTablePreview(row.original.content)}
+                  : summarizeTablePreview(sanitizePreviewText(row.original.content))}
               </span>
             )
           ),
