@@ -7,13 +7,6 @@ export const WEBSITE_INGESTION_PROVIDER = "firecrawl";
 export const WEBSITE_CRAWL_PAGE_LIMIT = 40;
 export const WEBSITE_CRAWL_DEPTH = 3;
 export const WEBSITE_CRAWL_FIRECRAWL_MODE = "firecrawl";
-export const WEBSITE_CRAWL_HTTP_MODE = "http";
-export const WEBSITE_CRAWL_BROWSER_MODE = "browser";
-export const WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT = 12;
-export const WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH = 2;
-export const WEBSITE_CRAWL_PRIORITY_PAGE_LIMIT = 2;
-export const WEBSITE_CRAWL_PRIORITY_DEPTH = 1;
-export const WEBSITE_CRAWL_PATTERN_LIMIT = 100;
 export const WEBSITE_PUBLIC_URL_ERROR_MESSAGE =
   "Enter a public website URL. Localhost, local network addresses, and direct IP addresses are not supported. Use a tunnel URL for local testing.";
 
@@ -35,9 +28,6 @@ const IMPORTANT_PATH_SEGMENTS = new Set([
   "services",
   "team",
 ]);
-
-const PRIORITY_CRAWL_LOCALE_PREFIXES = ["", "en", "fr"] as const;
-const PRIORITY_CRAWL_PATH_SEGMENTS = ["menu", "menu.html", "menus", "menus.html"] as const;
 
 const LOW_SIGNAL_PATH_SEGMENTS = new Set([
   "account",
@@ -248,156 +238,6 @@ export function shouldImportWebsitePage(input: {
 
 export function computeWebsiteDocumentImportance(pageUrl: string): number {
   return isImportantWebsitePath(pageUrl) ? 85 : 75;
-}
-
-export function shouldTriggerBrowserFallback(input: {
-  importedPageCount: number;
-  totalMarkdownBytes: number;
-}): boolean {
-  return (
-    input.importedPageCount === 0 ||
-    (input.importedPageCount < 3 && input.totalMarkdownBytes < 4 * 1024)
-  );
-}
-
-export function resolveWebsiteCrawlBudget(input: {
-  render: boolean;
-  pageLimit?: number | null;
-  depth?: number | null;
-}): { pageLimit: number; depth: number } {
-  const requestedPageLimit = input.pageLimit ?? WEBSITE_CRAWL_PAGE_LIMIT;
-  const requestedDepth = input.depth ?? WEBSITE_CRAWL_DEPTH;
-
-  if (!input.render) {
-    return {
-      pageLimit: requestedPageLimit,
-      depth: requestedDepth,
-    };
-  }
-
-  return {
-    pageLimit: Math.min(requestedPageLimit, WEBSITE_CRAWL_BROWSER_FALLBACK_PAGE_LIMIT),
-    depth: Math.min(requestedDepth, WEBSITE_CRAWL_BROWSER_FALLBACK_DEPTH),
-  };
-}
-
-function buildEquivalentWebsiteUrls(websiteUrl: string): Array<string> {
-  const canonicalWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
-  const parsed = new URL(canonicalWebsiteUrl);
-
-  if (!supportsApexAndWwwEquivalence(parsed.hostname)) {
-    return [canonicalWebsiteUrl];
-  }
-
-  const alternate = new URL(canonicalWebsiteUrl);
-  alternate.hostname = parsed.hostname.startsWith("www.")
-    ? parsed.hostname.slice(4)
-    : `www.${parsed.hostname}`;
-  const alternateWebsiteUrl = buildCanonicalWebsiteUrl(alternate);
-
-  if (alternateWebsiteUrl === canonicalWebsiteUrl) {
-    return [canonicalWebsiteUrl];
-  }
-
-  return [canonicalWebsiteUrl, alternateWebsiteUrl];
-}
-
-function buildExactSegmentExcludePatterns(
-  excludeBase: string,
-  pathSegment: string,
-): Array<string> {
-  return [
-    `${excludeBase}/${pathSegment}`,
-    `${excludeBase}/${pathSegment}/**`,
-    `${excludeBase}/**/${pathSegment}`,
-    `${excludeBase}/**/${pathSegment}/**`,
-  ];
-}
-
-export function buildWebsiteCrawlIncludePatterns(websiteUrl: string): Array<string> {
-  return Array.from(
-    new Set(
-      buildEquivalentWebsiteUrls(websiteUrl).flatMap((candidateWebsiteUrl) => [
-        candidateWebsiteUrl,
-        candidateWebsiteUrl.endsWith("/")
-          ? `${candidateWebsiteUrl}**`
-          : `${candidateWebsiteUrl}/**`,
-      ]),
-    ),
-  );
-}
-
-export function buildPriorityWebsiteCrawlTargets(websiteUrl: string): Array<string> {
-  const canonicalWebsiteUrl = normalizeWebsiteUrl(websiteUrl);
-  const parsed = new URL(canonicalWebsiteUrl);
-  const baseSegments =
-    parsed.pathname === "/" ? [] : parsed.pathname.split("/").filter(Boolean);
-
-  // Avoid appending priority paths beneath a concrete file path such as /about.html.
-  if (baseSegments.at(-1)?.includes(".")) {
-    return [];
-  }
-
-  const targets = new Set<string>();
-
-  for (const localePrefix of PRIORITY_CRAWL_LOCALE_PREFIXES) {
-    for (const pathSegment of PRIORITY_CRAWL_PATH_SEGMENTS) {
-      const target = new URL(parsed.origin);
-      const targetSegments = [...baseSegments];
-
-      if (localePrefix) {
-        targetSegments.push(localePrefix);
-      }
-      targetSegments.push(pathSegment);
-      target.pathname = `/${targetSegments.join("/")}`;
-
-      const normalizedTarget = buildCanonicalWebsiteUrl(target, {
-        origin: parsed.origin,
-      });
-      if (normalizedTarget !== canonicalWebsiteUrl) {
-        targets.add(normalizedTarget);
-      }
-    }
-  }
-
-  return Array.from(targets);
-}
-
-export function buildWebsiteCrawlExcludePatterns(websiteUrl: string): Array<string> {
-  const patterns = new Set<string>();
-
-  for (const candidateWebsiteUrl of buildEquivalentWebsiteUrls(websiteUrl)) {
-    const excludeBase = candidateWebsiteUrl.endsWith("/")
-      ? candidateWebsiteUrl.slice(0, -1)
-      : candidateWebsiteUrl;
-
-    const candidatePatterns = [
-      ...buildExactSegmentExcludePatterns(excludeBase, "account"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "accounts"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "cart"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "checkout"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "feed"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "legal"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "login"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "privacy"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "search"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "sign-in"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "signin"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "terms"),
-      ...buildExactSegmentExcludePatterns(excludeBase, "wp-admin"),
-      `${excludeBase}/cdn-cgi/*`,
-    ];
-
-    if (patterns.size + candidatePatterns.length > WEBSITE_CRAWL_PATTERN_LIMIT) {
-      break;
-    }
-
-    for (const pattern of candidatePatterns) {
-      patterns.add(pattern);
-    }
-  }
-
-  return Array.from(patterns);
 }
 
 export function countUtf8Bytes(value: string): number {

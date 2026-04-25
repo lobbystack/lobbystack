@@ -226,9 +226,9 @@ function createWebsiteIngestionJob(overrides: Record<string, unknown> = {}) {
     _creationTime: 1711000000000,
     businessId: "business-1",
     websiteUrl: "https://example.com/team",
-    provider: "cloudflare_browser_run",
+    provider: "firecrawl",
     status: "crawling",
-    crawlMode: "http",
+    crawlMode: "firecrawl",
     fallbackTriggered: false,
     pageLimit: 40,
     depth: 3,
@@ -774,7 +774,7 @@ describe("AgentKnowledgePage", () => {
         createWebsiteIngestionJob({
           _id: "website-job-failed",
           status: "failed",
-          lastError: "Cloudflare request failed",
+          lastError: "Firecrawl request failed",
         }),
       ],
     });
@@ -783,7 +783,7 @@ describe("AgentKnowledgePage", () => {
     render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
 
     expect(screen.getByText("agent:sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
-    expect(screen.queryByText("Cloudflare request failed")).toBeNull();
+    expect(screen.queryByText("Firecrawl request failed")).toBeNull();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));

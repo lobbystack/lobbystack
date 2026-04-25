@@ -19,7 +19,6 @@ import { requireMembership } from "../../lib/auth";
 import {
   WEBSITE_CRAWL_DEPTH,
   WEBSITE_CRAWL_FIRECRAWL_MODE,
-  WEBSITE_CRAWL_HTTP_MODE,
   WEBSITE_CRAWL_PAGE_LIMIT,
   WEBSITE_INGESTION_PROVIDER,
 } from "../../lib/websiteIngestion";
@@ -36,7 +35,6 @@ type WebsiteKnowledgeSourceArgs = {
 type PatchWebsiteIngestionJobArgs = WebsiteIngestionJobIdArgs & {
   status?: string;
   providerJobId?: string;
-  cloudflareJobId?: string;
   firecrawlScrapeJobs?: Array<{ url: string; jobId: string }>;
   crawlMode?: string;
   fallbackTriggered?: boolean;
@@ -397,18 +395,6 @@ export const cancelWebsiteIngestionJob = action({
           `[websiteIngestion] Failed to cancel Firecrawl crawl ${job.providerJobId} for ${String(job._id)}: ${message}`,
         );
       }
-    } else if (job.cloudflareJobId) {
-      try {
-        await ctx.runAction(internal.ai.context.websiteIngestionActions.cancelCloudflareWebsiteCrawlJob, {
-          cloudflareJobId: job.cloudflareJobId,
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown Cloudflare crawl cancel failure.";
-        console.warn(
-          `[websiteIngestion] Failed to cancel Cloudflare crawl ${job.cloudflareJobId} for ${String(job._id)}: ${message}`,
-        );
-      }
     }
 
     return await ctx.runMutation(internal.ai.context.websiteIngestion.cancelWebsiteIngestionJobAfterAccess, args);
@@ -558,7 +544,6 @@ export const patchWebsiteIngestionJob = internalMutation({
     websiteIngestionJobId: v.id("website_ingestion_jobs"),
     status: v.optional(v.string()),
     providerJobId: v.optional(v.string()),
-    cloudflareJobId: v.optional(v.string()),
     firecrawlScrapeJobs: v.optional(
       v.array(
         v.object({
@@ -589,9 +574,6 @@ export const patchWebsiteIngestionJob = internalMutation({
     }
     if (args.providerJobId !== undefined) {
       patch.providerJobId = args.providerJobId;
-    }
-    if (args.cloudflareJobId !== undefined) {
-      patch.cloudflareJobId = args.cloudflareJobId;
     }
     if (args.firecrawlScrapeJobs !== undefined) {
       patch.firecrawlScrapeJobs = args.firecrawlScrapeJobs;

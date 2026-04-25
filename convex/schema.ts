@@ -354,7 +354,6 @@ export default defineSchema({
     status: v.string(),
     workflowId: v.optional(v.string()),
     providerJobId: v.optional(v.string()),
-    cloudflareJobId: v.optional(v.string()),
     firecrawlScrapeJobs: v.optional(
       v.array(
         v.object({
