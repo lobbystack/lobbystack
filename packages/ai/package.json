@@ -1,5 +1,5 @@
 {
-  "name": "@ai-receptionist/ai",
+  "name": "@lobbystack/ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,6 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-receptionist/shared": "workspace:*"
+    "@lobbystack/shared": "workspace:*"
   }
 }

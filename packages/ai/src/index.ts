@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 export function buildVoiceSystemPrompt(snapshot: BusinessContextSnapshot): string {
   const services = (Array.isArray(snapshot.services) ? snapshot.services : [])

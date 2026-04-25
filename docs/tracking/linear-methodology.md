@@ -13,7 +13,7 @@ This document is the source of truth for how the Linear project should be struct
 
 ## Canonical Linear Setup
 
-- Project: `AI Receptionist MVP`
+- Project: `LobbyStack MVP`
 - Teams: one product team is enough for MVP
 - Roadmap units: use `M0` through `M6` as epics
 - Parent-child structure:
@@ -167,7 +167,7 @@ Every epic should include these issue types where relevant:
 
 Mirror the following artifacts into Linear project documentation:
 
-- [mvp-status.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/mvp-status.md)
-- [mvp-backlog.md](/Users/raphael/Coding/ai-receptionist/docs/tracking/mvp-backlog.md)
+- [mvp-status.md](/docs/tracking/mvp-status.md)
+- [mvp-backlog.md](/docs/tracking/mvp-backlog.md)
 
 The repo remains the fallback source of truth if MCP connectivity breaks.

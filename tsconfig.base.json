@@ -17,12 +17,12 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@ai-receptionist/ai": ["packages/ai/src"],
-      "@ai-receptionist/config": ["packages/config/src"],
-      "@ai-receptionist/domain": ["packages/domain/src"],
-      "@ai-receptionist/providers": ["packages/providers/src"],
-      "@ai-receptionist/shared": ["packages/shared/src"],
-      "@ai-receptionist/telemetry": ["packages/telemetry/src"]
+      "@lobbystack/ai": ["packages/ai/src"],
+      "@lobbystack/config": ["packages/config/src"],
+      "@lobbystack/domain": ["packages/domain/src"],
+      "@lobbystack/providers": ["packages/providers/src"],
+      "@lobbystack/shared": ["packages/shared/src"],
+      "@lobbystack/telemetry": ["packages/telemetry/src"]
     }
   }
 }

@@ -14,17 +14,42 @@
       "description": "Informations et directives que votre réceptionniste utilise pour répondre aux questions.",
       "listTitle": "Base de connaissances",
       "addKnowledge": "Ajouter",
+      "addKnowledgeOptions": {
+        "upload": "Téléverser",
+        "website": "Site web",
+        "text": "Texte"
+      },
       "editKnowledge": "Modifier les connaissances",
       "uploadDocument": "Téléverser un document",
+      "websiteImport": {
+        "badge": "Site web",
+        "title": "Importer un site web",
+        "description": "Explorez les pages publiques de votre site web pour que votre réceptionniste puisse les utiliser comme connaissances.",
+        "submit": "Importer le site web",
+        "submitting": "Import du site web…",
+        "success": "L'import du site web a démarré. Les pages apparaîtront ici au fur et à mesure du traitement.",
+        "submitFailed": "Nous n'avons pas pu démarrer l'import du site web. Réessayez.",
+        "previewPending": "Nous explorons ce site web. Les pages importées apparaîtront ici automatiquement.",
+        "previewFailed": "L'importation a echoue. Veuillez reessayer.",
+        "status": {
+          "inProgress": "En cours",
+          "failed": "Échec"
+        },
+        "validation": {
+          "urlRequired": "Entrez l'URL du site web à importer."
+        }
+      },
       "addKnowledgeDescription": "Ajoutez des heures d'ouverture, des tarifs, des politiques ou toute autre information que votre réceptionniste devrait connaître.",
       "editKnowledgeDescription": "Mettez a jour les informations que votre receptionniste doit utiliser pour repondre aux questions des clients.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
+      "textBadge": "Texte",
       "emptyState": "Aucune connaissance ajoutée pour le moment.",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
         "analyzing": "Analyse en cours...",
+        "inProgress": "En cours",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
@@ -42,6 +67,11 @@
           "hint": "Prend en charge PDF, DOCX, TXT et Markdown.",
           "dropzonePrefix": "Glissez-déposez un fichier ici, ou",
           "chooseFile": "Choisir un fichier"
+        },
+        "websiteUrl": {
+          "label": "URL du site web",
+          "placeholder": "https://example.com",
+          "hint": "Utilisez la page d'accueil publique ou la section que vous voulez importer."
         },
         "title": {
           "label": "Titre",
@@ -71,11 +101,13 @@
       "editKnowledgeDescription": "Mettez a jour les details du service que votre receptionniste doit expliquer et utiliser pendant la reservation.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
+      "textBadge": "Texte",
       "emptyState": "Aucun service ajouté pour le moment.",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
         "analyzing": "Analyse en cours...",
+        "inProgress": "En cours",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
@@ -122,11 +154,13 @@
       "editKnowledgeDescription": "Mettez a jour l instruction que votre receptionniste doit suivre pendant les appels et les suivis.",
       "uploadDocumentDescription": "Téléversez un fichier que votre réceptionniste pourra utiliser.",
       "documentBadge": "Document",
+      "textBadge": "Texte",
       "emptyState": "Aucune règle ajoutée pour le moment.",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
         "analyzing": "Analyse en cours...",
+        "inProgress": "En cours",
         "queued": "En attente",
         "indexing": "Indexation",
         "indexed": "Prêt",
@@ -167,8 +201,8 @@
     "searchPlaceholder": "Rechercher des elements",
     "title": "Titre",
     "preview": "Apercu",
-    "tags": "Mots-cles",
     "status": "Statut",
+    "disabled": "Desactive",
     "added": "Ajoute",
     "empty": "Aucun element correspondant.",
     "documentPreviewHint": "Cliquez pour previsualiser ce document.",
@@ -214,6 +248,13 @@
     "deleteTitle": "Supprimer l'entrée ?",
     "deleteDescription": "Cela supprimera définitivement cette entrée de l'espace agent.",
     "deleteCancel": "Annuler",
+    "cancelImport": "Annuler l'import",
+    "cancelImportTitle": "Annuler l'import du site web ?",
+    "cancelImportDescription": "Cela arrêtera l'import du site web et retirera l'entrée en cours du tableau.",
+    "enable": "Activer",
+    "disable": "Desactiver",
+    "activateEntry": "Activer l'entrée",
+    "deactivateEntry": "Désactiver l'entrée",
     "upload": "Téléverser",
     "uploading": "Téléversement…"
   },

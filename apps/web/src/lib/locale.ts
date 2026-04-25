@@ -4,8 +4,8 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export type TimeFormatPreference = "24h" | "ampm";
 
 export const DEFAULT_LOCALE: SupportedLocale = "en";
-export const LOCALE_STORAGE_KEY = "ai-receptionist.locale";
-export const TIME_FORMAT_STORAGE_KEY = "ai-receptionist.time-format";
+export const LOCALE_STORAGE_KEY = "lobbystack.locale";
+export const TIME_FORMAT_STORAGE_KEY = "lobbystack.time-format";
 
 export function normalizeLocale(value: string | null | undefined): SupportedLocale | null {
   if (!value) {

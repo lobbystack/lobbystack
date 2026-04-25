@@ -6,6 +6,7 @@ import { RAG } from "@convex-dev/rag";
 import { DAY, HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { WorkflowManager } from "@convex-dev/workflow";
 import { Workpool } from "@convex-dev/workpool";
+import { FirecrawlScrape } from "convex-firecrawl-scrape";
 
 import { components } from "../_generated/api";
 import {
@@ -63,6 +64,8 @@ export const bulkWorkpool = new Workpool(components.bulkWorkpool, {
 export const retrier = new ActionRetrier(components.actionRetrier);
 
 export const runtimeCrons = new Crons(components.crons);
+
+export const firecrawlScrape = new FirecrawlScrape(components.firecrawlScrape);
 
 export const onboardingRateLimiter = new RateLimiter(components.rateLimiter, {
   onboardingBusinessBootstrapPerHour: {

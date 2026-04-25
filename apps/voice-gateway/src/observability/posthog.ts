@@ -7,7 +7,7 @@ import {
 } from "@opentelemetry/sdk-logs";
 import { PostHog } from "posthog-node";
 
-import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@ai-receptionist/config";
+import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
 import {
   bucketLatencyMs,
   buildPostHogAiGenerationProperties,
@@ -18,7 +18,7 @@ import {
   redactAiTraceProperties,
   redactTelemetryProperties,
   type TelemetryProperties,
-} from "@ai-receptionist/telemetry";
+} from "@lobbystack/telemetry";
 
 type AiTraceCommon = {
   businessId: string;
@@ -102,8 +102,8 @@ function getOperationalLogger(): Logger | null {
 
   loggerProvider = new LoggerProvider({
     resource: resourceFromAttributes({
-      "service.name": "ai-receptionist-voice-gateway",
-      "service.namespace": "ai-receptionist",
+      "service.name": "lobbystack-voice-gateway",
+      "service.namespace": "lobbystack",
       "deployment.environment": env.DEPLOYMENT_MODE,
     }),
     processors: [
@@ -118,7 +118,7 @@ function getOperationalLogger(): Logger | null {
     ],
   });
   logs.setGlobalLoggerProvider(loggerProvider);
-  operationalLogger = logs.getLogger("ai-receptionist.voice-gateway");
+  operationalLogger = logs.getLogger("lobbystack.voice-gateway");
   return operationalLogger;
 }
 
@@ -203,25 +203,25 @@ function normalizeOperationalAttributes(
     }
 
     switch (key) {
-      case "ai_receptionist.business_id":
+      case "lobbystack.business_id":
         normalized.businessId = String(value);
         break;
-      case "ai_receptionist.call_id":
+      case "lobbystack.call_id":
         normalized.callId = String(value);
         break;
-      case "ai_receptionist.conversation_id":
+      case "lobbystack.conversation_id":
         normalized.conversationId = String(value);
         break;
-      case "ai_receptionist.provider":
+      case "lobbystack.provider":
         normalized.provider = String(value);
         break;
-      case "ai_receptionist.model":
+      case "lobbystack.model":
         normalized.model = String(value);
         break;
-      case "ai_receptionist.tool_name":
+      case "lobbystack.tool_name":
         normalized.toolName = String(value);
         break;
-      case "ai_receptionist.convex_path":
+      case "lobbystack.convex_path":
         normalized.convexPath = String(value);
         break;
       case "http.status_code":

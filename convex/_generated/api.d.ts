@@ -12,6 +12,8 @@ import type * as ai_agents_runtime from "../ai/agents/runtime.js";
 import type * as ai_context_knowledge from "../ai/context/knowledge.js";
 import type * as ai_context_knowledgeUploads from "../ai/context/knowledgeUploads.js";
 import type * as ai_context_snapshots from "../ai/context/snapshots.js";
+import type * as ai_context_websiteIngestion from "../ai/context/websiteIngestion.js";
+import type * as ai_context_websiteIngestionActions from "../ai/context/websiteIngestionActions.js";
 import type * as ai_preview_stream from "../ai/preview/stream.js";
 import type * as ai_workflows_runtime from "../ai/workflows/runtime.js";
 import type * as appointments_booking from "../appointments/booking.js";
@@ -73,11 +75,14 @@ import type * as lib_twilioMessageStatus from "../lib/twilioMessageStatus.js";
 import type * as lib_twilioSecurity from "../lib/twilioSecurity.js";
 import type * as lib_twilioUrls from "../lib/twilioUrls.js";
 import type * as lib_voiceCallStatus from "../lib/voiceCallStatus.js";
+import type * as lib_websiteIngestion from "../lib/websiteIngestion.js";
+import type * as lib_websiteIngestionStorage from "../lib/websiteIngestionStorage.js";
 import type * as notifications_reminders from "../notifications/reminders.js";
 import type * as onboarding_abuse from "../onboarding/abuse.js";
 import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
 import type * as onboarding_phoneVerification from "../onboarding/phoneVerification.js";
 import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
+import type * as onboarding_websites from "../onboarding/websites.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as smsCompliance from "../smsCompliance.js";
 import type * as telemetry_ai from "../telemetry/ai.js";
@@ -99,6 +104,8 @@ declare const fullApi: ApiFromModules<{
   "ai/context/knowledge": typeof ai_context_knowledge;
   "ai/context/knowledgeUploads": typeof ai_context_knowledgeUploads;
   "ai/context/snapshots": typeof ai_context_snapshots;
+  "ai/context/websiteIngestion": typeof ai_context_websiteIngestion;
+  "ai/context/websiteIngestionActions": typeof ai_context_websiteIngestionActions;
   "ai/preview/stream": typeof ai_preview_stream;
   "ai/workflows/runtime": typeof ai_workflows_runtime;
   "appointments/booking": typeof appointments_booking;
@@ -160,11 +167,14 @@ declare const fullApi: ApiFromModules<{
   "lib/twilioSecurity": typeof lib_twilioSecurity;
   "lib/twilioUrls": typeof lib_twilioUrls;
   "lib/voiceCallStatus": typeof lib_voiceCallStatus;
+  "lib/websiteIngestion": typeof lib_websiteIngestion;
+  "lib/websiteIngestionStorage": typeof lib_websiteIngestionStorage;
   "notifications/reminders": typeof notifications_reminders;
   "onboarding/abuse": typeof onboarding_abuse;
   "onboarding/phoneNumbers": typeof onboarding_phoneNumbers;
   "onboarding/phoneVerification": typeof onboarding_phoneVerification;
   "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
+  "onboarding/websites": typeof onboarding_websites;
   "services/localizedNames": typeof services_localizedNames;
   smsCompliance: typeof smsCompliance;
   "telemetry/ai": typeof telemetry_ai;
@@ -5389,6 +5399,378 @@ export declare const components: {
           };
         },
         any
+      >;
+    };
+  };
+  firecrawlScrape: {
+    lib: {
+      deleteScrape: FunctionReference<
+        "mutation",
+        "internal",
+        { id: string },
+        { deletedFileCount: number; success: boolean }
+      >;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getByUrl: FunctionReference<
+        "query",
+        "internal",
+        { url: string },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getCached: FunctionReference<
+        "query",
+        "internal",
+        {
+          formats?: Array<
+            | "markdown"
+            | "html"
+            | "rawHtml"
+            | "links"
+            | "images"
+            | "summary"
+            | "screenshot"
+          >;
+          url: string;
+        },
+        null | {
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }
+      >;
+      getContent: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileUrl?: string | null;
+          formats: Array<string>;
+          html?: string;
+          htmlFileUrl?: string | null;
+          images?: Array<string>;
+          imagesFileUrl?: string | null;
+          links?: Array<string>;
+          linksFileUrl?: string | null;
+          markdown?: string;
+          markdownFileUrl?: string | null;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileUrl?: string | null;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileUrl?: string | null;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+        }
+      >;
+      getStatus: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        null | {
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+        }
+      >;
+      invalidate: FunctionReference<
+        "mutation",
+        "internal",
+        { url: string },
+        { invalidatedCount: number; success: boolean }
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        {
+          cursor?: string;
+          limit?: number;
+          status?: "pending" | "scraping" | "completed" | "failed";
+        },
+        {
+          hasMore: boolean;
+          nextCursor: null | string;
+          scrapes: Array<{
+            _creationTime: number;
+            _id: string;
+            error?: string;
+            errorCode?: number | string;
+            expiresAt: number;
+            extractedJson?: any;
+            extractedJsonFileId?: string;
+            extractionSchema?: any;
+            formats: Array<string>;
+            html?: string;
+            htmlFileId?: string;
+            images?: Array<string>;
+            imagesFileId?: string;
+            links?: Array<string>;
+            linksFileId?: string;
+            markdown?: string;
+            markdownFileId?: string;
+            metadata?: {
+              cacheControl?: string;
+              contentType?: string;
+              description?: string;
+              language?: string;
+              ogDescription?: string;
+              ogImage?: string;
+              ogSiteName?: string;
+              ogTitle?: string;
+              sourceURL?: string;
+              statusCode?: number;
+              title?: string;
+            };
+            normalizedUrl: string;
+            rawHtml?: string;
+            rawHtmlFileId?: string;
+            scrapedAt?: number;
+            scrapingAt?: number;
+            screenshotFileId?: string;
+            screenshotUrl?: string;
+            startedAt: number;
+            status: "pending" | "scraping" | "completed" | "failed";
+            summary?: string;
+            url: string;
+            urlHash: string;
+          }>;
+        }
+      >;
+      listByStatus: FunctionReference<
+        "query",
+        "internal",
+        {
+          limit?: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+        },
+        Array<{
+          _creationTime: number;
+          _id: string;
+          error?: string;
+          errorCode?: number | string;
+          expiresAt: number;
+          extractedJson?: any;
+          extractedJsonFileId?: string;
+          extractionSchema?: any;
+          formats: Array<string>;
+          html?: string;
+          htmlFileId?: string;
+          images?: Array<string>;
+          imagesFileId?: string;
+          links?: Array<string>;
+          linksFileId?: string;
+          markdown?: string;
+          markdownFileId?: string;
+          metadata?: {
+            cacheControl?: string;
+            contentType?: string;
+            description?: string;
+            language?: string;
+            ogDescription?: string;
+            ogImage?: string;
+            ogSiteName?: string;
+            ogTitle?: string;
+            sourceURL?: string;
+            statusCode?: number;
+            title?: string;
+          };
+          normalizedUrl: string;
+          rawHtml?: string;
+          rawHtmlFileId?: string;
+          scrapedAt?: number;
+          scrapingAt?: number;
+          screenshotFileId?: string;
+          screenshotUrl?: string;
+          startedAt: number;
+          status: "pending" | "scraping" | "completed" | "failed";
+          summary?: string;
+          url: string;
+          urlHash: string;
+        }>
+      >;
+      startScrape: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          apiKey: string;
+          options?: {
+            excludeTags?: Array<string>;
+            extractionSchema?: any;
+            force?: boolean;
+            formats?: Array<
+              | "markdown"
+              | "html"
+              | "rawHtml"
+              | "links"
+              | "images"
+              | "summary"
+              | "screenshot"
+            >;
+            includeTags?: Array<string>;
+            mobile?: boolean;
+            onlyMainContent?: boolean;
+            proxy?: "basic" | "stealth" | "auto";
+            storeScreenshot?: boolean;
+            ttlMs?: number;
+            waitFor?: number;
+          };
+          url: string;
+        },
+        { jobId: string }
       >;
     };
   };

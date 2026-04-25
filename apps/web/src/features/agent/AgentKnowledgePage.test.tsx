@@ -1,22 +1,39 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
+import { getFunctionName } from "convex/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentKnowledgePage } from "./AgentKnowledgePage";
 
 const useRememberedConvexQueryMock = vi.fn();
 const deleteKnowledgeEntryMock = vi.fn();
+const setKnowledgeEntryActiveMock = vi.fn();
+const cancelWebsiteIngestionJobMock = vi.fn();
+const deleteWebsiteIngestionJobMock = vi.fn();
 const upsertKnowledgeSnippetMock = vi.fn();
 const convexQueryMock = vi.fn();
 const fetchMock = vi.fn();
+const useMutationMock = vi.fn();
 
 vi.mock("convex/react", () => ({
-  useAction: () => deleteKnowledgeEntryMock,
+  useAction: (reference: unknown) => {
+    const functionName = getFunctionName(reference as never);
+
+    if (functionName === "ai/context/knowledge:setKnowledgeEntryActive") {
+      return setKnowledgeEntryActiveMock;
+    }
+
+    if (functionName === "ai/context/websiteIngestion:cancelWebsiteIngestionJob") {
+      return cancelWebsiteIngestionJobMock;
+    }
+
+    return deleteKnowledgeEntryMock;
+  },
   useConvex: () => ({
     query: convexQueryMock,
   }),
-  useMutation: () => upsertKnowledgeSnippetMock,
+  useMutation: (...args: unknown[]) => useMutationMock(...args),
   useQuery: (...args: unknown[]) => useRememberedConvexQueryMock(...args),
 }));
 
@@ -110,11 +127,16 @@ vi.mock("@/components/ui/dropdown-menu", async () => {
     );
   }
 
+  function DropdownMenuSeparator(props: React.ComponentProps<"div">) {
+    return <div {...props} />;
+  }
+
   return {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
   };
 });
 
@@ -198,22 +220,96 @@ function createDocument(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createWebsiteIngestionJob(overrides: Record<string, unknown> = {}) {
+  return {
+    _id: "website-job-1",
+    _creationTime: 1711000000000,
+    businessId: "business-1",
+    websiteUrl: "https://example.com/team",
+    provider: "firecrawl",
+    status: "crawling",
+    crawlMode: "firecrawl",
+    fallbackTriggered: false,
+    pageLimit: 40,
+    depth: 3,
+    crawlFinishedCount: 0,
+    crawlTotalCount: 40,
+    importedCount: 0,
+    indexedCount: 0,
+    errorCount: 0,
+    documentCount: 0,
+    indexedDocumentCount: 0,
+    errorDocumentCount: 0,
+    pendingDocumentCount: 0,
+    ...overrides,
+  };
+}
+
+function mockAgentKnowledgeQueries(input: {
+  knowledge?: {
+    documents: Array<Record<string, unknown>>;
+    snippets: Array<Record<string, unknown>>;
+  };
+  websiteJobs?: Array<Record<string, unknown>>;
+}) {
+  const knowledgeResult = {
+    documents: input.knowledge?.documents ?? [],
+    snippets: input.knowledge?.snippets ?? [],
+  };
+  const websiteJobsResult = input.websiteJobs ?? [];
+
+  useRememberedConvexQueryMock.mockImplementation((_query: unknown, args: unknown) => {
+    if (!args || args === "skip" || typeof args !== "object") {
+      return undefined;
+    }
+
+    if ("section" in args) {
+      return knowledgeResult;
+    }
+
+    return websiteJobsResult;
+  });
+}
+
 describe("AgentKnowledgePage", () => {
   beforeEach(() => {
     useRememberedConvexQueryMock.mockReset();
     deleteKnowledgeEntryMock.mockReset();
+    setKnowledgeEntryActiveMock.mockReset();
+    cancelWebsiteIngestionJobMock.mockReset();
+    deleteWebsiteIngestionJobMock.mockReset();
     upsertKnowledgeSnippetMock.mockReset();
     convexQueryMock.mockReset();
     fetchMock.mockReset();
+    useMutationMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+    useMutationMock.mockImplementation((reference: unknown) => {
+      const functionName = getFunctionName(reference as never);
+
+      if (functionName === "ai/context/knowledge:upsertKnowledgeSnippet") {
+        return upsertKnowledgeSnippetMock;
+      }
+
+      if (functionName === "ai/context/websiteIngestion:deleteWebsiteIngestionJob") {
+        return deleteWebsiteIngestionJobMock;
+      }
+
+      if (functionName === "ai/context/websiteIngestion:cancelWebsiteIngestionJob") {
+        return cancelWebsiteIngestionJobMock;
+      }
+
+      return vi.fn();
+    });
   });
 
   it.each(["knowledge", "services", "rules"] as const)(
     "renders the shared table shell for %s",
     (section) => {
-      useRememberedConvexQueryMock.mockReturnValue({
-        documents: [],
-        snippets: [],
+      mockAgentKnowledgeQueries({
+        knowledge: {
+          documents: [],
+          snippets: [],
+        },
       });
 
       render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
@@ -221,8 +317,9 @@ describe("AgentKnowledgePage", () => {
       expect(screen.getByPlaceholderText("agent:table.searchPlaceholder")).toBeTruthy();
       expect(screen.getByText("agent:table.title")).toBeTruthy();
       expect(screen.getByText("agent:table.preview")).toBeTruthy();
-      expect(screen.getByText("agent:table.tags")).toBeTruthy();
       expect(screen.getByText("agent:table.status")).toBeTruthy();
+      expect(screen.queryByText("agent:table.tags")).toBeNull();
+      expect(screen.queryByRole("switch")).toBeNull();
       expect(screen.getByText("agent:table.added")).toBeTruthy();
       expect(screen.getByText(`agent:sections.${section}.emptyState`)).toBeTruthy();
       expect(screen.getByTestId("pagination")).toBeTruthy();
@@ -230,13 +327,17 @@ describe("AgentKnowledgePage", () => {
   );
 
   it("opens snippet rows in edit mode with prefilled values and saves via snippetId", async () => {
-    useRememberedConvexQueryMock.mockReturnValue({
-      documents: [],
-      snippets: [createSnippet()],
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [createSnippet()],
+      },
     });
     upsertKnowledgeSnippetMock.mockResolvedValue({ snippetId: "snippet-1" });
 
     render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByLabelText("agent:sections.knowledge.textBadge")).toBeTruthy();
 
     const user = userEvent.setup();
     await user.click(screen.getByText("Hours"));
@@ -272,10 +373,36 @@ describe("AgentKnowledgePage", () => {
     });
   });
 
+  it("toggles snippet activity from the row actions menu", async () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [createSnippet()],
+      },
+    });
+    setKnowledgeEntryActiveMock.mockResolvedValue(null);
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.disable" }));
+
+    await waitFor(() => {
+      expect(setKnowledgeEntryActiveMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        snippetId: "snippet-1",
+        active: false,
+      });
+    });
+  });
+
   it("keeps delete actions from opening the snippet edit dialog", async () => {
-    useRememberedConvexQueryMock.mockReturnValue({
-      documents: [],
-      snippets: [createSnippet()],
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [createSnippet()],
+      },
     });
     deleteKnowledgeEntryMock.mockResolvedValue(null);
 
@@ -302,9 +429,11 @@ describe("AgentKnowledgePage", () => {
   });
 
   it("expands knowledge documents inline without opening the snippet edit dialog", async () => {
-    useRememberedConvexQueryMock.mockReturnValue({
-      documents: [createDocument()],
-      snippets: [],
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [createDocument()],
+        snippets: [],
+      },
     });
     convexQueryMock.mockResolvedValue({
       textContent: "",
@@ -331,15 +460,17 @@ describe("AgentKnowledgePage", () => {
   it.each(["services", "rules"] as const)(
     "expands uploaded documents inline on the %s page",
     async (section) => {
-      useRememberedConvexQueryMock.mockReturnValue({
-        documents: [
-          createDocument({
-            _id: `document-${section}`,
-            section,
-            lastIndexedAt: `2026-04-14T00:00:00.000Z-${section}`,
-          }),
-        ],
-        snippets: [],
+      mockAgentKnowledgeQueries({
+        knowledge: {
+          documents: [
+            createDocument({
+              _id: `document-${section}`,
+              section,
+              lastIndexedAt: `2026-04-14T00:00:00.000Z-${section}`,
+            }),
+          ],
+          snippets: [],
+        },
       });
       convexQueryMock.mockResolvedValue({
         textContent: "",
@@ -362,4 +493,330 @@ describe("AgentKnowledgePage", () => {
       expect(fetchMock).toHaveBeenCalledWith("https://example.com/document.txt");
     },
   );
+
+  it("shows a pending website crawl row before any imported documents exist", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          crawlFinishedCount: 6,
+          crawlTotalCount: 40,
+        }),
+      ],
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("example.com/team")).toBeTruthy();
+    expect(
+      screen.getByLabelText("agent:sections.knowledge.websiteImport.badge"),
+    ).toBeTruthy();
+    expect(screen.getByText("15%")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "actions.moreOptions" })).toBeTruthy();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(
+      screen.queryByText("agent:sections.knowledge.websiteImport.previewPending"),
+    ).toBeNull();
+  });
+
+  it("caps website crawl progress below 100 until the job leaves the crawling state", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          crawlFinishedCount: 34,
+          crawlTotalCount: 34,
+        }),
+      ],
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("99%")).toBeTruthy();
+    expect(screen.queryByText("100%")).toBeNull();
+  });
+
+  it("keeps website crawl progress from moving backward as more pages are discovered", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-monotonic",
+          crawlFinishedCount: 20,
+          crawlTotalCount: 40,
+        }),
+      ],
+    });
+
+    const { rerender } = render(
+      <AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />,
+    );
+
+    expect(screen.getByText("50%")).toBeTruthy();
+
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-monotonic",
+          crawlFinishedCount: 21,
+          crawlTotalCount: 70,
+        }),
+      ],
+    });
+
+    rerender(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("50%")).toBeTruthy();
+    expect(screen.queryByText("30%")).toBeNull();
+  });
+
+  it("allows canceling an in-progress website import from the row actions menu", async () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-active",
+          status: "crawling",
+        }),
+      ],
+    });
+    cancelWebsiteIngestionJobMock.mockResolvedValue(null);
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.cancelImport" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.cancelImport" }));
+
+    await waitFor(() => {
+      expect(cancelWebsiteIngestionJobMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        websiteIngestionJobId: "website-job-active",
+      });
+    });
+    expect(screen.queryByText("example.com/team")).toBeNull();
+  });
+
+  it("shows processing uploads with the same preview progress pattern", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            status: "indexing",
+            processingProgress: 18,
+            textContent: "",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Clinic Policies")).toBeTruthy();
+    expect(screen.getByLabelText("agent:sections.knowledge.documentBadge")).toBeTruthy();
+    expect(screen.getAllByText("18%")).toHaveLength(1);
+    expect(screen.getByText("agent:sections.knowledge.status.indexing")).toBeTruthy();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
+    expect(screen.queryByText("agent:sections.knowledge.previewPending")).toBeNull();
+  });
+
+  it("keeps existing documents readable while they are being reindexed", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            status: "indexing",
+            processingProgress: 18,
+            textContent: "Existing document content remains visible.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Existing document content remains visible.")).toBeTruthy();
+    expect(screen.getByText("agent:sections.knowledge.status.indexing")).toBeTruthy();
+    expect(screen.queryByText("18%")).toBeNull();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
+  });
+
+  it("sanitizes markdown preview text for documents", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            status: "indexed",
+            textContent:
+              "Welcome guide [![CallRail logo](https://main--dotcom-prod.netlify.app/assets/svg/logo.svg)](https://callrail.com) includes phone number tracking.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.queryByText(/!\[CallRail logo\]/)).toBeNull();
+    expect(
+      screen.getByText("Welcome guide CallRail logo includes phone number tracking."),
+    ).toBeTruthy();
+  });
+
+  it("does not show per-page progress for website documents after import", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            sourceType: "website",
+            sourceUrl: "https://example.com/page-tree",
+            title: "Page Tree",
+            status: "indexing",
+            processingProgress: 0,
+            textContent: "Imported website page content is already available.",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Imported website page content is already available.")).toBeTruthy();
+    expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
+    expect(screen.queryByText("0%")).toBeNull();
+    expect(screen.queryByText("agent:sections.knowledge.status.analyzing")).toBeNull();
+  });
+
+  it("toggles document activity from the row actions menu", async () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [createDocument()],
+        snippets: [],
+      },
+    });
+    setKnowledgeEntryActiveMock.mockResolvedValue(null);
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.disable" }));
+
+    await waitFor(() => {
+      expect(setKnowledgeEntryActiveMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        documentId: "document-1",
+        active: false,
+      });
+    });
+  });
+
+  it("shows completed website documents with the website marker", () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [
+          createDocument({
+            sourceType: "website",
+            sourceUrl: "https://example.com/changelog",
+            title: "Changelog",
+          }),
+        ],
+        snippets: [],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("Changelog")).toBeTruthy();
+    expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
+    expect(screen.queryByLabelText("agent:sections.knowledge.documentBadge")).toBeNull();
+  });
+
+  it.each([
+    {
+      section: "services" as const,
+      snippet: createSnippet({
+        _id: "snippet-service-1",
+        section: "services",
+        title: "Front-desk service",
+      }),
+      title: "Front-desk service",
+    },
+    {
+      section: "rules" as const,
+      snippet: createSnippet({
+        _id: "snippet-rule-1",
+        section: "rules",
+        title: "After-hours rule",
+      }),
+      title: "After-hours rule",
+    },
+  ])("does not show title markers for $section rows", ({ section, snippet, title }) => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [snippet],
+      },
+    });
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.queryByLabelText(`agent:sections.${section}.textBadge`)).toBeNull();
+    expect(screen.queryByLabelText(`agent:sections.${section}.documentBadge`)).toBeNull();
+  });
+
+  it("allows deleting a failed website import row from the row actions menu", async () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [],
+        snippets: [],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-failed",
+          status: "failed",
+          lastError: "Firecrawl request failed",
+        }),
+      ],
+    });
+    deleteWebsiteIngestionJobMock.mockResolvedValue(null);
+
+    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+
+    expect(screen.getByText("agent:sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
+    expect(screen.queryByText("Firecrawl request failed")).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await user.click(screen.getByRole("button", { name: "actions.delete" }));
+    await user.click(screen.getByRole("button", { name: "agent:actions.delete" }));
+
+    await waitFor(() => {
+      expect(deleteWebsiteIngestionJobMock).toHaveBeenCalledWith({
+        businessId: "business-1",
+        websiteIngestionJobId: "website-job-failed",
+      });
+    });
+  });
 });

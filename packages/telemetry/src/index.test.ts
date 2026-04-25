@@ -221,15 +221,15 @@ describe("telemetry redaction", () => {
 
   it("redacts OTEL attributes that might contain customer data", () => {
     const attributes = redactOtelAttributes({
-      "ai_receptionist.customer_phone": "+14165550000",
-      "ai_receptionist.customer_name": "Jane Doe",
-      "ai_receptionist.tool_name": "bookAppointment",
+      "lobbystack.customer_phone": "+14165550000",
+      "lobbystack.customer_name": "Jane Doe",
+      "lobbystack.tool_name": "bookAppointment",
       "http.status_code": 200,
     });
 
-    expect(attributes["ai_receptionist.customer_phone"]).toBe("***0000");
-    expect(attributes["ai_receptionist.customer_name"]).toBe("[redacted]");
-    expect(attributes["ai_receptionist.tool_name"]).toBe("bookAppointment");
+    expect(attributes["lobbystack.customer_phone"]).toBe("***0000");
+    expect(attributes["lobbystack.customer_name"]).toBe("[redacted]");
+    expect(attributes["lobbystack.tool_name"]).toBe("bookAppointment");
     expect(attributes["http.status_code"]).toBe(200);
   });
 

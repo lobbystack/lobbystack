@@ -13,7 +13,7 @@ This repo deploys the dashboard in `apps/web` to Cloudflare Workers Static Asset
 ## Cloudflare Workers Builds Setup
 
 1. In Cloudflare, go to `Workers & Pages`.
-2. Create a new Worker from `Import a repository`, or open the existing Worker named `ai-receptionist`.
+2. Create a new Worker from `Import a repository`, or open the existing Worker named `lobbystack`.
 3. Connect the GitHub repository.
 4. Set the production branch to `main`.
 5. Set the root directory to `apps/web`.
@@ -57,7 +57,7 @@ These are build-time variables for Vite, not runtime Worker secrets.
 
 1. Save the Workers Builds configuration above.
 2. Push to `main`.
-3. Cloudflare will build `apps/web` and deploy the Worker named `ai-receptionist`.
+3. Cloudflare will build `apps/web` and deploy the Worker named `lobbystack`.
 4. Attach your production custom domain in Cloudflare if you do not want to use the default `workers.dev` hostname.
 
 ## Cloudflare Location Headers

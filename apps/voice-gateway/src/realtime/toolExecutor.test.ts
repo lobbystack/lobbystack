@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { demoSnapshot } from "@ai-receptionist/shared";
+import { demoSnapshot } from "@lobbystack/shared";
 
 const { searchVoiceKnowledgeMock } = vi.hoisted(() => ({
   searchVoiceKnowledgeMock: vi.fn(),

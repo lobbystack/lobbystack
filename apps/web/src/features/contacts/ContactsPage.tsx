@@ -18,6 +18,12 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DataTablePagination } from "@/components/data-table/pagination";
+import {
+  DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
+  DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS,
+  DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS,
+  DataTableRowActions,
+} from "@/components/data-table/row-controls";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
@@ -228,10 +234,14 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
             timeStyle: "short",
           }),
         id: "lastInteraction",
-        header: () => <span className="block text-right">{t("table.lastInteraction")}</span>,
+        header: () => (
+          <span className={`relative block text-right ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}>
+            {t("table.lastInteraction")}
+          </span>
+        ),
         cell: ({ row }) => (
           <span
-            className="block truncate text-right text-sm text-muted-foreground"
+            className={`relative block truncate text-right text-sm text-muted-foreground ${DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS}`}
             title={formatDateTime(row.original.lastInteractionAt, i18n.language, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -251,7 +261,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex w-16 justify-end pr-1">
+          <DataTableRowActions>
             <ContactActionsMenu
               blocking={blockingContactId === String(row.original.id)}
               deleting={deletingContactId === String(row.original.id)}
@@ -266,10 +276,10 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                 });
               }}
             />
-          </div>
+          </DataTableRowActions>
         ),
         meta: {
-          className: "w-16 text-right",
+          className: DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
         },
       },
     ],
@@ -331,7 +341,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                 <col className="w-[20%]" />
                 <col className="w-[12%]" />
                 <col className="w-[16%]" />
-                <col className="w-[8%]" />
+                <col className={DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS} />
               </colgroup>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -371,7 +381,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
                         cell.column.id === "lastInteraction"
                           ? "min-w-[11rem] max-w-0 text-right whitespace-nowrap"
                           : cell.column.id === "actions"
-                            ? "w-16 text-right"
+                            ? DATA_TABLE_ROW_ACTIONS_CELL_CLASS
                             : cell.column.columnDef.meta &&
                                 typeof cell.column.columnDef.meta === "object" &&
                                 "className" in cell.column.columnDef.meta

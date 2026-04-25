@@ -17,8 +17,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@ai-receptionist/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
-      "@ai-receptionist/telemetry": path.resolve(
+      "@lobbystack/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@lobbystack/telemetry": path.resolve(
         __dirname,
         "../../packages/telemetry/src/index.ts",
       ),

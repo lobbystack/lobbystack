@@ -20,10 +20,10 @@ I did not find evidence in the changed frontend code of client-side secret expos
 - Rule ID: REACT-CONFIG-001 / application auth privacy best practice
 - Severity: Medium
 - Location:
-  - [convex/businesses/catalog.ts:123](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L123)
-  - [convex/businesses/catalog.ts:142](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L142)
-  - [apps/web/src/features/settings/SettingsBusinessPage.tsx:200](/Users/raphael/Coding/ai-receptionist/apps/web/src/features/settings/SettingsBusinessPage.tsx#L200)
-  - [apps/web/public/locales/en/settings.json:153](/Users/raphael/Coding/ai-receptionist/apps/web/public/locales/en/settings.json#L153)
+  - [convex/businesses/catalog.ts:123](/convex/businesses/catalog.ts#L123)
+  - [convex/businesses/catalog.ts:142](/convex/businesses/catalog.ts#L142)
+  - [apps/web/src/features/settings/SettingsBusinessPage.tsx:200](/apps/web/src/features/settings/SettingsBusinessPage.tsx#L200)
+  - [apps/web/public/locales/en/settings.json:153](/apps/web/public/locales/en/settings.json#L153)
 - Evidence:
 
 ```ts
@@ -59,9 +59,9 @@ if (message.includes("already exists")) {
 - Rule ID: session hardening after credential changes
 - Severity: Low
 - Location:
-  - [convex/businesses/catalog.ts:322](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L322)
-  - [convex/businesses/catalog.ts:363](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L363)
-  - [convex/businesses/catalog.ts:456](/Users/raphael/Coding/ai-receptionist/convex/businesses/catalog.ts#L456)
+  - [convex/businesses/catalog.ts:322](/convex/businesses/catalog.ts#L322)
+  - [convex/businesses/catalog.ts:363](/convex/businesses/catalog.ts#L363)
+  - [convex/businesses/catalog.ts:456](/convex/businesses/catalog.ts#L456)
 - Evidence:
 
 The password-change flow explicitly revokes sessions:

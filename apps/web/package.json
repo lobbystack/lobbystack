@@ -1,5 +1,5 @@
 {
-  "name": "@ai-receptionist/web",
+  "name": "@lobbystack/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,10 +14,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-receptionist/ai": "workspace:*",
-    "@ai-receptionist/config": "workspace:*",
-    "@ai-receptionist/shared": "workspace:*",
-    "@ai-receptionist/telemetry": "workspace:*",
+    "@lobbystack/ai": "workspace:*",
+    "@lobbystack/config": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
     "@base-ui/react": "^1.2.0",
     "@convex-dev/auth": "latest",
     "@convex-dev/persistent-text-streaming": "latest",

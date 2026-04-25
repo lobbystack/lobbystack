@@ -5,7 +5,7 @@ import type {
   KnowledgeSnippet,
   ServiceSummary,
   TransferPolicy,
-} from "@ai-receptionist/shared";
+} from "@lobbystack/shared";
 
 type SnapshotBuilderInput = {
   businessId: string;

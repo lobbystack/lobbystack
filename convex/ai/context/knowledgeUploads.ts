@@ -8,7 +8,9 @@ import type { Id } from "../../_generated/dataModel";
 import { internalAction, type ActionCtx } from "../../_generated/server";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
+  buildKnowledgeDocumentPreviewText,
   hasMeaningfulKnowledgeDocumentText,
+  MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES,
   normalizeKnowledgeDocumentText,
 } from "../../lib/knowledgeDocuments";
 import type { RuntimeLocale } from "../../lib/runtimeLocale";
@@ -23,9 +25,6 @@ import {
 const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
 const KNOWLEDGE_STORAGE_LIMIT_ERROR_PREFIX = "Knowledge storage limit reached.";
-const MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES = 256 * 1024;
-const TRUNCATED_TEXT_SUFFIX = "\n\n...";
-
 function formatKnowledgeStorageLimit(limitBytes: number): string {
   if (limitBytes >= 1024 * 1024 * 1024) {
     return `${limitBytes / (1024 * 1024 * 1024)} GB`;
@@ -46,30 +45,6 @@ function getPreferredOcrLanguages(
   }
 
   return KNOWLEDGE_DOCUMENT_OCR_LANGUAGES;
-}
-
-function buildKnowledgeDocumentPreviewText(text: string): string {
-  if (getConvexSize(text) <= MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES) {
-    return text;
-  }
-
-  let low = 0;
-  let high = text.length;
-  let best = TRUNCATED_TEXT_SUFFIX.trim();
-
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2);
-    const candidate = `${text.slice(0, middle).trimEnd()}${TRUNCATED_TEXT_SUFFIX}`;
-
-    if (getConvexSize(candidate) <= MAX_INLINE_KNOWLEDGE_DOCUMENT_TEXT_BYTES) {
-      best = candidate;
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-
-  return best;
 }
 
 function isKnowledgeStorageLimitErrorMessage(message: string): boolean {

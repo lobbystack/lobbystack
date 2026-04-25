@@ -4,5 +4,5 @@ export const DEFAULT_RECEPTIONIST_BOOKING_POLICY =
 export const DEFAULT_RECEPTIONIST_TRANSFER_MODE = "on_request";
 
 export function buildDefaultReceptionistSummary(businessName: string): string {
-  return `${businessName} uses AI Receptionist to handle calls and SMS.`;
+  return `${businessName} uses LobbyStack to handle calls and SMS.`;
 }

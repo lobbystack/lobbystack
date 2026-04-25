@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -86,17 +87,20 @@ export function ContactActionsMenu({
           </DropdownMenuItem>
         )}
         {onDelete ? (
-          <DropdownMenuItem
-            className="gap-2.5 px-3 py-2"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete();
-            }}
-            variant="destructive"
-          >
-            <Trash2 />
-            <span>{t("table.actions.deleteContact")}</span>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2.5 px-3 py-2"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              variant="destructive"
+            >
+              <Trash2 />
+              <span>{t("table.actions.deleteContact")}</span>
+            </DropdownMenuItem>
+          </>
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>

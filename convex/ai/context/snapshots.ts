@@ -46,10 +46,14 @@ type UpdateReceptionistProfileArgs = {
 };
 
 function buildKnowledgeDigest(
-  documents: Array<Pick<Doc<"knowledge_documents">, "title" | "textContent" | "importance" | "status">>,
+  documents: Array<
+    Pick<Doc<"knowledge_documents">, "active" | "title" | "textContent" | "importance" | "status">
+  >,
 ): string {
   const ranked = documents
-    .filter((document) => document.status !== "error" && document.textContent)
+    .filter(
+      (document) => document.active !== false && document.status !== "error" && document.textContent,
+    )
     .sort((left, right) => right.importance - left.importance)
     .slice(0, 4);
 
@@ -228,6 +232,7 @@ export const refreshSnapshot = internalMutation({
       activePhoneNumbers.find((row) => row.voiceEnabled) ?? activePhoneNumbers[0];
     const primarySms =
       activePhoneNumbers.find((row) => row.smsEnabled) ?? activePhoneNumbers[0];
+    const activeDocuments = documents.filter((row) => row.active !== false);
     const snapshotPayload = buildBusinessContextSnapshot({
       businessId: String(args.businessId),
       version: `${Date.now()}`,
@@ -246,7 +251,7 @@ export const refreshSnapshot = internalMutation({
         ? { smsInstructions: profile.smsInstructions }
         : {}),
       summary: profile.summary,
-      knowledgeDigest: buildKnowledgeDigest(documents),
+      knowledgeDigest: buildKnowledgeDigest(activeDocuments),
       hours: hours.map((row) => ({
         dayOfWeek: row.dayOfWeek,
         openMinutes: row.openMinutes,

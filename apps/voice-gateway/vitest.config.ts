@@ -4,9 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
-      "@ai-receptionist/ai": path.resolve(__dirname, "../../packages/ai/src/index.ts"),
-      "@ai-receptionist/config": path.resolve(__dirname, "../../packages/config/src/index.ts"),
-      "@ai-receptionist/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      "@lobbystack/ai": path.resolve(__dirname, "../../packages/ai/src/index.ts"),
+      "@lobbystack/config": path.resolve(__dirname, "../../packages/config/src/index.ts"),
+      "@lobbystack/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },
   test: {

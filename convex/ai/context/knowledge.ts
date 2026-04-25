@@ -17,7 +17,7 @@ import {
   type QueryCtx,
 } from "../../_generated/server";
 import { api, internal } from "../../_generated/api";
-import type { Id } from "../../_generated/dataModel";
+import type { Doc, Id } from "../../_generated/dataModel";
 import { requireIdentity, requireMembership } from "../../lib/auth";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
@@ -66,6 +66,9 @@ type PreviewKnowledgeArgs = {
   prompt: string;
 };
 type DocumentIdArgs = { documentId: Id<"knowledge_documents"> };
+type IndexKnowledgeDocumentArgs = DocumentIdArgs & {
+  skipSnapshotRefresh?: boolean;
+};
 type SnippetIdArgs = { snippetId: Id<"knowledge_snippets"> };
 type DeleteKnowledgeEntryArgs =
   | {
@@ -75,6 +78,19 @@ type DeleteKnowledgeEntryArgs =
     }
   | {
       businessId: Id<"businesses">;
+      snippetId: Id<"knowledge_snippets">;
+      documentId?: never;
+    };
+type SetKnowledgeEntryActiveArgs =
+  | {
+      businessId: Id<"businesses">;
+      active: boolean;
+      documentId: Id<"knowledge_documents">;
+      snippetId?: never;
+    }
+  | {
+      businessId: Id<"businesses">;
+      active: boolean;
       snippetId: Id<"knowledge_snippets">;
       documentId?: never;
     };
@@ -164,6 +180,12 @@ async function requireKnowledgeAccess(
   }
 }
 
+function isKnowledgeDocumentActive(
+  document: Pick<Doc<"knowledge_documents">, "active"> | null | undefined,
+): boolean {
+  return document?.active !== false;
+}
+
 function formatKnowledgeStorageLimit(limitBytes: number): string {
   if (limitBytes >= 1024 * 1024 * 1024) {
     return `${limitBytes / (1024 * 1024 * 1024)} GB`;
@@ -204,10 +226,17 @@ async function assertKnowledgeStorageCapacity(
 async function indexKnowledgeDocumentById(
   ctx: ActionCtx,
   documentId: Id<"knowledge_documents">,
+  options?: {
+    skipSnapshotRefresh?: boolean;
+  },
 ): Promise<null> {
   const document = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
     documentId,
   });
+
+  if (!document || !isKnowledgeDocumentActive(document)) {
+    return null;
+  }
 
   let indexableText: string | null = document?.textContent ?? null;
   if (document?.extractedTextStorageId) {
@@ -225,7 +254,7 @@ async function indexKnowledgeDocumentById(
     indexableText = await extractedTextBlob.text();
   }
 
-  if (!document || !indexableText) {
+  if (!indexableText) {
     await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
       documentId,
       status: "error",
@@ -262,25 +291,50 @@ async function indexKnowledgeDocumentById(
       ],
     });
 
-    await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+    const latestDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
       documentId,
-      status: result.status === "ready" ? "indexed" : "indexing",
-      indexedEntryId: String(result.entryId),
-      indexVersion: KNOWLEDGE_INDEX_VERSION,
-      processingProgress: result.status === "ready" ? 100 : 96,
     });
+
+    if (!latestDocument || !isKnowledgeDocumentActive(latestDocument)) {
+      if (result.status !== "replaced") {
+        await rag.delete(ctx, { entryId: result.entryId as never });
+      }
+      return null;
+    }
+
     if (result.status === "ready") {
+      await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
+        documentId,
+        status: "indexed",
+        indexedEntryId: String(result.entryId),
+        indexVersion: KNOWLEDGE_INDEX_VERSION,
+        processingProgress: 100,
+      });
       await enqueuePostHogEventBestEffort(ctx, {
         eventName: "knowledge.document_indexed",
-        businessId: document.businessId,
-        distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
-        groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+        businessId: latestDocument.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(latestDocument.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(latestDocument.businessId)),
         properties: {
           documentId: String(documentId),
-          sourceType: document.sourceType,
-          section: document.section,
+          sourceType: latestDocument.sourceType,
+          section: latestDocument.section,
         },
       });
+    } else {
+      if (
+        latestDocument &&
+        (latestDocument.status !== "indexed" ||
+          !latestDocument.indexedEntryId ||
+          latestDocument.indexVersion !== KNOWLEDGE_INDEX_VERSION)
+      ) {
+        await ctx.scheduler.runAfter(1_000, internal.ai.context.knowledge.indexKnowledgeDocument, {
+          documentId,
+          ...(options?.skipSnapshotRefresh !== undefined
+            ? { skipSnapshotRefresh: options.skipSnapshotRefresh }
+            : {}),
+        });
+      }
     }
     await enqueuePostHogEventBestEffort(ctx, {
       eventName: "ai.embedding.completed",
@@ -298,9 +352,11 @@ async function indexKnowledgeDocumentById(
         latencyMs: Date.now() - startedAt,
       },
     });
-    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
-      businessId: document.businessId,
-    });
+    if (result.status === "ready" && !options?.skipSnapshotRefresh) {
+      await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+        businessId: document.businessId,
+      });
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to index this document.";
     await enqueuePostHogEventBestEffort(ctx, {
@@ -653,6 +709,112 @@ async function deleteKnowledgeEntryById(
   return null;
 }
 
+async function setKnowledgeEntryActiveById(
+  ctx: ActionCtx,
+  args: SetKnowledgeEntryActiveArgs,
+): Promise<null> {
+  await requireKnowledgeAccess(ctx, args.businessId);
+
+  if ("documentId" in args && args.documentId) {
+    const document = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
+      documentId: args.documentId,
+    });
+
+    if (!document || document.businessId !== args.businessId) {
+      throw new Error("Knowledge document not found.");
+    }
+
+    const currentlyActive = isKnowledgeDocumentActive(document);
+    if (currentlyActive === args.active) {
+      return null;
+    }
+
+    if (!args.active && document.indexedEntryId) {
+      await rag.delete(ctx, { entryId: document.indexedEntryId as never });
+    }
+
+    await ctx.runMutation(internal.ai.context.knowledge.setKnowledgeDocumentActiveState, {
+      documentId: args.documentId,
+      active: args.active,
+      ...(args.active ? {} : { resetIndexState: true }),
+    });
+
+    if (!args.active) {
+      await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+        businessId: args.businessId,
+      });
+      return null;
+    }
+
+    if (document.storageId && !document.textContent && !document.extractedTextStorageId) {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledgeUploads.extractUploadedKnowledgeDocument,
+        {
+          documentId: args.documentId,
+        },
+      );
+      return null;
+    }
+
+    if (document.textContent || document.extractedTextStorageId) {
+      await bulkWorkpool.enqueueAction(
+        ctx,
+        internal.ai.context.knowledge.indexKnowledgeDocument,
+        {
+          documentId: args.documentId,
+        },
+      );
+    }
+
+    return null;
+  }
+
+  const snippetId = args.snippetId;
+  if (!snippetId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  const snippet = await ctx.runQuery(internal.ai.context.knowledge.getSnippetForIndexing, {
+    snippetId,
+  });
+
+  if (!snippet || snippet.businessId !== args.businessId) {
+    throw new Error("Knowledge snippet not found.");
+  }
+
+  if (snippet.active === args.active) {
+    return null;
+  }
+
+  if (!args.active && snippet.indexedEntryId) {
+    await rag.delete(ctx, { entryId: snippet.indexedEntryId as never });
+  }
+
+  await ctx.runMutation(internal.ai.context.knowledge.setKnowledgeSnippetActiveState, {
+    snippetId,
+    active: args.active,
+    ...(args.active ? {} : { resetIndexState: true }),
+  });
+
+  if (!args.active) {
+    await ctx.runMutation(internal.ai.context.snapshots.refreshSnapshot, {
+      businessId: args.businessId,
+    });
+    return null;
+  }
+
+  await bulkWorkpool.enqueueAction(
+    ctx,
+    internal.ai.context.knowledge.indexKnowledgeSnippet,
+    {
+      snippetId,
+    },
+  );
+
+  return null;
+}
+
 export const getDocumentForIndexing = internalQuery({
   args: {
     documentId: v.id("knowledge_documents"),
@@ -839,6 +1001,60 @@ export const markSnippetIndexed = internalMutation({
   },
 });
 
+export const setKnowledgeDocumentActiveState = internalMutation({
+  args: {
+    documentId: v.id("knowledge_documents"),
+    active: v.boolean(),
+    resetIndexState: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      documentId: Id<"knowledge_documents">;
+      active: boolean;
+      resetIndexState?: boolean;
+    },
+  ) => {
+    await ctx.db.patch(args.documentId, {
+      active: args.active,
+      ...(args.resetIndexState
+        ? {
+            indexedEntryId: undefined,
+            indexVersion: undefined,
+          }
+        : {}),
+    });
+    return null;
+  },
+});
+
+export const setKnowledgeSnippetActiveState = internalMutation({
+  args: {
+    snippetId: v.id("knowledge_snippets"),
+    active: v.boolean(),
+    resetIndexState: v.optional(v.boolean()),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: {
+      snippetId: Id<"knowledge_snippets">;
+      active: boolean;
+      resetIndexState?: boolean;
+    },
+  ) => {
+    await ctx.db.patch(args.snippetId, {
+      active: args.active,
+      ...(args.resetIndexState
+        ? {
+            indexedEntryId: undefined,
+            indexVersion: undefined,
+          }
+        : {}),
+    });
+    return null;
+  },
+});
+
 export const deleteKnowledgeSnippetRecord = internalMutation({
   args: {
     snippetId: v.id("knowledge_snippets"),
@@ -917,6 +1133,7 @@ export const createKnowledgeDocument = mutation({
     const documentId = await ctx.db.insert("knowledge_documents", {
       businessId: args.businessId,
       ...(args.section !== undefined ? { section: args.section } : {}),
+      active: true,
       sourceType: args.sourceType,
       title: args.title,
       ...(args.storageId !== undefined ? { storageId: args.storageId } : {}),
@@ -1178,12 +1395,54 @@ export const deleteKnowledgeEntry = action({
   },
 });
 
+export const setKnowledgeEntryActive = action({
+  args: {
+    businessId: v.id("businesses"),
+    active: v.boolean(),
+    documentId: v.optional(v.id("knowledge_documents")),
+    snippetId: v.optional(v.id("knowledge_snippets")),
+  },
+  handler: async (
+    ctx: ActionCtx,
+    args: {
+      businessId: Id<"businesses">;
+      active: boolean;
+      documentId?: Id<"knowledge_documents">;
+      snippetId?: Id<"knowledge_snippets">;
+    },
+  ) => {
+    if ((args.documentId ? 1 : 0) + (args.snippetId ? 1 : 0) !== 1) {
+      throw new Error("Specify exactly one knowledge entry to update.");
+    }
+
+    return await setKnowledgeEntryActiveById(
+      ctx,
+      args.documentId
+        ? {
+            businessId: args.businessId,
+            active: args.active,
+            documentId: args.documentId,
+          }
+        : {
+            businessId: args.businessId,
+            active: args.active,
+            snippetId: args.snippetId!,
+          },
+    );
+  },
+});
+
 export const indexKnowledgeDocument = internalAction({
   args: {
     documentId: v.id("knowledge_documents"),
+    skipSnapshotRefresh: v.optional(v.boolean()),
   },
-  handler: async (ctx: ActionCtx, args: DocumentIdArgs) => {
-    return await indexKnowledgeDocumentById(ctx, args.documentId);
+  handler: async (ctx: ActionCtx, args: IndexKnowledgeDocumentArgs) => {
+    return await indexKnowledgeDocumentById(ctx, args.documentId, {
+      ...(args.skipSnapshotRefresh !== undefined
+        ? { skipSnapshotRefresh: args.skipSnapshotRefresh }
+        : {}),
+    });
   },
 });
 
@@ -1225,6 +1484,7 @@ export const getKnowledgeEntriesNeedingReindex = internalQuery({
       documentIds: documents
         .filter(
           (document) =>
+            isKnowledgeDocumentActive(document) &&
             (!!document.textContent || !!document.extractedTextStorageId) &&
             (!document.indexedEntryId ||
               document.status !== "indexed" ||

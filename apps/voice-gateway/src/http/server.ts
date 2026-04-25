@@ -2,8 +2,8 @@ import fastifyFormbody from "@fastify/formbody";
 import Fastify from "fastify";
 import { WebSocketServer } from "ws";
 
-import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
-import type { BusinessContextSnapshot } from "@ai-receptionist/shared";
+import { loadVoiceGatewayEnv } from "@lobbystack/config";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
@@ -59,7 +59,7 @@ export function createServer(): ReturnType<typeof Fastify> {
     });
     if (!hasValidTwilioSignature) {
       recordTwilioInvalidSignature({
-        "ai_receptionist.path": pathname,
+        "lobbystack.path": pathname,
       });
       server.log.warn(
         {

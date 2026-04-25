@@ -69,7 +69,7 @@ describe("AppSidebar", () => {
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
           <AppSidebar
-            businessName="AI Receptionist"
+            businessName="LobbyStack"
             onSignOut={() => {}}
             operatorEmail="raphael@example.com"
           />
@@ -92,7 +92,7 @@ describe("AppSidebar", () => {
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
           <AppSidebar
-            businessName="AI Receptionist"
+            businessName="LobbyStack"
             onSignOut={() => {}}
             operatorEmail="raphael@example.com"
           />
@@ -119,7 +119,7 @@ describe("AppSidebar", () => {
         <SidebarProvider>
           <MobileSidebarHarness />
           <AppSidebar
-            businessName="AI Receptionist"
+            businessName="LobbyStack"
             onSignOut={() => {}}
             operatorEmail="raphael@example.com"
           />

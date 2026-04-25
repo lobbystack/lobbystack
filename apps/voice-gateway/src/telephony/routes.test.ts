@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import {
   billingErrorCodes,
   type BusinessContextSnapshot,
-} from "@ai-receptionist/shared";
+} from "@lobbystack/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {

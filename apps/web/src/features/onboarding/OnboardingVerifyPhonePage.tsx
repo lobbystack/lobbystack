@@ -125,7 +125,7 @@ export function OnboardingVerifyPhonePage({
         captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
           businessId: String(businessId),
         });
-        void navigate("/onboarding/number");
+        void navigate("/onboarding/website");
         return;
       }
 
@@ -146,7 +146,7 @@ export function OnboardingVerifyPhonePage({
       <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-6 py-6">
         <header className="flex items-center justify-between">
           <div className="text-2xl font-semibold tracking-tight">
-            {import.meta.env.VITE_APP_NAME ?? "AI Receptionist"}
+            {import.meta.env.VITE_APP_NAME ?? "LobbyStack"}
           </div>
           <div className="flex items-center gap-3">
             {currentUserEmail ? (

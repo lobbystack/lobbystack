@@ -7,7 +7,7 @@ import {
   validateTelemetryEvent,
   type TelemetryProperties,
   type TelemetryEventName,
-} from "@ai-receptionist/telemetry";
+} from "@lobbystack/telemetry";
 
 type IdentifyOperatorArgs = {
   userId: string;

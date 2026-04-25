@@ -14,17 +14,42 @@
       "description": "Information and guidelines your receptionist uses to answer questions.",
       "listTitle": "Knowledge Base",
       "addKnowledge": "Add Knowledge",
+      "addKnowledgeOptions": {
+        "upload": "Upload",
+        "website": "Website",
+        "text": "Text"
+      },
       "editKnowledge": "Edit Knowledge",
       "uploadDocument": "Upload Document",
+      "websiteImport": {
+        "badge": "Website",
+        "title": "Import Website",
+        "description": "Crawl the public pages of your website so your receptionist can use them as knowledge.",
+        "submit": "Import Website",
+        "submitting": "Importing Website…",
+        "success": "Website import started. Pages will appear here as they finish processing.",
+        "submitFailed": "We couldn't start the website import. Please try again.",
+        "previewPending": "We're crawling this website. Imported pages will appear here automatically.",
+        "previewFailed": "Import failed. Please try again.",
+        "status": {
+          "inProgress": "In progress",
+          "failed": "Failed"
+        },
+        "validation": {
+          "urlRequired": "Enter a website URL to import."
+        }
+      },
       "addKnowledgeDescription": "Add opening hours, pricing, policies, or any other information your receptionist should know.",
       "editKnowledgeDescription": "Update the information your receptionist should use when answering customer questions.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
+      "textBadge": "Text",
       "emptyState": "No knowledge added yet.",
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
         "analyzing": "Analyzing...",
+        "inProgress": "In progress",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
@@ -42,6 +67,11 @@
           "hint": "Supports PDF, DOCX, TXT, and Markdown.",
           "dropzonePrefix": "Drag and drop a file here, or",
           "chooseFile": "Choose File"
+        },
+        "websiteUrl": {
+          "label": "Website URL",
+          "placeholder": "https://example.com",
+          "hint": "Use the public home page or section you want to import."
         },
         "title": {
           "label": "Title",
@@ -71,11 +101,13 @@
       "editKnowledgeDescription": "Update the service details your receptionist should mention and use while booking.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
+      "textBadge": "Text",
       "emptyState": "No services added yet.",
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
         "analyzing": "Analyzing...",
+        "inProgress": "In progress",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
@@ -122,11 +154,13 @@
       "editKnowledgeDescription": "Update the instruction your receptionist should follow during calls and follow-up flows.",
       "uploadDocumentDescription": "Upload a file so your receptionist can use it.",
       "documentBadge": "Document",
+      "textBadge": "Text",
       "emptyState": "No rules added yet.",
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
         "analyzing": "Analyzing...",
+        "inProgress": "In progress",
         "queued": "Queued",
         "indexing": "Indexing",
         "indexed": "Ready",
@@ -167,8 +201,8 @@
     "searchPlaceholder": "Search entries",
     "title": "Title",
     "preview": "Preview",
-    "tags": "Tags",
     "status": "Status",
+    "disabled": "Disabled",
     "added": "Added",
     "empty": "No matching entries found.",
     "documentPreviewHint": "Click to preview this document.",
@@ -214,6 +248,13 @@
     "deleteTitle": "Delete entry?",
     "deleteDescription": "This will permanently remove this entry from the agent workspace.",
     "deleteCancel": "Cancel",
+    "cancelImport": "Cancel import",
+    "cancelImportTitle": "Cancel website import?",
+    "cancelImportDescription": "This will stop the website import and remove the in-progress entry from the table.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "activateEntry": "Activate entry",
+    "deactivateEntry": "Deactivate entry",
     "upload": "Upload",
     "uploading": "Uploading…"
   },

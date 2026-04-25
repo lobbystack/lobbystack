@@ -1,4 +1,4 @@
-import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
+import { loadVoiceGatewayEnv } from "@lobbystack/config";
 
 function escapeXml(value: string): string {
   return value

@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "convex": {
+      "source": "get-convex/agent-skills",
+      "sourceType": "github",
+      "computedHash": "613ee9955985085d0fca8f96e1fc6d7cfd204dffa203499a1d508b8def76577b"
+    },
     "convex-create-component": {
       "source": "get-convex/agent-skills",
       "sourceType": "github",
@@ -25,6 +30,11 @@
       "source": "get-convex/agent-skills",
       "sourceType": "github",
       "computedHash": "e719d31d1ab0d19ca7b942d1154d3ff436b5c156900eea9866c2aaeb910a1388"
+    },
+    "firecrawl": {
+      "source": "firecrawl/cli",
+      "sourceType": "github",
+      "computedHash": "a256ac70fb21fac608ded68a4dd94948a658533b6ef6fb2e0e8a8eb5c48a766b"
     },
     "posthog-instrumentation": {
       "source": "posthog/posthog-for-claude",

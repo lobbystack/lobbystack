@@ -1,6 +1,6 @@
-import { buildVoiceSystemPrompt } from "@ai-receptionist/ai";
-import { loadVoiceGatewayEnv } from "@ai-receptionist/config";
-import { demoBusinessId, type BusinessContextSnapshot } from "@ai-receptionist/shared";
+import { buildVoiceSystemPrompt } from "@lobbystack/ai";
+import { loadVoiceGatewayEnv } from "@lobbystack/config";
+import { demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
@@ -1640,10 +1640,10 @@ function handleOpenAiMessage(
 
       if (latencyMs !== undefined) {
         recordOpenAiTurnLatency(latencyMs, {
-          ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-          ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
-          "ai_receptionist.provider": "openai",
-          "ai_receptionist.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+          "lobbystack.provider": "openai",
+          "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
         });
       }
 
@@ -1876,8 +1876,8 @@ export async function handleMediaStreamConnection(
 
   twilioSocket.on("close", () => {
     recordMediaStreamDisconnect({
-      ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-      ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+      ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+      ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
     });
     server.log.info(
       {
@@ -1958,7 +1958,7 @@ export async function handleMediaStreamConnection(
 
     if (!hasValidTwilioSignature) {
       recordTwilioInvalidSignature({
-        "ai_receptionist.path": "/media-stream",
+        "lobbystack.path": "/media-stream",
       });
       server.log.warn(
         { validationUrls },
@@ -2000,7 +2000,7 @@ export async function handleMediaStreamConnection(
       session.businessId !== null ? server.snapshotCache.get(session.businessId) : null;
     if (!snapshot) {
       recordSnapshotCacheMiss({
-        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
       });
       if (!session.to) {
         throw new Error("Twilio stream start did not include the called phone number.");
@@ -2010,7 +2010,7 @@ export async function handleMediaStreamConnection(
       session.businessId = snapshot.businessId;
     } else {
       recordSnapshotCacheHit({
-        "ai_receptionist.business_id": snapshot.businessId,
+        "lobbystack.business_id": snapshot.businessId,
       });
     }
 
@@ -2049,8 +2049,8 @@ export async function handleMediaStreamConnection(
 
     openAiSocket.on("error", (error: Error) => {
       recordOpenAiRealtimeError({
-        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-        ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
       });
       server.log.error(
         {
@@ -2069,8 +2069,8 @@ export async function handleMediaStreamConnection(
 
     openAiSocket.on("unexpected-response", (_request, response) => {
       recordOpenAiRealtimeError({
-        ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-        ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
       });
       server.log.error(
         {
@@ -2100,8 +2100,8 @@ export async function handleMediaStreamConnection(
       );
       if (!session.finalized) {
         recordOpenAiRealtimeError({
-          ...(session.businessId ? { "ai_receptionist.business_id": session.businessId } : {}),
-          ...(session.callId ? { "ai_receptionist.call_id": session.callId } : {}),
+          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
         });
         const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
           disposition: "openai_socket_closed",

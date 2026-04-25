@@ -1,9 +1,9 @@
 {
   "verifyPhone": {
     "title": "Vérifiez votre identité",
-    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour suggérer votre premier numéro d'entreprise.",
+    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour adapter la suite de l'onboarding à votre marché local.",
     "verifyTitle": "Entrez votre code de vérification",
-    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, nous vous proposerons un numéro d'entreprise correspondant à votre marché local.",
+    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, vous pourrez importer votre site web avant que nous vous proposions un numéro d'entreprise correspondant à votre marché local.",
     "fields": {
       "mobileNumber": "Numéro mobile",
       "code": "Code de vérification"
@@ -12,7 +12,7 @@
       "mobileNumber": "+1 581 748 4609",
       "code": "123456"
     },
-    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions suggérer un premier numéro d'entreprise dans le même marché local.",
+    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions adapter la suite de l'onboarding, y compris votre premier numéro d'entreprise, au même marché local.",
     "sendCode": "Obtenir le code",
     "sending": "Envoi du code...",
     "verifyCode": "Vérifier le code",
@@ -23,6 +23,24 @@
     "codeSent": "Nous avons envoyé un code de vérification à {{phone}}.",
     "sendFailed": "Impossible d'envoyer un code de vérification pour le moment. Veuillez réessayer.",
     "verifyFailed": "Impossible de vérifier ce code pour le moment. Veuillez réessayer.",
+    "signedInAs": "Connecté comme {{email}}"
+  },
+  "website": {
+    "title": "Importez votre site web",
+    "description": "Ajoutez le site public de votre entreprise pour que nous commencions à construire votre base de connaissances en arrière-plan avant que vous choisissiez votre numéro professionnel.",
+    "fields": {
+      "url": "Site web de l'entreprise"
+    },
+    "placeholders": {
+      "url": "https://exemple.com"
+    },
+    "hint": "Nous analyserons des pages publiques comme les services, l'à-propos, la FAQ, les horaires et les coordonnées. Vous pouvez passer cette étape si vous n'avez pas encore de site web.",
+    "submit": "Importer le site",
+    "submitting": "Importation du site...",
+    "skip": "Passer pour l'instant",
+    "skipping": "Passage...",
+    "submitFailed": "Impossible de démarrer l'importation du site pour le moment. Veuillez réessayer.",
+    "skipFailed": "Impossible de passer cette étape pour le moment. Veuillez réessayer.",
     "signedInAs": "Connecté comme {{email}}"
   },
   "number": {

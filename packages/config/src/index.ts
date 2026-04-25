@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { DeploymentMode } from "@ai-receptionist/shared";
+import type { DeploymentMode } from "@lobbystack/shared";
 
 const deploymentModeSchema = z.enum([
   "cloud",
@@ -63,7 +63,7 @@ const serverEnvSchema = z.object({
 const clientEnvSchema = z.object({
   VITE_CONVEX_URL: z.string().url(),
   VITE_CONVEX_SITE_URL: z.string().url(),
-  VITE_APP_NAME: z.string().default("AI Receptionist"),
+  VITE_APP_NAME: z.string().default("LobbyStack"),
   VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   VITE_POSTHOG_KEY: z.string().optional(),
   VITE_POSTHOG_HOST: z.string().min(1).optional(),

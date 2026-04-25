@@ -108,13 +108,13 @@ function renderVerifyEmailTemplate(input: TransactionalTemplateInput): {
   return {
     subject,
     html: [
-      "<p>You requested to change the sign-in email for your AI Receptionist account.</p>",
+      "<p>You requested to change the sign-in email for your LobbyStack account.</p>",
       `<p><a href="${escapedConfirmUrl}">Confirm your new email</a></p>`,
       `<p>This confirmation link expires in ${escapedExpiresMinutes} minutes.</p>`,
       "<p>If you did not request this change, you can safely ignore this email.</p>",
     ].join(""),
     text: [
-      "You requested to change the sign-in email for your AI Receptionist account.",
+      "You requested to change the sign-in email for your LobbyStack account.",
       `Confirm your new email: ${confirmUrl}`,
       `This confirmation link expires in ${expiresMinutes} minutes.`,
       "If you did not request this change, you can safely ignore this email.",
@@ -141,13 +141,13 @@ function renderPasswordResetEmail(input: TransactionalTemplateInput): {
   return {
     subject,
     html: [
-      "<p>You requested a password reset for your AI Receptionist account.</p>",
+      "<p>You requested a password reset for your LobbyStack account.</p>",
       `<p>Your reset code is <strong>${escapedCode}</strong>.</p>`,
       `<p>This code expires in ${escapedExpiresMinutes} minutes.</p>`,
       "<p>If you did not request this, you can safely ignore this email.</p>",
     ].join(""),
     text: [
-      "You requested a password reset for your AI Receptionist account.",
+      "You requested a password reset for your LobbyStack account.",
       `Your reset code is ${code}.`,
       `This code expires in ${expiresMinutes} minutes.`,
       "If you did not request this, you can safely ignore this email.",

@@ -21,6 +21,8 @@ export const WEB_EVENT_NAMES = [
   "web.agent.settings_saved",
   "web.onboarding.verify_phone_started",
   "web.onboarding.verify_phone_completed",
+  "web.onboarding.website_submitted",
+  "web.onboarding.website_skipped",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
   "web.knowledge.upload_started",
@@ -244,6 +246,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "countryCode",
   ],
   "web.onboarding.verify_phone_completed": ["businessId", "deploymentMode"],
+  "web.onboarding.website_submitted": ["businessId", "deploymentMode"],
+  "web.onboarding.website_skipped": ["businessId", "deploymentMode"],
   "web.onboarding.number_claim_started": [
     "businessId",
     "deploymentMode",

@@ -10,6 +10,8 @@ node_modules
 .env
 .env.*
 !.env.example
+.tmp/
+.firecrawl/
 apps/web/dist
 *.tsbuildinfo
 references/shadcn-admin

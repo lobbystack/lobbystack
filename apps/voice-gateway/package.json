@@ -1,5 +1,5 @@
 {
-  "name": "@ai-receptionist/voice-gateway",
+  "name": "@lobbystack/voice-gateway",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,11 +14,11 @@
     "@types/ws": "^8.18.1"
   },
   "dependencies": {
-    "@ai-receptionist/ai": "workspace:*",
-    "@ai-receptionist/config": "workspace:*",
-    "@ai-receptionist/providers": "workspace:*",
-    "@ai-receptionist/shared": "workspace:*",
-    "@ai-receptionist/telemetry": "workspace:*",
+    "@lobbystack/ai": "workspace:*",
+    "@lobbystack/config": "workspace:*",
+    "@lobbystack/providers": "workspace:*",
+    "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
     "@fastify/formbody": "^8.0.2",
     "@fastify/websocket": "^11.2.0",
     "@opentelemetry/api-logs": "^0.214.0",

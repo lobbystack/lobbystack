@@ -124,7 +124,7 @@ export const markVerificationApproved = internalMutation({
     });
 
     await ctx.db.patch(args.businessId, {
-      onboardingStage: "phone_number",
+      onboardingStage: "website",
     });
   },
 });

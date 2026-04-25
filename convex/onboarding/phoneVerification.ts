@@ -234,7 +234,7 @@ export const reuseVerifiedPhoneForOnboarding = action({
 
     await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
       businessId: args.businessId,
-      onboardingStage: "phone_number",
+      onboardingStage: "website",
     });
 
     return {
