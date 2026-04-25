@@ -53,6 +53,7 @@ type WebsiteImportSummary = {
   importedDocumentCount: number;
   resultsReady: boolean;
   weak: boolean;
+  aborted?: boolean;
 };
 
 type SubmitFirecrawlWebsiteCrawlArgs = WebsiteIngestionJobIdArgs;
@@ -747,6 +748,27 @@ function filterWebsiteDocumentsForScope(
   });
 }
 
+export function buildExistingWebsiteDocumentsBySourceUrl(
+  documents: Array<Doc<"knowledge_documents">>,
+  websiteUrl: string,
+): Map<string, Doc<"knowledge_documents"> & { sourceUrl: string }> {
+  const documentsBySourceUrl = new Map<
+    string,
+    Doc<"knowledge_documents"> & { sourceUrl: string }
+  >();
+
+  for (const document of filterWebsiteDocumentsForScope(documents, websiteUrl)) {
+    const normalizedSourceUrl = normalizeWebsitePageUrl(document.sourceUrl, websiteUrl);
+    if (!normalizedSourceUrl) {
+      continue;
+    }
+
+    documentsBySourceUrl.set(normalizedSourceUrl, document);
+  }
+
+  return documentsBySourceUrl;
+}
+
 export async function resolveFirecrawlMarkdownContent(
   content: FirecrawlScrapeContent | null,
   fetchImpl: typeof fetch = fetch,
@@ -1020,16 +1042,9 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
       throw new Error(`Website crawl ended with status ${crawl.status}.`);
     }
 
-    const existingWebsiteDocuments = filterWebsiteDocumentsForScope(
+    const existingDocumentsBySourceUrl = buildExistingWebsiteDocumentsBySourceUrl(
       await listExistingWebsiteDocuments(ctx, job.businessId),
       job.websiteUrl,
-    );
-    const existingDocumentsBySourceUrl = new Map(
-      existingWebsiteDocuments
-        .filter((document): document is Doc<"knowledge_documents"> & { sourceUrl: string } =>
-          typeof document.sourceUrl === "string",
-        )
-        .map((document) => [document.sourceUrl, document]),
     );
     const { crawledSourceUrls, selectedCandidates } = buildSelectedFirecrawlPageCandidates(
       job,
@@ -1082,6 +1097,15 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
       };
     }
 
+    if (await shouldAbortWebsiteImportCommit(ctx, args.websiteIngestionJobId)) {
+      return {
+        importedDocumentCount: 0,
+        resultsReady: true,
+        weak: false,
+        aborted: true,
+      };
+    }
+
     const documentsToIndex: Array<{
       documentId: Id<"knowledge_documents">;
       skipSnapshotRefresh: true;
@@ -1096,6 +1120,15 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
     ).reduce((total, byteLength) => total + byteLength, 0);
 
     for (const [sourceUrl, record] of scrapeResults.recordsBySourceUrl) {
+      if (await shouldAbortWebsiteImportCommit(ctx, args.websiteIngestionJobId)) {
+        return {
+          importedDocumentCount: 0,
+          resultsReady: true,
+          weak: false,
+          aborted: true,
+        };
+      }
+
       const contentHash = await sha256Hex(record.markdown);
       const existingDocument = existingDocumentsBySourceUrl.get(sourceUrl) ?? null;
       const existingDocumentIsActive = existingDocument ? isKnowledgeDocumentActive(existingDocument) : false;
@@ -1214,6 +1247,15 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
       await deleteWebsiteKnowledgeDocument(ctx, staleDocument);
     }
 
+    if (await shouldAbortWebsiteImportCommit(ctx, args.websiteIngestionJobId)) {
+      return {
+        importedDocumentCount: 0,
+        resultsReady: true,
+        weak: false,
+        aborted: true,
+      };
+    }
+
     if (documentsToIndex.length > 0) {
       await bulkWorkpool.enqueueActionBatch(
         ctx,
@@ -1225,6 +1267,15 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
     const documentCounts = await getWebsiteDocumentCounts(ctx, args.websiteIngestionJobId);
     const totalImportedDocumentCount =
       documentCounts.indexed + documentCounts.error + documentCounts.pending;
+
+    if (await shouldAbortWebsiteImportCommit(ctx, args.websiteIngestionJobId)) {
+      return {
+        importedDocumentCount: 0,
+        resultsReady: true,
+        weak: false,
+        aborted: true,
+      };
+    }
 
     await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
       websiteIngestionJobId: args.websiteIngestionJobId,
@@ -1258,6 +1309,14 @@ export const waitForWebsiteIngestionDocuments = internalAction({
 
 function isTerminalWebsiteIngestionStatus(status: string): boolean {
   return status === "completed" || status === "failed" || status === "canceled";
+}
+
+async function shouldAbortWebsiteImportCommit(
+  ctx: ActionCtx,
+  websiteIngestionJobId: Id<"website_ingestion_jobs">,
+): Promise<boolean> {
+  const latestJob = await loadWebsiteIngestionJobRecord(ctx, websiteIngestionJobId);
+  return isTerminalWebsiteIngestionStatus(latestJob.status);
 }
 
 async function markWebsiteIngestionJobFailed(
@@ -1408,6 +1467,11 @@ export const reconcileWebsiteIngestionJob = internalAction({
 
         if (!importSummary.resultsReady) {
           return { status: "crawling" };
+        }
+
+        if (importSummary.aborted) {
+          const latestJob = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
+          return { status: latestJob.status };
         }
 
         if (importSummary.importedDocumentCount === 0) {

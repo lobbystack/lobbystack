@@ -826,7 +826,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         },
       },
     ],
-    [deletingEntryId, locale, section, t, togglingEntryIds],
+    [businessId, deletingEntryId, locale, section, t, togglingEntryIds],
   );
 
   const table = useReactTable({

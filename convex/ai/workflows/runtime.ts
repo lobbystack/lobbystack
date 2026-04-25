@@ -176,6 +176,10 @@ export const importWebsiteKnowledgeWorkflow = workflowManager.define({
           commitChanges: true,
         });
 
+        if (importSummary.aborted) {
+          return null;
+        }
+
         if (importSummary.importedDocumentCount === 0) {
           await step.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
             websiteIngestionJobId: args.websiteIngestionJobId,

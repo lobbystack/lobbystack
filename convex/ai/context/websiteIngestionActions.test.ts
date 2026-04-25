@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildExistingWebsiteDocumentsBySourceUrl,
   isWebsiteDocumentInScope,
   resolveRunningWebsiteCrawlStatus,
   resolveFirecrawlMarkdownContent,
@@ -26,6 +27,24 @@ describe("websiteIngestionActions helpers", () => {
         websiteUrl: "https://example.com",
       }),
     ).toBe(false);
+  });
+
+  it("normalizes existing website documents before matching crawl pages", () => {
+    const matchingDocument = {
+      sourceUrl: "https://www.example.com/menu",
+    } as never;
+    const outsideDocument = {
+      sourceUrl: "https://other.example.com/menu",
+    } as never;
+
+    const documentsBySourceUrl = buildExistingWebsiteDocumentsBySourceUrl(
+      [matchingDocument, outsideDocument],
+      "https://example.com/",
+    );
+
+    expect(documentsBySourceUrl.get("https://example.com/menu")).toBe(matchingDocument);
+    expect(documentsBySourceUrl.has("https://www.example.com/menu")).toBe(false);
+    expect(documentsBySourceUrl.has("https://other.example.com/menu")).toBe(false);
   });
 
   it("returns inline Firecrawl markdown without fetching a file", async () => {
