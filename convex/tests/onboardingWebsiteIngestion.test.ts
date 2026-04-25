@@ -323,6 +323,33 @@ describe("website onboarding and ingestion", () => {
     });
   });
 
+  it("reuses an active same-url website ingestion job instead of creating a duplicate", async () => {
+    const t = createConvexHarness();
+    const subject = "website-reuse-active-job-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    const first = await authed.action(api.ai.context.websiteIngestion.submitWebsiteIngestion, {
+      businessId,
+      websiteUrl: "example.com/faq/?utm_source=first#top",
+    });
+    const second = await authed.action(api.ai.context.websiteIngestion.submitWebsiteIngestion, {
+      businessId,
+      websiteUrl: "https://example.com/faq?utm_source=second#bottom",
+    });
+
+    expect(second.websiteIngestionJobId).toBe(first.websiteIngestionJobId);
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+
+    const jobs = await listWebsiteIngestionJobs(t, businessId);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?._id).toBe(first.websiteIngestionJobId);
+  });
+
   it("allows deleting a failed website ingestion job with no imported documents", async () => {
     const t = createConvexHarness();
     const subject = "website-delete-failed-job-owner";

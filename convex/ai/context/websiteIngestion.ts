@@ -200,6 +200,45 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
   ): Promise<SubmitWebsiteIngestionResult> => {
     await requireMembership(ctx, args.businessId);
 
+    const existingJobs = await ctx.db
+      .query("website_ingestion_jobs")
+      .withIndex("by_business_id_and_website_url", (q) =>
+        q.eq("businessId", args.businessId).eq("websiteUrl", args.websiteUrl),
+      )
+      .collect();
+    const existingActiveJob = existingJobs.find((job) =>
+      ACTIVE_WEBSITE_INGESTION_STATUSES.includes(
+        job.status as (typeof ACTIVE_WEBSITE_INGESTION_STATUSES)[number],
+      ),
+    );
+
+    if (existingActiveJob) {
+      if (!existingActiveJob.workflowId) {
+        const workflowId = await workflowManager.start(
+          ctx,
+          internal.ai.workflows.runtime.importWebsiteKnowledgeWorkflow,
+          {
+            websiteIngestionJobId: existingActiveJob._id,
+          },
+        );
+
+        await ctx.db.patch(existingActiveJob._id, {
+          workflowId,
+        });
+      }
+
+      await ctx.db.patch(args.businessId, {
+        websiteUrl: args.websiteUrl,
+        ...(args.nextOnboardingStage ? { onboardingStage: args.nextOnboardingStage } : {}),
+      });
+
+      return {
+        status: "submitted",
+        websiteUrl: args.websiteUrl,
+        websiteIngestionJobId: existingActiveJob._id,
+      };
+    }
+
     const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
       businessId: args.businessId,
       websiteUrl: args.websiteUrl,

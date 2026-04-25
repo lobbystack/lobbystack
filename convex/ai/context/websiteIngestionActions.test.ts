@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   isWebsiteDocumentInScope,
+  resolveRunningWebsiteCrawlStatus,
   resolveFirecrawlMarkdownContent,
   startOrReuseFirecrawlScrapeJob,
 } from "./websiteIngestionActions";
@@ -76,6 +77,32 @@ describe("websiteIngestionActions helpers", () => {
         fetchMock,
       ),
     ).rejects.toThrow("Failed to fetch Firecrawl markdown file (503 Service Unavailable).");
+  });
+
+  it("marks running crawls stalled when provider progress stops", () => {
+    const nowMs = Date.parse("2026-04-25T18:00:00.000Z");
+
+    expect(
+      resolveRunningWebsiteCrawlStatus({
+        status: "running",
+        startedAt: "2026-04-25T17:00:00.000Z",
+        lastProgressAt: "2026-04-25T17:29:59.999Z",
+        nowMs,
+      }),
+    ).toBe("stalled");
+  });
+
+  it("marks running crawls timed out when total runtime exceeds the hard limit", () => {
+    const nowMs = Date.parse("2026-04-25T18:00:00.000Z");
+
+    expect(
+      resolveRunningWebsiteCrawlStatus({
+        status: "running",
+        startedAt: "2026-04-25T15:59:59.999Z",
+        lastProgressAt: "2026-04-25T17:45:00.000Z",
+        nowMs,
+      }),
+    ).toBe("timed_out");
   });
 
   it("reuses an in-flight Firecrawl scrape for the same page", async () => {

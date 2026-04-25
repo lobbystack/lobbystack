@@ -506,6 +506,33 @@ function parseIsoTimestamp(value: string | undefined): number | null {
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
+export function resolveRunningWebsiteCrawlStatus(input: {
+  status: string;
+  startedAt?: string;
+  lastProgressAt?: string;
+  nowMs?: number;
+}): string {
+  if (input.status !== "running") {
+    return input.status;
+  }
+
+  const nowMs = input.nowMs ?? Date.now();
+  const startedAtMs = parseIsoTimestamp(input.startedAt) ?? nowMs;
+  const lastProgressAtMs = parseIsoTimestamp(input.lastProgressAt) ?? startedAtMs;
+  const elapsedMs = nowMs - startedAtMs;
+  const stalledForMs = nowMs - lastProgressAtMs;
+
+  if (stalledForMs >= WEBSITE_CRAWL_STALL_WINDOW_MS) {
+    return "stalled";
+  }
+
+  if (elapsedMs >= WEBSITE_CRAWL_HARD_TIMEOUT_MS) {
+    return "timed_out";
+  }
+
+  return "running";
+}
+
 function getCloudflareProcessedPageCount(input: {
   finished?: number | undefined;
   skipped?: number | undefined;
@@ -1167,18 +1194,26 @@ export const getFirecrawlWebsiteCrawlJobStatus = internalAction({
     const previousProgressValue =
       typeof job.crawlFinishedCount === "number" ? job.crawlFinishedCount : 0;
     const progressAdvanced = progressValue > previousProgressValue;
+    const nextLastProgressAt =
+      progressAdvanced || !job.lastProgressAt
+        ? nowIso
+        : (job.lastProgressAt ?? job.startedAt ?? nowIso);
 
     await ctx.runMutation(internal.ai.context.websiteIngestion.patchWebsiteIngestionJob, {
       websiteIngestionJobId: args.websiteIngestionJobId,
       crawlFinishedCount: progressValue,
       crawlTotalCount: FIRECRAWL_PROGRESS_TOTAL,
-      ...(progressAdvanced || !job.lastProgressAt ? { lastProgressAt: nowIso } : {}),
+      ...(progressAdvanced || !job.lastProgressAt ? { lastProgressAt: nextLastProgressAt } : {}),
     });
 
     return {
       status:
         crawl.status === "scraping"
-          ? "running"
+          ? resolveRunningWebsiteCrawlStatus({
+              status: "running",
+              ...(job.startedAt !== undefined ? { startedAt: job.startedAt } : {}),
+              lastProgressAt: nextLastProgressAt,
+            })
           : crawl.status === "cancelled"
             ? "canceled"
             : crawl.status,
