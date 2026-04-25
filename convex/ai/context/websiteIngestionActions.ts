@@ -99,6 +99,11 @@ type WebsiteDocumentCountSummary = {
   pending: number;
 };
 
+type FirecrawlScrapeContent = {
+  markdown?: string;
+  markdownFileUrl?: string | null;
+};
+
 const CLOUDFLARE_CRAWL_MAX_ATTEMPTS = 5;
 const CLOUDFLARE_CRAWL_RETRY_DELAY_MS = 1_000;
 const WEBSITE_CRAWL_STALL_WINDOW_MS = 30 * 60 * 1_000;
@@ -786,8 +791,9 @@ async function collectReadyFirecrawlScrapeResults(
     });
 
     const statusCode = content?.metadata?.statusCode;
+    const markdown = await resolveFirecrawlMarkdownContent(content);
     if (
-      !content?.markdown ||
+      !markdown ||
       (statusCode !== undefined && (statusCode < 200 || statusCode >= 300))
     ) {
       continue;
@@ -795,7 +801,7 @@ async function collectReadyFirecrawlScrapeResults(
 
     const sourceUrl = scrapeJob.url;
 
-    const normalizedMarkdown = normalizeWebsiteMarkdown(content.markdown);
+    const normalizedMarkdown = normalizeWebsiteMarkdown(markdown);
     if (!shouldImportWebsitePage({ pageUrl: sourceUrl, markdown: normalizedMarkdown })) {
       continue;
     }
@@ -805,7 +811,7 @@ async function collectReadyFirecrawlScrapeResults(
     const title = buildWebsiteDocumentTitle({
       pageUrl: sourceUrl,
       title:
-        (typeof content.metadata?.title === "string" ? content.metadata.title : undefined) ??
+        (typeof content?.metadata?.title === "string" ? content.metadata.title : undefined) ??
         discoveredCandidate?.title,
     });
 
@@ -856,6 +862,50 @@ async function listExistingWebsiteDocuments(
       businessId,
     },
   );
+}
+
+export function isWebsiteDocumentInScope(input: {
+  sourceUrl: string;
+  websiteUrl: string;
+}): boolean {
+  return normalizeWebsitePageUrl(input.sourceUrl, input.websiteUrl) !== null;
+}
+
+function filterWebsiteDocumentsForScope(
+  documents: Array<Doc<"knowledge_documents">>,
+  websiteUrl: string,
+): Array<Doc<"knowledge_documents"> & { sourceUrl: string }> {
+  return documents.filter((document): document is Doc<"knowledge_documents"> & { sourceUrl: string } => {
+    return (
+      typeof document.sourceUrl === "string" &&
+      isWebsiteDocumentInScope({
+        sourceUrl: document.sourceUrl,
+        websiteUrl,
+      })
+    );
+  });
+}
+
+export async function resolveFirecrawlMarkdownContent(
+  content: FirecrawlScrapeContent | null,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (typeof content?.markdown === "string") {
+    return content.markdown;
+  }
+
+  if (!content?.markdownFileUrl) {
+    return null;
+  }
+
+  const response = await fetchImpl(content.markdownFileUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch Firecrawl markdown file (${response.status} ${response.statusText}).`,
+    );
+  }
+
+  return await response.text();
 }
 
 function isIndexedWebsiteDocumentCurrent(document: Doc<"knowledge_documents">): boolean {
@@ -1101,7 +1151,10 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
       throw new Error(`Website crawl ended with status ${crawl.status}.`);
     }
 
-    const existingWebsiteDocuments = await listExistingWebsiteDocuments(ctx, job.businessId);
+    const existingWebsiteDocuments = filterWebsiteDocumentsForScope(
+      await listExistingWebsiteDocuments(ctx, job.businessId),
+      job.websiteUrl,
+    );
     const existingDocumentsBySourceUrl = new Map(
       existingWebsiteDocuments
         .filter((document): document is Doc<"knowledge_documents"> & { sourceUrl: string } =>
@@ -1527,7 +1580,10 @@ export const importCloudflareWebsiteCrawlResults = internalAction({
   ): Promise<WebsiteImportSummary> => {
     const commitChanges = args.commitChanges ?? true;
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
-    const existingWebsiteDocuments = await listExistingWebsiteDocuments(ctx, job.businessId);
+    const existingWebsiteDocuments = filterWebsiteDocumentsForScope(
+      await listExistingWebsiteDocuments(ctx, job.businessId),
+      job.websiteUrl,
+    );
     const existingDocumentsBySourceUrl = new Map(
       existingWebsiteDocuments
         .filter((document): document is Doc<"knowledge_documents"> & { sourceUrl: string } =>

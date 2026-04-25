@@ -3070,6 +3070,150 @@ describe("website onboarding and ingestion", () => {
     expect(staleStorage).toBeNull();
   });
 
+  it("does not prune website documents that belong to a different imported site", async () => {
+    const t = createConvexHarness();
+    const subject = "website-cross-site-prune-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "phone_number",
+      subject,
+    });
+
+    const { currentSiteDocumentId, otherSiteDocumentId, otherSiteStorageId, websiteIngestionJobId } =
+      await t.run(async (ctx) => {
+        const currentMarkdown = "# About\n" + "current ".repeat(900);
+        const currentStorageId = await ctx.storage.store(
+          new Blob([currentMarkdown], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const otherSiteMarkdown = "# Menu\n" + "other ".repeat(900);
+        const otherSiteStorageId = await ctx.storage.store(
+          new Blob([otherSiteMarkdown], {
+            type: "text/markdown;charset=utf-8",
+          }),
+        );
+        const currentSiteDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://example.com/about",
+          title: "About",
+          extractedTextStorageId: currentStorageId,
+          mimeType: "text/markdown",
+          textContent: "Current about preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: await sha256Hex(normalizeWebsiteMarkdown(currentMarkdown)),
+          indexedEntryId: "entry-about",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+        const otherSiteDocumentId = await ctx.db.insert("knowledge_documents", {
+          businessId,
+          section: "knowledge",
+          sourceType: "website",
+          sourceUrl: "https://other.com/menu",
+          title: "Menu",
+          extractedTextStorageId: otherSiteStorageId,
+          mimeType: "text/markdown",
+          textContent: "Other site menu preview",
+          status: "indexed",
+          processingProgress: 100,
+          tags: [],
+          importance: 85,
+          contentHash: await sha256Hex(normalizeWebsiteMarkdown(otherSiteMarkdown)),
+          indexedEntryId: "entry-other-menu",
+          indexVersion: KNOWLEDGE_INDEX_VERSION,
+        });
+
+        const websiteIngestionJobId = await ctx.db.insert("website_ingestion_jobs", {
+          businessId,
+          websiteUrl: "https://example.com",
+          provider: "cloudflare_browser_run",
+          status: "crawling",
+          crawlMode: "browser",
+          fallbackTriggered: false,
+          pageLimit: 40,
+          depth: 3,
+          importedCount: 0,
+          indexedCount: 0,
+          errorCount: 0,
+        });
+
+        return {
+          currentSiteDocumentId,
+          otherSiteDocumentId,
+          otherSiteStorageId,
+          websiteIngestionJobId,
+        };
+      });
+
+    const currentMarkdown = "# About\n" + "current ".repeat(900);
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        result: {
+          status: "completed",
+          total: 1,
+          records: [
+            {
+              url: "https://example.com/about",
+              status: "completed",
+              markdown: currentMarkdown,
+              metadata: {
+                title: "About",
+              },
+            },
+          ],
+        },
+      }),
+    } as Response);
+
+    const summary = await t.action(
+      internal.ai.context.websiteIngestionActions.importCloudflareWebsiteCrawlResults,
+      {
+        websiteIngestionJobId,
+        cloudflareJobId: "cf-job-cross-site-prune-1",
+        crawlMode: "browser",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      importedDocumentCount: 1,
+      weak: false,
+    });
+    expect(enqueueActionBatchMock).not.toHaveBeenCalled();
+    expect(ragDeleteMock).not.toHaveBeenCalledWith(expect.anything(), {
+      entryId: "entry-other-menu",
+    });
+
+    const remainingCurrentSite = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://example.com/about",
+      },
+    );
+    expect(String(remainingCurrentSite?._id)).toBe(String(currentSiteDocumentId));
+
+    const remainingOtherSite = await t.query(
+      internal.ai.context.websiteIngestion.getWebsiteKnowledgeDocumentBySourceUrl,
+      {
+        businessId,
+        sourceUrl: "https://other.com/menu",
+      },
+    );
+    expect(String(remainingOtherSite?._id)).toBe(String(otherSiteDocumentId));
+
+    const preservedOtherSiteStorage = await t.run(async (ctx) => {
+      return await ctx.db.system.get("_storage", otherSiteStorageId);
+    });
+    expect(preservedOtherSiteStorage).not.toBeNull();
+  });
+
   it("keeps crawled low-signal pages instead of pruning them as stale", async () => {
     const t = createConvexHarness();
     const subject = "website-low-signal-owner";
