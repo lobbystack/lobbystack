@@ -291,6 +291,17 @@ async function indexKnowledgeDocumentById(
       ],
     });
 
+    const latestDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
+      documentId,
+    });
+
+    if (!latestDocument || !isKnowledgeDocumentActive(latestDocument)) {
+      if (result.status !== "replaced") {
+        await rag.delete(ctx, { entryId: result.entryId as never });
+      }
+      return null;
+    }
+
     if (result.status === "ready") {
       await ctx.runMutation(internal.ai.context.knowledge.markDocumentIndexed, {
         documentId,
@@ -301,20 +312,16 @@ async function indexKnowledgeDocumentById(
       });
       await enqueuePostHogEventBestEffort(ctx, {
         eventName: "knowledge.document_indexed",
-        businessId: document.businessId,
-        distinctId: getPostHogDistinctIdForBusinessSystem(String(document.businessId)),
-        groupKey: getPostHogBusinessGroupKey(String(document.businessId)),
+        businessId: latestDocument.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(latestDocument.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(latestDocument.businessId)),
         properties: {
           documentId: String(documentId),
-          sourceType: document.sourceType,
-          section: document.section,
+          sourceType: latestDocument.sourceType,
+          section: latestDocument.section,
         },
       });
     } else {
-      const latestDocument = await ctx.runQuery(internal.ai.context.knowledge.getDocumentForIndexing, {
-        documentId,
-      });
-
       if (
         latestDocument &&
         (latestDocument.status !== "indexed" ||

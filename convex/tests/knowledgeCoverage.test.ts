@@ -685,6 +685,75 @@ describe("Knowledge coverage", () => {
     expect(indexedDocument?.error).toBe("RAG unavailable");
   });
 
+  it("removes the RAG entry when a document is disabled during indexing", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { documentId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "knowledge-disable-during-index",
+        name: "Knowledge Disable During Index",
+      });
+      await insertReceptionistProfile(ctx, {
+        businessId,
+        businessName: "Knowledge Disable During Index",
+      });
+
+      const documentId = await ctx.db.insert("knowledge_documents", {
+        businessId,
+        sourceType: "upload",
+        title: "Race document",
+        textContent: "This document is disabled while its embedding is being created.",
+        status: "queued",
+        tags: [],
+        importance: 5,
+        active: true,
+      });
+
+      return { documentId };
+    });
+
+    const ragAddSpy = vi
+      .spyOn(componentsModule.rag, "add")
+      .mockImplementationOnce(async () => {
+        await t.run(async (ctx) => {
+          await ctx.db.patch(documentId, {
+            active: false,
+            indexedEntryId: undefined,
+            indexVersion: undefined,
+          });
+        });
+
+        return {
+          status: "ready",
+          entryId: "entry-disabled-race" as never,
+        } as unknown as RagAddResult;
+      });
+    const ragDeleteSpy = vi.spyOn(componentsModule.rag, "delete").mockResolvedValue(undefined);
+
+    try {
+      await t.action(internal.ai.context.knowledge.indexKnowledgeDocument, {
+        documentId,
+      });
+
+      const storedDocument = await t.run(async (ctx) => {
+        return await ctx.db.get(documentId);
+      });
+
+      expect(ragDeleteSpy).toHaveBeenCalledWith(expect.anything(), {
+        entryId: "entry-disabled-race",
+      });
+      expect(storedDocument).toMatchObject({
+        active: false,
+        status: "indexing",
+      });
+      expect(storedDocument?.indexedEntryId).toBeUndefined();
+      expect(storedDocument?.indexVersion).toBeUndefined();
+    } finally {
+      ragAddSpy.mockRestore();
+      ragDeleteSpy.mockRestore();
+    }
+  });
+
   it("keeps public knowledge retrieval isolated to the caller's business", async () => {
     const t = convexTest(schema, convexModules);
     const subject = "knowledge-owner";
