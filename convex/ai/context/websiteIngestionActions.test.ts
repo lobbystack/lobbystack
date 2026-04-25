@@ -1,11 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   isWebsiteDocumentInScope,
   resolveFirecrawlMarkdownContent,
+  startOrReuseFirecrawlScrapeJob,
 } from "./websiteIngestionActions";
 
 describe("websiteIngestionActions helpers", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("treats only same-site website documents as in scope", () => {
     expect(
       isWebsiteDocumentInScope({
@@ -71,5 +76,73 @@ describe("websiteIngestionActions helpers", () => {
         fetchMock,
       ),
     ).rejects.toThrow("Failed to fetch Firecrawl markdown file (503 Service Unavailable).");
+  });
+
+  it("reuses an in-flight Firecrawl scrape for the same page", async () => {
+    const ctx = {
+      runQuery: vi.fn().mockResolvedValue({
+        _id: "scrape_pending",
+        status: "scraping",
+        expiresAt: Date.now() + 60_000,
+        formats: ["markdown"],
+      }),
+      runMutation: vi.fn(),
+    };
+
+    await expect(
+      startOrReuseFirecrawlScrapeJob(
+        ctx as unknown as Parameters<typeof startOrReuseFirecrawlScrapeJob>[0],
+        "https://example.com/about",
+      ),
+    ).resolves.toEqual({ jobId: "scrape_pending" });
+
+    expect(ctx.runMutation).not.toHaveBeenCalled();
+  });
+
+  it("starts Firecrawl scrapes without forcing cache invalidation", async () => {
+    vi.stubEnv("FIRECRAWL_API_KEY", "test-firecrawl-key");
+    const ctx = {
+      runQuery: vi.fn().mockResolvedValue(null),
+      runMutation: vi.fn().mockResolvedValue({ jobId: "scrape_new" }),
+    };
+
+    await expect(
+      startOrReuseFirecrawlScrapeJob(
+        ctx as unknown as Parameters<typeof startOrReuseFirecrawlScrapeJob>[0],
+        "https://example.com/menu",
+      ),
+    ).resolves.toEqual({ jobId: "scrape_new" });
+
+    expect(ctx.runMutation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        options: expect.not.objectContaining({
+          force: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it("recovers when another import creates the scrape job first", async () => {
+    vi.stubEnv("FIRECRAWL_API_KEY", "test-firecrawl-key");
+    const ctx = {
+      runQuery: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          _id: "scrape_raced",
+          status: "pending",
+          expiresAt: Date.now() + 60_000,
+          formats: ["markdown"],
+        }),
+      runMutation: vi.fn().mockRejectedValue(new Error("Scrape already in progress for this URL.")),
+    };
+
+    await expect(
+      startOrReuseFirecrawlScrapeJob(
+        ctx as unknown as Parameters<typeof startOrReuseFirecrawlScrapeJob>[0],
+        "https://example.com/contact",
+      ),
+    ).resolves.toEqual({ jobId: "scrape_raced" });
   });
 });

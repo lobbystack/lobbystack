@@ -53,6 +53,15 @@ type FirecrawlScrapeJobState = {
   jobId: string;
 };
 
+type FirecrawlScrapeRecord = {
+  _id: string;
+  status: "pending" | "scraping" | "completed" | "failed";
+  expiresAt: number;
+  formats: Array<string>;
+};
+
+type FirecrawlScrapeJobCtx = Pick<ActionCtx, "runMutation" | "runQuery">;
+
 type CloudflareCrawlRecord = {
   url?: string;
   status?: string | number;
@@ -722,18 +731,7 @@ async function ensureFirecrawlScrapeJobs(
       continue;
     }
 
-    const scrapeJob = await ctx.runMutation(firecrawlScrape.api.lib.startScrape, {
-      url: candidate.sourceUrl,
-      apiKey: requireFirecrawlApiKey(),
-      options: {
-        formats: ["markdown"],
-        ttlMs: FIRECRAWL_SCRAPE_TTL_MS,
-        force: true,
-        onlyMainContent: true,
-        waitFor: FIRECRAWL_SCRAPE_WAIT_FOR_MS,
-        proxy: "auto",
-      },
-    });
+    const scrapeJob = await startOrReuseFirecrawlScrapeJob(ctx, candidate.sourceUrl);
 
     nextScrapeJobs.push({
       url: candidate.sourceUrl,
@@ -758,6 +756,71 @@ async function ensureFirecrawlScrapeJobs(
   }
 
   return nextScrapeJobs;
+}
+
+function canReuseFirecrawlScrapeRecord(
+  scrape: FirecrawlScrapeRecord | null,
+  now: number,
+): scrape is FirecrawlScrapeRecord {
+  if (!scrape) {
+    return false;
+  }
+
+  if (scrape.status === "pending" || scrape.status === "scraping") {
+    return true;
+  }
+
+  return (
+    scrape.status === "completed" &&
+    scrape.expiresAt > now &&
+    scrape.formats.includes("markdown")
+  );
+}
+
+async function getReusableFirecrawlScrapeJobId(
+  ctx: FirecrawlScrapeJobCtx,
+  sourceUrl: string,
+): Promise<string | null> {
+  const scrape = await ctx.runQuery(firecrawlScrape.api.lib.getByUrl, {
+    url: sourceUrl,
+  });
+
+  if (!canReuseFirecrawlScrapeRecord(scrape, Date.now())) {
+    return null;
+  }
+
+  return String(scrape._id);
+}
+
+export async function startOrReuseFirecrawlScrapeJob(
+  ctx: FirecrawlScrapeJobCtx,
+  sourceUrl: string,
+): Promise<{ jobId: string }> {
+  const existingJobId = await getReusableFirecrawlScrapeJobId(ctx, sourceUrl);
+  if (existingJobId) {
+    return { jobId: existingJobId };
+  }
+
+  try {
+    return await ctx.runMutation(firecrawlScrape.api.lib.startScrape, {
+      url: sourceUrl,
+      apiKey: requireFirecrawlApiKey(),
+      options: {
+        formats: ["markdown"],
+        ttlMs: FIRECRAWL_SCRAPE_TTL_MS,
+        onlyMainContent: true,
+        waitFor: FIRECRAWL_SCRAPE_WAIT_FOR_MS,
+        proxy: "auto",
+      },
+    });
+  } catch (error) {
+    const racedJobId = await getReusableFirecrawlScrapeJobId(ctx, sourceUrl);
+    if (racedJobId) {
+      return { jobId: racedJobId };
+    }
+
+    throw error;
+  }
 }
 
 async function collectReadyFirecrawlScrapeResults(
