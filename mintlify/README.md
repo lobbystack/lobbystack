@@ -12,17 +12,25 @@ The site uses `docs.json` for navigation, branding, colors, and global settings.
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview documentation changes locally:
+Preview documentation changes locally with the Mintlify CLI:
 
 ```bash
-npm i -g mint
+pnpm docs:dev
 ```
 
-Run the preview from this directory, where `docs.json` is located:
+The preview starts at `http://localhost:3000` and reloads as you edit. You can also run it from this directory:
 
 ```bash
 cd mintlify
-mint dev
+pnpm dev
+```
+
+Useful commands:
+
+```bash
+pnpm docs:dev:no-open
+pnpm docs:validate
+pnpm docs:broken-links
 ```
 
 View your local preview at `http://localhost:3000`.
