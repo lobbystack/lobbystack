@@ -1,0 +1,25 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "LobbyStack",
+  "description": "LobbyStack Help Center and developer documentation.",
+  "colors": {
+    "primary": "#8f414e",
+    "light": "#6b6868",
+    "dark": "#d2c5c7"
+  },
+  "fonts": {
+    "family": "Geist"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/morencyr/LobbyStack"
+    }
+  },
+  "navigation": {
+    "pages": [
+      "introduction"
+    ]
+  }
+}
