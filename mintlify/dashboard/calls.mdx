@@ -31,7 +31,7 @@ Open a call to see three tabs:
 | --- | --- |
 | **Transcript** | Saved caller and assistant turns when available. |
 | **Recording** | Audio player after call audio is uploaded, or a processing state while audio is still being prepared. |
-| **Details** | Outcome, follow-up task, Twilio Call SID, gateway session, disposition, and provider status. |
+| **Details** | Outcome, follow-up task, call status, transfer status, and timing details. |
 
 ## Follow-up tasks
 
@@ -39,10 +39,10 @@ If the receptionist takes a callback or follow-up message during a call, the tas
 
 ## Recordings
 
-LobbyStack stores a recording when the voice gateway uploads one for the call. While audio is still being prepared, the dashboard shows a processing state.
+LobbyStack stores a recording when call audio is available. While audio is still being prepared, the dashboard shows a processing state.
 
 <Note>
-  Recording playback appears after the voice gateway finishes uploading the call audio. Use your deployment and compliance settings to manage recording and retention policy.
+  Recording playback appears after the call audio finishes processing. Use your workspace and compliance settings to manage recording and retention policy.
 </Note>
 
 ## Outcomes

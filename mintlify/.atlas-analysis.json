@@ -74,23 +74,5 @@
     "Full call transcripts, recordings, and summaries",
     "Two-way AI SMS add-on",
     "Cloud-hosted and self-hostable"
-  ],
-  "publicApiSurface": [
-    "GET /calls/recordings/download",
-    "GET /messages/attachments/download",
-    "GET /integrations/google/callback",
-    "POST /twilio/sms/inbound",
-    "POST /twilio/sms/status",
-    "POST /preview/stream",
-    "POST /voice/context",
-    "POST /voice/call/start",
-    "POST /voice/call/transcript",
-    "POST /voice/call/complete",
-    "POST /voice/call/prepare-transfer",
-    "POST /voice/tool/find-availability",
-    "POST /voice/tool/check-availability",
-    "POST /voice/tool/book-appointment",
-    "POST /voice/tool/search-knowledge",
-    "POST /voice/tool/take-message"
   ]
 }

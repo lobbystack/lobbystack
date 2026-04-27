@@ -24,7 +24,7 @@ Changes apply to new calls and future SMS automation. They do not rewrite calls 
 
 ## How configuration is used
 
-LobbyStack builds a business context snapshot from your Agent settings. The voice gateway fetches that snapshot when a live call starts, so callers get stable behavior for the duration of the call.
+LobbyStack prepares the saved Agent settings for each live call, so callers get stable behavior for the duration of the conversation.
 
 For SMS, LobbyStack uses the current business context and the saved conversation state when generating AI replies.
 
