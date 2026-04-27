@@ -59,8 +59,9 @@
     "zod": "^3.24.2"
   },
   "scripts": {
-    "dev": "concurrently -n convex,web,voice \"pnpm dev:convex\" \"pnpm dev:web\" \"pnpm dev:voice\"",
+    "dev": "concurrently -n convex,web,voice,docs \"pnpm dev:convex\" \"pnpm dev:web\" \"pnpm dev:voice\" \"pnpm dev:docs\"",
     "dev:convex": "convex dev",
+    "dev:docs": "pnpm --filter @lobbystack/docs dev:no-open",
     "docs:dev": "pnpm --filter @lobbystack/docs dev",
     "docs:dev:no-open": "pnpm --filter @lobbystack/docs dev:no-open",
     "docs:validate": "pnpm --filter @lobbystack/docs validate",
