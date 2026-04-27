@@ -1,0 +1,92 @@
+---
+title: "Track caller profiles and contact history"
+description: "Every caller gets a contact profile automatically. View call history, messages, appointments, and activity in one place for each contact."
+---
+
+The **Contacts** page is a directory of every person who has called your LobbyStack number. LobbyStack creates a contact profile the first time someone calls, and keeps it updated as they call again, receive SMS messages, or book appointments. You can search your contacts, view their full interaction history, and manage their status.
+
+<Note>
+  All plans include unlimited contacts. There is no cap on the number of caller profiles LobbyStack stores for your account.
+</Note>
+
+## How contacts are created
+
+<Note>
+  Contacts are created automatically. You do not need to add callers manually — LobbyStack creates a profile the first time a number calls your receptionist and links all future interactions to that same profile.
+</Note>
+
+When a new number calls, LobbyStack:
+
+1. Creates a contact record linked to that phone number
+2. Captures the caller's name if the receptionist collected it during the call
+3. Links the call, any transcript, and any follow-up task to the contact
+
+On every subsequent call or SMS from the same number, LobbyStack adds to the existing profile rather than creating a duplicate.
+
+## What the Contacts page shows
+
+Each row in the contacts list includes:
+
+- **Contact name** — the name captured during a call, or "Unknown contact" if it was never collected. A **Blocked** badge appears if the contact has been blocked.
+- **Channels** — the caller's phone number, and their email address if it was collected
+- **Activity** — badges showing the total number of calls and messages associated with this contact
+- **Appointments** — the number of appointments booked by this contact
+- **Last interaction** — the date and time of the most recent call, message, or appointment
+
+Use the search bar at the top of the page to filter by name, phone number, or email address.
+
+## Open a contact profile
+
+Click any row to open the contact's detail view. The header shows the contact's name, phone number, email, and the date they were first seen. A row of counters shows the total number of calls, messages, appointments, and conversations.
+
+The detail view has three tabs: **Activity**, **Appointments**, and **Details**.
+
+### Activity tab
+
+The **Activity** tab shows a chronological feed of every interaction with this contact:
+
+- **Inbound call** — shows the call duration and status (completed, failed, or in progress). Click a call entry to open the full call detail view, including the transcript and recording.
+- **SMS message** — shows whether the message was inbound (from the caller) or outbound (from your receptionist or your team)
+- **Appointment** — shows the service name, staff member (if assigned), and appointment status
+
+### Appointments tab
+
+The **Appointments** tab lists every appointment this contact has booked through LobbyStack. Each entry shows:
+
+- Service name and staff member
+- Date and time
+- Appointment status (booked, confirmed, completed, or cancelled)
+- Booking channel (voice, SMS, or dashboard)
+- Calendar sync state
+
+### Details tab
+
+The **Details** tab contains the contact's full profile and system information:
+
+- **Contact information** — name, phone, email, timezone, and preferred language
+- **Blocking status** — whether the contact is blocked, when they were blocked, and who blocked them
+- **SMS consent** — the contact's SMS opt-in or opt-out status, when it was last updated, and how it was set (for example, via a STOP or START keyword)
+- **System info** — the contact ID and the date the profile was created
+
+## Block or delete a contact
+
+Each contact row and the contact detail view has an actions menu. From the menu you can:
+
+- **Block** the contact to prevent their future calls and messages from being handled by your receptionist
+- **Unblock** a previously blocked contact to restore normal handling
+- **Delete** the contact and all associated records
+
+<Warning>
+  Deleting a contact is permanent. All linked calls, messages, and appointment records are removed and cannot be recovered.
+</Warning>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="View calls" icon="phone" href="/dashboard/calls">
+    Open any call linked to a contact, including the transcript and recording.
+  </Card>
+  <Card title="View messages" icon="message" href="/dashboard/messages">
+    Read SMS conversations and send replies to a contact.
+  </Card>
+</CardGroup>

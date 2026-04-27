@@ -1,0 +1,111 @@
+---
+title: "Build your AI receptionist's knowledge base in LobbyStack"
+description: "Add FAQs, upload documents, and import your website so your AI receptionist can answer caller questions accurately and confidently."
+---
+
+The **Knowledge** section is where you teach your receptionist what it needs to know about your business. Every time a caller asks a question — about your hours, services, pricing, policies, or anything else — the receptionist draws on the content you add here to form its answer. The more relevant information you provide, the more confidently and accurately it responds.
+
+You can add knowledge in three ways: type it in directly as a text snippet, upload a document file, or import content from your website by URL.
+
+<Note>
+  Knowledge base storage is limited to **100 MB** on the Free plan and **2 GB** on Pro. Large document libraries should be curated — prioritize content that reflects the questions callers actually ask.
+</Note>
+
+## Three ways to add knowledge
+
+<Tabs>
+  <Tab title="Text snippet">
+    A text snippet is the quickest way to add a single piece of information — an FAQ answer, a policy statement, a note about parking, or anything else that comes up in calls. Each snippet has a title, content body, and optional tags to help the receptionist retrieve the right information at the right moment.
+
+    ### How to add a text snippet
+
+    <Steps>
+      <Step title="Open the Knowledge section">
+        In the dashboard sidebar, go to **Receptionist**, then click **Knowledge**.
+      </Step>
+      <Step title="Click Add Knowledge">
+        Click the **Add Knowledge** button in the top-right corner of the page.
+      </Step>
+      <Step title="Choose Text">
+        Select the text entry option from the dialog that opens.
+      </Step>
+      <Step title="Fill in the fields">
+        Enter a **Title** (a short label for this entry, such as "Business hours") and the **Content** (the full answer or information). Optionally add **Tags** as comma-separated keywords to improve retrieval accuracy.
+      </Step>
+      <Step title="Save">
+        Click **Save**. The snippet appears in your knowledge table immediately and is available on the next call.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Upload a document">
+    You can upload existing documents — staff handbooks, service menus, FAQ sheets, or any file that contains information your receptionist should know. LobbyStack extracts the text content and indexes it automatically.
+
+    **Supported file types:** PDF, DOCX, TXT, Markdown (`.md`)
+
+    **Maximum file size:** 10 MB per document
+
+    ### How to upload a document
+
+    <Steps>
+      <Step title="Open the Knowledge section">
+        In the dashboard sidebar, go to **Receptionist**, then click **Knowledge**.
+      </Step>
+      <Step title="Open the upload dialog">
+        Click the **Add Knowledge** menu and select **Upload document**.
+      </Step>
+      <Step title="Select your file">
+        Drag and drop your file onto the upload area, or click **Choose file** to browse. Only PDF, DOCX, TXT, and Markdown files are accepted.
+      </Step>
+      <Step title="Set a title and tags">
+        The **Title** field pre-fills with your file name — edit it if needed. Add comma-separated **Tags** to help the receptionist find this document during relevant calls.
+      </Step>
+      <Step title="Save">
+        Click **Save**. The document enters a processing queue and shows an indexing progress indicator. It becomes available to the receptionist once indexing completes.
+      </Step>
+    </Steps>
+
+    <Warning>
+      Files larger than 10 MB will be rejected. Split large documents into smaller, topic-focused files before uploading.
+    </Warning>
+  </Tab>
+  <Tab title="Import from website">
+    If your business website already contains the information callers ask about — service descriptions, team bios, FAQs, pricing pages — you can import it directly by URL. LobbyStack crawls your site using Firecrawl, extracts the text content from each page, and indexes it automatically. You do not need to copy and paste anything.
+
+    ### How to import your website
+
+    <Steps>
+      <Step title="Open the Knowledge section">
+        In the dashboard sidebar, go to **Receptionist**, then click **Knowledge**.
+      </Step>
+      <Step title="Open the website import dialog">
+        Click the **Add Knowledge** menu and select **Import from website**.
+      </Step>
+      <Step title="Enter your website URL">
+        Type or paste your website URL into the **Website URL** field. You can enter your homepage to crawl the full site, or a specific page URL to import just that section.
+      </Step>
+      <Step title="Submit the import">
+        Click **Import website**. LobbyStack queues a crawl job and displays a progress indicator in your knowledge table. Crawling and indexing can take a few minutes depending on the size of your site.
+      </Step>
+    </Steps>
+
+    <Note>
+      The crawl imports all publicly accessible pages reachable from the URL you provide. Pages behind a login, paywalls, or robots.txt exclusions will not be imported.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Managing your knowledge entries
+
+All three knowledge types appear in the same table on the **Knowledge** page. Each entry shows its title, a content preview, its current status (queued, indexing, indexed, or error), and the date it was added.
+
+You can:
+
+- **Disable** an entry without deleting it — useful for seasonal content or information you want to pause temporarily
+- **Re-enable** a disabled entry at any time
+- **Delete** an entry to remove it permanently from the knowledge base
+- **Click a document row** to expand a text preview of the extracted content
+- **Search** across all entries using the search bar at the top of the table
+
+<Tip>
+  Keep your knowledge base focused on what callers actually ask. Too much irrelevant content can reduce retrieval accuracy. Review your entries periodically and remove anything outdated.
+</Tip>

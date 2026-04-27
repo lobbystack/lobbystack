@@ -1,0 +1,148 @@
+---
+title: "Environment variables for self-hosting LobbyStack"
+description: "Complete reference for environment variables needed to configure a self-hosted LobbyStack deployment, grouped by service with descriptions and setup guidance."
+---
+
+LobbyStack is configured entirely through environment variables. This page lists every variable you need to set for a self-hosted deployment, grouped by the service they belong to. Required variables must be set before LobbyStack will function. Optional variables unlock specific features and can be added later.
+
+<Info>
+Some variables are set on your Convex deployment (backend), some are build-time variables for the web dashboard, and some are runtime secrets for the voice gateway. The groupings below indicate which service uses each variable.
+</Info>
+
+---
+
+## Core
+
+These variables are required for all three components of your deployment to work together.
+
+| Variable | Required | Description |
+|---|---|---|
+| `CONVEX_URL` | Yes | The URL of your Convex deployment, e.g. `https://your-deployment.convex.cloud`. Found in your Convex dashboard after creating a project. |
+| `CONVEX_SITE_URL` | Yes | The HTTP actions URL for your Convex deployment, e.g. `https://your-deployment.convex.site`. Found alongside `CONVEX_URL` in the Convex dashboard. |
+| `VITE_CONVEX_URL` | Yes | Build-time copy of `CONVEX_URL` for the web dashboard (Vite). Set this when building the web app. |
+| `VITE_CONVEX_SITE_URL` | Yes | Build-time copy of `CONVEX_SITE_URL` for the web dashboard (Vite). |
+| `SITE_URL` | Yes | The public URL of your web dashboard, e.g. `https://app.yourdomain.com`. Used by Convex Auth to generate password reset and email confirmation links. |
+| `VOICE_GATEWAY_BASE_URL` | Yes | The public HTTPS URL of your voice gateway, e.g. `https://your-voice-gateway.fly.dev`. Twilio will call this URL when a call arrives. |
+| `INTERNAL_SERVICE_TOKEN` | Yes | A secret token shared between the voice gateway and Convex backend. Generate a long random string and set the same value in both. |
+| `SESSION_ENCRYPTION_KEY` | Yes | Used to encrypt session data. Generate a random secret and keep it consistent across deployments. |
+| `JWT_PRIVATE_KEY` | Yes | Private key for JWT signing, used by Convex Auth. Generated during Convex Auth setup. |
+| `JWKS` | Yes | JSON Web Key Set for JWT verification, used by Convex Auth. Generated during Convex Auth setup. |
+| `DEPLOYMENT_MODE` | Yes | Set to `production` for a live deployment. Controls whether mock providers and test modes are active. |
+| `PORT` | No | Port the voice gateway listens on. Defaults to `3001`. |
+
+---
+
+## Twilio
+
+Twilio provides your dedicated phone number, handles inbound and outbound voice calls, and sends SMS messages. All Twilio variables are required for phone functionality.
+
+| Variable | Required | Description |
+|---|---|---|
+| `TWILIO_ACCOUNT_SID` | Yes | Your Twilio account SID. Found on the Twilio Console dashboard. Starts with `AC`. |
+| `TWILIO_AUTH_TOKEN` | Yes | Your Twilio auth token. Found on the Twilio Console dashboard alongside the account SID. |
+| `TWILIO_API_KEY` | Yes | A Twilio API key SID for making programmatic requests. Create one in **Twilio Console** → **Account** → **API keys**. |
+| `TWILIO_API_SECRET` | Yes | The secret corresponding to your Twilio API key. Shown only once at creation time. |
+| `TWILIO_ALERT_SMS_FROM` | Yes | The Twilio phone number or messaging service SID used to send call summary alert SMS messages to your team. |
+| `TWILIO_MESSAGING_SERVICE_SID` | No | A Twilio Messaging Service SID, used for two-way AI SMS if you enable that feature. |
+| `TWILIO_VERIFY_SERVICE_SID` | No | A Twilio Verify Service SID, used for phone number verification flows. |
+
+<Tip>
+After your voice gateway is deployed, configure your Twilio phone number's voice webhook to point to `https://your-voice-gateway.example.com/twilio/voice/inbound` using HTTP POST.
+</Tip>
+
+---
+
+## OpenAI
+
+OpenAI powers the AI voice conversations through the Realtime API.
+
+| Variable | Required | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | Yes | Your OpenAI API key. Created in the OpenAI platform under **API keys**. |
+| `OPENAI_REALTIME_MODEL` | No | The OpenAI Realtime model to use for voice calls. Defaults to `gpt-realtime`. |
+| `OPENAI_REALTIME_VOICE` | No | The voice persona for the AI receptionist. Defaults to `marin`. |
+| `OPENAI_TRANSCRIPTION_MODEL` | No | Model used for call transcription. Defaults to `gpt-4o-mini-transcribe`. |
+
+---
+
+## Billing (Polar)
+
+Polar powers subscription billing. This is optional — you only need it if you want to manage subscription billing for your own users, or if you are operating a multi-tenant deployment where businesses pay for access.
+
+| Variable | Required | Description |
+|---|---|---|
+| `POLAR_ORGANIZATION_TOKEN` | No | Your Polar organization API token. Created in the Polar dashboard under **Settings** → **API**. Keep this backend-only. |
+| `POLAR_WEBHOOK_SECRET` | No | The webhook signing secret from your Polar webhook configuration. Used to verify incoming webhook payloads. |
+| `POLAR_SERVER` | No | Set to `production` for live billing or `sandbox` for testing. Must match the environment your token and product IDs belong to. |
+| `POLAR_PRO_PRODUCT_ID` | No | The Polar product ID for your Pro plan product. |
+| `POLAR_AI_SMS_ADDON_PRODUCT_ID` | No | The Polar product ID for the AI SMS monthly add-on product. |
+| `POLAR_AI_SMS_SETUP_PRODUCT_ID` | No | The Polar product ID for the one-time AI SMS setup fee product. |
+
+---
+
+## Email (Resend)
+
+Resend sends transactional emails for auth flows — specifically password reset and email change confirmation. Without Resend configured, those flows will not deliver email in production.
+
+| Variable | Required | Description |
+|---|---|---|
+| `RESEND_API_KEY` | No | Your Resend API key. Created in the Resend dashboard under **API Keys**. |
+| `EMAIL_FROM_ADDRESS` | No | The sender address for auth emails, e.g. `noreply@yourdomain.com`. Must be a domain verified in your Resend account. |
+
+---
+
+## Calendar integrations
+
+These variables enable Google Calendar and Microsoft Outlook calendar sync for appointment booking.
+
+### Google Calendar
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | No | OAuth 2.0 client ID from Google Cloud Console. |
+| `GOOGLE_CLIENT_SECRET` | No | OAuth 2.0 client secret from Google Cloud Console. |
+| `GOOGLE_REDIRECT_URI` | No | The OAuth callback URL registered in Google Cloud Console, pointing to your Convex HTTP endpoint. |
+
+### Microsoft Outlook
+
+| Variable | Required | Description |
+|---|---|---|
+| `MICROSOFT_CLIENT_ID` | No | Application (client) ID from Azure App Registration. |
+| `MICROSOFT_CLIENT_SECRET` | No | Client secret from Azure App Registration. |
+| `MICROSOFT_TENANT_ID` | No | Azure tenant ID. Use `common` to support any Microsoft account (default). |
+| `MICROSOFT_REDIRECT_URI` | No | The OAuth callback URL registered in your Azure App Registration. |
+
+---
+
+## Embeddings (Google Gemini)
+
+LobbyStack can use Google Gemini to generate text embeddings for knowledge base search. Without Gemini configured, knowledge base search uses a fallback method.
+
+| Variable | Required | Description |
+|---|---|---|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | No | Your Google AI Studio API key. Created at [aistudio.google.com](https://aistudio.google.com). |
+| `GEMINI_EMBEDDING_MODEL` | No | Gemini model to use for embeddings. Defaults to `gemini-embedding-001`. |
+| `GEMINI_TEXT_MODEL` | No | Gemini model to use for text generation tasks. Defaults to `gemini-3.1-flash-lite-preview`. |
+
+---
+
+## Website import (Firecrawl)
+
+Firecrawl enables the website knowledge import feature, which crawls a URL and adds the content to your knowledge base automatically.
+
+| Variable | Required | Description |
+|---|---|---|
+| `FIRECRAWL_API_KEY` | No | Your Firecrawl API key. Created at [firecrawl.dev](https://firecrawl.dev). |
+
+---
+
+## Web dashboard build variables
+
+The following variables are used at build time by the web dashboard (Vite). Set them in your hosting platform's build environment (for example, in Cloudflare Workers Builds under **Settings** → **Build**).
+
+| Variable | Description |
+|---|---|
+| `VITE_CONVEX_URL` | Your Convex deployment URL. Required. |
+| `VITE_CONVEX_SITE_URL` | Your Convex site URL. Required. |
+| `VITE_APP_NAME` | Display name for the app. Defaults to `LobbyStack`. |
+| `VITE_DEPLOYMENT_MODE` | Set to `production` for a live deployment. |

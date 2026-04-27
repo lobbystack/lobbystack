@@ -1,0 +1,71 @@
+---
+title: "Connect Google Calendar for appointment booking"
+description: "Link your Google Calendar to LobbyStack so your AI receptionist can check availability and book appointments in real time during calls."
+---
+
+Connecting Google Calendar lets your AI receptionist check your availability and book appointments on the spot — without any back-and-forth. When a caller asks for an appointment, the AI reads your calendar in real time, offers open slots, and creates the booking automatically. All you need to do is connect your Google account and choose which calendar to use.
+
+## How the integration works
+
+LobbyStack uses Google's OAuth flow to connect to your calendar securely. You authorize access once, then select the calendar you want the AI to read and write to. During each call, the AI checks that calendar live for open time slots and books the appointment directly, so your calendar stays up to date without any manual entry.
+
+<Note>
+Booking requires at least one Service to be configured in your receptionist settings. If you have not set up your services yet, do that first — the AI needs to know what types of appointments you offer before it can schedule anything. See [Services and booking](/receptionist/services-and-booking) for details.
+</Note>
+
+## Connect Google Calendar
+
+<Steps>
+  <Step title="Open Integrations settings">
+    Go to **Settings** in your LobbyStack dashboard, then select **Integrations** from the sidebar.
+  </Step>
+  <Step title="Connect your Google account">
+    Find the Google Calendar card and click **Connect**. You will be redirected to Google's sign-in page.
+  </Step>
+  <Step title="Authorize access">
+    Sign in with the Google account that owns the calendar you want to use. Review the permissions LobbyStack requests — these allow it to read and create events — then click **Allow**.
+  </Step>
+  <Step title="Select a calendar">
+    After authorization, you are returned to the **Integrations** page. The Google Calendar card now shows a **Connected** status. Click the card to open the calendar settings, then choose the calendar you want LobbyStack to use from the dropdown. Click **Save calendar** to confirm your selection.
+  </Step>
+</Steps>
+
+## Change which calendar is used
+
+If you have multiple Google calendars — for example, a personal calendar and a business calendar — you can switch between them at any time.
+
+1. Go to **Settings > Integrations** and click the Google Calendar card.
+2. Open the calendar dropdown and select a different calendar.
+3. Click **Save calendar**.
+
+The AI will start using the newly selected calendar immediately for all future calls.
+
+## Connection status
+
+After connecting, the Google Calendar card shows one of two statuses:
+
+| Status | What it means |
+|---|---|
+| **Connected** | Your calendar is linked and the AI can read and write events. |
+| **Reconnect required** | Your authorization has expired or been revoked. Click **Reconnect** to re-authorize. |
+
+If you see **Reconnect required**, the AI cannot check your availability or book appointments until you reconnect. Follow the same steps as the initial connection.
+
+## Disconnect Google Calendar
+
+To remove the integration:
+
+1. Go to **Settings > Integrations** and click the Google Calendar card.
+2. Click **Disconnect**.
+3. Confirm the disconnection when prompted.
+
+Once disconnected, the AI will no longer check your calendar or book appointments. You can reconnect at any time by following the steps above.
+
+<CardGroup cols={2}>
+  <Card title="Services and booking" icon="calendar-check" href="/receptionist/services-and-booking">
+    Define the appointment types your AI receptionist can book.
+  </Card>
+  <Card title="Outlook Calendar" icon="calendar-days" href="/integrations/outlook-calendar">
+    Outlook and Microsoft 365 calendar integration — coming soon.
+  </Card>
+</CardGroup>

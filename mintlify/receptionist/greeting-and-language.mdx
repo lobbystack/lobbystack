@@ -1,0 +1,57 @@
+---
+title: "Set your AI receptionist's greeting and language settings"
+description: "Customize the opening message your AI receptionist speaks, set your default language, and add a transfer number for urgent call handoffs."
+---
+
+The **Basic Settings** page is the first stop when configuring your receptionist. Here you set the greeting message that plays the moment a call is answered, choose the default language for the conversation, and provide a phone number the receptionist can warm-transfer callers to when a situation calls for human attention.
+
+## Greeting message
+
+The greeting is the first thing a caller hears. Keep it friendly, brief, and representative of your brand. Something like "Thanks for calling Bright Smile Dental — I'm your AI receptionist. How can I help you today?" works well.
+
+### How to update your greeting
+
+<Steps>
+  <Step title="Open Basic Settings">
+    In the dashboard sidebar, go to **Receptionist**, then click **Basic Settings**.
+  </Step>
+  <Step title="Edit the greeting field">
+    Find the **Greeting** field at the top of the page and type your new greeting message. There is no character limit, but shorter greetings (one to two sentences) lead to a better caller experience.
+  </Step>
+  <Step title="Save your changes">
+    Click **Save** next to the greeting field. A confirmation message appears briefly when the save succeeds.
+  </Step>
+</Steps>
+
+<Tip>
+  Your greeting is a good place to set caller expectations. If your AI receptionist can book appointments, mention it: "I can also schedule appointments for you."
+</Tip>
+
+## Default language
+
+The **Default Language** selector lets you choose whether your receptionist opens conversations in English or French. This controls the language used for the greeting and initial prompts.
+
+| Option | Value |
+|--------|-------|
+| English | `en` |
+| French | `fr` |
+
+Select the language that matches the primary language your callers use. The setting saves automatically as soon as you change the selector — no separate **Save** button needed.
+
+### Automatic language detection
+
+Beyond the default, your receptionist detects the language a caller is speaking and switches automatically. LobbyStack supports English, French, Spanish, and more at runtime — no additional configuration is required. If a caller responds in Spanish, the receptionist continues the conversation in Spanish regardless of your default setting.
+
+<Note>
+  Automatic language detection happens at the start of each call. The default language you configure is the fallback used before the caller speaks.
+</Note>
+
+## Transfer phone number
+
+The **Transfer Number** is the phone number your receptionist dials when it needs to connect a caller to a human — for example, when a caller indicates an emergency, requests a person by name, or when your rules require escalation.
+
+Enter a valid phone number in the **Transfer Number** field and click **Save**. You can leave this field blank if you do not want to enable warm transfers, but callers who ask for a human will instead be offered a message or callback.
+
+<Warning>
+  If you leave the transfer number empty, your receptionist cannot perform a live warm transfer. Make sure your call-handling rules account for this — for example, by directing urgent callers to leave a message or receive a callback.
+</Warning>

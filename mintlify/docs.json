@@ -2,14 +2,19 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "almond",
   "name": "LobbyStack",
-  "description": "LobbyStack Help Center and developer documentation.",
+  "description": "Help Center and developer documentation for LobbyStack.",
   "colors": {
     "primary": "#8f414e",
     "light": "#6b6868",
     "dark": "#d2c5c7"
   },
+  "favicon": "/favicon.svg",
   "fonts": {
     "family": "Geist"
+  },
+  "logo": {
+    "light": "/logo.svg",
+    "dark": "/logo.svg"
   },
   "navbar": {
     "primary": {
@@ -18,8 +23,62 @@
     }
   },
   "navigation": {
-    "pages": [
-      "introduction"
+    "tabs": [
+      {
+        "tab": "Help Center",
+        "groups": [
+          {
+            "group": "Quick start",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "getting-started/account-setup",
+              "getting-started/claim-your-number"
+            ]
+          },
+          {
+            "group": "Receptionist",
+            "pages": [
+              "receptionist/overview",
+              "receptionist/greeting-and-language",
+              "receptionist/call-handling-rules",
+              "receptionist/knowledge-base",
+              "receptionist/services-and-booking"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/google-calendar",
+              "integrations/outlook-calendar",
+              "integrations/sms"
+            ]
+          },
+          {
+            "group": "Dashboard",
+            "pages": [
+              "dashboard/calls",
+              "dashboard/messages",
+              "dashboard/contacts"
+            ]
+          },
+          {
+            "group": "Account and billing",
+            "pages": [
+              "billing/plans",
+              "billing/usage"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/environment-variables",
+              "self-hosting/providers"
+            ]
+          }
+        ]
+      }
     ]
   }
 }

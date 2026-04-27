@@ -1,0 +1,59 @@
+---
+title: "Self-host LobbyStack on your own infrastructure"
+description: "Run LobbyStack on your own infrastructure for full data ownership and deployment flexibility. Self-hosted and cloud versions share the same features."
+---
+
+LobbyStack is open source and designed to be self-hosted from day one. The cloud-hosted version and the self-hosted version share the same codebase and the same features — the difference is where the software runs and who manages it. If you need full control over your data, want to run LobbyStack inside your own infrastructure, or are evaluating it as part of an Enterprise deployment, self-hosting is a supported path.
+
+<Warning>
+Self-hosting requires technical setup. You will need to create accounts with several third-party services, configure environment variables, and deploy at least two services (the voice gateway and the web dashboard). If you want to get started quickly without managing infrastructure, the managed cloud version at [LobbyStack.com](https://lobbystack.com) is available on a free plan with no credit card required.
+</Warning>
+
+---
+
+## What you are deploying
+
+A self-hosted LobbyStack installation consists of three components working together.
+
+**Convex backend**
+
+Convex is the primary backend for LobbyStack. It stores all your business data — contacts, call history, appointments, knowledge base content, and settings — and runs the serverless functions that power the application. You deploy Convex to the Convex cloud platform (not to your own servers), but your data lives in a Convex project that belongs to your account.
+
+**Voice gateway**
+
+The voice gateway is a Node.js service that handles live phone calls. It connects Twilio (for phone number management and call routing) with the OpenAI Realtime API (for the AI voice conversations). You deploy this service to a platform that can run a persistent Node.js process with a stable public HTTPS URL — Fly.io is a common choice and a Docker image is provided. This service must be reachable by Twilio's servers to receive incoming calls.
+
+**Web dashboard**
+
+The web dashboard is the React application you and your team use to manage settings, review call history, update your knowledge base, and configure your AI receptionist. It is a static web app that connects to your Convex backend. You can deploy it to Cloudflare Workers (recommended), any static hosting provider, or serve it yourself.
+
+---
+
+## What you need to get started
+
+To self-host LobbyStack you need accounts with three required services:
+
+- **Convex** — for the backend and database. A free tier is available at [convex.dev](https://convex.dev).
+- **Twilio** — for phone numbers, inbound voice calls, and SMS. Sign up at [twilio.com](https://twilio.com).
+- **OpenAI** — for AI voice conversations via the Realtime API. Sign up at [platform.openai.com](https://platform.openai.com).
+
+Several additional services are optional and can be added later to enable specific features like email notifications, Google Calendar sync, or website knowledge import. See [Third-party providers](/self-hosting/providers) for the full list.
+
+---
+
+## Same features as cloud
+
+Self-hosted LobbyStack has the same receptionist features as the managed cloud version: dedicated phone numbers, 24/7 call answering, appointment booking, knowledge base answers, call summaries, transcripts, caller profiles, and calendar integrations. The only difference is that billing and subscription management (Polar) are optional — you manage your own infrastructure costs directly.
+
+---
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Environment variables" icon="sliders" href="/self-hosting/environment-variables">
+    A complete reference of all environment variables needed to configure your self-hosted deployment.
+  </Card>
+  <Card title="Third-party providers" icon="plug" href="/self-hosting/providers">
+    Accounts and credentials you need from Convex, Twilio, OpenAI, and optional services.
+  </Card>
+</CardGroup>

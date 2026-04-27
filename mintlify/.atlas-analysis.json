@@ -1,0 +1,98 @@
+{
+  "projectType": "saas",
+  "projectName": "LobbyStack",
+  "projectDescription": "LobbyStack is an open-source AI receptionist that answers calls, books appointments, and routes callers for clinics, salons, repair shops, and other service businesses.",
+  "theme": "almond",
+  "primaryColor": "#8f414e",
+  "lightColor": "#6b6868",
+  "darkColor": "#d2c5c7",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "getting-started/account-setup",
+              "getting-started/claim-your-number"
+            ]
+          },
+          {
+            "group": "Receptionist",
+            "pages": [
+              "receptionist/overview",
+              "receptionist/greeting-and-language",
+              "receptionist/call-handling-rules",
+              "receptionist/knowledge-base",
+              "receptionist/services-and-booking"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/google-calendar",
+              "integrations/outlook-calendar",
+              "integrations/sms"
+            ]
+          },
+          {
+            "group": "Dashboard",
+            "pages": [
+              "dashboard/calls",
+              "dashboard/messages",
+              "dashboard/contacts"
+            ]
+          },
+          {
+            "group": "Billing & Plans",
+            "pages": [
+              "billing/plans",
+              "billing/usage"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/environment-variables",
+              "self-hosting/providers"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "24/7 AI call answering with natural voice",
+    "Automated appointment booking via Google Calendar and Outlook",
+    "Missed-call SMS follow-up",
+    "Multilingual support (English, French, Spanish, and more)",
+    "Custom greeting and call-handling rules",
+    "Knowledge base from documents and website import",
+    "Warm call transfer for urgent or VIP callers",
+    "Full call transcripts, recordings, and summaries",
+    "Two-way AI SMS add-on",
+    "Cloud-hosted and self-hostable"
+  ],
+  "publicApiSurface": [
+    "GET /calls/recordings/download",
+    "GET /messages/attachments/download",
+    "GET /integrations/google/callback",
+    "POST /twilio/sms/inbound",
+    "POST /twilio/sms/status",
+    "POST /preview/stream",
+    "POST /voice/context",
+    "POST /voice/call/start",
+    "POST /voice/call/transcript",
+    "POST /voice/call/complete",
+    "POST /voice/call/prepare-transfer",
+    "POST /voice/tool/find-availability",
+    "POST /voice/tool/check-availability",
+    "POST /voice/tool/book-appointment",
+    "POST /voice/tool/search-knowledge",
+    "POST /voice/tool/take-message"
+  ]
+}
