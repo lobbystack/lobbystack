@@ -4,9 +4,9 @@
   "name": "LobbyStack",
   "description": "Help Center and developer documentation for LobbyStack.",
   "colors": {
-    "primary": "#8f414e",
-    "light": "#6b6868",
-    "dark": "#d2c5c7"
+    "primary": "#0B0B0D",
+    "light": "#0B0B0D",
+    "dark": "#FFFFFF"
   },
   "favicon": "/favicon.svg",
   "fonts": {
