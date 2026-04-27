@@ -50,7 +50,6 @@
             "group": "Integrations",
             "pages": [
               "integrations/google-calendar",
-              "integrations/outlook-calendar",
               "integrations/sms"
             ]
           },
@@ -70,7 +69,7 @@
             ]
           },
           {
-            "group": "Self-Hosting",
+            "group": "Self-hosting",
             "pages": [
               "self-hosting/overview",
               "self-hosting/environment-variables",

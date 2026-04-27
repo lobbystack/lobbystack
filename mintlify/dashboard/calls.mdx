@@ -1,91 +1,57 @@
 ---
-title: "View and manage calls in your dashboard"
-description: "Browse every inbound call, play back recordings, read full transcripts, and review AI summaries and outcomes — all from the Calls page."
+title: "Review calls"
+description: "Use the Calls page to review inbound calls, outcomes, transcripts, recordings, and follow-up tasks."
 ---
 
-The **Calls** page is your complete record of every inbound call handled by your LobbyStack receptionist. Each row shows the caller's name or number, a one-line purpose summary, and the date and time of the call. You can search across all calls and play recordings inline without leaving the list.
+The **Calls** page is the call history for your active business. It shows inbound calls handled by LobbyStack, including status, outcome, transcript availability, and recording availability.
+
+## What the call list shows
+
+Each row can include:
+
+- Caller name or unknown caller label.
+- Caller phone number.
+- Purpose or outcome summary.
+- Start time.
+- Status and disposition.
+- Transcript indicator.
+- Audio playback when a recording is available.
+
+The page header also shows how many calls are currently live.
+
+## Search and filter
+
+Use the search field to find calls by caller name, phone number, or outcome text. Use the status filter to narrow the list.
+
+## Call detail view
+
+Open a call to see three tabs:
+
+| Tab | What it shows |
+| --- | --- |
+| **Transcript** | Saved caller and assistant turns when available. |
+| **Recording** | Audio player if a recording was stored; otherwise pending or unavailable state. |
+| **Details** | Outcome, follow-up task, Twilio Call SID, gateway session, disposition, and provider status. |
+
+## Follow-up tasks
+
+If the receptionist takes a callback or follow-up message during a call, the task appears on the call detail page. Operators can mark the task done from the dashboard.
+
+## Recordings
+
+LobbyStack stores a recording when the voice gateway uploads one for the call. If no recording URL is available yet, the dashboard shows either pending or unavailable.
 
 <Note>
-  All plans include unlimited call history. Your full call log is always available, with no rolling deletion window unless you configure a custom data retention policy.
+  Recording availability depends on the voice gateway and storage state. There is not currently a public dashboard toggle for recording retention on the Rules page.
 </Note>
 
-## What the Calls page shows
+## Outcomes
 
-Each row in the call list includes:
+Call summaries can include outcomes such as:
 
-- **Caller** — the contact name if LobbyStack recognized the caller, or "Unknown caller" for first-time callers
-- **Number** — the caller's phone number in local format
-- **Purpose** — a one-line outcome summary: a booked appointment, a message taken, a transfer result, or a transcript preview when no structured outcome was captured
-- **Time** — the date and time the call started
-- **Play button** — appears when a recording is available; click to start playback inline
-
-A live indicator in the page header shows how many calls are in progress right now.
-
-## Search and filter calls
-
-Use the search bar at the top of the **Calls** page to find a specific call. The search matches against caller name, phone number, and the purpose summary. Results update as you type.
-
-## Open a call detail view
-
-Click any row to open the full detail view for that call. The detail view has three tabs: **Transcript**, **Recording**, and **Details**.
-
-### Transcript tab
-
-Every call includes a full word-for-word transcript of the conversation between your receptionist and the caller. Messages from the caller appear on the left; responses from your AI receptionist appear on the right.
-
-### Recording tab
-
-If call recording is enabled for your account, the **Recording** tab shows an audio player with play, pause, and download controls. The player displays the call duration and lets you scrub to any point in the recording.
-
-<Info>
-  Call recording is off by default. To enable it, go to **Receptionist** → **Call handling rules** and turn on call recording. Recordings are stored securely and subject to your data retention settings.
-</Info>
-
-If recording is enabled but the audio is still processing, the tab shows a "pending" message. If recording was not enabled when the call occurred, the tab indicates the recording is unavailable.
-
-### Details tab
-
-The **Details** tab shows call metadata and any follow-up task the receptionist created:
-
-- **Follow-up task** — if the caller left a message or a task was flagged, it appears here with a title and notes. You can mark it as done directly from this tab.
-- **Call duration** — the total length of the call
-- **Call ID** — the internal identifier for the call, useful if you contact support
-
-## Call timeline
-
-Below the metadata row, each call detail view includes a visual timeline of call events: received, connected, transferred (if applicable), and completed or failed. Each step shows a timestamp and a status indicator.
-
-## Play a recording from the list view
-
-You can play a recording without opening the detail view:
-
-<Steps>
-  <Step title="Find the call in the list">
-    Scroll or search for the call you want to hear.
-  </Step>
-  <Step title="Click the play button">
-    The play button appears in the rightmost column if a recording is available. Click it to start playback.
-  </Step>
-  <Step title="Use the audio player">
-    A player bar appears at the top of the page. Use it to pause, resume, or download the recording. Clicking the play button again pauses playback.
-  </Step>
-</Steps>
-
-## Call outcomes explained
-
-The **Purpose** column summarizes what happened on each call:
-
-<CardGroup cols={2}>
-  <Card title="Appointment booked" icon="calendar-check" href="/receptionist/services-and-booking">
-    The caller selected a service and time. The summary shows the service name and start time.
-  </Card>
-  <Card title="Message taken" icon="messages" href="/dashboard/messages">
-    The caller left a message. The summary shows the message content.
-  </Card>
-  <Card title="Transfer completed" icon="phone-volume" href="/receptionist/call-handling-rules">
-    The call was transferred to your team. The summary shows the transfer result.
-  </Card>
-  <Card title="No structured outcome" icon="circle-info" href="/dashboard/calls">
-    A transcript preview is shown when the call did not result in a booking, message, or transfer.
-  </Card>
-</CardGroup>
+- Appointment booked.
+- Scheduling started but not completed.
+- Message taken.
+- Transfer completed, busy, or failed.
+- Completed without a structured outcome.
+- Failed, canceled, no-answer, or technical issue.

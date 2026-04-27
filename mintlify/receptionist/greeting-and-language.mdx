@@ -1,57 +1,61 @@
 ---
-title: "Set your AI receptionist's greeting and language settings"
-description: "Customize the opening message your AI receptionist speaks, set your default language, and add a transfer number for urgent call handoffs."
+title: "Set greeting, language, and transfers"
+description: "Configure the opening line, default customer language, and default transfer number for your AI receptionist."
 ---
 
-The **Basic Settings** page is the first stop when configuring your receptionist. Here you set the greeting message that plays the moment a call is answered, choose the default language for the conversation, and provide a phone number the receptionist can warm-transfer callers to when a situation calls for human attention.
+Open **Receptionist** > **AI settings** to edit the basic behavior used by the receptionist.
 
-## Greeting message
+## Greeting
 
-The greeting is the first thing a caller hears. Keep it friendly, brief, and representative of your brand. Something like "Thanks for calling Bright Smile Dental — I'm your AI receptionist. How can I help you today?" works well.
+The greeting is the opening line your receptionist uses when answering a call or starting a conversation. Keep it short and specific.
 
-### How to update your greeting
+Example:
+
+> Thanks for calling Bright Smile Dental. I'm the AI receptionist. How can I help?
 
 <Steps>
-  <Step title="Open Basic Settings">
-    In the dashboard sidebar, go to **Receptionist**, then click **Basic Settings**.
+  <Step title="Open AI settings">
+    In the dashboard sidebar, go to **Receptionist**. The AI settings page opens by default.
   </Step>
-  <Step title="Edit the greeting field">
-    Find the **Greeting** field at the top of the page and type your new greeting message. There is no character limit, but shorter greetings (one to two sentences) lead to a better caller experience.
+  <Step title="Edit the greeting">
+    Update the **Greeting** field.
   </Step>
-  <Step title="Save your changes">
-    Click **Save** next to the greeting field. A confirmation message appears briefly when the save succeeds.
+  <Step title="Save">
+    Click **Save** beside the greeting field.
   </Step>
 </Steps>
 
-<Tip>
-  Your greeting is a good place to set caller expectations. If your AI receptionist can book appointments, mention it: "I can also schedule appointments for you."
-</Tip>
+## Default customer language
 
-## Default language
-
-The **Default Language** selector lets you choose whether your receptionist opens conversations in English or French. This controls the language used for the greeting and initial prompts.
+The **Default customer language** setting supports:
 
 | Option | Value |
-|--------|-------|
+| --- | --- |
 | English | `en` |
 | French | `fr` |
 
-Select the language that matches the primary language your callers use. The setting saves automatically as soon as you change the selector — no separate **Save** button needed.
-
-### Automatic language detection
-
-Beyond the default, your receptionist detects the language a caller is speaking and switches automatically. LobbyStack supports English, French, Spanish, and more at runtime — no additional configuration is required. If a caller responds in Spanish, the receptionist continues the conversation in Spanish regardless of your default setting.
+Choose the language your receptionist should use when the caller's preference is unknown.
 
 <Note>
-  Automatic language detection happens at the start of each call. The default language you configure is the fallback used before the caller speaks.
+  Runtime language handling is currently built around English and French. Do not document or promise other languages unless the app adds them as supported runtime locales.
 </Note>
 
-## Transfer phone number
+## Default transfer number
 
-The **Transfer Number** is the phone number your receptionist dials when it needs to connect a caller to a human — for example, when a caller indicates an emergency, requests a person by name, or when your rules require escalation.
+The **Default transfer number** is the phone number used when the receptionist performs a live handoff to a human.
 
-Enter a valid phone number in the **Transfer Number** field and click **Save**. You can leave this field blank if you do not want to enable warm transfers, but callers who ask for a human will instead be offered a message or callback.
+<Steps>
+  <Step title="Enter a number">
+    Add a complete phone number in the transfer number field.
+  </Step>
+  <Step title="Save">
+    Click **Save** beside the transfer number field.
+  </Step>
+  <Step title="Add rules if needed">
+    Use **Receptionist** > **Rules** to describe when the receptionist should transfer, take a message, or ask for callback details.
+  </Step>
+</Steps>
 
 <Warning>
-  If you leave the transfer number empty, your receptionist cannot perform a live warm transfer. Make sure your call-handling rules account for this — for example, by directing urgent callers to leave a message or receive a callback.
+  If no transfer number is saved, live transfers cannot complete. The receptionist can still take a callback or follow-up message.
 </Warning>

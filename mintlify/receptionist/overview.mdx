@@ -1,47 +1,39 @@
 ---
-title: "Configuring your LobbyStack AI receptionist dashboard"
-description: "Set up your LobbyStack AI receptionist: configure your greeting, language, knowledge base, call-handling rules, and bookable services from one dashboard."
+title: "Configure your receptionist"
+description: "Set the greeting, language, transfer number, knowledge, services, and rules your AI receptionist uses on calls and messages."
 ---
 
-The **Receptionist** section of your LobbyStack dashboard is where you teach your AI receptionist how to represent your business on every call. From here you control how it greets callers, what it knows about your business, how it handles edge cases like urgent calls and after-hours inquiries, and which appointment types it can book.
+The **Receptionist** section controls how your AI receptionist behaves. It is split into four areas: AI settings, Knowledge, Services, and Rules.
 
-Changes you make here do not affect calls already in progress. LobbyStack takes a snapshot of your configuration at the start of each new call, so any setting you save takes effect the next time someone dials in.
-
-## What's in this section
+Changes apply to new calls and future SMS automation. They do not rewrite calls or messages that already happened.
 
 <CardGroup cols={2}>
-  <Card
-    title="Greeting and language"
-    icon="comment-dots"
-    href="/receptionist/greeting-and-language"
-  >
-    Set the opening message callers hear, choose your default language, and configure the transfer number for urgent handoffs.
+  <Card title="Greeting and language" icon="comment-dots" href="/receptionist/greeting-and-language">
+    Set the opening line, default customer language, and default transfer number.
   </Card>
-  <Card
-    title="Call handling rules"
-    icon="list-check"
-    href="/receptionist/call-handling-rules"
-  >
-    Define when to escalate, transfer, take a message, or resolve — and how your receptionist behaves after hours.
+  <Card title="Knowledge base" icon="book-open" href="/receptionist/knowledge-base">
+    Add business information from text entries, documents, or a website import.
   </Card>
-  <Card
-    title="Knowledge base"
-    icon="book-open"
-    href="/receptionist/knowledge-base"
-  >
-    Add FAQs, upload documents, and import your website so your receptionist can answer questions accurately.
+  <Card title="Services and booking" icon="calendar-check" href="/receptionist/services-and-booking">
+    Add appointment types and the service information callers need.
   </Card>
-  <Card
-    title="Services and booking"
-    icon="calendar-check"
-    href="/receptionist/services-and-booking"
-  >
-    Define your appointment types so callers can book in real time during a call.
+  <Card title="Rules" icon="list-check" href="/receptionist/call-handling-rules">
+    Add operating instructions for transfers, callbacks, fallback behavior, and special cases.
   </Card>
 </CardGroup>
 
-## How configuration changes take effect
+## How configuration is used
 
-LobbyStack uses a snapshot-based approach to keep live calls stable. When a call begins, the system captures a point-in-time snapshot of your receptionist's profile — including your greeting, language, rules, and knowledge. Any edits you save in the dashboard apply to the **next** call, not to calls already in progress.
+LobbyStack builds a business context snapshot from your receptionist settings. The voice gateway fetches that snapshot when a live call starts, so callers get stable behavior for the duration of the call.
 
-This means you can update your configuration at any time without worrying about disrupting a caller mid-conversation.
+For SMS, LobbyStack uses the current business context and the saved conversation state when generating AI replies.
+
+## Minimum setup for real callers
+
+Before forwarding production calls, check that:
+
+- Your greeting names your business and sets the right expectation.
+- The default customer language is set to English or French.
+- A transfer number is saved if you want live human handoff.
+- Your knowledge entries include hours, location, services, pricing, policies, and common caller questions.
+- Your services, staff, hours, and Google Calendar are configured before you rely on appointment booking.

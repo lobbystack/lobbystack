@@ -9,3 +9,5 @@ drafts/
 # Source-only project files
 AGENTS.md
 .atlas-analysis.json
+CONTRIBUTING.md
+LICENSE

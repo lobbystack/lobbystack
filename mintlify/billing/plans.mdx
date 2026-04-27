@@ -1,127 +1,62 @@
 ---
-title: "Plans and pricing: Free, Pro, and Enterprise"
-description: "LobbyStack has three plans: Free (no credit card required), Pro at $15/month with usage-based overage, and Enterprise for multi-location needs."
+title: "Plans and billing"
+description: "Understand the hosted plan catalog currently represented in the LobbyStack app: Free, Pro, Enterprise, and self-host."
 ---
 
-LobbyStack is free to start. The Free plan gives you a dedicated phone number, 24/7 AI call answering, appointment booking, and all core receptionist features — no credit card required. When your call volume grows, upgrade to Pro for $15/month and pay only for what you use beyond the included quota. For businesses with multiple locations or custom deployment needs, Enterprise is available with tailored pricing.
+LobbyStack supports four plan states in the app:
 
-## Plans at a glance
-
-| Feature | Free | Pro | Enterprise |
-|---|---|---|---|
-| **Monthly price** | $0 | $15/mo | Custom |
-| **Voice minutes included** | 10 min | 80 min | Custom |
-| **Overage rate (voice)** | — | $0.18/min | Custom |
-| **Outbound call attempts** | 2 | 20 | Custom |
-| **Overage rate (outbound)** | — | $0.02/attempt | Custom |
-| **Alert SMS segments** | 10 | 50 | Custom |
-| **Overage rate (alert SMS)** | — | $0.02/segment | Custom |
-| **Knowledge storage** | 100 MB | 2 GB | Custom |
-| **Two-way AI SMS** | Not included | Add-on available | Custom |
-| **Support** | Community | Priority email | Dedicated implementation |
-| **Phone numbers** | 1 dedicated | 1 dedicated | Multiple |
-| **Hosting** | Managed cloud | Managed cloud | Cloud or self-hosted |
+- **Free** for hosted workspaces with capped included usage.
+- **Pro** for hosted workspaces with a monthly charge, included usage, and billable overages.
+- **Enterprise** for custom hosted arrangements.
+- **Self-host** for deployments that use your own providers and do not use hosted usage limits.
 
 <Note>
-Free plan usage is capped — calls stop when you reach your included quota. There are no overage charges on Free. Upgrade to Pro to continue receiving calls without interruption and unlock usage-based billing. See [Understanding usage and billing](/billing/usage) for details.
+  Hosted billing is powered by Polar. Checkout and customer portal access are available only when the deployment has Polar products and billing settings configured.
 </Note>
 
----
+## Hosted plans
 
-## Free
+| Plan | Monthly charge | Voice minutes | Alert SMS segments | Outbound calls | Knowledge storage | Overages |
+| --- | --- | --- | --- | --- | --- | --- |
+| Free | $0 | 10 min | 10 | 2 | 100 MB | No |
+| Pro | $15/month | 80 min | 50 | 20 | 2 GB | Yes |
+| Enterprise | Custom | Custom | Custom | Custom | Custom | Custom |
 
-The Free plan is designed to let you experience LobbyStack with real calls before committing to a subscription. No credit card is required to sign up.
+Pro overage rates in the current app catalog:
 
-**What's included:**
+| Usage type | Pro overage rate |
+| --- | --- |
+| Voice | $0.18 per extra minute |
+| Alert SMS | $0.02 per extra segment |
+| Outbound calls | $0.02 per extra attempt |
 
-- Dedicated phone number
-- 24/7 call answering
-- Caller details and message capture
-- Knowledge base answers
-- Unlimited appointment booking
-- Unlimited contacts
-- Unlimited call history and recordings
-- Caller profiles and notes
-- Unlimited call summaries and transcripts
-- Google Calendar and Outlook integrations
-- Missed-call follow-up
-- Website knowledge import
-- Urgent call handoff
-- After-hours answering
-- Community support
+## AI SMS add-on
 
-**Monthly usage quota:**
+AI SMS is represented as a Pro add-on.
 
-- 10 voice minutes
-- 2 outbound call attempts
-- 10 alert SMS segments
-- 100 MB knowledge storage
+| Item | Price |
+| --- | --- |
+| Monthly add-on | $5/month |
+| One-time setup fee | $19 |
+| Usage | $0.03 per SMS segment |
 
-**Not included on Free:** Two-way AI SMS, priority email support.
+AI SMS also requires compliance setup before hosted business-number messaging is ready.
 
----
+## Self-host
 
-## Pro
+Self-hosted workspaces use your own provider accounts and are not limited by hosted plan quotas inside LobbyStack. You are responsible for your own Twilio, OpenAI, Convex, hosting, email, calendar, and optional billing setup.
 
-Pro is built for businesses running LobbyStack in production. At $15/month you get 80 included voice minutes plus usage-based billing so you never hit a hard wall — your receptionist keeps answering calls and you pay for what you actually use.
+<Card title="Self-hosting overview" icon="server" href="/self-hosting/overview">
+  Review the provider and environment requirements for running your own deployment.
+</Card>
 
-**Everything in Free, plus:**
+## Manage billing
 
-- 80 voice minutes included, then $0.18/min
-- 20 outbound call attempts included, then $0.02/attempt
-- 50 alert SMS segments included, then $0.02/segment
-- 2 GB knowledge storage
-- Two-way AI SMS add-on eligibility
-- Priority email support
+In the dashboard, open **Settings** > **Billing** to:
 
-**Two-way AI SMS add-on (Pro only):**
-
-The two-way AI SMS add-on lets LobbyStack continue conversations with callers over text after a call ends. The add-on is $5/month plus a one-time $19 setup fee, then $0.03 per AI SMS segment.
-
-<Tip>
-To add two-way AI SMS, go to **Settings** → **Billing** → **Add-ons** and select **Enable** next to Two-way AI SMS.
-</Tip>
-
----
-
-## Enterprise
-
-Enterprise is for businesses that need multiple dedicated numbers, multi-location routing, or custom deployment arrangements. Pricing is custom and tailored to your usage and infrastructure requirements.
-
-**Everything in Pro, plus:**
-
-- Multiple dedicated phone numbers
-- Multi-location routing
-- Custom fallback and escalation rules
-- Cloud or self-hosted deployment planning
-- Data retention guidance
-- Dedicated implementation support
-- Custom voice, SMS, outbound, and storage limits
-
-Contact the LobbyStack team to discuss Enterprise pricing and requirements.
-
----
-
-## Frequently asked questions
-
-<AccordionGroup>
-  <Accordion title="How does Pro pricing work?">
-    Pro is $15/month and includes 80 voice minutes, 20 outbound call attempts, and 50 alert SMS segments each month. After those included amounts are used, usage is billed at $0.18/minute for voice, $0.02 per outbound call attempt, and $0.02 per alert SMS segment. The optional two-way AI SMS add-on is $5/month plus a $19 one-time setup fee, then $0.03 per AI SMS segment.
-  </Accordion>
-
-  <Accordion title="Can I switch plans or cancel anytime?">
-    Yes. Upgrade, downgrade, or cancel your plan at any time from **Settings** → **Billing**. When you downgrade, you keep your current plan until the end of the billing period. There are no cancellation fees.
-  </Accordion>
-
-  <Accordion title="Can I use LobbyStack for free?">
-    Yes. The Free plan lets you start without a monthly subscription. It includes 10 voice minutes, 2 outbound call attempts, and 10 alert SMS segments per month. When your quota is reached, calls stop until the next billing period. Upgrade to Pro for higher limits and usage-based billing so calls never stop.
-  </Accordion>
-
-  <Accordion title="What features are available today?">
-    LobbyStack answers calls, captures caller details, handles business questions from your knowledge base, qualifies leads, books appointments, routes urgent callers, sends call summaries by SMS or email, and supports recordings, transcripts, Google Calendar, Outlook, and multilingual conversations.
-  </Accordion>
-
-  <Accordion title="What payment processor does LobbyStack use?">
-    LobbyStack billing is powered by Polar. When you upgrade or manage your subscription, you are redirected to a Polar-hosted checkout or customer portal. Your payment details are handled by Polar and are never stored in LobbyStack directly.
-  </Accordion>
-</AccordionGroup>
+- See the current plan.
+- Start Pro checkout when configured.
+- Open the Polar customer portal when available.
+- Enable the AI SMS add-on when eligible.
+- Review recent billing transactions.
+- Complete SMS compliance setup for hosted AI SMS.

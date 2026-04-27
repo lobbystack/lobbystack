@@ -1,57 +1,44 @@
 ---
-title: "Define services and enable appointment booking"
-description: "Add the appointment types your business offers so your AI receptionist can check availability and book directly into your calendar during a call."
+title: "Set up services and booking"
+description: "Add service entries and connect Google Calendar before relying on appointment booking."
 ---
 
-The **Services** section is where you define the appointment types your business offers. When a caller says they want to book, your receptionist uses these service definitions to guide the booking conversation — asking which service the caller needs, checking your calendar for open slots, and confirming the appointment in real time.
-
-Services are structured data, not free-form knowledge. Unlike the knowledge base, which the receptionist reads to answer questions, services are what it actively uses to power the booking workflow.
+The **Services** page contains the appointment types or offerings your receptionist can discuss with callers. Services are managed with the same entry table pattern as Knowledge and Rules: a title, content, optional tags, status, and actions.
 
 <Warning>
-  Appointment booking requires a connected calendar. Your receptionist cannot check availability or confirm bookings until you connect a Google Calendar or Outlook calendar to your account. Set that up first under [Google Calendar](/integrations/google-calendar) or [Outlook Calendar](/integrations/outlook-calendar).
+  Appointment booking depends on more than a service entry. You also need bookable staff, business hours, service assignments, and a connected Google Calendar. If those are missing, the receptionist may answer service questions but cannot reliably book real appointments.
 </Warning>
 
-## What a service is
-
-A service is an appointment type your business offers — for example, "Initial Consultation", "Oil Change", "Haircut and Style", or "Dog Grooming". Each service has a name. The AI uses the service name during the call to match the caller's request to the right appointment type and present available times.
-
-Keep service names short and clear. Use the same terms your callers would use when describing what they need.
-
-## How to add a service
+## Add a service
 
 <Steps>
-  <Step title="Open the Services section">
-    In the dashboard sidebar, go to **Receptionist**, then click **Services**.
+  <Step title="Open Services">
+    Go to **Receptionist** > **Services**.
   </Step>
-  <Step title="Click Add">
-    Click the **Add** button in the top-right corner of the page.
+  <Step title="Add service">
+    Click **Add Service**.
   </Step>
-  <Step title="Enter the service name">
-    Type the name of the appointment type in the **Title** field — for example, "30-Minute Consultation". You can also add a **Content** description with additional details the receptionist should know about this service, and optional **Tags** to improve retrieval.
+  <Step title="Describe the service">
+    Enter a clear title, such as "Initial Consultation", and describe what the service includes. Add tags that match caller language if helpful.
   </Step>
   <Step title="Save">
-    Click **Save**. The service appears in your services table and is immediately available for the receptionist to use on the next call.
+    Click **Save**. The service appears in the Services table.
   </Step>
 </Steps>
 
-## How booking works during a call
+## Make services easier to book
 
-When a caller expresses interest in booking an appointment, here is what happens:
+Write service entries the way callers ask for them:
 
-1. The receptionist identifies the caller's needs and matches them to one of your defined services.
-2. It checks your connected calendar for available time slots.
-3. It offers the caller one or more options and confirms their preference.
-4. It books the appointment directly in your calendar.
-5. The caller receives confirmation, and your calendar updates automatically — no manual entry needed.
+- Use the plain customer-facing service name.
+- Include duration, eligibility, prep instructions, and pricing only when those details are stable.
+- Add synonyms in tags when callers use different words for the same service.
+- Keep unavailable or seasonal services disabled.
 
-<Note>
-  The receptionist handles the entire booking conversation. It asks for the caller's name and contact information, confirms the service and time, and closes the loop — all without you needing to be on the call.
-</Note>
+## Calendar booking
 
-## Managing your services
+Google Calendar is the supported customer-facing calendar integration today. When calendar booking is configured, LobbyStack can use connected calendar data to find available times and create appointments.
 
-All services appear in the **Services** table. You can disable a service temporarily — for example, during a period when you are not offering it — or delete it permanently. Disabled services are not presented to callers during booking conversations.
-
-<Tip>
-  If your business offers many services, use the **Tags** field to help the receptionist match caller language to the right service. For example, a service named "Annual Wellness Visit" might have tags like "checkup", "physical", and "yearly exam".
-</Tip>
+<Card title="Connect Google Calendar" icon="calendar" href="/integrations/google-calendar">
+  Connect a Google account and select the calendar LobbyStack should use for bookings.
+</Card>

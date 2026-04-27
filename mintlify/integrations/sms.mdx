@@ -1,89 +1,58 @@
 ---
-title: "SMS notifications and two-way AI messaging"
-description: "LobbyStack sends automatic call summaries by SMS on every plan. Upgrade to Pro to add two-way AI SMS so the AI can text callers directly."
+title: "SMS, AI replies, and compliance"
+description: "Understand the difference between SMS alerts, AI SMS, manual replies, attachments, opt-out handling, and 10DLC setup."
 ---
 
-LobbyStack includes two distinct SMS features. Every plan includes alert SMS — automated text summaries sent to you after each call so you never miss what happened while you were busy. The two-way AI SMS add-on goes further: it lets the AI have full text conversations with your callers, follow up after missed calls, and send appointment confirmations — all without you doing anything.
+LobbyStack has two SMS-related concepts:
 
-<Tabs>
-  <Tab title="Alert SMS">
-
-## Alert SMS
-
-Alert SMS is included on all plans — Free, Pro, and Enterprise — at no extra charge. After every call, LobbyStack sends a text message to your verified phone number with a structured summary of what happened: caller name, phone number, their reason for calling, and any key details the AI captured.
-
-### What you receive
-
-Each alert SMS includes:
-
-- Caller name and phone number
-- The purpose of the call (booking request, question, urgent issue, etc.)
-- A brief summary of the conversation
-- Any follow-up action flagged by the AI
-
-### How to enable alert SMS
-
-Alert SMS is on by default. To receive messages, your phone number must be verified in your account settings.
-
-1. Go to **Settings** in your dashboard.
-2. Confirm your phone number is listed and verified.
-3. If your number is not yet verified, follow the on-screen prompts to add and verify it.
-
-Once your number is verified, you will receive a summary text after every call automatically.
+- **Alert SMS**: system-sent SMS notifications, such as appointment confirmations or reminders, subject to the hosted alert SMS usage pool.
+- **AI SMS**: two-way AI-assisted SMS conversations with callers, available as a Pro add-on after setup and compliance approval.
 
 <Note>
-Alert SMS segments are included in your monthly plan allowance. Free plan includes 10 segments per month; Pro includes 50 segments per month, then $0.02 per additional segment. A long summary may use more than one segment.
+  SMS behavior depends on your plan, add-ons, compliance state, and sender configuration.
 </Note>
 
-  </Tab>
-  <Tab title="Two-way AI SMS">
+## Manual SMS conversations
 
-## Two-way AI SMS
+The **Messages** page shows SMS conversations linked to contacts. Operators can reply manually to SMS conversations and can attach supported files.
 
-Two-way AI SMS is an optional add-on available exclusively on the **Pro plan**. It enables the AI to send and receive text messages on your behalf — not just notify you, but actively converse with your customers.
+Messages support:
 
-<Note>
-Two-way AI SMS requires a **Pro plan** subscription. It is not available on the Free plan. You can upgrade from **Settings > Billing**.
-</Note>
+- Inbound and outbound SMS history.
+- Manual operator replies.
+- Attachments, including images and documents.
+- Delivery status.
+- Pausing or resuming AI automation for a conversation.
 
-### What two-way AI SMS does
+## AI SMS add-on
 
-With this add-on enabled, your AI receptionist can:
+AI SMS lets the receptionist respond to inbound text conversations using the same business context used for calls. The add-on is available on Pro when checkout is configured, and it requires SMS compliance setup before hosted business-number sending is ready.
 
-- **Follow up after missed calls** — automatically send a text to callers you couldn't answer in time
-- **Handle inbound SMS** — respond to customers who text your LobbyStack number directly
-- **Send appointment confirmations** — text a confirmation to the caller after a booking is made on a call
-- **Continue conversations** — answer follow-up questions from customers over text, using your knowledge base
+Current catalog pricing in the app:
 
-### Pricing
+| Item | Price |
+| --- | --- |
+| AI SMS monthly add-on | $5/month |
+| AI SMS setup fee | $19 one time |
+| AI SMS usage | $0.03 per segment |
 
-| Item | Cost |
-|---|---|
-| Monthly add-on fee | $5/month |
-| One-time setup fee | $19 |
-| Per segment | $0.03/segment |
+## SMS compliance
 
-A segment is a unit of SMS billing (roughly 160 characters for standard messages). Most short conversational messages are one segment.
+Hosted AI SMS uses A2P 10DLC compliance setup. In **Settings** > **Billing**, the SMS compliance section collects business identity, contact, address, campaign, sample message, and opt-in information.
 
-### How to add two-way AI SMS
+Until hosted SMS compliance is approved, routing may stay on a shared alert sender and AI SMS may remain blocked.
 
-1. Make sure you are on the **Pro plan**. If you are on Free, go to **Settings > Billing** to upgrade.
-2. From **Settings > Billing**, find the **Two-way AI SMS** add-on and click **Add**.
-3. Review the pricing and confirm the $19 setup fee and $5/month recurring charge.
-4. Once activated, the AI will begin handling inbound SMS and sending follow-ups automatically.
+## Opt-out handling
 
-### SMS compliance and opt-out
+LobbyStack tracks SMS consent. STOP-style keywords mark a contact as opted out, and START-style keywords can mark them subscribed again. You can review SMS consent on the contact detail page.
 
-Opt-out is handled automatically. When a customer replies STOP to any text from your LobbyStack number, they are immediately removed from further AI-initiated messages. You do not need to manage this manually.
-
-  </Tab>
-</Tabs>
+## Related pages
 
 <CardGroup cols={2}>
-  <Card title="Billing and plans" icon="credit-card" href="/billing/plans">
-    Compare Free, Pro, and Enterprise plans and upgrade at any time.
+  <Card title="Messages" icon="message" href="/dashboard/messages">
+    Review SMS conversations, send manual replies, and pause or resume AI handling.
   </Card>
-  <Card title="Connect Google Calendar" icon="calendar" href="/integrations/google-calendar">
-    Enable appointment booking alongside SMS for a complete experience.
+  <Card title="Plans and usage" icon="credit-card" href="/billing/usage">
+    See usage pools and metered segment behavior.
   </Card>
 </CardGroup>

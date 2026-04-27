@@ -1,47 +1,48 @@
 ---
 title: "Introduction"
-description: "LobbyStack answers every call, books appointments, and routes callers for clinics, salons, repair shops, and more. Get started in under 10 minutes."
+description: "LobbyStack helps service businesses answer calls, capture caller details, book appointments, and follow up from one operator dashboard."
 ---
 
-LobbyStack is an AI receptionist that picks up your phone 24/7, captures caller details, answers FAQs from your knowledge base, books appointments directly into your calendar, and sends you structured summaries by SMS or email. It works alongside your team — handling the calls so you can focus on the work.
+LobbyStack is an open-source AI receptionist for service businesses. It answers calls through a Twilio phone number, uses your saved business knowledge to respond to callers, can book appointments when services and Google Calendar are configured, and saves calls, messages, contacts, appointments, transcripts, and recordings in the dashboard.
+
+<Note>
+  These docs describe the features currently represented in the LobbyStack app and backend. If a feature is not documented here, treat it as not generally available yet.
+</Note>
 
 <CardGroup cols={2}>
-  <Card title="Quick Start" icon="rocket" href="/quickstart">
-    Go from signup to live AI receptionist in under 10 minutes.
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Create an account, verify your mobile number, import a website, and claim a phone number.
   </Card>
-  <Card title="Claim Your Number" icon="phone" href="/getting-started/claim-your-number">
-    Get a dedicated local number or forward your existing line.
+  <Card title="Configure your receptionist" icon="robot" href="/receptionist/overview">
+    Set the greeting, default customer language, transfer number, knowledge, services, and rules.
   </Card>
-  <Card title="Configure Your Receptionist" icon="robot" href="/receptionist/overview">
-    Customize greeting, language, call rules, and knowledge base.
+  <Card title="Connect Google Calendar" icon="calendar" href="/integrations/google-calendar">
+    Let LobbyStack check busy time and create bookings on a selected Google calendar.
   </Card>
-  <Card title="Calendar Integrations" icon="calendar" href="/integrations/google-calendar">
-    Connect Google Calendar or Outlook to enable booking.
+  <Card title="Review dashboard activity" icon="file-lines" href="/dashboard/calls">
+    Review calls, recordings, transcripts, messages, contacts, appointments, and follow-up tasks.
   </Card>
 </CardGroup>
 
-## What LobbyStack does
+## What LobbyStack can do today
 
-When a caller dials your LobbyStack number, the AI receptionist:
+- Answer inbound calls through a configured Twilio number.
+- Use a saved greeting and default customer language of English or French.
+- Search knowledge from text entries, uploaded documents, and imported public website pages.
+- Help callers with appointment scheduling when services, hours, staff, and Google Calendar are configured.
+- Transfer a live call to a configured phone number when transfer policy allows it.
+- Take callback or follow-up messages when a transfer is not possible or a caller wants staff to follow up.
+- Store calls, transcripts, recordings, contacts, SMS conversations, appointments, and dashboard summaries.
+- Support hosted billing and usage tracking for Free, Pro, Enterprise, and self-host plans.
 
-1. **Greets the caller** using your custom greeting and preferred language
-2. **Answers questions** by searching your knowledge base (FAQs, documents, website content)
-3. **Books appointments** by checking your calendar in real time and confirming a slot
-4. **Takes messages** with caller name, phone, intent, and urgency level
-5. **Transfers urgent callers** to your team via warm handoff
-6. **Sends you a summary** by SMS or email after every call
+## Main dashboard areas
 
-<CardGroup cols={2}>
-  <Card title="View Call Transcripts" icon="file-lines" href="/dashboard/calls">
-    Review every call with full transcripts and recordings.
-  </Card>
-  <Card title="Two-way SMS" icon="message" href="/integrations/sms">
-    Add the AI SMS add-on to handle text conversations too.
-  </Card>
-  <Card title="Pricing Plans" icon="credit-card" href="/billing/plans">
-    Start free, upgrade to Pro for $15/month plus usage.
-  </Card>
-  <Card title="Self-Hosting" icon="server" href="/self-hosting/overview">
-    Run LobbyStack on your own infrastructure with full control.
-  </Card>
-</CardGroup>
+| Area | What it is for |
+| --- | --- |
+| **Home** | KPIs, action-required follow-ups, upcoming appointments, and recent calls. |
+| **Calls** | Inbound call history, transcripts, recordings, outcomes, and follow-up tasks. |
+| **Messages** | SMS conversation history, manual replies, attachments, and AI handoff controls. |
+| **Contacts** | Caller profiles, activity, appointments, blocking, and SMS consent state. |
+| **Receptionist** | Greeting, language, transfer number, knowledge, services, and rules. |
+| **Integrations** | Google Calendar connection and calendar selection. |
+| **Settings** | Account, preferences, billing, usage, and SMS compliance setup. |

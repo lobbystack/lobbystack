@@ -1,199 +1,62 @@
 ---
-title: "Third-party providers required for self-hosting"
-description: "Every external service needed to self-host LobbyStack: required providers for phone and AI voice, plus optional services for email, calendar, and embeddings."
+title: "Third-party providers"
+description: "What each external provider does in a self-hosted LobbyStack deployment."
 ---
 
-Self-hosting LobbyStack means you connect your own accounts with several third-party services. Three providers are required to get a working installation: Convex for the backend, Twilio for phone calls, and OpenAI for AI voice. The rest are optional and unlock specific features you can add at any time.
+Self-hosting means connecting your own provider accounts. The provider list below is based on the current codebase and `.env.example`.
 
-For each provider below you will find what it does in LobbyStack, how to sign up, what credentials you receive, and which environment variables to configure. See [Environment variables](/self-hosting/environment-variables) for the full variable reference.
-
----
-
-## Required providers
+## Required for live calls
 
 <AccordionGroup>
-  <Accordion title="Convex — backend and database" icon="database">
-    Convex is the primary backend for LobbyStack. It stores all your data (contacts, calls, appointments, knowledge base, settings), runs the serverless functions that power the application, and handles authentication. Your data lives in a Convex project tied to your account.
+  <Accordion title="Convex - backend, database, auth, and HTTP endpoints" icon="database">
+    Convex stores business data, call records, contacts, appointments, knowledge, billing state, and app settings. It also runs backend functions and HTTP endpoints used by Twilio, the voice gateway, calendar callbacks, and downloads.
 
-    **Sign up:** [convex.dev](https://convex.dev) — a free tier is available.
-
-    **What you get:**
-    - A Convex project with a deployment URL and site URL
-    - Access to the Convex dashboard for monitoring and managing your data
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `CONVEX_URL` | Convex dashboard → your project → **Settings** → deployment URL |
-    | `CONVEX_SITE_URL` | Convex dashboard → your project → **Settings** → HTTP actions URL |
-    | `VITE_CONVEX_URL` | Same value as `CONVEX_URL`, set as a build variable |
-    | `VITE_CONVEX_SITE_URL` | Same value as `CONVEX_SITE_URL`, set as a build variable |
+    Configure `CONVEX_URL`, `CONVEX_SITE_URL`, and matching `VITE_` variables for the web dashboard.
   </Accordion>
 
-  <Accordion title="Twilio — phone numbers and calls" icon="phone">
-    Twilio provides your dedicated business phone number, handles all inbound and outbound voice calls, and delivers SMS messages. Every call your AI receptionist answers goes through Twilio.
+  <Accordion title="Twilio - phone numbers, voice, SMS, and verification" icon="phone">
+    Twilio provides phone numbers, inbound voice webhooks, Media Streams, SMS delivery, and phone verification.
 
-    **Sign up:** [twilio.com](https://twilio.com) — a free trial account is available.
-
-    **What you need to set up:**
-    1. Purchase a phone number in the Twilio Console.
-    2. Create an API key in **Twilio Console** → **Account** → **API keys & tokens**.
-    3. After deploying the voice gateway, configure your Twilio phone number's voice webhook to `POST https://your-voice-gateway.example.com/twilio/voice/inbound`.
-
-    **What you get:**
-    - Account SID and Auth Token (from the Console dashboard)
-    - API Key SID and API Secret (from the API keys page)
-    - A phone number for inbound and outbound calls
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `TWILIO_ACCOUNT_SID` | Twilio Console → home dashboard |
-    | `TWILIO_AUTH_TOKEN` | Twilio Console → home dashboard |
-    | `TWILIO_API_KEY` | Twilio Console → **Account** → **API keys** |
-    | `TWILIO_API_SECRET` | Shown once when you create the API key |
-    | `TWILIO_ALERT_SMS_FROM` | Your Twilio phone number or Messaging Service SID |
+    Live voice requires a Twilio number with its voice webhook pointing at the voice gateway. Onboarding phone verification requires `TWILIO_VERIFY_SERVICE_SID`.
   </Accordion>
 
-  <Accordion title="OpenAI — AI voice conversations" icon="microphone">
-    OpenAI powers the AI voice conversations in LobbyStack through the Realtime API. The AI receptionist uses OpenAI to understand what callers say and respond naturally in real time.
+  <Accordion title="OpenAI - Realtime voice" icon="microphone">
+    OpenAI powers live voice conversations through the Realtime API. Configure `OPENAI_API_KEY` on the voice gateway.
 
-    **Sign up:** [platform.openai.com](https://platform.openai.com)
+    You pay OpenAI directly for self-hosted usage.
+  </Accordion>
 
-    **What you need:**
-    - Access to the OpenAI Realtime API (available on Pay-as-you-go accounts)
+  <Accordion title="Voice gateway hosting" icon="server">
+    The voice gateway is a Node.js service with a public HTTPS URL. Twilio must be able to reach it for inbound calls and media streams.
 
-    **What you get:**
-    - An API key from the OpenAI platform
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `OPENAI_API_KEY` | OpenAI platform → **API keys** |
-
-    <Note>
-    The OpenAI Realtime API is a usage-billed service. Your OpenAI account will be charged directly for voice processing usage in your self-hosted deployment — this is separate from any LobbyStack plan pricing.
-    </Note>
+    The existing deployment docs use Fly.io as one supported hosting option.
   </Accordion>
 </AccordionGroup>
-
----
 
 ## Optional providers
 
 <AccordionGroup>
-  <Accordion title="Google Cloud — Google Calendar integration" icon="calendar">
-    Required if you want your AI receptionist to check availability and book appointments in Google Calendar.
-
-    **Sign up:** [console.cloud.google.com](https://console.cloud.google.com)
-
-    **What you need to set up:**
-    1. Create a project in Google Cloud Console.
-    2. Enable the **Google Calendar API** for your project.
-    3. Create an **OAuth 2.0 Client ID** (Web application type) under **APIs & Services** → **Credentials**.
-    4. Add your Convex HTTP endpoint as an authorized redirect URI.
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `GOOGLE_CLIENT_ID` | Google Cloud Console → **APIs & Services** → **Credentials** |
-    | `GOOGLE_CLIENT_SECRET` | Same credentials page |
-    | `GOOGLE_REDIRECT_URI` | The redirect URI you registered, pointing to your Convex HTTP endpoint |
+  <Accordion title="Google Calendar" icon="calendar">
+    Google Calendar enables calendar availability and booking sync. Configure Google OAuth variables and `SESSION_ENCRYPTION_KEY`.
   </Accordion>
 
-  <Accordion title="Microsoft Azure — Outlook calendar integration" icon="calendar-days">
-    Required if you want your AI receptionist to check availability and book appointments in Microsoft Outlook or Microsoft 365 calendars.
-
-    **Sign up:** [portal.azure.com](https://portal.azure.com)
-
-    **What you need to set up:**
-    1. Register a new application in **Azure Active Directory** → **App registrations**.
-    2. Add the required Microsoft Graph calendar permissions.
-    3. Create a client secret under **Certificates & secrets**.
-    4. Add your Convex HTTP endpoint as a redirect URI.
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `MICROSOFT_CLIENT_ID` | Azure portal → your app registration → **Overview** |
-    | `MICROSOFT_CLIENT_SECRET` | Azure portal → your app registration → **Certificates & secrets** |
-    | `MICROSOFT_TENANT_ID` | Use `common` unless you are limiting to a single Azure tenant |
-    | `MICROSOFT_REDIRECT_URI` | The redirect URI you registered in your app registration |
+  <Accordion title="Firecrawl" icon="globe">
+    Firecrawl powers website knowledge import. Without it, operators can still add text entries and upload documents.
   </Accordion>
 
-  <Accordion title="Resend — transactional email" icon="envelope">
-    Resend sends auth emails — specifically password reset emails and email change confirmation messages. Without Resend, users cannot reset their passwords or confirm email address changes.
-
-    **Sign up:** [resend.com](https://resend.com) — a free tier is available.
-
-    **What you need to set up:**
-    1. Verify your sending domain in the Resend dashboard.
-    2. Create an API key under **API Keys**.
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `RESEND_API_KEY` | Resend dashboard → **API Keys** |
-    | `EMAIL_FROM_ADDRESS` | Your verified sender address, e.g. `noreply@yourdomain.com` |
-
-    <Tip>
-    Also set `SITE_URL` (in the Core variables) to your web dashboard's public URL. Convex Auth uses it to build the correct reset and confirmation links inside the emails Resend delivers.
-    </Tip>
+  <Accordion title="Google Gemini" icon="magnifying-glass">
+    Gemini is used for embeddings and non-realtime text generation in knowledge and SMS flows.
   </Accordion>
 
-  <Accordion title="Firecrawl — website knowledge import" icon="globe">
-    Firecrawl enables the website knowledge import feature. When you enter a URL in your knowledge base settings, LobbyStack uses Firecrawl to crawl that site and extract its content, which the AI can then reference when answering caller questions.
-
-    **Sign up:** [firecrawl.dev](https://firecrawl.dev)
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `FIRECRAWL_API_KEY` | Firecrawl dashboard → **API Keys** |
+  <Accordion title="Resend" icon="envelope">
+    Resend sends password reset and email-change emails. Without email delivery, those auth flows will not work correctly in production.
   </Accordion>
 
-  <Accordion title="Google Gemini — knowledge base embeddings" icon="magnifying-glass">
-    Google Gemini generates the text embeddings that power semantic search in your knowledge base. When a caller asks a question, LobbyStack uses embeddings to find the most relevant answers from your documents and FAQs. Without Gemini, knowledge base search uses a simpler fallback method.
-
-    **Sign up:** [aistudio.google.com](https://aistudio.google.com)
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI Studio → **Get API key** |
+  <Accordion title="Polar" icon="credit-card">
+    Polar powers hosted subscription billing, checkout, customer portal access, product mapping, transactions, and usage sync. Single-business self-host deployments usually do not need Polar.
   </Accordion>
 
-  <Accordion title="Polar — subscription billing" icon="credit-card">
-    Polar powers subscription billing. You need this only if you are operating a multi-tenant deployment where your own customers pay for access to LobbyStack — for example, if you are building a product on top of the LobbyStack codebase. For a single-business self-hosted installation, Polar is not needed.
-
-    **Sign up:** [polar.sh](https://polar.sh)
-
-    **What you need to set up in Polar:**
-    1. Create a Polar organization.
-    2. Create three products: a Pro monthly recurring product, an AI SMS monthly add-on product, and an AI SMS one-time setup product.
-    3. Configure a webhook pointing to your Convex HTTP endpoint at `/polar/events`.
-
-    **Environment variables to set:**
-
-    | Variable | Where to find it |
-    |---|---|
-    | `POLAR_ORGANIZATION_TOKEN` | Polar dashboard → **Settings** → **API** |
-    | `POLAR_WEBHOOK_SECRET` | Polar dashboard → your webhook configuration |
-    | `POLAR_SERVER` | Set to `production` or `sandbox` to match your token |
-    | `POLAR_PRO_PRODUCT_ID` | Polar dashboard → your Pro product → product ID |
-    | `POLAR_AI_SMS_ADDON_PRODUCT_ID` | Polar dashboard → your AI SMS add-on product → product ID |
-    | `POLAR_AI_SMS_SETUP_PRODUCT_ID` | Polar dashboard → your AI SMS setup product → product ID |
-
-    <Warning>
-    Keep `POLAR_ORGANIZATION_TOKEN` and `POLAR_WEBHOOK_SECRET` as backend-only secrets. Never expose them to the web app, browser environment variables, or client-side code.
-    </Warning>
+  <Accordion title="PostHog" icon="chart-line">
+    PostHog is used for analytics and telemetry when configured.
   </Accordion>
 </AccordionGroup>
