@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="LobbyStack">
-<rect width="256" height="256" rx="56" fill="#FFFFFF"/>
-<g transform="translate(28 234) scale(0.092 -0.092)"
-fill="#0B0B0D" stroke="none">
+<svg xmlns="http://www.w3.org/2000/svg"
+ viewBox="0 0 218.000000 231.000000"
+ preserveAspectRatio="xMidYMid meet">
+<g transform="translate(0.000000,231.000000) scale(0.100000,-0.100000)"
+fill="#FFFFFF" stroke="none">
 <path d="M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159
 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19
 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20
