@@ -9,7 +9,7 @@ Changes apply to new calls and future SMS automation. They do not rewrite calls 
 
 <CardGroup cols={2}>
   <Card title="AI settings" icon="comment-dots" href="/agent/ai-settings">
-    Set the opening line, default customer language, and default transfer number.
+    Set the opening line, fallback language, and default transfer number.
   </Card>
   <Card title="Knowledge" icon="book-open" href="/agent/knowledge">
     Add business information from text entries, documents, or a website import.
@@ -33,7 +33,7 @@ For SMS, LobbyStack uses the current business context and the saved conversation
 Before forwarding production calls, check that:
 
 - Your greeting names your business and sets the right expectation.
-- The default customer language is set to English or French.
+- The fallback language is set for cases where the caller's language is unclear.
 - A transfer number is saved if you want live human handoff.
 - Your knowledge entries include hours, location, services, pricing, policies, and common caller questions.
 - Your service entries and Google Calendar connection are ready before you rely on appointment booking.
