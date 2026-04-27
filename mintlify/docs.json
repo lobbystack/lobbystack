@@ -37,33 +37,32 @@
             ]
           },
           {
-            "group": "Receptionist",
+            "group": "General",
             "pages": [
-              "receptionist/overview",
-              "receptionist/greeting-and-language",
-              "receptionist/call-handling-rules",
-              "receptionist/knowledge-base",
-              "receptionist/services-and-booking"
-            ]
-          },
-          {
-            "group": "Integrations",
-            "pages": [
-              "integrations/google-calendar",
-              "integrations/sms"
-            ]
-          },
-          {
-            "group": "Dashboard",
-            "pages": [
+              "dashboard/home",
               "dashboard/calls",
               "dashboard/messages",
               "dashboard/contacts"
             ]
           },
           {
-            "group": "Account and billing",
+            "group": "Agent",
             "pages": [
+              "agent/overview",
+              "agent/ai-settings",
+              "agent/knowledge",
+              "agent/services",
+              "agent/rules"
+            ]
+          },
+          {
+            "group": "Manage",
+            "pages": [
+              "dashboard/analytics",
+              "integrations/overview",
+              "integrations/google-calendar",
+              "integrations/sms",
+              "settings/overview",
               "billing/plans",
               "billing/usage"
             ]

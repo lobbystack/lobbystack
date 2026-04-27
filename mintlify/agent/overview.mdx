@@ -1,30 +1,30 @@
 ---
-title: "Configure your receptionist"
-description: "Set the greeting, language, transfer number, knowledge, services, and rules your AI receptionist uses on calls and messages."
+title: "Agent overview"
+description: "Use the Agent section to configure AI settings, knowledge, services, and rules for your receptionist."
 ---
 
-The **Receptionist** section controls how your AI receptionist behaves. It is split into four areas: AI settings, Knowledge, Services, and Rules.
+The **Agent** section controls how your AI receptionist behaves. It is split into four pages: AI settings, Knowledge, Services, and Rules.
 
 Changes apply to new calls and future SMS automation. They do not rewrite calls or messages that already happened.
 
 <CardGroup cols={2}>
-  <Card title="Greeting and language" icon="comment-dots" href="/receptionist/greeting-and-language">
+  <Card title="AI settings" icon="comment-dots" href="/agent/ai-settings">
     Set the opening line, default customer language, and default transfer number.
   </Card>
-  <Card title="Knowledge base" icon="book-open" href="/receptionist/knowledge-base">
+  <Card title="Knowledge" icon="book-open" href="/agent/knowledge">
     Add business information from text entries, documents, or a website import.
   </Card>
-  <Card title="Services and booking" icon="calendar-check" href="/receptionist/services-and-booking">
+  <Card title="Services" icon="calendar-check" href="/agent/services">
     Add appointment types and the service information callers need.
   </Card>
-  <Card title="Rules" icon="list-check" href="/receptionist/call-handling-rules">
+  <Card title="Rules" icon="list-check" href="/agent/rules">
     Add operating instructions for transfers, callbacks, fallback behavior, and special cases.
   </Card>
 </CardGroup>
 
 ## How configuration is used
 
-LobbyStack builds a business context snapshot from your receptionist settings. The voice gateway fetches that snapshot when a live call starts, so callers get stable behavior for the duration of the call.
+LobbyStack builds a business context snapshot from your Agent settings. The voice gateway fetches that snapshot when a live call starts, so callers get stable behavior for the duration of the call.
 
 For SMS, LobbyStack uses the current business context and the saved conversation state when generating AI replies.
 

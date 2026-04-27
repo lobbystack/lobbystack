@@ -3,16 +3,16 @@
   "projectName": "LobbyStack",
   "projectDescription": "LobbyStack is an open-source AI receptionist that answers calls, books appointments, and routes callers for clinics, salons, repair shops, and other service businesses.",
   "theme": "almond",
-  "primaryColor": "#8f414e",
-  "lightColor": "#6b6868",
-  "darkColor": "#d2c5c7",
+  "primaryColor": "#0B0B0D",
+  "lightColor": "#0B0B0D",
+  "darkColor": "#FFFFFF",
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Help Center",
         "groups": [
           {
-            "group": "Get Started",
+            "group": "Quick start",
             "pages": [
               "introduction",
               "quickstart",
@@ -21,34 +21,32 @@
             ]
           },
           {
-            "group": "Receptionist",
+            "group": "General",
             "pages": [
-              "receptionist/overview",
-              "receptionist/greeting-and-language",
-              "receptionist/call-handling-rules",
-              "receptionist/knowledge-base",
-              "receptionist/services-and-booking"
-            ]
-          },
-          {
-            "group": "Integrations",
-            "pages": [
-              "integrations/google-calendar",
-              "integrations/outlook-calendar",
-              "integrations/sms"
-            ]
-          },
-          {
-            "group": "Dashboard",
-            "pages": [
+              "dashboard/home",
               "dashboard/calls",
               "dashboard/messages",
               "dashboard/contacts"
             ]
           },
           {
-            "group": "Billing & Plans",
+            "group": "Agent",
             "pages": [
+              "agent/overview",
+              "agent/ai-settings",
+              "agent/knowledge",
+              "agent/services",
+              "agent/rules"
+            ]
+          },
+          {
+            "group": "Manage",
+            "pages": [
+              "dashboard/analytics",
+              "integrations/overview",
+              "integrations/google-calendar",
+              "integrations/sms",
+              "settings/overview",
               "billing/plans",
               "billing/usage"
             ]
@@ -67,9 +65,9 @@
   },
   "keyFeatures": [
     "24/7 AI call answering with natural voice",
-    "Automated appointment booking via Google Calendar and Outlook",
+    "Appointment booking via Google Calendar",
     "Missed-call SMS follow-up",
-    "Multilingual support (English, French, Spanish, and more)",
+    "English and French receptionist languages",
     "Custom greeting and call-handling rules",
     "Knowledge base from documents and website import",
     "Warm call transfer for urgent or VIP callers",
