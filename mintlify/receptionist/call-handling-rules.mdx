@@ -15,7 +15,7 @@ Good rules are specific and operational:
 - "For after-hours callers, take a message and include the caller's preferred callback window."
 
 <Note>
-  Business hours are part of the backend scheduling model, but the current public dashboard exposes rules as the safest place for operator-written after-hours instructions.
+  Rules are the best place for operator-written after-hours instructions, escalation policies, and special handling notes.
 </Note>
 
 ## Add a rule
@@ -37,10 +37,10 @@ Good rules are specific and operational:
 
 ## Transfers and callbacks
 
-Transfers require a default transfer number in **Receptionist** > **AI settings**. If a transfer is not available, the receptionist can create a follow-up task with callback details. Those tasks appear in the dashboard and on call detail pages.
+Transfers use the default transfer number in **Receptionist** > **AI settings**. When a live handoff is not the right next step, the receptionist can create a follow-up task with callback details. Those tasks appear in the dashboard and on call detail pages.
 
 ## Recording and transcripts
 
 LobbyStack stores call transcripts and can store call recordings from the voice gateway. Operators review recordings from the **Calls** page when a recording is available.
 
-There is currently no public dashboard toggle for enabling or disabling recording from the Rules page, so do not rely on a rule entry as a recording retention control.
+Use rules for call-handling behavior. Manage recording and retention policy in your deployment and compliance settings.

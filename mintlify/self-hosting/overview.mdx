@@ -3,11 +3,11 @@ title: "Self-hosting overview"
 description: "Understand the moving pieces required to run LobbyStack with your own provider accounts."
 ---
 
-LobbyStack is open source and can be run with your own provider accounts. Self-hosting is an advanced path: you operate the app, configure external services, manage secrets, and handle provider billing directly.
+LobbyStack is open source and can be run with your own provider accounts. Self-hosting gives your team direct control over the app, external services, secrets, and provider billing.
 
-<Warning>
-  Self-hosting is not a one-click install. You need a Convex deployment, a public voice gateway, Twilio, OpenAI, and a static web dashboard deployment before live calls can work.
-</Warning>
+<Note>
+  For live calls, prepare a Convex deployment, public voice gateway, Twilio account, OpenAI account, and static web dashboard deployment.
+</Note>
 
 ## Components
 
@@ -34,9 +34,9 @@ LobbyStack is open source and can be run with your own provider accounts. Self-h
 - **Polar** if you are operating hosted billing for your own customers.
 - **PostHog** for analytics and telemetry.
 
-## What self-host does not do for you
+## What your team manages
 
-When self-hosting, you are responsible for:
+When self-hosting, your team manages:
 
 - Twilio account setup, phone numbers, webhooks, A2P/10DLC compliance, and SMS costs.
 - OpenAI usage costs.
