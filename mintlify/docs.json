@@ -1,0 +1,82 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "LobbyStack",
+  "description": "Help Center and developer documentation for LobbyStack.",
+  "colors": {
+    "primary": "#0B0B0D",
+    "light": "#0B0B0D",
+    "dark": "#FFFFFF"
+  },
+  "favicon": "/favicon.svg",
+  "fonts": {
+    "family": "Geist"
+  },
+  "logo": {
+    "light": "/logo.svg",
+    "dark": "/logo-dark.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/morencyr/LobbyStack"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Help Center",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "getting-started/account-setup",
+              "getting-started/claim-your-number"
+            ]
+          },
+          {
+            "group": "General",
+            "pages": [
+              "dashboard/home",
+              "dashboard/calls",
+              "dashboard/messages",
+              "dashboard/contacts"
+            ]
+          },
+          {
+            "group": "Agent",
+            "pages": [
+              "agent/overview",
+              "agent/ai-settings",
+              "agent/knowledge",
+              "agent/services",
+              "agent/rules"
+            ]
+          },
+          {
+            "group": "Manage",
+            "pages": [
+              "dashboard/analytics",
+              "integrations/overview",
+              "integrations/google-calendar",
+              "integrations/sms",
+              "settings/overview",
+              "billing/plans",
+              "billing/usage"
+            ]
+          },
+          {
+            "group": "Self-hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/environment-variables",
+              "self-hosting/providers"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

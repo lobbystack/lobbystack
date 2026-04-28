@@ -16,3 +16,4 @@ apps/web/dist
 *.tsbuildinfo
 references/shadcn-admin
 .agents
+mintlify/.atlas-analysis.json

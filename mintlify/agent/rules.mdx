@@ -1,0 +1,58 @@
+---
+title: "Rules"
+description: "Use plain text rules to define how your agent should act during calls and conversations."
+---
+
+The **Rules** page lets you shape your agent's behavior in plain text. Instead of building workflows or maintaining decision trees, write the instruction the way you would explain it to a teammate.
+
+Rules are useful for actions, policies, and judgment calls: when to transfer a caller, when to take a callback message, what to do after hours, and how to handle questions that need a human response.
+
+## What to put in rules
+
+Good rules are specific, action-oriented, and easy to follow:
+
+- "If a caller says there is an emergency, transfer to the default transfer number."
+- "If the caller asks for a human and transfer is unavailable, take a callback message with their name, phone number, and preferred callback time."
+- "If the receptionist is not sure of an answer, say that the team will follow up instead of guessing."
+- "For after-hours callers, take a message and include the caller's preferred callback window."
+
+<Note>
+  Rules give you a simpler way to define what your agent should do than complex workflows or visual builders. Say the behavior you want in clear language, then keep the rule updated as your process changes.
+</Note>
+
+## Rule templates
+
+| Scenario | Template |
+| --- | --- |
+| Live transfer | If a caller asks for a human or describes an urgent issue, transfer to the default transfer number. |
+| Callback | If the caller wants a callback, collect their name, phone number, reason for calling, and preferred callback window. |
+| Uncertain answer | If the receptionist is not confident, take a message for the team instead of guessing. |
+| After-hours | Outside business hours, take a message and tell the caller the team will follow up during the next business day. |
+| Pricing questions | If pricing depends on the customer's situation, explain the starting point and offer to have the team follow up with details. |
+
+## Add a rule
+
+<Steps>
+  <Step title="Open Rules">
+    In the dashboard sidebar, go to **Agent** > **Rules**.
+  </Step>
+  <Step title="Add a rule">
+    Click **Add Rule**.
+  </Step>
+  <Step title="Write the instruction">
+    Add a short title and the full instruction in the content field. Use tags if they help you find the rule later.
+  </Step>
+  <Step title="Save">
+    Click **Save**. The rule is available to the receptionist after it is saved and indexed.
+  </Step>
+</Steps>
+
+## Transfers and callbacks
+
+Transfers use the default transfer number in **Agent** > **AI settings**. When a live handoff is not the right next step, the receptionist can create a follow-up task with callback details. Those tasks appear in the dashboard and on call detail pages.
+
+## Recording and transcripts
+
+LobbyStack stores call transcripts and can store call recordings. Operators review recordings from the **Calls** page when a recording is available.
+
+Use rules for call-handling behavior. Manage recording and retention policy in your workspace and compliance settings.

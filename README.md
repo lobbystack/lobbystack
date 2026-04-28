@@ -1,6 +1,6 @@
 # LobbyStack
 
-Open-source AI receptionist software for clinics, repair shops, salons, and service businesses. The product is cloud-first, self-hostable from day one, and keeps one shared core codebase across hosted and self-hosted deployments.
+Open-source AI receptionist software for businesses that rely on phone calls. The product is cloud-first, self-hostable from day one, and keeps one shared core codebase across hosted and self-hosted deployments.
 
 ## Architecture
 

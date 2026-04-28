@@ -1,0 +1,95 @@
+---
+title: "Environment variables"
+description: "Key environment variables used by the LobbyStack web app, Convex backend, voice gateway, and optional providers."
+---
+
+Use the repository's `.env.example` as the source of truth for local setup. This page summarizes the variables operators most often need to understand.
+
+<Note>
+  Secrets such as provider API keys, auth tokens, signing keys, and encryption keys must be configured only in backend or deployment secret stores. Do not expose them through `VITE_` variables.
+</Note>
+
+## Shared app URLs and secrets
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `APP_BASE_URL` | Convex | Public web app URL used for redirects such as Google Calendar OAuth. |
+| `SITE_URL` | Convex | Public web app URL used by auth and billing links. |
+| `CONVEX_URL` | Server/runtime | Convex deployment URL. |
+| `CONVEX_SITE_URL` | Server/runtime | Convex HTTP actions URL. |
+| `VOICE_GATEWAY_BASE_URL` | Convex, voice gateway | Public HTTPS URL for the voice gateway. |
+| `INTERNAL_SERVICE_TOKEN` | Convex, voice gateway | Shared secret for internal HTTP calls between the voice gateway and Convex. |
+| `SESSION_ENCRYPTION_KEY` | Convex | Required for encrypted Google Calendar token storage. |
+| `DEPLOYMENT_MODE` | Convex, voice gateway | Deployment mode label used by runtime and telemetry. |
+
+## Web dashboard build variables
+
+| Variable | Notes |
+| --- | --- |
+| `VITE_CONVEX_URL` | Required by the React dashboard. |
+| `VITE_CONVEX_SITE_URL` | Used for HTTP endpoints and downloads. |
+| `VITE_APP_NAME` | Display name; defaults to LobbyStack in `.env.example`. |
+| `VITE_DEPLOYMENT_MODE` | Client-side deployment mode label. |
+| `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`, `VITE_POSTHOG_UI_HOST` | Optional web analytics settings. |
+
+## Voice gateway
+
+| Variable | Notes |
+| --- | --- |
+| `PORT` | Port the voice gateway listens on. Defaults to `3001`. |
+| `OPENAI_API_KEY` | Required for live OpenAI Realtime voice calls. |
+| `OPENAI_REALTIME_MODEL` | Defaults to `gpt-realtime`. |
+| `OPENAI_REALTIME_VOICE` | Defaults to `marin`. |
+| `OPENAI_TRANSCRIPTION_MODEL` | Defaults to `gpt-4o-mini-transcribe`. |
+
+Optional OpenAI cost fallback variables exist in `.env.example` for telemetry when automatic model pricing is unavailable.
+
+## Twilio
+
+| Variable | Notes |
+| --- | --- |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID. |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token. |
+| `TWILIO_VERIFY_SERVICE_SID` | Required for onboarding phone verification. |
+| `TWILIO_ALERT_SMS_FROM` | Shared hosted alert SMS sender or messaging service SID. |
+| `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_MESSAGING_SERVICE_SID` | Present in `.env.example` for Twilio features, but not required by every deployment path. |
+
+## Google Calendar
+
+| Variable | Notes |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID. |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
+| `GOOGLE_REDIRECT_URI` | Optional if `CONVEX_SITE_URL` can derive `/integrations/google/callback`. |
+
+Google Calendar token storage also requires `SESSION_ENCRYPTION_KEY`.
+
+## Knowledge and AI text providers
+
+| Variable | Notes |
+| --- | --- |
+| `FIRECRAWL_API_KEY` | Enables website import. |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Enables Gemini text and embeddings. |
+| `GEMINI_TEXT_MODEL` | Defaults to `gemini-3.1-flash-lite-preview`. |
+| `GEMINI_EMBEDDING_MODEL` | Defaults to `gemini-embedding-001`. |
+
+## SMS compliance
+
+| Variable | Notes |
+| --- | --- |
+| `TWILIO_PRIMARY_CUSTOMER_PROFILE_SID` | Required for hosted 10DLC registration. |
+| `TWILIO_A2P_STATUS_EMAIL` | Required for hosted 10DLC registration callbacks. |
+
+## Email
+
+| Variable | Notes |
+| --- | --- |
+| `RESEND_API_KEY` | Sends password reset and email-change emails. |
+| `EMAIL_FROM_ADDRESS` | Verified sender address used by auth emails. |
+
+## Telemetry
+
+| Variable | Notes |
+| --- | --- |
+| `POSTHOG_KEY`, `POSTHOG_HOST` | Backend telemetry. |
+| `POSTHOG_PRIVACY_MODE` | Privacy-mode toggle in `.env.example`. |

@@ -1,0 +1,56 @@
+---
+title: "Self-hosting overview"
+description: "Understand the moving pieces required to run LobbyStack with your own provider accounts."
+---
+
+LobbyStack is open source and can be run with your own provider accounts. Self-hosting gives your team direct control over the app, external services, secrets, and provider usage.
+
+<Note>
+  For live calls, prepare a Convex deployment, public voice gateway, Twilio account, OpenAI account, and static web dashboard deployment.
+</Note>
+
+## Components
+
+| Component | Purpose |
+| --- | --- |
+| Convex backend | Stores business data and runs backend functions, HTTP endpoints, auth, billing logic, calendar sync, SMS, and knowledge workflows. |
+| Voice gateway | Node.js service that handles Twilio Voice, Twilio Media Streams, OpenAI Realtime, transfers, and recording upload. |
+| Web dashboard | React/Vite app operators use to configure the receptionist and review activity. |
+
+## Required providers for live voice
+
+- **Convex** for backend and storage.
+- **Twilio** for phone numbers, voice calls, SMS, and phone verification.
+- **OpenAI** for Realtime voice conversations.
+- **A hosting platform** for the voice gateway with a public HTTPS URL.
+- **Static hosting** for the web dashboard.
+
+## Optional providers
+
+- **Google Calendar** for calendar availability and booking sync.
+- **Firecrawl** for website knowledge import.
+- **Google Gemini** for knowledge embeddings and non-realtime text generation.
+- **Resend** for password reset and email-change emails.
+- **PostHog** for analytics and telemetry.
+
+## What your team manages
+
+When self-hosting, your team manages:
+
+- Twilio account setup, phone numbers, webhooks, A2P/10DLC compliance, and SMS costs.
+- OpenAI usage costs.
+- Convex project ownership and deployment settings.
+- Voice gateway uptime and public networking.
+- Secret management.
+- Product, privacy, retention, and compliance policies for your deployment.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Environment variables" icon="sliders" href="/self-hosting/environment-variables">
+    Review the main runtime and provider variables used by the app.
+  </Card>
+  <Card title="Third-party providers" icon="plug" href="/self-hosting/providers">
+    See what each external provider does in LobbyStack.
+  </Card>
+</CardGroup>

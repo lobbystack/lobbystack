@@ -1,0 +1,58 @@
+---
+title: "Third-party providers"
+description: "What each external provider does in a self-hosted LobbyStack deployment."
+---
+
+Self-hosting means connecting your own provider accounts. The provider list below is based on the current codebase and `.env.example`.
+
+## Required for live calls
+
+<AccordionGroup>
+  <Accordion title="Convex - backend, database, auth, and HTTP endpoints" icon="database">
+    Convex stores business data, call records, contacts, appointments, knowledge, billing state, and app settings. It also runs backend functions and HTTP endpoints used by Twilio, the voice gateway, calendar callbacks, and downloads.
+
+    Configure `CONVEX_URL`, `CONVEX_SITE_URL`, and matching `VITE_` variables for the web dashboard.
+  </Accordion>
+
+  <Accordion title="Twilio - phone numbers, voice, SMS, and verification" icon="phone">
+    Twilio provides phone numbers, inbound voice webhooks, Media Streams, SMS delivery, and phone verification.
+
+    Live voice requires a Twilio number with its voice webhook pointing at the voice gateway. Onboarding phone verification requires `TWILIO_VERIFY_SERVICE_SID`.
+  </Accordion>
+
+  <Accordion title="OpenAI - Realtime voice" icon="microphone">
+    OpenAI powers live voice conversations through the Realtime API. Configure `OPENAI_API_KEY` on the voice gateway.
+
+    You pay OpenAI directly for self-hosted usage.
+  </Accordion>
+
+  <Accordion title="Voice gateway hosting" icon="server">
+    The voice gateway is a Node.js service with a public HTTPS URL. Twilio must be able to reach it for inbound calls and media streams.
+
+    The existing deployment docs use Fly.io as one supported hosting option.
+  </Accordion>
+</AccordionGroup>
+
+## Optional providers
+
+<AccordionGroup>
+  <Accordion title="Google Calendar" icon="calendar">
+    Google Calendar enables calendar availability and booking sync. Configure Google OAuth variables and `SESSION_ENCRYPTION_KEY`.
+  </Accordion>
+
+  <Accordion title="Firecrawl" icon="globe">
+    Firecrawl powers website knowledge import. Without it, operators can still add text entries and upload documents.
+  </Accordion>
+
+  <Accordion title="Google Gemini" icon="magnifying-glass">
+    Gemini is used for embeddings and non-realtime text generation in knowledge and SMS flows.
+  </Accordion>
+
+  <Accordion title="Resend" icon="envelope">
+    Resend sends password reset and email-change emails. Without email delivery, those auth flows will not work correctly in production.
+  </Accordion>
+
+  <Accordion title="PostHog" icon="chart-line">
+    PostHog is used for analytics and telemetry when configured.
+  </Accordion>
+</AccordionGroup>

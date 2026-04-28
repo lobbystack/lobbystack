@@ -1,0 +1,58 @@
+---
+title: "SMS, AI replies, and compliance"
+description: "Understand the difference between SMS alerts, AI SMS, manual replies, attachments, opt-out handling, and 10DLC setup."
+---
+
+LobbyStack has two SMS-related concepts:
+
+- **Alert SMS**: system-sent SMS notifications, such as appointment confirmations or reminders, subject to the hosted alert SMS usage pool.
+- **AI SMS**: two-way AI-assisted SMS conversations with callers, available as a Pro add-on after setup and compliance approval.
+
+<Note>
+  Hosted AI SMS is available on Pro with the AI SMS add-on and approved SMS compliance setup.
+</Note>
+
+## Manual SMS conversations
+
+The **Messages** page shows SMS conversations linked to contacts. Operators can reply manually to SMS conversations and can attach supported files.
+
+Messages support:
+
+- Inbound and outbound SMS history.
+- Manual operator replies.
+- Attachments, including images and documents.
+- Delivery status.
+- Pausing or resuming AI automation for a conversation.
+
+## AI SMS add-on
+
+AI SMS lets the receptionist respond to inbound text conversations using the same business context used for calls. The add-on is available on Pro and includes a compliance setup step before hosted business-number sending is ready.
+
+Current catalog pricing in the app:
+
+| Item | Price |
+| --- | --- |
+| AI SMS monthly add-on | $5/month |
+| AI SMS setup fee | $19 one time |
+| AI SMS usage | $0.03 per segment |
+
+## SMS compliance
+
+Hosted AI SMS uses A2P 10DLC compliance setup. In **Settings** > **Billing**, the SMS compliance section collects business identity, contact, address, campaign, sample message, and opt-in information.
+
+After compliance approval, LobbyStack can use your hosted business sender for AI SMS conversations.
+
+## Opt-out handling
+
+LobbyStack tracks SMS consent. STOP-style keywords mark a contact as opted out, and START-style keywords can mark them subscribed again. You can review SMS consent on the contact detail page.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Messages" icon="message" href="/dashboard/messages">
+    Review SMS conversations, send manual replies, and pause or resume AI handling.
+  </Card>
+  <Card title="Plans and usage" icon="credit-card" href="/billing/usage">
+    See usage pools and metered segment behavior.
+  </Card>
+</CardGroup>

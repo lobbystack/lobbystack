@@ -61,6 +61,10 @@
   "scripts": {
     "dev": "concurrently -n convex,web,voice \"pnpm dev:convex\" \"pnpm dev:web\" \"pnpm dev:voice\"",
     "dev:convex": "convex dev",
+    "docs:dev": "pnpm --filter @lobbystack/docs dev",
+    "docs:dev:no-open": "pnpm --filter @lobbystack/docs dev:no-open",
+    "docs:validate": "pnpm --filter @lobbystack/docs validate",
+    "docs:broken-links": "pnpm --filter @lobbystack/docs broken-links",
     "dev:web": "pnpm --filter @lobbystack/web dev",
     "dev:voice": "pnpm --filter @lobbystack/voice-gateway dev",
     "dev:onboarding:website": "tsx scripts/prepare-onboarding-website.ts",

@@ -1,0 +1,39 @@
+---
+title: "Overview"
+description: "Use the Agent section to configure AI settings, knowledge, services, and rules for your receptionist."
+---
+
+The **Agent** section controls how your AI receptionist behaves. It is split into four pages: AI settings, Knowledge, Services, and Rules.
+
+Changes apply to new calls and future SMS automation. They do not rewrite calls or messages that already happened.
+
+<CardGroup cols={2}>
+  <Card title="AI settings" icon="comment-dots" href="/agent/ai-settings">
+    Set the opening line, fallback language, and default transfer number.
+  </Card>
+  <Card title="Knowledge" icon="book-open" href="/agent/knowledge">
+    Add business information from text entries, documents, or a website import.
+  </Card>
+  <Card title="Services" icon="calendar-check" href="/agent/services">
+    Add appointment types and the service information callers need.
+  </Card>
+  <Card title="Rules" icon="list-check" href="/agent/rules">
+    Add operating instructions for transfers, callbacks, fallback behavior, and special cases.
+  </Card>
+</CardGroup>
+
+## How configuration is used
+
+LobbyStack prepares the saved Agent settings for each live call, so callers get stable behavior for the duration of the conversation.
+
+For SMS, LobbyStack uses the current business context and the saved conversation state when generating AI replies.
+
+## Minimum setup for real callers
+
+Before forwarding production calls, check that:
+
+- Your greeting names your business and sets the right expectation.
+- The fallback language is set for cases where the caller's language is unclear.
+- A transfer number is saved if you want live human handoff.
+- Your knowledge entries include hours, location, services, pricing, policies, and common caller questions.
+- Your service entries and Google Calendar connection are ready before you rely on appointment booking.

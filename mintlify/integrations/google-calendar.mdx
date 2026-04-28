@@ -1,0 +1,46 @@
+---
+title: "Connect Google Calendar"
+description: "Connect a Google account, choose a writable calendar, and let LobbyStack use it for appointment availability and booking sync."
+---
+
+Google Calendar lets LobbyStack read calendar availability, create booking events, and track calendar sync state for appointments.
+
+<Note>
+  Connect Google Calendar after you add the services callers can request. This gives LobbyStack a calendar for checking availability and adding bookings.
+</Note>
+
+## How the integration works
+
+LobbyStack uses Google OAuth. You connect a Google account, LobbyStack stores the connection securely, and you select the calendar that should receive bookings. The integration can also sync busy time so LobbyStack avoids offering unavailable slots.
+
+## Connect Google Calendar
+
+<Steps>
+  <Step title="Open Integrations">
+    In the dashboard, open **Integrations**.
+  </Step>
+  <Step title="Start Google connection">
+    Find **Google Calendar** and click **Connect**.
+  </Step>
+  <Step title="Authorize Google">
+    Sign in to Google and approve the requested calendar permissions.
+  </Step>
+  <Step title="Select a calendar">
+    After returning to LobbyStack, click the connected Google card, choose a calendar from the dropdown, and click **Save calendar**.
+  </Step>
+</Steps>
+
+## Change the selected calendar
+
+1. Open **Integrations**.
+2. Click the Google Calendar card.
+3. Choose another calendar.
+4. Click **Save calendar**.
+
+LobbyStack uses the newly selected calendar for future availability checks and bookings.
+
+## Reconnect or disconnect
+
+If Google access expires or is revoked, the card shows that reconnect is required. Click **Reconnect Google** and complete OAuth again.
+
+To remove the integration, open the Google Calendar card and click **Disconnect**. LobbyStack removes the current connection for bookings.
