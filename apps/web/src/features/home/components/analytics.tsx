@@ -602,7 +602,7 @@ function MetricChartCard({
             accessibilityLayer
             data={chartData}
             margin={{
-              bottom: 0,
+              bottom: 8,
               left: 0,
               right: 0,
               top: 8,
@@ -616,6 +616,7 @@ function MetricChartCard({
             <XAxis
               axisLine={false}
               dataKey="dayLabel"
+              height={28}
               interval="preserveStartEnd"
               tickLine={false}
               tickMargin={8}
@@ -623,6 +624,7 @@ function MetricChartCard({
             <YAxis
               domain={[0, (dataMax: number) => Math.max(dataMax, 1)]}
               hide
+              padding={{ bottom: 16, top: 8 }}
             />
             <ChartTooltip
               content={
