@@ -10,7 +10,9 @@
   "delta": {
     "flat": "Aucun changement depuis le mois dernier",
     "up": "+{{value}} % depuis le mois dernier",
-    "down": "-{{value}} % depuis le mois dernier"
+    "down": "-{{value}} % depuis le mois dernier",
+    "durationUp": "+{{value}} depuis le mois dernier",
+    "durationDown": "-{{value}} depuis le mois dernier"
   },
   "home": {
     "title": "Accueil",
@@ -70,6 +72,9 @@
       },
       "appointments": {
         "title": "Rendez-vous"
+      },
+      "averageDuration": {
+        "title": "Duree moyenne"
       },
       "contacts": {
         "title": "Contacts"

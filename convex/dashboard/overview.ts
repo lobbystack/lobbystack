@@ -64,6 +64,24 @@ function calculateDeltaPercent(window: KpiWindow): number {
   return Number((((window.current - window.previous) / window.previous) * 100).toFixed(1));
 }
 
+function calculateAverageDurationSeconds(
+  values: Array<number | null | undefined>,
+): number {
+  let sum = 0;
+  let count = 0;
+
+  for (const value of values) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+
+    sum += value;
+    count += 1;
+  }
+
+  return count === 0 ? 0 : Math.round(sum / count);
+}
+
 function buildAverageWindow(
   values: Array<{ timestamp: number; durationSeconds: number | null | undefined }>,
   currentStart: number,
@@ -262,6 +280,18 @@ export const getHomeSummary = query({
       nextMonthStart,
       previousMonthStart,
     );
+    const averageDurationWindow = buildAverageWindow(
+      calls.map((call) => ({
+        timestamp: Date.parse(call.startedAt),
+        durationSeconds: call.providerCallDurationSeconds,
+      })),
+      currentMonthStart,
+      nextMonthStart,
+      previousMonthStart,
+    );
+    const averageDurationSeconds = calculateAverageDurationSeconds(
+      calls.map((call) => call.providerCallDurationSeconds),
+    );
 
     const monthlyCallsMap = new Map<string, number>();
     for (const call of calls) {
@@ -451,6 +481,12 @@ export const getHomeSummary = query({
           currentMonth: contactsThisMonth.current,
           previousMonth: contactsThisMonth.previous,
           deltaPercent: calculateDeltaPercent(contactsThisMonth),
+        },
+        averageDuration: {
+          totalSeconds: averageDurationSeconds,
+          currentMonthSeconds: averageDurationWindow.current,
+          previousMonthSeconds: averageDurationWindow.previous,
+          deltaSeconds: averageDurationWindow.current - averageDurationWindow.previous,
         },
       },
       liveCalls,

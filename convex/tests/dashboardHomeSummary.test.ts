@@ -54,6 +54,63 @@ async function insertContact(
 }
 
 describe("Dashboard home summary", () => {
+  it("includes average call duration in the KPI summary", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-average-duration");
+    const now = new Date();
+    const currentMonthStartedAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 12, 12, 0, 0),
+    ).toISOString();
+    const previousMonthStartedAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 12, 12, 0, 0),
+    ).toISOString();
+
+    await t.run(async (ctx) => {
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        channel: "voice",
+        status: "closed",
+      });
+
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-current-a",
+        status: "completed",
+        startedAt: currentMonthStartedAt,
+        providerCallDurationSeconds: 90,
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-current-b",
+        status: "completed",
+        startedAt: currentMonthStartedAt,
+        providerCallDurationSeconds: 150,
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-previous",
+        status: "completed",
+        startedAt: previousMonthStartedAt,
+        providerCallDurationSeconds: 60,
+      });
+    });
+
+    const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId,
+      locale: HOME_SUMMARY_LOCALE,
+    });
+
+    expect(summary.kpis.averageDuration).toEqual({
+      totalSeconds: 100,
+      currentMonthSeconds: 120,
+      previousMonthSeconds: 60,
+      deltaSeconds: 60,
+    });
+  });
+
   it("only shows deduped follow-up tasks in action required", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-follow-up");

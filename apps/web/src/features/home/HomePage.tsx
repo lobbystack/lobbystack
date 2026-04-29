@@ -59,6 +59,7 @@ type HomeSummary = {
     messages: { total: number; deltaPercent: number };
     appointments: { total: number; deltaPercent: number };
     contacts: { total: number; deltaPercent: number };
+    averageDuration: { totalSeconds: number; deltaSeconds: number };
   };
   liveCalls: number;
   monthlyCalls: Array<{ monthStart: string; total: number }>;
@@ -92,9 +93,9 @@ type HomeSummary = {
 };
 
 type MetricCard = {
-  key: keyof HomeSummary["kpis"];
-  icon: ReactNode;
-  value: number;
+  key: "calls" | "messages" | "appointments" | "averageDuration";
+  description: string;
+  value: string;
 };
 
 function initialsFromName(value: string | null): string {
@@ -109,76 +110,15 @@ function initialsFromName(value: string | null): string {
     .join("");
 }
 
-function metricIcon(key: MetricCard["key"]): ReactNode {
-  if (key === "calls") {
-    return (
-      <svg
-        className="h-4 w-4 text-muted-foreground"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.9.32 1.79.59 2.65a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.43-1.11a2 2 0 0 1 2.11-.45c.86.27 1.75.47 2.65.59A2 2 0 0 1 22 16.92Z" />
-      </svg>
-    );
+function formatDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds}s`;
   }
 
-  if (key === "messages") {
-    return (
-      <svg
-        className="h-4 w-4 text-muted-foreground"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
-      </svg>
-    );
-  }
-
-  if (key === "appointments") {
-    return (
-      <svg
-        className="h-4 w-4 text-muted-foreground"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect height="18" rx="2" ry="2" width="18" x="3" y="4" />
-        <line x1="16" x2="16" y1="2" y2="6" />
-        <line x1="8" x2="8" y1="2" y2="6" />
-        <line x1="3" x2="21" y1="10" y2="10" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      className="h-4 w-4 text-muted-foreground"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
+  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
 }
 
 function getActionKindLabel(
@@ -278,6 +218,17 @@ export function HomePage({ businessId }: HomePageProps) {
       : t("delta.down", { value: Math.abs(deltaPercent).toFixed(1) });
   }
 
+  function formatDurationDelta(deltaSeconds: number): string {
+    if (deltaSeconds === 0) {
+      return t("delta.flat");
+    }
+
+    const value = formatDuration(Math.abs(deltaSeconds));
+    return deltaSeconds > 0
+      ? t("delta.durationUp", { value })
+      : t("delta.durationDown", { value });
+  }
+
   if (!businessId) {
     return (
       <BusinessSetupCard />
@@ -286,21 +237,25 @@ export function HomePage({ businessId }: HomePageProps) {
 
   const metricCards: MetricCard[] = summary
     ? [
-        { key: "calls", icon: metricIcon("calls"), value: summary.kpis.calls.total },
+        {
+          key: "calls",
+          value: summary.kpis.calls.total.toLocaleString(i18n.language),
+          description: formatDelta(summary.kpis.calls.deltaPercent),
+        },
         {
           key: "messages",
-          icon: metricIcon("messages"),
-          value: summary.kpis.messages.total,
+          value: summary.kpis.messages.total.toLocaleString(i18n.language),
+          description: formatDelta(summary.kpis.messages.deltaPercent),
         },
         {
           key: "appointments",
-          icon: metricIcon("appointments"),
-          value: summary.kpis.appointments.total,
+          value: summary.kpis.appointments.total.toLocaleString(i18n.language),
+          description: formatDelta(summary.kpis.appointments.deltaPercent),
         },
         {
-          key: "contacts",
-          icon: metricIcon("contacts"),
-          value: summary.kpis.contacts.total,
+          key: "averageDuration",
+          value: formatDuration(summary.kpis.averageDuration.totalSeconds),
+          description: formatDurationDelta(summary.kpis.averageDuration.deltaSeconds),
         },
       ]
     : [];
@@ -312,27 +267,19 @@ export function HomePage({ businessId }: HomePageProps) {
         {isLoadingSummary ? (
           <MetricCardGridSkeleton />
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-4">
             {metricCards.map((card) => {
-              const metric = summary?.kpis[card.key];
-
               return (
-                <Card key={card.key}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle>{t(`home.metrics.${card.key}.title`)}</CardTitle>
-                    {card.icon}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="type-metric">
-                      {card.value.toLocaleString(i18n.language)}
-                    </div>
-                    <p className="type-meta">
-                      {metric
-                        ? formatDelta(metric.deltaPercent)
-                        : t("home.metrics.loading")}
-                    </p>
-                  </CardContent>
-                </Card>
+                <section
+                  className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
+                  key={card.key}
+                >
+                  <h2 className="type-card-title">{t(`home.metrics.${card.key}.title`)}</h2>
+                  <div className="mt-8">
+                    <p className="type-metric">{card.value}</p>
+                    <p className="type-meta">{card.description}</p>
+                  </div>
+                </section>
               );
             })}
           </div>

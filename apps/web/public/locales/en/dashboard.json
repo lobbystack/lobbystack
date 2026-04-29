@@ -10,7 +10,9 @@
   "delta": {
     "flat": "No change from last month",
     "up": "+{{value}}% from last month",
-    "down": "-{{value}}% from last month"
+    "down": "-{{value}}% from last month",
+    "durationUp": "+{{value}} from last month",
+    "durationDown": "-{{value}} from last month"
   },
   "home": {
     "title": "Home",
@@ -70,6 +72,9 @@
       },
       "appointments": {
         "title": "Appointments"
+      },
+      "averageDuration": {
+        "title": "Average duration"
       },
       "contacts": {
         "title": "Contacts"

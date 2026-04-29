@@ -25,14 +25,14 @@ export function PageHeaderSkeleton({
 
 export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
-        <div className="rounded-xl border bg-card" key={index}>
-          <div className="flex flex-row items-center justify-between px-6 pb-2 pt-6">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="size-4 rounded-full" />
-          </div>
-          <div className="px-6 pb-6">
+        <div
+          className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
+          key={index}
+        >
+          <Skeleton className="h-4 w-24" />
+          <div className="mt-8">
             <Skeleton className="h-8 w-20" />
             <Skeleton className="mt-2 h-4 w-28" />
           </div>
