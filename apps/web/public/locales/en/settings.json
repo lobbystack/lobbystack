@@ -390,6 +390,7 @@
     }
   },
   "account": {
+    "title": "Account",
     "actions": {
       "change": "Change"
     },

@@ -41,6 +41,7 @@ import {
   SettingsBillingPage,
   SettingsBillingUsagePage,
 } from "@/features/settings/SettingsBillingPage";
+import { SettingsAccountPage } from "@/features/settings/SettingsAccountPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
@@ -312,7 +313,7 @@ function WorkspaceShell() {
                     <Navigate replace to="/settings/usage" />
                   )
                 }
-                path="account"
+                path="team"
               />
               <Route
                 element={
@@ -345,6 +346,7 @@ function WorkspaceShell() {
                 path="usage"
               />
             </Route>
+            <Route element={<SettingsAccountPage />} path="/settings/account" />
             <Route element={<Navigate replace to="/" />} path="*" />
           </Routes>
         )}

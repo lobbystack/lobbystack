@@ -20,7 +20,7 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
   const navigationItems = [
     { label: t("sections.usage"), to: "/settings/usage" },
     { label: t("sections.billing"), to: "/settings/billing" },
-    { label: t("sections.business"), to: "/settings/account" },
+    { label: t("sections.business"), to: "/settings/team" },
     { label: t("sections.appearance"), to: "/settings/appearance" },
   ] as const;
 

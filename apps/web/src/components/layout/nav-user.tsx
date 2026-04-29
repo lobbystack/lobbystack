@@ -1,4 +1,4 @@
-import { Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react";
+import { Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles, User as UserIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { SidebarUserSkeleton } from "@/components/loading-skeletons";
@@ -86,6 +86,10 @@ export function NavUser({ onSignOut, user, isLoading = false }: NavUserProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem render={<Link to="/settings/account" />}>
+                <UserIcon />
+                Account
+              </DropdownMenuItem>
               <DropdownMenuItem render={<Link to="/settings/billing" />}>
                 <CreditCard />
                 Billing
