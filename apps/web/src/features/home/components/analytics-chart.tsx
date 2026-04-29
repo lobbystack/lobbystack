@@ -16,15 +16,13 @@ type AnalyticsChartProps = {
     calls: number;
     messages: number;
   }>;
+  granularity?: "daily" | "hourly" | "monthly" | "weekly" | "yearly";
 };
 
-export function AnalyticsChart({ data }: AnalyticsChartProps) {
+export function AnalyticsChart({ data, granularity = "daily" }: AnalyticsChartProps) {
   const { i18n, t } = useTranslation("dashboard");
   const chartData = data.map((item) => ({
-    name: formatDateTime(item.dayStart, i18n.language, {
-      weekday: "short",
-      timeZone: "UTC",
-    }),
+    name: formatChartLabel(item.dayStart, granularity, i18n.language),
     calls: item.calls,
     messages: item.messages,
   }));
@@ -97,4 +95,37 @@ export function AnalyticsChart({ data }: AnalyticsChartProps) {
       </AreaChart>
     </ChartContainer>
   );
+}
+
+function formatChartLabel(
+  value: string,
+  granularity: NonNullable<AnalyticsChartProps["granularity"]>,
+  locale: string,
+): string {
+  if (granularity === "hourly") {
+    return formatDateTime(value, locale, {
+      hour: "numeric",
+      timeZone: "UTC",
+    });
+  }
+
+  if (granularity === "monthly") {
+    return formatDateTime(value, locale, {
+      month: "short",
+      timeZone: "UTC",
+    });
+  }
+
+  if (granularity === "yearly") {
+    return formatDateTime(value, locale, {
+      timeZone: "UTC",
+      year: "numeric",
+    });
+  }
+
+  return formatDateTime(value, locale, {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
 }
