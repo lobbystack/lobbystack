@@ -111,6 +111,24 @@ describe("AppSidebar", () => {
     ]);
   });
 
+  it("uses product branding instead of the tenant name in the sidebar header", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="Tim Hortons"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+            operatorName="Raphael"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "LobbyStack" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Tim Hortons" })).toBeNull();
+  });
+
   it("supports repeated mobile navigation between general, agent, and manage links", async () => {
     window.innerWidth = 390;
 

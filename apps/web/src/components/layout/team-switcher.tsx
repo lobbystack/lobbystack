@@ -1,6 +1,3 @@
-import * as React from "react";
-import { Plus } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import {
   SidebarMenu,
@@ -14,42 +11,35 @@ type TeamSwitcherProps = {
   isLoading?: boolean;
 };
 
-export function TeamSwitcher({ teams, isLoading = false }: TeamSwitcherProps) {
-  const activeBusiness = React.useMemo<Team>(
-    () =>
-      teams[0] ?? {
-        name: "Workspace",
-        logo: Plus,
-      },
-    [teams],
-  );
+const BRAND_NAME = "LobbyStack";
 
+export function TeamSwitcher({ isLoading = false }: TeamSwitcherProps) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         {isLoading ? (
           <SidebarTeamSkeleton />
         ) : (
-        <SidebarMenuButton
-          size="lg"
-          className="text-sidebar-foreground hover:bg-transparent hover:text-sidebar-foreground"
-        >
-          <Avatar>
-            <AvatarFallback>
-              {activeBusiness.name
-                .split(/\s+/)
-                .map((part) => part[0]?.toUpperCase() ?? "")
-                .join("")
-                .slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="grid flex-1 text-start leading-tight">
-            <span className="truncate text-base font-semibold">{activeBusiness.name}</span>
-            {activeBusiness.plan ? (
-              <span className="truncate text-xs">{activeBusiness.plan}</span>
-            ) : null}
-          </div>
-        </SidebarMenuButton>
+          <SidebarMenuButton
+            aria-label={BRAND_NAME}
+            size="lg"
+            className="gap-1.5 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+          >
+            <div className="flex aspect-square size-8 items-center justify-center text-sidebar-foreground">
+              <img
+                alt=""
+                className="size-[30px] shrink-0 object-contain dark:invert"
+                src="/brand/logo-icon.svg"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 items-center overflow-hidden">
+              <img
+                alt=""
+                className="h-[26px] w-auto max-w-44 object-contain dark:invert"
+                src="/brand/logo-wordmark.svg"
+              />
+            </div>
+          </SidebarMenuButton>
         )}
       </SidebarMenuItem>
     </SidebarMenu>
