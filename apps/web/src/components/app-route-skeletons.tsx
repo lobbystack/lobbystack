@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 
 export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
   if (pathname.startsWith("/calls/")) {
@@ -114,7 +115,7 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-6 w-12 rounded-full" />
           </div>
-          <div className="rounded-xl border bg-card p-6">
+          <Surface className="p-6">
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
                 <div className="space-y-2" key={index}>
@@ -123,14 +124,14 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
                 </div>
               ))}
             </div>
-          </div>
+          </Surface>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-6 w-12 rounded-full" />
           </div>
-          <div className="rounded-xl border bg-card p-6">
+          <Surface className="p-6">
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
                 <div className="flex items-center justify-between gap-3" key={index}>
@@ -145,12 +146,12 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
                 </div>
               ))}
             </div>
-          </div>
+          </Surface>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
         <ChartBlockSkeleton height={350} />
-        <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+        <Surface className="p-6 lg:col-span-3">
           <div className="space-y-2">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-40" />
@@ -167,7 +168,7 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
               </div>
             ))}
           </div>
-        </div>
+        </Surface>
       </div>
     </div>
   );

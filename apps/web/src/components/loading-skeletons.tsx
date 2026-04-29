@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { TableCard } from "@/components/ui/table";
 
 export function PageHeaderSkeleton({
@@ -25,7 +26,7 @@ export function PageHeaderSkeleton({
 
 export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-4">
+    <Surface className="grid sm:grid-cols-2 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <div
           className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
@@ -38,7 +39,7 @@ export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
           </div>
         </div>
       ))}
-    </div>
+    </Surface>
   );
 }
 
@@ -102,7 +103,7 @@ export function SettingsItemGroupSkeleton({
   return (
     <div className="flex flex-col gap-4">
       {Array.from({ length: rows }).map((_, index) => (
-        <div className="rounded-xl border bg-card px-6 py-5" key={index}>
+        <Surface className="px-6 py-5" key={index}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <Skeleton className="h-5 w-32" />
@@ -111,7 +112,7 @@ export function SettingsItemGroupSkeleton({
             </div>
             <Skeleton className="h-9 w-24 rounded-md" />
           </div>
-        </div>
+        </Surface>
       ))}
     </div>
   );
@@ -191,24 +192,24 @@ export function DetailPageSkeleton({ cards = 3 }: { cards?: number }) {
     <div className="flex flex-1 flex-col gap-6">
       <Skeleton className="h-5 w-32" />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-        <div className="rounded-xl border bg-card p-6">
+        <Surface className="p-6">
           <div className="space-y-4">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-40 w-full rounded-xl" />
           </div>
-        </div>
+        </Surface>
         <div className="flex flex-col gap-4">
           {Array.from({ length: cards }).map((_, index) => (
-            <div className="rounded-xl border bg-card p-6" key={index}>
+            <Surface className="p-6" key={index}>
               <div className="space-y-3">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
-            </div>
+            </Surface>
           ))}
         </div>
       </div>
@@ -242,12 +243,12 @@ export function SidebarUserSkeleton() {
 
 export function ChartBlockSkeleton({ height = 320 }: { height?: number }) {
   return (
-    <div className="rounded-xl border bg-card p-6">
+    <Surface className="p-6">
       <div className="space-y-2">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-4 w-48" />
       </div>
       <Skeleton className="mt-6 w-full rounded-xl" style={{ height }} />
-    </div>
+    </Surface>
   );
 }

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { surfaceClassName } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
@@ -475,7 +476,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
       <div className="flex flex-col gap-6">
         <PageHeader title={t("sections.integrations")} />
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <li className="rounded-xl border bg-card p-4">
+          <li className={`${surfaceClassName} p-4`}>
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center">
                 <GoogleCalendarLogo />
@@ -523,7 +524,7 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
             </div>
           </li>
 
-          <li className="rounded-xl border bg-card p-4">
+          <li className={`${surfaceClassName} p-4`}>
             <div className="mb-8 flex items-center justify-between gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center text-foreground">
                 <MicrosoftCalendarLogo />

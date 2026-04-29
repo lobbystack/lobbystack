@@ -38,6 +38,7 @@ import {
   MetricCardGridSkeleton,
 } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { AnalyticsChart } from "@/features/home/components/analytics-chart";
 import { formatDateTime } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
@@ -301,7 +302,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
           <ChartBlockSkeleton />
           <MetricCardGridSkeleton />
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            <div className="rounded-xl border bg-card p-6 lg:col-span-4">
+            <Surface className="p-6 lg:col-span-4">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />
@@ -317,8 +318,8 @@ export function Analytics({ businessId }: AnalyticsProps) {
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+            </Surface>
+            <Surface className="p-6 lg:col-span-3">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />
@@ -334,7 +335,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
                   </div>
                 ))}
               </div>
-            </div>
+            </Surface>
           </div>
         </>
       ) : (
@@ -348,7 +349,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
               <AnalyticsChart data={summary?.weeklySeries ?? []} granularity={granularity} />
             </CardContent>
           </Card>
-          <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2">
+          <Surface className="grid sm:grid-cols-2">
             {cards.map((card) => (
               <MetricChartCard
                 chartData={metricChartData}
@@ -361,7 +362,7 @@ export function Analytics({ businessId }: AnalyticsProps) {
                 valueFormatter={card.valueFormatter}
               />
             ))}
-          </div>
+          </Surface>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
             <Card className="col-span-1 lg:col-span-4">
               <CardHeader>

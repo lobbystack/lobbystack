@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import {
   Table,
   TableBody,
@@ -609,11 +610,9 @@ function BorderedItem({
   className?: string;
 }) {
   return (
-    <div
-      className={`rounded-xl border border-border bg-card px-6 py-5 ${className ?? ""}`}
-    >
+    <Surface className={`px-6 py-5 ${className ?? ""}`}>
       {children}
-    </div>
+    </Surface>
   );
 }
 

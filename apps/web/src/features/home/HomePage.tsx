@@ -38,6 +38,7 @@ import {
   MetricCardGridSkeleton,
 } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { Separator } from "@/components/ui/separator";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import {
@@ -267,7 +268,7 @@ export function HomePage({ businessId }: HomePageProps) {
         {isLoadingSummary ? (
           <MetricCardGridSkeleton />
         ) : (
-          <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-4">
+          <Surface className="grid sm:grid-cols-2 lg:grid-cols-4">
             {metricCards.map((card) => {
               return (
                 <section
@@ -282,7 +283,7 @@ export function HomePage({ businessId }: HomePageProps) {
                 </section>
               );
             })}
-          </div>
+          </Surface>
         )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <motion.section
@@ -527,7 +528,7 @@ export function HomePage({ businessId }: HomePageProps) {
         {isLoadingSummary ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
             <ChartBlockSkeleton height={350} />
-            <div className="rounded-xl border bg-card p-6 lg:col-span-3">
+            <Surface className="p-6 lg:col-span-3">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-4 w-40" />
@@ -544,7 +545,7 @@ export function HomePage({ businessId }: HomePageProps) {
                   </div>
                 ))}
               </div>
-            </div>
+            </Surface>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
