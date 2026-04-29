@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Calendar } from "@/components/ui/calendar";
 import {
   ChartContainer,
@@ -465,7 +466,6 @@ function AnalyticsControlBar({
           render={
             <Button
               aria-label={t("home.analytics.controls.granularity")}
-              className="h-9 w-auto min-w-0 justify-center gap-2 px-3 text-sm"
               variant="outline"
             />
           }
@@ -473,7 +473,7 @@ function AnalyticsControlBar({
           <span className="truncate">
             {t(`home.analytics.controls.granularities.${granularity}`)}
           </span>
-          <ChevronDown className="text-muted-foreground" />
+          <ChevronDown className="text-muted-foreground" data-icon="inline-end" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-44">
           <DropdownMenuGroup>
@@ -500,18 +500,18 @@ function AnalyticsControlBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-border bg-input/30 transition-colors">
+      <ButtonGroup>
         <Popover>
           <PopoverTrigger
             render={
               <Button
                 aria-label={t("home.analytics.controls.dateRange")}
-                className="h-full w-10 rounded-none border-0 border-r border-border bg-transparent p-0 hover:bg-input/50 transition-colors"
-                variant="ghost"
+                size="icon"
+                variant="outline"
               />
             }
           >
-            <CalendarIcon className="size-4" />
+            <CalendarIcon />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-auto p-0" sideOffset={8}>
             <Calendar
@@ -528,8 +528,8 @@ function AnalyticsControlBar({
             render={
               <Button
                 aria-label={t("home.analytics.controls.presetRange")}
-                className="h-full max-w-56 justify-center rounded-none border-0 bg-transparent pl-3 pr-5 text-sm hover:bg-input/50 transition-colors"
-                variant="ghost"
+                className="max-w-56"
+                variant="outline"
               />
             }
           >
@@ -554,7 +554,7 @@ function AnalyticsControlBar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </ButtonGroup>
     </div>
   );
 }
