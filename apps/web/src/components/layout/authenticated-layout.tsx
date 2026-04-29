@@ -12,6 +12,7 @@ type AuthenticatedLayoutProps = {
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  showUpgradeToPro?: boolean;
   isLoading?: boolean;
 };
 
@@ -34,6 +35,7 @@ export function AuthenticatedLayout({
   operatorAvatar,
   operatorEmail,
   operatorName,
+  showUpgradeToPro = false,
   isLoading = false,
 }: AuthenticatedLayoutProps) {
   const defaultOpen = getSidebarDefaultOpen();
@@ -54,6 +56,7 @@ export function AuthenticatedLayout({
         {...(operatorAvatar ? { operatorAvatar } : {})}
         {...(operatorEmail ? { operatorEmail } : {})}
         {...(operatorName ? { operatorName } : {})}
+        showUpgradeToPro={showUpgradeToPro}
       />
       <SidebarInset
         className={cn(

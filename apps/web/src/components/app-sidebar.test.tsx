@@ -6,6 +6,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppSidebar } from "./app-sidebar";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 
+const themeState = vi.hoisted(() => ({
+  resolvedTheme: "dark",
+  setTheme: vi.fn(),
+}));
+
+vi.mock("next-themes", () => ({
+  useTheme: () => ({
+    resolvedTheme: themeState.resolvedTheme,
+    setTheme: themeState.setTheme,
+    theme: themeState.resolvedTheme,
+  }),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -34,6 +47,8 @@ vi.mock("react-i18next", () => ({
 
 describe("AppSidebar", () => {
   beforeEach(() => {
+    themeState.resolvedTheme = "dark";
+    themeState.setTheme.mockReset();
     window.innerWidth = 1280;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -127,6 +142,67 @@ describe("AppSidebar", () => {
 
     expect(screen.getByRole("button", { name: "LobbyStack" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Tim Hortons" })).toBeNull();
+  });
+
+  it("only shows the Pro upgrade action when enabled", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+    expect(screen.queryByRole("menuitem", { name: "Upgrade to Pro" })).toBeNull();
+
+    rerender(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+            showUpgradeToPro
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+
+    const upgradeLink = await screen.findByRole("menuitem", { name: "Upgrade to Pro" });
+    expect(upgradeLink.getAttribute("href")).toBe("/settings/billing");
+  });
+
+  it("replaces the billing action with a theme toggle", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="raphael@example.com"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+
+    expect(screen.queryByRole("menuitem", { name: "Billing" })).toBeNull();
+
+    await user.click(await screen.findByRole("menuitem", { name: "Toggle theme" }));
+
+    expect(themeState.setTheme).toHaveBeenCalledWith("light");
+    expect(screen.getByRole("menuitem", { name: "Toggle theme" })).toBeTruthy();
   });
 
   it("supports repeated mobile navigation between general, agent, and manage links", async () => {

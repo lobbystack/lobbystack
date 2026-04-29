@@ -113,8 +113,16 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
+  const billingStatus = useQuery(
+    api.billing.getStatus,
+    businessId ? { businessId } : "skip",
+  );
   const isBootstrapLoading = businesses === undefined || currentUser === undefined;
   const previousBusinessIdRef = useRef<string | null>(null);
+  const showUpgradeToPro =
+    billingStatus?.hasCheckoutAccess === true &&
+    billingStatus.availableCheckoutPlans.includes("pro") &&
+    billingStatus.plan === "free_cloud";
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -208,6 +216,7 @@ function WorkspaceShell() {
           ? { operatorName: currentUser.displayName ?? currentUser.name! }
           : {}
       )}
+      showUpgradeToPro={showUpgradeToPro}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         {isBootstrapLoading ? (
