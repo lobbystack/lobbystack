@@ -500,13 +500,13 @@ function AnalyticsControlBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="inline-flex h-9 items-stretch overflow-hidden rounded-full border border-border bg-input/30 transition-colors hover:bg-input/50">
+      <div className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-border bg-input/30 transition-colors">
         <Popover>
           <PopoverTrigger
             render={
               <Button
                 aria-label={t("home.analytics.controls.dateRange")}
-                className="h-full w-10 rounded-none border-0 border-r border-border bg-transparent p-0 hover:bg-transparent"
+                className="h-full w-10 rounded-none border-0 border-r border-border bg-transparent p-0 hover:bg-input/50 transition-colors"
                 variant="ghost"
               />
             }
@@ -528,7 +528,7 @@ function AnalyticsControlBar({
             render={
               <Button
                 aria-label={t("home.analytics.controls.presetRange")}
-                className="h-full max-w-56 justify-center rounded-none border-0 bg-transparent pl-3 pr-5 text-sm hover:bg-transparent"
+                className="h-full max-w-56 justify-center rounded-none border-0 bg-transparent pl-3 pr-5 text-sm hover:bg-input/50 transition-colors"
                 variant="ghost"
               />
             }
