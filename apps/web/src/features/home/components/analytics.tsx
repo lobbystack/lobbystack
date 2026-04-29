@@ -499,18 +499,18 @@ function AnalyticsControlBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="flex h-9 overflow-hidden rounded-4xl border border-border bg-input/30 transition-colors hover:bg-input/50">
+      <div className="inline-flex h-9 items-stretch overflow-hidden rounded-full border border-border bg-input/30 transition-colors hover:bg-input/50">
         <Popover>
           <PopoverTrigger
             render={
               <Button
                 aria-label={t("home.analytics.controls.dateRange")}
-                className="grid h-9 w-11 place-items-center rounded-none border-0 border-r bg-transparent px-0 hover:bg-transparent"
-                variant="outline"
+                className="h-full w-10 rounded-none border-0 border-r border-border bg-transparent p-0 hover:bg-transparent"
+                variant="ghost"
               />
             }
           >
-            <CalendarIcon />
+            <CalendarIcon className="size-4" />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-auto p-0" sideOffset={8}>
             <Calendar
@@ -527,8 +527,8 @@ function AnalyticsControlBar({
             render={
               <Button
                 aria-label={t("home.analytics.controls.presetRange")}
-                className="h-9 min-w-44 justify-start rounded-none border-0 bg-transparent px-4 text-sm hover:bg-transparent"
-                variant="outline"
+                className="h-full max-w-56 justify-center rounded-none border-0 bg-transparent pl-3 pr-5 text-sm hover:bg-transparent"
+                variant="ghost"
               />
             }
           >
