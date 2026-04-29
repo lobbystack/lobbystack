@@ -1,9 +1,3 @@
-import {
-  CalendarDays,
-  Clock3,
-  MessageSquare,
-  Phone,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../../convex/_generated/api";
@@ -109,28 +103,24 @@ export function Analytics({ businessId }: AnalyticsProps) {
           title: t("home.analytics.cards.calls"),
           value: summary.metrics.calls.value.toLocaleString(i18n.language),
           description: formatPercentDelta(summary.metrics.calls.deltaPercent),
-          icon: Phone,
         },
         {
           key: "messages" as const,
           title: t("home.analytics.cards.messages"),
           value: summary.metrics.messages.value.toLocaleString(i18n.language),
           description: formatPercentDelta(summary.metrics.messages.deltaPercent),
-          icon: MessageSquare,
         },
         {
           key: "appointments" as const,
           title: t("home.analytics.cards.appointments"),
           value: summary.metrics.appointments.value.toLocaleString(i18n.language),
           description: formatPercentDelta(summary.metrics.appointments.deltaPercent),
-          icon: CalendarDays,
         },
         {
           key: "averageDuration" as const,
           title: t("home.analytics.cards.averageDuration"),
           value: formatDuration(summary.metrics.averageCallDurationSeconds.value),
           description: formatDurationDelta(summary.metrics.averageCallDurationSeconds.deltaSeconds),
-          icon: Clock3,
         },
       ]
     : [];
@@ -189,18 +179,18 @@ export function Analytics({ businessId }: AnalyticsProps) {
               <AnalyticsChart data={summary?.weeklySeries ?? []} />
             </CardContent>
           </Card>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid overflow-hidden rounded-xl border bg-card sm:grid-cols-2 lg:grid-cols-4">
             {cards.map((card) => (
-              <Card key={card.key}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle>{card.title}</CardTitle>
-                  <card.icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="type-metric">{card.value}</div>
+              <section
+                className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
+                key={card.key}
+              >
+                <h2 className="type-card-title">{card.title}</h2>
+                <div className="mt-8">
+                  <p className="type-metric">{card.value}</p>
                   <p className="type-meta">{card.description}</p>
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             ))}
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
