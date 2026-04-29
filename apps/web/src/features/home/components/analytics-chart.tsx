@@ -1,4 +1,11 @@
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  type XAxisTickContentProps,
+} from "recharts";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -41,7 +48,7 @@ export function AnalyticsChart({ data, granularity = "daily" }: AnalyticsChartPr
         },
       }}
     >
-      <AreaChart data={chartData} margin={{ left: 4, right: 4, top: 8 }}>
+      <AreaChart data={chartData} margin={{ left: 0, right: 4, top: 8 }}>
         <defs>
           <linearGradient id="fillCalls" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--color-calls)" stopOpacity={0.35} />
@@ -61,10 +68,19 @@ export function AnalyticsChart({ data, granularity = "daily" }: AnalyticsChartPr
           axisLine={false}
           dataKey="name"
           fontSize={12}
+          interval={0}
           stroke="#888888"
+          tick={renderXAxisTick}
           tickLine={false}
         />
-        <YAxis axisLine={false} fontSize={12} stroke="#888888" tickLine={false} />
+        <YAxis
+          axisLine={false}
+          fontSize={12}
+          stroke="#888888"
+          tick={{ dx: 32 }}
+          tickLine={false}
+          width={0}
+        />
         <Area
           activeDot={{
             r: 6,
@@ -95,6 +111,35 @@ export function AnalyticsChart({ data, granularity = "daily" }: AnalyticsChartPr
       </AreaChart>
     </ChartContainer>
   );
+}
+
+function renderXAxisTick({
+  index,
+  payload,
+  visibleTicksCount,
+  x,
+  y,
+}: XAxisTickContentProps) {
+  const xPosition = toSvgNumber(x);
+  const yPosition = toSvgNumber(y) + 16;
+  const textAnchor =
+    index === 0 ? "start" : index === visibleTicksCount - 1 ? "end" : "middle";
+
+  return (
+    <text
+      fill="#888888"
+      fontSize={12}
+      textAnchor={textAnchor}
+      x={xPosition}
+      y={yPosition}
+    >
+      {payload.value}
+    </text>
+  );
+}
+
+function toSvgNumber(value: number | string): number {
+  return typeof value === "number" ? value : Number(value);
 }
 
 function formatChartLabel(

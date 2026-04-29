@@ -291,11 +291,11 @@ export function Analytics({ businessId }: AnalyticsProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 py-2 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-2">
         <div className="flex min-w-0 flex-col">
           <h1 className="type-page-title">{t("analyticsPage.title")}</h1>
         </div>
-        {controlBar}
+        <div className="ms-auto flex shrink-0">{controlBar}</div>
       </div>
       {isLoadingSummary ? (
         <>
