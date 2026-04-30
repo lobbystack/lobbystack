@@ -52,6 +52,7 @@
               "agent/ai-settings",
               "agent/knowledge",
               "agent/services",
+              "agent/appointment-changes",
               "agent/rules"
             ]
           },
