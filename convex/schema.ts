@@ -577,6 +577,7 @@ export default defineSchema({
     aiGenerated: v.boolean(),
   })
     .index("by_business_id", ["businessId"])
+    .index("by_business_id_and_provider_updated_at", ["businessId", "providerUpdatedAt"])
     .index("by_conversation_id", ["conversationId"])
     .index("by_conversation_session_id", ["conversationSessionId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),
@@ -708,6 +709,7 @@ export default defineSchema({
     calendarSyncIssueId: v.optional(v.id("inbox_items")),
     calendarExternalEventId: v.optional(v.string()),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_starts_at", ["businessId", "startsAt"])
     .index("by_business_id_and_calendar_sync_state_and_starts_at", [
       "businessId",
@@ -793,7 +795,9 @@ export default defineSchema({
     providerUpdatedAt: v.optional(v.string()),
     providerRawDlrDoneDate: v.optional(v.string()),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_scheduled_for", ["businessId", "scheduledFor"])
+    .index("by_business_id_and_provider_updated_at", ["businessId", "providerUpdatedAt"])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
     .index("by_provider_message_id", ["providerMessageId"]),

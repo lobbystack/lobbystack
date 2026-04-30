@@ -1279,43 +1279,54 @@ function AddonsSection({
             <div className="flex items-start gap-2.5">
               <Check className="mt-0.5 size-4 text-emerald-500" />
               <span className="text-[15px] leading-relaxed text-foreground">
-                Allows multiple receptionists to handle SMS queries using your business numbers
+                {t("billing.addon.aiSmsFeatures.smsQueries")}
               </span>
             </div>
             <div className="flex items-start gap-2.5">
               <Check className="mt-0.5 size-4 text-emerald-500" />
               <span className="text-[15px] leading-relaxed text-foreground">
-                Seamlessly hands over alerts to staff while preserving conversational context
+                {t("billing.addon.aiSmsFeatures.staffAlerts")}
               </span>
             </div>
             <div className="flex items-start gap-2.5">
               <Check className="mt-0.5 size-4 text-emerald-500" />
               <span className="text-[15px] leading-relaxed text-foreground">
-                Requires 10DLC brand and campaign registration for A2P compliance
+                {t("billing.addon.aiSmsFeatures.compliance")}
               </span>
             </div>
           </div>
 
           <div className="flex flex-col pt-2">
             <span className="mb-4 text-sm font-medium text-muted-foreground">
-              Associated fees
+              {t("billing.addon.associatedFees")}
             </span>
             <div className="flex items-center justify-between border-b border-border/60 py-3.5 text-[15px]">
-              <span className="text-muted-foreground">Carrier review & setup fees</span>
+              <span className="text-muted-foreground">{t("billing.addon.carrierSetupFees")}</span>
               <span className="font-medium text-foreground">
-                {formatCents(billingAddonCatalog.ai_sms.oneTimeSetupChargeCents, locale)} one-time
+                {t("billing.addon.oneTimeFeeValue", {
+                  amount: formatCents(
+                    billingAddonCatalog.ai_sms.oneTimeSetupChargeCents,
+                    locale,
+                  ),
+                })}
               </span>
             </div>
             <div className="flex items-center justify-between border-b border-border/60 py-3.5 text-[15px]">
-              <span className="text-muted-foreground">Monthly subscription fee</span>
-              <span className="font-medium text-foreground">
-                {addonMonthlyPrice}/month
+              <span className="text-muted-foreground">{t("billing.addon.monthlyFee")}</span>
+              <span className="flex items-baseline gap-1 font-medium text-foreground">
+                <span>{addonMonthlyPrice}</span>
+                <span>{t("billing.currentPlan.monthlySuffix")}</span>
               </span>
             </div>
             <div className="flex items-center justify-between py-3.5 text-[15px]">
-              <span className="text-muted-foreground">Messaging rate</span>
+              <span className="text-muted-foreground">{t("billing.addon.messagingRate")}</span>
               <span className="font-medium text-foreground">
-                {formatCents(billingAddonCatalog.ai_sms.usageRatePerSegmentCents, locale)}/segment
+                {t("billing.addon.perSegmentFeeValue", {
+                  amount: formatCents(
+                    billingAddonCatalog.ai_sms.usageRatePerSegmentCents,
+                    locale,
+                  ),
+                })}
               </span>
             </div>
           </div>

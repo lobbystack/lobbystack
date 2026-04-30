@@ -139,7 +139,18 @@
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
       "aiSmsRequiresProPrefix": "Disponible avec le forfait",
-      "aiSmsRequiresProLink": "Pro"
+      "aiSmsRequiresProLink": "Pro",
+      "aiSmsFeatures": {
+        "smsQueries": "Permet à plusieurs réceptionnistes de gérer les demandes SMS avec vos numéros d'entreprise",
+        "staffAlerts": "Transmet les alertes à l'équipe tout en conservant le contexte conversationnel",
+        "compliance": "Nécessite l'inscription de la marque et de la campagne 10DLC pour la conformité A2P"
+      },
+      "associatedFees": "Frais associés",
+      "carrierSetupFees": "Frais d'examen et de configuration du fournisseur",
+      "oneTimeFeeValue": "{{amount}} une fois",
+      "monthlyFee": "Frais mensuels d'abonnement",
+      "messagingRate": "Tarif des messages",
+      "perSegmentFeeValue": "{{amount}}/segment"
     },
     "compliance": {
       "title": "Conformité SMS IA",

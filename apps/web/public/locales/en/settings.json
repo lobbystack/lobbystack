@@ -139,7 +139,18 @@
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "One-time setup fee: {{amount}}",
       "aiSmsRequiresProPrefix": "Available on",
-      "aiSmsRequiresProLink": "Pro plan"
+      "aiSmsRequiresProLink": "Pro plan",
+      "aiSmsFeatures": {
+        "smsQueries": "Allows multiple receptionists to handle SMS queries using your business numbers",
+        "staffAlerts": "Seamlessly hands over alerts to staff while preserving conversational context",
+        "compliance": "Requires 10DLC brand and campaign registration for A2P compliance"
+      },
+      "associatedFees": "Associated fees",
+      "carrierSetupFees": "Carrier review & setup fees",
+      "oneTimeFeeValue": "{{amount}} one-time",
+      "monthlyFee": "Monthly subscription fee",
+      "messagingRate": "Messaging rate",
+      "perSegmentFeeValue": "{{amount}}/segment"
     },
     "compliance": {
       "title": "AI SMS compliance",

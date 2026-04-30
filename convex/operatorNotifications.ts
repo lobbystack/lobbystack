@@ -133,6 +133,16 @@ function deliveryErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function mergeDocsById<T extends { _id: string }>(collections: Array<Array<T>>): Array<T> {
+  const byId = new Map<string, T>();
+  for (const collection of collections) {
+    for (const doc of collection) {
+      byId.set(doc._id, doc);
+    }
+  }
+  return Array.from(byId.values());
+}
+
 export const listRecipientsForEvent = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -238,6 +248,24 @@ export const getDirectRecipient = internalQuery({
       smsEnabled: args.channel === "sms",
       eventPreferences: buildDefaultOperatorNotificationEventPreferences(),
     };
+  },
+});
+
+export const hasDeliveryForEvent = internalQuery({
+  args: {
+    userId: v.id("users"),
+    channel: operatorNotificationChannelValidator,
+    eventKey: v.string(),
+  },
+  handler: async (ctx, args): Promise<boolean> => {
+    const delivery = await ctx.db
+      .query("operator_notification_deliveries")
+      .withIndex("by_user_id_and_channel_and_event_key", (q) =>
+        q.eq("userId", args.userId).eq("channel", args.channel).eq("eventKey", args.eventKey),
+      )
+      .unique();
+
+    return delivery !== null;
   },
 });
 
@@ -671,7 +699,19 @@ export const getDailyDigestSummary = internalQuery({
     endIso: v.string(),
   },
   handler: async (ctx, args): Promise<DigestSummary> => {
-    const [calls, appointments, voiceItems, calendarIssues, messages, notifications] =
+    const startMs = Date.parse(args.startIso);
+    const endMs = Date.parse(args.endIso);
+    const [
+      calls,
+      appointments,
+      voiceItems,
+      calendarIssues,
+      messagesCreatedInWindow,
+      messagesUpdatedInWindow,
+      notificationsScheduledInWindow,
+      notificationsUpdatedInWindow,
+      notificationsCreatedInWindow,
+    ] =
       await Promise.all([
         ctx.db
           .query("calls")
@@ -681,34 +721,86 @@ export const getDailyDigestSummary = internalQuery({
           .collect(),
         ctx.db
           .query("appointments")
-          .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", args.businessId))
-          .collect(),
-        ctx.db
-          .query("inbox_items")
-          .withIndex("by_business_id_and_kind", (q) =>
-            q.eq("businessId", args.businessId).eq("kind", "voice_message"),
+          .withIndex("by_business_id", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .gte("_creationTime", startMs)
+              .lt("_creationTime", endMs),
           )
           .collect(),
         ctx.db
           .query("inbox_items")
           .withIndex("by_business_id_and_kind", (q) =>
-            q.eq("businessId", args.businessId).eq("kind", "calendar_sync_issue"),
+            q
+              .eq("businessId", args.businessId)
+              .eq("kind", "voice_message")
+              .gte("_creationTime", startMs)
+              .lt("_creationTime", endMs),
+          )
+          .collect(),
+        ctx.db
+          .query("inbox_items")
+          .withIndex("by_business_id_and_kind", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .eq("kind", "calendar_sync_issue")
+              .gte("_creationTime", startMs)
+              .lt("_creationTime", endMs),
           )
           .collect(),
         ctx.db
           .query("messages")
-          .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+          .withIndex("by_business_id", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .gte("_creationTime", startMs)
+              .lt("_creationTime", endMs),
+          )
+          .collect(),
+        ctx.db
+          .query("messages")
+          .withIndex("by_business_id_and_provider_updated_at", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .gte("providerUpdatedAt", args.startIso)
+              .lt("providerUpdatedAt", args.endIso),
+          )
           .collect(),
         ctx.db
           .query("notifications")
           .withIndex("by_business_id_and_scheduled_for", (q) =>
-            q.eq("businessId", args.businessId),
+            q
+              .eq("businessId", args.businessId)
+              .gte("scheduledFor", args.startIso)
+              .lt("scheduledFor", args.endIso),
+          )
+          .collect(),
+        ctx.db
+          .query("notifications")
+          .withIndex("by_business_id_and_provider_updated_at", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .gte("providerUpdatedAt", args.startIso)
+              .lt("providerUpdatedAt", args.endIso),
+          )
+          .collect(),
+        ctx.db
+          .query("notifications")
+          .withIndex("by_business_id", (q) =>
+            q
+              .eq("businessId", args.businessId)
+              .gte("_creationTime", startMs)
+              .lt("_creationTime", endMs),
           )
           .collect(),
       ]);
 
-    const startMs = Date.parse(args.startIso);
-    const endMs = Date.parse(args.endIso);
+    const messages = mergeDocsById([messagesCreatedInWindow, messagesUpdatedInWindow]);
+    const notifications = mergeDocsById([
+      notificationsScheduledInWindow,
+      notificationsUpdatedInWindow,
+      notificationsCreatedInWindow,
+    ]);
     const inWindowMs = (value: number) => value >= startMs && value < endMs;
     const inWindowIso = (value: string | undefined) =>
       value !== undefined && inWindowMs(Date.parse(value));
@@ -789,6 +881,7 @@ export const dispatchDueDailyDigests = internalAction({
     const now = DateTime.utc();
     let attempted = 0;
     let sent = 0;
+    const summaryCache = new Map<string, DigestSummary>();
 
     for (const target of targets) {
       const localNow = now.setZone(target.timezone);
@@ -813,14 +906,25 @@ export const dispatchDueDailyDigests = internalAction({
         continue;
       }
 
-      const summary: DigestSummary = await ctx.runQuery(
-        internal.operatorNotifications.getDailyDigestSummary,
-        {
+      const eventKey = `dailyDigest:${String(target.businessId)}:${String(target.userId)}:${digestForDate}`;
+      const alreadyReserved: boolean = await ctx.runQuery(
+        internal.operatorNotifications.hasDeliveryForEvent,
+        { userId: target.userId, channel: "email", eventKey },
+      );
+      if (alreadyReserved) {
+        continue;
+      }
+
+      const summaryCacheKey = `${String(target.businessId)}:${startIso}:${endIso}`;
+      let summary = summaryCache.get(summaryCacheKey);
+      if (!summary) {
+        summary = await ctx.runQuery(internal.operatorNotifications.getDailyDigestSummary, {
           businessId: target.businessId,
           startIso,
           endIso,
-        },
-      );
+        });
+        summaryCache.set(summaryCacheKey, summary);
+      }
       const subject = `Daily summary for ${target.businessName}`;
       const body = buildDigestBody({
         businessName: target.businessName,
@@ -833,7 +937,7 @@ export const dispatchDueDailyDigests = internalAction({
         channel: "email",
         to: target.email,
         eventKind: "dailyDigest",
-        eventKey: `dailyDigest:${String(target.businessId)}:${String(target.userId)}:${digestForDate}`,
+        eventKey,
         subject,
         body,
         digestForDate,
