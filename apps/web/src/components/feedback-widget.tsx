@@ -78,9 +78,6 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
         >
           <MessageSquarePlus data-icon="inline-start" />
           {t("feedback.trigger")}
-          <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-            F
-          </span>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-96 max-w-[calc(100vw-2rem)]" sideOffset={8}>
           <PopoverHeader>
