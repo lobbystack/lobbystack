@@ -131,13 +131,96 @@
     "addon": {
       "title": "Modules complémentaires",
       "aiSmsName": "SMS IA",
-      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise.",
+      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise après l'approbation 10DLC.",
       "enable": "Activer",
-      "aiSmsActiveBadge": "SMS IA actifs",
+      "register": "Inscrire",
+      "aiSmsActiveBadge": "Actif",
+      "aiSmsSetupRequiredBadge": "Configuration requise",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
       "aiSmsRequiresProPrefix": "Disponible avec le forfait",
       "aiSmsRequiresProLink": "Pro"
+    },
+    "compliance": {
+      "title": "Conformité SMS IA",
+      "description": "Inscrivez votre entreprise à A2P 10DLC afin que les alertes hébergées et les réponses IA puissent utiliser le numéro d'entreprise approuvé.",
+      "cardTitle": "Inscription 10DLC",
+      "routingSummary": "Routage actuel de l'expéditeur : {{senderMode}}.",
+      "approvedNumber": "Numéro d'entreprise approuvé : {{phoneNumber}}",
+      "senderMode": {
+        "platformPhone": "les alertes restent sur l'expéditeur hébergé partagé",
+        "businessPhone": "les messages sont envoyés directement depuis le numéro d'entreprise",
+        "businessMessagingService": "les alertes et les SMS IA sont envoyés via le Messaging Service d'entreprise approuvé"
+      },
+      "status": {
+        "setupRequired": "Configuration requise",
+        "awaitingVerification": "En attente de vérification",
+        "underReview": "En cours d'examen",
+        "approved": "Approuvé",
+        "failed": "Échec",
+        "suspended": "Suspendu"
+      },
+      "actions": {
+        "backToBilling": "Facturation",
+        "save": "Enregistrer le brouillon",
+        "saving": "Enregistrement...",
+        "submit": "Soumettre l'inscription",
+        "resume": "Reprendre l'inscription",
+        "refresh": "Actualiser l'état",
+        "working": "Mise à jour..."
+      },
+      "toast": {
+        "saved": "Brouillon de conformité SMS enregistré.",
+        "saveFailed": "Impossible d'enregistrer le brouillon de conformité SMS.",
+        "submitted": "Inscription de conformité SMS mise à jour.",
+        "submitFailed": "Impossible de mettre à jour l'inscription de conformité SMS."
+      },
+      "companyTypes": {
+        "private": "Privée",
+        "nonProfit": "Sans but lucratif",
+        "government": "Gouvernement",
+        "public": "Publique"
+      },
+      "trafficTier": {
+        "lowVolume": "Faible volume (recommandé)",
+        "mixed": "Mixte / volume plus élevé"
+      },
+      "fields": {
+        "approvedPhoneNumber": "Numéro d'entreprise à inscrire",
+        "businessName": "Raison sociale légale",
+        "websiteUrl": "URL du site web",
+        "businessType": "Type d'entreprise",
+        "businessIndustry": "Secteur d'activité",
+        "businessRegistrationIdentifier": "Type d'identifiant fiscal",
+        "businessRegistrationNumber": "Numéro d'identifiant fiscal",
+        "companyType": "Type de société",
+        "stockExchange": "Bourse",
+        "stockTicker": "Symbole boursier",
+        "brandContactEmail": "Courriel du contact de marque (obligatoire pour les sociétés publiques)",
+        "representativeFirstName": "Prénom du représentant autorisé",
+        "representativeLastName": "Nom du représentant autorisé",
+        "representativeBusinessTitle": "Titre du représentant autorisé",
+        "representativeJobPosition": "Rôle du représentant autorisé",
+        "representativePhoneNumber": "Téléphone du représentant autorisé",
+        "representativeEmail": "Courriel du représentant autorisé",
+        "addressCustomerName": "Nom postal",
+        "addressStreet": "Adresse civique",
+        "addressStreetSecondary": "Adresse ligne 2",
+        "addressCity": "Ville",
+        "addressRegion": "État / province",
+        "addressPostalCode": "Code postal",
+        "addressIsoCountry": "Code pays",
+        "trafficTier": "Profil de trafic",
+        "campaignDescription": "Description de la campagne",
+        "messageFlow": "Flux d'inscription",
+        "sampleMessageOne": "Exemple de message 1",
+        "sampleMessageTwo": "Exemple de message 2",
+        "optInMessage": "Message de confirmation d'inscription",
+        "optOutMessage": "Message de désabonnement",
+        "helpMessage": "Message d'aide",
+        "hasEmbeddedLinks": "Les messages incluent des liens",
+        "hasEmbeddedPhone": "Les messages incluent des numéros de téléphone"
+      }
     },
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",

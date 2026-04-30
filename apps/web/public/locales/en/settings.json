@@ -132,9 +132,8 @@
       "title": "Add-ons",
       "aiSmsName": "AI SMS",
       "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously after 10DLC approval.",
-      "aiSmsSetupRequiredDescription": "AI SMS billing is active, but 10DLC registration still needs to be completed before alerts and AI SMS can use the business number.",
-      "aiSmsSetupRequiredNotice": "Alerts stay on the shared hosted sender until approval. AI SMS remains blocked while Twilio reviews the registration.",
       "enable": "Enable",
+      "register": "Register",
       "aiSmsActiveBadge": "Active",
       "aiSmsSetupRequiredBadge": "Setup required",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
@@ -162,6 +161,7 @@
         "suspended": "Suspended"
       },
       "actions": {
+        "backToBilling": "Billing",
         "save": "Save draft",
         "saving": "Saving...",
         "submit": "Submit registration",

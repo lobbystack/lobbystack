@@ -38,6 +38,7 @@ import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePa
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 import {
+  SettingsBillingCompliancePage,
   SettingsBillingPage,
   SettingsBillingUsagePage,
 } from "@/features/settings/SettingsBillingPage";
@@ -344,6 +345,16 @@ function WorkspaceShell() {
                   )
                 }
                 path="billing"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsBillingCompliancePage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="billing/ai-sms-compliance"
               />
               <Route
                 element={

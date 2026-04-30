@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAction, useMutation } from "convex/react";
+import { Link, Navigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  ArrowLeft,
   ArrowUpRight,
   Check,
   CircleAlert,
@@ -1188,10 +1190,18 @@ function AddonsSection({
     >
       {t("billing.addon.aiSmsActiveBadge")}
     </Badge>
+  ) : setupRequired && status.hasBillingManagementAccess ? (
+    <Button
+      size="sm"
+      variant="outline"
+      render={<Link to="/settings/billing/ai-sms-compliance" />}
+    >
+      {t("billing.addon.register")}
+    </Button>
   ) : setupRequired ? (
     <Badge
       variant="outline"
-      className="border-amber-200 bg-amber-50 text-[11px] tracking-wide text-amber-700"
+      className="border-amber-200 bg-amber-50 text-[11px] tracking-wide text-amber-900"
     >
       {t("billing.addon.aiSmsSetupRequiredBadge")}
     </Badge>
@@ -1215,88 +1225,99 @@ function AddonsSection({
       description={t("billing.addon.aiSmsDescription")}
     >
       <BorderedItem>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[15px] font-medium leading-6 text-foreground">
-                {t("billing.addon.aiSmsName")}
-              </span>
-              {isOperational && (
-                <Badge
-                  variant="default"
-                  className="bg-emerald-600 text-[10px] tracking-wide text-white dark:bg-emerald-500"
-                >
-                  {t("billing.addon.aiSmsActiveBadge")}
-                </Badge>
-              )}
-              {!isOperational && setupRequired && (
-                <Badge
-                  variant="outline"
-                  className="border-amber-200 bg-amber-50 text-[10px] tracking-wide text-amber-700"
-                >
-                  {t("billing.addon.aiSmsSetupRequiredBadge")}
-                </Badge>
+        <div className="flex w-full flex-col gap-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xl font-medium tracking-tight text-foreground">
+                  {t("billing.addon.aiSmsName")}
+                </span>
+                {isOperational && (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-200 bg-emerald-50 text-[11px] tracking-wide text-emerald-700"
+                  >
+                    {t("billing.addon.aiSmsActiveBadge")}
+                  </Badge>
+                )}
+                {!isOperational && setupRequired && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-200 bg-amber-50 text-[11px] tracking-wide text-amber-900"
+                  >
+                    {t("billing.addon.aiSmsSetupRequiredBadge")}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="mt-2 shrink-0 md:mt-0">
+              {isFreePlanLocked ? (
+                <Tooltip>
+                  <TooltipTrigger render={<span className="inline-flex" />}>
+                    {enableControl}
+                  </TooltipTrigger>
+                  <TooltipContent className="pointer-events-auto gap-1">
+                    <span>{t("billing.addon.aiSmsRequiresProPrefix")}</span>
+                    <Button
+                      variant="link"
+                      size="xs"
+                      className="h-auto p-0 text-background underline underline-offset-2 hover:text-background/80"
+                      disabled={loading !== null}
+                      onClick={() => void handleUpgradeToPro()}
+                    >
+                      {t("billing.addon.aiSmsRequiresProLink")}
+                    </Button>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                enableControl
               )}
             </div>
-            <span className="text-[15px] leading-6 text-muted-foreground">
-              {setupRequired
-                ? t("billing.addon.aiSmsSetupRequiredDescription")
-                : t("billing.addon.aiSmsDescription")}
-            </span>
-            {setupRequired && (
-              <span className="text-sm leading-6 text-muted-foreground">
-                {t("billing.addon.aiSmsSetupRequiredNotice")}
-              </span>
-            )}
-            {status.aiSmsEnabled && (
-              <div className="mt-1 flex flex-wrap items-end gap-2">
-                <span className="text-2xl font-semibold tracking-tight text-foreground">
-                  {addonMonthlyPrice}
-                </span>
-                <span className="pb-0.5 text-sm text-muted-foreground">
-                  {t("billing.currentPlan.monthlySuffix")}
-                </span>
-              </div>
-            )}
-            <span className="text-sm tabular-nums leading-6 text-muted-foreground">
-              {t("billing.addon.aiSmsPricing", {
-                monthly: addonMonthlyPrice,
-                perSegment: formatCents(
-                  billingAddonCatalog.ai_sms.usageRatePerSegmentCents,
-                  locale,
-                ),
-              })}
-              {" · "}
-              {t("billing.addon.aiSmsSetup", {
-                amount: formatCents(
-                  billingAddonCatalog.ai_sms.oneTimeSetupChargeCents,
-                  locale,
-                ),
-              })}
-            </span>
           </div>
-          <div className="shrink-0">
-            {isFreePlanLocked ? (
-              <Tooltip>
-                <TooltipTrigger render={<span className="inline-flex" />}>
-                  {enableControl}
-                </TooltipTrigger>
-                <TooltipContent className="pointer-events-auto gap-1">
-                  <span>{t("billing.addon.aiSmsRequiresProPrefix")}</span>
-                  <Button
-                    variant="link"
-                    size="xs"
-                    className="h-auto p-0 text-background underline underline-offset-2 hover:text-background/80"
-                    disabled={loading !== null}
-                    onClick={() => void handleUpgradeToPro()}
-                  >
-                    {t("billing.addon.aiSmsRequiresProLink")}
-                  </Button>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              enableControl
-            )}
+
+          <div className="flex flex-col gap-3.5">
+            <div className="flex items-start gap-2.5">
+              <Check className="mt-0.5 size-4 text-emerald-500" />
+              <span className="text-[15px] leading-relaxed text-foreground">
+                Allows multiple receptionists to handle SMS queries using your business numbers
+              </span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Check className="mt-0.5 size-4 text-emerald-500" />
+              <span className="text-[15px] leading-relaxed text-foreground">
+                Seamlessly hands over alerts to staff while preserving conversational context
+              </span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Check className="mt-0.5 size-4 text-emerald-500" />
+              <span className="text-[15px] leading-relaxed text-foreground">
+                Requires 10DLC brand and campaign registration for A2P compliance
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col pt-2">
+            <span className="mb-4 text-sm font-medium text-muted-foreground">
+              Associated fees
+            </span>
+            <div className="flex items-center justify-between border-b border-border/60 py-3.5 text-[15px]">
+              <span className="text-muted-foreground">Carrier review & setup fees</span>
+              <span className="font-medium text-foreground">
+                {formatCents(billingAddonCatalog.ai_sms.oneTimeSetupChargeCents, locale)} one-time
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border/60 py-3.5 text-[15px]">
+              <span className="text-muted-foreground">Monthly subscription fee</span>
+              <span className="font-medium text-foreground">
+                {addonMonthlyPrice}/month
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-3.5 text-[15px]">
+              <span className="text-muted-foreground">Messaging rate</span>
+              <span className="font-medium text-foreground">
+                {formatCents(billingAddonCatalog.ai_sms.usageRatePerSegmentCents, locale)}/segment
+              </span>
+            </div>
           </div>
         </div>
       </BorderedItem>
@@ -1340,7 +1361,7 @@ function getComplianceBadge(
     default:
       return {
         label: t("billing.compliance.status.setupRequired"),
-        className: "border-amber-200 bg-amber-50 text-amber-700",
+        className: "border-amber-200 bg-amber-50 text-amber-900",
       };
   }
 }
@@ -2486,7 +2507,6 @@ function BillingOverviewSkeleton({
     <div className="flex w-full flex-col gap-10">
       <PlanSectionSkeleton t={t} />
       <AddonsSectionSkeleton t={t} />
-      <AiSmsComplianceSectionSkeleton t={t} />
       <SpendingCapSectionSkeleton t={t} />
       <TransactionsSectionSkeleton t={t} />
     </div>
@@ -2513,16 +2533,6 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { i18n, t } = useTranslation("settings");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
-  const shouldFetchCompliance = Boolean(
-    status &&
-      status.hasBillingManagementAccess &&
-      status.plan !== "self_host" &&
-      status.aiSmsEnabled,
-  );
-  const { data: compliance } = useSmsComplianceStatus(
-    props.businessId,
-    shouldFetchCompliance,
-  );
 
   if (isLoadingStatus || !status) {
     return <BillingOverviewSkeleton t={t} />;
@@ -2555,15 +2565,52 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
         locale={locale}
         t={t}
       />
-      {status.hasBillingManagementAccess && status.aiSmsEnabled && compliance && (
-        <AiSmsComplianceSection
-          businessId={props.businessId}
-          compliance={compliance}
-          t={t}
-        />
-      )}
       <SpendingCapSection status={status} t={t} />
       <TransactionsSection status={status} locale={locale} t={t} />
+    </div>
+  );
+}
+
+export function SettingsBillingCompliancePage(props: SettingsBillingPageProps) {
+  const { t } = useTranslation("settings");
+  const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+  const shouldFetchCompliance = Boolean(
+    status &&
+      status.hasBillingManagementAccess &&
+      status.plan !== "self_host" &&
+      status.aiSmsEnabled,
+  );
+  const {
+    data: compliance,
+    isInitialLoading: isLoadingCompliance,
+  } = useSmsComplianceStatus(props.businessId, shouldFetchCompliance);
+
+  if (isLoadingStatus || !status || (shouldFetchCompliance && isLoadingCompliance)) {
+    return <AiSmsComplianceSectionSkeleton t={t} />;
+  }
+
+  if (!shouldFetchCompliance) {
+    return <Navigate replace to="/settings/billing" />;
+  }
+
+  if (!compliance) {
+    return <AiSmsComplianceSectionSkeleton t={t} />;
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-10">
+      <Link
+        className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
+        to="/settings/billing"
+      >
+        <ArrowLeft className="size-4" />
+        {t("billing.compliance.actions.backToBilling")}
+      </Link>
+      <AiSmsComplianceSection
+        businessId={props.businessId}
+        compliance={compliance}
+        t={t}
+      />
     </div>
   );
 }
