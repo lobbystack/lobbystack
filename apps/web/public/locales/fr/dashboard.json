@@ -10,7 +10,9 @@
   "delta": {
     "flat": "Aucun changement depuis le mois dernier",
     "up": "+{{value}} % depuis le mois dernier",
-    "down": "-{{value}} % depuis le mois dernier"
+    "down": "-{{value}} % depuis le mois dernier",
+    "durationUp": "+{{value}} depuis le mois dernier",
+    "durationDown": "-{{value}} depuis le mois dernier"
   },
   "home": {
     "title": "Accueil",
@@ -28,17 +30,43 @@
         "description": "Appels et messages de la semaine dans votre espace reception."
       },
       "cards": {
-        "calls": "Appels cette semaine",
-        "messages": "Messages cette semaine",
+        "calls": "Nombre d'appels",
+        "messages": "Nombre de messages",
         "appointments": "Rendez-vous reserves",
-        "averageDuration": "Duree moyenne d'appel"
+        "agentResponseTime": "Temps de reponse agent"
+      },
+      "controls": {
+        "dateRange": "Plage de dates",
+        "granularity": "Intervalle d'agregation",
+        "more": "Plus d'options",
+        "presetRange": "Periode predeterminee",
+        "granularities": {
+          "hourly": "Horaire",
+          "daily": "Quotidien",
+          "weekly": "Hebdomadaire",
+          "monthly": "Mensuel",
+          "yearly": "Annuel"
+        },
+        "presets": {
+          "today": "Aujourd'hui",
+          "yesterday": "Hier",
+          "thisWeek": "Cette semaine",
+          "thisMonth": "Ce mois-ci",
+          "lastMonth": "Mois dernier",
+          "last30": "30 derniers jours",
+          "last3Months": "3 derniers mois",
+          "thisYear": "Cette annee",
+          "lastYear": "Annee derniere",
+          "allTime": "Depuis le debut",
+          "custom": "Plage personnalisee"
+        }
       },
       "metrics": {
-        "flat": "Aucun changement vs semaine derniere",
-        "percentUp": "+{{value}}% vs semaine derniere",
-        "percentDown": "-{{value}}% vs semaine derniere",
-        "durationUp": "+{{value}} vs semaine derniere",
-        "durationDown": "-{{value}} vs semaine derniere"
+        "flat": "Aucun changement vs periode precedente",
+        "percentUp": "+{{value}}% vs periode precedente",
+        "percentDown": "-{{value}}% vs periode precedente",
+        "durationUp": "+{{value}} vs periode precedente",
+        "durationDown": "-{{value}} vs periode precedente"
       },
       "outcomes": {
         "title": "Resultats des appels",
@@ -70,6 +98,9 @@
       },
       "appointments": {
         "title": "Rendez-vous"
+      },
+      "averageDuration": {
+        "title": "Duree moyenne"
       },
       "contacts": {
         "title": "Contacts"

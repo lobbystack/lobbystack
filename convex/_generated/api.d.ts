@@ -28,6 +28,7 @@ import type * as dashboard_contacts from "../dashboard/contacts.js";
 import type * as dashboard_messages from "../dashboard/messages.js";
 import type * as dashboard_outcomes from "../dashboard/outcomes.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
+import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
@@ -59,6 +60,7 @@ import type * as lib_node_tesseractInProcessWorker from "../lib/node/tesseractIn
 import type * as lib_node_twilioClient from "../lib/node/twilioClient.js";
 import type * as lib_onboardingLocation from "../lib/onboardingLocation.js";
 import type * as lib_onboardingPhoneNumbers from "../lib/onboardingPhoneNumbers.js";
+import type * as lib_operatorNotificationPreferences from "../lib/operatorNotificationPreferences.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_providers_email from "../lib/providers/email.js";
@@ -83,6 +85,7 @@ import type * as onboarding_phoneNumbers from "../onboarding/phoneNumbers.js";
 import type * as onboarding_phoneVerification from "../onboarding/phoneVerification.js";
 import type * as onboarding_phoneVerificationState from "../onboarding/phoneVerificationState.js";
 import type * as onboarding_websites from "../onboarding/websites.js";
+import type * as operatorNotifications from "../operatorNotifications.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as smsCompliance from "../smsCompliance.js";
 import type * as telemetry_ai from "../telemetry/ai.js";
@@ -120,6 +123,7 @@ declare const fullApi: ApiFromModules<{
   "dashboard/messages": typeof dashboard_messages;
   "dashboard/outcomes": typeof dashboard_outcomes;
   "dashboard/overview": typeof dashboard_overview;
+  feedback: typeof feedback;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
   "integrations/googleCalendar": typeof integrations_googleCalendar;
@@ -151,6 +155,7 @@ declare const fullApi: ApiFromModules<{
   "lib/node/twilioClient": typeof lib_node_twilioClient;
   "lib/onboardingLocation": typeof lib_onboardingLocation;
   "lib/onboardingPhoneNumbers": typeof lib_onboardingPhoneNumbers;
+  "lib/operatorNotificationPreferences": typeof lib_operatorNotificationPreferences;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;
   "lib/providers/email": typeof lib_providers_email;
@@ -175,6 +180,7 @@ declare const fullApi: ApiFromModules<{
   "onboarding/phoneVerification": typeof onboarding_phoneVerification;
   "onboarding/phoneVerificationState": typeof onboarding_phoneVerificationState;
   "onboarding/websites": typeof onboarding_websites;
+  operatorNotifications: typeof operatorNotifications;
   "services/localizedNames": typeof services_localizedNames;
   smsCompliance: typeof smsCompliance;
   "telemetry/ai": typeof telemetry_ai;

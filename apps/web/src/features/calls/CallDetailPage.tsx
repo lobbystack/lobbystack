@@ -29,6 +29,7 @@ import {
 import { SectionBlock } from "@/components/section-block";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { captureAnalyticsEvent } from "@/lib/analytics";
@@ -659,9 +660,9 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
 
       {/* Call events timeline */}
       <SectionBlock title={t("detail.events.title")}>
-        <div className="overflow-hidden rounded-xl border bg-card px-4">
+        <Surface className="px-4">
           <CallEventTimeline events={events} locale={locale} />
-        </div>
+        </Surface>
       </SectionBlock>
 
       {/* Tabbed content */}

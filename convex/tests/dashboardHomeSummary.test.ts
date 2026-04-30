@@ -2,7 +2,8 @@ import { convexTest, type TestConvex } from "convex-test";
 import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
+import { buildAgentResponseWindow } from "../dashboard/overview";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -54,6 +55,154 @@ async function insertContact(
 }
 
 describe("Dashboard home summary", () => {
+  it("includes average call duration in the KPI summary", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-average-duration");
+    const now = new Date();
+    const currentMonthStartedAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 12, 12, 0, 0),
+    ).toISOString();
+    const previousMonthStartedAt = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 12, 12, 0, 0),
+    ).toISOString();
+
+    await t.run(async (ctx) => {
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        channel: "voice",
+        status: "closed",
+      });
+
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-current-a",
+        status: "completed",
+        startedAt: currentMonthStartedAt,
+        providerCallDurationSeconds: 90,
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-current-b",
+        status: "completed",
+        startedAt: currentMonthStartedAt,
+        providerCallDurationSeconds: 150,
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        conversationId,
+        twilioCallSid: "CA-dashboard-home-average-duration-previous",
+        status: "completed",
+        startedAt: previousMonthStartedAt,
+        providerCallDurationSeconds: 60,
+      });
+    });
+
+    const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId,
+      locale: HOME_SUMMARY_LOCALE,
+    });
+
+    expect(summary.kpis.averageDuration).toEqual({
+      totalSeconds: 100,
+      currentMonthSeconds: 120,
+      previousMonthSeconds: 60,
+      deltaSeconds: 60,
+    });
+  });
+
+  it("calculates agent response time from inbound messages to AI replies", () => {
+    const businessId = "business-response-time" as Id<"businesses">;
+    const currentConversationId = "conversation-current" as Id<"conversations">;
+    const previousConversationId = "conversation-previous" as Id<"conversations">;
+    const currentWeekStart = Date.parse("2026-03-22T00:00:00.000Z");
+    const previousWeekStart = Date.parse("2026-03-15T00:00:00.000Z");
+    const nextWeekStart = Date.parse("2026-03-29T00:00:00.000Z");
+
+    function message(
+      id: string,
+      conversationId: Id<"conversations">,
+      direction: "inbound" | "outbound",
+      aiGenerated: boolean,
+      createdAt: string,
+    ): Doc<"messages"> {
+      return {
+        _id: id as Id<"messages">,
+        _creationTime: Date.parse(createdAt),
+        businessId,
+        conversationId,
+        direction,
+        channel: "sms",
+        body: id,
+        status: direction === "inbound" ? "received" : "sent",
+        aiGenerated,
+      };
+    }
+
+    const window = buildAgentResponseWindow(
+      [
+        message(
+          "current-inbound-a",
+          currentConversationId,
+          "inbound",
+          false,
+          "2026-03-23T10:00:00.000Z",
+        ),
+        message(
+          "current-outbound-a",
+          currentConversationId,
+          "outbound",
+          true,
+          "2026-03-23T10:00:12.000Z",
+        ),
+        message(
+          "current-inbound-b",
+          currentConversationId,
+          "inbound",
+          false,
+          "2026-03-23T11:00:00.000Z",
+        ),
+        message(
+          "current-outbound-human",
+          currentConversationId,
+          "outbound",
+          false,
+          "2026-03-23T11:00:06.000Z",
+        ),
+        message(
+          "current-outbound-b",
+          currentConversationId,
+          "outbound",
+          true,
+          "2026-03-23T11:00:18.000Z",
+        ),
+        message(
+          "previous-inbound",
+          previousConversationId,
+          "inbound",
+          false,
+          "2026-03-17T10:00:00.000Z",
+        ),
+        message(
+          "previous-outbound",
+          previousConversationId,
+          "outbound",
+          true,
+          "2026-03-17T10:00:06.000Z",
+        ),
+      ],
+      currentWeekStart,
+      nextWeekStart,
+      previousWeekStart,
+    );
+
+    expect(window).toEqual({
+      current: 15,
+      previous: 6,
+    });
+  });
+
   it("only shows deduped follow-up tasks in action required", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-follow-up");

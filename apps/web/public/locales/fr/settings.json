@@ -6,15 +6,16 @@
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
     "integrationsDescription": "Connectez vos outils et applications préférés.",
-    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité de facturation récente.",
+    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité récente.",
     "usageDescription": "Suivez l'utilisation hébergée, les limites du forfait et la date de réinitialisation de la période en cours."
   },
   "sections": {
     "business": "Équipe",
     "appearance": "Préférences",
     "integrations": "Intégrations",
-    "billing": "Facturation",
-    "usage": "Utilisation"
+    "billing": "Forfait",
+    "usage": "Utilisation",
+    "notifications": "Notifications"
   },
   "billing": {
     "toast": {
@@ -130,13 +131,107 @@
     "addon": {
       "title": "Modules complémentaires",
       "aiSmsName": "SMS IA",
-      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise.",
+      "aiSmsDescription": "Permettez à votre réceptionniste d'envoyer des réponses SMS conversationnelles depuis votre numéro d'entreprise après l'approbation 10DLC.",
       "enable": "Activer",
-      "aiSmsActiveBadge": "SMS IA actifs",
+      "register": "Inscrire",
+      "aiSmsActiveBadge": "Actif",
+      "aiSmsSetupRequiredBadge": "Configuration requise",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "Frais d'installation uniques : {{amount}}",
       "aiSmsRequiresProPrefix": "Disponible avec le forfait",
-      "aiSmsRequiresProLink": "Pro"
+      "aiSmsRequiresProLink": "Pro",
+      "aiSmsFeatures": {
+        "smsQueries": "Permet à plusieurs réceptionnistes de gérer les demandes SMS avec vos numéros d'entreprise",
+        "staffAlerts": "Transmet les alertes à l'équipe tout en conservant le contexte conversationnel",
+        "compliance": "Nécessite l'inscription de la marque et de la campagne 10DLC pour la conformité A2P"
+      },
+      "associatedFees": "Frais associés",
+      "carrierSetupFees": "Frais d'examen et de configuration du fournisseur",
+      "oneTimeFeeValue": "{{amount}} une fois",
+      "monthlyFee": "Frais mensuels d'abonnement",
+      "messagingRate": "Tarif des messages",
+      "perSegmentFeeValue": "{{amount}}/segment"
+    },
+    "compliance": {
+      "title": "Conformité SMS IA",
+      "description": "Inscrivez votre entreprise à A2P 10DLC afin que les alertes hébergées et les réponses IA puissent utiliser le numéro d'entreprise approuvé.",
+      "cardTitle": "Inscription 10DLC",
+      "routingSummary": "Routage actuel de l'expéditeur : {{senderMode}}.",
+      "approvedNumber": "Numéro d'entreprise approuvé : {{phoneNumber}}",
+      "senderMode": {
+        "platformPhone": "les alertes restent sur l'expéditeur hébergé partagé",
+        "businessPhone": "les messages sont envoyés directement depuis le numéro d'entreprise",
+        "businessMessagingService": "les alertes et les SMS IA sont envoyés via le Messaging Service d'entreprise approuvé"
+      },
+      "status": {
+        "setupRequired": "Configuration requise",
+        "awaitingVerification": "En attente de vérification",
+        "underReview": "En cours d'examen",
+        "approved": "Approuvé",
+        "failed": "Échec",
+        "suspended": "Suspendu"
+      },
+      "actions": {
+        "backToBilling": "Forfait",
+        "save": "Enregistrer le brouillon",
+        "saving": "Enregistrement...",
+        "submit": "Soumettre l'inscription",
+        "resume": "Reprendre l'inscription",
+        "refresh": "Actualiser l'état",
+        "working": "Mise à jour..."
+      },
+      "toast": {
+        "saved": "Brouillon de conformité SMS enregistré.",
+        "saveFailed": "Impossible d'enregistrer le brouillon de conformité SMS.",
+        "submitted": "Inscription de conformité SMS mise à jour.",
+        "submitFailed": "Impossible de mettre à jour l'inscription de conformité SMS."
+      },
+      "companyTypes": {
+        "private": "Privée",
+        "nonProfit": "Sans but lucratif",
+        "government": "Gouvernement",
+        "public": "Publique"
+      },
+      "trafficTier": {
+        "lowVolume": "Faible volume (recommandé)",
+        "mixed": "Mixte / volume plus élevé"
+      },
+      "fields": {
+        "approvedPhoneNumber": "Numéro d'entreprise à inscrire",
+        "businessName": "Raison sociale légale",
+        "websiteUrl": "URL du site web",
+        "businessType": "Type d'entreprise",
+        "businessIndustry": "Secteur d'activité",
+        "businessRegistrationIdentifier": "Type d'identifiant fiscal",
+        "businessRegistrationNumber": "Numéro d'identifiant fiscal",
+        "companyType": "Type de société",
+        "stockExchange": "Bourse",
+        "stockTicker": "Symbole boursier",
+        "brandContactEmail": "Courriel du contact de marque (obligatoire pour les sociétés publiques)",
+        "representativeFirstName": "Prénom du représentant autorisé",
+        "representativeLastName": "Nom du représentant autorisé",
+        "representativeBusinessTitle": "Titre du représentant autorisé",
+        "representativeJobPosition": "Rôle du représentant autorisé",
+        "representativePhoneNumber": "Téléphone du représentant autorisé",
+        "representativeEmail": "Courriel du représentant autorisé",
+        "addressCustomerName": "Nom postal",
+        "addressStreet": "Adresse civique",
+        "addressStreetSecondary": "Adresse ligne 2",
+        "addressCity": "Ville",
+        "addressRegion": "État / province",
+        "addressPostalCode": "Code postal",
+        "addressIsoCountry": "Code pays",
+        "trafficTier": "Profil de trafic",
+        "campaignDescription": "Description de la campagne",
+        "messageFlow": "Flux d'inscription",
+        "sampleMessageOne": "Exemple de message 1",
+        "sampleMessageTwo": "Exemple de message 2",
+        "optInMessage": "Message de confirmation d'inscription",
+        "optOutMessage": "Message de désabonnement",
+        "helpMessage": "Message d'aide",
+        "hasEmbeddedLinks": "Les messages incluent des liens",
+        "hasEmbeddedPhone": "Les messages incluent des numéros de téléphone"
+      }
     },
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",
@@ -465,5 +560,79 @@
     "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
     "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
     "snapshot": "Actualisez votre instantané après d'importants changements de politique pour que la voix les prenne rapidement en compte."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choisissez quels événements déclenchent une alerte par téléphone ou par courriel.",
+    "actions": {
+      "testEmail": "Tester le courriel",
+      "testSms": "Tester le SMS",
+      "testing": "Envoi..."
+    },
+    "toast": {
+      "saveFailed": "Les préférences de notification n'ont pas été enregistrées.",
+      "smsUnavailable": "Vérifiez un numéro de téléphone avant d'activer les notifications SMS.",
+      "smsSenderUnavailable": "Configurez un expéditeur SMS d'alerte avant d'activer les notifications SMS.",
+      "testEmailSent": "Courriel de test envoyé.",
+      "testSmsSent": "SMS de test envoyé.",
+      "testFailed": "Impossible d'envoyer la notification de test."
+    },
+    "sources": {
+      "title": "Canaux",
+      "email": {
+        "title": "Courriel",
+        "description": "Recevez les alertes et les résumés quotidiens par courriel."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Recevez les alertes urgentes sur votre téléphone vérifié.",
+        "unverifiedDescription": "Ajoutez et vérifiez un numéro de téléphone dans votre compte avant d'activer les alertes SMS.",
+        "senderMissingDescription": "Les alertes SMS sont indisponibles tant qu'un expéditeur SMS d'alerte n'est pas configuré pour cet espace de travail."
+      }
+    },
+    "communication": {
+      "title": "Communication",
+      "eventColumn": "Événement"
+    },
+    "events": {
+      "voiceMessage": {
+        "title": "Message vocal capturé",
+        "description": "Quand l'IA prend un message de rappel ou de suivi pendant un appel."
+      },
+      "pausedSms": {
+        "title": "Nouveau message dans une conversation SMS en pause",
+        "description": "Quand l'automatisation SMS est mise en pause manuellement et que le client envoie un autre message."
+      },
+      "smsFailed": {
+        "title": "Notification SMS client échouée",
+        "description": "Quand un SMS de confirmation ou de rappel de rendez-vous échoue ou n'est pas livré."
+      },
+      "calendarSync": {
+        "title": "Problème de synchronisation du calendrier",
+        "description": "Quand un rendez-vous ne peut pas être synchronisé au calendrier et nécessite une attention."
+      },
+      "transferFailed": {
+        "title": "Transfert d'appel échoué",
+        "description": "Quand l'IA a essayé de transférer un appelant à un humain, mais que le transfert n'a pas abouti."
+      },
+      "aiReplyFailed": {
+        "title": "Réponse SMS IA échouée",
+        "description": "Quand le système ne parvient pas à générer ou envoyer une réponse SMS IA."
+      }
+    },
+    "systemIssues": {
+      "title": "Problèmes système"
+    },
+    "digest": {
+      "title": "Résumé",
+      "dailySummary": {
+        "title": "Résumé quotidien",
+        "description": "Recevez un seul courriel quotidien résumant l'activité des appels et les nouveaux messages."
+      },
+      "sendTime": {
+        "title": "Heure d'envoi",
+        "description": "L'heure à laquelle votre résumé quotidien sera envoyé."
+      }
+    }
   }
 }

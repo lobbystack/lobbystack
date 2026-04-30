@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { surfaceClassName } from "@/components/ui/surface"
 
 type TableProps = React.ComponentProps<"table"> & {
   containerClassName?: string
@@ -31,7 +32,7 @@ function TableCard({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="table-card"
-      className={cn("overflow-hidden rounded-xl border bg-card", className)}
+      className={cn(surfaceClassName, className)}
       {...props}
     />
   )
@@ -41,7 +42,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-table-header [&_tr]:border-b", className)}
       {...props}
     />
   )

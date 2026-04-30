@@ -15,6 +15,13 @@ type AverageWindow = {
   previous: number;
 };
 
+type AnalyticsGranularity = "daily" | "hourly" | "monthly" | "weekly" | "yearly";
+
+type DurationPoint = {
+  timestamp: number;
+  durationSeconds: number;
+};
+
 function getMonthBoundary(date: Date, monthOffset: number): number {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + monthOffset, 1);
 }
@@ -27,6 +34,16 @@ function getWeekStartBoundary(date: Date, weekOffset: number): number {
   );
   const currentWeekday = date.getUTCDay();
   return startOfCurrentDay - currentWeekday * 24 * 60 * 60 * 1000 + weekOffset * 7 * 24 * 60 * 60 * 1000;
+}
+
+function getDefaultAnalyticsRange(date: Date): { start: number; end: number } {
+  const end = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+  const start = end - 30 * 24 * 60 * 60 * 1000;
+  return { start, end };
+}
+
+function getPreviousRangeStart(start: number, end: number): number {
+  return start - Math.max(end - start, 1);
 }
 
 function toMonthKey(value: string): string {
@@ -64,6 +81,24 @@ function calculateDeltaPercent(window: KpiWindow): number {
   return Number((((window.current - window.previous) / window.previous) * 100).toFixed(1));
 }
 
+function calculateAverageDurationSeconds(
+  values: Array<number | null | undefined>,
+): number {
+  let sum = 0;
+  let count = 0;
+
+  for (const value of values) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+
+    sum += value;
+    count += 1;
+  }
+
+  return count === 0 ? 0 : Math.round(sum / count);
+}
+
 function buildAverageWindow(
   values: Array<{ timestamp: number; durationSeconds: number | null | undefined }>,
   currentStart: number,
@@ -96,6 +131,146 @@ function buildAverageWindow(
     current: currentCount === 0 ? 0 : Math.round(currentSum / currentCount),
     previous: previousCount === 0 ? 0 : Math.round(previousSum / previousCount),
   };
+}
+
+function getBucketStart(timestamp: number, granularity: AnalyticsGranularity): number {
+  const date = new Date(timestamp);
+
+  if (granularity === "hourly") {
+    return Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      date.getUTCHours(),
+    );
+  }
+
+  if (granularity === "weekly") {
+    return getWeekStartBoundary(date, 0);
+  }
+
+  if (granularity === "monthly") {
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+  }
+
+  if (granularity === "yearly") {
+    return Date.UTC(date.getUTCFullYear(), 0, 1);
+  }
+
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function getNextBucketStart(bucketStart: number, granularity: AnalyticsGranularity): number {
+  const date = new Date(bucketStart);
+
+  if (granularity === "hourly") {
+    return bucketStart + 60 * 60 * 1000;
+  }
+
+  if (granularity === "weekly") {
+    return bucketStart + 7 * 24 * 60 * 60 * 1000;
+  }
+
+  if (granularity === "monthly") {
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
+  }
+
+  if (granularity === "yearly") {
+    return Date.UTC(date.getUTCFullYear() + 1, 0, 1);
+  }
+
+  return bucketStart + 24 * 60 * 60 * 1000;
+}
+
+function buildBucketStarts(
+  start: number,
+  end: number,
+  granularity: AnalyticsGranularity,
+): Array<number> {
+  const starts: Array<number> = [];
+  let cursor = getBucketStart(start, granularity);
+
+  while (cursor < end && starts.length < 500) {
+    starts.push(cursor);
+    cursor = getNextBucketStart(cursor, granularity);
+  }
+
+  return starts;
+}
+
+function buildBucketAverageDurationMap(
+  values: Array<DurationPoint>,
+  granularity: AnalyticsGranularity,
+): Map<string, number> {
+  const sums = new Map<string, { sum: number; count: number }>();
+
+  for (const value of values) {
+    const bucketKey = new Date(getBucketStart(value.timestamp, granularity)).toISOString();
+    const bucket = sums.get(bucketKey) ?? { sum: 0, count: 0 };
+    bucket.sum += value.durationSeconds;
+    bucket.count += 1;
+    sums.set(bucketKey, bucket);
+  }
+
+  return new Map(
+    Array.from(sums.entries()).map(([bucketKey, bucket]) => [
+      bucketKey,
+      Math.round(bucket.sum / bucket.count),
+    ]),
+  );
+}
+
+function buildAgentResponseValues(messages: Array<Doc<"messages">>): Array<DurationPoint> {
+  const messagesByConversation = new Map<Id<"conversations">, Array<Doc<"messages">>>();
+
+  for (const message of messages) {
+    const conversationMessages = messagesByConversation.get(message.conversationId) ?? [];
+    conversationMessages.push(message);
+    messagesByConversation.set(message.conversationId, conversationMessages);
+  }
+
+  const responseValues: Array<DurationPoint> = [];
+
+  for (const conversationMessages of messagesByConversation.values()) {
+    conversationMessages.sort((left, right) => left._creationTime - right._creationTime);
+
+    let pendingInboundAt: number | null = null;
+    for (const message of conversationMessages) {
+      if (message.direction === "inbound") {
+        pendingInboundAt = message._creationTime;
+        continue;
+      }
+
+      if (message.direction !== "outbound" || !message.aiGenerated || pendingInboundAt === null) {
+        continue;
+      }
+
+      responseValues.push({
+        timestamp: message._creationTime,
+        durationSeconds: Math.max(
+          0,
+          Math.round((message._creationTime - pendingInboundAt) / 1000),
+        ),
+      });
+      pendingInboundAt = null;
+    }
+  }
+
+  return responseValues;
+}
+
+export function buildAgentResponseWindow(
+  messages: Array<Doc<"messages">>,
+  currentStart: number,
+  nextStart: number,
+  previousStart: number,
+): AverageWindow {
+  return buildAverageWindow(
+    buildAgentResponseValues(messages),
+    currentStart,
+    nextStart,
+    previousStart,
+  );
 }
 
 function toDayKey(timestamp: number): string {
@@ -261,6 +436,18 @@ export const getHomeSummary = query({
       currentMonthStart,
       nextMonthStart,
       previousMonthStart,
+    );
+    const averageDurationWindow = buildAverageWindow(
+      calls.map((call) => ({
+        timestamp: Date.parse(call.startedAt),
+        durationSeconds: call.providerCallDurationSeconds,
+      })),
+      currentMonthStart,
+      nextMonthStart,
+      previousMonthStart,
+    );
+    const averageDurationSeconds = calculateAverageDurationSeconds(
+      calls.map((call) => call.providerCallDurationSeconds),
     );
 
     const monthlyCallsMap = new Map<string, number>();
@@ -452,6 +639,12 @@ export const getHomeSummary = query({
           previousMonth: contactsThisMonth.previous,
           deltaPercent: calculateDeltaPercent(contactsThisMonth),
         },
+        averageDuration: {
+          totalSeconds: averageDurationSeconds,
+          currentMonthSeconds: averageDurationWindow.current,
+          previousMonthSeconds: averageDurationWindow.previous,
+          deltaSeconds: averageDurationWindow.current - averageDurationWindow.previous,
+        },
       },
       liveCalls,
       actionRequired,
@@ -465,14 +658,27 @@ export const getHomeSummary = query({
 export const getAnalyticsSummary = query({
   args: {
     businessId: v.id("businesses"),
+    granularity: v.optional(
+      v.union(
+        v.literal("hourly"),
+        v.literal("daily"),
+        v.literal("weekly"),
+        v.literal("monthly"),
+        v.literal("yearly"),
+      ),
+    ),
+    rangeEndMs: v.optional(v.number()),
+    rangeStartMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);
 
     const now = new Date();
-    const currentWeekStart = getWeekStartBoundary(now, 0);
-    const previousWeekStart = getWeekStartBoundary(now, -1);
-    const nextWeekStart = getWeekStartBoundary(now, 1);
+    const defaultRange = getDefaultAnalyticsRange(now);
+    const rangeStart = args.rangeStartMs ?? defaultRange.start;
+    const rangeEnd = args.rangeEndMs ?? defaultRange.end;
+    const previousRangeStart = getPreviousRangeStart(rangeStart, rangeEnd);
+    const granularity = args.granularity ?? "weekly";
 
     const [calls, appointments, conversations] = await Promise.all([
       ctx.db
@@ -502,65 +708,88 @@ export const getAnalyticsSummary = query({
 
     const callWindow = buildKpiWindow(
       calls.map((call) => Date.parse(call.startedAt)),
-      currentWeekStart,
-      nextWeekStart,
-      previousWeekStart,
+      rangeStart,
+      rangeEnd,
+      previousRangeStart,
     );
     const messageWindow = buildKpiWindow(
       allMessages.map((message) => message._creationTime),
-      currentWeekStart,
-      nextWeekStart,
-      previousWeekStart,
+      rangeStart,
+      rangeEnd,
+      previousRangeStart,
     );
     const appointmentWindow = buildKpiWindow(
       appointments.map((appointment) => Date.parse(appointment.startsAt)),
-      currentWeekStart,
-      nextWeekStart,
-      previousWeekStart,
+      rangeStart,
+      rangeEnd,
+      previousRangeStart,
     );
-    const averageDurationWindow = buildAverageWindow(
-      calls.map((call) => ({
-        timestamp: Date.parse(call.startedAt),
-        durationSeconds: call.providerCallDurationSeconds,
-      })),
-      currentWeekStart,
-      nextWeekStart,
-      previousWeekStart,
+    const agentResponseValues = buildAgentResponseValues(allMessages);
+    const agentResponseWindow = buildAverageWindow(
+      agentResponseValues,
+      rangeStart,
+      rangeEnd,
+      previousRangeStart,
     );
 
-    const callCountsByDay = new Map<string, number>();
-    const messageCountsByDay = new Map<string, number>();
+    const callCountsByBucket = new Map<string, number>();
+    const messageCountsByBucket = new Map<string, number>();
+    const appointmentCountsByBucket = new Map<string, number>();
+    const agentResponseSecondsByBucket = buildBucketAverageDurationMap(
+      agentResponseValues.filter(
+        (value) => value.timestamp >= rangeStart && value.timestamp < rangeEnd,
+      ),
+      granularity,
+    );
     for (const call of calls) {
       const timestamp = Date.parse(call.startedAt);
-      if (timestamp < currentWeekStart || timestamp >= nextWeekStart) {
+      if (timestamp < rangeStart || timestamp >= rangeEnd) {
         continue;
       }
-      incrementCount(callCountsByDay, toDayKey(timestamp));
+      incrementCount(
+        callCountsByBucket,
+        new Date(getBucketStart(timestamp, granularity)).toISOString(),
+      );
     }
 
     for (const message of allMessages) {
-      if (message._creationTime < currentWeekStart || message._creationTime >= nextWeekStart) {
+      if (message._creationTime < rangeStart || message._creationTime >= rangeEnd) {
         continue;
       }
-      incrementCount(messageCountsByDay, toDayKey(message._creationTime));
+      incrementCount(
+        messageCountsByBucket,
+        new Date(getBucketStart(message._creationTime, granularity)).toISOString(),
+      );
     }
 
-    const weeklySeries = Array.from({ length: 7 }, (_, index) => {
-      const dayStart = new Date(currentWeekStart + index * 24 * 60 * 60 * 1000);
-      const dayKey = dayStart.toISOString().slice(0, 10);
+    for (const appointment of appointments) {
+      const timestamp = Date.parse(appointment.startsAt);
+      if (timestamp < rangeStart || timestamp >= rangeEnd) {
+        continue;
+      }
+      incrementCount(
+        appointmentCountsByBucket,
+        new Date(getBucketStart(timestamp, granularity)).toISOString(),
+      );
+    }
+
+    const weeklySeries = buildBucketStarts(rangeStart, rangeEnd, granularity).map((bucketStart) => {
+      const bucketKey = new Date(bucketStart).toISOString();
       return {
-        dayStart: dayStart.toISOString(),
-        calls: callCountsByDay.get(dayKey) ?? 0,
-        messages: messageCountsByDay.get(dayKey) ?? 0,
+        dayStart: bucketKey,
+        calls: callCountsByBucket.get(bucketKey) ?? 0,
+        messages: messageCountsByBucket.get(bucketKey) ?? 0,
+        appointments: appointmentCountsByBucket.get(bucketKey) ?? 0,
+        agentResponseSeconds: agentResponseSecondsByBucket.get(bucketKey) ?? 0,
       };
     });
 
     const currentWeekCalls = calls.filter((call) => {
       const timestamp = Date.parse(call.startedAt);
-      return timestamp >= currentWeekStart && timestamp < nextWeekStart;
+      return timestamp >= rangeStart && timestamp < rangeEnd;
     });
     const currentWeekMessages = allMessages.filter(
-      (message) => message._creationTime >= currentWeekStart && message._creationTime < nextWeekStart,
+      (message) => message._creationTime >= rangeStart && message._creationTime < rangeEnd,
     );
 
     const outcomes = {
@@ -609,9 +838,9 @@ export const getAnalyticsSummary = query({
           value: appointmentWindow.current,
           deltaPercent: calculateDeltaPercent(appointmentWindow),
         },
-        averageCallDurationSeconds: {
-          value: averageDurationWindow.current,
-          deltaSeconds: averageDurationWindow.current - averageDurationWindow.previous,
+        averageAgentResponseSeconds: {
+          value: agentResponseWindow.current,
+          deltaSeconds: agentResponseWindow.current - agentResponseWindow.previous,
         },
       },
       outcomes: [

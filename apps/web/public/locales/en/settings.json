@@ -6,15 +6,16 @@
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
     "integrationsDescription": "Connect your favorite tools and applications.",
-    "billingDescription": "Review your hosted plan, add-ons, and recent billing activity.",
+    "billingDescription": "Review your hosted plan, add-ons, and recent activity.",
     "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
   },
   "sections": {
     "business": "Team",
     "appearance": "Preferences",
     "integrations": "Integrations",
-    "billing": "Billing",
-    "usage": "Usage"
+    "billing": "Plan",
+    "usage": "Usage",
+    "notifications": "Notifications"
   },
   "billing": {
     "toast": {
@@ -131,15 +132,25 @@
       "title": "Add-ons",
       "aiSmsName": "AI SMS",
       "aiSmsDescription": "Allows your agent to send and reply to SMS autonomously after 10DLC approval.",
-      "aiSmsSetupRequiredDescription": "AI SMS billing is active, but 10DLC registration still needs to be completed before alerts and AI SMS can use the business number.",
-      "aiSmsSetupRequiredNotice": "Alerts stay on the shared hosted sender until approval. AI SMS remains blocked while Twilio reviews the registration.",
       "enable": "Enable",
+      "register": "Register",
       "aiSmsActiveBadge": "Active",
       "aiSmsSetupRequiredBadge": "Setup required",
       "aiSmsPricing": "{{monthly}}/mo + {{perSegment}}/segment",
       "aiSmsSetup": "One-time setup fee: {{amount}}",
       "aiSmsRequiresProPrefix": "Available on",
-      "aiSmsRequiresProLink": "Pro plan"
+      "aiSmsRequiresProLink": "Pro plan",
+      "aiSmsFeatures": {
+        "smsQueries": "Allows multiple receptionists to handle SMS queries using your business numbers",
+        "staffAlerts": "Seamlessly hands over alerts to staff while preserving conversational context",
+        "compliance": "Requires 10DLC brand and campaign registration for A2P compliance"
+      },
+      "associatedFees": "Associated fees",
+      "carrierSetupFees": "Carrier review & setup fees",
+      "oneTimeFeeValue": "{{amount}} one-time",
+      "monthlyFee": "Monthly subscription fee",
+      "messagingRate": "Messaging rate",
+      "perSegmentFeeValue": "{{amount}}/segment"
     },
     "compliance": {
       "title": "AI SMS compliance",
@@ -161,6 +172,7 @@
         "suspended": "Suspended"
       },
       "actions": {
+        "backToBilling": "Plan",
         "save": "Save draft",
         "saving": "Saving...",
         "submit": "Submit registration",
@@ -390,6 +402,7 @@
     }
   },
   "account": {
+    "title": "Account",
     "actions": {
       "change": "Change"
     },
@@ -548,5 +561,79 @@
     "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choose which events trigger an alert to your phone or email.",
+    "actions": {
+      "testEmail": "Test email",
+      "testSms": "Test SMS",
+      "testing": "Sending..."
+    },
+    "toast": {
+      "saveFailed": "Notification preferences were not saved.",
+      "smsUnavailable": "Verify a phone number before enabling SMS notifications.",
+      "smsSenderUnavailable": "Configure an alert SMS sender before enabling SMS notifications.",
+      "testEmailSent": "Test email sent.",
+      "testSmsSent": "Test SMS sent.",
+      "testFailed": "Unable to send the test notification."
+    },
+    "sources": {
+      "title": "Channels",
+      "email": {
+        "title": "Email",
+        "description": "Receive alerts and daily summaries by email."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Receive urgent alerts on your verified phone.",
+        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts.",
+        "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
+      }
+    },
+    "communication": {
+      "title": "Communication",
+      "eventColumn": "Event"
+    },
+    "events": {
+      "voiceMessage": {
+        "title": "Voice message captured",
+        "description": "When the AI takes a callback or follow-up message during a call."
+      },
+      "pausedSms": {
+        "title": "New message in paused SMS conversation",
+        "description": "When SMS automation is manually paused and the customer sends another message."
+      },
+      "smsFailed": {
+        "title": "Customer SMS notification failed",
+        "description": "When an appointment confirmation or reminder SMS fails or is undelivered."
+      },
+      "calendarSync": {
+        "title": "Calendar sync issue",
+        "description": "When an appointment cannot sync to the calendar and needs attention."
+      },
+      "transferFailed": {
+        "title": "Live call transfer failed",
+        "description": "When the AI tried to transfer a caller to a human, but the transfer did not complete."
+      },
+      "aiReplyFailed": {
+        "title": "SMS AI reply failed",
+        "description": "When the system fails to generate or send an AI SMS reply."
+      }
+    },
+    "systemIssues": {
+      "title": "System issues"
+    },
+    "digest": {
+      "title": "Digest",
+      "dailySummary": {
+        "title": "Daily summary",
+        "description": "Receive a single daily email summarizing call activity and new messages."
+      },
+      "sendTime": {
+        "title": "Send time",
+        "description": "The time of day your daily summary will be sent."
+      }
+    }
   }
 }

@@ -50,6 +50,7 @@ const serverEnvSchema = z.object({
   MICROSOFT_REDIRECT_URI: z.string().url().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().email(),
+  FEEDBACK_TO_EMAIL: z.string().email().optional(),
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
   POSTHOG_PRIVACY_MODE: booleanEnvSchema,

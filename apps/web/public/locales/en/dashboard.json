@@ -10,7 +10,9 @@
   "delta": {
     "flat": "No change from last month",
     "up": "+{{value}}% from last month",
-    "down": "-{{value}}% from last month"
+    "down": "-{{value}}% from last month",
+    "durationUp": "+{{value}} from last month",
+    "durationDown": "-{{value}} from last month"
   },
   "home": {
     "title": "Home",
@@ -28,17 +30,43 @@
         "description": "Weekly calls and messages across your receptionist workspace."
       },
       "cards": {
-        "calls": "Calls This Week",
-        "messages": "Messages This Week",
+        "calls": "Number of calls",
+        "messages": "Number of messages",
         "appointments": "Appointments Booked",
-        "averageDuration": "Avg. Call Duration"
+        "agentResponseTime": "Agent Response Time"
+      },
+      "controls": {
+        "dateRange": "Date range",
+        "granularity": "Aggregation interval",
+        "more": "More options",
+        "presetRange": "Preset time frame",
+        "granularities": {
+          "hourly": "Hourly",
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        },
+        "presets": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "thisWeek": "This Week",
+          "thisMonth": "This Month",
+          "lastMonth": "Last Month",
+          "last30": "Last 30 Days",
+          "last3Months": "Last 3 Months",
+          "thisYear": "This Year",
+          "lastYear": "Last Year",
+          "allTime": "All Time",
+          "custom": "Custom Range"
+        }
       },
       "metrics": {
-        "flat": "No change vs last week",
-        "percentUp": "+{{value}}% vs last week",
-        "percentDown": "-{{value}}% vs last week",
-        "durationUp": "+{{value}} vs last week",
-        "durationDown": "-{{value}} vs last week"
+        "flat": "No change vs previous period",
+        "percentUp": "+{{value}}% vs previous period",
+        "percentDown": "-{{value}}% vs previous period",
+        "durationUp": "+{{value}} vs previous period",
+        "durationDown": "-{{value}} vs previous period"
       },
       "outcomes": {
         "title": "Call Outcomes",
@@ -70,6 +98,9 @@
       },
       "appointments": {
         "title": "Appointments"
+      },
+      "averageDuration": {
+        "title": "Average duration"
       },
       "contacts": {
         "title": "Contacts"

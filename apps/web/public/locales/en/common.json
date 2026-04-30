@@ -2,7 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Loading...",
-    "description": "Syncing your operator console and receptionist settings."
+    "description": "Syncing your workspace and receptionist settings."
   },
   "language": {
     "label": "Language",
@@ -22,5 +22,23 @@
     "customer": "Customer",
     "receptionist": "Receptionist",
     "prompt": "Prompt"
+  },
+  "feedback": {
+    "trigger": "Feedback",
+    "title": "Send feedback",
+    "description": "Tell us what would make this dashboard better.",
+    "label": "Feedback message",
+    "placeholder": "Have an idea to improve LobbyStack? Tell the team.",
+    "characterCount": "{{count}} / {{max}} characters",
+    "helpText": "Need help?",
+    "helpCenter": "Help Center",
+    "contactLink": "Contact us",
+    "helpTextSeparator": "or",
+    "docsLink": "see docs.",
+    "submit": "Send",
+    "toast": {
+      "sent": "Feedback sent.",
+      "failed": "We could not save that feedback."
+    }
   }
 }

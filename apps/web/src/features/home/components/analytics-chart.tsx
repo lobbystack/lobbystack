@@ -1,4 +1,11 @@
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  type XAxisTickContentProps,
+} from "recharts";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -16,15 +23,13 @@ type AnalyticsChartProps = {
     calls: number;
     messages: number;
   }>;
+  granularity?: "daily" | "hourly" | "monthly" | "weekly" | "yearly";
 };
 
-export function AnalyticsChart({ data }: AnalyticsChartProps) {
+export function AnalyticsChart({ data, granularity = "daily" }: AnalyticsChartProps) {
   const { i18n, t } = useTranslation("dashboard");
   const chartData = data.map((item) => ({
-    name: formatDateTime(item.dayStart, i18n.language, {
-      weekday: "short",
-      timeZone: "UTC",
-    }),
+    name: formatChartLabel(item.dayStart, granularity, i18n.language),
     calls: item.calls,
     messages: item.messages,
   }));
@@ -43,7 +48,7 @@ export function AnalyticsChart({ data }: AnalyticsChartProps) {
         },
       }}
     >
-      <AreaChart data={chartData} margin={{ left: 4, right: 4, top: 8 }}>
+      <AreaChart data={chartData} margin={{ left: 0, right: 4, top: 8 }}>
         <defs>
           <linearGradient id="fillCalls" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--color-calls)" stopOpacity={0.35} />
@@ -63,10 +68,19 @@ export function AnalyticsChart({ data }: AnalyticsChartProps) {
           axisLine={false}
           dataKey="name"
           fontSize={12}
+          interval={0}
           stroke="#888888"
+          tick={renderXAxisTick}
           tickLine={false}
         />
-        <YAxis axisLine={false} fontSize={12} stroke="#888888" tickLine={false} />
+        <YAxis
+          axisLine={false}
+          fontSize={12}
+          stroke="#888888"
+          tick={{ dx: 32 }}
+          tickLine={false}
+          width={0}
+        />
         <Area
           activeDot={{
             r: 6,
@@ -97,4 +111,66 @@ export function AnalyticsChart({ data }: AnalyticsChartProps) {
       </AreaChart>
     </ChartContainer>
   );
+}
+
+function renderXAxisTick({
+  index,
+  payload,
+  visibleTicksCount,
+  x,
+  y,
+}: XAxisTickContentProps) {
+  const xPosition = toSvgNumber(x);
+  const yPosition = toSvgNumber(y) + 16;
+  const textAnchor =
+    index === 0 ? "start" : index === visibleTicksCount - 1 ? "end" : "middle";
+
+  return (
+    <text
+      fill="#888888"
+      fontSize={12}
+      textAnchor={textAnchor}
+      x={xPosition}
+      y={yPosition}
+    >
+      {payload.value}
+    </text>
+  );
+}
+
+function toSvgNumber(value: number | string): number {
+  return typeof value === "number" ? value : Number(value);
+}
+
+function formatChartLabel(
+  value: string,
+  granularity: NonNullable<AnalyticsChartProps["granularity"]>,
+  locale: string,
+): string {
+  if (granularity === "hourly") {
+    return formatDateTime(value, locale, {
+      hour: "numeric",
+      timeZone: "UTC",
+    });
+  }
+
+  if (granularity === "monthly") {
+    return formatDateTime(value, locale, {
+      month: "short",
+      timeZone: "UTC",
+    });
+  }
+
+  if (granularity === "yearly") {
+    return formatDateTime(value, locale, {
+      timeZone: "UTC",
+      year: "numeric",
+    });
+  }
+
+  return formatDateTime(value, locale, {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
 }

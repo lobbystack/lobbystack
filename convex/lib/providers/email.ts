@@ -5,7 +5,11 @@ import type { ActionCtx, MutationCtx } from "../../_generated/server";
 
 type SendEmailCtx = Pick<ActionCtx, "runMutation"> | Pick<MutationCtx, "runMutation">;
 
-type TransactionalTemplateName = "verify_email" | "password_reset" | "operator_alert";
+type TransactionalTemplateName =
+  | "verify_email"
+  | "password_reset"
+  | "operator_alert"
+  | "feedback_submission";
 
 type TransactionalTemplateInput = {
   template: TransactionalTemplateName;
@@ -16,6 +20,8 @@ type TransactionalTemplateInput = {
 
 const DEFAULT_PASSWORD_RESET_SUBJECT = "Reset your password";
 const DEFAULT_VERIFY_EMAIL_SUBJECT = "Confirm your new email";
+const DEFAULT_OPERATOR_ALERT_SUBJECT = "LobbyStack notification";
+const DEFAULT_FEEDBACK_SUBMISSION_SUBJECT = "LobbyStack feedback";
 
 export type TransactionalEmailConfig = {
   fromAddress: string;
@@ -61,8 +67,10 @@ export function renderTransactionalEmail(
       return renderVerifyEmailTemplate(input);
     case "password_reset":
       return renderPasswordResetEmail(input);
+    case "feedback_submission":
+      return renderFeedbackSubmissionEmail(input);
     case "operator_alert":
-      throw new Error(`Email template "${input.template}" is not implemented yet.`);
+      return renderOperatorAlertEmail(input);
     default: {
       const exhaustiveTemplate: never = input.template;
       throw new Error(`Unsupported email template "${exhaustiveTemplate}".`);
@@ -152,6 +160,44 @@ function renderPasswordResetEmail(input: TransactionalTemplateInput): {
       `This code expires in ${expiresMinutes} minutes.`,
       "If you did not request this, you can safely ignore this email.",
     ].join("\n\n"),
+  };
+}
+
+function renderOperatorAlertEmail(input: TransactionalTemplateInput): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const body = requireTemplateVariable(input.template, input.variables, "body");
+  const subject = input.subject || input.variables.subject || DEFAULT_OPERATOR_ALERT_SUBJECT;
+  return renderBodyEmail(subject, body);
+}
+
+function renderFeedbackSubmissionEmail(input: TransactionalTemplateInput): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const body = requireTemplateVariable(input.template, input.variables, "body");
+  const subject = input.subject || DEFAULT_FEEDBACK_SUBMISSION_SUBJECT;
+  return renderBodyEmail(subject, body);
+}
+
+function renderBodyEmail(subject: string, body: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const escapedSubject = escapeHtml(subject);
+  const escapedBody = escapeHtml(body).replaceAll("\n", "<br />");
+
+  return {
+    subject,
+    html: [
+      `<p><strong>${escapedSubject}</strong></p>`,
+      `<p>${escapedBody}</p>`,
+    ].join(""),
+    text: [subject, body].join("\n\n"),
   };
 }
 

@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 import {
+  SettingsBillingCompliancePage,
   SettingsBillingPage,
   SettingsBillingUsagePage,
 } from "./SettingsBillingPage";
@@ -349,6 +350,22 @@ function renderBillingPage(input: {
   );
 }
 
+function renderBillingCompliancePage(input: {
+  status: BillingStatus;
+  compliance?: SmsComplianceState;
+  campaignOptions?: SmsComplianceCampaignOption[];
+}) {
+  mockQueries(input);
+
+  return render(
+    <MemoryRouter initialEntries={["/settings/plan/ai-sms-compliance"]}>
+      <TooltipProvider>
+        <SettingsBillingCompliancePage businessId={businessId} />
+      </TooltipProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("SettingsBillingPage AI SMS add-on", () => {
   beforeEach(() => {
     startCheckoutMock.mockReset();
@@ -573,7 +590,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.queryByText("billing.usage.voiceTitle")).toBeNull();
   });
 
-  it("shows setup required after AI SMS is purchased but compliance is not approved", () => {
+  it("shows a register link after AI SMS is purchased but compliance is not approved", () => {
     renderBillingPage({
       status: buildStatus({
         plan: "pro",
@@ -594,10 +611,12 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getAllByText("billing.addon.aiSmsSetupRequiredBadge").length).toBeGreaterThan(
       0,
     );
+    const registerLink = screen.getByRole("link", { name: "billing.addon.register" });
+    expect(registerLink.getAttribute("href")).toBe("/settings/plan/ai-sms-compliance");
   });
 
-  it("renders the hosted AI SMS compliance section for eligible workspaces", () => {
-    renderBillingPage({
+  it("renders the hosted AI SMS compliance page for eligible workspaces", () => {
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -621,9 +640,14 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("billing.compliance.cardTitle")).toBeTruthy();
     expect(screen.getByText(/billing\.compliance\.routingSummary/)).toBeTruthy();
     expect(screen.getByText("Twilio is reviewing your campaign.")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "billing.compliance.actions.backToBilling" })
+        .getAttribute("href"),
+    ).toBe("/settings/plan");
   });
 
-  it("hides the hosted AI SMS compliance section for non-admin members", () => {
+  it("keeps the register action hidden for non-admin members", () => {
     renderBillingPage({
       status: buildStatus({
         plan: "pro",
@@ -645,6 +669,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.queryByText("billing.compliance.title")).toBeNull();
     expect(screen.queryByText("billing.compliance.cardTitle")).toBeNull();
     expect(screen.queryByText("billing.addon.aiSmsActiveBadge")).toBeNull();
+    expect(screen.queryByRole("link", { name: "billing.addon.register" })).toBeNull();
     expect(screen.getAllByText("billing.addon.aiSmsSetupRequiredBadge").length).toBeGreaterThan(
       0,
     );
@@ -661,7 +686,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "pending_review",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -709,7 +734,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "collecting_info",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -753,7 +778,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "pending_review",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -786,7 +811,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "failed",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -827,7 +852,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "pending_review",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -857,8 +882,6 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     const phoneSelect = within(phoneSelectField as HTMLElement).getByRole("combobox");
     expect(phoneSelect.getAttribute("data-disabled")).toBeNull();
 
-    await user.click(phoneSelect);
-    await user.click(screen.getByRole("option", { name: "+14165550177" }));
     await user.click(
       screen.getByRole("button", { name: "billing.compliance.actions.resume" }),
     );
@@ -884,7 +907,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "pending_review",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
@@ -937,7 +960,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: "pending_review",
     });
 
-    renderBillingPage({
+    renderBillingCompliancePage({
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",

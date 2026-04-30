@@ -26,7 +26,7 @@
     "handoffActiveTitle": "IA active",
     "handoffActiveDescription": "Une réponse humaine fera passer cette conversation en relais humain.",
     "handoffPausedTitle": "Relais humain actif",
-    "handoffPausedDescription": "L'IA restera silencieuse jusqu'à ce qu'un opérateur la réactive.",
+    "handoffPausedDescription": "L'IA restera silencieuse jusqu'à ce que quelqu'un la réactive.",
     "handoffPausedStatus": "L'IA a été mise en pause pour {{name}} le {{time}}.",
     "handoffPausedStatusWithoutTime": "L'IA a été mise en pause pour {{name}}.",
     "handoffPausedStatusFallback": "L'IA est en pause pour cette conversation.",

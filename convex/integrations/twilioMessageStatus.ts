@@ -31,7 +31,7 @@ type ReconcileTwilioMessageStatusResult =
   | {
       matched: true;
       applied: boolean;
-      resource: "message" | "notification";
+      resource: "message" | "notification" | "operator_notification";
       status: string;
     };
 
@@ -77,6 +77,20 @@ async function reconcileMessageStatus(
         },
       );
     }
+    if (
+      message.aiGenerated &&
+      message.direction === "outbound" &&
+      message.channel === "sms" &&
+      (nextStatus === "failed" || nextStatus === "undelivered")
+    ) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: message.businessId,
+        eventKind: "aiReplyFailed",
+        eventKey: `aiReplyFailed:${String(message._id)}:delivery`,
+        subject: "SMS AI reply failed",
+        body: `An AI-generated SMS failed delivery for conversation ${String(message.conversationId)}.`,
+      });
+    }
   }
 
   return {
@@ -117,6 +131,15 @@ async function reconcileNotificationStatus(
         ? { providerRawDlrDoneDate: args.providerRawDlrDoneDate }
         : {}),
     });
+    if (nextStatus === "failed") {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: notification.businessId,
+        eventKind: "smsFailed",
+        eventKey: `smsFailed:${String(notification._id)}`,
+        subject: "Customer SMS notification failed",
+        body: `A ${notification.kind} SMS scheduled for ${notification.scheduledFor} failed delivery.`,
+      });
+    }
   }
 
   return {
@@ -149,6 +172,26 @@ export const reconcileProviderStatus = internalMutation({
       return notificationResult;
     }
 
+    const operatorResult: { matched: boolean; status?: string } = await ctx.runMutation(
+      internal.operatorNotifications.reconcileProviderStatus,
+      {
+        providerMessageSid: args.providerMessageSid,
+        providerStatus: args.providerStatus,
+        providerUpdatedAt: args.providerUpdatedAt,
+        ...(args.providerErrorCode !== undefined
+          ? { providerErrorCode: args.providerErrorCode }
+          : {}),
+      },
+    );
+    if (operatorResult.matched) {
+      return {
+        matched: true,
+        applied: true,
+        resource: "operator_notification",
+        status: operatorResult.status ?? args.providerStatus,
+      };
+    }
+
     return { matched: false };
   },
 });
@@ -175,7 +218,99 @@ export const recordProviderPricing = internalMutation({
         .unique();
 
       if (!notification) {
-        return { matched: false, applied: false };
+        const operatorDelivery = await ctx.db
+          .query("operator_notification_deliveries")
+          .withIndex("by_provider_message_id", (q) =>
+            q.eq("providerMessageId", args.providerMessageSid),
+          )
+          .unique();
+
+        if (!operatorDelivery) {
+          return { matched: false, applied: false };
+        }
+
+        const operatorDeliveryPatch: Partial<typeof operatorDelivery> = {};
+        let operatorDeliveryChanged = false;
+        let operatorDeliveryPricingChanged = false;
+
+        if (
+          args.providerUpdatedAt !== undefined &&
+          args.providerUpdatedAt !== operatorDelivery.providerUpdatedAt
+        ) {
+          operatorDeliveryPatch.providerUpdatedAt = args.providerUpdatedAt;
+          operatorDeliveryChanged = true;
+        }
+        if (
+          args.providerPrice !== undefined &&
+          args.providerPrice !== operatorDelivery.providerPrice
+        ) {
+          operatorDeliveryPatch.providerPrice = args.providerPrice;
+          operatorDeliveryChanged = true;
+          operatorDeliveryPricingChanged = true;
+        }
+        if (
+          args.providerPriceUnit !== undefined &&
+          args.providerPriceUnit !== operatorDelivery.providerPriceUnit
+        ) {
+          operatorDeliveryPatch.providerPriceUnit = args.providerPriceUnit;
+          operatorDeliveryChanged = true;
+          operatorDeliveryPricingChanged = true;
+        }
+        if (
+          args.providerCostUsd !== undefined &&
+          args.providerCostUsd !== operatorDelivery.providerCostUsd
+        ) {
+          operatorDeliveryPatch.providerCostUsd = args.providerCostUsd;
+          operatorDeliveryChanged = true;
+          operatorDeliveryPricingChanged = true;
+        }
+        if (
+          args.providerNumSegments !== undefined &&
+          args.providerNumSegments !== operatorDelivery.providerNumSegments
+        ) {
+          operatorDeliveryPatch.providerNumSegments = args.providerNumSegments;
+          operatorDeliveryChanged = true;
+          operatorDeliveryPricingChanged = true;
+        }
+
+        if (!operatorDeliveryChanged) {
+          return { matched: true, applied: false };
+        }
+
+        await ctx.db.patch(operatorDelivery._id, operatorDeliveryPatch);
+
+        if (
+          operatorDeliveryPricingChanged &&
+          args.providerNumSegments !== undefined &&
+          operatorDelivery.senderRole === "platform_alert"
+        ) {
+          const usageResult = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
+            businessId: operatorDelivery.businessId,
+            sourceKey: `alert_sms:operator_notification:${String(operatorDelivery._id)}`,
+            quantity: args.providerNumSegments,
+            recordedAt: args.providerUpdatedAt ?? new Date().toISOString(),
+          });
+
+          if (usageResult.syncNeeded) {
+            await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+              usageEventId: usageResult.usageEventId,
+            });
+          }
+        }
+
+        if (operatorDeliveryPricingChanged && args.providerCostUsd !== undefined) {
+          await ctx.runMutation(internal.unitEconomics.recordOperatorNotificationProviderCost, {
+            businessId: operatorDelivery.businessId,
+            operatorNotificationDeliveryId: operatorDelivery._id,
+            occurredAt: args.providerUpdatedAt ?? new Date().toISOString(),
+            costUsd: args.providerCostUsd,
+            ...(args.providerNumSegments !== undefined
+              ? { numSegments: args.providerNumSegments }
+              : {}),
+          });
+        }
+
+        return { matched: true, applied: true };
       }
 
       const notificationPatch: Partial<typeof notification> = {};

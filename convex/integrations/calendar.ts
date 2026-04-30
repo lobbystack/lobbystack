@@ -1408,6 +1408,32 @@ export const upsertCalendarSyncIssue = internalMutation({
       entityId: String(appointment._id),
       payload: JSON.stringify({ issueId: String(issueId) }),
     });
+    const memberships = await ctx.db
+      .query("business_memberships")
+      .withIndex("by_business_id", (q) => q.eq("businessId", appointment.businessId))
+      .collect();
+    let hasOperatorNotificationDestination = false;
+    for (const membership of memberships) {
+      if (membership.status !== "active") {
+        continue;
+      }
+
+      const user = await ctx.db.get(membership.userId);
+      if (user?.email || (user?.phone && user.phoneVerificationTime)) {
+        hasOperatorNotificationDestination = true;
+        break;
+      }
+    }
+
+    if (hasOperatorNotificationDestination) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: appointment.businessId,
+        eventKind: "calendarSync",
+        eventKey: `calendarSync:${String(issueId)}`,
+        subject: title,
+        body,
+      });
+    }
 
     return { issueId, created: true };
   },

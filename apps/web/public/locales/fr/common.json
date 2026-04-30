@@ -2,7 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Chargement...",
-    "description": "Synchronisation de votre console opérateur et des réglages de la réceptionniste."
+    "description": "Synchronisation de votre espace et des réglages de la réceptionniste."
   },
   "language": {
     "label": "Langue",
@@ -22,5 +22,23 @@
     "customer": "Client",
     "receptionist": "Réceptionniste",
     "prompt": "Demande"
+  },
+  "feedback": {
+    "trigger": "Feedback",
+    "title": "Envoyer un commentaire",
+    "description": "Dites-nous ce qui améliorerait ce tableau de bord.",
+    "label": "Message de feedback",
+    "placeholder": "Une idée pour améliorer LobbyStack ? Dites-le à l’équipe.",
+    "characterCount": "{{count}} / {{max}} caractères",
+    "helpText": "Besoin d’aide ?",
+    "helpCenter": "Centre d’aide",
+    "contactLink": "Contactez-nous",
+    "helpTextSeparator": "ou",
+    "docsLink": "consultez la doc.",
+    "submit": "Envoyer",
+    "toast": {
+      "sent": "Feedback envoyé.",
+      "failed": "Nous n’avons pas pu enregistrer ce feedback."
+    }
   }
 }

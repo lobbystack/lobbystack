@@ -1,17 +1,21 @@
 import type { CSSProperties, ReactNode } from "react";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AuthenticatedLayoutProps = {
+  businessId?: Id<"businesses">;
   businessName?: string;
   children: ReactNode;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  showUpgradeToPro?: boolean;
   isLoading?: boolean;
 };
 
@@ -28,12 +32,14 @@ function getSidebarDefaultOpen(): boolean {
 }
 
 export function AuthenticatedLayout({
+  businessId,
   businessName,
   children,
   onSignOut,
   operatorAvatar,
   operatorEmail,
   operatorName,
+  showUpgradeToPro = false,
   isLoading = false,
 }: AuthenticatedLayoutProps) {
   const defaultOpen = getSidebarDefaultOpen();
@@ -54,6 +60,7 @@ export function AuthenticatedLayout({
         {...(operatorAvatar ? { operatorAvatar } : {})}
         {...(operatorEmail ? { operatorEmail } : {})}
         {...(operatorName ? { operatorName } : {})}
+        showUpgradeToPro={showUpgradeToPro}
       />
       <SidebarInset
         className={cn(
@@ -63,6 +70,7 @@ export function AuthenticatedLayout({
         )}
       >
         <SiteHeader fixed />
+        {!isLoading ? <FeedbackWidget {...(businessId ? { businessId } : {})} /> : null}
         {children}
       </SidebarInset>
     </SidebarProvider>

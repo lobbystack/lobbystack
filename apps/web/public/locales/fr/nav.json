@@ -12,7 +12,7 @@
     "placeholder": "Rechercher dans l'espace..."
   },
   "sidebar": {
-    "businessSlugFallback": "Console opérateur",
+    "businessSlugFallback": "Tableau de bord",
     "general": "Général",
     "agent": "Agent",
     "other": "Gestion",
@@ -20,6 +20,9 @@
     "openSettings": "Ouvrir les réglages",
     "signedIn": "Connecté",
     "workspaceReady": "Espace prêt",
+    "upgradeToPro": "Passer à Pro",
+    "account": "Compte",
+    "toggleTheme": "Changer le thème",
     "signOut": "Se déconnecter"
   }
 }

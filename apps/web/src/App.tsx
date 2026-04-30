@@ -38,9 +38,12 @@ import { SettingsAppearancePage } from "@/features/settings/SettingsAppearancePa
 import { IntegrationsPage } from "@/features/settings/IntegrationsPage";
 import { SettingsBusinessPage } from "@/features/settings/SettingsBusinessPage";
 import {
+  SettingsBillingCompliancePage,
   SettingsBillingPage,
   SettingsBillingUsagePage,
 } from "@/features/settings/SettingsBillingPage";
+import { SettingsAccountPage } from "@/features/settings/SettingsAccountPage";
+import { SettingsNotificationsPage } from "@/features/settings/SettingsNotificationsPage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
@@ -112,8 +115,16 @@ function WorkspaceShell() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
   const businessId = activeBusiness?._id;
+  const billingStatus = useQuery(
+    api.billing.getStatus,
+    businessId ? { businessId } : "skip",
+  );
   const isBootstrapLoading = businesses === undefined || currentUser === undefined;
   const previousBusinessIdRef = useRef<string | null>(null);
+  const showUpgradeToPro =
+    billingStatus?.hasCheckoutAccess === true &&
+    billingStatus.availableCheckoutPlans.includes("pro") &&
+    billingStatus.plan === "free_cloud";
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -199,6 +210,7 @@ function WorkspaceShell() {
     <AuthenticatedLayout
       isLoading={isBootstrapLoading}
       onSignOut={() => void handleSignOut()}
+      {...(businessId ? { businessId } : {})}
       {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}
@@ -207,6 +219,7 @@ function WorkspaceShell() {
           ? { operatorName: currentUser.displayName ?? currentUser.name! }
           : {}
       )}
+      showUpgradeToPro={showUpgradeToPro}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         {isBootstrapLoading ? (
@@ -312,7 +325,7 @@ function WorkspaceShell() {
                     <Navigate replace to="/settings/usage" />
                   )
                 }
-                path="account"
+                path="team"
               />
               <Route
                 element={
@@ -332,7 +345,17 @@ function WorkspaceShell() {
                     <Navigate replace to="/settings" />
                   )
                 }
-                path="billing"
+                path="plan"
+              />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsBillingCompliancePage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="plan/ai-sms-compliance"
               />
               <Route
                 element={
@@ -344,7 +367,18 @@ function WorkspaceShell() {
                 }
                 path="usage"
               />
+              <Route
+                element={
+                  businessId ? (
+                    <SettingsNotificationsPage businessId={businessId} />
+                  ) : (
+                    <Navigate replace to="/settings" />
+                  )
+                }
+                path="notifications"
+              />
             </Route>
+            <Route element={<SettingsAccountPage />} path="/settings/account" />
             <Route element={<Navigate replace to="/" />} path="*" />
           </Routes>
         )}

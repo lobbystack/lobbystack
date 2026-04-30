@@ -104,3 +104,21 @@ export const onboardingRateLimiter = new RateLimiter(components.rateLimiter, {
     period: HOUR,
   },
 });
+
+export const dashboardAbuseRateLimiter = new RateLimiter(components.rateLimiter, {
+  dashboardFeedbackSubmissionPerUserPerHour: {
+    kind: "fixed window",
+    rate: 5,
+    period: HOUR,
+  },
+  dashboardFeedbackSubmissionPerBusinessPerHour: {
+    kind: "fixed window",
+    rate: 25,
+    period: HOUR,
+  },
+  dashboardTestNotificationPerUserPerHour: {
+    kind: "fixed window",
+    rate: 5,
+    period: HOUR,
+  },
+});

@@ -167,6 +167,7 @@ type IngestInboundSmsArgs = {
 type IngestInboundSmsResult = {
   conversationId: Id<"conversations">;
   contactId: Id<"contacts">;
+  messageId: Id<"messages">;
   replySuppressed: boolean;
   automationState: "ai_active" | "human_handoff";
 };
@@ -409,9 +410,11 @@ export const ingestInboundSms = internalMutation({
       channel: args.channel,
     });
 
-    const { conversationId }: { conversationId: Id<"conversations"> } = await ctx.runMutation(
-      internal.conversations.webhooks.storeInboundMessage,
-      {
+    const {
+      conversationId,
+      messageId,
+    }: { conversationId: Id<"conversations">; messageId: Id<"messages"> } =
+      await ctx.runMutation(internal.conversations.webhooks.storeInboundMessage, {
         businessId: args.businessId,
         contactId,
         channel: args.channel,
@@ -420,8 +423,7 @@ export const ingestInboundSms = internalMutation({
           ? { providerMessageSid: args.providerMessageSid }
           : {}),
         ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
-      },
-    );
+      });
 
     if (args.idempotencyKeyId) {
       await ctx.db.patch(args.idempotencyKeyId, {
@@ -439,6 +441,7 @@ export const ingestInboundSms = internalMutation({
     return {
       conversationId,
       contactId,
+      messageId,
       replySuppressed:
         nextConsentStatus === "opted_out" ||
         automationState === "human_handoff" ||
@@ -576,7 +579,7 @@ export const storeInboundMessage = internalMutation({
   handler: async (
     ctx: MutationCtx,
     args: StoreInboundMessageArgs,
-  ): Promise<{ conversationId: Id<"conversations"> }> => {
+  ): Promise<{ conversationId: Id<"conversations">; messageId: Id<"messages"> }> => {
     const existing: Doc<"conversations"> | null = await ctx.runQuery(
       internal.conversations.webhooks.getConversationForContact,
       {
@@ -653,7 +656,7 @@ export const storeInboundMessage = internalMutation({
       }),
     );
 
-    return { conversationId };
+    return { conversationId, messageId };
   },
 });
 
@@ -950,6 +953,20 @@ export const markOutboundMessageSendFailed = internalMutation({
       providerUpdatedAt: args.providerUpdatedAt,
     });
 
+    if (
+      message.aiGenerated &&
+      message.channel === "sms" &&
+      message.direction === "outbound"
+    ) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: message.businessId,
+        eventKind: "aiReplyFailed",
+        eventKey: `aiReplyFailed:${String(args.messageId)}:send`,
+        subject: "SMS AI reply failed",
+        body: `An AI-generated SMS could not be sent for conversation ${String(message.conversationId)}.`,
+      });
+    }
+
     await enqueuePostHogOutboxRecord(
       ctx,
       serializePostHogEvent({
@@ -1183,7 +1200,12 @@ export const handleTwilioSmsInbound = internalAction({
           })
         : undefined;
 
-    const { conversationId, replySuppressed, automationState }: IngestInboundSmsResult = await ctx.runMutation(
+    const {
+      conversationId,
+      messageId: inboundMessageId,
+      replySuppressed,
+      automationState,
+    }: IngestInboundSmsResult = await ctx.runMutation(
       internal.conversations.webhooks.ingestInboundSms,
       {
         businessId: phoneNumber.businessId,
@@ -1198,6 +1220,28 @@ export const handleTwilioSmsInbound = internalAction({
     );
 
     if (replySuppressed) {
+      if (automationState === "human_handoff") {
+        try {
+          await ctx.scheduler.runAfter(
+            0,
+            internal.operatorNotifications.dispatchEvent,
+            {
+              businessId: phoneNumber.businessId,
+              eventKind: "pausedSms",
+              eventKey: `pausedSms:${String(inboundMessageId)}`,
+              subject: "New message in paused SMS conversation",
+              body: `A customer sent a new SMS while automation is paused.\n\nFrom: ${args.from}\n\n${args.body}`,
+            },
+          );
+        } catch (error) {
+          console.warn("[operatorNotifications] Failed to dispatch paused SMS alert", {
+            businessId: String(phoneNumber.businessId),
+            messageId: String(inboundMessageId),
+            error,
+          });
+        }
+      }
+
       if (idempotencyKeyId) {
         await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
           idempotencyKeyId,
@@ -1271,6 +1315,21 @@ export const handleTwilioSmsInbound = internalAction({
       await ctx.runMutation(internal.conversations.webhooks.discardReservedOutboundMessage, {
         messageId,
       });
+      try {
+        await ctx.runAction(internal.operatorNotifications.dispatchEvent, {
+          businessId: phoneNumber.businessId,
+          eventKind: "aiReplyFailed",
+          eventKey: `aiReplyFailed:${String(messageId)}:generation`,
+          subject: "SMS AI reply failed",
+          body: `The AI could not generate an SMS reply for conversation ${String(conversationId)}.`,
+        });
+      } catch (notificationError) {
+        console.warn("[operatorNotifications] Failed to dispatch AI reply generation alert", {
+          businessId: String(phoneNumber.businessId),
+          messageId: String(messageId),
+          error: notificationError,
+        });
+      }
       throw error;
     }
 

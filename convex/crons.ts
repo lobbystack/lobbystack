@@ -11,10 +11,23 @@ export const dispatchDueNotifications = internalAction({
   },
 });
 
+export const dispatchDueDailyDigests = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ attempted: number; sent: number }> => {
+    return await ctx.runAction(internal.operatorNotifications.dispatchDueDailyDigests, {});
+  },
+});
+
 crons.interval(
   "dispatch due notifications",
   { minutes: 15 },
   internal.crons.dispatchDueNotifications,
+  {},
+);
+crons.interval(
+  "dispatch due operator daily digests",
+  { minutes: 15 },
+  internal.crons.dispatchDueDailyDigests,
   {},
 );
 crons.interval(

@@ -30,6 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import {
@@ -300,14 +301,14 @@ function StatCard({
   value: number;
 }) {
   return (
-    <div className="flex items-center rounded-xl border bg-card px-4 py-3">
+    <Surface className="flex items-center px-4 py-3">
       <div className="flex flex-col">
         <span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">
           {value}
         </span>
         <span className="type-meta">{label}</span>
       </div>
-    </div>
+    </Surface>
   );
 }
 
@@ -497,10 +498,7 @@ function AppointmentsTab({
   return (
     <div className="flex flex-col gap-3 py-4">
       {appointments.map((appointment) => (
-        <div
-          className="flex flex-col gap-3 rounded-xl border bg-card px-4 py-3"
-          key={appointment.id}
-        >
+        <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}>
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
               <span className="type-item-title">
@@ -548,7 +546,7 @@ function AppointmentsTab({
               </span>
             </div>
           </div>
-        </div>
+        </Surface>
       ))}
     </div>
   );

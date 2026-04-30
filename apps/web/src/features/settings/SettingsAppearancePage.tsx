@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -9,17 +7,15 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { Surface } from "@/components/ui/surface";
 import { useLocalePreference } from "@/components/locale-provider";
 import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
-
-type ThemeChoice = "light" | "dark";
 
 type SettingsAppearancePageProps = {
   businessId: Id<"businesses">;
@@ -29,36 +25,18 @@ export function SettingsAppearancePage({
   businessId: _businessId,
 }: SettingsAppearancePageProps) {
   const { t } = useTranslation(["settings", "common"]);
-  const { resolvedTheme, setTheme, theme } = useTheme();
   const { locale, setLocale } = useLocalePreference();
   const { timeFormatPreference, setTimeFormatPreference } =
     useAppearancePreference();
-  const selectedTheme: ThemeChoice =
-    theme === "light" || theme === "dark"
-      ? theme
-      : resolvedTheme === "dark"
-        ? "dark"
-        : "light";
 
-  const themeChoices = useMemo(
-    () =>
-      [
-        {
-          mode: "light" as const,
-          label: t("appearance.theme.light"),
-        },
-        {
-          mode: "dark" as const,
-          label: t("appearance.theme.dark"),
-        },
-      ] satisfies Array<{ mode: ThemeChoice; label: string }>,
-    [t],
-  );
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-8">
-        <ItemGroup spacing="section">
-          <Item variant="outline">
+        <Surface className="flex flex-col">
+          <Item
+            className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+            variant="default"
+          >
             <ItemContent>
               <ItemTitle>{t("appearance.language.label")}</ItemTitle>
               <ItemDescription>
@@ -84,7 +62,10 @@ export function SettingsAppearancePage({
             </ItemActions>
           </Item>
 
-          <Item variant="outline">
+          <Item
+            className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+            variant="default"
+          >
             <ItemContent>
               <ItemTitle>{t("appearance.timeFormat.label")}</ItemTitle>
               <ItemDescription>
@@ -109,30 +90,7 @@ export function SettingsAppearancePage({
               </NativeSelect>
             </ItemActions>
           </Item>
-
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle>{t("appearance.theme.label")}</ItemTitle>
-              <ItemDescription>
-                {t("appearance.theme.description")}
-              </ItemDescription>
-            </ItemContent>
-            <ItemActions className="w-full sm:w-auto">
-              <NativeSelect
-                aria-label={t("appearance.theme.label")}
-                className="w-full sm:w-28"
-                onChange={(event) => setTheme(event.target.value as ThemeChoice)}
-                value={selectedTheme}
-              >
-                {themeChoices.map((choice) => (
-                  <NativeSelectOption key={choice.mode} value={choice.mode}>
-                    {choice.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </ItemActions>
-          </Item>
-        </ItemGroup>
+        </Surface>
       </div>
     </div>
   );

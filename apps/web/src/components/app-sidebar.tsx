@@ -34,6 +34,7 @@ type AppSidebarProps = {
   operatorAvatar?: string;
   operatorEmail?: string;
   operatorName?: string;
+  showUpgradeToPro?: boolean;
   isLoading?: boolean;
 };
 
@@ -80,6 +81,7 @@ export function AppSidebar({
   operatorAvatar,
   operatorEmail,
   operatorName,
+  showUpgradeToPro = false,
   isLoading = false,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
@@ -176,7 +178,12 @@ export function AppSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser isLoading={isLoading} onSignOut={onSignOut} user={sidebarData.user} />
+        <NavUser
+          isLoading={isLoading}
+          onSignOut={onSignOut}
+          showUpgradeToPro={showUpgradeToPro}
+          user={sidebarData.user}
+        />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

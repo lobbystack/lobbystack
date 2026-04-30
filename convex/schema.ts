@@ -16,6 +16,11 @@ import {
 } from "./lib/smsCompliance";
 import { knowledgeSectionValidator } from "./lib/knowledgeSections";
 import { localizedServiceNamesValidator } from "./lib/serviceNames";
+import {
+  operatorNotificationChannelValidator,
+  operatorNotificationEventKindValidator,
+  operatorNotificationEventPreferencesValidator,
+} from "./lib/operatorNotificationPreferences";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
@@ -124,6 +129,12 @@ const unitEconomicsQuantityUnitValidator = v.union(
   v.literal("user"),
 );
 
+const feedbackEmailStatusValidator = v.union(
+  v.literal("pending_email"),
+  v.literal("email_sent"),
+  v.literal("email_failed"),
+);
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -174,7 +185,29 @@ export default defineSchema({
     status: v.string(),
   })
     .index("by_user_id_and_business_id", ["userId", "businessId"])
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_role", ["businessId", "role"]),
+
+  feedback_submissions: defineTable({
+    userId: v.id("users"),
+    userEmail: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    businessId: v.optional(v.id("businesses")),
+    businessName: v.optional(v.string()),
+    message: v.string(),
+    pagePath: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    emailStatus: feedbackEmailStatusValidator,
+    recipientEmail: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    emailError: v.optional(v.string()),
+    submittedAt: v.string(),
+    emailedAt: v.optional(v.string()),
+    updatedAt: v.string(),
+  })
+    .index("by_business_id_and_submitted_at", ["businessId", "submittedAt"])
+    .index("by_user_id_and_submitted_at", ["userId", "submittedAt"])
+    .index("by_email_status_and_submitted_at", ["emailStatus", "submittedAt"]),
 
   staff: defineTable({
     businessId: v.id("businesses"),
@@ -544,6 +577,7 @@ export default defineSchema({
     aiGenerated: v.boolean(),
   })
     .index("by_business_id", ["businessId"])
+    .index("by_business_id_and_provider_updated_at", ["businessId", "providerUpdatedAt"])
     .index("by_conversation_id", ["conversationId"])
     .index("by_conversation_session_id", ["conversationSessionId"])
     .index("by_provider_message_sid", ["providerMessageSid"]),
@@ -675,6 +709,7 @@ export default defineSchema({
     calendarSyncIssueId: v.optional(v.id("inbox_items")),
     calendarExternalEventId: v.optional(v.string()),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_starts_at", ["businessId", "startsAt"])
     .index("by_business_id_and_calendar_sync_state_and_starts_at", [
       "businessId",
@@ -760,10 +795,58 @@ export default defineSchema({
     providerUpdatedAt: v.optional(v.string()),
     providerRawDlrDoneDate: v.optional(v.string()),
   })
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_scheduled_for", ["businessId", "scheduledFor"])
+    .index("by_business_id_and_provider_updated_at", ["businessId", "providerUpdatedAt"])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
     .index("by_provider_message_id", ["providerMessageId"]),
+
+  operator_notification_preferences: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    emailEnabled: v.boolean(),
+    smsEnabled: v.boolean(),
+    eventPreferences: operatorNotificationEventPreferencesValidator,
+    dailySummaryEnabled: v.boolean(),
+    dailySummarySendTime: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_user_id_and_business_id", ["userId", "businessId"])
+    .index("by_daily_summary_enabled_and_daily_summary_send_time", [
+      "dailySummaryEnabled",
+      "dailySummarySendTime",
+    ]),
+
+  operator_notification_deliveries: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    eventKind: operatorNotificationEventKindValidator,
+    eventKey: v.string(),
+    channel: operatorNotificationChannelValidator,
+    status: v.string(),
+    subject: v.string(),
+    body: v.string(),
+    scheduledFor: v.optional(v.string()),
+    sentAt: v.optional(v.string()),
+    error: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    providerStatus: v.optional(v.string()),
+    providerErrorCode: v.optional(v.string()),
+    providerUpdatedAt: v.optional(v.string()),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerNumSegments: v.optional(v.number()),
+    senderRole: v.optional(smsSenderRoleValidator),
+    digestForDate: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
+    .index("by_provider_message_id", ["providerMessageId"])
+    .index("by_business_id_and_event_kind", ["businessId", "eventKind"])
+    .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
 
   unit_economics_events: defineTable({
     businessId: v.id("businesses"),
@@ -782,6 +865,7 @@ export default defineSchema({
     conversationId: v.optional(v.id("conversations")),
     messageId: v.optional(v.id("messages")),
     notificationId: v.optional(v.id("notifications")),
+    operatorNotificationDeliveryId: v.optional(v.id("operator_notification_deliveries")),
   })
     .index("by_event_key", ["eventKey"])
     .index("by_business_id_and_month_key_and_occurred_at", [
@@ -797,6 +881,7 @@ export default defineSchema({
     .index("by_call_id", ["callId"])
     .index("by_message_id", ["messageId"])
     .index("by_notification_id", ["notificationId"])
+    .index("by_operator_notification_delivery_id", ["operatorNotificationDeliveryId"])
     .index("by_conversation_id", ["conversationId"]),
 
   unit_economics_rollups: defineTable({
@@ -834,6 +919,7 @@ export default defineSchema({
     status: v.string(),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
+    .index("by_business_id_and_kind", ["businessId", "kind"])
     .index("by_business_id_and_kind_and_status", ["businessId", "kind", "status"])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_related_id", ["relatedId"]),
