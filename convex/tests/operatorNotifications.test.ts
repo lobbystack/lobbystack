@@ -334,6 +334,67 @@ describe("operator notification preferences", () => {
     });
   });
 
+  it("downgrades SMS recipients to email when no alert sender is configured", async () => {
+    const originalAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
+    delete process.env.TWILIO_ALERT_SMS_FROM;
+
+    try {
+      const t = createConvexHarness();
+      const seeded = await seedMember(t, {
+        subject: "operator-sms-sender-missing",
+        email: "operator@example.com",
+        phone: "+15145550123",
+        phoneVerificationTime: Date.now(),
+      });
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("operator_notification_preferences", {
+          businessId: seeded.businessId,
+          userId: seeded.userId,
+          emailEnabled: true,
+          smsEnabled: true,
+          eventPreferences: {
+            voiceMessage: { email: true, sms: true },
+            pausedSms: { email: true, sms: true },
+            smsFailed: { email: true, sms: true },
+            calendarSync: { email: true, sms: true },
+            transferFailed: { email: true, sms: true },
+            aiReplyFailed: { email: true, sms: true },
+          },
+          dailySummaryEnabled: true,
+          dailySummarySendTime: "08:00",
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      await t.action(internal.operatorNotifications.dispatchEvent, {
+        businessId: seeded.businessId,
+        eventKind: "voiceMessage",
+        eventKey: "voiceMessage:missing-alert-sender",
+        subject: "Voice message captured",
+        body: "A caller left a message.",
+      });
+
+      await t.run(async (ctx) => {
+        const deliveries = await ctx.db
+          .query("operator_notification_deliveries")
+          .withIndex("by_business_id_and_event_kind", (q) =>
+            q.eq("businessId", seeded.businessId).eq("eventKind", "voiceMessage"),
+          )
+          .collect();
+
+        expect(deliveries).toHaveLength(1);
+        expect(deliveries[0]?.channel).toBe("email");
+      });
+    } finally {
+      if (originalAlertSmsFrom === undefined) {
+        delete process.env.TWILIO_ALERT_SMS_FROM;
+      } else {
+        process.env.TWILIO_ALERT_SMS_FROM = originalAlertSmsFrom;
+      }
+    }
+  });
+
   it("reserves and releases alert SMS usage for operator SMS delivery attempts", async () => {
     const t = createConvexHarness();
     const seeded = await seedMember(t, {

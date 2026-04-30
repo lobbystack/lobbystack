@@ -170,6 +170,13 @@ function mergeDocsById<T extends { _id: string }>(collections: Array<Array<T>>):
   return Array.from(byId.values());
 }
 
+function hasAlertSmsSender(input: {
+  fromPhoneNumber?: string;
+  twilioMessagingServiceSid?: string;
+}): boolean {
+  return Boolean(input.fromPhoneNumber || input.twilioMessagingServiceSid);
+}
+
 export const listRecipientsForEvent = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -183,10 +190,17 @@ export const listRecipientsForEvent = internalQuery({
     ),
   },
   handler: async (ctx: QueryCtx, args): Promise<Array<NotificationRecipient>> => {
-    const memberships = await ctx.db
-      .query("business_memberships")
-      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
-      .collect();
+    const [memberships, smsPolicy] = await Promise.all([
+      ctx.db
+        .query("business_memberships")
+        .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+        .collect(),
+      ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+        businessId: args.businessId,
+        capability: "alert",
+      }),
+    ]);
+    const alertSmsSenderConfigured = hasAlertSmsSender(smsPolicy);
 
     const recipients: Array<NotificationRecipient> = [];
     for (const membership of memberships) {
@@ -209,6 +223,7 @@ export const listRecipientsForEvent = internalQuery({
       const emailEnabled =
         Boolean(user.email) && isEventPreferenceEnabled(effective, args.eventKind, "email");
       const smsEnabled =
+        alertSmsSenderConfigured &&
         Boolean(user.phone && user.phoneVerificationTime) &&
         isEventPreferenceEnabled(effective, args.eventKind, "sms");
 
