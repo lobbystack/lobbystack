@@ -43,7 +43,7 @@ navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
 #navbar a[href="https://lobbystack.com"],
 #navbar *:has(> a[href="https://lobbystack.com"]),
 navbar-link[href="https://lobbystack.com"] {
-  margin-right: 10px !important;
+  margin-right: 8px !important;
 }
 
 #topbar-cta-button,
