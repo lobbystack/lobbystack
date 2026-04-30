@@ -782,6 +782,15 @@ export const setTransferState = internalMutation({
         }),
       );
     }
+    if (args.transferState === "failed") {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: call.businessId,
+        eventKind: "transferFailed",
+        eventKey: `transferFailed:${String(args.callId)}`,
+        subject: "Live call transfer failed",
+        body: `A live transfer failed for call ${String(args.callId)}.`,
+      });
+    }
     return null;
   },
 });
@@ -944,6 +953,14 @@ export const takeMessageForVoice = internalMutation({
         summary: body,
       });
     }
+
+    await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+      businessId: args.businessId,
+      eventKind: "voiceMessage",
+      eventKey: `voiceMessage:${String(inboxItemId)}`,
+      subject: title,
+      body,
+    });
 
     return { inboxItemId };
   },

@@ -7,13 +7,13 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { Surface } from "@/components/ui/surface";
 import { useLocalePreference } from "@/components/locale-provider";
 import type { SupportedLocale, TimeFormatPreference } from "@/lib/locale";
 
@@ -32,8 +32,11 @@ export function SettingsAppearancePage({
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-8">
-        <div className="flex flex-col rounded-xl border border-border bg-card">
-          <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+        <Surface className="flex flex-col">
+          <Item
+            className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+            variant="default"
+          >
             <ItemContent>
               <ItemTitle>{t("appearance.language.label")}</ItemTitle>
               <ItemDescription>
@@ -59,7 +62,10 @@ export function SettingsAppearancePage({
             </ItemActions>
           </Item>
 
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+          <Item
+            className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+            variant="default"
+          >
             <ItemContent>
               <ItemTitle>{t("appearance.timeFormat.label")}</ItemTitle>
               <ItemDescription>
@@ -84,8 +90,7 @@ export function SettingsAppearancePage({
               </NativeSelect>
             </ItemActions>
           </Item>
-
-          </div>
+        </Surface>
       </div>
     </div>
   );

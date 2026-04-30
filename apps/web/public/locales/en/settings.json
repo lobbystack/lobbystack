@@ -554,24 +554,36 @@
   "notifications": {
     "title": "Notifications",
     "description": "Choose which events trigger an alert to your phone or email.",
+    "actions": {
+      "testEmail": "Test email",
+      "testSms": "Test SMS",
+      "testing": "Sending..."
+    },
+    "toast": {
+      "saveFailed": "Notification preferences were not saved.",
+      "smsUnavailable": "Verify a phone number before enabling SMS notifications.",
+      "testEmailSent": "Test email sent.",
+      "testSmsSent": "Test SMS sent.",
+      "testFailed": "Unable to send the test notification."
+    },
     "sources": {
-      "title": "Sources",
-      "description": "Select where and when you'll be notified",
-      "browser": {
-        "title": "Browser",
-        "description": "Receive notifications in your browser."
-      },
+      "title": "Channels",
+      "description": "Choose where operator alerts are sent for your account.",
       "email": {
         "title": "Email",
-        "description": "Receive notifications in your email client."
+        "description": "Receive operator alerts and daily summaries by email."
       },
       "sms": {
         "title": "SMS",
-        "description": "Receive text message notifications on your phone."
+        "description": "Receive urgent operator alerts on your verified phone.",
+        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts."
       }
     },
     "communication": {
       "title": "Communication",
+      "eventColumn": "Event"
+    },
+    "events": {
       "voiceMessage": {
         "title": "Voice message captured",
         "description": "When the AI takes a callback or follow-up message during a call."
@@ -579,10 +591,7 @@
       "pausedSms": {
         "title": "New message in paused SMS conversation",
         "description": "When SMS automation is manually paused and the customer sends another message."
-      }
-    },
-    "systemIssues": {
-      "title": "System issues",
+      },
       "smsFailed": {
         "title": "Customer SMS notification failed",
         "description": "When an appointment confirmation or reminder SMS fails or is undelivered."
@@ -599,6 +608,9 @@
         "title": "SMS AI reply failed",
         "description": "When the system fails to generate or send an AI SMS reply."
       }
+    },
+    "systemIssues": {
+      "title": "System issues"
     },
     "digest": {
       "title": "Digest",

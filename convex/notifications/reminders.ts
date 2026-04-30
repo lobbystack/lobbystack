@@ -233,11 +233,25 @@ export const markNotificationSendFailed = internalMutation({
     providerStatus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification) {
+      throw new Error("Notification not found.");
+    }
+
     await ctx.db.patch(args.notificationId, {
       status: "failed",
       ...(args.providerStatus !== undefined ? { providerStatus: args.providerStatus } : {}),
       providerUpdatedAt: args.providerUpdatedAt,
     });
+
+    await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+      businessId: notification.businessId,
+      eventKind: "smsFailed",
+      eventKey: `smsFailed:${String(args.notificationId)}`,
+      subject: "Customer SMS notification failed",
+      body: `A ${notification.kind} SMS scheduled for ${notification.scheduledFor} failed.`,
+    });
+
     return null;
   },
 });

@@ -160,6 +160,10 @@ describe("AppSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
     expect(screen.queryByRole("menuitem", { name: "Upgrade to Pro" })).toBeNull();
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: "Toggle theme" })).toBeNull();
+    });
 
     rerender(
       <MemoryRouter initialEntries={["/"]}>

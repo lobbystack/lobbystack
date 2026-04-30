@@ -31,7 +31,7 @@ type ReconcileTwilioMessageStatusResult =
   | {
       matched: true;
       applied: boolean;
-      resource: "message" | "notification";
+      resource: "message" | "notification" | "operator_notification";
       status: string;
     };
 
@@ -77,6 +77,20 @@ async function reconcileMessageStatus(
         },
       );
     }
+    if (
+      message.aiGenerated &&
+      message.direction === "outbound" &&
+      message.channel === "sms" &&
+      (nextStatus === "failed" || nextStatus === "undelivered")
+    ) {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: message.businessId,
+        eventKind: "aiReplyFailed",
+        eventKey: `aiReplyFailed:${String(message._id)}:delivery`,
+        subject: "SMS AI reply failed",
+        body: `An AI-generated SMS failed delivery for conversation ${String(message.conversationId)}.`,
+      });
+    }
   }
 
   return {
@@ -117,6 +131,15 @@ async function reconcileNotificationStatus(
         ? { providerRawDlrDoneDate: args.providerRawDlrDoneDate }
         : {}),
     });
+    if (nextStatus === "failed") {
+      await ctx.scheduler.runAfter(0, internal.operatorNotifications.dispatchEvent, {
+        businessId: notification.businessId,
+        eventKind: "smsFailed",
+        eventKey: `smsFailed:${String(notification._id)}`,
+        subject: "Customer SMS notification failed",
+        body: `A ${notification.kind} SMS scheduled for ${notification.scheduledFor} failed delivery.`,
+      });
+    }
   }
 
   return {
@@ -147,6 +170,26 @@ export const reconcileProviderStatus = internalMutation({
     const notificationResult = await reconcileNotificationStatus(ctx, args);
     if (notificationResult) {
       return notificationResult;
+    }
+
+    const operatorResult: { matched: boolean; status?: string } = await ctx.runMutation(
+      internal.operatorNotifications.reconcileProviderStatus,
+      {
+        providerMessageSid: args.providerMessageSid,
+        providerStatus: args.providerStatus,
+        providerUpdatedAt: args.providerUpdatedAt,
+        ...(args.providerErrorCode !== undefined
+          ? { providerErrorCode: args.providerErrorCode }
+          : {}),
+      },
+    );
+    if (operatorResult.matched) {
+      return {
+        matched: true,
+        applied: true,
+        resource: "operator_notification",
+        status: operatorResult.status ?? args.providerStatus,
+      };
     }
 
     return { matched: false };

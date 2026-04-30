@@ -17,6 +17,7 @@ vi.mock("react-i18next", () => ({
         "sections.billing": "Billing",
         "sections.business": "Team",
         "sections.appearance": "Preferences",
+        "sections.notifications": "Notifications",
       };
 
       return translations[key] ?? key;
@@ -32,8 +33,9 @@ function renderSettingsShell(initialEntry: string) {
           <Route element={<Navigate replace to="/settings/usage" />} index />
           <Route element={<div>Usage content</div>} path="usage" />
           <Route element={<div>Billing content</div>} path="billing" />
-          <Route element={<div>Team content</div>} path="account" />
+          <Route element={<div>Team content</div>} path="team" />
           <Route element={<div>Appearance content</div>} path="appearance" />
+          <Route element={<div>Notifications content</div>} path="notifications" />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -53,7 +55,7 @@ describe("SettingsLayout", () => {
   });
 
   it("renders a shared Settings header with route-backed subnav links", () => {
-    renderSettingsShell("/settings/account");
+    renderSettingsShell("/settings/team");
 
     expect(
       screen.getByRole("heading", { name: "Settings" }),
@@ -65,12 +67,17 @@ describe("SettingsLayout", () => {
       "/settings/billing",
     );
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe(
-      "/settings/account",
+      "/settings/team",
     );
     expect(
       screen.getByRole("link", { name: "Preferences" }).getAttribute("href"),
     ).toBe(
       "/settings/appearance",
+    );
+    expect(
+      screen.getByRole("link", { name: "Notifications" }).getAttribute("href"),
+    ).toBe(
+      "/settings/notifications",
     );
     expect(
       screen.getByRole("link", { name: "Team" }).getAttribute("aria-current"),

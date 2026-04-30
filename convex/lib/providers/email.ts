@@ -16,6 +16,7 @@ type TransactionalTemplateInput = {
 
 const DEFAULT_PASSWORD_RESET_SUBJECT = "Reset your password";
 const DEFAULT_VERIFY_EMAIL_SUBJECT = "Confirm your new email";
+const DEFAULT_OPERATOR_ALERT_SUBJECT = "LobbyStack notification";
 
 export type TransactionalEmailConfig = {
   fromAddress: string;
@@ -62,7 +63,7 @@ export function renderTransactionalEmail(
     case "password_reset":
       return renderPasswordResetEmail(input);
     case "operator_alert":
-      throw new Error(`Email template "${input.template}" is not implemented yet.`);
+      return renderOperatorAlertEmail(input);
     default: {
       const exhaustiveTemplate: never = input.template;
       throw new Error(`Unsupported email template "${exhaustiveTemplate}".`);
@@ -152,6 +153,26 @@ function renderPasswordResetEmail(input: TransactionalTemplateInput): {
       `This code expires in ${expiresMinutes} minutes.`,
       "If you did not request this, you can safely ignore this email.",
     ].join("\n\n"),
+  };
+}
+
+function renderOperatorAlertEmail(input: TransactionalTemplateInput): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const body = requireTemplateVariable(input.template, input.variables, "body");
+  const subject = input.subject || input.variables.subject || DEFAULT_OPERATOR_ALERT_SUBJECT;
+  const escapedSubject = escapeHtml(subject);
+  const escapedBody = escapeHtml(body).replaceAll("\n", "<br />");
+
+  return {
+    subject,
+    html: [
+      `<p><strong>${escapedSubject}</strong></p>`,
+      `<p>${escapedBody}</p>`,
+    ].join(""),
+    text: [subject, body].join("\n\n"),
   };
 }
 

@@ -857,8 +857,6 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     const phoneSelect = within(phoneSelectField as HTMLElement).getByRole("combobox");
     expect(phoneSelect.getAttribute("data-disabled")).toBeNull();
 
-    await user.click(phoneSelect);
-    await user.click(screen.getByRole("option", { name: "+14165550177" }));
     await user.click(
       screen.getByRole("button", { name: "billing.compliance.actions.resume" }),
     );

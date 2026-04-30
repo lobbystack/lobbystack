@@ -1,7 +1,12 @@
+import { useAction, useMutation, useQuery } from "convex/react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
+import { toast } from "sonner";
 
+import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Item,
   ItemActions,
@@ -9,11 +14,13 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { Switch } from "@/components/ui/switch";
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -22,111 +29,238 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 
 type SettingsNotificationsPageProps = {
   businessId: Id<"businesses">;
 };
 
-type NotificationSources = {
-  browser: boolean;
-  email: boolean;
-  sms: boolean;
+type NotificationChannel = "email" | "sms";
+
+type NotificationEventKey =
+  | "voiceMessage"
+  | "pausedSms"
+  | "smsFailed"
+  | "calendarSync"
+  | "transferFailed"
+  | "aiReplyFailed";
+
+type NotificationEventPreferences = Record<
+  NotificationEventKey,
+  Record<NotificationChannel, boolean>
+>;
+
+type NotificationPreferencesState = {
+  emailEnabled: boolean;
+  smsEnabled: boolean;
+  eventPreferences: NotificationEventPreferences;
+  dailySummaryEnabled: boolean;
+  dailySummarySendTime: string;
 };
 
-type NotificationPreferences = {
-  browser: boolean;
-  email: boolean;
-  sms: boolean;
-};
+const communicationEvents: Array<NotificationEventKey> = [
+  "voiceMessage",
+  "pausedSms",
+];
+
+const systemIssueEvents: Array<NotificationEventKey> = [
+  "smsFailed",
+  "calendarSync",
+  "transferFailed",
+  "aiReplyFailed",
+];
+
+function toPreferenceState(input: NotificationPreferencesState): NotificationPreferencesState {
+  return {
+    emailEnabled: input.emailEnabled,
+    smsEnabled: input.smsEnabled,
+    eventPreferences: input.eventPreferences,
+    dailySummaryEnabled: input.dailySummaryEnabled,
+    dailySummarySendTime: input.dailySummarySendTime,
+  };
+}
 
 export function SettingsNotificationsPage({
-  businessId: _businessId,
+  businessId,
 }: SettingsNotificationsPageProps) {
   const { t } = useTranslation(["settings", "common"]);
+  const remotePreferences = useQuery(
+    api.users.preferences.getNotificationPreferences,
+    { businessId },
+  );
+  const updateNotificationPreferences = useMutation(
+    api.users.preferences.updateNotificationPreferences,
+  );
+  const sendTestOperatorNotification = useAction(
+    api.users.preferences.sendTestOperatorNotification,
+  );
+  const saveVersionRef = useRef(0);
+  const [draft, setDraft] = useState<NotificationPreferencesState | null>(null);
+  const [pendingTestChannel, setPendingTestChannel] =
+    useState<NotificationChannel | null>(null);
 
-  const [sources, setSources] = useState<NotificationSources>({
-    browser: true,
-    email: true,
-    sms: false,
-  });
+  useEffect(() => {
+    if (remotePreferences) {
+      setDraft(toPreferenceState(remotePreferences));
+    }
+  }, [remotePreferences]);
 
-  const [preferences, setPreferences] = useState<{
-    voiceMessage: NotificationPreferences;
-    pausedSms: NotificationPreferences;
-    smsFailed: NotificationPreferences;
-    calendarSync: NotificationPreferences;
-    transferFailed: NotificationPreferences;
-    aiReplyFailed: NotificationPreferences;
-  }>({
-    voiceMessage: { browser: true, email: true, sms: false },
-    pausedSms: { browser: true, email: true, sms: false },
-    smsFailed: { browser: true, email: true, sms: false },
-    calendarSync: { browser: true, email: true, sms: false },
-    transferFailed: { browser: true, email: true, sms: false },
-    aiReplyFailed: { browser: true, email: true, sms: false },
-  });
+  const canUseSms = remotePreferences?.canUseSms ?? false;
+  const isLoading = remotePreferences === undefined || draft === null;
 
-  const [dailySummary, setDailySummary] = useState(true);
-  const [sendTime, setSendTime] = useState("08:00");
+  function persistPreferences(next: NotificationPreferencesState): void {
+    const previous = draft;
+    if (!previous) {
+      return;
+    }
 
-  const handlePrefChange = (
-    event: keyof typeof preferences,
-    source: keyof NotificationPreferences,
-    checked: boolean
-  ) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [event]: { ...prev[event], [source]: checked },
-    }));
-  };
+    if (!canUseSms && next.smsEnabled) {
+      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      return;
+    }
+
+    setDraft(next);
+    const saveVersion = saveVersionRef.current + 1;
+    saveVersionRef.current = saveVersion;
+
+    void updateNotificationPreferences({
+      businessId,
+      ...next,
+    }).catch((error) => {
+      if (saveVersionRef.current === saveVersion) {
+        setDraft(previous);
+      }
+      toast.error(t("settings:notifications.toast.saveFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    });
+  }
+
+  function handleChannelChange(channel: NotificationChannel, checked: boolean): void {
+    if (!draft) {
+      return;
+    }
+    if (channel === "sms" && checked && !canUseSms) {
+      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      return;
+    }
+
+    persistPreferences({
+      ...draft,
+      [channel === "email" ? "emailEnabled" : "smsEnabled"]: checked,
+    });
+  }
+
+  function handlePrefChange(
+    eventKey: NotificationEventKey,
+    channel: NotificationChannel,
+    checked: boolean,
+  ): void {
+    if (!draft) {
+      return;
+    }
+    if (channel === "sms" && checked && !canUseSms) {
+      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      return;
+    }
+
+    persistPreferences({
+      ...draft,
+      eventPreferences: {
+        ...draft.eventPreferences,
+        [eventKey]: {
+          ...draft.eventPreferences[eventKey],
+          [channel]: checked,
+        },
+      },
+    });
+  }
+
+  function handleDailySummaryChange(checked: boolean): void {
+    if (!draft) {
+      return;
+    }
+    persistPreferences({
+      ...draft,
+      dailySummaryEnabled: checked,
+    });
+  }
+
+  function handleSendTimeChange(sendTime: string): void {
+    if (!draft) {
+      return;
+    }
+    persistPreferences({
+      ...draft,
+      dailySummarySendTime: sendTime,
+    });
+  }
+
+  async function handleTestNotification(channel: NotificationChannel): Promise<void> {
+    if (channel === "sms" && !canUseSms) {
+      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      return;
+    }
+
+    setPendingTestChannel(channel);
+    try {
+      await sendTestOperatorNotification({ businessId, channel });
+      toast.success(
+        t(
+          channel === "email"
+            ? "settings:notifications.toast.testEmailSent"
+            : "settings:notifications.toast.testSmsSent",
+        ),
+      );
+    } catch (error) {
+      toast.error(t("settings:notifications.toast.testFailed"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setPendingTestChannel(null);
+    }
+  }
 
   const renderConfigRow = (
-    eventKey: keyof typeof preferences,
+    eventKey: NotificationEventKey,
     titleKey: string,
-    descriptionKey: string
+    descriptionKey: string,
   ) => {
     return (
       <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent">
-        <TableCell className="px-6 py-5 whitespace-normal">
+        <TableCell className="whitespace-normal px-6 py-5">
           <div className="flex flex-col gap-1 pr-4">
             <span className="text-sm font-medium text-foreground">{t(titleKey)}</span>
             <span className="text-sm text-muted-foreground">{t(descriptionKey)}</span>
           </div>
         </TableCell>
-        {sources.browser && (
+        {draft?.emailEnabled ? (
           <TableCell className="px-6 py-5 text-center align-middle !pr-6">
             <div className="flex w-full justify-center">
-              <Checkbox 
-                checked={preferences[eventKey].browser}
-                onCheckedChange={(c) => handlePrefChange(eventKey, "browser", c === true)}
-                aria-label={`${t("settings:notifications.sources.browser.title")} - ${t(titleKey)}`}
-              />
-            </div>
-          </TableCell>
-        )}
-        {sources.email && (
-          <TableCell className="px-6 py-5 text-center align-middle !pr-6">
-            <div className="flex w-full justify-center">
-              <Checkbox 
-                checked={preferences[eventKey].email}
-                onCheckedChange={(c) => handlePrefChange(eventKey, "email", c === true)}
+              <Checkbox
                 aria-label={`${t("settings:notifications.sources.email.title")} - ${t(titleKey)}`}
+                checked={draft.eventPreferences[eventKey].email}
+                disabled={isLoading}
+                onCheckedChange={(checked) =>
+                  handlePrefChange(eventKey, "email", checked === true)
+                }
               />
             </div>
           </TableCell>
-        )}
-        {sources.sms && (
+        ) : null}
+        {draft?.smsEnabled ? (
           <TableCell className="px-6 py-5 text-center align-middle !pr-6">
             <div className="flex w-full justify-center">
-              <Checkbox 
-                checked={preferences[eventKey].sms}
-                onCheckedChange={(c) => handlePrefChange(eventKey, "sms", c === true)}
+              <Checkbox
                 aria-label={`${t("settings:notifications.sources.sms.title")} - ${t(titleKey)}`}
+                checked={canUseSms && draft.eventPreferences[eventKey].sms}
+                disabled={isLoading || !canUseSms}
+                onCheckedChange={(checked) =>
+                  handlePrefChange(eventKey, "sms", checked === true)
+                }
               />
             </div>
           </TableCell>
-        )}
+        ) : null}
       </TableRow>
     );
   };
@@ -134,30 +268,47 @@ export function SettingsNotificationsPage({
   const renderConfigHeader = () => (
     <TableHeader className="bg-transparent">
       <TableRow className="border-b border-border hover:bg-transparent">
-        <TableHead className="px-6 h-12 align-middle text-sm font-medium text-foreground">Source</TableHead>
-        {sources.browser && (
-          <TableHead className="w-[120px] px-6 h-12 align-middle text-center text-sm font-medium text-foreground">
-            {t("settings:notifications.sources.browser.title")}
-          </TableHead>
-        )}
-        {sources.email && (
-          <TableHead className="w-[120px] px-6 h-12 align-middle text-center text-sm font-medium text-foreground">
+        <TableHead className="h-12 px-6 align-middle text-sm font-medium text-foreground">
+          {t("settings:notifications.communication.eventColumn")}
+        </TableHead>
+        {draft?.emailEnabled ? (
+          <TableHead className="h-12 w-[120px] px-6 text-center align-middle text-sm font-medium text-foreground">
             {t("settings:notifications.sources.email.title")}
           </TableHead>
-        )}
-        {sources.sms && (
-          <TableHead className="w-[120px] px-6 h-12 align-middle text-center text-sm font-medium text-foreground">
+        ) : null}
+        {draft?.smsEnabled ? (
+          <TableHead className="h-12 w-[120px] px-6 text-center align-middle text-sm font-medium text-foreground">
             {t("settings:notifications.sources.sms.title")}
           </TableHead>
-        )}
+        ) : null}
       </TableRow>
     </TableHeader>
   );
 
+  const renderConfigRows = (events: Array<NotificationEventKey>) =>
+    events.map((eventKey) =>
+      renderConfigRow(
+        eventKey,
+        `settings:notifications.events.${eventKey}.title`,
+        `settings:notifications.events.${eventKey}.description`,
+      ),
+    );
+
+  if (isLoading) {
+    return (
+      <div className="w-full overflow-y-auto pb-12">
+        <div className="flex w-full flex-col gap-12">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-12">
-        {/* Sources Group */}
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="text-sm font-medium text-foreground">
@@ -167,24 +318,11 @@ export function SettingsNotificationsPage({
               {t("settings:notifications.sources.description")}
             </p>
           </div>
-          <div className="flex flex-col rounded-xl border border-border bg-card">
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
-              <ItemContent>
-                <ItemTitle>{t("settings:notifications.sources.browser.title")}</ItemTitle>
-                <ItemDescription>
-                  {t("settings:notifications.sources.browser.description")}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Switch 
-                  checked={sources.browser} 
-                  onCheckedChange={(c) => setSources(prev => ({ ...prev, browser: c }))} 
-                  aria-label={t("settings:notifications.sources.browser.title")}
-                />
-              </ItemActions>
-            </Item>
-
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
               <ItemContent>
                 <ItemTitle>{t("settings:notifications.sources.email.title")}</ItemTitle>
                 <ItemDescription>
@@ -192,79 +330,97 @@ export function SettingsNotificationsPage({
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Switch 
-                  checked={sources.email} 
-                  onCheckedChange={(c) => setSources(prev => ({ ...prev, email: c }))} 
+                <Button
+                  disabled={pendingTestChannel !== null}
+                  onClick={() => void handleTestNotification("email")}
+                  size="sm"
+                  variant="outline"
+                >
+                  {pendingTestChannel === "email"
+                    ? t("settings:notifications.actions.testing")
+                    : t("settings:notifications.actions.testEmail")}
+                </Button>
+                <Switch
                   aria-label={t("settings:notifications.sources.email.title")}
+                  checked={draft.emailEnabled}
+                  onCheckedChange={(checked) => handleChannelChange("email", checked)}
                 />
               </ItemActions>
             </Item>
 
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
               <ItemContent>
                 <ItemTitle>{t("settings:notifications.sources.sms.title")}</ItemTitle>
                 <ItemDescription>
-                  {t("settings:notifications.sources.sms.description")}
+                  {canUseSms
+                    ? t("settings:notifications.sources.sms.description")
+                    : t("settings:notifications.sources.sms.unverifiedDescription")}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Switch 
-                  checked={sources.sms} 
-                  onCheckedChange={(c) => setSources(prev => ({ ...prev, sms: c }))} 
+                <Button
+                  disabled={!canUseSms || pendingTestChannel !== null}
+                  onClick={() => void handleTestNotification("sms")}
+                  size="sm"
+                  variant="outline"
+                >
+                  {pendingTestChannel === "sms"
+                    ? t("settings:notifications.actions.testing")
+                    : t("settings:notifications.actions.testSms")}
+                </Button>
+                <Switch
                   aria-label={t("settings:notifications.sources.sms.title")}
+                  checked={draft.smsEnabled}
+                  disabled={!canUseSms}
+                  onCheckedChange={(checked) => handleChannelChange("sms", checked)}
                 />
               </ItemActions>
             </Item>
-          </div>
+          </Surface>
         </div>
 
-        {/* Communication Group */}
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="text-sm font-medium text-foreground">
               {t("settings:notifications.communication.title")}
             </h3>
           </div>
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Surface>
             <Table>
               {renderConfigHeader()}
-              <TableBody>
-                {renderConfigRow("voiceMessage", "settings:notifications.communication.voiceMessage.title", "settings:notifications.communication.voiceMessage.description")}
-                {renderConfigRow("pausedSms", "settings:notifications.communication.pausedSms.title", "settings:notifications.communication.pausedSms.description")}
-              </TableBody>
+              <TableBody>{renderConfigRows(communicationEvents)}</TableBody>
             </Table>
-          </div>
+          </Surface>
         </div>
 
-        {/* System Issues Group */}
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="text-sm font-medium text-foreground">
               {t("settings:notifications.systemIssues.title")}
             </h3>
           </div>
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <Surface>
             <Table>
               {renderConfigHeader()}
-              <TableBody>
-                {renderConfigRow("smsFailed", "settings:notifications.systemIssues.smsFailed.title", "settings:notifications.systemIssues.smsFailed.description")}
-                {renderConfigRow("calendarSync", "settings:notifications.systemIssues.calendarSync.title", "settings:notifications.systemIssues.calendarSync.description")}
-                {renderConfigRow("transferFailed", "settings:notifications.systemIssues.transferFailed.title", "settings:notifications.systemIssues.transferFailed.description")}
-                {renderConfigRow("aiReplyFailed", "settings:notifications.systemIssues.aiReplyFailed.title", "settings:notifications.systemIssues.aiReplyFailed.description")}
-              </TableBody>
+              <TableBody>{renderConfigRows(systemIssueEvents)}</TableBody>
             </Table>
-          </div>
+          </Surface>
         </div>
 
-        {/* Digest Group */}
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="text-sm font-medium text-foreground">
               {t("settings:notifications.digest.title")}
             </h3>
           </div>
-          <div className="flex flex-col rounded-xl border border-border bg-card">
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
               <ItemContent>
                 <ItemTitle>{t("settings:notifications.digest.dailySummary.title")}</ItemTitle>
                 <ItemDescription>
@@ -272,15 +428,18 @@ export function SettingsNotificationsPage({
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Switch 
-                  checked={dailySummary} 
-                  onCheckedChange={setDailySummary} 
+                <Switch
                   aria-label={t("settings:notifications.digest.dailySummary.title")}
+                  checked={draft.dailySummaryEnabled}
+                  onCheckedChange={handleDailySummaryChange}
                 />
               </ItemActions>
             </Item>
 
-            <Item variant="default" className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
               <ItemContent>
                 <ItemTitle>{t("settings:notifications.digest.sendTime.title")}</ItemTitle>
                 <ItemDescription>
@@ -291,8 +450,8 @@ export function SettingsNotificationsPage({
                 <NativeSelect
                   aria-label={t("settings:notifications.digest.sendTime.title")}
                   className="w-full sm:w-28"
-                  value={sendTime}
-                  onChange={(e) => setSendTime(e.target.value)}
+                  onChange={(event) => handleSendTimeChange(event.target.value)}
+                  value={draft.dailySummarySendTime}
                 >
                   <NativeSelectOption value="08:00">8:00 AM</NativeSelectOption>
                   <NativeSelectOption value="09:00">9:00 AM</NativeSelectOption>
@@ -301,7 +460,7 @@ export function SettingsNotificationsPage({
                 </NativeSelect>
               </ItemActions>
             </Item>
-          </div>
+          </Surface>
         </div>
       </div>
     </div>

@@ -16,6 +16,11 @@ import {
 } from "./lib/smsCompliance";
 import { knowledgeSectionValidator } from "./lib/knowledgeSections";
 import { localizedServiceNamesValidator } from "./lib/serviceNames";
+import {
+  operatorNotificationChannelValidator,
+  operatorNotificationEventKindValidator,
+  operatorNotificationEventPreferencesValidator,
+} from "./lib/operatorNotificationPreferences";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
@@ -174,6 +179,7 @@ export default defineSchema({
     status: v.string(),
   })
     .index("by_user_id_and_business_id", ["userId", "businessId"])
+    .index("by_business_id", ["businessId"])
     .index("by_business_id_and_role", ["businessId", "role"]),
 
   staff: defineTable({
@@ -765,6 +771,47 @@ export default defineSchema({
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"])
     .index("by_provider_message_id", ["providerMessageId"]),
 
+  operator_notification_preferences: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    emailEnabled: v.boolean(),
+    smsEnabled: v.boolean(),
+    eventPreferences: operatorNotificationEventPreferencesValidator,
+    dailySummaryEnabled: v.boolean(),
+    dailySummarySendTime: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_business_id_and_user_id", ["businessId", "userId"])
+    .index("by_user_id_and_business_id", ["userId", "businessId"])
+    .index("by_daily_summary_enabled_and_daily_summary_send_time", [
+      "dailySummaryEnabled",
+      "dailySummarySendTime",
+    ]),
+
+  operator_notification_deliveries: defineTable({
+    businessId: v.id("businesses"),
+    userId: v.id("users"),
+    eventKind: operatorNotificationEventKindValidator,
+    eventKey: v.string(),
+    channel: operatorNotificationChannelValidator,
+    status: v.string(),
+    subject: v.string(),
+    body: v.string(),
+    scheduledFor: v.optional(v.string()),
+    sentAt: v.optional(v.string()),
+    error: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    providerStatus: v.optional(v.string()),
+    providerErrorCode: v.optional(v.string()),
+    providerUpdatedAt: v.optional(v.string()),
+    digestForDate: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
+    .index("by_provider_message_id", ["providerMessageId"])
+    .index("by_business_id_and_event_kind", ["businessId", "eventKind"])
+    .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
+
   unit_economics_events: defineTable({
     businessId: v.id("businesses"),
     monthKey: v.string(),
@@ -834,6 +881,7 @@ export default defineSchema({
     status: v.string(),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
+    .index("by_business_id_and_kind", ["businessId", "kind"])
     .index("by_business_id_and_kind_and_status", ["businessId", "kind", "status"])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_related_id", ["relatedId"]),

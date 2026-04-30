@@ -14,7 +14,8 @@
     "appearance": "Préférences",
     "integrations": "Intégrations",
     "billing": "Facturation",
-    "usage": "Utilisation"
+    "usage": "Utilisation",
+    "notifications": "Notifications"
   },
   "billing": {
     "toast": {
@@ -465,5 +466,78 @@
     "hours": "Définissez les heures, les services et les affectations d'équipe afin que la réservation puisse proposer de vrais créneaux.",
     "transfer": "Ajoutez des règles de transfert et un numéro de secours avant de transférer les appels urgents.",
     "snapshot": "Actualisez votre instantané après d'importants changements de politique pour que la voix les prenne rapidement en compte."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choisissez quels événements déclenchent une alerte par téléphone ou par courriel.",
+    "actions": {
+      "testEmail": "Tester le courriel",
+      "testSms": "Tester le SMS",
+      "testing": "Envoi..."
+    },
+    "toast": {
+      "saveFailed": "Les préférences de notification n'ont pas été enregistrées.",
+      "smsUnavailable": "Vérifiez un numéro de téléphone avant d'activer les notifications SMS.",
+      "testEmailSent": "Courriel de test envoyé.",
+      "testSmsSent": "SMS de test envoyé.",
+      "testFailed": "Impossible d'envoyer la notification de test."
+    },
+    "sources": {
+      "title": "Canaux",
+      "description": "Choisissez où les alertes opérateur sont envoyées pour votre compte.",
+      "email": {
+        "title": "Courriel",
+        "description": "Recevez les alertes opérateur et les résumés quotidiens par courriel."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Recevez les alertes opérateur urgentes sur votre téléphone vérifié.",
+        "unverifiedDescription": "Ajoutez et vérifiez un numéro de téléphone dans votre compte avant d'activer les alertes SMS."
+      }
+    },
+    "communication": {
+      "title": "Communication",
+      "eventColumn": "Événement"
+    },
+    "events": {
+      "voiceMessage": {
+        "title": "Message vocal capturé",
+        "description": "Quand l'IA prend un message de rappel ou de suivi pendant un appel."
+      },
+      "pausedSms": {
+        "title": "Nouveau message dans une conversation SMS en pause",
+        "description": "Quand l'automatisation SMS est mise en pause manuellement et que le client envoie un autre message."
+      },
+      "smsFailed": {
+        "title": "Notification SMS client échouée",
+        "description": "Quand un SMS de confirmation ou de rappel de rendez-vous échoue ou n'est pas livré."
+      },
+      "calendarSync": {
+        "title": "Problème de synchronisation du calendrier",
+        "description": "Quand un rendez-vous ne peut pas être synchronisé au calendrier et nécessite une attention."
+      },
+      "transferFailed": {
+        "title": "Transfert d'appel échoué",
+        "description": "Quand l'IA a essayé de transférer un appelant à un humain, mais que le transfert n'a pas abouti."
+      },
+      "aiReplyFailed": {
+        "title": "Réponse SMS IA échouée",
+        "description": "Quand le système ne parvient pas à générer ou envoyer une réponse SMS IA."
+      }
+    },
+    "systemIssues": {
+      "title": "Problèmes système"
+    },
+    "digest": {
+      "title": "Résumé",
+      "dailySummary": {
+        "title": "Résumé quotidien",
+        "description": "Recevez un seul courriel quotidien résumant l'activité des appels et les nouveaux messages."
+      },
+      "sendTime": {
+        "title": "Heure d'envoi",
+        "description": "L'heure à laquelle votre résumé quotidien sera envoyé."
+      }
+    }
   }
 }
