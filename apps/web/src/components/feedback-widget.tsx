@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { MessageSquarePlus } from "lucide-react";
+import { Command, CornerDownLeft, MessageSquarePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -79,12 +79,16 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           <MessageSquarePlus data-icon="inline-start" />
           {t("feedback.trigger")}
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-96 max-w-[calc(100vw-2rem)]" sideOffset={8}>
-          <PopoverHeader>
+        <PopoverContent
+          align="end"
+          className="w-[32rem] max-w-[calc(100vw-2rem)] rounded-3xl border-border/80 bg-background p-8 shadow-2xl"
+          sideOffset={8}
+        >
+          <PopoverHeader className="sr-only">
             <PopoverTitle>{t("feedback.title")}</PopoverTitle>
             <PopoverDescription>{t("feedback.description")}</PopoverDescription>
           </PopoverHeader>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
             <FieldGroup className="gap-3">
               <Field data-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}>
                 <FieldLabel className="sr-only" htmlFor="dashboard-feedback-message">
@@ -97,8 +101,9 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
                   maxLength={MAX_FEEDBACK_MESSAGE_LENGTH + 1}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder={t("feedback.placeholder")}
-                  rows={5}
+                  rows={7}
                   value={message}
+                  className="min-h-36 rounded-2xl border-border/80 bg-muted/30 px-4 py-4 text-base placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
                 />
                 <FieldDescription>
                   {t("feedback.characterCount", {
@@ -109,9 +114,30 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
               </Field>
             </FieldGroup>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{t("feedback.helpText")}</p>
-              <Button disabled={!canSubmit} size="sm" type="submit">
+              <p className="text-sm text-muted-foreground">
+                {t("feedback.helpText")}{" "}
+                <a className="text-primary hover:underline" href="mailto:raphael.morency@icloud.com">
+                  {t("feedback.contactLink")}
+                </a>{" "}
+                {t("feedback.helpTextSeparator")}{" "}
+                <a className="text-primary hover:underline" href="/docs">
+                  {t("feedback.docsLink")}
+                </a>
+              </p>
+              <Button
+                className="h-12 gap-2 rounded-3xl px-5 text-base font-semibold"
+                disabled={!canSubmit}
+                type="submit"
+              >
                 {t("feedback.submit")}
+                <span className="flex items-center gap-1 text-primary-foreground/70">
+                  <span className="flex size-7 items-center justify-center rounded-xl bg-primary-foreground/15">
+                    <Command className="size-4" />
+                  </span>
+                  <span className="flex size-7 items-center justify-center rounded-xl bg-primary-foreground/15">
+                    <CornerDownLeft className="size-4" />
+                  </span>
+                </span>
               </Button>
             </div>
           </form>

@@ -29,7 +29,10 @@ vi.mock("react-i18next", () => ({
         "feedback.description": "Tell us what would make this dashboard better.",
         "feedback.label": "Feedback message",
         "feedback.placeholder": "What should we improve?",
-        "feedback.helpText": "Sent to the LobbyStack team.",
+        "feedback.helpText": "Need help?",
+        "feedback.contactLink": "Contact us",
+        "feedback.helpTextSeparator": "or",
+        "feedback.docsLink": "see docs.",
         "feedback.submit": "Send",
         "feedback.toast.sent": "Feedback sent.",
         "feedback.toast.failed": "We could not save that feedback.",
@@ -67,8 +70,8 @@ describe("FeedbackWidget", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Feedback" }));
 
-    expect(screen.getByRole("heading", { name: "Send feedback" })).toBeTruthy();
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Contact us" })).toBeTruthy();
   });
 
   it("keeps send disabled for an empty message", async () => {
