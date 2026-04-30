@@ -343,6 +343,7 @@ export const markDeliverySent = internalMutation({
     providerMessageId: v.optional(v.string()),
     providerStatus: v.optional(v.string()),
     providerUpdatedAt: v.optional(v.string()),
+    senderRole: v.optional(v.union(v.literal("platform_alert"), v.literal("business_ai"))),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.deliveryId, {
@@ -355,6 +356,7 @@ export const markDeliverySent = internalMutation({
       ...(args.providerUpdatedAt !== undefined
         ? { providerUpdatedAt: args.providerUpdatedAt }
         : {}),
+      ...(args.senderRole !== undefined ? { senderRole: args.senderRole } : {}),
     });
     return null;
   },
@@ -521,6 +523,7 @@ async function deliverSms(
       providerMessageId: result.providerMessageSid,
       providerStatus: result.providerStatus,
       providerUpdatedAt,
+      senderRole: smsPolicy.senderRole,
     });
   } catch (error) {
     if (

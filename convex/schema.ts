@@ -839,6 +839,7 @@ export default defineSchema({
     providerPriceUnit: v.optional(v.string()),
     providerCostUsd: v.optional(v.number()),
     providerNumSegments: v.optional(v.number()),
+    senderRole: v.optional(smsSenderRoleValidator),
     digestForDate: v.optional(v.string()),
     createdAt: v.string(),
   })

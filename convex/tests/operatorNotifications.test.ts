@@ -461,6 +461,7 @@ describe("operator notification preferences", () => {
         subject: "Test",
         body: "Test body",
         providerMessageId: "SM_OPERATOR_PRICING",
+        senderRole: "platform_alert",
         createdAt: new Date().toISOString(),
       });
     });
@@ -507,6 +508,54 @@ describe("operator notification preferences", () => {
       expect(unitEconomicsEvent?.costUsd).toBe(0.015);
       expect(unitEconomicsEvent?.quantity).toBe(2);
       expect(unitEconomicsEvent?.quantityUnit).toBe("segment");
+    });
+  });
+
+  it("does not record hosted alert usage for business-sender operator SMS pricing", async () => {
+    const t = createConvexHarness();
+    const seeded = await seedMember(t, {
+      subject: "operator-sms-business-sender-pricing",
+      email: "operator@example.com",
+      phone: "+15145550123",
+      phoneVerificationTime: Date.now(),
+    });
+    const deliveryId = await t.run(async (ctx) => {
+      return await ctx.db.insert("operator_notification_deliveries", {
+        businessId: seeded.businessId,
+        userId: seeded.userId,
+        eventKind: "test",
+        eventKey: "test:sms-business-sender-pricing",
+        channel: "sms",
+        status: "sent",
+        subject: "Test",
+        body: "Test body",
+        providerMessageId: "SM_OPERATOR_BUSINESS_SENDER_PRICING",
+        senderRole: "business_ai",
+        createdAt: new Date().toISOString(),
+      });
+    });
+    const usageSourceKey = `alert_sms:operator_notification:${String(deliveryId)}`;
+
+    await t.mutation(internal.integrations.twilioMessageStatus.recordProviderPricing, {
+      providerMessageSid: "SM_OPERATOR_BUSINESS_SENDER_PRICING",
+      providerUpdatedAt: "2026-04-29T12:00:00.000Z",
+      providerPrice: -0.015,
+      providerPriceUnit: "usd",
+      providerCostUsd: 0.015,
+      providerNumSegments: 2,
+    });
+
+    await t.run(async (ctx) => {
+      const delivery = await ctx.db.get(deliveryId);
+      expect(delivery?.providerNumSegments).toBe(2);
+
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", seeded.businessId).eq("sourceKey", usageSourceKey),
+        )
+        .unique();
+      expect(usageEvent).toBeNull();
     });
   });
 

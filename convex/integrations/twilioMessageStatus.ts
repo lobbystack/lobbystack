@@ -279,7 +279,11 @@ export const recordProviderPricing = internalMutation({
 
         await ctx.db.patch(operatorDelivery._id, operatorDeliveryPatch);
 
-        if (operatorDeliveryPricingChanged && args.providerNumSegments !== undefined) {
+        if (
+          operatorDeliveryPricingChanged &&
+          args.providerNumSegments !== undefined &&
+          operatorDelivery.senderRole === "platform_alert"
+        ) {
           const usageResult = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
             businessId: operatorDelivery.businessId,
             sourceKey: `alert_sms:operator_notification:${String(operatorDelivery._id)}`,
