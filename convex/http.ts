@@ -143,6 +143,48 @@ const bookAppointmentSchema = z.object({
   contactPhone: z.string().min(1),
 });
 
+const lookupAppointmentForChangeSchema = z.object({
+  businessId: z.string().min(1),
+  callerPhone: z.string().min(1),
+});
+
+const verifyAppointmentForChangeSchema = z.object({
+  businessId: z.string().min(1),
+  appointmentId: z.string().min(1),
+  action: z.enum(["cancel", "reschedule"]),
+  callerPhone: z.string().min(1),
+  callerName: z.string().min(1).optional(),
+  appointmentStartsAt: z.string().min(1).optional(),
+  serviceName: z.string().min(1).optional(),
+  callId: z.string().min(1).optional(),
+  conversationId: z.string().min(1).optional(),
+});
+
+const appointmentChangeOtpStartSchema = z.object({
+  verificationId: z.string().min(1),
+});
+
+const appointmentChangeOtpVerifySchema = z.object({
+  verificationId: z.string().min(1),
+  code: z.string().min(1),
+});
+
+const cancelAppointmentSchema = z.object({
+  businessId: z.string().min(1),
+  appointmentId: z.string().min(1),
+  callerPhone: z.string().min(1),
+  finalConfirmation: z.boolean(),
+  verificationId: z.string().min(1).optional(),
+  callId: z.string().min(1).optional(),
+  conversationId: z.string().min(1).optional(),
+});
+
+const rescheduleAppointmentSchema = cancelAppointmentSchema.extend({
+  startsAt: z.string().min(1),
+  timezone: z.string().min(1).optional(),
+  preferredStaffId: z.string().min(1).optional(),
+});
+
 const takeMessageSchema = z.object({
   businessId: z.string().min(1),
   callId: z.string().min(1),
@@ -189,6 +231,7 @@ type IdFieldMap = {
   calls: "calls";
   contacts: "contacts";
   conversations: "conversations";
+  appointment_change_verifications: "appointment_change_verifications";
   staff: "staff";
 };
 
@@ -1077,6 +1120,211 @@ http.route({
       ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
       contactPhone: body.data.contactPhone,
     });
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/lookup-appointment-for-change",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, lookupAppointmentForChangeSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runQuery(internal.appointments.changes.lookupAppointmentsForChange, {
+      businessId: asId("businesses", body.data.businessId),
+      callerPhone: body.data.callerPhone,
+    });
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/verify-appointment-for-change",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, verifyAppointmentForChangeSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runMutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: asId("businesses", body.data.businessId),
+        appointmentId: asId("appointments", body.data.appointmentId),
+        action: body.data.action,
+        channel: "voice",
+        callerPhone: body.data.callerPhone,
+        ...(body.data.callerName !== undefined ? { callerName: body.data.callerName } : {}),
+        ...(body.data.appointmentStartsAt !== undefined
+          ? { appointmentStartsAt: body.data.appointmentStartsAt }
+          : {}),
+        ...(body.data.serviceName !== undefined ? { serviceName: body.data.serviceName } : {}),
+        ...(body.data.callId !== undefined ? { callId: asId("calls", body.data.callId) } : {}),
+        ...(body.data.conversationId !== undefined
+          ? { conversationId: asId("conversations", body.data.conversationId) }
+          : {}),
+      },
+    );
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/send-appointment-change-otp",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, appointmentChangeOtpStartSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runAction(
+      internal.appointments.changeOtp.startAppointmentChangeOtp,
+      {
+        verificationId: asId(
+          "appointment_change_verifications",
+          body.data.verificationId,
+        ),
+      },
+    );
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/verify-appointment-change-otp",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, appointmentChangeOtpVerifySchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runAction(
+      internal.appointments.changeOtp.verifyAppointmentChangeOtp,
+      {
+        verificationId: asId(
+          "appointment_change_verifications",
+          body.data.verificationId,
+        ),
+        code: body.data.code,
+      },
+    );
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/cancel-appointment",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, cancelAppointmentSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runMutation(
+      internal.appointments.changes.cancelAppointmentForBusiness,
+      {
+        businessId: asId("businesses", body.data.businessId),
+        appointmentId: asId("appointments", body.data.appointmentId),
+        channel: "voice",
+        callerPhone: body.data.callerPhone,
+        finalConfirmation: body.data.finalConfirmation,
+        ...(body.data.verificationId !== undefined
+          ? {
+              verificationId: asId(
+                "appointment_change_verifications",
+                body.data.verificationId,
+              ),
+            }
+          : {}),
+        ...(body.data.callId !== undefined ? { callId: asId("calls", body.data.callId) } : {}),
+        ...(body.data.conversationId !== undefined
+          ? { conversationId: asId("conversations", body.data.conversationId) }
+          : {}),
+      },
+    );
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/tool/reschedule-appointment",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, rescheduleAppointmentSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runMutation(
+      internal.appointments.changes.rescheduleAppointmentForBusiness,
+      {
+        businessId: asId("businesses", body.data.businessId),
+        appointmentId: asId("appointments", body.data.appointmentId),
+        channel: "voice",
+        callerPhone: body.data.callerPhone,
+        startsAt: body.data.startsAt,
+        finalConfirmation: body.data.finalConfirmation,
+        ...(body.data.timezone !== undefined ? { timezone: body.data.timezone } : {}),
+        ...(body.data.preferredStaffId !== undefined
+          ? { preferredStaffId: asId("staff", body.data.preferredStaffId) }
+          : {}),
+        ...(body.data.verificationId !== undefined
+          ? {
+              verificationId: asId(
+                "appointment_change_verifications",
+                body.data.verificationId,
+              ),
+            }
+          : {}),
+        ...(body.data.callId !== undefined ? { callId: asId("calls", body.data.callId) } : {}),
+        ...(body.data.conversationId !== undefined
+          ? { conversationId: asId("conversations", body.data.conversationId) }
+          : {}),
+      },
+    );
 
     return Response.json(result);
   }),

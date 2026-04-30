@@ -7,11 +7,17 @@ import {
 } from "../observability/posthog";
 import {
   bookVoiceAppointment,
+  cancelVoiceAppointment,
   checkVoiceAvailability,
   findVoiceAvailability,
+  lookupVoiceAppointmentForChange,
+  rescheduleVoiceAppointment,
   searchVoiceKnowledge,
+  sendVoiceAppointmentChangeOtp,
   takeVoiceMessage,
   updateVoiceTransferState,
+  verifyVoiceAppointmentChangeOtp,
+  verifyVoiceAppointmentForChange,
 } from "../convex/runtimeClient";
 import {
   MAX_CUMULATIVE_HOLD_SECONDS,
@@ -148,6 +154,38 @@ const bookAppointmentSchema = z.object({
   contactPhone: z.string().optional(),
 });
 
+const verifyAppointmentForChangeSchema = z.object({
+  appointmentId: z.string(),
+  action: z.enum(["cancel", "reschedule"]),
+  callerName: z.string().optional(),
+  appointmentStartsAt: z.string().optional(),
+  serviceName: z.string().optional(),
+});
+
+const appointmentChangeOtpSchema = z.object({
+  verificationId: z.string(),
+});
+
+const verifyAppointmentChangeOtpSchema = z.object({
+  verificationId: z.string(),
+  code: z.string(),
+});
+
+const cancelAppointmentSchema = z.object({
+  appointmentId: z.string(),
+  verificationId: z.string().optional(),
+  finalConfirmation: z.boolean(),
+});
+
+const rescheduleAppointmentSchema = z.object({
+  appointmentId: z.string(),
+  startsAt: z.string(),
+  timezone: z.string().optional(),
+  preferredStaffId: z.string().optional(),
+  verificationId: z.string().optional(),
+  finalConfirmation: z.boolean(),
+});
+
 const transferCallSchema = z.object({
   reason: z.string().optional(),
 });
@@ -174,6 +212,13 @@ const takeMessageSchema = z.object({
 const searchKnowledgeSchema = z.object({
   query: z.string(),
 });
+
+function safeAppointmentToolError(error: unknown): Record<string, unknown> {
+  return {
+    ok: false,
+    reason: error instanceof Error ? error.message : "Appointment change failed.",
+  };
+}
 
 export type ExecutedToolResult = {
   result: Record<string, unknown>;
@@ -340,6 +385,110 @@ export async function executeVoiceTool(input: {
             return {
               result,
             };
+          }
+          case "lookupAppointmentForChange": {
+            try {
+              const result = await lookupVoiceAppointmentForChange({
+                businessId: input.businessId,
+                callerPhone: input.callerPhone,
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
+          }
+          case "verifyAppointmentForChange": {
+            const parsed = verifyAppointmentForChangeSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const result = await verifyVoiceAppointmentForChange({
+                businessId: input.businessId,
+                appointmentId: parsed.appointmentId,
+                action: parsed.action,
+                callerPhone: input.callerPhone,
+                ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
+                ...(parsed.appointmentStartsAt !== undefined
+                  ? { appointmentStartsAt: parsed.appointmentStartsAt }
+                  : {}),
+                ...(parsed.serviceName !== undefined ? { serviceName: parsed.serviceName } : {}),
+                ...(input.callId !== undefined ? { callId: input.callId } : {}),
+                ...(input.conversationId !== undefined
+                  ? { conversationId: input.conversationId }
+                  : {}),
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
+          }
+          case "sendAppointmentChangeOtp": {
+            const parsed = appointmentChangeOtpSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const result = await sendVoiceAppointmentChangeOtp({
+                verificationId: parsed.verificationId,
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
+          }
+          case "verifyAppointmentChangeOtp": {
+            const parsed = verifyAppointmentChangeOtpSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const result = await verifyVoiceAppointmentChangeOtp({
+                verificationId: parsed.verificationId,
+                code: parsed.code,
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
+          }
+          case "cancelAppointment": {
+            const parsed = cancelAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const result = await cancelVoiceAppointment({
+                businessId: input.businessId,
+                appointmentId: parsed.appointmentId,
+                callerPhone: input.callerPhone,
+                finalConfirmation: parsed.finalConfirmation,
+                ...(parsed.verificationId !== undefined
+                  ? { verificationId: parsed.verificationId }
+                  : {}),
+                ...(input.callId !== undefined ? { callId: input.callId } : {}),
+                ...(input.conversationId !== undefined
+                  ? { conversationId: input.conversationId }
+                  : {}),
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
+          }
+          case "rescheduleAppointment": {
+            const parsed = rescheduleAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            try {
+              const result = await rescheduleVoiceAppointment({
+                businessId: input.businessId,
+                appointmentId: parsed.appointmentId,
+                callerPhone: input.callerPhone,
+                startsAt: parsed.startsAt,
+                timezone: parsed.timezone ?? input.snapshot.timezone,
+                ...(parsed.preferredStaffId !== undefined
+                  ? { preferredStaffId: parsed.preferredStaffId }
+                  : {}),
+                finalConfirmation: parsed.finalConfirmation,
+                ...(parsed.verificationId !== undefined
+                  ? { verificationId: parsed.verificationId }
+                  : {}),
+                ...(input.callId !== undefined ? { callId: input.callId } : {}),
+                ...(input.conversationId !== undefined
+                  ? { conversationId: input.conversationId }
+                  : {}),
+              });
+              return { result };
+            } catch (error) {
+              return { result: safeAppointmentToolError(error) };
+            }
           }
           case "transferCall": {
             const parsed = transferCallSchema.parse(JSON.parse(input.rawArguments || "{}"));

@@ -17,6 +17,8 @@ import type * as ai_context_websiteIngestionActions from "../ai/context/websiteI
 import type * as ai_preview_stream from "../ai/preview/stream.js";
 import type * as ai_workflows_runtime from "../ai/workflows/runtime.js";
 import type * as appointments_booking from "../appointments/booking.js";
+import type * as appointments_changeOtp from "../appointments/changeOtp.js";
+import type * as appointments_changes from "../appointments/changes.js";
 import type * as auth from "../auth.js";
 import type * as billing from "../billing.js";
 import type * as businesses_admin from "../businesses/admin.js";
@@ -39,6 +41,7 @@ import type * as integrations_twilioSms from "../integrations/twilioSms.js";
 import type * as integrations_twilioSmsDebug from "../integrations/twilioSmsDebug.js";
 import type * as integrations_twilioVoice from "../integrations/twilioVoice.js";
 import type * as lib_accountCredentials from "../lib/accountCredentials.js";
+import type * as lib_appointmentChangePolicy from "../lib/appointmentChangePolicy.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_billing from "../lib/billing.js";
@@ -112,6 +115,8 @@ declare const fullApi: ApiFromModules<{
   "ai/preview/stream": typeof ai_preview_stream;
   "ai/workflows/runtime": typeof ai_workflows_runtime;
   "appointments/booking": typeof appointments_booking;
+  "appointments/changeOtp": typeof appointments_changeOtp;
+  "appointments/changes": typeof appointments_changes;
   auth: typeof auth;
   billing: typeof billing;
   "businesses/admin": typeof businesses_admin;
@@ -134,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/twilioSmsDebug": typeof integrations_twilioSmsDebug;
   "integrations/twilioVoice": typeof integrations_twilioVoice;
   "lib/accountCredentials": typeof lib_accountCredentials;
+  "lib/appointmentChangePolicy": typeof lib_appointmentChangePolicy;
   "lib/auth": typeof lib_auth;
   "lib/availability": typeof lib_availability;
   "lib/billing": typeof lib_billing;

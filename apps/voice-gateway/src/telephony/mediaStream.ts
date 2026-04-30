@@ -679,6 +679,118 @@ function createRealtimeToolDefinitions() {
     },
     {
       type: "function",
+      name: "lookupAppointmentForChange",
+      description:
+        "Look up future confirmed appointments that the current caller phone is allowed to discuss before cancelling or rescheduling.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "verifyAppointmentForChange",
+      description:
+        "Verify the caller's name and an appointment fact for a specific appointment before any cancellation or reschedule attempt.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          action: { type: "string", enum: ["cancel", "reschedule"] },
+          callerName: { type: "string" },
+          appointmentStartsAt: {
+            type: "string",
+            description:
+              "The existing appointment start time from lookupAppointmentForChange when the caller confirms the time.",
+          },
+          serviceName: {
+            type: "string",
+            description:
+              "The existing appointment service name when the caller confirms the service.",
+          },
+        },
+        required: ["appointmentId", "action"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "sendAppointmentChangeOtp",
+      description:
+        "Send the required one-time code after verifyAppointmentForChange says OTP is required.",
+      parameters: {
+        type: "object",
+        properties: {
+          verificationId: { type: "string" },
+        },
+        required: ["verificationId"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "verifyAppointmentChangeOtp",
+      description:
+        "Check a caller-provided one-time code for an appointment change verification session.",
+      parameters: {
+        type: "object",
+        properties: {
+          verificationId: { type: "string" },
+          code: { type: "string" },
+        },
+        required: ["verificationId", "code"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "cancelAppointment",
+      description:
+        "Cancel an appointment only after verification succeeds and the caller gives explicit final confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          verificationId: { type: "string" },
+          finalConfirmation: {
+            type: "boolean",
+            description:
+              "True only when the caller explicitly confirms they want this appointment cancelled now.",
+          },
+        },
+        required: ["appointmentId", "finalConfirmation"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "rescheduleAppointment",
+      description:
+        "Reschedule an appointment only after verification succeeds, availability is checked by the backend, and the caller gives explicit final confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          startsAt: {
+            type: "string",
+            description: "The new exact ISO appointment start datetime.",
+          },
+          timezone: { type: "string" },
+          preferredStaffId: { type: "string" },
+          verificationId: { type: "string" },
+          finalConfirmation: {
+            type: "boolean",
+            description:
+              "True only when the caller explicitly confirms they want this appointment moved to the exact new time now.",
+          },
+        },
+        required: ["appointmentId", "startsAt", "finalConfirmation"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
       name: "transferCall",
       description:
         "Transfer the live call to a human when transfer policy allows it, someone is available to receive the transfer, and the caller requests or needs a human handoff.",
@@ -1417,7 +1529,7 @@ async function configureOpenAiSession(
         "Start in the language implied by the configured greeting.",
         "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
-        "Use tools for authoritative actions like booking, transfer, and message taking.",
+        "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
         "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
         "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, or when directed by silence-timeout handling.",
         "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
@@ -1435,6 +1547,10 @@ async function configureOpenAiSession(
         "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
         "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
         "Only call bookAppointment after the caller confirms a specific offered time.",
+        "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If the caller phone does not match an appointment, or there are multiple possible appointments, ask a clarifying question or offer human handoff.",
+        "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they confirmed, such as the existing time or service.",
+        "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",
+        "Only call cancelAppointment or rescheduleAppointment after the caller gives explicit final confirmation for the exact appointment and action. Never claim the change succeeded unless that final tool result has ok true.",
         "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
         "Interpret relative dates and times in the business timezone.",
       ].join("\n\n"),

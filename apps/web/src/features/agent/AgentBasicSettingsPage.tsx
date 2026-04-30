@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
-import type { RuntimeLocale } from "@lobbystack/shared";
+import type { AppointmentChangePolicy, RuntimeLocale } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -19,6 +19,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 
 type AgentBasicSettingsPageProps = {
@@ -85,6 +86,23 @@ export function resolveTransferNumberForSave({
   };
 }
 
+export function buildAppointmentChangePolicyForSave({
+  allowCancel,
+  allowReschedule,
+  requireOtp,
+}: {
+  allowCancel: boolean;
+  allowReschedule: boolean;
+  requireOtp: boolean;
+}): AppointmentChangePolicy {
+  return {
+    enabled: allowCancel || allowReschedule,
+    allowCancel,
+    allowReschedule,
+    verificationMode: requireOtp ? "otp_required" : "phone_match_and_facts",
+  };
+}
+
 export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
   const { i18n, t } = useTranslation(["agent", "common"]);
   const configuration = useQuery(api.businesses.catalog.getAgentBasicSettings, {
@@ -98,12 +116,17 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
   const [transferNumber, setTransferNumber] = useState("");
   const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
+  const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
+  const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
+  const [requireAppointmentChangeOtp, setRequireAppointmentChangeOtp] = useState(false);
   const [greetingStatus, setGreetingStatus] = useState<string | null>(null);
   const [localeStatus, setLocaleStatus] = useState<string | null>(null);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
+  const [appointmentChangeStatus, setAppointmentChangeStatus] = useState<string | null>(null);
   const [isGreetingSaving, setIsGreetingSaving] = useState(false);
   const [isLocaleSaving, setIsLocaleSaving] = useState(false);
   const [isTransferSaving, setIsTransferSaving] = useState(false);
+  const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
   const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
   useEffect(() => {
     const profile = configuration?.profile;
@@ -114,6 +137,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     setDefaultLocale(configuration.business?.defaultLocale ?? "en");
     setTransferNumber(profile.transferNumber ?? "");
     setTransferNumberInputValue(profile.transferNumber ?? "");
+    const appointmentChangePolicy = profile.appointmentChangePolicy as
+      | AppointmentChangePolicy
+      | undefined;
+    setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
+    setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
+    setRequireAppointmentChangeOtp(
+      appointmentChangePolicy?.verificationMode === "otp_required",
+    );
   }, [configuration]);
 
   useEffect(() => {
@@ -138,12 +169,18 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       }, 3000));
     }
 
+    if (appointmentChangeStatus) {
+      timeouts.push(window.setTimeout(() => {
+        setAppointmentChangeStatus(null);
+      }, 3000));
+    }
+
     return () => {
       for (const timeoutId of timeouts) {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [greetingStatus, localeStatus, transferStatus]);
+  }, [appointmentChangeStatus, greetingStatus, localeStatus, transferStatus]);
 
   async function saveGreeting(): Promise<void> {
     if (!persistedProfile) {
@@ -211,6 +248,45 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
       setTransferStatusTone("success");
     } finally {
       setIsTransferSaving(false);
+    }
+  }
+
+  async function saveAppointmentChangePolicy(): Promise<void> {
+    if (!persistedProfile) {
+      return;
+    }
+
+    const transferNumberResolution = resolveTransferNumberForSave({
+      rawInputValue: transferNumberInputValue,
+      validTransferNumber: transferNumber,
+    });
+    if (!transferNumberResolution.ok) {
+      setTransferStatus(t(transferNumberResolution.errorKey));
+      setTransferStatusTone("error");
+      return;
+    }
+
+    setIsAppointmentChangeSaving(true);
+    setAppointmentChangeStatus(null);
+    try {
+      await saveProfile({
+        businessId,
+        defaultLocale,
+        greeting,
+        transferNumber: transferNumberResolution.value,
+        appointmentChangePolicy: buildAppointmentChangePolicyForSave({
+          allowCancel: allowAppointmentCancel,
+          allowReschedule: allowAppointmentReschedule,
+          requireOtp: requireAppointmentChangeOtp,
+        }),
+      });
+      captureAnalyticsEvent("web.agent.settings_saved", {
+        businessId: String(businessId),
+        setting: "appointment_changes",
+      });
+      setAppointmentChangeStatus(t("agent:actions.saved"));
+    } finally {
+      setIsAppointmentChangeSaving(false);
     }
   }
 
@@ -362,6 +438,111 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
             ) : null}
             title={t("agent:fields.transferNumber.label")}
           />
+        </ItemGroup>
+
+        <ItemGroup spacing="section">
+          <Item
+            className="grid gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            variant="outline"
+          >
+            <ItemContent>
+              <ItemTitle>{t("agent:appointmentChanges.title")}</ItemTitle>
+              <ItemDescription>{t("agent:appointmentChanges.description")}</ItemDescription>
+              <div className="mt-4 grid gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <ItemTitle className="text-sm">
+                      {t("agent:appointmentChanges.allowCancel.label")}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {t("agent:appointmentChanges.allowCancel.hint")}
+                    </ItemDescription>
+                  </div>
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-5 w-8 rounded-full" />
+                  ) : (
+                    <Switch
+                      aria-label={t("agent:appointmentChanges.allowCancel.label")}
+                      checked={allowAppointmentCancel}
+                      disabled={isAppointmentChangeSaving || !persistedProfile}
+                      onCheckedChange={(checked) => {
+                        setAllowAppointmentCancel(checked);
+                        setAppointmentChangeStatus(null);
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <ItemTitle className="text-sm">
+                      {t("agent:appointmentChanges.allowReschedule.label")}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {t("agent:appointmentChanges.allowReschedule.hint")}
+                    </ItemDescription>
+                  </div>
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-5 w-8 rounded-full" />
+                  ) : (
+                    <Switch
+                      aria-label={t("agent:appointmentChanges.allowReschedule.label")}
+                      checked={allowAppointmentReschedule}
+                      disabled={isAppointmentChangeSaving || !persistedProfile}
+                      onCheckedChange={(checked) => {
+                        setAllowAppointmentReschedule(checked);
+                        setAppointmentChangeStatus(null);
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <ItemTitle className="text-sm">
+                      {t("agent:appointmentChanges.requireOtp.label")}
+                    </ItemTitle>
+                    <ItemDescription>
+                      {t("agent:appointmentChanges.requireOtp.hint")}
+                    </ItemDescription>
+                  </div>
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-5 w-8 rounded-full" />
+                  ) : (
+                    <Switch
+                      aria-label={t("agent:appointmentChanges.requireOtp.label")}
+                      checked={requireAppointmentChangeOtp}
+                      disabled={isAppointmentChangeSaving || !persistedProfile}
+                      onCheckedChange={(checked) => {
+                        setRequireAppointmentChangeOtp(checked);
+                        setAppointmentChangeStatus(null);
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+              {appointmentChangeStatus ? (
+                <ItemDescription className="pt-2">{appointmentChangeStatus}</ItemDescription>
+              ) : null}
+            </ItemContent>
+            <ItemActions className="w-full justify-end self-center sm:w-auto">
+              <Button
+                disabled={
+                  isLoadingConfiguration ||
+                  isAppointmentChangeSaving ||
+                  !persistedProfile
+                }
+                onClick={() => void saveAppointmentChangePolicy()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {isAppointmentChangeSaving
+                  ? t("agent:actions.saving")
+                  : t("agent:actions.save")}
+              </Button>
+            </ItemActions>
+          </Item>
         </ItemGroup>
       </div>
     </div>

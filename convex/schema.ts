@@ -5,6 +5,7 @@ import {
   runtimeLocaleSourceValidator,
   runtimeLocaleValidator,
 } from "./lib/runtimeLocale";
+import { appointmentChangePolicyValidator } from "./lib/appointmentChangePolicy";
 import {
   smsComplianceBrandKindValidator,
   smsComplianceCustomerTypeValidator,
@@ -378,6 +379,7 @@ export default defineSchema({
     smsInstructions: v.optional(v.string()),
     transferMode: v.string(),
     transferNumber: v.optional(v.string()),
+    appointmentChangePolicy: v.optional(appointmentChangePolicyValidator),
   }).index("by_business_id", ["businessId"]),
 
   website_ingestion_jobs: defineTable({
@@ -474,6 +476,7 @@ export default defineSchema({
       mode: v.string(),
       transferNumber: v.optional(v.string()),
     }),
+    appointmentChangePolicy: v.optional(appointmentChangePolicyValidator),
     hours: v.array(hoursWindowValidator),
     closures: v.array(closureWindowValidator),
     services: v.array(serviceSummaryValidator),
@@ -552,6 +555,54 @@ export default defineSchema({
     lastConfirmedStartsAt: v.optional(v.string()),
     updatedAt: v.string(),
   }).index("by_conversation_id", ["conversationId"]),
+
+  appointment_change_verifications: defineTable({
+    businessId: v.id("businesses"),
+    appointmentId: v.id("appointments"),
+    contactId: v.id("contacts"),
+    callId: v.optional(v.id("calls")),
+    conversationId: v.optional(v.id("conversations")),
+    channel: v.string(),
+    callerPhone: v.string(),
+    verificationMode: v.string(),
+    status: v.string(),
+    otpPhone: v.optional(v.string()),
+    verificationSid: v.optional(v.string()),
+    verifiedAt: v.optional(v.string()),
+    expiresAt: v.string(),
+    attemptCount: v.number(),
+    lastError: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_appointment_id", ["appointmentId"])
+    .index("by_call_id", ["callId"])
+    .index("by_conversation_id", ["conversationId"])
+    .index("by_business_id_and_caller_phone", ["businessId", "callerPhone"]),
+
+  appointment_change_audit_logs: defineTable({
+    businessId: v.id("businesses"),
+    appointmentId: v.id("appointments"),
+    contactId: v.id("contacts"),
+    verificationId: v.optional(v.id("appointment_change_verifications")),
+    action: v.string(),
+    channel: v.string(),
+    callerPhone: v.string(),
+    verificationMode: v.string(),
+    status: v.string(),
+    oldStatus: v.optional(v.string()),
+    oldStartsAt: v.optional(v.string()),
+    oldEndsAt: v.optional(v.string()),
+    oldStaffId: v.optional(v.id("staff")),
+    newStatus: v.optional(v.string()),
+    newStartsAt: v.optional(v.string()),
+    newEndsAt: v.optional(v.string()),
+    newStaffId: v.optional(v.id("staff")),
+    payload: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_business_id_and_created_at", ["businessId", "createdAt"])
+    .index("by_appointment_id_and_created_at", ["appointmentId", "createdAt"]),
 
   messages: defineTable({
     businessId: v.id("businesses"),

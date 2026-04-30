@@ -40,10 +40,21 @@ vi.mock("../context/fetchSnapshot", () => ({
 
 vi.mock("../convex/runtimeClient", () => ({
   RuntimeRequestError: runtimeRequestErrorClass,
+  bookVoiceAppointment: vi.fn(),
+  cancelVoiceAppointment: vi.fn(),
+  checkVoiceAvailability: vi.fn(),
   startVoiceCall: startVoiceCallMock,
   completeVoiceCall: completeVoiceCallMock,
+  findVoiceAvailability: vi.fn(),
+  lookupVoiceAppointmentForChange: vi.fn(),
   reconcileVoiceCallStatus: reconcileVoiceCallStatusMock,
+  rescheduleVoiceAppointment: vi.fn(),
+  searchVoiceKnowledge: vi.fn(),
+  sendVoiceAppointmentChangeOtp: vi.fn(),
+  takeVoiceMessage: vi.fn(),
   updateVoiceTransferState: updateVoiceTransferStateMock,
+  verifyVoiceAppointmentChangeOtp: vi.fn(),
+  verifyVoiceAppointmentForChange: vi.fn(),
 }));
 
 import { createServer } from "../http/server";

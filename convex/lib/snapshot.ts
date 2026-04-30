@@ -40,6 +40,13 @@ type TransferPolicy = {
   transferNumber?: string;
 };
 
+type AppointmentChangePolicy = {
+  enabled: boolean;
+  allowCancel: boolean;
+  allowReschedule: boolean;
+  verificationMode: "phone_match_and_facts" | "otp_required" | "operator_only";
+};
+
 type SnapshotBuilderInput = {
   businessId: string;
   version: string;
@@ -61,6 +68,7 @@ type SnapshotBuilderInput = {
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
   transferPolicy: TransferPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
   phoneNumber?: string;
   smsNumber?: string;
   email?: string;
@@ -97,6 +105,9 @@ export function buildBusinessContextSnapshot(input: SnapshotBuilderInput) {
     bookingPolicy: input.bookingPolicy,
     knowledgeDigest: input.knowledgeDigest ?? "",
     transferPolicy: input.transferPolicy,
+    ...(input.appointmentChangePolicy
+      ? { appointmentChangePolicy: input.appointmentChangePolicy }
+      : {}),
     hours: input.hours,
     closures: input.closures,
     services: input.services,

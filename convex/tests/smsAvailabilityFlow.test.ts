@@ -255,6 +255,56 @@ async function seedMultiServiceBusiness(
   return { businessId, initialConsultationId, supportConsultationId };
 }
 
+async function seedConfirmedAppointmentForConversation(
+  ctx: TestContext,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId: Id<"conversations">;
+    serviceId: Id<"services">;
+    startsAt: string;
+    endsAt: string;
+  },
+): Promise<Id<"appointments">> {
+  const conversation = await ctx.db.get(input.conversationId);
+  if (!conversation?.contactId) {
+    throw new Error("Expected conversation contact.");
+  }
+  const staff = (
+    await ctx.db
+      .query("staff")
+      .withIndex("by_business_id", (q) => q.eq("businessId", input.businessId))
+      .take(1)
+  )[0];
+  if (!staff) {
+    throw new Error("Expected seeded staff.");
+  }
+
+  const appointmentId = await ctx.db.insert("appointments", {
+    businessId: input.businessId,
+    contactId: conversation.contactId,
+    staffId: staff._id,
+    serviceId: input.serviceId,
+    startsAt: input.startsAt,
+    endsAt: input.endsAt,
+    timezone: "America/Toronto",
+    status: "confirmed",
+    sourceChannel: "sms",
+    calendarSyncState: "not_required",
+  });
+  await ctx.db.insert("conversation_booking_state", {
+    businessId: input.businessId,
+    conversationId: input.conversationId,
+    mode: "booked",
+    selectedServiceId: input.serviceId,
+    lastConfirmedAppointmentId: appointmentId,
+    lastConfirmedServiceId: input.serviceId,
+    lastConfirmedStartsAt: input.startsAt,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return appointmentId;
+}
+
 async function fetchLatestOutboundBody(
   ctx: TestContext,
   businessId: Id<"businesses">,
@@ -408,12 +458,12 @@ function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
         }
       | {
           handled: true;
-          appointmentChangeStatus: {
-            hasConfirmedAppointment: boolean;
-            changeSupported: false;
-            appointment?: {
-              formattedStart: string;
-              serviceName: string;
+        appointmentChangeStatus: {
+          hasConfirmedAppointment: boolean;
+          changeSupported: boolean;
+          appointment?: {
+            formattedStart: string;
+            serviceName: string;
             };
           };
         };
@@ -435,8 +485,8 @@ function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
     return {
       text:
         locale === "fr"
-          ? `Je peux vous aider par SMS pour les questions de rendez-vous, mais je ne peux pas encore annuler ou déplacer un rendez-vous ici. Veuillez nous contacter au sujet de votre ${status.appointment.serviceName} ${status.appointment.formattedStart}.`
-          : `I can help with appointment questions by SMS, but I can't cancel or reschedule appointments here yet. Please contact us about your ${status.appointment.serviceName} on ${status.appointment.formattedStart}.`,
+          ? `Je peux vous aider avec ce rendez-vous pour ${status.appointment.serviceName} ${status.appointment.formattedStart}. Pour vérifier que vous êtes autorisé, répondez avec le nom au dossier et l'heure ou le service du rendez-vous.`
+          : `I can help with that ${status.appointment.serviceName} appointment on ${status.appointment.formattedStart}. To verify you are authorized, please reply with the name on the appointment and either the appointment time or service.`,
     };
   });
 }
@@ -1757,7 +1807,7 @@ describe("SMS scheduling flow", () => {
     });
   });
 
-  it("returns structured appointment-change facts for unsupported cancel requests", async () => {
+  it("returns structured appointment-change facts for supported cancel requests", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
 
@@ -1771,14 +1821,12 @@ describe("SMS scheduling flow", () => {
         businessId,
         contactPhone: "+14165550968",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-21T13:30:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-15T13:30:00.000Z",
+        endsAt: "2030-05-15T14:00:00.000Z",
       });
       return { businessId, conversationId, initialConsultationId };
     });
@@ -1795,7 +1843,7 @@ describe("SMS scheduling flow", () => {
       handled: boolean;
       appointmentChangeStatus?: {
         hasConfirmedAppointment: boolean;
-        changeSupported: false;
+        changeSupported: boolean;
         appointment?: {
           serviceId: Id<"services">;
           serviceName: string;
@@ -1807,11 +1855,11 @@ describe("SMS scheduling flow", () => {
     expect(toolResult.handled).toBe(true);
     expect(toolResult.appointmentChangeStatus).toMatchObject({
       hasConfirmedAppointment: true,
-      changeSupported: false,
+      changeSupported: true,
       appointment: {
         serviceId: initialConsultationId,
         serviceName: "Initial Consultation",
-        formattedStart: "Saturday, Mar 21 at 9:30 AM",
+        formattedStart: "Wednesday, May 15 at 9:30 AM",
       },
     });
   });
@@ -2603,7 +2651,7 @@ describe("SMS scheduling flow", () => {
     });
   });
 
-  it("does not claim an appointment was cancelled when SMS cancellation is unsupported", async () => {
+  it("asks for verification instead of claiming an SMS cancellation succeeded", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
     mockAgentToUseAppointmentChangeTool();
@@ -2618,14 +2666,12 @@ describe("SMS scheduling flow", () => {
         businessId,
         contactPhone: "+14165550987",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-21T14:00:00.000Z",
+        endsAt: "2030-05-21T14:30:00.000Z",
       });
       return { businessId, conversationId };
     });
@@ -2637,13 +2683,13 @@ describe("SMS scheduling flow", () => {
       prompt: "Something came up, I need to cancel",
     });
 
-    expect(reply).toContain("I can't cancel or reschedule appointments here yet");
+    expect(reply).toContain("To verify you are authorized");
     expect(reply).toContain("Initial Consultation");
-    expect(reply).toContain("Tuesday, Mar 17 at 10:00 AM");
+    expect(reply).toContain("Tuesday, May 21 at 10:00 AM");
     expect(reply).not.toContain("I have cancelled your appointment");
   });
 
-  it("routes explicit cancel requests to unsupported-change replies before appointment lookups", async () => {
+  it("routes explicit cancel requests to verification before appointment lookups", async () => {
     const t = createConvexHarness();
 
     const { businessId, conversationId } = await t.run(async (ctx) => {
@@ -2656,14 +2702,12 @@ describe("SMS scheduling flow", () => {
         businessId,
         contactPhone: "+14165550959",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-21T14:00:00.000Z",
+        endsAt: "2030-05-21T14:30:00.000Z",
       });
       return { businessId, conversationId };
     });
@@ -2675,7 +2719,7 @@ describe("SMS scheduling flow", () => {
       prompt: "Please cancel my appointment.",
     });
 
-    expect(reply).toContain("I can't cancel or reschedule appointments here yet");
+    expect(reply).toContain("To verify you are authorized");
     expect(reply).not.toContain("You're booked for");
   });
 
@@ -2796,14 +2840,12 @@ describe("SMS scheduling flow", () => {
         businessId,
         contactPhone: "+14165550951",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-17T14:00:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-21T14:00:00.000Z",
+        endsAt: "2030-05-21T14:30:00.000Z",
       });
       return { businessId, conversationId };
     });
@@ -2815,9 +2857,9 @@ describe("SMS scheduling flow", () => {
       prompt: "Can you move it?",
     });
 
-    expect(reply).toContain("I can't cancel or reschedule appointments here yet");
+    expect(reply).toContain("To verify you are authorized");
     expect(reply).toContain("Initial Consultation");
-    expect(reply).toContain("Tuesday, Mar 17 at 10:00 AM");
+    expect(reply).toContain("Tuesday, May 21 at 10:00 AM");
   });
 
   it("does not treat generic language changes as appointment-change requests", async () => {
@@ -3443,7 +3485,7 @@ describe("SMS scheduling flow", () => {
     expect(reply).toContain("17 mars");
   });
 
-  it("keeps unsupported cancellation replies localized in French", async () => {
+  it("keeps appointment-change verification replies localized in French", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
     mockAgentToUseAppointmentChangeTool("fr");
@@ -3463,14 +3505,12 @@ describe("SMS scheduling flow", () => {
         locale: "fr",
         localeSource: "business_default",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-17T20:00:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-21T20:00:00.000Z",
+        endsAt: "2030-05-21T20:30:00.000Z",
       });
       return { businessId, conversationId };
     });
@@ -3482,12 +3522,12 @@ describe("SMS scheduling flow", () => {
       prompt: "Je dois annuler mon rendez-vous.",
     });
 
-    expect(reply).toContain("Je peux vous aider par SMS");
-    expect(reply).toContain("je ne peux pas encore annuler ou déplacer un rendez-vous ici");
+    expect(reply).toContain("Je peux vous aider avec ce rendez-vous");
+    expect(reply).toContain("Pour vérifier que vous êtes autorisé");
     expect(reply).toContain("Initial Consultation");
   });
 
-  it("treats accented French reschedule requests as unsupported appointment changes", async () => {
+  it("treats accented French reschedule requests as appointment changes", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
     mockAgentToUseAppointmentChangeTool("fr");
@@ -3507,14 +3547,12 @@ describe("SMS scheduling flow", () => {
         locale: "fr",
         localeSource: "business_default",
       });
-      await ctx.db.insert("conversation_booking_state", {
+      await seedConfirmedAppointmentForConversation(ctx, {
         businessId,
         conversationId,
-        mode: "booked",
-        selectedServiceId: initialConsultationId,
-        lastConfirmedServiceId: initialConsultationId,
-        lastConfirmedStartsAt: "2026-03-17T20:00:00.000Z",
-        updatedAt: new Date().toISOString(),
+        serviceId: initialConsultationId,
+        startsAt: "2030-05-21T20:00:00.000Z",
+        endsAt: "2030-05-21T20:30:00.000Z",
       });
       return { businessId, conversationId };
     });
@@ -3526,8 +3564,8 @@ describe("SMS scheduling flow", () => {
       prompt: "Je dois déplacer mon rendez-vous.",
     });
 
-    expect(reply).toContain("Je peux vous aider par SMS");
-    expect(reply).toContain("je ne peux pas encore annuler ou déplacer un rendez-vous ici");
+    expect(reply).toContain("Je peux vous aider avec ce rendez-vous");
+    expect(reply).toContain("Pour vérifier que vous êtes autorisé");
     expect(reply).toContain("Initial Consultation");
   });
 

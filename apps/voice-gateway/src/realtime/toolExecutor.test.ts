@@ -2,17 +2,37 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { demoSnapshot } from "@lobbystack/shared";
 
-const { searchVoiceKnowledgeMock } = vi.hoisted(() => ({
+const {
+  cancelVoiceAppointmentMock,
+  lookupVoiceAppointmentForChangeMock,
+  rescheduleVoiceAppointmentMock,
+  searchVoiceKnowledgeMock,
+  sendVoiceAppointmentChangeOtpMock,
+  verifyVoiceAppointmentChangeOtpMock,
+  verifyVoiceAppointmentForChangeMock,
+} = vi.hoisted(() => ({
+  cancelVoiceAppointmentMock: vi.fn(),
+  lookupVoiceAppointmentForChangeMock: vi.fn(),
+  rescheduleVoiceAppointmentMock: vi.fn(),
   searchVoiceKnowledgeMock: vi.fn(),
+  sendVoiceAppointmentChangeOtpMock: vi.fn(),
+  verifyVoiceAppointmentChangeOtpMock: vi.fn(),
+  verifyVoiceAppointmentForChangeMock: vi.fn(),
 }));
 
 vi.mock("../convex/runtimeClient", () => ({
   bookVoiceAppointment: vi.fn(),
+  cancelVoiceAppointment: cancelVoiceAppointmentMock,
   checkVoiceAvailability: vi.fn(),
   findVoiceAvailability: vi.fn(),
+  lookupVoiceAppointmentForChange: lookupVoiceAppointmentForChangeMock,
+  rescheduleVoiceAppointment: rescheduleVoiceAppointmentMock,
   searchVoiceKnowledge: searchVoiceKnowledgeMock,
+  sendVoiceAppointmentChangeOtp: sendVoiceAppointmentChangeOtpMock,
   takeVoiceMessage: vi.fn(),
   updateVoiceTransferState: vi.fn(),
+  verifyVoiceAppointmentChangeOtp: verifyVoiceAppointmentChangeOtpMock,
+  verifyVoiceAppointmentForChange: verifyVoiceAppointmentForChangeMock,
 }));
 
 import { executeVoiceTool } from "./toolExecutor";
@@ -193,6 +213,186 @@ describe("executeVoiceTool searchKnowledge", () => {
       source: "snapshot_fallback",
       fallbackUsed: true,
       fallbackReason: "no_matches",
+    });
+  });
+});
+
+describe("executeVoiceTool appointment changes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passes caller and conversation context into verification", async () => {
+    verifyVoiceAppointmentForChangeMock.mockResolvedValue({
+      ok: true,
+      verified: true,
+      requiresOtp: false,
+      verificationId: "verification_123",
+      appointmentId: "appointment_123",
+      contactId: "contact_123",
+      status: "facts_verified",
+    });
+
+    const result = await executeVoiceTool({
+      toolName: "verifyAppointmentForChange",
+      rawArguments: JSON.stringify({
+        appointmentId: "appointment_123",
+        action: "cancel",
+        callerName: "Jane Doe",
+        appointmentStartsAt: "2030-05-15T14:00:00.000Z",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+      callerPhone: "+14165550199",
+    });
+
+    expect(verifyVoiceAppointmentForChangeMock).toHaveBeenCalledWith({
+      businessId: "business_123",
+      appointmentId: "appointment_123",
+      action: "cancel",
+      callerPhone: "+14165550199",
+      callerName: "Jane Doe",
+      appointmentStartsAt: "2030-05-15T14:00:00.000Z",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    expect(result.result).toMatchObject({
+      ok: true,
+      verificationId: "verification_123",
+    });
+  });
+
+  it("returns safe tool output when the cancellation mutation rejects", async () => {
+    cancelVoiceAppointmentMock.mockRejectedValue(new Error("verification_required"));
+
+    const result = await executeVoiceTool({
+      toolName: "cancelAppointment",
+      rawArguments: JSON.stringify({
+        appointmentId: "appointment_123",
+        verificationId: "verification_123",
+        finalConfirmation: true,
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+      callerPhone: "+14165550199",
+    });
+
+    expect(cancelVoiceAppointmentMock).toHaveBeenCalledWith({
+      businessId: "business_123",
+      appointmentId: "appointment_123",
+      callerPhone: "+14165550199",
+      finalConfirmation: true,
+      verificationId: "verification_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    expect(result.result).toEqual({
+      ok: false,
+      reason: "verification_required",
+    });
+  });
+
+  it("passes caller context into rescheduling and defaults timezone from the snapshot", async () => {
+    rescheduleVoiceAppointmentMock.mockResolvedValue({
+      ok: true,
+      action: "reschedule",
+      appointmentId: "appointment_123",
+      serviceId: "service_123",
+      startsAt: "2030-05-16T15:00:00.000Z",
+      endsAt: "2030-05-16T15:30:00.000Z",
+      status: "confirmed",
+      calendarSyncState: "pending",
+    });
+
+    const result = await executeVoiceTool({
+      toolName: "rescheduleAppointment",
+      rawArguments: JSON.stringify({
+        appointmentId: "appointment_123",
+        startsAt: "2030-05-16T15:00:00.000Z",
+        verificationId: "verification_123",
+        finalConfirmation: true,
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550199",
+    });
+
+    expect(rescheduleVoiceAppointmentMock).toHaveBeenCalledWith({
+      businessId: "business_123",
+      appointmentId: "appointment_123",
+      callerPhone: "+14165550199",
+      startsAt: "2030-05-16T15:00:00.000Z",
+      timezone: demoSnapshot.timezone,
+      finalConfirmation: true,
+      verificationId: "verification_123",
+    });
+    expect(result.result).toMatchObject({
+      ok: true,
+      action: "reschedule",
+      calendarSyncState: "pending",
+    });
+  });
+
+  it("exposes lookup and OTP tools through the same executor path", async () => {
+    lookupVoiceAppointmentForChangeMock.mockResolvedValue({
+      ok: true,
+      policy: {
+        enabled: true,
+        allowCancel: true,
+        allowReschedule: true,
+        verificationMode: "otp_required",
+      },
+      phoneMatched: true,
+      appointments: [],
+    });
+    sendVoiceAppointmentChangeOtpMock.mockResolvedValue({
+      ok: true,
+      status: "pending",
+      verificationId: "verification_123",
+      otpPhone: "+14165550199",
+    });
+    verifyVoiceAppointmentChangeOtpMock.mockResolvedValue({
+      ok: true,
+      status: "approved",
+      verificationId: "verification_123",
+    });
+
+    await executeVoiceTool({
+      toolName: "lookupAppointmentForChange",
+      rawArguments: "{}",
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550199",
+    });
+    await executeVoiceTool({
+      toolName: "sendAppointmentChangeOtp",
+      rawArguments: JSON.stringify({ verificationId: "verification_123" }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550199",
+    });
+    await executeVoiceTool({
+      toolName: "verifyAppointmentChangeOtp",
+      rawArguments: JSON.stringify({ verificationId: "verification_123", code: "123456" }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550199",
+    });
+
+    expect(lookupVoiceAppointmentForChangeMock).toHaveBeenCalledWith({
+      businessId: "business_123",
+      callerPhone: "+14165550199",
+    });
+    expect(sendVoiceAppointmentChangeOtpMock).toHaveBeenCalledWith({
+      verificationId: "verification_123",
+    });
+    expect(verifyVoiceAppointmentChangeOtpMock).toHaveBeenCalledWith({
+      verificationId: "verification_123",
+      code: "123456",
     });
   });
 });

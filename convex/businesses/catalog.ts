@@ -43,6 +43,7 @@ import {
   localizedServiceNamesValidator,
   normalizeLocalizedServiceNames,
 } from "../lib/serviceNames";
+import { normalizeAppointmentChangePolicy } from "../lib/appointmentChangePolicy";
 import {
   buildTwilioSmsInboundWebhookUrl,
   buildTwilioVoiceInboundWebhookUrl,
@@ -378,6 +379,9 @@ export const getAgentBasicSettings = query({
             _id: profile._id,
             greeting: profile.greeting,
             transferNumber: profile.transferNumber,
+            appointmentChangePolicy: normalizeAppointmentChangePolicy(
+              profile.appointmentChangePolicy,
+            ),
           }
         : null,
     };

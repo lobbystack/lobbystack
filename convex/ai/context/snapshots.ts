@@ -21,6 +21,11 @@ import {
   DEFAULT_RECEPTIONIST_TRANSFER_MODE,
 } from "../../lib/receptionistProfileDefaults";
 import {
+  appointmentChangePolicyValidator,
+  normalizeAppointmentChangePolicy,
+  type AppointmentChangePolicy,
+} from "../../lib/appointmentChangePolicy";
+import {
   inferRuntimeLocaleFromBusinessContext,
   resolveRuntimeLocale,
   runtimeLocaleValidator,
@@ -43,6 +48,7 @@ type UpdateReceptionistProfileArgs = {
   smsInstructions?: string;
   transferMode?: string;
   transferNumber?: string | null;
+  appointmentChangePolicy?: AppointmentChangePolicy;
 };
 
 function buildKnowledgeDigest(
@@ -104,6 +110,7 @@ export const updateReceptionistProfile = mutation({
     smsInstructions: v.optional(v.string()),
     transferMode: v.optional(v.string()),
     transferNumber: v.optional(v.union(v.string(), v.null())),
+    appointmentChangePolicy: v.optional(appointmentChangePolicyValidator),
   },
   handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
     await requireMembership(ctx, args.businessId);
@@ -137,6 +144,9 @@ export const updateReceptionistProfile = mutation({
         : args.transferNumber !== undefined
           ? args.transferNumber.trim() || undefined
           : existing?.transferNumber;
+    const appointmentChangePolicy = normalizeAppointmentChangePolicy(
+      args.appointmentChangePolicy ?? existing?.appointmentChangePolicy,
+    );
     const nextProfile = {
       businessId: args.businessId,
       greeting: args.greeting,
@@ -147,6 +157,7 @@ export const updateReceptionistProfile = mutation({
       ...(smsInstructions !== undefined ? { smsInstructions } : {}),
       transferMode,
       ...(transferNumber !== undefined ? { transferNumber } : {}),
+      appointmentChangePolicy,
     };
 
     if (existing) {
@@ -284,6 +295,9 @@ export const refreshSnapshot = internalMutation({
           ? { transferNumber: profile.transferNumber }
           : {}),
       },
+      appointmentChangePolicy: normalizeAppointmentChangePolicy(
+        profile.appointmentChangePolicy,
+      ),
       ...(primaryPhone?.e164 !== undefined ? { phoneNumber: primaryPhone.e164 } : {}),
       ...(primarySms?.e164 !== undefined ? { smsNumber: primarySms.e164 } : {}),
     });
