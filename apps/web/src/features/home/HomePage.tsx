@@ -268,16 +268,20 @@ export function HomePage({ businessId }: HomePageProps) {
         {isLoadingSummary ? (
           <MetricCardGridSkeleton />
         ) : (
-          <Surface className="grid sm:grid-cols-2 lg:grid-cols-4">
+          <Surface className="grid sm:grid-cols-2 md:grid-cols-4">
             {metricCards.map((card) => {
               return (
                 <section
-                  className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
+                  className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
                   key={card.key}
                 >
-                  <h2 className="type-card-title">{t(`home.metrics.${card.key}.title`)}</h2>
-                  <div className="mt-8">
-                    <p className="type-metric">{card.value}</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <h2 className="type-card-title text-foreground">{t(`home.metrics.${card.key}.title`)}</h2>
+                      <p className="text-4xl font-normal tracking-normal text-foreground tabular-nums">
+                        {card.value}
+                      </p>
+                    </div>
                     <p className="type-meta">{card.description}</p>
                   </div>
                 </section>

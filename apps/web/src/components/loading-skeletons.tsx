@@ -26,16 +26,18 @@ export function PageHeaderSkeleton({
 
 export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <Surface className="grid sm:grid-cols-2 lg:grid-cols-4">
+    <Surface className="grid sm:grid-cols-2 md:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <div
-          className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"
+          className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
           key={index}
         >
-          <Skeleton className="h-4 w-24" />
-          <div className="mt-8">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="mt-2 h-4 w-28" />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-10 w-20" />
+            </div>
+            <Skeleton className="h-4 w-32" />
           </div>
         </div>
       ))}
