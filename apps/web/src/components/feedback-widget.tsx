@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { Command, CornerDownLeft, MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -117,20 +117,8 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
                   {t("feedback.docsLink")}
                 </a>
               </p>
-              <Button
-                className="h-10 gap-2 rounded-3xl px-4 text-sm font-semibold"
-                disabled={!canSubmit}
-                type="submit"
-              >
+              <Button disabled={!canSubmit} size="sm" type="submit">
                 {t("feedback.submit")}
-                <span className="flex items-center gap-1 text-primary-foreground/70">
-                  <span className="flex size-6 items-center justify-center rounded-lg bg-primary-foreground/15">
-                    <Command className="size-3.5" />
-                  </span>
-                  <span className="flex size-6 items-center justify-center rounded-lg bg-primary-foreground/15">
-                    <CornerDownLeft className="size-3.5" />
-                  </span>
-                </span>
               </Button>
             </div>
           </form>
