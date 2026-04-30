@@ -68,6 +68,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           render={
             <Button
               aria-label={t("feedback.trigger")}
+              className="aria-expanded:bg-secondary/80"
               size="sm"
               type="button"
               variant="secondary"
