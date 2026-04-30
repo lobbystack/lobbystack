@@ -19,6 +19,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 
@@ -251,7 +252,15 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     }
   }
 
-  async function saveAppointmentChangePolicy(): Promise<void> {
+  async function saveAppointmentChangePolicy({
+    allowCancel = allowAppointmentCancel,
+    allowReschedule = allowAppointmentReschedule,
+    requireOtp = requireAppointmentChangeOtp,
+  }: {
+    allowCancel?: boolean;
+    allowReschedule?: boolean;
+    requireOtp?: boolean;
+  } = {}): Promise<void> {
     if (!persistedProfile) {
       return;
     }
@@ -275,9 +284,9 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
         greeting,
         transferNumber: transferNumberResolution.value,
         appointmentChangePolicy: buildAppointmentChangePolicyForSave({
-          allowCancel: allowAppointmentCancel,
-          allowReschedule: allowAppointmentReschedule,
-          requireOtp: requireAppointmentChangeOtp,
+          allowCancel,
+          allowReschedule,
+          requireOtp,
         }),
       });
       captureAnalyticsEvent("web.agent.settings_saved", {
@@ -440,109 +449,99 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
           />
         </ItemGroup>
 
-        <ItemGroup spacing="section">
-          <Item
-            className="grid gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-            variant="outline"
-          >
-            <ItemContent>
-              <ItemTitle>{t("agent:appointmentChanges.title")}</ItemTitle>
-              <div className="mt-4 grid gap-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <ItemTitle className="text-sm">
-                      {t("agent:appointmentChanges.allowCancel.label")}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {t("agent:appointmentChanges.allowCancel.hint")}
-                    </ItemDescription>
-                  </div>
-                  {isLoadingConfiguration ? (
-                    <Skeleton className="h-5 w-8 rounded-full" />
-                  ) : (
-                    <Switch
-                      aria-label={t("agent:appointmentChanges.allowCancel.label")}
-                      checked={allowAppointmentCancel}
-                      disabled={isAppointmentChangeSaving || !persistedProfile}
-                      onCheckedChange={(checked) => {
-                        setAllowAppointmentCancel(checked);
-                        setAppointmentChangeStatus(null);
-                      }}
-                    />
-                  )}
-                </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm leading-snug font-medium">
+            {t("agent:appointmentChanges.title")}
+          </h2>
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.allowCancel.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.allowCancel.hint")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.allowCancel.label")}
+                    checked={allowAppointmentCancel}
+                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    onCheckedChange={(checked) => {
+                      setAllowAppointmentCancel(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ allowCancel: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
 
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <ItemTitle className="text-sm">
-                      {t("agent:appointmentChanges.allowReschedule.label")}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {t("agent:appointmentChanges.allowReschedule.hint")}
-                    </ItemDescription>
-                  </div>
-                  {isLoadingConfiguration ? (
-                    <Skeleton className="h-5 w-8 rounded-full" />
-                  ) : (
-                    <Switch
-                      aria-label={t("agent:appointmentChanges.allowReschedule.label")}
-                      checked={allowAppointmentReschedule}
-                      disabled={isAppointmentChangeSaving || !persistedProfile}
-                      onCheckedChange={(checked) => {
-                        setAllowAppointmentReschedule(checked);
-                        setAppointmentChangeStatus(null);
-                      }}
-                    />
-                  )}
-                </div>
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.allowReschedule.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.allowReschedule.hint")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.allowReschedule.label")}
+                    checked={allowAppointmentReschedule}
+                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    onCheckedChange={(checked) => {
+                      setAllowAppointmentReschedule(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ allowReschedule: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
 
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <ItemTitle className="text-sm">
-                      {t("agent:appointmentChanges.requireOtp.label")}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {t("agent:appointmentChanges.requireOtp.hint")}
-                    </ItemDescription>
-                  </div>
-                  {isLoadingConfiguration ? (
-                    <Skeleton className="h-5 w-8 rounded-full" />
-                  ) : (
-                    <Switch
-                      aria-label={t("agent:appointmentChanges.requireOtp.label")}
-                      checked={requireAppointmentChangeOtp}
-                      disabled={isAppointmentChangeSaving || !persistedProfile}
-                      onCheckedChange={(checked) => {
-                        setRequireAppointmentChangeOtp(checked);
-                        setAppointmentChangeStatus(null);
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-              {appointmentChangeStatus ? (
-                <ItemDescription className="pt-2">{appointmentChangeStatus}</ItemDescription>
-              ) : null}
-            </ItemContent>
-            <ItemActions className="w-full justify-end self-center sm:w-auto">
-              <Button
-                disabled={
-                  isLoadingConfiguration ||
-                  isAppointmentChangeSaving ||
-                  !persistedProfile
-                }
-                onClick={() => void saveAppointmentChangePolicy()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {isAppointmentChangeSaving
-                  ? t("agent:actions.saving")
-                  : t("agent:actions.save")}
-              </Button>
-            </ItemActions>
-          </Item>
-        </ItemGroup>
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:appointmentChanges.requireOtp.label")}</ItemTitle>
+                <ItemDescription>
+                  {t("agent:appointmentChanges.requireOtp.hint")}
+                </ItemDescription>
+                {appointmentChangeStatus ? (
+                  <ItemDescription>{appointmentChangeStatus}</ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions>
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                ) : (
+                  <Switch
+                    aria-label={t("agent:appointmentChanges.requireOtp.label")}
+                    checked={requireAppointmentChangeOtp}
+                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    onCheckedChange={(checked) => {
+                      setRequireAppointmentChangeOtp(checked);
+                      setAppointmentChangeStatus(null);
+                      void saveAppointmentChangePolicy({ requireOtp: checked });
+                    }}
+                  />
+                )}
+              </ItemActions>
+            </Item>
+          </Surface>
+        </section>
       </div>
     </div>
   );
