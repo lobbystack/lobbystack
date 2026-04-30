@@ -7,25 +7,18 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { SettingsNotificationsPage } from "./SettingsNotificationsPage";
 
 const {
-  sendTestOperatorNotificationMock,
   toastErrorMock,
-  toastSuccessMock,
   updateNotificationPreferencesMock,
-  useActionMock,
   useMutationMock,
   useQueryMock,
 } = vi.hoisted(() => ({
-  sendTestOperatorNotificationMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  toastSuccessMock: vi.fn(),
   updateNotificationPreferencesMock: vi.fn(),
-  useActionMock: vi.fn(),
   useMutationMock: vi.fn(),
   useQueryMock: vi.fn(),
 }));
 
 vi.mock("convex/react", () => ({
-  useAction: (...args: unknown[]) => useActionMock(...args),
   useMutation: (...args: unknown[]) => useMutationMock(...args),
   useQuery: (...args: unknown[]) => useQueryMock(...args),
 }));
@@ -39,7 +32,6 @@ vi.mock("react-i18next", () => ({
 vi.mock("sonner", () => ({
   toast: {
     error: (...args: unknown[]) => toastErrorMock(...args),
-    success: (...args: unknown[]) => toastSuccessMock(...args),
   },
 }));
 
@@ -71,7 +63,6 @@ function buildPreferences(overrides: Record<string, unknown> = {}) {
 function renderNotificationsPage(preferences = buildPreferences()) {
   useQueryMock.mockReturnValue(preferences);
   updateNotificationPreferencesMock.mockResolvedValue(preferences);
-  sendTestOperatorNotificationMock.mockResolvedValue({ channel: "email", sent: true });
 
   return render(<SettingsNotificationsPage businessId={businessId} />);
 }
@@ -80,11 +71,8 @@ describe("SettingsNotificationsPage", () => {
   beforeEach(() => {
     useQueryMock.mockReset();
     useMutationMock.mockReset();
-    useActionMock.mockReset();
     updateNotificationPreferencesMock.mockReset();
-    sendTestOperatorNotificationMock.mockReset();
     toastErrorMock.mockReset();
-    toastSuccessMock.mockReset();
 
     useMutationMock.mockImplementation((reference: unknown) => {
       if (
@@ -94,15 +82,6 @@ describe("SettingsNotificationsPage", () => {
         return updateNotificationPreferencesMock;
       }
       throw new Error("Unexpected mutation reference.");
-    });
-    useActionMock.mockImplementation((reference: unknown) => {
-      if (
-        getFunctionName(reference as never) ===
-        "users/preferences:sendTestOperatorNotification"
-      ) {
-        return sendTestOperatorNotificationMock;
-      }
-      throw new Error("Unexpected action reference.");
     });
   });
 
@@ -167,12 +146,9 @@ describe("SettingsNotificationsPage", () => {
     const smsSwitch = screen.getByRole("switch", {
       name: "settings:notifications.sources.sms.title",
     });
-    const smsTestButton = screen.getByRole("button", {
-      name: "settings:notifications.actions.testSms",
-    });
 
     expect(smsSwitch.getAttribute("data-disabled")).not.toBeNull();
-    expect((smsTestButton as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText("settings:notifications.actions.testSms")).toBeNull();
   });
 
   it("disables SMS controls when no alert sender is configured", async () => {
@@ -193,33 +169,17 @@ describe("SettingsNotificationsPage", () => {
         name: "settings:notifications.sources.sms.title",
       }).getAttribute("data-disabled"),
     ).not.toBeNull();
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "settings:notifications.actions.testSms",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    expect(screen.queryByText("settings:notifications.actions.testSms")).toBeNull();
   });
 
-  it("sends test notifications and reports success", async () => {
-    const user = userEvent.setup();
+  it("does not render test notification buttons", async () => {
     renderNotificationsPage();
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: "settings:notifications.actions.testEmail",
-      }),
-    );
-
-    await waitFor(() => {
-      expect(sendTestOperatorNotificationMock).toHaveBeenCalledWith({
-        businessId,
-        channel: "email",
-      });
-      expect(toastSuccessMock).toHaveBeenCalledWith(
-        "settings:notifications.toast.testEmailSent",
-      );
+    await screen.findByRole("switch", {
+      name: "settings:notifications.sources.email.title",
     });
+
+    expect(screen.queryByText("settings:notifications.actions.testEmail")).toBeNull();
+    expect(screen.queryByText("settings:notifications.actions.testSms")).toBeNull();
   });
 });

@@ -1,11 +1,10 @@
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Item,
@@ -92,13 +91,8 @@ export function SettingsNotificationsPage({
   const updateNotificationPreferences = useMutation(
     api.users.preferences.updateNotificationPreferences,
   );
-  const sendTestOperatorNotification = useAction(
-    api.users.preferences.sendTestOperatorNotification,
-  );
   const saveVersionRef = useRef(0);
   const [draft, setDraft] = useState<NotificationPreferencesState | null>(null);
-  const [pendingTestChannel, setPendingTestChannel] =
-    useState<NotificationChannel | null>(null);
 
   useEffect(() => {
     if (remotePreferences) {
@@ -209,31 +203,6 @@ export function SettingsNotificationsPage({
     });
   }
 
-  async function handleTestNotification(channel: NotificationChannel): Promise<void> {
-    if (channel === "sms" && !canUseSms) {
-      showSmsUnavailableToast();
-      return;
-    }
-
-    setPendingTestChannel(channel);
-    try {
-      await sendTestOperatorNotification({ businessId, channel });
-      toast.success(
-        t(
-          channel === "email"
-            ? "settings:notifications.toast.testEmailSent"
-            : "settings:notifications.toast.testSmsSent",
-        ),
-      );
-    } catch (error) {
-      toast.error(t("settings:notifications.toast.testFailed"), {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setPendingTestChannel(null);
-    }
-  }
-
   const renderConfigRow = (
     eventKey: NotificationEventKey,
     titleKey: string,
@@ -341,16 +310,6 @@ export function SettingsNotificationsPage({
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Button
-                  disabled={pendingTestChannel !== null}
-                  onClick={() => void handleTestNotification("email")}
-                  size="sm"
-                  variant="outline"
-                >
-                  {pendingTestChannel === "email"
-                    ? t("settings:notifications.actions.testing")
-                    : t("settings:notifications.actions.testEmail")}
-                </Button>
                 <Switch
                   aria-label={t("settings:notifications.sources.email.title")}
                   checked={draft.emailEnabled}
@@ -376,16 +335,6 @@ export function SettingsNotificationsPage({
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
-                <Button
-                  disabled={!canUseSms || pendingTestChannel !== null}
-                  onClick={() => void handleTestNotification("sms")}
-                  size="sm"
-                  variant="outline"
-                >
-                  {pendingTestChannel === "sms"
-                    ? t("settings:notifications.actions.testing")
-                    : t("settings:notifications.actions.testSms")}
-                </Button>
                 <Switch
                   aria-label={t("settings:notifications.sources.sms.title")}
                   checked={draft.smsEnabled}
