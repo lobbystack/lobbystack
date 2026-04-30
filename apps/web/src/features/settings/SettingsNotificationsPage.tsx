@@ -328,9 +328,6 @@ export function SettingsNotificationsPage({
             <h3 className="text-sm font-medium text-foreground">
               {t("settings:notifications.sources.title")}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("settings:notifications.sources.description")}
-            </p>
           </div>
           <Surface className="flex flex-col">
             <Item

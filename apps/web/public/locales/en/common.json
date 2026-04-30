@@ -2,7 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Loading...",
-    "description": "Syncing your operator console and receptionist settings."
+    "description": "Syncing your workspace and receptionist settings."
   },
   "language": {
     "label": "Language",

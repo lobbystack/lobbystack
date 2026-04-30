@@ -26,7 +26,7 @@
     "handoffActiveTitle": "AI active",
     "handoffActiveDescription": "A human reply will switch this conversation into handoff mode.",
     "handoffPausedTitle": "Human handoff active",
-    "handoffPausedDescription": "AI will stay silent until an operator resumes it.",
+    "handoffPausedDescription": "AI will stay silent until someone resumes it.",
     "handoffPausedStatus": "The AI was paused for this user on {{time}}.",
     "handoffPausedStatusWithoutTime": "The AI was paused for this user.",
     "handoffPausedStatusFallback": "The AI is paused for this conversation.",

@@ -12,7 +12,7 @@
     "placeholder": "Rechercher dans l'espace..."
   },
   "sidebar": {
-    "businessSlugFallback": "Console opérateur",
+    "businessSlugFallback": "Tableau de bord",
     "general": "Général",
     "agent": "Agent",
     "other": "Gestion",

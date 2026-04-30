@@ -485,14 +485,13 @@
     },
     "sources": {
       "title": "Canaux",
-      "description": "Choisissez où les alertes opérateur sont envoyées pour votre compte.",
       "email": {
         "title": "Courriel",
-        "description": "Recevez les alertes opérateur et les résumés quotidiens par courriel."
+        "description": "Recevez les alertes et les résumés quotidiens par courriel."
       },
       "sms": {
         "title": "SMS",
-        "description": "Recevez les alertes opérateur urgentes sur votre téléphone vérifié.",
+        "description": "Recevez les alertes urgentes sur votre téléphone vérifié.",
         "unverifiedDescription": "Ajoutez et vérifiez un numéro de téléphone dans votre compte avant d'activer les alertes SMS.",
         "senderMissingDescription": "Les alertes SMS sont indisponibles tant qu'un expéditeur SMS d'alerte n'est pas configuré pour cet espace de travail."
       }

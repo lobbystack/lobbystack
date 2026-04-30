@@ -12,7 +12,7 @@
     "placeholder": "Search workspace..."
   },
   "sidebar": {
-    "businessSlugFallback": "Operator console",
+    "businessSlugFallback": "Workspace console",
     "general": "General",
     "agent": "Agent",
     "other": "Manage",

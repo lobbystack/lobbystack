@@ -2,7 +2,7 @@
   "appName": "LobbyStack",
   "loading": {
     "title": "Chargement...",
-    "description": "Synchronisation de votre console opérateur et des réglages de la réceptionniste."
+    "description": "Synchronisation de votre espace et des réglages de la réceptionniste."
   },
   "language": {
     "label": "Langue",

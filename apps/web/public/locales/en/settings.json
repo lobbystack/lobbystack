@@ -569,14 +569,13 @@
     },
     "sources": {
       "title": "Channels",
-      "description": "Choose where operator alerts are sent for your account.",
       "email": {
         "title": "Email",
-        "description": "Receive operator alerts and daily summaries by email."
+        "description": "Receive alerts and daily summaries by email."
       },
       "sms": {
         "title": "SMS",
-        "description": "Receive urgent operator alerts on your verified phone.",
+        "description": "Receive urgent alerts on your verified phone.",
         "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts.",
         "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
       }
