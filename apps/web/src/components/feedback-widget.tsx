@@ -77,7 +77,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           }
         >
           <span className="text-muted-foreground">{t("feedback.trigger")}</span>
-          <MessageCircle className="text-muted-foreground" data-icon="inline-end" />
+          <MessageCircle className="text-muted-foreground" />
         </PopoverTrigger>
         <PopoverContent
           align="end"
