@@ -19,11 +19,8 @@
   "navbar": {
     "links": [
       {
-        "label": "Lobbystack.com",
-        "href": "https://lobbystack.com"
-      },
-      {
-        "type": "github",
+        "label": " ",
+        "icon": "github",
         "href": "https://github.com/morencyr/LobbyStack"
       },
       {
@@ -34,6 +31,7 @@
     "primary": {
       "type": "button",
       "label": "Try for free",
+      "name": "Try for free",
       "href": "https://app.lobbystack.com/signup"
     }
   },
@@ -50,7 +48,7 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Help Center",
+        "tab": "Lobbystack.com",
         "groups": [
           {
             "group": "Get started",
