@@ -20,6 +20,9 @@
     "openSettings": "Open settings",
     "signedIn": "Signed in",
     "workspaceReady": "Workspace ready",
+    "upgradeToPro": "Upgrade to Pro",
+    "account": "Account",
+    "toggleTheme": "Toggle theme",
     "signOut": "Sign out"
   }
 }

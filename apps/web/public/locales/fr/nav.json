@@ -20,6 +20,9 @@
     "openSettings": "Ouvrir les réglages",
     "signedIn": "Connecté",
     "workspaceReady": "Espace prêt",
+    "upgradeToPro": "Passer à Pro",
+    "account": "Compte",
+    "toggleTheme": "Changer le thème",
     "signOut": "Se déconnecter"
   }
 }

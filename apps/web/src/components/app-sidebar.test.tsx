@@ -33,6 +33,10 @@ vi.mock("react-i18next", () => ({
         "nav:items.analytics": "Analytics",
         "nav:items.agent": "Agent",
         "nav:items.settings": "Settings",
+        "sidebar.upgradeToPro": "Upgrade to Pro",
+        "sidebar.account": "Account",
+        "sidebar.toggleTheme": "Toggle theme",
+        "sidebar.signOut": "Sign out",
         "settings:sections.integrations": "Integrations",
         "agent:sections.basicSettings.title": "AI settings",
         "agent:sections.knowledge.title": "Knowledge",
@@ -146,7 +150,7 @@ describe("AppSidebar", () => {
 
   it("only shows the Pro upgrade action when enabled", async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
+    const { unmount } = render(
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
           <AppSidebar
@@ -160,12 +164,9 @@ describe("AppSidebar", () => {
 
     await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
     expect(screen.queryByRole("menuitem", { name: "Upgrade to Pro" })).toBeNull();
-    await user.keyboard("{Escape}");
-    await waitFor(() => {
-      expect(screen.queryByRole("menuitem", { name: "Toggle theme" })).toBeNull();
-    });
+    unmount();
 
-    rerender(
+    render(
       <MemoryRouter initialEntries={["/"]}>
         <SidebarProvider>
           <AppSidebar

@@ -2,6 +2,7 @@ import { motion, useAnimation } from "motion/react";
 import { ChevronsUpDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { SidebarUserSkeleton } from "@/components/loading-skeletons";
@@ -126,6 +127,7 @@ export function NavUser({
   user,
   isLoading = false,
 }: NavUserProps) {
+  const { t } = useTranslation("nav");
   const { isMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
@@ -183,7 +185,7 @@ export function NavUser({
                     render={<Link to="/settings/plan" />}
                   >
                     <CrownAnimatedIcon controls={crownControls} />
-                    Upgrade to Pro
+                    {t("sidebar.upgradeToPro")}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -198,7 +200,7 @@ export function NavUser({
                 render={<Link to="/settings/account" />}
               >
                 <UserIcon ref={accountIconRef} size={16} />
-                Account
+                {t("sidebar.account")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 closeOnClick={false}
@@ -209,7 +211,7 @@ export function NavUser({
                 onMouseLeave={() => stopIconAnimation(themeIconRef)}
               >
                 <ContrastIcon ref={themeIconRef} size={16} />
-                Toggle theme
+                {t("sidebar.toggleTheme")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -222,7 +224,7 @@ export function NavUser({
               variant="destructive"
             >
               <LogOutAnimatedIcon controls={logOutControls} />
-              Sign out
+              {t("sidebar.signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
