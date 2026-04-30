@@ -40,6 +40,12 @@ navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
   margin: 0 !important;
 }
 
+#navbar a[href="https://lobbystack.com"],
+#navbar *:has(> a[href="https://lobbystack.com"]),
+navbar-link[href="https://lobbystack.com"] {
+  margin-right: 24px !important;
+}
+
 #topbar-cta-button,
 [data-component-name="primary-header-button"],
 #navbar a[href*="app.lobbystack.com/signup"] {
