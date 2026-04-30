@@ -109,11 +109,11 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
             <div className="flex items-center justify-between gap-3">
               <p className="min-w-0 text-sm text-muted-foreground">
                 {t("feedback.helpText")}{" "}
-                <a className="text-primary hover:underline" href="mailto:raphael.morency@icloud.com">
+                <a className="text-primary underline underline-offset-4" href="mailto:raphael.morency@icloud.com">
                   {t("feedback.contactLink")}
                 </a>{" "}
                 {t("feedback.helpTextSeparator")}{" "}
-                <a className="text-primary hover:underline" href="/docs">
+                <a className="text-primary underline underline-offset-4" href="/docs">
                   {t("feedback.docsLink")}
                 </a>
               </p>
