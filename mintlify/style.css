@@ -40,9 +40,7 @@ navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
 #topbar-cta-button,
 [data-component-name="primary-header-button"],
 #navbar a[href*="app.lobbystack.com/signup"] {
-  padding: 10px 16px !important;
   border: 1px solid #0b0b0d !important;
-  border-radius: 16px !important;
   background: #0b0b0d !important;
   box-shadow: none !important;
 }
