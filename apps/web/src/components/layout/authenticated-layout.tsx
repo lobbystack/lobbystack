@@ -70,14 +70,7 @@ export function AuthenticatedLayout({
         )}
       >
         <SiteHeader fixed />
-        {!isLoading ? (
-          <div className="sticky top-0 z-40 hidden h-0 justify-end md:flex">
-            <FeedbackWidget
-              className="mt-4 mr-4"
-              {...(businessId ? { businessId } : {})}
-            />
-          </div>
-        ) : null}
+        {!isLoading ? <FeedbackWidget {...(businessId ? { businessId } : {})} /> : null}
         {children}
       </SidebarInset>
     </SidebarProvider>

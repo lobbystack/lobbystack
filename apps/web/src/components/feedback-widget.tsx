@@ -22,16 +22,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 
 const MAX_FEEDBACK_MESSAGE_LENGTH = 2_000;
 
 type FeedbackWidgetProps = {
   businessId?: Id<"businesses">;
-  className?: string;
 };
 
-export function FeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
+export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
   const { t } = useTranslation("common");
   const location = useLocation();
   const submitFeedback = useMutation(api.feedback.submit);
@@ -65,7 +63,7 @@ export function FeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
   }
 
   return (
-    <div className={cn("hidden items-center gap-4 md:flex", className)}>
+    <div className="fixed top-4 right-4 z-40 hidden items-center gap-4 md:flex">
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger
           render={
