@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMutation } from "convex/react";
+import { MessageCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -76,6 +77,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           }
         >
           <span className="text-muted-foreground">{t("feedback.trigger")}</span>
+          <MessageCircle className="text-muted-foreground" data-icon="inline-end" />
         </PopoverTrigger>
         <PopoverContent
           align="end"
