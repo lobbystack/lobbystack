@@ -113,7 +113,12 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
                   {t("feedback.contactLink")}
                 </a>{" "}
                 {t("feedback.helpTextSeparator")}{" "}
-                <a className="text-primary underline underline-offset-4" href="https://docs.lobbystack.com">
+                <a
+                  className="text-primary underline underline-offset-4"
+                  href="https://docs.lobbystack.com"
+                  rel="noreferrer"
+                  target="_blank"
+                >
                   {t("feedback.docsLink")}
                 </a>
               </p>
@@ -127,6 +132,8 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
       <a
         className="text-sm font-medium text-muted-foreground hover:text-foreground"
         href="https://docs.lobbystack.com"
+        rel="noreferrer"
+        target="_blank"
       >
         {t("feedback.helpCenter")}
       </a>

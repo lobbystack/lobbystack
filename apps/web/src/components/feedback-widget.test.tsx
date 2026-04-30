@@ -73,9 +73,9 @@ describe("FeedbackWidget", () => {
 
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Contact us" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Help Center" }).getAttribute("href")).toBe(
-      "https://docs.lobbystack.com",
-    );
+    const helpCenterLink = screen.getByRole("link", { name: "Help Center" });
+    expect(helpCenterLink.getAttribute("href")).toBe("https://docs.lobbystack.com");
+    expect(helpCenterLink.getAttribute("target")).toBe("_blank");
   });
 
   it("keeps send disabled for an empty message", async () => {
