@@ -1,22 +1,30 @@
 #navbar a[href="https://github.com/morencyr/LobbyStack"],
-navbar-link[href="https://github.com/morencyr/LobbyStack"] {
+navbar-link[href="https://github.com/morencyr/LobbyStack"],
+navbar-link:has(a[href="https://github.com/morencyr/LobbyStack"]),
+#navbar a[href="https://app.lobbystack.com/login"],
+navbar-link[href="https://app.lobbystack.com/login"],
+navbar-link:has(a[href="https://app.lobbystack.com/login"]) {
   min-width: auto !important;
   width: auto !important;
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
+  font-weight: 400 !important;
 }
 
 #navbar a[href="https://github.com/morencyr/LobbyStack"] span,
 #navbar a[href="https://github.com/morencyr/LobbyStack"] p,
 navbar-link[href="https://github.com/morencyr/LobbyStack"] span,
-navbar-link[href="https://github.com/morencyr/LobbyStack"] p {
+navbar-link[href="https://github.com/morencyr/LobbyStack"] p,
+navbar-link:has(a[href="https://github.com/morencyr/LobbyStack"]) span,
+navbar-link:has(a[href="https://github.com/morencyr/LobbyStack"]) p {
   display: none !important;
 }
 
 #navbar a[href="https://github.com/morencyr/LobbyStack"] svg,
-navbar-link[href="https://github.com/morencyr/LobbyStack"] svg {
+navbar-link[href="https://github.com/morencyr/LobbyStack"] svg,
+navbar-link:has(a[href="https://github.com/morencyr/LobbyStack"]) svg {
   margin: 0 !important;
 }
 
