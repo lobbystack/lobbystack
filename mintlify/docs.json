@@ -19,6 +19,10 @@
   "navbar": {
     "links": [
       {
+        "label": "Lobbystack.com",
+        "href": "https://lobbystack.com"
+      },
+      {
         "label": "",
         "icon": "github",
         "href": "https://github.com/morencyr/LobbyStack"
@@ -49,7 +53,6 @@
     "tabs": [
       {
         "tab": "Lobbystack.com",
-        "href": "https://lobbystack.com",
         "groups": [
           {
             "group": "Get started",
