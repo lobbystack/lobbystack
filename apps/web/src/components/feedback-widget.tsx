@@ -1,7 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useMutation } from "convex/react";
-import { MessageSquarePlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -75,7 +74,6 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
             />
           }
         >
-          <MessageSquarePlus data-icon="inline-start" />
           {t("feedback.trigger")}
         </PopoverTrigger>
         <PopoverContent
