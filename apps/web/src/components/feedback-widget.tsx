@@ -71,7 +71,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
               aria-label={t("feedback.trigger")}
               size="sm"
               type="button"
-              variant="secondary"
+              variant="outline"
             />
           }
         >
