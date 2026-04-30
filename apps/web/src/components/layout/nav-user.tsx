@@ -180,7 +180,7 @@ export function NavUser({
                     onFocus={() => void crownControls.start("animate")}
                     onMouseEnter={() => void crownControls.start("animate")}
                     onMouseLeave={() => void crownControls.start("normal")}
-                    render={<Link to="/settings/billing" />}
+                    render={<Link to="/settings/plan" />}
                   >
                     <CrownAnimatedIcon controls={crownControls} />
                     Upgrade to Pro

@@ -1190,8 +1190,8 @@ export const startCheckout = action({
         ? { customerName: checkoutContext.billingContactName }
         : {}),
       products: getTargetProductIds(args.target),
-      successUrl: new URL("/settings/billing?checkout=success", siteUrl).toString(),
-      returnUrl: new URL("/settings/billing", siteUrl).toString(),
+      successUrl: new URL("/settings/plan?checkout=success", siteUrl).toString(),
+      returnUrl: new URL("/settings/plan", siteUrl).toString(),
       embedOrigin: siteUrl.origin,
       customerMetadata: {
         billingKey: checkoutContext.billingKey,
@@ -1232,7 +1232,7 @@ export const openPortal = action({
     const siteUrl = getBillingSiteUrl();
     const session = await createPolarClient().customerSessions.create({
       externalCustomerId: customer.externalId,
-      returnUrl: new URL("/settings/billing", siteUrl).toString(),
+      returnUrl: new URL("/settings/plan", siteUrl).toString(),
     });
 
     return { url: session.customerPortalUrl };

@@ -181,7 +181,7 @@ describe("AppSidebar", () => {
     await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
 
     const upgradeLink = await screen.findByRole("menuitem", { name: "Upgrade to Pro" });
-    expect(upgradeLink.getAttribute("href")).toBe("/settings/billing");
+    expect(upgradeLink.getAttribute("href")).toBe("/settings/plan");
   });
 
   it("replaces the billing action with a theme toggle", async () => {

@@ -14,7 +14,7 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "header.title": "Settings",
         "sections.usage": "Usage",
-        "sections.billing": "Billing",
+        "sections.billing": "Plan",
         "sections.business": "Team",
         "sections.appearance": "Preferences",
         "sections.notifications": "Notifications",
@@ -32,7 +32,7 @@ function renderSettingsShell(initialEntry: string) {
         <Route element={<SettingsLayout businessId={businessId} />} path="/settings">
           <Route element={<Navigate replace to="/settings/usage" />} index />
           <Route element={<div>Usage content</div>} path="usage" />
-          <Route element={<div>Billing content</div>} path="billing" />
+          <Route element={<div>Plan content</div>} path="plan" />
           <Route element={<div>Team content</div>} path="team" />
           <Route element={<div>Appearance content</div>} path="appearance" />
           <Route element={<div>Notifications content</div>} path="notifications" />
@@ -63,8 +63,8 @@ describe("SettingsLayout", () => {
     expect(screen.getByRole("link", { name: "Usage" }).getAttribute("href")).toBe(
       "/settings/usage",
     );
-    expect(screen.getByRole("link", { name: "Billing" }).getAttribute("href")).toBe(
-      "/settings/billing",
+    expect(screen.getByRole("link", { name: "Plan" }).getAttribute("href")).toBe(
+      "/settings/plan",
     );
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe(
       "/settings/team",

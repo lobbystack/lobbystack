@@ -6,14 +6,14 @@
   "layout": {
     "businessDescription": "Gérez les détails de votre compte et vos identifiants de connexion.",
     "integrationsDescription": "Connectez vos outils et applications préférés.",
-    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité de facturation récente.",
+    "billingDescription": "Consultez votre forfait hébergé, vos modules complémentaires et votre activité récente.",
     "usageDescription": "Suivez l'utilisation hébergée, les limites du forfait et la date de réinitialisation de la période en cours."
   },
   "sections": {
     "business": "Équipe",
     "appearance": "Préférences",
     "integrations": "Intégrations",
-    "billing": "Facturation",
+    "billing": "Forfait",
     "usage": "Utilisation",
     "notifications": "Notifications"
   },
@@ -161,7 +161,7 @@
         "suspended": "Suspendu"
       },
       "actions": {
-        "backToBilling": "Facturation",
+        "backToBilling": "Forfait",
         "save": "Enregistrer le brouillon",
         "saving": "Enregistrement...",
         "submit": "Soumettre l'inscription",

@@ -6,14 +6,14 @@
   "layout": {
     "businessDescription": "Manage your account details and sign-in credentials.",
     "integrationsDescription": "Connect your favorite tools and applications.",
-    "billingDescription": "Review your hosted plan, add-ons, and recent billing activity.",
+    "billingDescription": "Review your hosted plan, add-ons, and recent activity.",
     "usageDescription": "Track hosted usage, plan limits, and reset timing for this billing period."
   },
   "sections": {
     "business": "Team",
     "appearance": "Preferences",
     "integrations": "Integrations",
-    "billing": "Billing",
+    "billing": "Plan",
     "usage": "Usage",
     "notifications": "Notifications"
   },
@@ -161,7 +161,7 @@
         "suspended": "Suspended"
       },
       "actions": {
-        "backToBilling": "Billing",
+        "backToBilling": "Plan",
         "save": "Save draft",
         "saving": "Saving...",
         "submit": "Submit registration",

@@ -344,7 +344,7 @@ function WorkspaceShell() {
                     <Navigate replace to="/settings" />
                   )
                 }
-                path="billing"
+                path="plan"
               />
               <Route
                 element={
@@ -354,7 +354,7 @@ function WorkspaceShell() {
                     <Navigate replace to="/settings" />
                   )
                 }
-                path="billing/ai-sms-compliance"
+                path="plan/ai-sms-compliance"
               />
               <Route
                 element={

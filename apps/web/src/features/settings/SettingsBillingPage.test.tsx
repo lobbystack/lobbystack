@@ -358,7 +358,7 @@ function renderBillingCompliancePage(input: {
   mockQueries(input);
 
   return render(
-    <MemoryRouter initialEntries={["/settings/billing/ai-sms-compliance"]}>
+    <MemoryRouter initialEntries={["/settings/plan/ai-sms-compliance"]}>
       <TooltipProvider>
         <SettingsBillingCompliancePage businessId={businessId} />
       </TooltipProvider>
@@ -612,7 +612,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       0,
     );
     const registerLink = screen.getByRole("link", { name: "billing.addon.register" });
-    expect(registerLink.getAttribute("href")).toBe("/settings/billing/ai-sms-compliance");
+    expect(registerLink.getAttribute("href")).toBe("/settings/plan/ai-sms-compliance");
   });
 
   it("renders the hosted AI SMS compliance page for eligible workspaces", () => {
@@ -644,7 +644,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       screen
         .getByRole("link", { name: "billing.compliance.actions.backToBilling" })
         .getAttribute("href"),
-    ).toBe("/settings/billing");
+    ).toBe("/settings/plan");
   });
 
   it("keeps the register action hidden for non-admin members", () => {

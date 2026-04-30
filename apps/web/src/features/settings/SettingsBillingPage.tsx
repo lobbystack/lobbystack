@@ -1194,7 +1194,7 @@ function AddonsSection({
     <Button
       size="sm"
       variant="outline"
-      render={<Link to="/settings/billing/ai-sms-compliance" />}
+      render={<Link to="/settings/plan/ai-sms-compliance" />}
     >
       {t("billing.addon.register")}
     </Button>
@@ -2590,7 +2590,7 @@ export function SettingsBillingCompliancePage(props: SettingsBillingPageProps) {
   }
 
   if (!shouldFetchCompliance) {
-    return <Navigate replace to="/settings/billing" />;
+    return <Navigate replace to="/settings/plan" />;
   }
 
   if (!compliance) {
@@ -2601,7 +2601,7 @@ export function SettingsBillingCompliancePage(props: SettingsBillingPageProps) {
     <div className="flex w-full flex-col gap-10">
       <Link
         className="type-body-muted inline-flex w-fit items-center gap-1.5 transition-colors hover:text-foreground"
-        to="/settings/billing"
+        to="/settings/plan"
       >
         <ArrowLeft className="size-4" />
         {t("billing.compliance.actions.backToBilling")}
