@@ -1587,6 +1587,75 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("does not deliver a reminder after the notification was canceled", async () => {
+    const t = createTestHarness();
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-notification-canceled-reminder",
+        name: "Twilio Notification Canceled Reminder",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550104",
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550155",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut and Style",
+        slug: "cut-and-style-canceled-reminder",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "canceled",
+      });
+    });
+
+    await expect(
+      t.action(internal.notifications.reminders.deliverNotification, {
+        notificationId,
+      }),
+    ).rejects.toThrow("Notification is no longer pending.");
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const notification = await ctx.db.get(notificationId);
+      expect(notification?.status).toBe("canceled");
+      expect(notification?.providerStatus).toBeUndefined();
+    });
+  });
+
   it("keeps a one-segment GSM reminder sendable when only one hosted segment remains", async () => {
     const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
