@@ -49,8 +49,13 @@
             "group": "Agent",
             "pages": [
               "agent/overview",
-              "agent/ai-settings",
-              "agent/ai-settings/appointment-changes",
+              {
+                "group": "AI settings",
+                "pages": [
+                  "agent/ai-settings",
+                  "agent/ai-settings/appointment-changes"
+                ]
+              },
               "agent/knowledge",
               "agent/services",
               "agent/rules"
