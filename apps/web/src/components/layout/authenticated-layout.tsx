@@ -71,11 +71,8 @@ export function AuthenticatedLayout({
       >
         <SiteHeader fixed />
         {!isLoading ? (
-          <div className="relative z-40 hidden h-0 justify-end md:flex">
-            <FeedbackWidget
-              className="mt-4 mr-4"
-              {...(businessId ? { businessId } : {})}
-            />
+          <div className="absolute top-4 right-4 z-40 hidden md:block">
+            <FeedbackWidget {...(businessId ? { businessId } : {})} />
           </div>
         ) : null}
         {children}
