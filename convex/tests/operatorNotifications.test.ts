@@ -1,14 +1,22 @@
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest, type TestConvex } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import schema from "../schema";
 import { modules } from "../test.setup";
+import { TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE } from "../users/preferences";
 
 const convexModules = modules;
 
 type ConvexHarness = TestConvex<typeof schema>;
+
+function createConvexHarness(): ConvexHarness {
+  const t = convexTest(schema, convexModules);
+  registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
+  return t;
+}
 
 async function seedMember(
   t: ConvexHarness,
@@ -60,7 +68,7 @@ async function seedMember(
 
 describe("operator notification preferences", () => {
   it("returns email-on, SMS-off defaults when no preference row exists", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const seeded = await seedMember(t, {
       subject: "operator-defaults",
       email: "operator@example.com",
@@ -82,7 +90,7 @@ describe("operator notification preferences", () => {
   });
 
   it("updates only the authenticated member preferences for a business", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const first = await seedMember(t, {
       subject: "operator-one",
       email: "one@example.com",
@@ -126,7 +134,7 @@ describe("operator notification preferences", () => {
   });
 
   it("rejects SMS preferences when the operator phone is missing or unverified", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const seeded = await seedMember(t, {
       subject: "operator-without-phone",
       email: "operator@example.com",
@@ -160,7 +168,7 @@ describe("operator notification preferences", () => {
     process.env.TWILIO_ALERT_SMS_FROM = "";
 
     try {
-      const t = convexTest(schema, convexModules);
+      const t = createConvexHarness();
       const seeded = await seedMember(t, {
         subject: "operator-without-alert-sender",
         email: "operator@example.com",
@@ -192,8 +200,75 @@ describe("operator notification preferences", () => {
     }
   });
 
+  it("rate limits repeated test notification attempts per operator and channel", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+    const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+
+    try {
+      const t = createConvexHarness();
+      const seeded = await seedMember(t, {
+        subject: "operator-test-rate-limit",
+        email: "operator@example.com",
+        phone: "+15145550123",
+        phoneVerificationTime: Date.now(),
+      });
+
+      await t.run(async (ctx) => {
+        await ctx.db.insert("platform_sms_senders", {
+          role: "platform_alert",
+          label: "Test alert sender",
+          e164: "+15145550100",
+          status: "active",
+          smsEnabled: true,
+        });
+      });
+
+      for (let index = 0; index < 5; index += 1) {
+        try {
+          await seeded.authed.action(api.users.preferences.sendTestOperatorNotification, {
+            businessId: seeded.businessId,
+            channel: "sms",
+          });
+        } catch (error) {
+          expect(error instanceof Error ? error.message : String(error)).not.toContain(
+            TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE,
+          );
+        }
+      }
+
+      await expect(
+        seeded.authed.action(api.users.preferences.sendTestOperatorNotification, {
+          businessId: seeded.businessId,
+          channel: "sms",
+        }),
+      ).rejects.toThrow(TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"scope":"dashboard_abuse_control"'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"limiter":"dashboardTestNotificationPerUserPerHour"'),
+      );
+    } finally {
+      warnSpy.mockRestore();
+      if (originalTwilioAccountSid === undefined) {
+        delete process.env.TWILIO_ACCOUNT_SID;
+      } else {
+        process.env.TWILIO_ACCOUNT_SID = originalTwilioAccountSid;
+      }
+      if (originalTwilioAuthToken === undefined) {
+        delete process.env.TWILIO_AUTH_TOKEN;
+      } else {
+        process.env.TWILIO_AUTH_TOKEN = originalTwilioAuthToken;
+      }
+    }
+  });
+
   it("enqueues one delivery per event key and skips disabled preferences", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const seeded = await seedMember(t, {
       subject: "operator-dispatch",
       email: "operator@example.com",
@@ -260,7 +335,7 @@ describe("operator notification preferences", () => {
   });
 
   it("reserves and releases alert SMS usage for operator SMS delivery attempts", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const seeded = await seedMember(t, {
       subject: "operator-sms-dispatch",
       phone: "+15145550123",
@@ -329,7 +404,7 @@ describe("operator notification preferences", () => {
   });
 
   it("updates operator SMS delivery rows from Twilio status callbacks", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const seeded = await seedMember(t, {
       subject: "operator-sms-status",
       email: "operator@example.com",
@@ -367,8 +442,76 @@ describe("operator notification preferences", () => {
     });
   });
 
+  it("records actual Twilio pricing for operator SMS deliveries", async () => {
+    const t = createConvexHarness();
+    const seeded = await seedMember(t, {
+      subject: "operator-sms-pricing",
+      email: "operator@example.com",
+      phone: "+15145550123",
+      phoneVerificationTime: Date.now(),
+    });
+    const deliveryId = await t.run(async (ctx) => {
+      return await ctx.db.insert("operator_notification_deliveries", {
+        businessId: seeded.businessId,
+        userId: seeded.userId,
+        eventKind: "test",
+        eventKey: "test:sms-pricing",
+        channel: "sms",
+        status: "sent",
+        subject: "Test",
+        body: "Test body",
+        providerMessageId: "SM_OPERATOR_PRICING",
+        createdAt: new Date().toISOString(),
+      });
+    });
+    const usageSourceKey = `alert_sms:operator_notification:${String(deliveryId)}`;
+
+    await t.mutation(internal.billing.recordAlertSmsUsage, {
+      businessId: seeded.businessId,
+      sourceKey: usageSourceKey,
+      quantity: 1,
+      recordedAt: "2026-04-29T11:59:00.000Z",
+    });
+
+    await t.mutation(internal.integrations.twilioMessageStatus.recordProviderPricing, {
+      providerMessageSid: "SM_OPERATOR_PRICING",
+      providerUpdatedAt: "2026-04-29T12:00:00.000Z",
+      providerPrice: -0.015,
+      providerPriceUnit: "usd",
+      providerCostUsd: 0.015,
+      providerNumSegments: 2,
+    });
+
+    await t.run(async (ctx) => {
+      const delivery = await ctx.db.get(deliveryId);
+      expect(delivery?.providerPrice).toBe(-0.015);
+      expect(delivery?.providerPriceUnit).toBe("usd");
+      expect(delivery?.providerCostUsd).toBe(0.015);
+      expect(delivery?.providerNumSegments).toBe(2);
+
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", seeded.businessId).eq("sourceKey", usageSourceKey),
+        )
+        .unique();
+      expect(usageEvent?.quantity).toBe(2);
+
+      const unitEconomicsEvent = await ctx.db
+        .query("unit_economics_events")
+        .withIndex("by_operator_notification_delivery_id", (q) =>
+          q.eq("operatorNotificationDeliveryId", deliveryId),
+        )
+        .unique();
+      expect(unitEconomicsEvent?.eventKind).toBe("notification_provider");
+      expect(unitEconomicsEvent?.costUsd).toBe(0.015);
+      expect(unitEconomicsEvent?.quantity).toBe(2);
+      expect(unitEconomicsEvent?.quantityUnit).toBe("segment");
+    });
+  });
+
   it("sends one digest per user, business, and local date and skips disabled digests", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const enabled = await seedMember(t, {
       subject: "operator-digest-enabled",
       email: "digest@example.com",

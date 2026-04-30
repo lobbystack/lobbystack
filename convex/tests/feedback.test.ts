@@ -1,12 +1,20 @@
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest, type TestConvex } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
+import { FEEDBACK_RATE_LIMIT_MESSAGE } from "../feedback";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
 const convexModules = modules;
 type ConvexHarness = TestConvex<typeof schema>;
+
+function createConvexHarness(): ConvexHarness {
+  const t = convexTest(schema, convexModules);
+  registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
+  return t;
+}
 
 async function flushImmediateScheduledFunctions(t: ConvexHarness): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -46,7 +54,7 @@ async function seedUserAndBusiness(
 
 describe("dashboard feedback", () => {
   it("lets an authenticated business member submit feedback", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const subject = "feedback-owner";
     const { businessId, userId } = await seedUserAndBusiness(t, { subject });
 
@@ -78,7 +86,7 @@ describe("dashboard feedback", () => {
   });
 
   it("rejects unauthenticated feedback", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
 
     await expect(
       t.mutation(api.feedback.submit, {
@@ -88,7 +96,7 @@ describe("dashboard feedback", () => {
   });
 
   it("rejects feedback for a business the user cannot access", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const subject = "feedback-non-member";
     const { businessId } = await seedUserAndBusiness(t, {
       subject,
@@ -104,7 +112,7 @@ describe("dashboard feedback", () => {
   });
 
   it("rejects empty and over-limit messages", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const subject = "feedback-validation";
     await seedUserAndBusiness(t, { subject });
     const asOwner = t.withIdentity({ subject });
@@ -123,7 +131,7 @@ describe("dashboard feedback", () => {
   });
 
   it("updates feedback email delivery status", async () => {
-    const t = convexTest(schema, convexModules);
+    const t = createConvexHarness();
     const subject = "feedback-email-status";
     const { businessId, userId } = await seedUserAndBusiness(t, { subject });
     const feedbackSubmissionId = await t.run(async (ctx) => {
@@ -163,5 +171,40 @@ describe("dashboard feedback", () => {
         emailError: "Resend failed",
       });
     });
+  });
+
+  it("rate limits repeated submissions from the same user", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const t = createConvexHarness();
+    const subject = "feedback-rate-limit";
+    const { businessId } = await seedUserAndBusiness(t, { subject });
+    const asOwner = t.withIdentity({ subject });
+
+    try {
+      for (let index = 0; index < 5; index += 1) {
+        await asOwner.mutation(api.feedback.submit, {
+          businessId,
+          message: `Feedback idea ${index + 1}`,
+        });
+      }
+
+      await expect(
+        asOwner.mutation(api.feedback.submit, {
+          businessId,
+          message: "One too many ideas at once.",
+        }),
+      ).rejects.toThrow(FEEDBACK_RATE_LIMIT_MESSAGE);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"scope":"dashboard_abuse_control"'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"limiter":"dashboardFeedbackSubmissionPerUserPerHour"'),
+      );
+
+      await flushImmediateScheduledFunctions(t);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });

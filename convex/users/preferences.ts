@@ -4,6 +4,7 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { action, internalQuery, mutation, query } from "../_generated/server";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../lib/auth";
+import { dashboardAbuseRateLimiter } from "../lib/components";
 import {
   DEFAULT_DAILY_SUMMARY_SEND_TIME,
   buildDefaultOperatorNotificationEventPreferences,
@@ -16,6 +17,8 @@ import {
 } from "../lib/operatorNotificationPreferences";
 
 const localeValidator = v.union(v.literal("en"), v.literal("fr"));
+export const TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE =
+  "Too many test notifications. Please try again later.";
 
 type NotificationPreferencesPayload = {
   emailEnabled: boolean;
@@ -112,6 +115,49 @@ function assertSmsPreferencesAllowed(input: {
     (input.smsEnabled || hasEnabledSmsEventPreference(input.eventPreferences))
   ) {
     throw new Error(getSmsPreferenceErrorMessage(input.smsUnavailableReason));
+  }
+}
+
+function logDashboardRateLimitBlocked(input: {
+  limiter: string;
+  reason: string;
+  userId: Id<"users">;
+  businessId: Id<"businesses">;
+  channel: OperatorNotificationChannel;
+}) {
+  console.warn(
+    JSON.stringify({
+      scope: "dashboard_abuse_control",
+      decision: "blocked",
+      ...input,
+    }),
+  );
+}
+
+async function assertTestNotificationAllowed(
+  ctx: Parameters<typeof dashboardAbuseRateLimiter.limit>[0],
+  input: {
+    userId: Id<"users">;
+    businessId: Id<"businesses">;
+    channel: OperatorNotificationChannel;
+  },
+): Promise<void> {
+  const limit = await dashboardAbuseRateLimiter.limit(
+    ctx,
+    "dashboardTestNotificationPerUserPerHour",
+    {
+      key: `${String(input.userId)}:${input.channel}`,
+    },
+  );
+  if (!limit.ok) {
+    logDashboardRateLimitBlocked({
+      limiter: "dashboardTestNotificationPerUserPerHour",
+      reason: "rate_limit_user_channel",
+      userId: input.userId,
+      businessId: input.businessId,
+      channel: input.channel,
+    });
+    throw new Error(TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE);
   }
 }
 
@@ -289,6 +335,11 @@ export const sendTestOperatorNotification = action({
         throw new Error("Alert SMS quota reached.");
       }
     }
+    await assertTestNotificationAllowed(ctx, {
+      userId: context.userId,
+      businessId: context.businessId,
+      channel: args.channel,
+    });
 
     const result: { sent: boolean; error?: string } = await ctx.runAction(
       internal.operatorNotifications.dispatchDirectNotification,

@@ -3,12 +3,16 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { requireCurrentUser, requireMembership } from "./lib/auth";
+import { dashboardAbuseRateLimiter } from "./lib/components";
 import { sendTransactionalEmail } from "./lib/providers/email";
 
 const MAX_FEEDBACK_MESSAGE_LENGTH = 2_000;
 const MAX_PAGE_PATH_LENGTH = 500;
 const MAX_USER_AGENT_LENGTH = 1_000;
+export const FEEDBACK_RATE_LIMIT_MESSAGE =
+  "Too many feedback submissions. Please try again later.";
 
 type FeedbackSubmissionForDelivery = Doc<"feedback_submissions">;
 
@@ -81,6 +85,67 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function logDashboardRateLimitBlocked(input: {
+  limiter: string;
+  reason: string;
+  userId: Id<"users">;
+  businessId?: Id<"businesses">;
+}) {
+  console.warn(
+    JSON.stringify({
+      scope: "dashboard_abuse_control",
+      decision: "blocked",
+      ...input,
+    }),
+  );
+}
+
+async function assertFeedbackSubmissionAllowed(
+  ctx: MutationCtx,
+  input: {
+    userId: Id<"users">;
+    businessId?: Id<"businesses">;
+  },
+): Promise<void> {
+  const userLimit = await dashboardAbuseRateLimiter.limit(
+    ctx,
+    "dashboardFeedbackSubmissionPerUserPerHour",
+    {
+      key: String(input.userId),
+    },
+  );
+  if (!userLimit.ok) {
+    logDashboardRateLimitBlocked({
+      limiter: "dashboardFeedbackSubmissionPerUserPerHour",
+      reason: "rate_limit_user",
+      userId: input.userId,
+      ...(input.businessId ? { businessId: input.businessId } : {}),
+    });
+    throw new Error(FEEDBACK_RATE_LIMIT_MESSAGE);
+  }
+
+  if (!input.businessId) {
+    return;
+  }
+
+  const businessLimit = await dashboardAbuseRateLimiter.limit(
+    ctx,
+    "dashboardFeedbackSubmissionPerBusinessPerHour",
+    {
+      key: String(input.businessId),
+    },
+  );
+  if (!businessLimit.ok) {
+    logDashboardRateLimitBlocked({
+      limiter: "dashboardFeedbackSubmissionPerBusinessPerHour",
+      reason: "rate_limit_business",
+      userId: input.userId,
+      businessId: input.businessId,
+    });
+    throw new Error(FEEDBACK_RATE_LIMIT_MESSAGE);
+  }
+}
+
 export const submit = mutation({
   args: {
     businessId: v.optional(v.id("businesses")),
@@ -101,6 +166,10 @@ export const submit = mutation({
         throw new Error("Business not found.");
       }
     }
+    await assertFeedbackSubmissionAllowed(ctx, {
+      userId: user._id,
+      ...(business ? { businessId: business._id } : {}),
+    });
 
     const now = new Date().toISOString();
     const pagePath = normalizeOptionalText(args.pagePath, MAX_PAGE_PATH_LENGTH);

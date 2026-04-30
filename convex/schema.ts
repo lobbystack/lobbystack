@@ -835,6 +835,10 @@ export default defineSchema({
     providerStatus: v.optional(v.string()),
     providerErrorCode: v.optional(v.string()),
     providerUpdatedAt: v.optional(v.string()),
+    providerPrice: v.optional(v.number()),
+    providerPriceUnit: v.optional(v.string()),
+    providerCostUsd: v.optional(v.number()),
+    providerNumSegments: v.optional(v.number()),
     digestForDate: v.optional(v.string()),
     createdAt: v.string(),
   })
@@ -860,6 +864,7 @@ export default defineSchema({
     conversationId: v.optional(v.id("conversations")),
     messageId: v.optional(v.id("messages")),
     notificationId: v.optional(v.id("notifications")),
+    operatorNotificationDeliveryId: v.optional(v.id("operator_notification_deliveries")),
   })
     .index("by_event_key", ["eventKey"])
     .index("by_business_id_and_month_key_and_occurred_at", [
@@ -875,6 +880,7 @@ export default defineSchema({
     .index("by_call_id", ["callId"])
     .index("by_message_id", ["messageId"])
     .index("by_notification_id", ["notificationId"])
+    .index("by_operator_notification_delivery_id", ["operatorNotificationDeliveryId"])
     .index("by_conversation_id", ["conversationId"]),
 
   unit_economics_rollups: defineTable({

@@ -65,6 +65,7 @@ type CostEventInput = {
   conversationId?: Id<"conversations">;
   messageId?: Id<"messages">;
   notificationId?: Id<"notifications">;
+  operatorNotificationDeliveryId?: Id<"operator_notification_deliveries">;
 };
 
 function toMonthKey(value: string): string {
@@ -198,6 +199,12 @@ function buildSmsProviderEventKey(messageId: Id<"messages">): string {
 
 function buildNotificationProviderEventKey(notificationId: Id<"notifications">): string {
   return `notification_provider:notification:${String(notificationId)}`;
+}
+
+function buildOperatorNotificationProviderEventKey(
+  operatorNotificationDeliveryId: Id<"operator_notification_deliveries">,
+): string {
+  return `notification_provider:operator_notification:${String(operatorNotificationDeliveryId)}`;
 }
 
 function getCallOccurredAt(call: Pick<Doc<"calls">, "providerUpdatedAt" | "endedAt" | "startedAt">): string {
@@ -453,6 +460,9 @@ async function upsertCostEvent(
     ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
     ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
     ...(input.notificationId !== undefined ? { notificationId: input.notificationId } : {}),
+    ...(input.operatorNotificationDeliveryId !== undefined
+      ? { operatorNotificationDeliveryId: input.operatorNotificationDeliveryId }
+      : {}),
   };
 
   if (existing) {
@@ -869,6 +879,42 @@ export const recordNotificationProviderCost = internalMutation({
       costUsd: args.costUsd,
       provider: "twilio",
       notificationId: args.notificationId,
+      ...(args.numSegments !== undefined
+        ? {
+            quantity: args.numSegments,
+            quantityUnit: "segment" as const,
+          }
+        : {}),
+    });
+    await recomputeAffectedMonths(ctx, {
+      businessId: args.businessId,
+      monthKey: eventWrite.monthKey,
+      ...(eventWrite.previousMonthKey
+        ? { previousMonthKey: eventWrite.previousMonthKey }
+        : {}),
+    });
+    return null;
+  },
+});
+
+export const recordOperatorNotificationProviderCost = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    operatorNotificationDeliveryId: v.id("operator_notification_deliveries"),
+    occurredAt: v.string(),
+    costUsd: v.number(),
+    numSegments: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const eventWrite = await upsertCostEvent(ctx, {
+      businessId: args.businessId,
+      occurredAt: args.occurredAt,
+      eventKey: buildOperatorNotificationProviderEventKey(args.operatorNotificationDeliveryId),
+      eventKind: "notification_provider",
+      channel: "platform",
+      costUsd: args.costUsd,
+      provider: "twilio",
+      operatorNotificationDeliveryId: args.operatorNotificationDeliveryId,
       ...(args.numSegments !== undefined
         ? {
             quantity: args.numSegments,
