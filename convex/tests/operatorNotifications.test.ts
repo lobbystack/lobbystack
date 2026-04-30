@@ -155,6 +155,43 @@ describe("operator notification preferences", () => {
     ).rejects.toThrow(/verified phone number/i);
   });
 
+  it("marks SMS unavailable and rejects test SMS when no alert sender is configured", async () => {
+    const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
+    process.env.TWILIO_ALERT_SMS_FROM = "";
+
+    try {
+      const t = convexTest(schema, convexModules);
+      const seeded = await seedMember(t, {
+        subject: "operator-without-alert-sender",
+        email: "operator@example.com",
+        phone: "+15145550123",
+        phoneVerificationTime: Date.now(),
+      });
+
+      const preferences = await seeded.authed.query(
+        api.users.preferences.getNotificationPreferences,
+        { businessId: seeded.businessId },
+      );
+
+      expect(preferences.phoneVerified).toBe(true);
+      expect(preferences.canUseSms).toBe(false);
+      expect(preferences.smsUnavailableReason).toBe("sender_missing");
+
+      await expect(
+        seeded.authed.action(api.users.preferences.sendTestOperatorNotification, {
+          businessId: seeded.businessId,
+          channel: "sms",
+        }),
+      ).rejects.toThrow(/alert sms sender/i);
+    } finally {
+      if (originalTwilioAlertSmsFrom === undefined) {
+        delete process.env.TWILIO_ALERT_SMS_FROM;
+      } else {
+        process.env.TWILIO_ALERT_SMS_FROM = originalTwilioAlertSmsFrom;
+      }
+    }
+  });
+
   it("enqueues one delivery per event key and skips disabled preferences", async () => {
     const t = convexTest(schema, convexModules);
     const seeded = await seedMember(t, {

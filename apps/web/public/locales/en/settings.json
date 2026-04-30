@@ -562,6 +562,7 @@
     "toast": {
       "saveFailed": "Notification preferences were not saved.",
       "smsUnavailable": "Verify a phone number before enabling SMS notifications.",
+      "smsSenderUnavailable": "Configure an alert SMS sender before enabling SMS notifications.",
       "testEmailSent": "Test email sent.",
       "testSmsSent": "Test SMS sent.",
       "testFailed": "Unable to send the test notification."
@@ -576,7 +577,8 @@
       "sms": {
         "title": "SMS",
         "description": "Receive urgent operator alerts on your verified phone.",
-        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts."
+        "unverifiedDescription": "Add and verify a phone number on your account before enabling SMS alerts.",
+        "senderMissingDescription": "SMS alerts are unavailable until an alert SMS sender is configured for this workspace."
       }
     },
     "communication": {

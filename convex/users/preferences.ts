@@ -27,6 +27,7 @@ type NotificationPreferencesPayload = {
   phone: string | null;
   phoneVerified: boolean;
   canUseSms: boolean;
+  smsUnavailableReason: SmsUnavailableReason;
 };
 
 type NotificationActionContext = {
@@ -38,18 +39,49 @@ type NotificationActionContext = {
   phoneVerified: boolean;
 };
 
+type SmsUnavailableReason = "phone_unverified" | "sender_missing" | null;
+
+function getSmsUnavailableReason(input: {
+  user: Doc<"users">;
+  alertSmsSenderConfigured: boolean;
+}): SmsUnavailableReason {
+  if (!input.user.phone || !input.user.phoneVerificationTime) {
+    return "phone_unverified";
+  }
+  if (!input.alertSmsSenderConfigured) {
+    return "sender_missing";
+  }
+  return null;
+}
+
+function isAlertSmsSenderConfigured(input: {
+  fromPhoneNumber?: string;
+  twilioMessagingServiceSid?: string;
+}): boolean {
+  return Boolean(input.fromPhoneNumber || input.twilioMessagingServiceSid);
+}
+
+function getSmsPreferenceErrorMessage(reason: SmsUnavailableReason): string {
+  if (reason === "sender_missing") {
+    return "An alert SMS sender is required for SMS notifications.";
+  }
+  return "A verified phone number is required for SMS notifications.";
+}
+
 function resolveNotificationPreferencesPayload(input: {
   user: Doc<"users">;
   preferences: Doc<"operator_notification_preferences"> | null;
+  smsUnavailableReason: SmsUnavailableReason;
 }): NotificationPreferencesPayload {
   const phoneVerified = Boolean(input.user.phone && input.user.phoneVerificationTime);
+  const canUseSms = input.smsUnavailableReason === null;
   const eventPreferences =
     input.preferences?.eventPreferences ?? buildDefaultOperatorNotificationEventPreferences();
 
   return {
     emailEnabled: input.preferences?.emailEnabled ?? true,
-    smsEnabled: phoneVerified ? (input.preferences?.smsEnabled ?? false) : false,
-    eventPreferences: phoneVerified
+    smsEnabled: canUseSms ? (input.preferences?.smsEnabled ?? false) : false,
+    eventPreferences: canUseSms
       ? eventPreferences
       : {
           voiceMessage: { ...eventPreferences.voiceMessage, sms: false },
@@ -65,22 +97,21 @@ function resolveNotificationPreferencesPayload(input: {
     email: input.user.email ?? null,
     phone: input.user.phone ?? null,
     phoneVerified,
-    canUseSms: phoneVerified,
+    canUseSms,
+    smsUnavailableReason: input.smsUnavailableReason,
   };
 }
 
 function assertSmsPreferencesAllowed(input: {
-  user: Doc<"users">;
+  smsUnavailableReason: SmsUnavailableReason;
   smsEnabled: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
 }) {
   if (
-    !input.user.phone ||
-    !input.user.phoneVerificationTime
+    input.smsUnavailableReason !== null &&
+    (input.smsEnabled || hasEnabledSmsEventPreference(input.eventPreferences))
   ) {
-    if (input.smsEnabled || hasEnabledSmsEventPreference(input.eventPreferences)) {
-      throw new Error("A verified phone number is required for SMS notifications.");
-    }
+    throw new Error(getSmsPreferenceErrorMessage(input.smsUnavailableReason));
   }
 }
 
@@ -112,6 +143,10 @@ export const getNotificationPreferences = query({
   handler: async (ctx, args): Promise<NotificationPreferencesPayload> => {
     const user = await requireCurrentUser(ctx);
     await requireMembership(ctx, args.businessId);
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: args.businessId,
+      capability: "alert",
+    });
 
     const preferences = await ctx.db
       .query("operator_notification_preferences")
@@ -120,7 +155,14 @@ export const getNotificationPreferences = query({
       )
       .unique();
 
-    return resolveNotificationPreferencesPayload({ user, preferences });
+    return resolveNotificationPreferencesPayload({
+      user,
+      preferences,
+      smsUnavailableReason: getSmsUnavailableReason({
+        user,
+        alertSmsSenderConfigured: isAlertSmsSenderConfigured(smsPolicy),
+      }),
+    });
   },
 });
 
@@ -136,12 +178,20 @@ export const updateNotificationPreferences = mutation({
   handler: async (ctx, args): Promise<NotificationPreferencesPayload> => {
     const user = await ensureCurrentUser(ctx);
     await requireMembership(ctx, args.businessId);
+    const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+      businessId: args.businessId,
+      capability: "alert",
+    });
+    const smsUnavailableReason = getSmsUnavailableReason({
+      user,
+      alertSmsSenderConfigured: isAlertSmsSenderConfigured(smsPolicy),
+    });
     const dailySummarySendTime = normalizeDailySummarySendTime(
       args.dailySummarySendTime,
     );
 
     assertSmsPreferencesAllowed({
-      user,
+      smsUnavailableReason,
       smsEnabled: args.smsEnabled,
       eventPreferences: args.eventPreferences,
     });
@@ -176,7 +226,8 @@ export const updateNotificationPreferences = mutation({
       email: user.email ?? null,
       phone: user.phone ?? null,
       phoneVerified: Boolean(user.phone && user.phoneVerificationTime),
-      canUseSms: Boolean(user.phone && user.phoneVerificationTime),
+      canUseSms: smsUnavailableReason === null,
+      smsUnavailableReason,
     };
   },
 });
@@ -226,8 +277,20 @@ export const sendTestOperatorNotification = action({
     if (args.channel === "sms" && (!context.phone || !context.phoneVerified)) {
       throw new Error("A verified phone number is required for SMS notifications.");
     }
+    if (args.channel === "sms") {
+      const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
+        businessId: args.businessId,
+        capability: "alert",
+      });
+      if (!isAlertSmsSenderConfigured(smsPolicy)) {
+        throw new Error("An alert SMS sender is required before test SMS notifications can be sent.");
+      }
+      if (!smsPolicy.allowed) {
+        throw new Error("Alert SMS quota reached.");
+      }
+    }
 
-    const result: { sent: boolean } = await ctx.runAction(
+    const result: { sent: boolean; error?: string } = await ctx.runAction(
       internal.operatorNotifications.dispatchDirectNotification,
       {
         businessId: args.businessId,
@@ -241,7 +304,7 @@ export const sendTestOperatorNotification = action({
     );
 
     if (!result.sent) {
-      throw new Error("Unable to send the test notification.");
+      throw new Error(result.error ?? "Unable to send the test notification.");
     }
 
     return { channel: args.channel, sent: true };

@@ -63,6 +63,7 @@ function buildPreferences(overrides: Record<string, unknown> = {}) {
     phone: "+15145550123",
     phoneVerified: true,
     canUseSms: true,
+    smsUnavailableReason: null,
     ...overrides,
   };
 }
@@ -155,6 +156,7 @@ describe("SettingsNotificationsPage", () => {
         smsEnabled: false,
         phoneVerified: false,
         canUseSms: false,
+        smsUnavailableReason: "phone_unverified",
         phone: "+15145550123",
       }),
     );
@@ -171,6 +173,33 @@ describe("SettingsNotificationsPage", () => {
 
     expect(smsSwitch.getAttribute("data-disabled")).not.toBeNull();
     expect((smsTestButton as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("disables SMS controls when no alert sender is configured", async () => {
+    renderNotificationsPage(
+      buildPreferences({
+        smsEnabled: false,
+        phoneVerified: true,
+        canUseSms: false,
+        smsUnavailableReason: "sender_missing",
+      }),
+    );
+
+    expect(
+      await screen.findByText("settings:notifications.sources.sms.senderMissingDescription"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("switch", {
+        name: "settings:notifications.sources.sms.title",
+      }).getAttribute("data-disabled"),
+    ).not.toBeNull();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "settings:notifications.actions.testSms",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 
   it("sends test notifications and reports success", async () => {

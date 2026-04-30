@@ -478,6 +478,7 @@
     "toast": {
       "saveFailed": "Les préférences de notification n'ont pas été enregistrées.",
       "smsUnavailable": "Vérifiez un numéro de téléphone avant d'activer les notifications SMS.",
+      "smsSenderUnavailable": "Configurez un expéditeur SMS d'alerte avant d'activer les notifications SMS.",
       "testEmailSent": "Courriel de test envoyé.",
       "testSmsSent": "SMS de test envoyé.",
       "testFailed": "Impossible d'envoyer la notification de test."
@@ -492,7 +493,8 @@
       "sms": {
         "title": "SMS",
         "description": "Recevez les alertes opérateur urgentes sur votre téléphone vérifié.",
-        "unverifiedDescription": "Ajoutez et vérifiez un numéro de téléphone dans votre compte avant d'activer les alertes SMS."
+        "unverifiedDescription": "Ajoutez et vérifiez un numéro de téléphone dans votre compte avant d'activer les alertes SMS.",
+        "senderMissingDescription": "Les alertes SMS sont indisponibles tant qu'un expéditeur SMS d'alerte n'est pas configuré pour cet espace de travail."
       }
     },
     "communication": {

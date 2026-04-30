@@ -57,6 +57,8 @@ type NotificationPreferencesState = {
   dailySummarySendTime: string;
 };
 
+type SmsUnavailableReason = "phone_unverified" | "sender_missing" | null;
+
 const communicationEvents: Array<NotificationEventKey> = [
   "voiceMessage",
   "pausedSms",
@@ -105,7 +107,19 @@ export function SettingsNotificationsPage({
   }, [remotePreferences]);
 
   const canUseSms = remotePreferences?.canUseSms ?? false;
+  const smsUnavailableReason: SmsUnavailableReason =
+    remotePreferences?.smsUnavailableReason ?? null;
   const isLoading = remotePreferences === undefined || draft === null;
+
+  function showSmsUnavailableToast(): void {
+    toast.error(
+      t(
+        smsUnavailableReason === "sender_missing"
+          ? "settings:notifications.toast.smsSenderUnavailable"
+          : "settings:notifications.toast.smsUnavailable",
+      ),
+    );
+  }
 
   function persistPreferences(next: NotificationPreferencesState): void {
     const previous = draft;
@@ -114,7 +128,7 @@ export function SettingsNotificationsPage({
     }
 
     if (!canUseSms && next.smsEnabled) {
-      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      showSmsUnavailableToast();
       return;
     }
 
@@ -140,7 +154,7 @@ export function SettingsNotificationsPage({
       return;
     }
     if (channel === "sms" && checked && !canUseSms) {
-      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      showSmsUnavailableToast();
       return;
     }
 
@@ -159,7 +173,7 @@ export function SettingsNotificationsPage({
       return;
     }
     if (channel === "sms" && checked && !canUseSms) {
-      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      showSmsUnavailableToast();
       return;
     }
 
@@ -197,7 +211,7 @@ export function SettingsNotificationsPage({
 
   async function handleTestNotification(channel: NotificationChannel): Promise<void> {
     if (channel === "sms" && !canUseSms) {
-      toast.error(t("settings:notifications.toast.smsUnavailable"));
+      showSmsUnavailableToast();
       return;
     }
 
@@ -357,7 +371,11 @@ export function SettingsNotificationsPage({
                 <ItemDescription>
                   {canUseSms
                     ? t("settings:notifications.sources.sms.description")
-                    : t("settings:notifications.sources.sms.unverifiedDescription")}
+                    : t(
+                        smsUnavailableReason === "sender_missing"
+                          ? "settings:notifications.sources.sms.senderMissingDescription"
+                          : "settings:notifications.sources.sms.unverifiedDescription",
+                      )}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>

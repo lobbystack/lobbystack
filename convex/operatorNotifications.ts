@@ -447,7 +447,7 @@ async function deliverChannel(
     scheduledFor?: string;
     digestForDate?: string;
   },
-): Promise<{ attempted: boolean; sent: boolean }> {
+): Promise<{ attempted: boolean; sent: boolean; error?: string }> {
   const reservation: { deliveryId: Id<"operator_notification_deliveries">; created: boolean } =
     await ctx.runMutation(internal.operatorNotifications.reserveDelivery, {
       businessId: input.businessId,
@@ -484,13 +484,14 @@ async function deliverChannel(
     }
     return { attempted: true, sent: true };
   } catch (error) {
+    const errorMessage = deliveryErrorMessage(error);
     await ctx.runMutation(internal.operatorNotifications.markDeliveryFailed, {
       deliveryId: reservation.deliveryId,
-      error: deliveryErrorMessage(error),
+      error: errorMessage,
       providerStatus: "failed",
       providerUpdatedAt: new Date().toISOString(),
     });
-    return { attempted: true, sent: false };
+    return { attempted: true, sent: false, error: errorMessage };
   }
 }
 
@@ -575,7 +576,7 @@ export const dispatchDirectNotification = internalAction({
     body: v.string(),
     digestForDate: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<{ sent: boolean }> => {
+  handler: async (ctx, args): Promise<{ sent: boolean; error?: string }> => {
     const recipient: NotificationRecipient | null = await ctx.runQuery(
       internal.operatorNotifications.getDirectRecipient,
       {
@@ -609,7 +610,10 @@ export const dispatchDirectNotification = internalAction({
       ...(args.digestForDate !== undefined ? { digestForDate: args.digestForDate } : {}),
     });
 
-    return { sent: result.sent };
+    return {
+      sent: result.sent,
+      ...(result.error !== undefined ? { error: result.error } : {}),
+    };
   },
 });
 
