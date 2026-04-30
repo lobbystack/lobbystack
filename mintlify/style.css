@@ -25,9 +25,17 @@ navbar-link[href="https://github.com/morencyr/LobbyStack"] svg {
 [data-component-name="primary-header-button"],
 [data-component-name="primary-header-button"] * {
   color: #0b0b0d !important;
+  font-weight: 400 !important;
 }
 
 #topbar-cta-button:empty::before,
 [data-component-name="primary-header-button"]:empty::before {
   content: "Try for free";
+}
+
+#navbar .nav-tabs-item,
+#navbar .nav-tabs-item *,
+nav-tabs-item,
+nav-tabs-item * {
+  font-weight: 400 !important;
 }
