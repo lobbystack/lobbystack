@@ -167,6 +167,16 @@ export async function completeVoiceCall(input: {
   await postJson("/voice/call/complete", input);
 }
 
+export async function systemBlockContactForVoiceCall(input: {
+  callId: string;
+  blockedAt: string;
+}): Promise<{ blocked: boolean; contactId?: string; reason?: string }> {
+  return await postJson<{ blocked: boolean; contactId?: string; reason?: string }>(
+    "/voice/call/system-block-contact",
+    input,
+  );
+}
+
 export async function recordVoiceAiCost(input: {
   businessId: string;
   callId: string;

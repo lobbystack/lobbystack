@@ -118,7 +118,9 @@ export type VoiceToolName =
   | "checkAvailability"
   | "bookAppointment"
   | "transferCall"
-  | "takeMessage";
+  | "takeMessage"
+  | "endCall"
+  | "setCallHold";
 
 export const demoBusinessId = "demo-clinic";
 

@@ -686,6 +686,23 @@ export function recordToolExecutionFailure(
   });
 }
 
+export function recordAiDirectedCallEnd(
+  attributes?: OperationalAttributes & {
+    reason?: string;
+    severity?: string;
+    holdSecondsUsed?: number;
+    autoBlocked?: boolean;
+  },
+): void {
+  captureOperationalEvent({
+    event: "ops.voice.call_ended_by_ai",
+    properties: {
+      provider: "openai",
+      ...normalizeOperationalAttributes(attributes),
+    },
+  });
+}
+
 export function recordRecordingUploadFailure(
   attributes?: OperationalAttributes,
 ): void {

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createCallInactivityState,
+  getCallInactivityAction,
+  grantCallHold,
+  markAssistantResponseDone,
+  markCallerActivity,
+  markHoldExpiryCheckInSent,
+  markRealtimeIdleTimeout,
+} from "../realtime/callControl";
+import {
   estimateRealtimeTotalCostUsd,
   getRealtimeGenerationOutcome,
 } from "./mediaStream";
@@ -176,6 +185,83 @@ describe("getRealtimeGenerationOutcome", () => {
     expect(getRealtimeGenerationOutcome("failed")).toEqual({
       isError: true,
       error: "failed",
+    });
+  });
+});
+
+describe("call inactivity control", () => {
+  it("times out silent calls 75 seconds after assistant playback", () => {
+    let state = createCallInactivityState();
+    state = markAssistantResponseDone(state, 1_000);
+    state = markRealtimeIdleTimeout(state, 31_000);
+
+    expect(getCallInactivityAction(state, 31_000)).toEqual({
+      kind: "none",
+      nextCheckInMs: 45_000,
+    });
+    expect(getCallInactivityAction(state, 76_000)).toEqual({
+      kind: "silence_timeout",
+    });
+  });
+
+  it("suppresses the normal silence timeout during an active hold", () => {
+    let state = createCallInactivityState();
+    state = markAssistantResponseDone(state, 1_000);
+    const grant = grantCallHold(state, {
+      requestedDurationSeconds: 120,
+      reason: "Caller asked to check something.",
+      nowMs: 10_000,
+    });
+    state = grant.state;
+
+    expect(grant.result).toMatchObject({
+      ok: true,
+      grantedDurationSeconds: 120,
+    });
+    expect(getCallInactivityAction(state, 76_000)).toEqual({
+      kind: "none",
+      nextCheckInMs: 54_000,
+    });
+  });
+
+  it("checks in when a hold expires, then times out after the grace window", () => {
+    let state = createCallInactivityState();
+    state = grantCallHold(state, {
+      requestedDurationSeconds: 30,
+      reason: "Caller asked for a moment.",
+      nowMs: 1_000,
+    }).state;
+
+    expect(getCallInactivityAction(state, 31_000)).toEqual({
+      kind: "hold_expired_check_in",
+    });
+
+    state = markHoldExpiryCheckInSent(state, 31_000);
+    expect(getCallInactivityAction(state, 60_000)).toEqual({
+      kind: "none",
+      nextCheckInMs: 1_000,
+    });
+    expect(getCallInactivityAction(state, 61_000)).toEqual({
+      kind: "silence_timeout",
+    });
+  });
+
+  it("caller activity resets hold and silence state but preserves used hold budget", () => {
+    let state = createCallInactivityState();
+    state = grantCallHold(state, {
+      requestedDurationSeconds: 60,
+      reason: "Caller asked to look something up.",
+      nowMs: 1_000,
+    }).state;
+    state = markHoldExpiryCheckInSent(state, 61_000);
+    state = markCallerActivity(state);
+
+    expect(state).toMatchObject({
+      silenceWindowStartedAtMs: null,
+      silenceCheckInSent: false,
+      activeHoldExpiresAtMs: null,
+      holdExpiryCheckInSentAtMs: null,
+      holdSecondsUsed: 60,
     });
   });
 });

@@ -13,6 +13,12 @@ import {
   takeVoiceMessage,
   updateVoiceTransferState,
 } from "../convex/runtimeClient";
+import {
+  MAX_CUMULATIVE_HOLD_SECONDS,
+  MAX_SINGLE_HOLD_SECONDS,
+  type EndCallRequest,
+  type HoldGrantResult,
+} from "./callControl";
 
 function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
@@ -146,6 +152,17 @@ const transferCallSchema = z.object({
   reason: z.string().optional(),
 });
 
+const endCallSchema = z.object({
+  reason: z.enum(["caller_finished", "abuse", "silence_timeout"]),
+  message: z.string().min(1).max(500),
+  severity: z.enum(["borderline", "severe"]).optional(),
+});
+
+const setCallHoldSchema = z.object({
+  durationSeconds: z.number().int().min(1).max(600),
+  reason: z.string().min(1).max(500),
+});
+
 const takeMessageSchema = z.object({
   callerName: z.string().optional(),
   callbackPhone: z.string().optional(),
@@ -161,6 +178,8 @@ const searchKnowledgeSchema = z.object({
 export type ExecutedToolResult = {
   result: Record<string, unknown>;
   pendingTransferDestination?: string;
+  endCall?: EndCallRequest;
+  hold?: HoldGrantResult;
 };
 
 export async function executeVoiceTool(input: {
@@ -171,6 +190,9 @@ export async function executeVoiceTool(input: {
   callId?: string;
   conversationId?: string;
   callerPhone: string;
+  holdBudget?: {
+    remainingHoldSeconds: number;
+  };
 }): Promise<ExecutedToolResult> {
   const startedAt = Date.now();
   const attributes = {
@@ -345,6 +367,62 @@ export async function executeVoiceTool(input: {
                 reason: parsed.reason ?? "Caller requested a human handoff.",
               },
               pendingTransferDestination: input.snapshot.transferPolicy.transferNumber,
+            };
+          }
+          case "endCall": {
+            const parsed = endCallSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            return {
+              result: {
+                ok: true,
+                reason: parsed.reason,
+                message: parsed.message,
+                ...(parsed.severity !== undefined ? { severity: parsed.severity } : {}),
+              },
+              endCall: {
+                reason: parsed.reason,
+                message: parsed.message,
+                ...(parsed.severity !== undefined ? { severity: parsed.severity } : {}),
+              },
+            };
+          }
+          case "setCallHold": {
+            const parsed = setCallHoldSchema.parse(JSON.parse(input.rawArguments || "{}"));
+            const remainingHoldSeconds =
+              input.holdBudget?.remainingHoldSeconds ?? MAX_CUMULATIVE_HOLD_SECONDS;
+            const grantedDurationSeconds = Math.min(
+              parsed.durationSeconds,
+              MAX_SINGLE_HOLD_SECONDS,
+              Math.max(0, remainingHoldSeconds),
+            );
+
+            if (grantedDurationSeconds <= 0) {
+              const hold: HoldGrantResult = {
+                ok: false,
+                requestedDurationSeconds: parsed.durationSeconds,
+                grantedDurationSeconds: 0,
+                remainingHoldSeconds: 0,
+                capped: true,
+                reason: parsed.reason,
+                error: "hold_limit_reached",
+              };
+              return {
+                result: hold,
+                hold,
+              };
+            }
+
+            const hold: HoldGrantResult = {
+              ok: true,
+              requestedDurationSeconds: parsed.durationSeconds,
+              grantedDurationSeconds,
+              remainingHoldSeconds: Math.max(0, remainingHoldSeconds - grantedDurationSeconds),
+              capped: grantedDurationSeconds < parsed.durationSeconds,
+              reason: parsed.reason,
+            };
+
+            return {
+              result: hold,
+              hold,
             };
           }
           case "takeMessage": {

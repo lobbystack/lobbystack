@@ -383,6 +383,64 @@ describe("Contact blocking", () => {
     });
   });
 
+  it("system-blocks a voice call contact idempotently without an operator actor", async () => {
+    const { businessId, t } = await seedWorkspace({
+      subject: "contact-block-system-voice",
+    });
+    const contactId = await insertContact(t, {
+      businessId,
+      phone: "+14165550201",
+    });
+
+    const initialResult = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-system-block-contact",
+      from: "+14165550201",
+      to: "+14165550999",
+      startedAt: "2026-04-15T18:00:00.000Z",
+    });
+
+    const blockResult = await t.mutation(
+      internal.voice.runtime.systemBlockContactForVoiceCall,
+      {
+        callId: initialResult.callId,
+        blockedAt: "2026-04-15T18:01:00.000Z",
+      },
+    );
+
+    expect(blockResult).toEqual({
+      blocked: true,
+      contactId,
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db.get(contactId);
+      expect(contact).toMatchObject({
+        operatorBlockedAt: "2026-04-15T18:01:00.000Z",
+      });
+      expect(contact?.operatorBlockedByUserId).toBeUndefined();
+    });
+
+    const idempotentResult = await t.mutation(
+      internal.voice.runtime.systemBlockContactForVoiceCall,
+      {
+        callId: initialResult.callId,
+        blockedAt: "2026-04-15T18:02:00.000Z",
+      },
+    );
+
+    expect(idempotentResult).toEqual({
+      blocked: true,
+      contactId,
+      reason: "already_blocked",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db.get(contactId);
+      expect(contact?.operatorBlockedAt).toBe("2026-04-15T18:01:00.000Z");
+    });
+  });
+
   it("still allows unknown and unblocked contacts to start voice calls", async () => {
     const { authed, businessId, t } = await seedWorkspace({
       subject: "contact-block-voice-allowed",

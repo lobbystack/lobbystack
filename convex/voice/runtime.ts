@@ -110,6 +110,15 @@ type CompleteCallArgs = {
   disposition?: string;
   providerDurationSeconds?: number;
 };
+type SystemBlockContactForVoiceCallArgs = {
+  callId: Id<"calls">;
+  blockedAt: string;
+};
+type SystemBlockContactForVoiceCallResult = {
+  blocked: boolean;
+  contactId?: Id<"contacts">;
+  reason?: string;
+};
 type ReconcileTwilioCallStatusArgs = {
   twilioCallSid: string;
   callStatus: string;
@@ -1104,6 +1113,54 @@ export const completeCall = internalMutation({
     );
 
     return null;
+  },
+});
+
+export const systemBlockContactForVoiceCall = internalMutation({
+  args: {
+    callId: v.id("calls"),
+    blockedAt: v.string(),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: SystemBlockContactForVoiceCallArgs,
+  ): Promise<SystemBlockContactForVoiceCallResult> => {
+    const call: Doc<"calls"> | null = await ctx.db.get(args.callId);
+    if (!call) {
+      return { blocked: false, reason: "call_not_found" };
+    }
+
+    if (!call.conversationId) {
+      return { blocked: false, reason: "missing_conversation" };
+    }
+
+    const conversation: Doc<"conversations"> | null = await ctx.db.get(call.conversationId);
+    if (!conversation?.contactId) {
+      return { blocked: false, reason: "missing_contact" };
+    }
+
+    const contact: Doc<"contacts"> | null = await ctx.db.get(conversation.contactId);
+    if (!contact) {
+      return { blocked: false, reason: "contact_not_found" };
+    }
+
+    if (isContactBlocked(contact)) {
+      return {
+        blocked: true,
+        contactId: contact._id,
+        reason: "already_blocked",
+      };
+    }
+
+    await ctx.db.patch(contact._id, {
+      operatorBlockedAt: args.blockedAt,
+      operatorBlockedByUserId: undefined,
+    });
+
+    return {
+      blocked: true,
+      contactId: contact._id,
+    };
   },
 });
 

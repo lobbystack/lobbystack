@@ -82,6 +82,11 @@ const completeCallSchema = z.object({
   providerDurationSeconds: z.number().optional(),
 });
 
+const systemBlockContactForVoiceCallSchema = z.object({
+  callId: z.string().min(1),
+  blockedAt: z.string().min(1),
+});
+
 const recordVoiceAiCostSchema = z.object({
   businessId: z.string().min(1),
   callId: z.string().min(1),
@@ -888,6 +893,29 @@ http.route({
     });
 
     return Response.json({ ok: true });
+  }),
+});
+
+http.route({
+  path: "/voice/call/system-block-contact",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, systemBlockContactForVoiceCallSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const result = await ctx.runMutation(internal.voice.runtime.systemBlockContactForVoiceCall, {
+      callId: asId("calls", body.data.callId),
+      blockedAt: body.data.blockedAt,
+    });
+
+    return Response.json(result);
   }),
 });
 

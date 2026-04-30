@@ -196,3 +196,90 @@ describe("executeVoiceTool searchKnowledge", () => {
     });
   });
 });
+
+describe("executeVoiceTool call control", () => {
+  it("returns a terminal endCall result", async () => {
+    const result = await executeVoiceTool({
+      toolName: "endCall",
+      rawArguments: JSON.stringify({
+        reason: "caller_finished",
+        message: "Thanks for calling. Goodbye.",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result.result).toEqual({
+      ok: true,
+      reason: "caller_finished",
+      message: "Thanks for calling. Goodbye.",
+    });
+    expect(result.endCall).toEqual({
+      reason: "caller_finished",
+      message: "Thanks for calling. Goodbye.",
+    });
+  });
+
+  it("rejects invalid endCall reasons", async () => {
+    await expect(
+      executeVoiceTool({
+        toolName: "endCall",
+        rawArguments: JSON.stringify({
+          reason: "done",
+          message: "Goodbye.",
+        }),
+        snapshot: demoSnapshot,
+        businessId: "business_123",
+        callerPhone: "+14165550000",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("caps a hold request to the single-hold maximum", async () => {
+    const result = await executeVoiceTool({
+      toolName: "setCallHold",
+      rawArguments: JSON.stringify({
+        durationSeconds: 300,
+        reason: "Caller asked for a minute to check their calendar.",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result.hold).toMatchObject({
+      ok: true,
+      requestedDurationSeconds: 300,
+      grantedDurationSeconds: 120,
+      remainingHoldSeconds: 180,
+      capped: true,
+    });
+  });
+
+  it("reports exhausted cumulative hold budget", async () => {
+    const result = await executeVoiceTool({
+      toolName: "setCallHold",
+      rawArguments: JSON.stringify({
+        durationSeconds: 30,
+        reason: "Caller asked for more time.",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+      holdBudget: {
+        remainingHoldSeconds: 0,
+      },
+    });
+
+    expect(result.hold).toEqual({
+      ok: false,
+      requestedDurationSeconds: 30,
+      grantedDurationSeconds: 0,
+      remainingHoldSeconds: 0,
+      capped: true,
+      reason: "Caller asked for more time.",
+      error: "hold_limit_reached",
+    });
+  });
+});

@@ -89,6 +89,7 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.voice.openai_realtime_error",
   "ops.voice.turn_completed",
   "ops.voice.turn_slow",
+  "ops.voice.call_ended_by_ai",
   "ops.voice.tool_completed",
   "ops.voice.tool_failed",
   "ops.voice.recording_upload_failed",
@@ -474,6 +475,12 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "model",
     "latencyBucket",
+  ],
+  "ops.voice.call_ended_by_ai": [
+    "businessId",
+    "deploymentMode",
+    "callId",
+    "reason",
   ],
   "ops.voice.tool_completed": [
     "businessId",
