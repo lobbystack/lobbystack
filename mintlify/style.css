@@ -1,11 +1,17 @@
-#navbar a[href="https://github.com/morencyr/LobbyStack"],
-navbar-link[href="https://github.com/morencyr/LobbyStack"],
-#navbar a[href="https://app.lobbystack.com/login"],
-navbar-link[href="https://app.lobbystack.com/login"],
+#navbar a[href*="github.com/morencyr/LobbyStack"],
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]),
+navbar-link[href*="github.com/morencyr/LobbyStack"],
+#navbar a[href*="app.lobbystack.com/login"],
+#navbar *:has(> a[href*="app.lobbystack.com/login"]),
+navbar-link[href*="app.lobbystack.com/login"],
 login-link,
 .login-link,
+.navbar-link,
+[data-component-name="navbar-link"],
+[data-component-name="login-link"],
 topbar-right-container navbar-link,
-.topbar-right-container .navbar-link {
+.topbar-right-container .navbar-link,
+[data-component-name="topbar-right-container"] .navbar-link {
   min-width: auto !important;
   width: auto !important;
   padding: 0 !important;
@@ -16,15 +22,18 @@ topbar-right-container navbar-link,
   font-weight: 400 !important;
 }
 
-#navbar a[href="https://github.com/morencyr/LobbyStack"] span,
-#navbar a[href="https://github.com/morencyr/LobbyStack"] p,
-navbar-link[href="https://github.com/morencyr/LobbyStack"] span,
-navbar-link[href="https://github.com/morencyr/LobbyStack"] p {
+#navbar a[href*="github.com/morencyr/LobbyStack"] span,
+#navbar a[href*="github.com/morencyr/LobbyStack"] p,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) span,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) p,
+navbar-link[href*="github.com/morencyr/LobbyStack"] span,
+navbar-link[href*="github.com/morencyr/LobbyStack"] p {
   display: none !important;
 }
 
-#navbar a[href="https://github.com/morencyr/LobbyStack"] svg,
-navbar-link[href="https://github.com/morencyr/LobbyStack"] svg {
+#navbar a[href*="github.com/morencyr/LobbyStack"] svg,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) svg,
+navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
   margin: 0 !important;
 }
 
