@@ -19,7 +19,7 @@
   "navbar": {
     "links": [
       {
-        "label": "GitHub",
+        "label": "",
         "icon": "github",
         "href": "https://github.com/morencyr/LobbyStack"
       },
