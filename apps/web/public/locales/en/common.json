@@ -31,6 +31,7 @@
     "placeholder": "Have an idea to improve LobbyStack? Tell the team.",
     "characterCount": "{{count}} / {{max}} characters",
     "helpText": "Need help?",
+    "helpCenter": "Help Center",
     "contactLink": "Contact us",
     "helpTextSeparator": "or",
     "docsLink": "see docs.",

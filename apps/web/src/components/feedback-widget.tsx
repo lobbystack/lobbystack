@@ -63,7 +63,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
   }
 
   return (
-    <div className="fixed top-4 right-4 z-40 hidden md:block">
+    <div className="fixed top-4 right-4 z-40 hidden items-center gap-4 md:flex">
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger
           render={
@@ -125,6 +125,9 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           </form>
         </PopoverContent>
       </Popover>
+      <Button nativeButton={false} render={<a href="/docs" />} size="sm" variant="ghost">
+        <span className="text-muted-foreground">{t("feedback.helpCenter")}</span>
+      </Button>
     </div>
   );
 }

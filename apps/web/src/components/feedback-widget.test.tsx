@@ -30,6 +30,7 @@ vi.mock("react-i18next", () => ({
         "feedback.label": "Feedback message",
         "feedback.placeholder": "Have an idea to improve LobbyStack? Tell the team.",
         "feedback.helpText": "Need help?",
+        "feedback.helpCenter": "Help Center",
         "feedback.contactLink": "Contact us",
         "feedback.helpTextSeparator": "or",
         "feedback.docsLink": "see docs.",
@@ -72,6 +73,9 @@ describe("FeedbackWidget", () => {
 
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Contact us" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Help Center" }).getAttribute("href")).toBe(
+      "/docs",
+    );
   });
 
   it("keeps send disabled for an empty message", async () => {
