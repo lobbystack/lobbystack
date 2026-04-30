@@ -218,6 +218,9 @@
     "goToPage": "Go to page {{page}}"
   },
   "fields": {
+    "defaults": {
+      "title": "Defaults"
+    },
     "greeting": {
       "label": "Greeting",
       "placeholder": "Hello, thank you for calling…",

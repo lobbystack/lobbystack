@@ -218,6 +218,9 @@
     "goToPage": "Aller a la page {{page}}"
   },
   "fields": {
+    "defaults": {
+      "title": "Valeurs par défaut"
+    },
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",

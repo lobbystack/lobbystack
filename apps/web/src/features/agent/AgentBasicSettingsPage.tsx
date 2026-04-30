@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { AppointmentChangePolicy, RuntimeLocale } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
@@ -26,41 +25,6 @@ import { captureAnalyticsEvent } from "@/lib/analytics";
 type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
 };
-
-type AgentBasicSettingItemProps = {
-  action: ReactNode;
-  description: string;
-  field: ReactNode;
-  status?: ReactNode;
-  title: string;
-};
-
-function AgentBasicSettingItem({
-  action,
-  description,
-  field,
-  status,
-  title,
-}: AgentBasicSettingItemProps) {
-  return (
-    <Item
-      className="grid gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-      variant="outline"
-    >
-      <ItemContent>
-        <ItemTitle>{title}</ItemTitle>
-        <ItemDescription>{description}</ItemDescription>
-        <div className="pt-2">
-          {field}
-        </div>
-        {status ?? null}
-      </ItemContent>
-      <ItemActions className="w-full justify-end self-center sm:w-auto">
-        {action}
-      </ItemActions>
-    </Item>
-  );
-}
 
 export function resolveTransferNumberForSave({
   rawInputValue,
@@ -302,152 +266,174 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   return (
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-8">
-        <ItemGroup spacing="section">
-          <AgentBasicSettingItem
-            action={(
-              <Button
-                disabled={isLoadingConfiguration || isGreetingSaving || !persistedProfile}
-                onClick={() => void saveGreeting()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
-              </Button>
-            )}
-            description={t("agent:fields.greeting.hint")}
-            field={
-              isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-md sm:max-w-md" />
-              ) : (
-                <Input
-                  className="w-full sm:max-w-md"
-                  id="agent-greeting"
-                  placeholder={t("agent:fields.greeting.placeholder")}
-                  value={greeting}
-                  onChange={(event) => {
-                    setGreeting(event.target.value);
-                    setGreetingStatus(null);
-                  }}
-                />
-              )
-            }
-            status={greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
-            title={t("agent:fields.greeting.label")}
-          />
-
-          <Item variant="outline">
-            <ItemContent>
-              <ItemTitle>{t("agent:fields.defaultLocale.label")}</ItemTitle>
-              <ItemDescription>{t("agent:fields.defaultLocale.hint")}</ItemDescription>
-              {isLocaleSaving ? <ItemDescription>{t("agent:actions.saving")}</ItemDescription> : null}
-              {!isLocaleSaving && localeStatus ? <ItemDescription>{localeStatus}</ItemDescription> : null}
-            </ItemContent>
-            <ItemActions className="w-full sm:w-auto">
-              {isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-full rounded-md sm:w-[9.5ch]" />
-              ) : (
-                <NativeSelect
-                  aria-label={t("agent:fields.defaultLocale.label")}
-                  className="w-full sm:w-[9.5ch]"
-                  id="agent-default-language"
-                  onChange={(event) => {
-                    const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
-                    setDefaultLocale(nextLocale);
-                    setLocaleStatus(null);
-                    void (async () => {
-                      if (!persistedProfile) {
-                        return;
-                      }
-
-                      const transferNumberResolution = resolveTransferNumberForSave({
-                        rawInputValue: transferNumberInputValue,
-                        validTransferNumber: transferNumber,
-                      });
-                      if (!transferNumberResolution.ok) {
-                        setTransferStatus(t(transferNumberResolution.errorKey));
-                        setTransferStatusTone("error");
-                        return;
-                      }
-
-                      setIsLocaleSaving(true);
-                      try {
-                        await saveProfile({
-                          businessId,
-                          defaultLocale: nextLocale,
-                          greeting,
-                          transferNumber: transferNumberResolution.value,
-                        });
-                        captureAnalyticsEvent("web.agent.settings_saved", {
-                          businessId: String(businessId),
-                          setting: "default_locale",
-                        });
-                        setLocaleStatus(t("agent:actions.saved"));
-                      } finally {
-                        setIsLocaleSaving(false);
-                      }
-                    })();
-                  }}
-                  value={defaultLocale}
+        <section className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm leading-snug font-medium">
+            {t("agent:fields.defaults.title")}
+          </h2>
+          <Surface className="flex flex-col">
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.greeting.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.greeting.hint")}</ItemDescription>
+                <div className="pt-2">
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-10 w-full rounded-md sm:max-w-md" />
+                  ) : (
+                    <Input
+                      className="w-full sm:max-w-md"
+                      id="agent-greeting"
+                      placeholder={t("agent:fields.greeting.placeholder")}
+                      value={greeting}
+                      onChange={(event) => {
+                        setGreeting(event.target.value);
+                        setGreetingStatus(null);
+                      }}
+                    />
+                  )}
+                </div>
+                {greetingStatus ? <ItemDescription>{greetingStatus}</ItemDescription> : null}
+              </ItemContent>
+              <ItemActions className="w-full justify-end self-center sm:w-auto">
+                <Button
+                  disabled={isLoadingConfiguration || isGreetingSaving || !persistedProfile}
+                  onClick={() => void saveGreeting()}
+                  size="sm"
+                  type="button"
+                  variant="outline"
                 >
-                  <NativeSelectOption value="en">
-                    {t("common:language.english")}
-                  </NativeSelectOption>
-                  <NativeSelectOption value="fr">
-                    {t("common:language.french")}
-                  </NativeSelectOption>
-                </NativeSelect>
-              )}
-            </ItemActions>
-          </Item>
+                  {isGreetingSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                </Button>
+              </ItemActions>
+            </Item>
 
-          <AgentBasicSettingItem
-            action={(
-              <Button
-                disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile}
-                onClick={() => void saveTransferNumber()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
-              </Button>
-            )}
-            description={t("agent:fields.transferNumber.hint")}
-            field={
-              isLoadingConfiguration ? (
-                <Skeleton className="h-10 w-32 rounded-md" />
-              ) : (
-                <PhoneInput
-                  className="w-full min-w-0 sm:w-[12ch]"
-                  containerClassName="w-full sm:w-fit"
-                  id="agent-transfer-number"
-                  locale={i18n.language}
-                  maxLength={18}
-                  onRawValueChange={(nextRawValue) => {
-                    setTransferNumberInputValue(nextRawValue);
-                    setTransferStatus(null);
-                    setTransferStatusTone("success");
-                  }}
-                  value={transferNumber || undefined}
-                  onChange={(nextValue) => {
-                    setTransferNumber(nextValue ?? "");
-                    setTransferStatus(null);
-                    setTransferStatusTone("success");
-                  }}
-                />
-              )
-            }
-            status={transferStatus ? (
-              <ItemDescription
-                className={transferStatusTone === "error" ? "text-destructive" : undefined}
-              >
-                {transferStatus}
-              </ItemDescription>
-            ) : null}
-            title={t("agent:fields.transferNumber.label")}
-          />
-        </ItemGroup>
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.defaultLocale.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.defaultLocale.hint")}</ItemDescription>
+                {isLocaleSaving ? (
+                  <ItemDescription>{t("agent:actions.saving")}</ItemDescription>
+                ) : null}
+                {!isLocaleSaving && localeStatus ? (
+                  <ItemDescription>{localeStatus}</ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-[9.5ch]" />
+                ) : (
+                  <NativeSelect
+                    aria-label={t("agent:fields.defaultLocale.label")}
+                    className="w-full sm:w-[9.5ch]"
+                    id="agent-default-language"
+                    onChange={(event) => {
+                      const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
+                      setDefaultLocale(nextLocale);
+                      setLocaleStatus(null);
+                      void (async () => {
+                        if (!persistedProfile) {
+                          return;
+                        }
+
+                        const transferNumberResolution = resolveTransferNumberForSave({
+                          rawInputValue: transferNumberInputValue,
+                          validTransferNumber: transferNumber,
+                        });
+                        if (!transferNumberResolution.ok) {
+                          setTransferStatus(t(transferNumberResolution.errorKey));
+                          setTransferStatusTone("error");
+                          return;
+                        }
+
+                        setIsLocaleSaving(true);
+                        try {
+                          await saveProfile({
+                            businessId,
+                            defaultLocale: nextLocale,
+                            greeting,
+                            transferNumber: transferNumberResolution.value,
+                          });
+                          captureAnalyticsEvent("web.agent.settings_saved", {
+                            businessId: String(businessId),
+                            setting: "default_locale",
+                          });
+                          setLocaleStatus(t("agent:actions.saved"));
+                        } finally {
+                          setIsLocaleSaving(false);
+                        }
+                      })();
+                    }}
+                    value={defaultLocale}
+                  >
+                    <NativeSelectOption value="en">
+                      {t("common:language.english")}
+                    </NativeSelectOption>
+                    <NativeSelectOption value="fr">
+                      {t("common:language.french")}
+                    </NativeSelectOption>
+                  </NativeSelect>
+                )}
+              </ItemActions>
+            </Item>
+
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.transferNumber.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.transferNumber.hint")}</ItemDescription>
+                <div className="pt-2">
+                  {isLoadingConfiguration ? (
+                    <Skeleton className="h-10 w-32 rounded-md" />
+                  ) : (
+                    <PhoneInput
+                      className="w-full min-w-0 sm:w-[12ch]"
+                      containerClassName="w-full sm:w-fit"
+                      id="agent-transfer-number"
+                      locale={i18n.language}
+                      maxLength={18}
+                      onRawValueChange={(nextRawValue) => {
+                        setTransferNumberInputValue(nextRawValue);
+                        setTransferStatus(null);
+                        setTransferStatusTone("success");
+                      }}
+                      value={transferNumber || undefined}
+                      onChange={(nextValue) => {
+                        setTransferNumber(nextValue ?? "");
+                        setTransferStatus(null);
+                        setTransferStatusTone("success");
+                      }}
+                    />
+                  )}
+                </div>
+                {transferStatus ? (
+                  <ItemDescription
+                    className={transferStatusTone === "error" ? "text-destructive" : undefined}
+                  >
+                    {transferStatus}
+                  </ItemDescription>
+                ) : null}
+              </ItemContent>
+              <ItemActions className="w-full justify-end self-center sm:w-auto">
+                <Button
+                  disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile}
+                  onClick={() => void saveTransferNumber()}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {isTransferSaving ? t("agent:actions.saving") : t("agent:actions.save")}
+                </Button>
+              </ItemActions>
+            </Item>
+          </Surface>
+        </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-sm leading-snug font-medium">
