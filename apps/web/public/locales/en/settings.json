@@ -554,6 +554,22 @@
   "notifications": {
     "title": "Notifications",
     "description": "Choose which events trigger an alert to your phone or email.",
+    "sources": {
+      "title": "Sources",
+      "description": "Select where and when you'll be notified",
+      "browser": {
+        "title": "Browser",
+        "description": "Receive notifications in your browser."
+      },
+      "email": {
+        "title": "Email",
+        "description": "Receive notifications in your email client."
+      },
+      "sms": {
+        "title": "SMS",
+        "description": "Receive text message notifications on your phone."
+      }
+    },
     "communication": {
       "title": "Communication",
       "voiceMessage": {
@@ -582,6 +598,17 @@
       "aiReplyFailed": {
         "title": "SMS AI reply failed",
         "description": "When the system fails to generate or send an AI SMS reply."
+      }
+    },
+    "digest": {
+      "title": "Digest",
+      "dailySummary": {
+        "title": "Daily summary",
+        "description": "Receive a single daily email summarizing call activity and new messages."
+      },
+      "sendTime": {
+        "title": "Send time",
+        "description": "The time of day your daily summary will be sent."
       }
     }
   }
