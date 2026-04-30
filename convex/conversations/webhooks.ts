@@ -1222,13 +1222,17 @@ export const handleTwilioSmsInbound = internalAction({
     if (replySuppressed) {
       if (automationState === "human_handoff") {
         try {
-          await ctx.runAction(internal.operatorNotifications.dispatchEvent, {
-            businessId: phoneNumber.businessId,
-            eventKind: "pausedSms",
-            eventKey: `pausedSms:${String(inboundMessageId)}`,
-            subject: "New message in paused SMS conversation",
-            body: `A customer sent a new SMS while automation is paused.\n\nFrom: ${args.from}\n\n${args.body}`,
-          });
+          await ctx.scheduler.runAfter(
+            0,
+            internal.operatorNotifications.dispatchEvent,
+            {
+              businessId: phoneNumber.businessId,
+              eventKind: "pausedSms",
+              eventKey: `pausedSms:${String(inboundMessageId)}`,
+              subject: "New message in paused SMS conversation",
+              body: `A customer sent a new SMS while automation is paused.\n\nFrom: ${args.from}\n\n${args.body}`,
+            },
+          );
         } catch (error) {
           console.warn("[operatorNotifications] Failed to dispatch paused SMS alert", {
             businessId: String(phoneNumber.businessId),

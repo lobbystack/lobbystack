@@ -112,6 +112,33 @@ function buildOperatorSmsBody(input: {
   return `${body.slice(0, 597)}...`;
 }
 
+function estimateSmsSegments(body: string): number {
+  const gsmBasic =
+    "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ" +
+    " !\"#¤%&'()*+,-./0123456789:;<=>?" +
+    "¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+  const gsmExtended = "^{}\\[~]|€";
+  let gsmSeptetLength = 0;
+
+  for (const char of body) {
+    if (gsmBasic.includes(char)) {
+      gsmSeptetLength += 1;
+      continue;
+    }
+    if (gsmExtended.includes(char)) {
+      gsmSeptetLength += 2;
+      continue;
+    }
+
+    const unicodeLength = body.length;
+    return unicodeLength <= 70 ? 1 : Math.max(1, Math.ceil(unicodeLength / 67));
+  }
+
+  return gsmSeptetLength <= 160
+    ? 1
+    : Math.max(1, Math.ceil(gsmSeptetLength / 153));
+}
+
 function parseSendTime(sendTime: string): { hour: number; minute: number } {
   const [hourRaw, minuteRaw] = sendTime.split(":");
   const hour = Number(hourRaw);
@@ -440,25 +467,81 @@ async function deliverSms(
     throw new Error("No alert SMS sender is configured.");
   }
 
-  const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
-    internal.integrations.twilioSms.sendMessage,
-    {
-      to: input.to,
-      body: buildOperatorSmsBody({ subject: input.subject, body: input.body }),
-      statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
-      ...(smsPolicy.fromPhoneNumber ? { from: smsPolicy.fromPhoneNumber } : {}),
-      ...(smsPolicy.twilioMessagingServiceSid
-        ? { messagingServiceSid: smsPolicy.twilioMessagingServiceSid }
-        : {}),
-    },
-  );
+  const body = buildOperatorSmsBody({ subject: input.subject, body: input.body });
+  const usageSourceKey = `alert_sms:operator_notification:${String(input.deliveryId)}`;
+  const providerUpdatedAt = new Date().toISOString();
+  let reservedAlertUsage:
+    | {
+        usageEventId?: Id<"billing_usage_events">;
+        syncNeeded?: boolean;
+      }
+    | null = null;
+  let messageAcceptedByProvider = false;
 
-  await ctx.runMutation(internal.operatorNotifications.markDeliverySent, {
-    deliveryId: input.deliveryId,
-    providerMessageId: result.providerMessageSid,
-    providerStatus: result.providerStatus,
-    providerUpdatedAt: new Date().toISOString(),
-  });
+  try {
+    if (smsPolicy.senderRole === "platform_alert") {
+      const reservedUsage = await ctx.runMutation(internal.billing.reserveAlertSmsUsage, {
+        businessId: input.businessId,
+        sourceKey: usageSourceKey,
+        estimatedSegments: estimateSmsSegments(body),
+        recordedAt: providerUpdatedAt,
+      });
+      if (!reservedUsage.allowed) {
+        throw new Error("Alert SMS quota reached.");
+      }
+      reservedAlertUsage = {
+        ...(reservedUsage.usageEventId ? { usageEventId: reservedUsage.usageEventId } : {}),
+        ...(reservedUsage.syncNeeded !== undefined
+          ? { syncNeeded: reservedUsage.syncNeeded }
+          : {}),
+      };
+      if (reservedUsage.syncNeeded && reservedUsage.usageEventId) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: reservedUsage.usageEventId,
+        });
+      }
+    }
+
+    const result: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
+      internal.integrations.twilioSms.sendMessage,
+      {
+        to: input.to,
+        body,
+        statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+        ...(smsPolicy.fromPhoneNumber ? { from: smsPolicy.fromPhoneNumber } : {}),
+        ...(smsPolicy.twilioMessagingServiceSid
+          ? { messagingServiceSid: smsPolicy.twilioMessagingServiceSid }
+          : {}),
+      },
+    );
+    messageAcceptedByProvider = true;
+
+    await ctx.runMutation(internal.operatorNotifications.markDeliverySent, {
+      deliveryId: input.deliveryId,
+      providerMessageId: result.providerMessageSid,
+      providerStatus: result.providerStatus,
+      providerUpdatedAt,
+    });
+  } catch (error) {
+    if (
+      smsPolicy.senderRole === "platform_alert" &&
+      !messageAcceptedByProvider &&
+      reservedAlertUsage?.usageEventId
+    ) {
+      const releasedUsage = await ctx.runMutation(internal.billing.recordAlertSmsUsage, {
+        businessId: input.businessId,
+        sourceKey: usageSourceKey,
+        quantity: 0,
+        recordedAt: new Date().toISOString(),
+      });
+      if (releasedUsage.syncNeeded && releasedUsage.usageEventId) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: releasedUsage.usageEventId,
+        });
+      }
+    }
+    throw error;
+  }
 }
 
 async function deliverChannel(

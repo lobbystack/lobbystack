@@ -259,6 +259,75 @@ describe("operator notification preferences", () => {
     });
   });
 
+  it("reserves and releases alert SMS usage for operator SMS delivery attempts", async () => {
+    const t = convexTest(schema, convexModules);
+    const seeded = await seedMember(t, {
+      subject: "operator-sms-dispatch",
+      phone: "+15145550123",
+      phoneVerificationTime: Date.now(),
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("platform_sms_senders", {
+        role: "platform_alert",
+        label: "Test alert sender",
+        e164: "+15145550100",
+        status: "active",
+        smsEnabled: true,
+      });
+    });
+
+    const current = await seeded.authed.query(
+      api.users.preferences.getNotificationPreferences,
+      { businessId: seeded.businessId },
+    );
+    await seeded.authed.mutation(api.users.preferences.updateNotificationPreferences, {
+      businessId: seeded.businessId,
+      emailEnabled: false,
+      smsEnabled: true,
+      eventPreferences: {
+        ...current.eventPreferences,
+        voiceMessage: {
+          email: false,
+          sms: true,
+        },
+      },
+      dailySummaryEnabled: true,
+      dailySummarySendTime: "08:00",
+    });
+
+    await t.action(internal.operatorNotifications.dispatchEvent, {
+      businessId: seeded.businessId,
+      eventKind: "voiceMessage",
+      eventKey: "voiceMessage:sms-usage",
+      subject: "Voice message captured",
+      body: "A caller left a message.",
+    });
+
+    await t.run(async (ctx) => {
+      const deliveries = await ctx.db
+        .query("operator_notification_deliveries")
+        .withIndex("by_business_id_and_event_kind", (q) =>
+          q.eq("businessId", seeded.businessId).eq("eventKind", "voiceMessage"),
+        )
+        .collect();
+      const smsDelivery = deliveries.find((delivery) => delivery.channel === "sms");
+      expect(smsDelivery).toBeTruthy();
+
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q
+            .eq("businessId", seeded.businessId)
+            .eq("sourceKey", `alert_sms:operator_notification:${String(smsDelivery!._id)}`),
+        )
+        .unique();
+
+      expect(usageEvent?.usageKind).toBe("alert_sms_segments");
+      expect(usageEvent?.quantity).toBe(0);
+    });
+  });
+
   it("updates operator SMS delivery rows from Twilio status callbacks", async () => {
     const t = convexTest(schema, convexModules);
     const seeded = await seedMember(t, {

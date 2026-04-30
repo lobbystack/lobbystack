@@ -78,6 +78,20 @@ type BillingContact = {
   name: string | null;
 };
 
+function getAlertSmsUsageSourceKey(input: {
+  notificationId?: Id<"notifications">;
+  sourceKey?: string;
+}): string {
+  const sourceKey = input.sourceKey?.trim();
+  if (sourceKey) {
+    return sourceKey;
+  }
+  if (input.notificationId) {
+    return `alert_sms:${String(input.notificationId)}`;
+  }
+  throw new Error("Alert SMS usage requires a notificationId or sourceKey.");
+}
+
 type CheckoutTarget = HostedCheckoutPlanSlug | BillingAddonSlug;
 
 type CheckoutContext = {
@@ -1657,7 +1671,8 @@ export const recordVoiceUsage = internalMutation({
 export const recordAlertSmsUsage = internalMutation({
   args: {
     businessId: v.id("businesses"),
-    notificationId: v.id("notifications"),
+    notificationId: v.optional(v.id("notifications")),
+    sourceKey: v.optional(v.string()),
     quantity: v.number(),
     recordedAt: v.string(),
   },
@@ -1677,7 +1692,7 @@ export const recordAlertSmsUsage = internalMutation({
       businessId: args.businessId,
       usageKind: "alert_sms_segments",
       quantity: args.quantity,
-      sourceKey: `alert_sms:${String(args.notificationId)}`,
+      sourceKey: getAlertSmsUsageSourceKey(args),
       recordedAt: args.recordedAt,
     });
   },
@@ -1830,7 +1845,8 @@ export const reserveVoiceUsageAtCallStart = internalMutation({
 export const reserveAlertSmsUsage = internalMutation({
   args: {
     businessId: v.id("businesses"),
-    notificationId: v.id("notifications"),
+    notificationId: v.optional(v.id("notifications")),
+    sourceKey: v.optional(v.string()),
     estimatedSegments: v.number(),
     recordedAt: v.string(),
   },
@@ -1847,7 +1863,7 @@ export const reserveAlertSmsUsage = internalMutation({
     syncNeeded: v.optional(v.boolean()),
   }),
   handler: async (ctx, args): Promise<UsageReservationResult> => {
-    const sourceKey = `alert_sms:${String(args.notificationId)}`;
+    const sourceKey = getAlertSmsUsageSourceKey(args);
     const existingUsageEvent = await ctx.db
       .query("billing_usage_events")
       .withIndex("by_business_id_and_source_key", (q) =>
