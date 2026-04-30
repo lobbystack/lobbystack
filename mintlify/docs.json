@@ -22,6 +22,16 @@
       "href": "https://github.com/morencyr/LobbyStack"
     }
   },
+  "redirects": [
+    {
+      "source": "/agent/ai-settings",
+      "destination": "/agent/ai-settings/overview"
+    },
+    {
+      "source": "/agent/ai-settings/",
+      "destination": "/agent/ai-settings/overview"
+    }
+  ],
   "navigation": {
     "tabs": [
       {
@@ -52,7 +62,7 @@
               {
                 "group": "AI settings",
                 "pages": [
-                  "agent/ai-settings",
+                  "agent/ai-settings/overview",
                   "agent/ai-settings/appointment-changes"
                 ]
               },
