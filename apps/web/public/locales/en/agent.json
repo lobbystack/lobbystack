@@ -239,7 +239,6 @@
   },
   "appointmentChanges": {
     "title": "Appointment changes",
-    "description": "Control whether the receptionist can cancel or reschedule confirmed appointments. When one-time codes are off, the caller phone and appointment details are used for verification.",
     "allowCancel": {
       "label": "Allow AI cancellations",
       "hint": "Let the receptionist cancel a verified future appointment."

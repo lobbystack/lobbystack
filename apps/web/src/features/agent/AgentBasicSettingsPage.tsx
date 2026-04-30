@@ -447,7 +447,6 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
           >
             <ItemContent>
               <ItemTitle>{t("agent:appointmentChanges.title")}</ItemTitle>
-              <ItemDescription>{t("agent:appointmentChanges.description")}</ItemDescription>
               <div className="mt-4 grid gap-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">

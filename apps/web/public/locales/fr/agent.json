@@ -239,7 +239,6 @@
   },
   "appointmentChanges": {
     "title": "Modifications de rendez-vous",
-    "description": "Controlez si la receptionniste peut annuler ou deplacer des rendez-vous confirmes. Sans code unique, le numero de l'appelant et les details du rendez-vous servent a la verification.",
     "allowCancel": {
       "label": "Autoriser les annulations IA",
       "hint": "Permettre a la receptionniste d'annuler un rendez-vous a venir verifie."
