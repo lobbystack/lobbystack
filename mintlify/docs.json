@@ -17,9 +17,24 @@
     "dark": "/logo-dark.svg"
   },
   "navbar": {
+    "links": [
+      {
+        "label": "Lobbystack.com",
+        "href": "https://lobbystack.com"
+      },
+      {
+        "type": "github",
+        "href": "https://github.com/morencyr/LobbyStack"
+      },
+      {
+        "label": "Log in",
+        "href": "https://app.lobbystack.com/login"
+      }
+    ],
     "primary": {
-      "type": "github",
-      "href": "https://github.com/morencyr/LobbyStack"
+      "type": "button",
+      "label": "Try for free",
+      "href": "https://app.lobbystack.com/signup"
     }
   },
   "redirects": [
