@@ -148,6 +148,7 @@ export const markFeedbackEmailSent = internalMutation({
     await ctx.db.patch(args.feedbackSubmissionId, {
       emailStatus: "email_sent",
       providerMessageId: args.providerMessageId,
+      emailError: undefined,
       emailedAt: now,
       updatedAt: now,
     });
