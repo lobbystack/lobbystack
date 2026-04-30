@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   envDir: "../../",
+  envPrefix: ["VITE_", "CONVEX_URL", "CONVEX_SITE_URL"],
   plugins: [react(), tailwindcss()],
   build: {
     // PostHog error tracking needs emitted source maps so deployed bundles can be symbolicated.

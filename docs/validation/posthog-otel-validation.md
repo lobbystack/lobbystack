@@ -53,7 +53,7 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
    - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
 8. Validate browser source maps:
-   - deploy with `pnpm --filter @lobbystack/web deploy:cloudflare` or `preview:cloudflare`
+   - deploy the built web assets after running `pnpm build && pnpm posthog:sourcemaps`
    - confirm the matching release exists in PostHog symbol sets
    - confirm browser stack traces resolve to source files instead of minified bundles
 

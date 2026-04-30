@@ -12,7 +12,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { initializeAnalytics } from "@/lib/analytics";
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL;
+const convexUrl = import.meta.env.CONVEX_URL;
 const convex = new ConvexReactClient(convexUrl);
 
 initializeAnalytics();

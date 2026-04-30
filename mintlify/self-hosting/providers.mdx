@@ -11,7 +11,7 @@ Self-hosting means connecting your own provider accounts. The provider list belo
   <Accordion title="Convex - backend, database, auth, and HTTP endpoints" icon="database">
     Convex stores business data, call records, contacts, appointments, knowledge, billing state, and app settings. It also runs backend functions and HTTP endpoints used by Twilio, the voice gateway, calendar callbacks, and downloads.
 
-    Configure `CONVEX_URL`, `CONVEX_SITE_URL`, and matching `VITE_` variables for the web dashboard.
+    Configure `CONVEX_URL` and `CONVEX_SITE_URL`; the web dashboard reads those same Convex URLs at build time.
   </Accordion>
 
   <Accordion title="Twilio - phone numbers, voice, SMS, and verification" icon="phone">

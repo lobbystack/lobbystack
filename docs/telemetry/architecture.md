@@ -86,7 +86,7 @@ Production browser deploys continue to follow PostHog's source map flow:
 - `vite build` emits source maps
 - `apps/web/scripts/upload-posthog-sourcemaps.mjs` runs `posthog-cli sourcemap inject`
 - the same script uploads the injected assets to PostHog with a stable release name and commit-based release version
-- `wrangler deploy` serves the already-injected assets from `dist/`
+- the static host serves the already-injected assets from `dist/`
 
 ### Managed reverse proxy browser ingestion
 
