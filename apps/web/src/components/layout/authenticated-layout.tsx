@@ -70,7 +70,16 @@ export function AuthenticatedLayout({
         )}
       >
         <SiteHeader fixed />
-        {!isLoading ? <FeedbackWidget {...(businessId ? { businessId } : {})} /> : null}
+        {!isLoading ? (
+          <div className="pointer-events-none absolute top-4 inset-x-0 z-40 hidden md:block">
+            <div className="mx-auto flex w-full max-w-7xl justify-end px-6">
+              <FeedbackWidget
+                className="pointer-events-auto"
+                {...(businessId ? { businessId } : {})}
+              />
+            </div>
+          </div>
+        ) : null}
         {children}
       </SidebarInset>
     </SidebarProvider>

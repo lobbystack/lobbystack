@@ -62,8 +62,8 @@ const serverEnvSchema = z.object({
 });
 
 const clientEnvSchema = z.object({
-  VITE_CONVEX_URL: z.string().url(),
-  VITE_CONVEX_SITE_URL: z.string().url(),
+  CONVEX_URL: z.string().url(),
+  CONVEX_SITE_URL: z.string().url(),
   VITE_APP_NAME: z.string().default("LobbyStack"),
   VITE_DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   VITE_POSTHOG_KEY: z.string().optional(),

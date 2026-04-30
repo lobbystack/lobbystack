@@ -1,0 +1,78 @@
+#navbar a[href*="github.com/morencyr/LobbyStack"],
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]),
+navbar-link[href*="github.com/morencyr/LobbyStack"],
+#navbar a[href="https://lobbystack.com"],
+#navbar *:has(> a[href="https://lobbystack.com"]),
+navbar-link[href="https://lobbystack.com"],
+#navbar a[href*="app.lobbystack.com/login"],
+#navbar *:has(> a[href*="app.lobbystack.com/login"]),
+navbar-link[href*="app.lobbystack.com/login"],
+login-link,
+.login-link,
+.navbar-link,
+[data-component-name="navbar-link"],
+[data-component-name="login-link"],
+topbar-right-container navbar-link,
+.topbar-right-container .navbar-link,
+[data-component-name="topbar-right-container"] .navbar-link {
+  min-width: auto !important;
+  width: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+}
+
+#navbar a[href*="github.com/morencyr/LobbyStack"] span,
+#navbar a[href*="github.com/morencyr/LobbyStack"] p,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) span,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) p,
+navbar-link[href*="github.com/morencyr/LobbyStack"] span,
+navbar-link[href*="github.com/morencyr/LobbyStack"] p {
+  display: none !important;
+}
+
+#navbar a[href*="github.com/morencyr/LobbyStack"] svg,
+#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) svg,
+navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
+  margin: 0 !important;
+}
+
+#navbar a[href="https://lobbystack.com"],
+#navbar *:has(> a[href="https://lobbystack.com"]),
+navbar-link[href="https://lobbystack.com"] {
+  margin-right: 8px !important;
+}
+
+#topbar-cta-button,
+[data-component-name="primary-header-button"],
+#navbar a[href*="app.lobbystack.com/signup"] {
+  border: 1px solid #0b0b0d !important;
+  border-radius: 26px !important;
+  background: #0b0b0d !important;
+  box-shadow: none !important;
+}
+
+#topbar-cta-button,
+#topbar-cta-button *,
+[data-component-name="primary-header-button"],
+[data-component-name="primary-header-button"] *,
+#navbar a[href*="app.lobbystack.com/signup"],
+#navbar a[href*="app.lobbystack.com/signup"] * {
+  color: #ffffff !important;
+  font-weight: 400 !important;
+}
+
+#topbar-cta-button:empty::before,
+[data-component-name="primary-header-button"]:empty::before {
+  content: "Try for free";
+}
+
+#navbar .nav-tabs-item,
+#navbar .nav-tabs-item *,
+nav-tabs-item,
+nav-tabs-item * {
+  font-weight: 400 !important;
+}

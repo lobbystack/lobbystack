@@ -17,64 +17,92 @@
     "dark": "/logo-dark.svg"
   },
   "navbar": {
+    "links": [
+      {
+        "label": "Lobbystack.com",
+        "href": "https://lobbystack.com"
+      },
+      {
+        "label": "",
+        "icon": "github",
+        "href": "https://github.com/morencyr/LobbyStack"
+      },
+      {
+        "label": "Log in",
+        "href": "https://app.lobbystack.com/login"
+      }
+    ],
     "primary": {
-      "type": "github",
-      "href": "https://github.com/morencyr/LobbyStack"
+      "type": "button",
+      "label": "Try for free",
+      "name": "Try for free",
+      "href": "https://app.lobbystack.com/signup"
     }
   },
+  "redirects": [
+    {
+      "source": "/agent/ai-settings",
+      "destination": "/agent/ai-settings/overview"
+    },
+    {
+      "source": "/agent/ai-settings/",
+      "destination": "/agent/ai-settings/overview"
+    }
+  ],
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Help Center",
-        "groups": [
+        "group": "Get started",
+        "pages": [
+          "introduction",
+          "quickstart",
+          "getting-started/account-setup",
+          "getting-started/claim-your-number"
+        ]
+      },
+      {
+        "group": "General",
+        "pages": [
+          "dashboard/home",
+          "dashboard/calls",
+          "dashboard/messages",
+          "dashboard/contacts"
+        ]
+      },
+      {
+        "group": "Agent",
+        "pages": [
+          "agent/overview",
           {
-            "group": "Get started",
+            "group": "AI settings",
             "pages": [
-              "introduction",
-              "quickstart",
-              "getting-started/account-setup",
-              "getting-started/claim-your-number"
+              "agent/ai-settings/overview",
+              "agent/ai-settings/appointment-changes"
             ]
           },
-          {
-            "group": "General",
-            "pages": [
-              "dashboard/home",
-              "dashboard/calls",
-              "dashboard/messages",
-              "dashboard/contacts"
-            ]
-          },
-          {
-            "group": "Agent",
-            "pages": [
-              "agent/overview",
-              "agent/ai-settings",
-              "agent/knowledge",
-              "agent/services",
-              "agent/rules"
-            ]
-          },
-          {
-            "group": "Manage",
-            "pages": [
-              "dashboard/analytics",
-              "integrations/overview",
-              "integrations/google-calendar",
-              "integrations/sms",
-              "settings/overview",
-              "billing/plans",
-              "billing/usage"
-            ]
-          },
-          {
-            "group": "Self-hosting",
-            "pages": [
-              "self-hosting/overview",
-              "self-hosting/environment-variables",
-              "self-hosting/providers"
-            ]
-          }
+          "agent/knowledge",
+          "agent/services",
+          "agent/rules"
+        ]
+      },
+      {
+        "group": "Manage",
+        "pages": [
+          "dashboard/analytics",
+          "integrations/overview",
+          "integrations/google-calendar",
+          "integrations/sms",
+          "settings/overview",
+          "billing/plans",
+          "billing/usage"
+        ]
+      },
+      {
+        "group": "Self-hosting",
+        "pages": [
+          "self-hosting/overview",
+          "self-hosting/environment-variables",
+          "self-hosting/providers"
         ]
       }
     ]

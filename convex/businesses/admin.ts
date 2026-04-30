@@ -20,6 +20,7 @@ import {
   DEFAULT_RECEPTIONIST_TONE,
   DEFAULT_RECEPTIONIST_TRANSFER_MODE,
 } from "../lib/receptionistProfileDefaults";
+import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
 
 /**
  * Create the initial tenant and owner membership for the authenticated user.
@@ -72,6 +73,7 @@ export const bootstrapBusiness = mutation({
       smsInstructions:
         "Keep replies concise and friendly. Ask one follow-up question at a time.",
       transferMode: DEFAULT_RECEPTIONIST_TRANSFER_MODE,
+      appointmentChangePolicy: DEFAULT_APPOINTMENT_CHANGE_POLICY,
     });
 
     await ensureDefaultStaffForBusiness(ctx, {

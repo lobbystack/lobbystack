@@ -54,6 +54,25 @@ export type TransferPolicy = {
   transferNumber?: string;
 };
 
+export type AppointmentChangeVerificationMode =
+  | "phone_match_and_facts"
+  | "otp_required"
+  | "operator_only";
+
+export type AppointmentChangePolicy = {
+  enabled: boolean;
+  allowCancel: boolean;
+  allowReschedule: boolean;
+  verificationMode: AppointmentChangeVerificationMode;
+};
+
+export const defaultAppointmentChangePolicy: AppointmentChangePolicy = {
+  enabled: true,
+  allowCancel: true,
+  allowReschedule: true,
+  verificationMode: "phone_match_and_facts",
+};
+
 export type KnowledgeSnippet = {
   id: string;
   title: string;
@@ -78,6 +97,7 @@ export type BusinessContextSnapshot = {
   bookingPolicy: string;
   knowledgeDigest: string;
   transferPolicy: TransferPolicy;
+  appointmentChangePolicy?: AppointmentChangePolicy;
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
@@ -117,8 +137,16 @@ export type VoiceToolName =
   | "findAvailability"
   | "checkAvailability"
   | "bookAppointment"
+  | "lookupAppointmentForChange"
+  | "verifyAppointmentForChange"
+  | "sendAppointmentChangeOtp"
+  | "verifyAppointmentChangeOtp"
+  | "cancelAppointment"
+  | "rescheduleAppointment"
   | "transferCall"
-  | "takeMessage";
+  | "takeMessage"
+  | "endCall"
+  | "setCallHold";
 
 export const demoBusinessId = "demo-clinic";
 
@@ -144,6 +172,7 @@ export const demoSnapshot: BusinessContextSnapshot = {
     mode: "on_urgent",
     transferNumber: "+14165551234",
   },
+  appointmentChangePolicy: defaultAppointmentChangePolicy,
   hours: [
     { dayOfWeek: 1, openMinutes: 9 * 60, closeMinutes: 17 * 60 },
     { dayOfWeek: 2, openMinutes: 9 * 60, closeMinutes: 17 * 60 },

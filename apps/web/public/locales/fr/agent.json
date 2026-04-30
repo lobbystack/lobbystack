@@ -218,6 +218,9 @@
     "goToPage": "Aller a la page {{page}}"
   },
   "fields": {
+    "defaults": {
+      "title": "Valeurs par défaut"
+    },
     "greeting": {
       "label": "Message d'accueil",
       "placeholder": "Bonjour, merci d'avoir appelé…",
@@ -235,6 +238,21 @@
       "errors": {
         "invalid": "Entrez un numéro de transfert complet et valide avant d'enregistrer."
       }
+    }
+  },
+  "appointmentChanges": {
+    "title": "Modifications de rendez-vous",
+    "allowCancel": {
+      "label": "Autoriser les annulations IA",
+      "hint": "Permettre a la receptionniste d'annuler un rendez-vous a venir verifie."
+    },
+    "allowReschedule": {
+      "label": "Autoriser les deplacements IA",
+      "hint": "Permettre a la receptionniste de deplacer un rendez-vous verifie apres verification des disponibilites."
+    },
+    "requireOtp": {
+      "label": "Exiger un code unique",
+      "hint": "Envoyer un code avant toute annulation ou modification."
     }
   },
   "actions": {

@@ -14,12 +14,14 @@ import {
   recordVoiceAiCost,
   releaseVoiceTransfer,
   startVoiceCall,
+  systemBlockContactForVoiceCall,
   updateVoiceTransferState,
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
 import { fetchSnapshotForPhoneNumber } from "../context/fetchSnapshot";
 import {
   recordMediaStreamDisconnect,
+  recordAiDirectedCallEnd,
   recordOpenAiRealtimeError,
   recordOpenAiTurnLatency,
   recordSnapshotCacheHit,
@@ -32,6 +34,20 @@ import {
   captureAiTraceStarted,
   capturePostHogException,
 } from "../observability/posthog";
+import {
+  HOLD_EXPIRY_GRACE_MS,
+  MAX_CUMULATIVE_HOLD_SECONDS,
+  NORMAL_IDLE_TIMEOUT_MS,
+  createCallInactivityState,
+  getCallInactivityAction,
+  grantCallHold,
+  markAssistantResponseDone,
+  markCallerActivity,
+  markHoldExpiryCheckInSent,
+  markRealtimeIdleTimeout,
+  type CallInactivityState,
+  type EndCallRequest,
+} from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import {
   endLiveCallWithMessage,
@@ -168,6 +184,9 @@ type ActiveVoiceSession = {
   }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
+  inactivity: CallInactivityState;
+  inactivityTimer: ReturnType<typeof setTimeout> | null;
+  terminalHangupInProgress: boolean;
   aiTraceId: string;
   assistantResponseRequestedAtMs: number | null;
   assistantFirstOutputAtMs: number | null;
@@ -660,6 +679,118 @@ function createRealtimeToolDefinitions() {
     },
     {
       type: "function",
+      name: "lookupAppointmentForChange",
+      description:
+        "Look up future confirmed appointments that the current caller phone is allowed to discuss before cancelling or rescheduling.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "verifyAppointmentForChange",
+      description:
+        "Verify the caller's name and an appointment fact for a specific appointment before any cancellation or reschedule attempt.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          action: { type: "string", enum: ["cancel", "reschedule"] },
+          callerName: { type: "string" },
+          appointmentStartsAt: {
+            type: "string",
+            description:
+              "The existing appointment start time from lookupAppointmentForChange when the caller confirms the time.",
+          },
+          serviceName: {
+            type: "string",
+            description:
+              "The existing appointment service name when the caller confirms the service.",
+          },
+        },
+        required: ["appointmentId", "action"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "sendAppointmentChangeOtp",
+      description:
+        "Send the required one-time code after verifyAppointmentForChange says OTP is required.",
+      parameters: {
+        type: "object",
+        properties: {
+          verificationId: { type: "string" },
+        },
+        required: ["verificationId"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "verifyAppointmentChangeOtp",
+      description:
+        "Check a caller-provided one-time code for an appointment change verification session.",
+      parameters: {
+        type: "object",
+        properties: {
+          verificationId: { type: "string" },
+          code: { type: "string" },
+        },
+        required: ["verificationId", "code"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "cancelAppointment",
+      description:
+        "Cancel an appointment only after verification succeeds and the caller gives explicit final confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          verificationId: { type: "string" },
+          finalConfirmation: {
+            type: "boolean",
+            description:
+              "True only when the caller explicitly confirms they want this appointment cancelled now.",
+          },
+        },
+        required: ["appointmentId", "finalConfirmation"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "rescheduleAppointment",
+      description:
+        "Reschedule an appointment only after verification succeeds, availability is checked by the backend, and the caller gives explicit final confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string" },
+          startsAt: {
+            type: "string",
+            description: "The new exact ISO appointment start datetime.",
+          },
+          timezone: { type: "string" },
+          preferredStaffId: { type: "string" },
+          verificationId: { type: "string" },
+          finalConfirmation: {
+            type: "boolean",
+            description:
+              "True only when the caller explicitly confirms they want this appointment moved to the exact new time now.",
+          },
+        },
+        required: ["appointmentId", "startsAt", "finalConfirmation"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
       name: "transferCall",
       description:
         "Transfer the live call to a human when transfer policy allows it, someone is available to receive the transfer, and the caller requests or needs a human handoff.",
@@ -689,6 +820,49 @@ function createRealtimeToolDefinitions() {
         additionalProperties: false,
       },
     },
+    {
+      type: "function",
+      name: "setCallHold",
+      description:
+        "Grant intentional waiting time only when the caller asks you to hold or clearly needs a short pause. The gateway may cap the requested duration.",
+      parameters: {
+        type: "object",
+        properties: {
+          durationSeconds: {
+            type: "integer",
+            description: "Requested hold duration in seconds.",
+          },
+          reason: { type: "string" },
+        },
+        required: ["durationSeconds", "reason"],
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
+      name: "endCall",
+      description:
+        "End the live call after a final message for explicit caller closing cues, severe abuse, repeated abusive behavior after one warning, or silence timeout.",
+      parameters: {
+        type: "object",
+        properties: {
+          reason: {
+            type: "string",
+            enum: ["caller_finished", "abuse", "silence_timeout"],
+          },
+          message: {
+            type: "string",
+            description: "Brief final message to say before hanging up.",
+          },
+          severity: {
+            type: "string",
+            enum: ["borderline", "severe"],
+          },
+        },
+        required: ["reason", "message"],
+        additionalProperties: false,
+      },
+    },
   ];
 }
 
@@ -703,6 +877,169 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
+}
+
+function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
+  postRealtimeEvent(socket, {
+    type: "session.update",
+    session: {
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+        idle_timeout_ms: idleTimeoutMs,
+      },
+    },
+  });
+}
+
+function clearInactivityTimer(session: ActiveVoiceSession): void {
+  if (session.inactivityTimer !== null) {
+    clearTimeout(session.inactivityTimer);
+    session.inactivityTimer = null;
+  }
+}
+
+function getDispositionForEndCall(reason: EndCallRequest["reason"]): string {
+  return reason === "abuse" ? "abuse_ended" : reason;
+}
+
+async function initiateTerminalHangup(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  input: EndCallRequest,
+): Promise<void> {
+  if (session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  session.terminalHangupInProgress = true;
+  session.finalDispositionOverride = getDispositionForEndCall(input.reason);
+  clearInactivityTimer(session);
+  clearPendingTransferPlaybackWait(server, session, "terminal_hangup");
+
+  let autoBlocked = false;
+  if (input.reason === "abuse" && session.callId) {
+    try {
+      const result = await systemBlockContactForVoiceCall({
+        callId: session.callId,
+        blockedAt: new Date().toISOString(),
+      });
+      autoBlocked = result.blocked;
+    } catch (error) {
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          callSid: session.callSid,
+        },
+        "Failed to auto-block abusive caller",
+      );
+    }
+  }
+
+  recordAiDirectedCallEnd({
+    ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+    ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+    reason: input.reason,
+    ...(input.severity ? { severity: input.severity } : {}),
+    holdSecondsUsed: session.inactivity.holdSecondsUsed,
+    autoBlocked,
+  });
+
+  if (!session.callSid) {
+    await finalizeCall(
+      server,
+      openAiSocket,
+      twilioSocket,
+      session,
+      getDispositionForEndCall(input.reason),
+    );
+    return;
+  }
+
+  try {
+    await endLiveCallWithMessage({
+      callSid: session.callSid,
+      sayMessage: input.message,
+    });
+  } catch (error) {
+    session.terminalHangupInProgress = false;
+    session.finalDispositionOverride = null;
+    throw error;
+  }
+}
+
+function scheduleInactivityTimer(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  clearInactivityTimer(session);
+
+  if (session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  const action = getCallInactivityAction(session.inactivity, Date.now());
+  if (action.kind !== "none" || action.nextCheckInMs === undefined) {
+    return;
+  }
+
+  session.inactivityTimer = setTimeout(() => {
+    session.inactivityTimer = null;
+    const task = runInactivityAction(server, openAiSocket, twilioSocket, session);
+    trackTask(session, task);
+  }, Math.max(0, action.nextCheckInMs));
+}
+
+async function runInactivityAction(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): Promise<void> {
+  if (session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  const nowMs = Date.now();
+  const action = getCallInactivityAction(session.inactivity, nowMs);
+  if (action.kind === "hold_expired_check_in") {
+    session.inactivity = markHoldExpiryCheckInSent(session.inactivity, nowMs);
+    updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
+    postRealtimeEvent(openAiSocket, {
+      type: "response.create",
+      response: {
+        instructions:
+          "The caller asked you to hold and the hold time has expired. Briefly ask if they are still there, then stop and wait.",
+      },
+    });
+    scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
+    return;
+  }
+
+  if (action.kind === "silence_timeout") {
+    await initiateTerminalHangup(server, openAiSocket, twilioSocket, session, {
+      reason: "silence_timeout",
+      message: "I'm going to end the call for now. Please call back when you're ready.",
+    });
+    return;
+  }
+
+  scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
+}
+
+function resetInactivityForCallerActivity(
+  openAiSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  session.inactivity = markCallerActivity(session.inactivity);
+  clearInactivityTimer(session);
+  updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
 }
 
 function clearPendingTransferPlaybackWait(
@@ -888,6 +1225,7 @@ async function finalizeCall(
     return;
   }
   session.finalized = true;
+  clearInactivityTimer(session);
   if (session.activeCallCounted) {
     session.activeCallCounted = false;
   }
@@ -953,6 +1291,7 @@ async function recoverFromProviderFailure(
   if (
     session.finalized ||
     session.providerRecoveryStarted ||
+    session.terminalHangupInProgress ||
     !session.callSid
   ) {
     return;
@@ -1190,7 +1529,11 @@ async function configureOpenAiSession(
         "Start in the language implied by the configured greeting.",
         "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
-        "Use tools for authoritative actions like booking, transfer, and message taking.",
+        "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
+        "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
+        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, or when directed by silence-timeout handling.",
+        "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
+        "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
         "Do not make up availability, hours, or business policy.",
         ...(businessNowLabel
           ? [
@@ -1204,6 +1547,10 @@ async function configureOpenAiSession(
         "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
         "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
         "Only call bookAppointment after the caller confirms a specific offered time.",
+        "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If the caller phone does not match an appointment, or there are multiple possible appointments, ask a clarifying question or offer human handoff.",
+        "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they confirmed, such as the existing time or service.",
+        "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",
+        "Only call cancelAppointment or rescheduleAppointment after the caller gives explicit final confirmation for the exact appointment and action. Never claim the change succeeded unless that final tool result has ok true.",
         "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
         "Interpret relative dates and times in the business timezone.",
       ].join("\n\n"),
@@ -1218,6 +1565,7 @@ async function configureOpenAiSession(
         type: "server_vad",
         create_response: true,
         interrupt_response: true,
+        idle_timeout_ms: NORMAL_IDLE_TIMEOUT_MS,
       },
       tools: createRealtimeToolDefinitions(),
       tool_choice: "auto",
@@ -1300,6 +1648,7 @@ async function initializeCallRecord(
 async function handleToolCall(
   server: FastifyInstance,
   openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
   session: ActiveVoiceSession,
   message: {
     name: string;
@@ -1325,10 +1674,35 @@ async function handleToolCall(
         ? { conversationId: session.conversationId }
         : {}),
       callerPhone: session.from ?? "unknown",
+      holdBudget: {
+        remainingHoldSeconds: Math.max(
+          0,
+          MAX_CUMULATIVE_HOLD_SECONDS - session.inactivity.holdSecondsUsed,
+        ),
+      },
     });
 
     if (result.pendingTransferDestination) {
       session.pendingTransferDestination = result.pendingTransferDestination;
+    }
+
+    let toolOutput = result.result;
+    if (result.hold) {
+      const grant = grantCallHold(session.inactivity, {
+        requestedDurationSeconds: result.hold.requestedDurationSeconds,
+        reason: result.hold.reason,
+        nowMs: Date.now(),
+      });
+      session.inactivity = grant.state;
+      toolOutput = grant.result;
+
+      if (grant.result.ok) {
+        updateRealtimeIdleTimeout(
+          openAiSocket,
+          grant.result.grantedDurationSeconds * 1000 + HOLD_EXPIRY_GRACE_MS,
+        );
+        scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
+      }
     }
 
     captureAiSpan({
@@ -1357,9 +1731,21 @@ async function handleToolCall(
       item: {
         type: "function_call_output",
         call_id: message.callId,
-        output: JSON.stringify(result.result),
+        output: JSON.stringify(toolOutput),
       },
     });
+
+    if (result.endCall) {
+      await initiateTerminalHangup(
+        server,
+        openAiSocket,
+        twilioSocket,
+        session,
+        result.endCall,
+      );
+      return;
+    }
+
     session.assistantResponseRequestedAtMs = Date.now();
     session.assistantFirstOutputAtMs = null;
     postRealtimeEvent(openAiSocket, {
@@ -1583,6 +1969,7 @@ function handleOpenAiMessage(
         trackTask(session, recordCostTask);
       }
 
+      resetInactivityForCallerActivity(openAiSocket, session);
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -1749,15 +2136,28 @@ function handleOpenAiMessage(
       ) {
         queueTransferAfterPlayback(server, twilioSocket, session);
       }
+      if (
+        payload.response?.status === "completed" &&
+        !session.pendingTransferDestination
+      ) {
+        session.inactivity = markAssistantResponseDone(session.inactivity, completedAtMs);
+        scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
+      }
       return;
     }
     case "input_audio_buffer.speech_started": {
+      resetInactivityForCallerActivity(openAiSocket, session);
       cancelAssistantAudio(server, openAiSocket, twilioSocket, session);
+      return;
+    }
+    case "input_audio_buffer.timeout_triggered": {
+      session.inactivity = markRealtimeIdleTimeout(session.inactivity, Date.now());
+      scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
       return;
     }
     case "response.function_call_arguments.done": {
       if (payload.name && payload.call_id && payload.arguments) {
-        const task = handleToolCall(server, openAiSocket, session, {
+        const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.name,
           callId: payload.call_id,
           arguments: payload.arguments,
@@ -1773,7 +2173,7 @@ function handleOpenAiMessage(
         payload.item.call_id &&
         payload.item.arguments
       ) {
-        const task = handleToolCall(server, openAiSocket, session, {
+        const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.item.name,
           callId: payload.item.call_id,
           arguments: payload.item.arguments,
@@ -1935,6 +2335,9 @@ export async function handleMediaStreamConnection(
     pendingOutboundPlaybackGroups: [],
     pendingInboundAudio: [],
     pendingTasks: new Set(),
+    inactivity: createCallInactivityState(),
+    inactivityTimer: null,
+    terminalHangupInProgress: false,
     aiTraceId: crypto.randomUUID(),
     assistantResponseRequestedAtMs: null,
     assistantFirstOutputAtMs: null,
@@ -2098,7 +2501,7 @@ export async function handleMediaStreamConnection(
         },
         "OpenAI Realtime websocket closed",
       );
-      if (!session.finalized) {
+      if (!session.finalized && !session.terminalHangupInProgress) {
         recordOpenAiRealtimeError({
           ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
           ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),

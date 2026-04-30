@@ -218,6 +218,9 @@
     "goToPage": "Go to page {{page}}"
   },
   "fields": {
+    "defaults": {
+      "title": "Defaults"
+    },
     "greeting": {
       "label": "Greeting",
       "placeholder": "Hello, thank you for calling…",
@@ -235,6 +238,21 @@
       "errors": {
         "invalid": "Enter a complete valid transfer number before saving."
       }
+    }
+  },
+  "appointmentChanges": {
+    "title": "Appointment changes",
+    "allowCancel": {
+      "label": "Allow AI cancellations",
+      "hint": "Let the receptionist cancel a verified future appointment."
+    },
+    "allowReschedule": {
+      "label": "Allow AI rescheduling",
+      "hint": "Let the receptionist move a verified future appointment after availability is checked."
+    },
+    "requireOtp": {
+      "label": "Require one-time code",
+      "hint": "Send a code before any cancellation or reschedule."
     }
   },
   "actions": {

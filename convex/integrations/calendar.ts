@@ -1638,14 +1638,12 @@ export const syncAppointmentToExternalCalendars = internalAction({
         },
       );
 
-      if (previousState === "failed" || previousState === "drifted") {
-        await ctx.runMutation(
-          internal.integrations.calendar.upsertCalendarSyncIssue,
-          {
-            appointmentId: args.appointmentId,
-          },
-        );
-      }
+      await ctx.runMutation(
+        internal.integrations.calendar.upsertCalendarSyncIssue,
+        {
+          appointmentId: args.appointmentId,
+        },
+      );
 
       return {
         ok: false,

@@ -133,6 +133,9 @@ export const getNotificationDeliveryContext = internalQuery({
     if (!appointment) {
       throw new Error("Appointment not found for notification.");
     }
+    if (appointment.status === "canceled" || appointment.status === "cancelled") {
+      throw new Error("Appointment is no longer confirmed.");
+    }
 
     const [service, contact, business, profile, smsPolicy] =
       await Promise.all([
@@ -261,8 +264,38 @@ export const markNotificationPending = internalMutation({
     notificationId: v.id("notifications"),
   },
   handler: async (ctx, args) => {
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification || notification.status !== "scheduled") {
+      return { ok: false };
+    }
+
     await ctx.db.patch(args.notificationId, { status: "pending" });
-    return null;
+    return { ok: true };
+  },
+});
+
+export const cancelScheduledNotificationsForAppointment = internalMutation({
+  args: {
+    appointmentId: v.id("appointments"),
+  },
+  handler: async (ctx, args) => {
+    const notifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_kind_and_related_id", (q) =>
+        q.eq("kind", "appointment_reminder").eq("relatedId", String(args.appointmentId)),
+      )
+      .collect();
+
+    let cancelled = 0;
+    for (const notification of notifications) {
+      if (notification.status !== "scheduled" && notification.status !== "pending") {
+        continue;
+      }
+      await ctx.db.patch(notification._id, { status: "canceled" });
+      cancelled += 1;
+    }
+
+    return { cancelled };
   },
 });
 
@@ -291,6 +324,9 @@ export const createAppointmentNotifications = internalMutation({
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment) {
       throw new Error("Appointment not found.");
+    }
+    if (appointment.status !== "confirmed") {
+      return null;
     }
     const business = await ctx.db.get(appointment.businessId);
     const senderRole =
@@ -389,9 +425,15 @@ export const deliverScheduledNotification = internalAction({
     notificationId: v.id("notifications"),
   },
   handler: async (ctx, args) => {
-    await ctx.runMutation(internal.notifications.reminders.markNotificationPending, {
-      notificationId: args.notificationId,
-    });
+    const result: { ok: boolean } = await ctx.runMutation(
+      internal.notifications.reminders.markNotificationPending,
+      {
+        notificationId: args.notificationId,
+      },
+    );
+    if (!result.ok) {
+      return null;
+    }
     await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
       notificationId: args.notificationId,
     });

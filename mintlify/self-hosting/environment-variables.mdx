@@ -15,8 +15,8 @@ Use the repository's `.env.example` as the source of truth for local setup. This
 | --- | --- | --- |
 | `APP_BASE_URL` | Convex | Public web app URL used for redirects such as Google Calendar OAuth. |
 | `SITE_URL` | Convex | Public web app URL used by auth and billing links. |
-| `CONVEX_URL` | Server/runtime | Convex deployment URL. |
-| `CONVEX_SITE_URL` | Server/runtime | Convex HTTP actions URL. |
+| `CONVEX_URL` | Server/runtime, web build | Convex deployment URL. Also exposed to the React dashboard by Vite. |
+| `CONVEX_SITE_URL` | Server/runtime, web build | Convex HTTP actions URL. Also exposed to the React dashboard by Vite. |
 | `VOICE_GATEWAY_BASE_URL` | Convex, voice gateway | Public HTTPS URL for the voice gateway. |
 | `INTERNAL_SERVICE_TOKEN` | Convex, voice gateway | Shared secret for internal HTTP calls between the voice gateway and Convex. |
 | `SESSION_ENCRYPTION_KEY` | Convex | Required for encrypted Google Calendar token storage. |
@@ -26,8 +26,6 @@ Use the repository's `.env.example` as the source of truth for local setup. This
 
 | Variable | Notes |
 | --- | --- |
-| `VITE_CONVEX_URL` | Required by the React dashboard. |
-| `VITE_CONVEX_SITE_URL` | Used for HTTP endpoints and downloads. |
 | `VITE_APP_NAME` | Display name; defaults to LobbyStack in `.env.example`. |
 | `VITE_DEPLOYMENT_MODE` | Client-side deployment mode label. |
 | `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`, `VITE_POSTHOG_UI_HOST` | Optional web analytics settings. |

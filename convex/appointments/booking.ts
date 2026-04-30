@@ -112,6 +112,7 @@ async function loadBookingContext(
   args: {
     businessId: Id<"businesses">;
     serviceId: Id<"services">;
+    excludeAppointmentId?: Id<"appointments">;
   },
 ): Promise<BookingContext> {
   const service = await ctx.db.get(args.serviceId);
@@ -162,10 +163,13 @@ async function loadBookingContext(
       : defaultStaffId
         ? [defaultStaffId]
         : [];
+  const blockingAppointments = appointments.filter(
+    (row) => row._id !== args.excludeAppointmentId && row.status === "confirmed",
+  );
   const existingAppointments =
     eligibleAssignments.length > 0
       ? [
-          ...appointments.map((row) => ({
+          ...blockingAppointments.map((row) => ({
             startsAt: row.startsAt,
             endsAt: row.endsAt,
             staffId: String(row.staffId),
@@ -180,7 +184,7 @@ async function loadBookingContext(
         ]
       : defaultStaffId
         ? [
-            ...appointments.map((row) => ({
+            ...blockingAppointments.map((row) => ({
               startsAt: row.startsAt,
               endsAt: row.endsAt,
               staffId: defaultStaffId,
@@ -383,6 +387,7 @@ export const checkAvailabilityForBusiness = internalQuery({
     startsAt: v.string(),
     timezone: v.string(),
     preferredStaffId: v.optional(v.id("staff")),
+    excludeAppointmentId: v.optional(v.id("appointments")),
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
@@ -420,6 +425,7 @@ export const findAvailabilityForBusiness = internalQuery({
     preferredHour24: v.optional(v.number()),
     preferredMinute: v.optional(v.number()),
     limit: v.optional(v.number()),
+    excludeAppointmentId: v.optional(v.id("appointments")),
   },
   handler: async (ctx, args) => {
     const context = await loadBookingContext(ctx, args);
@@ -512,6 +518,7 @@ export const checkAvailability = query({
     startsAt: v.string(),
     timezone: v.string(),
     preferredStaffId: v.optional(v.id("staff")),
+    excludeAppointmentId: v.optional(v.id("appointments")),
   },
   handler: async (ctx, args) => {
     await requireMembership(ctx, args.businessId);

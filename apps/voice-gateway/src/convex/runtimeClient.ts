@@ -58,6 +58,74 @@ type BookAppointmentResponse = {
   serviceName: string;
 };
 
+type AppointmentChangePolicy = {
+  enabled: boolean;
+  allowCancel: boolean;
+  allowReschedule: boolean;
+  verificationMode: "phone_match_and_facts" | "otp_required" | "operator_only";
+};
+
+type AppointmentChangeLookupResponse = {
+  ok: true;
+  policy: AppointmentChangePolicy;
+  phoneMatched: boolean;
+  appointments: Array<{
+    appointmentId: string;
+    contactId: string;
+    serviceId: string;
+    serviceName: string;
+    startsAt: string;
+    endsAt: string;
+    timezone: string;
+  }>;
+};
+
+type AppointmentChangeVerifyResponse =
+  | {
+      ok: true;
+      verified: true;
+      requiresOtp: boolean;
+      verificationId: string;
+      appointmentId: string;
+      contactId: string;
+      status: string;
+    }
+  | {
+      ok: false;
+      verified: false;
+      reason: string;
+    };
+
+type AppointmentChangeOtpResponse =
+  | {
+      ok: true;
+      status: string;
+      verificationId: string;
+      otpPhone?: string;
+    }
+  | {
+      ok: false;
+      status?: string;
+      reason: string;
+    };
+
+type AppointmentChangeMutationResponse =
+  | {
+      ok: true;
+      action: "cancel" | "reschedule";
+      appointmentId: string;
+      serviceId: string;
+      startsAt: string;
+      endsAt: string;
+      status: string;
+      calendarSyncState: string;
+    }
+  | {
+      ok: false;
+      action: "cancel" | "reschedule";
+      reason: string;
+    };
+
 type TakeMessageResponse = {
   inboxItemId: string;
 };
@@ -167,6 +235,16 @@ export async function completeVoiceCall(input: {
   await postJson("/voice/call/complete", input);
 }
 
+export async function systemBlockContactForVoiceCall(input: {
+  callId: string;
+  blockedAt: string;
+}): Promise<{ blocked: boolean; contactId?: string; reason?: string }> {
+  return await postJson<{ blocked: boolean; contactId?: string; reason?: string }>(
+    "/voice/call/system-block-contact",
+    input,
+  );
+}
+
 export async function recordVoiceAiCost(input: {
   businessId: string;
   callId: string;
@@ -266,6 +344,85 @@ export async function bookVoiceAppointment(input: {
   contactPhone: string;
 }): Promise<BookAppointmentResponse> {
   return await postJson<BookAppointmentResponse>("/voice/tool/book-appointment", input);
+}
+
+export async function lookupVoiceAppointmentForChange(input: {
+  businessId: string;
+  callerPhone: string;
+}): Promise<AppointmentChangeLookupResponse> {
+  return await postJson<AppointmentChangeLookupResponse>(
+    "/voice/tool/lookup-appointment-for-change",
+    input,
+  );
+}
+
+export async function verifyVoiceAppointmentForChange(input: {
+  businessId: string;
+  appointmentId: string;
+  action: "cancel" | "reschedule";
+  callerPhone: string;
+  callerName?: string;
+  appointmentStartsAt?: string;
+  serviceName?: string;
+  callId?: string;
+  conversationId?: string;
+}): Promise<AppointmentChangeVerifyResponse> {
+  return await postJson<AppointmentChangeVerifyResponse>(
+    "/voice/tool/verify-appointment-for-change",
+    input,
+  );
+}
+
+export async function sendVoiceAppointmentChangeOtp(input: {
+  verificationId: string;
+}): Promise<AppointmentChangeOtpResponse> {
+  return await postJson<AppointmentChangeOtpResponse>(
+    "/voice/tool/send-appointment-change-otp",
+    input,
+  );
+}
+
+export async function verifyVoiceAppointmentChangeOtp(input: {
+  verificationId: string;
+  code: string;
+}): Promise<AppointmentChangeOtpResponse> {
+  return await postJson<AppointmentChangeOtpResponse>(
+    "/voice/tool/verify-appointment-change-otp",
+    input,
+  );
+}
+
+export async function cancelVoiceAppointment(input: {
+  businessId: string;
+  appointmentId: string;
+  callerPhone: string;
+  finalConfirmation: boolean;
+  verificationId?: string;
+  callId?: string;
+  conversationId?: string;
+}): Promise<AppointmentChangeMutationResponse> {
+  return await postJson<AppointmentChangeMutationResponse>(
+    "/voice/tool/cancel-appointment",
+    input,
+  );
+}
+
+export async function rescheduleVoiceAppointment(input: {
+  businessId: string;
+  appointmentId: string;
+  callerPhone: string;
+  startsAt: string;
+  timezone?: string;
+  preferredStaffId?: string;
+  finalConfirmation: boolean;
+  verificationId?: string;
+  callId?: string;
+  conversationId?: string;
+}): Promise<AppointmentChangeMutationResponse> {
+  return await postJson<AppointmentChangeMutationResponse>(
+    "/voice/tool/reschedule-appointment",
+    input,
+  );
 }
 
 export async function takeVoiceMessage(input: {
