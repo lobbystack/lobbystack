@@ -68,14 +68,13 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           render={
             <Button
               aria-label={t("feedback.trigger")}
-              className="text-muted-foreground hover:text-muted-foreground aria-expanded:text-muted-foreground"
               size="sm"
               type="button"
-              variant="ghost"
+              variant="secondary"
             />
           }
         >
-          {t("feedback.trigger")}
+          <span className="text-muted-foreground">{t("feedback.trigger")}</span>
         </PopoverTrigger>
         <PopoverContent
           align="end"
