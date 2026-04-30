@@ -129,6 +129,12 @@ const unitEconomicsQuantityUnitValidator = v.union(
   v.literal("user"),
 );
 
+const feedbackEmailStatusValidator = v.union(
+  v.literal("pending_email"),
+  v.literal("email_sent"),
+  v.literal("email_failed"),
+);
+
 export default defineSchema({
   ...authTables,
   users: defineTable({
@@ -181,6 +187,27 @@ export default defineSchema({
     .index("by_user_id_and_business_id", ["userId", "businessId"])
     .index("by_business_id", ["businessId"])
     .index("by_business_id_and_role", ["businessId", "role"]),
+
+  feedback_submissions: defineTable({
+    userId: v.id("users"),
+    userEmail: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    businessId: v.optional(v.id("businesses")),
+    businessName: v.optional(v.string()),
+    message: v.string(),
+    pagePath: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    emailStatus: feedbackEmailStatusValidator,
+    recipientEmail: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    emailError: v.optional(v.string()),
+    submittedAt: v.string(),
+    emailedAt: v.optional(v.string()),
+    updatedAt: v.string(),
+  })
+    .index("by_business_id_and_submitted_at", ["businessId", "submittedAt"])
+    .index("by_user_id_and_submitted_at", ["userId", "submittedAt"])
+    .index("by_email_status_and_submitted_at", ["emailStatus", "submittedAt"]),
 
   staff: defineTable({
     businessId: v.id("businesses"),

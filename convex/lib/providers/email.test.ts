@@ -50,6 +50,25 @@ describe("transactional email provider", () => {
     expect(email.html).toContain("href=\"https://example.com/confirm-email-change?token=test&amp;email=updated%40example.com\"");
   });
 
+  it("renders dashboard feedback submissions with escaped content", async () => {
+    const { renderTransactionalEmail } = await import("./email");
+
+    const email = renderTransactionalEmail({
+      template: "feedback_submission",
+      to: "feedback@example.com",
+      subject: "LobbyStack feedback from Maple Clinic",
+      variables: {
+        body: "A helpful idea\n\n<script>alert('x')</script>",
+      },
+    });
+
+    expect(email.subject).toBe("LobbyStack feedback from Maple Clinic");
+    expect(email.text).toContain("A helpful idea");
+    expect(email.html).toContain("A helpful idea<br /><br />");
+    expect(email.html).toContain("&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;");
+    expect(email.html).not.toContain("<script>");
+  });
+
   it("uses Resend test mode in development", async () => {
     vi.stubEnv("DEPLOYMENT_MODE", "development");
     vi.stubEnv("EMAIL_FROM_ADDRESS", "noreply@example.com");

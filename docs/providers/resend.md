@@ -10,6 +10,7 @@ Set these variables before testing auth email:
 - `DEPLOYMENT_MODE`
 - `RESEND_API_KEY`
 - `EMAIL_FROM_ADDRESS`
+- `FEEDBACK_TO_EMAIL` for dashboard feedback delivery
 - `SITE_URL`
 
 Development keeps the Resend component in test mode when `DEPLOYMENT_MODE=development`.
@@ -32,4 +33,5 @@ Convex Auth uses `SITE_URL` internally for password reset and email confirmation
 
 - Real delivery requires `DEPLOYMENT_MODE` to be something other than `development`.
 - The configured `EMAIL_FROM_ADDRESS` must be a sender that your Resend account can use.
+- Dashboard feedback submissions are stored in Convex first, then delivered to `FEEDBACK_TO_EMAIL` asynchronously.
 - Signup verification and other transactional templates are still reserved for follow-up work.

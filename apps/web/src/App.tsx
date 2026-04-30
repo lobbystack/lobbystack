@@ -210,6 +210,7 @@ function WorkspaceShell() {
     <AuthenticatedLayout
       isLoading={isBootstrapLoading}
       onSignOut={() => void handleSignOut()}
+      {...(businessId ? { businessId } : {})}
       {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
       {...(currentUser?.image ? { operatorAvatar: currentUser.image } : {})}
       {...(currentUser?.email ? { operatorEmail: currentUser.email } : {})}

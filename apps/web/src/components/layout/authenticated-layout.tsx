@@ -1,11 +1,14 @@
 import type { CSSProperties, ReactNode } from "react";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 type AuthenticatedLayoutProps = {
+  businessId?: Id<"businesses">;
   businessName?: string;
   children: ReactNode;
   onSignOut: () => void;
@@ -29,6 +32,7 @@ function getSidebarDefaultOpen(): boolean {
 }
 
 export function AuthenticatedLayout({
+  businessId,
   businessName,
   children,
   onSignOut,
@@ -66,6 +70,7 @@ export function AuthenticatedLayout({
         )}
       >
         <SiteHeader fixed />
+        {!isLoading ? <FeedbackWidget {...(businessId ? { businessId } : {})} /> : null}
         {children}
       </SidebarInset>
     </SidebarProvider>

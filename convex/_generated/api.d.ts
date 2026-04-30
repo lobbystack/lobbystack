@@ -28,6 +28,7 @@ import type * as dashboard_contacts from "../dashboard/contacts.js";
 import type * as dashboard_messages from "../dashboard/messages.js";
 import type * as dashboard_outcomes from "../dashboard/outcomes.js";
 import type * as dashboard_overview from "../dashboard/overview.js";
+import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as integrations_calendar from "../integrations/calendar.js";
 import type * as integrations_googleCalendar from "../integrations/googleCalendar.js";
@@ -122,6 +123,7 @@ declare const fullApi: ApiFromModules<{
   "dashboard/messages": typeof dashboard_messages;
   "dashboard/outcomes": typeof dashboard_outcomes;
   "dashboard/overview": typeof dashboard_overview;
+  feedback: typeof feedback;
   http: typeof http;
   "integrations/calendar": typeof integrations_calendar;
   "integrations/googleCalendar": typeof integrations_googleCalendar;

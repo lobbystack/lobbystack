@@ -22,5 +22,19 @@
     "customer": "Client",
     "receptionist": "Réceptionniste",
     "prompt": "Demande"
+  },
+  "feedback": {
+    "trigger": "Feedback",
+    "title": "Envoyer un commentaire",
+    "description": "Dites-nous ce qui améliorerait ce tableau de bord.",
+    "label": "Message de feedback",
+    "placeholder": "Que devrions-nous améliorer ?",
+    "characterCount": "{{count}} / {{max}} caractères",
+    "helpText": "Envoyé à l’équipe LobbyStack.",
+    "submit": "Envoyer",
+    "toast": {
+      "sent": "Feedback envoyé.",
+      "failed": "Nous n’avons pas pu enregistrer ce feedback."
+    }
   }
 }

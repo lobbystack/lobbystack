@@ -22,5 +22,19 @@
     "customer": "Customer",
     "receptionist": "Receptionist",
     "prompt": "Prompt"
+  },
+  "feedback": {
+    "trigger": "Feedback",
+    "title": "Send feedback",
+    "description": "Tell us what would make this dashboard better.",
+    "label": "Feedback message",
+    "placeholder": "What should we improve?",
+    "characterCount": "{{count}} / {{max}} characters",
+    "helpText": "Sent to the LobbyStack team.",
+    "submit": "Send",
+    "toast": {
+      "sent": "Feedback sent.",
+      "failed": "We could not save that feedback."
+    }
   }
 }
