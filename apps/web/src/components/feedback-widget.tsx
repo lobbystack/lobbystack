@@ -75,8 +75,8 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
             />
           }
         >
+          <MessageSquareShare className="text-muted-foreground" data-icon="inline-start" />
           <span className="text-muted-foreground">{t("feedback.trigger")}</span>
-          <MessageSquareShare className="text-muted-foreground" data-icon="inline-end" />
         </PopoverTrigger>
         <PopoverContent
           align="end"
