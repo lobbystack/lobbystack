@@ -22,6 +22,7 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
     { label: t("sections.billing"), to: "/settings/billing" },
     { label: t("sections.business"), to: "/settings/team" },
     { label: t("sections.appearance"), to: "/settings/appearance" },
+    { label: t("sections.notifications"), to: "/settings/notifications" },
   ] as const;
 
   return (

@@ -14,7 +14,8 @@
     "appearance": "Preferences",
     "integrations": "Integrations",
     "billing": "Billing",
-    "usage": "Usage"
+    "usage": "Usage",
+    "notifications": "Notifications"
   },
   "billing": {
     "toast": {
@@ -549,5 +550,39 @@
     "hours": "Set hours, services, and bookable team assignments so booking can suggest real times.",
     "transfer": "Add transfer rules and a fallback number before handing off urgent calls.",
     "snapshot": "Refresh your snapshot after major policy changes so voice picks them up quickly."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Choose which events trigger an alert to your phone or email.",
+    "communication": {
+      "title": "Communication",
+      "voiceMessage": {
+        "title": "Voice message captured",
+        "description": "When the AI takes a callback or follow-up message during a call."
+      },
+      "pausedSms": {
+        "title": "New message in paused SMS conversation",
+        "description": "When SMS automation is manually paused and the customer sends another message."
+      }
+    },
+    "systemIssues": {
+      "title": "System issues",
+      "smsFailed": {
+        "title": "Customer SMS notification failed",
+        "description": "When an appointment confirmation or reminder SMS fails or is undelivered."
+      },
+      "calendarSync": {
+        "title": "Calendar sync issue",
+        "description": "When an appointment cannot sync to the calendar and needs attention."
+      },
+      "transferFailed": {
+        "title": "Live call transfer failed",
+        "description": "When the AI tried to transfer a caller to a human, but the transfer did not complete."
+      },
+      "aiReplyFailed": {
+        "title": "SMS AI reply failed",
+        "description": "When the system fails to generate or send an AI SMS reply."
+      }
+    }
   }
 }

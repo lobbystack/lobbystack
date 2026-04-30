@@ -831,8 +831,9 @@ function UsageSection({
             : undefined
         }
       >
-        <BorderedItem className="flex flex-col gap-5">
-          <UsageMeterRow
+        <BorderedItem className="p-0">
+          <div className="px-6 py-5 border-b border-border last:border-b-0">
+            <UsageMeterRow
             label={t("billing.usage.voiceTitle")}
             locale={locale}
             t={t}
@@ -849,7 +850,10 @@ function UsageSection({
             mode="included"
           />
 
-          <UsageMeterRow
+          </div>
+
+          <div className="px-6 py-5 border-b border-border last:border-b-0">
+            <UsageMeterRow
             label={t("billing.usage.outboundAttemptsTitle")}
             locale={locale}
             t={t}
@@ -862,7 +866,10 @@ function UsageSection({
             mode="included"
           />
 
-          <UsageMeterRow
+          </div>
+
+          <div className="px-6 py-5 border-b border-border last:border-b-0">
+            <UsageMeterRow
             label={t("billing.usage.alertSmsTitle")}
             locale={locale}
             t={t}
@@ -875,7 +882,10 @@ function UsageSection({
             mode="included"
           />
 
-          <UsageMeterRow
+          </div>
+
+          <div className="px-6 py-5 border-b border-border last:border-b-0">
+            <UsageMeterRow
             label={t("billing.usage.knowledgeTitle")}
             locale={locale}
             t={t}
@@ -888,6 +898,7 @@ function UsageSection({
             formatValue={formatStorage}
             mode="included"
           />
+          </div>
         </BorderedItem>
       </BillingSection>
 
@@ -902,10 +913,11 @@ function UsageSection({
               : undefined
           }
         >
-          <BorderedItem className="flex flex-col gap-5">
+          <BorderedItem className="p-0 flex flex-col">
             {catalog.overagesBillable && (
               <>
-                <UsageMeterRow
+                <div className="px-6 py-5 border-b border-border last:border-b-0">
+                  <UsageMeterRow
                   label={t("billing.usage.voiceTitle")}
                   locale={locale}
                   t={t}
@@ -921,8 +933,10 @@ function UsageSection({
                   overageBillable={catalog.overagesBillable}
                   mode="payg"
                 />
+                </div>
 
-                <UsageMeterRow
+                <div className="px-6 py-5 border-b border-border last:border-b-0">
+                  <UsageMeterRow
                   label={t("billing.usage.outboundAttemptsTitle")}
                   locale={locale}
                   t={t}
@@ -934,8 +948,10 @@ function UsageSection({
                   overageBillable={catalog.overagesBillable}
                   mode="payg"
                 />
+                </div>
 
-                <UsageMeterRow
+                <div className="px-6 py-5 border-b border-border last:border-b-0">
+                  <UsageMeterRow
                   label={t("billing.usage.alertSmsTitle")}
                   locale={locale}
                   t={t}
@@ -946,12 +962,14 @@ function UsageSection({
                   overageRateCents={catalog.alertSmsOverageRatePerSegmentCents}
                   overageBillable={catalog.overagesBillable}
                   mode="payg"
-                />
+                  />
+                </div>
               </>
             )}
 
             {status.aiSmsEnabled && (
-              <UsageMeterRow
+              <div className="px-6 py-5 border-b border-border last:border-b-0">
+                <UsageMeterRow
                 label={t("billing.usage.aiSmsTitle")}
                 locale={locale}
                 t={t}
@@ -964,6 +982,7 @@ function UsageSection({
                 metered
                 mode="payg"
               />
+              </div>
             )}
           </BorderedItem>
         </BillingSection>
