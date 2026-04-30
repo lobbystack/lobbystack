@@ -69,15 +69,14 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           render={
             <Button
               aria-label={t("feedback.trigger")}
-              className="aria-expanded:bg-secondary/80"
               size="sm"
               type="button"
               variant="secondary"
             />
           }
         >
-          <span className="text-muted-foreground">{t("feedback.trigger")}</span>
-          <MessageCircle className="text-muted-foreground" />
+          {t("feedback.trigger")}
+          <MessageCircle data-icon="inline-end" />
         </PopoverTrigger>
         <PopoverContent
           align="end"
@@ -125,9 +124,9 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           </form>
         </PopoverContent>
       </Popover>
-      <Button nativeButton={false} render={<a href="/docs" />} size="sm" variant="ghost">
-        <span className="text-muted-foreground">{t("feedback.helpCenter")}</span>
-      </Button>
+      <a className="text-sm font-medium text-muted-foreground hover:text-foreground" href="/docs">
+        {t("feedback.helpCenter")}
+      </a>
     </div>
   );
 }

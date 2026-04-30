@@ -73,7 +73,7 @@ describe("FeedbackWidget", () => {
 
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Contact us" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Help Center" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Help Center" }).getAttribute("href")).toBe(
       "/docs",
     );
   });
