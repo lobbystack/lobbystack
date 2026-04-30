@@ -10,7 +10,6 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -81,15 +80,15 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-[32rem] max-w-[calc(100vw-2rem)] rounded-3xl border-border/80 bg-background p-8 shadow-2xl"
+          className="w-96 max-w-[calc(100vw-2rem)] rounded-2xl border-border/80 bg-background p-4 shadow-xl"
           sideOffset={8}
         >
           <PopoverHeader className="sr-only">
             <PopoverTitle>{t("feedback.title")}</PopoverTitle>
             <PopoverDescription>{t("feedback.description")}</PopoverDescription>
           </PopoverHeader>
-          <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-            <FieldGroup className="gap-3">
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <FieldGroup className="gap-0">
               <Field data-invalid={message.length > MAX_FEEDBACK_MESSAGE_LENGTH}>
                 <FieldLabel className="sr-only" htmlFor="dashboard-feedback-message">
                   {t("feedback.label")}
@@ -101,20 +100,14 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
                   maxLength={MAX_FEEDBACK_MESSAGE_LENGTH + 1}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder={t("feedback.placeholder")}
-                  rows={7}
+                  rows={4}
                   value={message}
-                  className="min-h-36 rounded-2xl border-border/80 bg-muted/30 px-4 py-4 text-base placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
+                  className="min-h-28 rounded-xl border-border/80 bg-muted/30 px-3 py-3 text-sm placeholder:text-muted-foreground/70 focus-visible:ring-ring/40"
                 />
-                <FieldDescription>
-                  {t("feedback.characterCount", {
-                    count: message.length,
-                    max: MAX_FEEDBACK_MESSAGE_LENGTH,
-                  })}
-                </FieldDescription>
               </Field>
             </FieldGroup>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="min-w-0 text-sm text-muted-foreground">
                 {t("feedback.helpText")}{" "}
                 <a className="text-primary hover:underline" href="mailto:raphael.morency@icloud.com">
                   {t("feedback.contactLink")}
@@ -125,17 +118,17 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
                 </a>
               </p>
               <Button
-                className="h-12 gap-2 rounded-3xl px-5 text-base font-semibold"
+                className="h-10 gap-2 rounded-3xl px-4 text-sm font-semibold"
                 disabled={!canSubmit}
                 type="submit"
               >
                 {t("feedback.submit")}
                 <span className="flex items-center gap-1 text-primary-foreground/70">
-                  <span className="flex size-7 items-center justify-center rounded-xl bg-primary-foreground/15">
-                    <Command className="size-4" />
+                  <span className="flex size-6 items-center justify-center rounded-lg bg-primary-foreground/15">
+                    <Command className="size-3.5" />
                   </span>
-                  <span className="flex size-7 items-center justify-center rounded-xl bg-primary-foreground/15">
-                    <CornerDownLeft className="size-4" />
+                  <span className="flex size-6 items-center justify-center rounded-lg bg-primary-foreground/15">
+                    <CornerDownLeft className="size-3.5" />
                   </span>
                 </span>
               </Button>
