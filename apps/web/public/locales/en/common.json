@@ -28,7 +28,7 @@
     "title": "Send feedback",
     "description": "Tell us what would make this dashboard better.",
     "label": "Feedback message",
-    "placeholder": "Have an idea to improve this page? Tell the LobbyStack team.",
+    "placeholder": "Have an idea to improve LobbyStack? Tell the team.",
     "characterCount": "{{count}} / {{max}} characters",
     "helpText": "Need help?",
     "contactLink": "Contact us",

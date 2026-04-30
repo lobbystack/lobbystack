@@ -28,7 +28,7 @@
     "title": "Envoyer un commentaire",
     "description": "Dites-nous ce qui améliorerait ce tableau de bord.",
     "label": "Message de feedback",
-    "placeholder": "Une idée pour améliorer cette page ? Dites-le à l’équipe LobbyStack.",
+    "placeholder": "Une idée pour améliorer LobbyStack ? Dites-le à l’équipe.",
     "characterCount": "{{count}} / {{max}} caractères",
     "helpText": "Besoin d’aide ?",
     "contactLink": "Contactez-nous",
