@@ -68,6 +68,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
           render={
             <Button
               aria-label={t("feedback.trigger")}
+              className="text-muted-foreground hover:text-muted-foreground aria-expanded:text-muted-foreground"
               size="sm"
               type="button"
               variant="ghost"
@@ -107,7 +108,7 @@ export function FeedbackWidget({ businessId }: FeedbackWidgetProps) {
             <div className="flex items-center justify-between gap-3">
               <p className="min-w-0 text-sm text-muted-foreground">
                 {t("feedback.helpText")}{" "}
-                <a className="text-primary underline underline-offset-4" href="mailto:raphael.morency@icloud.com">
+                <a className="text-primary underline underline-offset-4" href="mailto:support@lobbystack.com">
                   {t("feedback.contactLink")}
                 </a>{" "}
                 {t("feedback.helpTextSeparator")}{" "}
