@@ -50,9 +50,9 @@
             "pages": [
               "agent/overview",
               "agent/ai-settings",
+              "agent/ai-settings/appointment-changes",
               "agent/knowledge",
               "agent/services",
-              "agent/appointment-changes",
               "agent/rules"
             ]
           },
