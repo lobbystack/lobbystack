@@ -2673,8 +2673,8 @@ describe("SMS scheduling flow", () => {
     });
 
     expect(reply).toContain("To verify you are authorized");
-    expect(reply).toContain("Initial Consultation");
-    expect(reply).toContain("Tuesday, May 21 at 10:00 AM");
+    expect(reply).not.toContain("Initial Consultation");
+    expect(reply).not.toContain("Tuesday, May 21 at 10:00 AM");
     expect(reply).not.toContain("I have cancelled your appointment");
   });
 
@@ -2847,8 +2847,8 @@ describe("SMS scheduling flow", () => {
     });
 
     expect(reply).toContain("To verify you are authorized");
-    expect(reply).toContain("Initial Consultation");
-    expect(reply).toContain("Tuesday, May 21 at 10:00 AM");
+    expect(reply).not.toContain("Initial Consultation");
+    expect(reply).not.toContain("Tuesday, May 21 at 10:00 AM");
   });
 
   it("does not treat generic language changes as appointment-change requests", async () => {
@@ -3554,9 +3554,10 @@ describe("SMS scheduling flow", () => {
       prompt: "Je dois déplacer mon rendez-vous.",
     });
 
-    expect(reply).toContain("Je peux vous aider avec ce rendez-vous");
+    expect(reply).toContain("Je vois un rendez-vous confirmé");
     expect(reply).toContain("Pour vérifier que vous êtes autorisé");
-    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("Initial Consultation");
+    expect(reply).not.toContain("21 mai");
   });
 
   it("removes partial closures from business-hours replies", async () => {

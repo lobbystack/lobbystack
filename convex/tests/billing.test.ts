@@ -1,5 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { polarEventsIngestMock } = vi.hoisted(() => ({
   polarEventsIngestMock: vi.fn(),
@@ -58,6 +58,11 @@ type ConvexHarness = TestConvex<typeof schema>;
 type TestRunFunction = Parameters<ConvexHarness["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
 
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-04-15T12:00:00.000Z"));
+});
+
 afterEach(() => {
   if (originalProProductId === undefined) {
     delete process.env.POLAR_PRO_PRODUCT_ID;
@@ -90,6 +95,7 @@ afterEach(() => {
   }
 
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 async function seedWorkspace(
