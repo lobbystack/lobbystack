@@ -117,6 +117,10 @@ export const getNotificationDeliveryContext = internalQuery({
       throw new Error("Only SMS notifications are supported.");
     }
 
+    if (notification.status !== "pending") {
+      throw new Error("Notification is no longer pending.");
+    }
+
     if (!notification.relatedId) {
       throw new Error("Notification is missing a related appointment.");
     }
