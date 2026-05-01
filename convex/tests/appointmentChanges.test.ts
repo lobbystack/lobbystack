@@ -292,6 +292,37 @@ describe("appointment change authorization", () => {
     });
   });
 
+  it("matches relative day facts across business-local DST boundaries", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(fixture.appointmentId, {
+        startsAt: "2030-03-10T14:00:00.000Z",
+        endsAt: "2030-03-10T14:30:00.000Z",
+      });
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-03-10T04:30:00.000Z"));
+
+    const verification = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        appointmentStartsAt: "tomorrow morning",
+      },
+    );
+
+    expect(verification).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+  });
+
   it("matches unzoned dated appointment facts in the business timezone", async () => {
     const previousTimezone = process.env.TZ;
     process.env.TZ = "UTC";

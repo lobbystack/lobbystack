@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { DateTime } from "luxon";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import {
@@ -296,24 +297,16 @@ function getBusinessRelativeLocalDate(
   timezone: string,
   daysFromToday: number,
 ): Pick<LocalAppointmentDateTime, "year" | "month" | "day"> | null {
-  const target = new Date(Date.now() + daysFromToday * 24 * 60 * 60 * 1000);
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).formatToParts(target);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value;
-  const year = Number(value("year"));
-  const month = Number(value("month"));
-  const day = Number(value("day"));
-
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+  const target = DateTime.now().setZone(timezone).plus({ days: daysFromToday });
+  if (!target.isValid) {
     return null;
   }
 
-  return { year, month, day };
+  return {
+    year: target.year,
+    month: target.month,
+    day: target.day,
+  };
 }
 
 function parseProvidedClockTime(input: string):
