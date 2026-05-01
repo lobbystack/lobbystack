@@ -292,6 +292,38 @@ describe("appointment change authorization", () => {
     });
   });
 
+  it("matches unzoned dated appointment facts in the business timezone", async () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = "UTC";
+    try {
+      const t = createHarness();
+      const fixture = await seedAppointmentChangeFixture(t);
+
+      const verification = await t.mutation(
+        internal.appointments.changes.verifyAppointmentChangeFacts,
+        {
+          businessId: fixture.businessId,
+          action: "cancel",
+          channel: "sms",
+          callerPhone: fixture.contactPhone,
+          callerName: "Jane Doe",
+          appointmentStartsAt: "May 15 2030 10:00 AM",
+        },
+      );
+
+      expect(verification).toMatchObject({
+        ok: true,
+        appointmentId: fixture.appointmentId,
+      });
+    } finally {
+      if (previousTimezone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimezone;
+      }
+    }
+  });
+
   it("matches natural clock facts across hour boundaries", async () => {
     const t = createHarness();
     const fixture = await seedAppointmentChangeFixture(t);

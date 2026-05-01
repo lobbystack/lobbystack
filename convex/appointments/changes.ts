@@ -188,10 +188,6 @@ function appointmentTimesMatch(
     return true;
   }
 
-  if (Number.isFinite(providedMs) && /\b(?:19|20)\d{2}\b/.test(providedStartsAt)) {
-    return false;
-  }
-
   return appointmentLocalTimeFactMatches(appointment, providedStartsAt);
 }
 
