@@ -1,5 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -150,6 +150,11 @@ describe("appointment change authorization", () => {
   beforeEach(() => {
     workflowStartMock.mockReset();
     workflowStartMock.mockResolvedValue(null);
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("allows cancellation after phone, name, appointment fact, and final confirmation", async () => {
@@ -229,6 +234,62 @@ describe("appointment change authorization", () => {
     expect(state.notifications[0]?.status).toBe("canceled");
     expect(state.audits.some((audit) => audit.status === "succeeded")).toBe(true);
     expect(workflowStartMock).toHaveBeenCalled();
+  });
+
+  it("matches caller-provided appointment time facts without an appointment id", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t);
+
+    const formattedDateTime = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        appointmentStartsAt: "Wednesday, May 15 at 10:00 AM",
+      },
+    );
+    expect(formattedDateTime).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+
+    const roughTime = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        appointmentStartsAt: "at 10",
+      },
+    );
+    expect(roughTime).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-05-14T14:00:00.000Z"));
+
+    const relativeDayPart = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        appointmentStartsAt: "tomorrow morning",
+      },
+    );
+    expect(relativeDayPart).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
   });
 
   it("blocks OTP-required cancellation until OTP is approved", async () => {
