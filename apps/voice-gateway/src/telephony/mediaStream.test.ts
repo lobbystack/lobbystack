@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { demoSnapshot } from "@lobbystack/shared";
 
 import {
   createCallInactivityState,
@@ -12,9 +13,34 @@ import {
   shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
+  buildRealtimeSessionConfig,
   estimateRealtimeTotalCostUsd,
   getRealtimeGenerationOutcome,
 } from "./mediaStream";
+
+describe("buildRealtimeSessionConfig", () => {
+  it("requests phone-compatible audio responses only", () => {
+    const config = buildRealtimeSessionConfig({
+      snapshot: demoSnapshot,
+      runtimeConfig: {
+        OPENAI_REALTIME_VOICE: "marin",
+        OPENAI_TRANSCRIPTION_MODEL: "gpt-4o-mini-transcribe",
+      },
+      businessNowLabel: "Friday, 2026-05-01, 6:30 p.m.",
+    });
+
+    expect(config.modalities).toEqual(["audio"]);
+    expect(config.input_audio_format).toBe("g711_ulaw");
+    expect(config.output_audio_format).toBe("g711_ulaw");
+    expect(config.voice).toBe("marin");
+    expect(config.input_audio_transcription).toEqual({
+      model: "gpt-4o-mini-transcribe",
+    });
+    expect(config.instructions).toContain(
+      "The current local business time is Friday, 2026-05-01, 6:30 p.m. in America/Toronto.",
+    );
+  });
+});
 
 describe("estimateRealtimeTotalCostUsd", () => {
   it("prefers provider-reported total cost when available", () => {
