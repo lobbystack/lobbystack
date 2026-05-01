@@ -167,7 +167,6 @@ type AppointmentChangeStatusResult = {
   appointmentCount?: number;
   policyMode?: "phone_match_and_facts" | "otp_required" | "operator_only";
   reason?: string;
-  appointment?: CurrentAppointmentSummary;
 };
 type OfferedSlotSummary = {
   startsAt: string;
@@ -1559,21 +1558,6 @@ function buildBusinessHoursReply(input: {
   });
 }
 
-function buildAppointmentChangeUnavailableReply(
-  summary: CurrentAppointmentSummary,
-  locale: RuntimeLocale,
-): string {
-  const formattedStart = formatRuntimeAppointmentDateTime(
-    summary.startsAt,
-    summary.timezone,
-    locale,
-  );
-  return localizeRuntimeText(locale, {
-    en: `I can help with that ${summary.serviceName} appointment on ${formattedStart}. To verify you are authorized, please reply with the name on the appointment and either the appointment time or service.`,
-    fr: `Je peux vous aider avec ce rendez-vous pour ${summary.serviceName} ${formattedStart}. Pour vérifier que vous êtes autorisé, répondez avec le nom au dossier et l'heure ou le service du rendez-vous.`,
-  });
-}
-
 function classifyCurrentAppointmentQuestion(
   prompt: string,
 ): CurrentAppointmentQuestionType {
@@ -1891,26 +1875,20 @@ async function resolveAppointmentChangeStatus(
       verificationMode: "phone_match_and_facts" | "otp_required" | "operator_only";
     };
     phoneMatched: boolean;
-    appointments: Array<{
-      appointmentId: Id<"appointments">;
-      contactId: Id<"contacts">;
-      serviceId: Id<"services">;
-      serviceName: string;
-      startsAt: string;
-      endsAt: string;
-      timezone: string;
-    }>;
+    appointmentCount: number;
+    hasConfirmedAppointments: boolean;
+    appointments: Array<Record<string, never>>;
   } = await ctx.runQuery(internal.appointments.changes.lookupAppointmentsForChange, {
     businessId,
     callerPhone: contact.contactPhone,
   });
 
-  if (!lookup.phoneMatched || lookup.appointments.length === 0) {
+  if (!lookup.phoneMatched || lookup.appointmentCount === 0) {
     return {
       hasConfirmedAppointment: false,
       changeSupported: false,
       phoneMatched: lookup.phoneMatched,
-      appointmentCount: lookup.appointments.length,
+      appointmentCount: lookup.appointmentCount,
       policyMode: lookup.policy.verificationMode,
       reason: lookup.phoneMatched ? "no_confirmed_appointments" : "phone_mismatch",
     };
@@ -1929,38 +1907,13 @@ async function resolveAppointmentChangeStatus(
       (wantsReschedule && lookup.policy.allowReschedule) ||
       (!wantsCancel && !wantsReschedule && (lookup.policy.allowCancel || lookup.policy.allowReschedule)));
 
-  const appointment = lookup.appointments[0];
-  const localizedServiceName = appointment
-    ? await resolveCustomerFacingServiceName(ctx, {
-        serviceId: appointment.serviceId,
-        fallbackName: appointment.serviceName,
-        locale,
-      })
-    : "appointment";
-
   return {
     hasConfirmedAppointment: true,
-    changeSupported: actionAllowed && lookup.appointments.length === 1,
+    changeSupported: actionAllowed,
     phoneMatched: lookup.phoneMatched,
-    appointmentCount: lookup.appointments.length,
+    appointmentCount: lookup.appointmentCount,
     policyMode: lookup.policy.verificationMode,
     ...(!actionAllowed ? { reason: "appointment_changes_not_allowed" } : {}),
-    ...(appointment
-      ? {
-          appointment: {
-            appointmentId: appointment.appointmentId,
-            serviceId: appointment.serviceId,
-            serviceName: localizedServiceName,
-            startsAt: appointment.startsAt,
-            timezone: appointment.timezone,
-            formattedStart: formatRuntimeAppointmentDateTime(
-              appointment.startsAt,
-              appointment.timezone,
-              locale,
-            ),
-          },
-        }
-      : {}),
   };
 }
 
@@ -1977,19 +1930,22 @@ function buildAppointmentChangeStatusReply(
 
   if ((status.appointmentCount ?? 0) > 1) {
     return localizeRuntimeText(locale, {
-      en: "I found more than one future appointment for this phone number. Which appointment would you like to change?",
-      fr: "Je vois plus d'un rendez-vous à venir pour ce numéro. Quel rendez-vous voulez-vous modifier?",
+      en: "I found more than one future appointment for this phone number. To verify which one to change, please reply with the name on the appointment and either the appointment time or service.",
+      fr: "Je vois plus d'un rendez-vous à venir pour ce numéro. Pour vérifier lequel modifier, répondez avec le nom au dossier et l'heure ou le service du rendez-vous.",
     });
   }
 
-  if (!status.hasConfirmedAppointment || !status.appointment) {
+  if (!status.hasConfirmedAppointment) {
     return localizeRuntimeText(locale, {
       en: "I do not see a confirmed appointment to change right now.",
       fr: "Je ne vois pas de rendez-vous confirmé à modifier pour le moment.",
     });
   }
 
-  return buildAppointmentChangeUnavailableReply(status.appointment, locale);
+  return localizeRuntimeText(locale, {
+    en: "I found a confirmed appointment for this phone number. To verify you are authorized to change it, please reply with the name on the appointment and either the appointment time or service.",
+    fr: "Je vois un rendez-vous confirmé pour ce numéro. Pour vérifier que vous êtes autorisé à le modifier, répondez avec le nom au dossier et l'heure ou le service du rendez-vous.",
+  });
 }
 
 function unhandledSmsToolResult(): SmsToolResult {
@@ -2111,7 +2067,7 @@ const bookAppointmentSlotToolArgsSchema = z.object({
 });
 
 const verifyAppointmentChangeToolArgsSchema = z.object({
-  appointmentId: z.string(),
+  appointmentId: z.string().optional(),
   action: z.enum(["cancel", "reschedule"]),
   callerName: z.string().optional(),
   appointmentStartsAt: z.string().optional(),
@@ -2200,7 +2156,7 @@ function createSmsAgentTools(input: {
     }),
     getAppointmentChangeStatus: createTool({
       description:
-        "Return structured facts about the currently confirmed appointment when the user asks to cancel, move, change, or reschedule it.",
+        "Return whether the current SMS phone has confirmed appointments that may be changed. Does not reveal appointment facts.",
       args: z.object({}),
       handler: async () => {
         return await resolveAppointmentChangeStatusToolResult(
@@ -2213,7 +2169,7 @@ function createSmsAgentTools(input: {
     }),
     lookupAppointmentForChange: createTool({
       description:
-        "Look up future confirmed appointments for the current SMS phone before cancelling or rescheduling.",
+        "Check for future confirmed appointments for the current SMS phone before cancelling or rescheduling. Does not reveal appointment facts.",
       args: z.object({}),
       handler: async () => {
         const contact = await input.ctx.runQuery(
@@ -2230,27 +2186,12 @@ function createSmsAgentTools(input: {
             callerPhone: contact.contactPhone,
           },
         );
-        const appointments = await Promise.all(
-          result.appointments.map(async (appointment) => ({
-            ...appointment,
-            serviceName: await resolveCustomerFacingServiceName(input.ctx, {
-              serviceId: appointment.serviceId,
-              fallbackName: appointment.serviceName,
-              locale: input.locale,
-            }),
-            formattedStart: formatRuntimeAppointmentDateTime(
-              appointment.startsAt,
-              appointment.timezone,
-              input.locale,
-            ),
-          })),
-        );
-        return { ...result, appointments };
+        return result;
       },
     }),
     verifyAppointmentForChange: createTool({
       description:
-        "Verify the SMS customer name and an appointment fact before cancellation or rescheduling.",
+        "Verify the SMS customer name and an appointment fact before cancellation or rescheduling. The backend can match the appointment from the provided fact.",
       args: verifyAppointmentChangeToolArgsSchema,
       handler: async (_toolCtx, args) => {
         const parsed = verifyAppointmentChangeToolArgsSchema.parse(args);
@@ -2265,10 +2206,12 @@ function createSmsAgentTools(input: {
           internal.appointments.changes.verifyAppointmentChangeFacts,
           {
             businessId: input.businessId,
-            appointmentId: parsed.appointmentId as Id<"appointments">,
             action: parsed.action,
             channel: "sms",
             callerPhone: contact.contactPhone,
+            ...(parsed.appointmentId !== undefined
+              ? { appointmentId: parsed.appointmentId as Id<"appointments"> }
+              : {}),
             ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
             ...(parsed.appointmentStartsAt !== undefined
               ? { appointmentStartsAt: parsed.appointmentStartsAt }

@@ -154,11 +154,27 @@ describe("appointment change authorization", () => {
     const t = createHarness();
     const fixture = await seedAppointmentChangeFixture(t);
 
+    const lookup = await t.query(
+      internal.appointments.changes.lookupAppointmentsForChange,
+      {
+        businessId: fixture.businessId,
+        callerPhone: fixture.contactPhone,
+      },
+    );
+    expect(lookup).toMatchObject({
+      ok: true,
+      phoneMatched: true,
+      appointmentCount: 1,
+      hasConfirmedAppointments: true,
+      appointments: [],
+    });
+    expect(JSON.stringify(lookup)).not.toContain(fixture.startsAt);
+    expect(JSON.stringify(lookup)).not.toContain("Initial Consultation");
+
     const verification = await t.mutation(
       internal.appointments.changes.verifyAppointmentChangeFacts,
       {
         businessId: fixture.businessId,
-        appointmentId: fixture.appointmentId,
         action: "cancel",
         channel: "sms",
         callerPhone: fixture.contactPhone,
@@ -170,6 +186,7 @@ describe("appointment change authorization", () => {
     if (!verification.ok) {
       throw new Error("Expected verification to succeed.");
     }
+    expect(verification.appointmentId).toBe(fixture.appointmentId);
 
     const result = await t.mutation(
       internal.appointments.changes.cancelAppointmentForBusiness,

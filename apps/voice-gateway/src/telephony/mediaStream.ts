@@ -681,7 +681,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "lookupAppointmentForChange",
       description:
-        "Look up future confirmed appointments that the current caller phone is allowed to discuss before cancelling or rescheduling.",
+        "Check whether the current caller phone has future confirmed appointments before cancelling or rescheduling. This does not reveal appointment facts.",
       parameters: {
         type: "object",
         properties: {},
@@ -692,7 +692,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "verifyAppointmentForChange",
       description:
-        "Verify the caller's name and an appointment fact for a specific appointment before any cancellation or reschedule attempt.",
+        "Verify the caller's name and an appointment fact before any cancellation or reschedule attempt. If the lookup did not return an appointmentId, omit it and let the backend match the fact.",
       parameters: {
         type: "object",
         properties: {
@@ -702,15 +702,15 @@ function createRealtimeToolDefinitions() {
           appointmentStartsAt: {
             type: "string",
             description:
-              "The existing appointment start time from lookupAppointmentForChange when the caller confirms the time.",
+              "The existing appointment start time as provided by the caller.",
           },
           serviceName: {
             type: "string",
             description:
-              "The existing appointment service name when the caller confirms the service.",
+              "The existing appointment service name as provided by the caller.",
           },
         },
-        required: ["appointmentId", "action"],
+        required: ["action"],
         additionalProperties: false,
       },
     },
@@ -1547,8 +1547,8 @@ async function configureOpenAiSession(
         "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
         "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
         "Only call bookAppointment after the caller confirms a specific offered time.",
-        "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If the caller phone does not match an appointment, or there are multiple possible appointments, ask a clarifying question or offer human handoff.",
-        "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they confirmed, such as the existing time or service.",
+        "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If appointments exist, ask the caller for the name on the appointment and either the existing appointment time or service; do not claim to know those facts from lookup.",
+        "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they provided, such as the existing time or service.",
         "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",
         "Only call cancelAppointment or rescheduleAppointment after the caller gives explicit final confirmation for the exact appointment and action. Never claim the change succeeded unless that final tool result has ok true.",
         "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",

@@ -458,13 +458,10 @@ function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
         }
       | {
           handled: true;
-        appointmentChangeStatus: {
-          hasConfirmedAppointment: boolean;
-          changeSupported: boolean;
-          appointment?: {
-            formattedStart: string;
-            serviceName: string;
-            };
+          appointmentChangeStatus: {
+            hasConfirmedAppointment: boolean;
+            changeSupported: boolean;
+            appointmentCount?: number;
           };
         };
 
@@ -473,7 +470,7 @@ function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
     }
 
     const status = toolResult.appointmentChangeStatus;
-    if (!status.hasConfirmedAppointment || !status.appointment) {
+    if (!status.hasConfirmedAppointment) {
       return {
         text:
           locale === "fr"
@@ -485,8 +482,8 @@ function mockAgentToUseAppointmentChangeTool(locale: "en" | "fr" = "en"): void {
     return {
       text:
         locale === "fr"
-          ? `Je peux vous aider avec ce rendez-vous pour ${status.appointment.serviceName} ${status.appointment.formattedStart}. Pour vérifier que vous êtes autorisé, répondez avec le nom au dossier et l'heure ou le service du rendez-vous.`
-          : `I can help with that ${status.appointment.serviceName} appointment on ${status.appointment.formattedStart}. To verify you are authorized, please reply with the name on the appointment and either the appointment time or service.`,
+          ? "Je vois un rendez-vous confirmé pour ce numéro. Pour vérifier que vous êtes autorisé à le modifier, répondez avec le nom au dossier et l'heure ou le service du rendez-vous."
+          : "I found a confirmed appointment for this phone number. To verify you are authorized to change it, please reply with the name on the appointment and either the appointment time or service.",
     };
   });
 }
@@ -1807,11 +1804,11 @@ describe("SMS scheduling flow", () => {
     });
   });
 
-  it("returns structured appointment-change facts for supported cancel requests", async () => {
+  it("returns redacted appointment-change status for supported cancel requests", async () => {
     const t = createConvexHarness();
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = "test-google-key";
 
-    const { businessId, conversationId, initialConsultationId } = await t.run(async (ctx) => {
+    const { businessId, conversationId } = await t.run(async (ctx) => {
       const { businessId, initialConsultationId } = await seedMultiServiceBusiness(ctx, {
         slug: "sms-structured-appointment-change-status",
         name: "SMS Structured Appointment Change Status",
@@ -1828,7 +1825,7 @@ describe("SMS scheduling flow", () => {
         startsAt: "2030-05-15T13:30:00.000Z",
         endsAt: "2030-05-15T14:00:00.000Z",
       });
-      return { businessId, conversationId, initialConsultationId };
+      return { businessId, conversationId };
     });
     await t.mutation(internal.ai.context.snapshots.refreshSnapshot, { businessId });
 
@@ -1844,11 +1841,7 @@ describe("SMS scheduling flow", () => {
       appointmentChangeStatus?: {
         hasConfirmedAppointment: boolean;
         changeSupported: boolean;
-        appointment?: {
-          serviceId: Id<"services">;
-          serviceName: string;
-          formattedStart: string;
-        };
+        appointmentCount?: number;
       };
     }>(request.tools.getAppointmentChangeStatus!);
 
@@ -1856,11 +1849,7 @@ describe("SMS scheduling flow", () => {
     expect(toolResult.appointmentChangeStatus).toMatchObject({
       hasConfirmedAppointment: true,
       changeSupported: true,
-      appointment: {
-        serviceId: initialConsultationId,
-        serviceName: "Initial Consultation",
-        formattedStart: "Wednesday, May 15 at 9:30 AM",
-      },
+      appointmentCount: 1,
     });
   });
 
@@ -3522,9 +3511,10 @@ describe("SMS scheduling flow", () => {
       prompt: "Je dois annuler mon rendez-vous.",
     });
 
-    expect(reply).toContain("Je peux vous aider avec ce rendez-vous");
+    expect(reply).toContain("Je vois un rendez-vous confirmé");
     expect(reply).toContain("Pour vérifier que vous êtes autorisé");
-    expect(reply).toContain("Initial Consultation");
+    expect(reply).not.toContain("Initial Consultation");
+    expect(reply).not.toContain("21 mai");
   });
 
   it("treats accented French reschedule requests as appointment changes", async () => {

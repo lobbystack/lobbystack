@@ -155,7 +155,7 @@ const bookAppointmentSchema = z.object({
 });
 
 const verifyAppointmentForChangeSchema = z.object({
-  appointmentId: z.string(),
+  appointmentId: z.string().optional(),
   action: z.enum(["cancel", "reschedule"]),
   callerName: z.string().optional(),
   appointmentStartsAt: z.string().optional(),
@@ -402,9 +402,9 @@ export async function executeVoiceTool(input: {
             try {
               const result = await verifyVoiceAppointmentForChange({
                 businessId: input.businessId,
-                appointmentId: parsed.appointmentId,
                 action: parsed.action,
                 callerPhone: input.callerPhone,
+                ...(parsed.appointmentId !== undefined ? { appointmentId: parsed.appointmentId } : {}),
                 ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
                 ...(parsed.appointmentStartsAt !== undefined
                   ? { appointmentStartsAt: parsed.appointmentStartsAt }

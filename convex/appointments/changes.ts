@@ -27,15 +27,9 @@ type AppointmentChangeLookupResult = {
   ok: true;
   policy: AppointmentChangePolicy;
   phoneMatched: boolean;
-  appointments: Array<{
-    appointmentId: Id<"appointments">;
-    contactId: Id<"contacts">;
-    serviceId: Id<"services">;
-    serviceName: string;
-    startsAt: string;
-    endsAt: string;
-    timezone: string;
-  }>;
+  appointmentCount: number;
+  hasConfirmedAppointments: boolean;
+  appointments: Array<Record<string, never>>;
 };
 
 type AppointmentChangeVerifyResult =
@@ -197,6 +191,59 @@ async function loadVerifiedAppointmentContext(
   }
 
   return { appointment, contact, service };
+}
+
+async function loadConfirmedAppointmentChangeContextsForCaller(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  input: {
+    businessId: Id<"businesses">;
+    callerPhone: string;
+  },
+): Promise<{
+  contact: Doc<"contacts"> | null;
+  contexts: Array<{
+    appointment: Doc<"appointments">;
+    contact: Doc<"contacts">;
+    service: Doc<"services">;
+  }>;
+}> {
+  const contact = await ctx.db
+    .query("contacts")
+    .withIndex("by_business_id_and_phone", (q) =>
+      q.eq("businessId", input.businessId).eq("phone", input.callerPhone),
+    )
+    .unique();
+
+  if (!contact || !phonesMatch(contact.phone, input.callerPhone)) {
+    return { contact: null, contexts: [] };
+  }
+
+  const nowIso = new Date().toISOString();
+  const appointments = await ctx.db
+    .query("appointments")
+    .withIndex("by_contact_id_and_starts_at", (q) =>
+      q.eq("contactId", contact._id).gte("startsAt", nowIso),
+    )
+    .collect();
+  const confirmed = appointments.filter(
+    (appointment) =>
+      appointment.businessId === input.businessId &&
+      appointment.status === "confirmed",
+  );
+  const services = await Promise.all(
+    confirmed.map((appointment) => ctx.db.get(appointment.serviceId)),
+  );
+
+  return {
+    contact,
+    contexts: confirmed.flatMap((appointment, index) => {
+      const service = services[index];
+      if (!service || service.businessId !== input.businessId) {
+        return [];
+      }
+      return [{ appointment, contact, service }];
+    }),
+  };
 }
 
 async function findLatestVerification(
@@ -408,54 +455,29 @@ export const lookupAppointmentsForChange = internalQuery({
     args,
   ): Promise<AppointmentChangeLookupResult> => {
     const policy = await getAppointmentChangePolicy(ctx, args.businessId);
-    const contact = await ctx.db
-      .query("contacts")
-      .withIndex("by_business_id_and_phone", (q) =>
-        q.eq("businessId", args.businessId).eq("phone", args.callerPhone),
-      )
-      .unique();
+    const { contact, contexts } = await loadConfirmedAppointmentChangeContextsForCaller(
+      ctx,
+      args,
+    );
 
-    if (!contact || !phonesMatch(contact.phone, args.callerPhone)) {
+    if (!contact) {
       return {
         ok: true,
         policy,
         phoneMatched: false,
+        appointmentCount: 0,
+        hasConfirmedAppointments: false,
         appointments: [],
       };
     }
-
-    const nowIso = new Date().toISOString();
-    const appointments = await ctx.db
-      .query("appointments")
-      .withIndex("by_contact_id_and_starts_at", (q) =>
-        q.eq("contactId", contact._id).gte("startsAt", nowIso),
-      )
-      .collect();
-    const confirmed = appointments.filter(
-      (appointment) =>
-        appointment.businessId === args.businessId &&
-        appointment.status === "confirmed",
-    );
-    const services = await Promise.all(confirmed.map((appointment) => ctx.db.get(appointment.serviceId)));
-    const byServiceId = new Map(
-      services
-        .filter((service): service is Doc<"services"> => service !== null)
-        .map((service) => [service._id, service]),
-    );
 
     return {
       ok: true,
       policy,
       phoneMatched: true,
-      appointments: confirmed.map((appointment) => ({
-        appointmentId: appointment._id,
-        contactId: appointment.contactId,
-        serviceId: appointment.serviceId,
-        serviceName: byServiceId.get(appointment.serviceId)?.name ?? "appointment",
-        startsAt: appointment.startsAt,
-        endsAt: appointment.endsAt,
-        timezone: appointment.timezone,
-      })),
+      appointmentCount: contexts.length,
+      hasConfirmedAppointments: contexts.length > 0,
+      appointments: [],
     };
   },
 });
@@ -463,7 +485,7 @@ export const lookupAppointmentsForChange = internalQuery({
 export const verifyAppointmentChangeFacts = internalMutation({
   args: {
     businessId: v.id("businesses"),
-    appointmentId: v.id("appointments"),
+    appointmentId: v.optional(v.id("appointments")),
     action: v.union(v.literal("cancel"), v.literal("reschedule")),
     channel: v.string(),
     callerPhone: v.string(),
@@ -482,31 +504,79 @@ export const verifyAppointmentChangeFacts = internalMutation({
       return { ok: false, verified: false, reason: "appointment_changes_not_allowed" };
     }
 
-    const loaded = await loadVerifiedAppointmentContext(ctx, args);
-    if (!loaded || loaded.appointment.status !== "confirmed") {
-      return { ok: false, verified: false, reason: "appointment_not_found" };
-    }
-
-    if (!phonesMatch(loaded.contact.phone, args.callerPhone)) {
-      return { ok: false, verified: false, reason: "phone_mismatch" };
-    }
-
-    if (!personNamesMatch(loaded.contact.name, args.callerName)) {
-      return { ok: false, verified: false, reason: "name_mismatch" };
-    }
-
     const providedTime = args.appointmentStartsAt?.trim();
     const providedServiceName = args.serviceName?.trim();
     if (!providedTime && !providedServiceName) {
       return { ok: false, verified: false, reason: "missing_appointment_fact" };
     }
 
-    if (providedTime && !appointmentTimesMatch(loaded.appointment, providedTime)) {
-      return { ok: false, verified: false, reason: "appointment_time_mismatch" };
+    let loaded:
+      | {
+          appointment: Doc<"appointments">;
+          contact: Doc<"contacts">;
+          service: Doc<"services">;
+        }
+      | null = null;
+
+    if (args.appointmentId) {
+      loaded = await loadVerifiedAppointmentContext(ctx, {
+        businessId: args.businessId,
+        appointmentId: args.appointmentId,
+      });
+      if (!loaded || loaded.appointment.status !== "confirmed") {
+        return { ok: false, verified: false, reason: "appointment_not_found" };
+      }
+
+      if (!phonesMatch(loaded.contact.phone, args.callerPhone)) {
+        return { ok: false, verified: false, reason: "phone_mismatch" };
+      }
+
+      if (!personNamesMatch(loaded.contact.name, args.callerName)) {
+        return { ok: false, verified: false, reason: "name_mismatch" };
+      }
+
+      if (providedTime && !appointmentTimesMatch(loaded.appointment, providedTime)) {
+        return { ok: false, verified: false, reason: "appointment_time_mismatch" };
+      }
+
+      if (providedServiceName && !serviceNamesMatch(loaded.service, providedServiceName)) {
+        return { ok: false, verified: false, reason: "service_mismatch" };
+      }
+    } else {
+      const { contact, contexts } = await loadConfirmedAppointmentChangeContextsForCaller(
+        ctx,
+        {
+          businessId: args.businessId,
+          callerPhone: args.callerPhone,
+        },
+      );
+      if (!contact) {
+        return { ok: false, verified: false, reason: "phone_mismatch" };
+      }
+      if (!personNamesMatch(contact.name, args.callerName)) {
+        return { ok: false, verified: false, reason: "name_mismatch" };
+      }
+
+      const matches = contexts.filter(
+        (context) =>
+          (!providedTime || appointmentTimesMatch(context.appointment, providedTime)) &&
+          (!providedServiceName || serviceNamesMatch(context.service, providedServiceName)),
+      );
+      if (matches.length === 0) {
+        return {
+          ok: false,
+          verified: false,
+          reason: providedTime ? "appointment_time_mismatch" : "service_mismatch",
+        };
+      }
+      if (matches.length > 1) {
+        return { ok: false, verified: false, reason: "appointment_match_ambiguous" };
+      }
+      loaded = matches[0] ?? null;
     }
 
-    if (providedServiceName && !serviceNamesMatch(loaded.service, providedServiceName)) {
-      return { ok: false, verified: false, reason: "service_mismatch" };
+    if (!loaded) {
+      return { ok: false, verified: false, reason: "appointment_not_found" };
     }
 
     const requiresOtp = policy.verificationMode === "otp_required";

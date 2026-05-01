@@ -150,7 +150,7 @@ const lookupAppointmentForChangeSchema = z.object({
 
 const verifyAppointmentForChangeSchema = z.object({
   businessId: z.string().min(1),
-  appointmentId: z.string().min(1),
+  appointmentId: z.string().min(1).optional(),
   action: z.enum(["cancel", "reschedule"]),
   callerPhone: z.string().min(1),
   callerName: z.string().min(1).optional(),
@@ -1166,7 +1166,9 @@ http.route({
       internal.appointments.changes.verifyAppointmentChangeFacts,
       {
         businessId: asId("businesses", body.data.businessId),
-        appointmentId: asId("appointments", body.data.appointmentId),
+        ...(body.data.appointmentId !== undefined
+          ? { appointmentId: asId("appointments", body.data.appointmentId) }
+          : {}),
         action: body.data.action,
         channel: "voice",
         callerPhone: body.data.callerPhone,
