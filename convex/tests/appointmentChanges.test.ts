@@ -292,6 +292,41 @@ describe("appointment change authorization", () => {
     });
   });
 
+  it("rejects non-substantive service facts without an appointment id", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t, { contactName: null });
+
+    const weakServiceFact = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        serviceName: "i",
+      },
+    );
+    expect(weakServiceFact).toMatchObject({
+      ok: false,
+      reason: "service_mismatch",
+    });
+
+    const substantiveServiceFact = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        serviceName: "Initial",
+      },
+    );
+    expect(substantiveServiceFact).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+  });
+
   it("blocks OTP-required cancellation until OTP is approved", async () => {
     const t = createHarness();
     const fixture = await seedAppointmentChangeFixture(t, {

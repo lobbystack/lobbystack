@@ -141,6 +141,39 @@ function serviceNamesMatch(service: Doc<"services">, providedServiceName: string
     );
 }
 
+function substantiveServiceNameFactMatches(
+  service: Doc<"services">,
+  providedServiceName: string,
+): boolean {
+  const provided = normalizeComparable(providedServiceName);
+  if (!provided) {
+    return false;
+  }
+
+  const candidates = getServiceNameCandidates(service).map((candidate) =>
+    normalizeComparable(candidate),
+  );
+  if (candidates.some((candidate) => candidate === provided)) {
+    return true;
+  }
+
+  const providedTokens = tokenizeComparable(provided).filter((token) => token.length >= 3);
+  if (providedTokens.length === 0) {
+    return false;
+  }
+
+  return candidates.some((candidate) => {
+    const candidateTokens = tokenizeComparable(candidate);
+    return providedTokens.every((providedToken) =>
+      candidateTokens.some(
+        (candidateToken) =>
+          candidateToken === providedToken ||
+          (providedToken.length >= 4 && candidateToken.startsWith(providedToken)),
+      ),
+    );
+  });
+}
+
 function appointmentTimesMatch(
   appointment: Doc<"appointments">,
   providedStartsAt: string,
@@ -854,7 +887,8 @@ export const verifyAppointmentChangeFacts = internalMutation({
       const matches = contexts.filter(
         (context) =>
           (!providedTime || appointmentTimesMatch(context.appointment, providedTime)) &&
-          (!providedServiceName || serviceNamesMatch(context.service, providedServiceName)),
+          (!providedServiceName ||
+            substantiveServiceNameFactMatches(context.service, providedServiceName)),
       );
       if (matches.length === 0) {
         return {
