@@ -151,6 +151,8 @@ type UsageSyncTelemetryEventName =
   | "ops.billing.usage_sync_failed"
   | "ops.billing.usage_sync_recovered";
 
+const MIN_BILLABLE_VOICE_DURATION_SECONDS = 10;
+
 const USAGE_SYNC_RETRY_DELAYS_MS = [
   30_000,
   120_000,
@@ -258,6 +260,13 @@ function getUsageQuantityField(
     case "ai_sms_segments":
       return "aiSmsSegmentsUsed";
   }
+}
+
+function getBillableVoiceUsageSeconds(durationSeconds: number): number {
+  const normalizedDurationSeconds = Math.max(0, durationSeconds);
+  return normalizedDurationSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS
+    ? 0
+    : normalizedDurationSeconds;
 }
 
 async function findBillingContactForRole(
@@ -1661,7 +1670,7 @@ export const recordVoiceUsage = internalMutation({
     return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "voice_seconds",
-      quantity: args.quantity,
+      quantity: getBillableVoiceUsageSeconds(args.quantity),
       sourceKey: `voice:${String(args.callId)}`,
       recordedAt: args.recordedAt,
     });

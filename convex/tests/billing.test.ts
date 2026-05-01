@@ -989,6 +989,105 @@ describe("billing", () => {
     });
   });
 
+  it("exempts reserved voice calls under ten seconds from included usage", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-short-call",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    await t.mutation(internal.billing.reserveVoiceUsageAtCallStart, {
+      businessId,
+      callId: anchors.callId,
+      recordedAt: "2026-04-12T14:00:00.000Z",
+    });
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 9,
+      recordedAt: "2026-04-12T14:00:09.000Z",
+    });
+
+    const usageState = await t.run(async (ctx: TestContext) => {
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(anchors.callId)}`),
+        )
+        .unique();
+      return { usageMonth, usageEvent };
+    });
+
+    expect(usageResult).toMatchObject({
+      syncNeeded: false,
+    });
+    expect(usageState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 0,
+      voiceBlocked: false,
+      lastRecordedAt: "2026-04-12T14:00:09.000Z",
+    });
+    expect(usageState.usageEvent).toMatchObject({
+      quantity: 0,
+      recordedAt: "2026-04-12T14:00:09.000Z",
+    });
+  });
+
+  it("counts voice calls at the ten-second billing boundary", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-ten-second-call",
+      deploymentMode: "cloud",
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 10,
+      recordedAt: "2026-04-12T14:00:10.000Z",
+    });
+
+    const usageState = await t.run(async (ctx: TestContext) => {
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(anchors.callId)}`),
+        )
+        .unique();
+      return { usageMonth, usageEvent };
+    });
+
+    expect(usageResult).toMatchObject({
+      syncNeeded: false,
+    });
+    expect(usageState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 10,
+      voiceBlocked: false,
+      lastRecordedAt: "2026-04-12T14:00:10.000Z",
+    });
+    expect(usageState.usageEvent).toMatchObject({
+      quantity: 10,
+      recordedAt: "2026-04-12T14:00:10.000Z",
+    });
+  });
+
   it("reserves hosted alert SMS usage before Twilio reports segments", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {
@@ -1736,6 +1835,53 @@ describe("billing", () => {
     expect(usageMonth).toMatchObject({
       outboundCallAttemptsUsed: 21,
       outboundCallAttemptsBlocked: false,
+    });
+  });
+
+  it("sends zero metered voice quantity for Pro calls under ten seconds", async () => {
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-pro-short-voice",
+      deploymentMode: "cloud",
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_short_voice",
+      });
+    });
+    const anchors = await t.run(async (ctx: TestContext) => {
+      return await seedUsageAnchors(ctx, { businessId });
+    });
+
+    const usageResult = await t.mutation(internal.billing.recordVoiceUsage, {
+      businessId,
+      callId: anchors.callId,
+      quantity: 9,
+      recordedAt: "2026-04-12T15:00:09.000Z",
+    });
+    const payload = await t.query(internal.billing.getUsageSyncPayload, {
+      usageEventId: usageResult.usageEventId,
+    });
+
+    const usageEvent = await t.run(async (ctx: TestContext) => {
+      return await ctx.db.get(usageResult.usageEventId);
+    });
+
+    expect(usageResult.syncNeeded).toBe(true);
+    expect(usageEvent).toMatchObject({
+      quantity: 0,
+      syncStatus: "pending",
+    });
+    expect(payload).toMatchObject({
+      usageKind: "voice_seconds",
+      quantity: 0,
+      polarQuantity: 0,
+      sourceKey: `voice:${String(anchors.callId)}`,
     });
   });
 
