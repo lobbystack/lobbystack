@@ -388,6 +388,26 @@ function appointmentDayPartMatches(hour: number, input: string): boolean | null 
   return null;
 }
 
+function clockDifferenceMinutes(leftMinutes: number, rightMinutes: number): number {
+  const absoluteDifference = Math.abs(leftMinutes - rightMinutes);
+  return Math.min(absoluteDifference, 24 * 60 - absoluteDifference);
+}
+
+function appointmentClockTimeMatches(
+  local: Pick<LocalAppointmentDateTime, "hour" | "minute">,
+  clockTime: { hour: number; minute: number; hasMeridiem: boolean },
+): boolean {
+  const localMinutes = local.hour * 60 + local.minute;
+  const candidateHours = clockTime.hasMeridiem
+    ? [clockTime.hour]
+    : [...new Set([clockTime.hour, (clockTime.hour + 12) % 24])];
+
+  return candidateHours.some((hour) => {
+    const candidateMinutes = hour * 60 + clockTime.minute;
+    return clockDifferenceMinutes(localMinutes, candidateMinutes) <= 30;
+  });
+}
+
 function appointmentLocalTimeFactMatches(
   appointment: Doc<"appointments">,
   providedStartsAt: string,
@@ -459,12 +479,7 @@ function appointmentLocalTimeFactMatches(
   const clockTime = parseProvidedClockTime(raw);
   const dayPartMatches = appointmentDayPartMatches(local.hour, normalized);
   if (clockTime) {
-    const minuteMatches = Math.abs(local.minute - clockTime.minute) <= 30;
-    const hourMatches = clockTime.hasMeridiem
-      ? local.hour === clockTime.hour
-      : local.hour === clockTime.hour ||
-        local.hour % 12 === clockTime.hour % 12;
-    return hourMatches && minuteMatches;
+    return appointmentClockTimeMatches(local, clockTime);
   }
 
   if (dayPartMatches !== null) {

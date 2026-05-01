@@ -292,6 +292,34 @@ describe("appointment change authorization", () => {
     });
   });
 
+  it("matches natural clock facts across hour boundaries", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(fixture.appointmentId, {
+        startsAt: "2030-05-15T14:45:00.000Z",
+        endsAt: "2030-05-15T15:15:00.000Z",
+      });
+    });
+
+    const nearHourBoundary = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        appointmentStartsAt: "11 AM",
+      },
+    );
+
+    expect(nearHourBoundary).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+  });
+
   it("rejects non-substantive service facts without an appointment id", async () => {
     const t = createHarness();
     const fixture = await seedAppointmentChangeFixture(t, { contactName: null });
