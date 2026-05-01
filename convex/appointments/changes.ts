@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { DateTime } from "luxon";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import {
@@ -27,15 +28,9 @@ type AppointmentChangeLookupResult = {
   ok: true;
   policy: AppointmentChangePolicy;
   phoneMatched: boolean;
-  appointments: Array<{
-    appointmentId: Id<"appointments">;
-    contactId: Id<"contacts">;
-    serviceId: Id<"services">;
-    serviceName: string;
-    startsAt: string;
-    endsAt: string;
-    timezone: string;
-  }>;
+  appointmentCount: number;
+  hasConfirmedAppointments: boolean;
+  appointments: Array<Record<string, never>>;
 };
 
 type AppointmentChangeVerifyResult =
@@ -124,6 +119,13 @@ function personNamesMatch(storedName: string | undefined, providedName: string |
   return storedTokens.length > 0 && storedTokens.every((token) => providedTokens.has(token));
 }
 
+function storedContactNameMatchesIfPresent(
+  storedName: string | undefined,
+  providedName: string | undefined,
+): boolean {
+  return !storedName?.trim() || personNamesMatch(storedName, providedName);
+}
+
 function serviceNamesMatch(service: Doc<"services">, providedServiceName: string): boolean {
   const provided = normalizeComparable(providedServiceName);
   if (!provided) {
@@ -140,17 +142,340 @@ function serviceNamesMatch(service: Doc<"services">, providedServiceName: string
     );
 }
 
+function substantiveServiceNameFactMatches(
+  service: Doc<"services">,
+  providedServiceName: string,
+): boolean {
+  const provided = normalizeComparable(providedServiceName);
+  if (!provided) {
+    return false;
+  }
+
+  const candidates = getServiceNameCandidates(service).map((candidate) =>
+    normalizeComparable(candidate),
+  );
+  if (candidates.some((candidate) => candidate === provided)) {
+    return true;
+  }
+
+  const providedTokens = tokenizeComparable(provided).filter((token) => token.length >= 3);
+  if (providedTokens.length === 0) {
+    return false;
+  }
+
+  return candidates.some((candidate) => {
+    const candidateTokens = tokenizeComparable(candidate);
+    return providedTokens.every((providedToken) =>
+      candidateTokens.some(
+        (candidateToken) =>
+          candidateToken === providedToken ||
+          (providedToken.length >= 4 && candidateToken.startsWith(providedToken)),
+      ),
+    );
+  });
+}
+
 function appointmentTimesMatch(
   appointment: Doc<"appointments">,
   providedStartsAt: string,
 ): boolean {
   const actualMs = Date.parse(appointment.startsAt);
   const providedMs = Date.parse(providedStartsAt);
-  if (!Number.isFinite(actualMs) || !Number.isFinite(providedMs)) {
+  if (!Number.isFinite(actualMs)) {
     return false;
   }
 
-  return Math.abs(actualMs - providedMs) <= 30 * 60 * 1000;
+  if (Number.isFinite(providedMs) && Math.abs(actualMs - providedMs) <= 30 * 60 * 1000) {
+    return true;
+  }
+
+  return appointmentLocalTimeFactMatches(appointment, providedStartsAt);
+}
+
+const MONTHS_BY_NAME = new Map(
+  [
+    ["jan", 1],
+    ["january", 1],
+    ["feb", 2],
+    ["february", 2],
+    ["mar", 3],
+    ["march", 3],
+    ["apr", 4],
+    ["april", 4],
+    ["may", 5],
+    ["jun", 6],
+    ["june", 6],
+    ["jul", 7],
+    ["july", 7],
+    ["aug", 8],
+    ["august", 8],
+    ["sep", 9],
+    ["sept", 9],
+    ["september", 9],
+    ["oct", 10],
+    ["october", 10],
+    ["nov", 11],
+    ["november", 11],
+    ["dec", 12],
+    ["december", 12],
+  ].map(([name, month]) => [name, month as number]),
+);
+
+const WEEKDAYS_BY_NAME = new Map(
+  [
+    ["sun", 0],
+    ["sunday", 0],
+    ["mon", 1],
+    ["monday", 1],
+    ["tue", 2],
+    ["tues", 2],
+    ["tuesday", 2],
+    ["wed", 3],
+    ["wednesday", 3],
+    ["thu", 4],
+    ["thur", 4],
+    ["thurs", 4],
+    ["thursday", 4],
+    ["fri", 5],
+    ["friday", 5],
+    ["sat", 6],
+    ["saturday", 6],
+  ].map(([name, weekday]) => [name, weekday as number]),
+);
+
+type LocalAppointmentDateTime = {
+  year: number;
+  month: number;
+  day: number;
+  weekday: number;
+  hour: number;
+  minute: number;
+};
+
+function getAppointmentLocalDateTime(
+  appointment: Doc<"appointments">,
+): LocalAppointmentDateTime | null {
+  const date = new Date(appointment.startsAt);
+  if (!Number.isFinite(date.getTime())) {
+    return null;
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: appointment.timezone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value;
+  const year = Number(value("year"));
+  const month = Number(value("month"));
+  const day = Number(value("day"));
+  const weekday = WEEKDAYS_BY_NAME.get(value("weekday")?.toLowerCase() ?? "");
+  const hour = Number(value("hour"));
+  const minute = Number(value("minute"));
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    weekday === undefined ||
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute)
+  ) {
+    return null;
+  }
+
+  return { year, month, day, weekday, hour, minute };
+}
+
+function getBusinessRelativeLocalDate(
+  timezone: string,
+  daysFromToday: number,
+): Pick<LocalAppointmentDateTime, "year" | "month" | "day"> | null {
+  const target = DateTime.now().setZone(timezone).plus({ days: daysFromToday });
+  if (!target.isValid) {
+    return null;
+  }
+
+  return {
+    year: target.year,
+    month: target.month,
+    day: target.day,
+  };
+}
+
+function parseProvidedClockTime(input: string):
+  | {
+      hour: number;
+      minute: number;
+      hasMeridiem: boolean;
+    }
+  | null {
+  const meridiemMatch = input.match(
+    /\b(\d{1,2})(?:(?::|\s)(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/,
+  );
+  if (meridiemMatch) {
+    const rawHour = Number(meridiemMatch[1]);
+    const minute = meridiemMatch[2] ? Number(meridiemMatch[2]) : 0;
+    if (rawHour < 1 || rawHour > 12 || minute < 0 || minute > 59) {
+      return null;
+    }
+    const isPm = meridiemMatch[3]?.startsWith("p") ?? false;
+    return {
+      hour: rawHour === 12 ? (isPm ? 12 : 0) : rawHour + (isPm ? 12 : 0),
+      minute,
+      hasMeridiem: true,
+    };
+  }
+
+  const hourSuffixMatch = input.match(/\b(\d{1,2})\s*h(?:\s*(\d{2}))?\b/);
+  if (hourSuffixMatch) {
+    const hour = Number(hourSuffixMatch[1]);
+    const minute = hourSuffixMatch[2] ? Number(hourSuffixMatch[2]) : 0;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return null;
+    }
+    return { hour, minute, hasMeridiem: true };
+  }
+
+  const qualifiedTimeMatch = input.match(
+    /\b(?:at|around|about|near|vers|a|à)\s+(\d{1,2})(?:(?::|\s)(\d{2}))?\b/,
+  );
+  const bareTimeMatch = input.trim().match(/^(\d{1,2})(?:(?::|\s)(\d{2}))?$/);
+  const match = qualifiedTimeMatch ?? bareTimeMatch;
+  if (!match) {
+    return null;
+  }
+
+  const hour = Number(match[1]);
+  const minute = match[2] ? Number(match[2]) : 0;
+  if (hour < 1 || hour > 23 || minute < 0 || minute > 59) {
+    return null;
+  }
+
+  return { hour, minute, hasMeridiem: false };
+}
+
+function appointmentDayPartMatches(hour: number, input: string): boolean | null {
+  if (/\b(morning|matin)\b/.test(input)) {
+    return hour >= 5 && hour < 12;
+  }
+  if (/\b(afternoon|apres midi|apres-midi|apr s midi)\b/.test(input)) {
+    return hour >= 12 && hour < 17;
+  }
+  if (/\b(evening|soir|soiree|soir e)\b/.test(input)) {
+    return hour >= 17 && hour < 21;
+  }
+  if (/\b(night|tonight|nuit)\b/.test(input)) {
+    return hour >= 21 || hour < 5;
+  }
+  return null;
+}
+
+function clockDifferenceMinutes(leftMinutes: number, rightMinutes: number): number {
+  const absoluteDifference = Math.abs(leftMinutes - rightMinutes);
+  return Math.min(absoluteDifference, 24 * 60 - absoluteDifference);
+}
+
+function appointmentClockTimeMatches(
+  local: Pick<LocalAppointmentDateTime, "hour" | "minute">,
+  clockTime: { hour: number; minute: number; hasMeridiem: boolean },
+): boolean {
+  const localMinutes = local.hour * 60 + local.minute;
+  const candidateHours = clockTime.hasMeridiem
+    ? [clockTime.hour]
+    : [...new Set([clockTime.hour, (clockTime.hour + 12) % 24])];
+
+  return candidateHours.some((hour) => {
+    const candidateMinutes = hour * 60 + clockTime.minute;
+    return clockDifferenceMinutes(localMinutes, candidateMinutes) <= 30;
+  });
+}
+
+function appointmentLocalTimeFactMatches(
+  appointment: Doc<"appointments">,
+  providedStartsAt: string,
+): boolean {
+  const local = getAppointmentLocalDateTime(appointment);
+  if (!local) {
+    return false;
+  }
+
+  const raw = providedStartsAt.trim().toLowerCase();
+  const normalized = normalizeComparable(providedStartsAt);
+  if (!normalized) {
+    return false;
+  }
+
+  let hasDateSignal = false;
+
+  const yearMatch = normalized.match(/\b((?:19|20)\d{2})\b/);
+  if (yearMatch) {
+    hasDateSignal = true;
+    if (Number(yearMatch[1]) !== local.year) {
+      return false;
+    }
+  }
+
+  const monthDayMatch = normalized.match(
+    /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\b/,
+  );
+  const dayMonthMatch = normalized.match(
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/,
+  );
+  if (monthDayMatch || dayMonthMatch) {
+    hasDateSignal = true;
+    const month = monthDayMatch
+      ? MONTHS_BY_NAME.get(monthDayMatch[1] ?? "")
+      : MONTHS_BY_NAME.get(dayMonthMatch?.[2] ?? "");
+    const day = Number(monthDayMatch?.[2] ?? dayMonthMatch?.[1]);
+    if (month !== local.month || day !== local.day) {
+      return false;
+    }
+  }
+
+  const weekday = [...WEEKDAYS_BY_NAME.entries()].find(([name]) =>
+    new RegExp(`\\b${name}\\b`).test(normalized),
+  )?.[1];
+  if (weekday !== undefined) {
+    hasDateSignal = true;
+    if (weekday !== local.weekday) {
+      return false;
+    }
+  }
+
+  const relativeDay = /\b(tomorrow|tmrw|demain)\b/.test(normalized)
+    ? getBusinessRelativeLocalDate(appointment.timezone, 1)
+    : /\b(today|aujourd hui)\b/.test(normalized)
+      ? getBusinessRelativeLocalDate(appointment.timezone, 0)
+      : null;
+  if (relativeDay) {
+    hasDateSignal = true;
+    if (
+      relativeDay.year !== local.year ||
+      relativeDay.month !== local.month ||
+      relativeDay.day !== local.day
+    ) {
+      return false;
+    }
+  }
+
+  const clockTime = parseProvidedClockTime(raw);
+  const dayPartMatches = appointmentDayPartMatches(local.hour, normalized);
+  if (clockTime) {
+    return appointmentClockTimeMatches(local, clockTime);
+  }
+
+  if (dayPartMatches !== null) {
+    return dayPartMatches && hasDateSignal;
+  }
+
+  return false;
 }
 
 function actionAllowed(policy: AppointmentChangePolicy, action: AppointmentChangeAction): boolean {
@@ -197,6 +522,59 @@ async function loadVerifiedAppointmentContext(
   }
 
   return { appointment, contact, service };
+}
+
+async function loadConfirmedAppointmentChangeContextsForCaller(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  input: {
+    businessId: Id<"businesses">;
+    callerPhone: string;
+  },
+): Promise<{
+  contact: Doc<"contacts"> | null;
+  contexts: Array<{
+    appointment: Doc<"appointments">;
+    contact: Doc<"contacts">;
+    service: Doc<"services">;
+  }>;
+}> {
+  const contact = await ctx.db
+    .query("contacts")
+    .withIndex("by_business_id_and_phone", (q) =>
+      q.eq("businessId", input.businessId).eq("phone", input.callerPhone),
+    )
+    .unique();
+
+  if (!contact || !phonesMatch(contact.phone, input.callerPhone)) {
+    return { contact: null, contexts: [] };
+  }
+
+  const nowIso = new Date().toISOString();
+  const appointments = await ctx.db
+    .query("appointments")
+    .withIndex("by_contact_id_and_starts_at", (q) =>
+      q.eq("contactId", contact._id).gte("startsAt", nowIso),
+    )
+    .collect();
+  const confirmed = appointments.filter(
+    (appointment) =>
+      appointment.businessId === input.businessId &&
+      appointment.status === "confirmed",
+  );
+  const services = await Promise.all(
+    confirmed.map((appointment) => ctx.db.get(appointment.serviceId)),
+  );
+
+  return {
+    contact,
+    contexts: confirmed.flatMap((appointment, index) => {
+      const service = services[index];
+      if (!service || service.businessId !== input.businessId) {
+        return [];
+      }
+      return [{ appointment, contact, service }];
+    }),
+  };
 }
 
 async function findLatestVerification(
@@ -408,54 +786,29 @@ export const lookupAppointmentsForChange = internalQuery({
     args,
   ): Promise<AppointmentChangeLookupResult> => {
     const policy = await getAppointmentChangePolicy(ctx, args.businessId);
-    const contact = await ctx.db
-      .query("contacts")
-      .withIndex("by_business_id_and_phone", (q) =>
-        q.eq("businessId", args.businessId).eq("phone", args.callerPhone),
-      )
-      .unique();
+    const { contact, contexts } = await loadConfirmedAppointmentChangeContextsForCaller(
+      ctx,
+      args,
+    );
 
-    if (!contact || !phonesMatch(contact.phone, args.callerPhone)) {
+    if (!contact) {
       return {
         ok: true,
         policy,
         phoneMatched: false,
+        appointmentCount: 0,
+        hasConfirmedAppointments: false,
         appointments: [],
       };
     }
-
-    const nowIso = new Date().toISOString();
-    const appointments = await ctx.db
-      .query("appointments")
-      .withIndex("by_contact_id_and_starts_at", (q) =>
-        q.eq("contactId", contact._id).gte("startsAt", nowIso),
-      )
-      .collect();
-    const confirmed = appointments.filter(
-      (appointment) =>
-        appointment.businessId === args.businessId &&
-        appointment.status === "confirmed",
-    );
-    const services = await Promise.all(confirmed.map((appointment) => ctx.db.get(appointment.serviceId)));
-    const byServiceId = new Map(
-      services
-        .filter((service): service is Doc<"services"> => service !== null)
-        .map((service) => [service._id, service]),
-    );
 
     return {
       ok: true,
       policy,
       phoneMatched: true,
-      appointments: confirmed.map((appointment) => ({
-        appointmentId: appointment._id,
-        contactId: appointment.contactId,
-        serviceId: appointment.serviceId,
-        serviceName: byServiceId.get(appointment.serviceId)?.name ?? "appointment",
-        startsAt: appointment.startsAt,
-        endsAt: appointment.endsAt,
-        timezone: appointment.timezone,
-      })),
+      appointmentCount: contexts.length,
+      hasConfirmedAppointments: contexts.length > 0,
+      appointments: [],
     };
   },
 });
@@ -463,7 +816,7 @@ export const lookupAppointmentsForChange = internalQuery({
 export const verifyAppointmentChangeFacts = internalMutation({
   args: {
     businessId: v.id("businesses"),
-    appointmentId: v.id("appointments"),
+    appointmentId: v.optional(v.id("appointments")),
     action: v.union(v.literal("cancel"), v.literal("reschedule")),
     channel: v.string(),
     callerPhone: v.string(),
@@ -482,31 +835,80 @@ export const verifyAppointmentChangeFacts = internalMutation({
       return { ok: false, verified: false, reason: "appointment_changes_not_allowed" };
     }
 
-    const loaded = await loadVerifiedAppointmentContext(ctx, args);
-    if (!loaded || loaded.appointment.status !== "confirmed") {
-      return { ok: false, verified: false, reason: "appointment_not_found" };
-    }
-
-    if (!phonesMatch(loaded.contact.phone, args.callerPhone)) {
-      return { ok: false, verified: false, reason: "phone_mismatch" };
-    }
-
-    if (!personNamesMatch(loaded.contact.name, args.callerName)) {
-      return { ok: false, verified: false, reason: "name_mismatch" };
-    }
-
     const providedTime = args.appointmentStartsAt?.trim();
     const providedServiceName = args.serviceName?.trim();
     if (!providedTime && !providedServiceName) {
       return { ok: false, verified: false, reason: "missing_appointment_fact" };
     }
 
-    if (providedTime && !appointmentTimesMatch(loaded.appointment, providedTime)) {
-      return { ok: false, verified: false, reason: "appointment_time_mismatch" };
+    let loaded:
+      | {
+          appointment: Doc<"appointments">;
+          contact: Doc<"contacts">;
+          service: Doc<"services">;
+        }
+      | null = null;
+
+    if (args.appointmentId) {
+      loaded = await loadVerifiedAppointmentContext(ctx, {
+        businessId: args.businessId,
+        appointmentId: args.appointmentId,
+      });
+      if (!loaded || loaded.appointment.status !== "confirmed") {
+        return { ok: false, verified: false, reason: "appointment_not_found" };
+      }
+
+      if (!phonesMatch(loaded.contact.phone, args.callerPhone)) {
+        return { ok: false, verified: false, reason: "phone_mismatch" };
+      }
+
+      if (!storedContactNameMatchesIfPresent(loaded.contact.name, args.callerName)) {
+        return { ok: false, verified: false, reason: "name_mismatch" };
+      }
+
+      if (providedTime && !appointmentTimesMatch(loaded.appointment, providedTime)) {
+        return { ok: false, verified: false, reason: "appointment_time_mismatch" };
+      }
+
+      if (providedServiceName && !serviceNamesMatch(loaded.service, providedServiceName)) {
+        return { ok: false, verified: false, reason: "service_mismatch" };
+      }
+    } else {
+      const { contact, contexts } = await loadConfirmedAppointmentChangeContextsForCaller(
+        ctx,
+        {
+          businessId: args.businessId,
+          callerPhone: args.callerPhone,
+        },
+      );
+      if (!contact) {
+        return { ok: false, verified: false, reason: "phone_mismatch" };
+      }
+      if (!storedContactNameMatchesIfPresent(contact.name, args.callerName)) {
+        return { ok: false, verified: false, reason: "name_mismatch" };
+      }
+
+      const matches = contexts.filter(
+        (context) =>
+          (!providedTime || appointmentTimesMatch(context.appointment, providedTime)) &&
+          (!providedServiceName ||
+            substantiveServiceNameFactMatches(context.service, providedServiceName)),
+      );
+      if (matches.length === 0) {
+        return {
+          ok: false,
+          verified: false,
+          reason: providedTime ? "appointment_time_mismatch" : "service_mismatch",
+        };
+      }
+      if (matches.length > 1) {
+        return { ok: false, verified: false, reason: "appointment_match_ambiguous" };
+      }
+      loaded = matches[0] ?? null;
     }
 
-    if (providedServiceName && !serviceNamesMatch(loaded.service, providedServiceName)) {
-      return { ok: false, verified: false, reason: "service_mismatch" };
+    if (!loaded) {
+      return { ok: false, verified: false, reason: "appointment_not_found" };
     }
 
     const requiresOtp = policy.verificationMode === "otp_required";
@@ -776,7 +1178,9 @@ export const rescheduleAppointmentForBusiness = internalMutation({
       serviceId: loaded.appointment.serviceId,
       startsAt: args.startsAt,
       timezone: args.timezone ?? loaded.appointment.timezone,
-      preferredStaffId: args.preferredStaffId ?? loaded.appointment.staffId,
+      ...(args.preferredStaffId !== undefined
+        ? { preferredStaffId: args.preferredStaffId }
+        : {}),
       excludeAppointmentId: loaded.appointment._id,
     });
     const selected = availability[0];

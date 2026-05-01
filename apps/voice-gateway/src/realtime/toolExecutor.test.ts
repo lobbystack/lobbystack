@@ -347,6 +347,8 @@ describe("executeVoiceTool appointment changes", () => {
         verificationMode: "otp_required",
       },
       phoneMatched: true,
+      appointmentCount: 0,
+      hasConfirmedAppointments: false,
       appointments: [],
     });
     sendVoiceAppointmentChangeOtpMock.mockResolvedValue({

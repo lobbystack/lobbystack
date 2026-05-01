@@ -69,15 +69,9 @@ type AppointmentChangeLookupResponse = {
   ok: true;
   policy: AppointmentChangePolicy;
   phoneMatched: boolean;
-  appointments: Array<{
-    appointmentId: string;
-    contactId: string;
-    serviceId: string;
-    serviceName: string;
-    startsAt: string;
-    endsAt: string;
-    timezone: string;
-  }>;
+  appointmentCount: number;
+  hasConfirmedAppointments: boolean;
+  appointments: Array<Record<string, never>>;
 };
 
 type AppointmentChangeVerifyResponse =
@@ -358,7 +352,7 @@ export async function lookupVoiceAppointmentForChange(input: {
 
 export async function verifyVoiceAppointmentForChange(input: {
   businessId: string;
-  appointmentId: string;
+  appointmentId?: string;
   action: "cancel" | "reschedule";
   callerPhone: string;
   callerName?: string;
