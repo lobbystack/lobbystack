@@ -423,6 +423,29 @@ describe("executeVoiceTool call control", () => {
     });
   });
 
+  it("accepts spam as a terminal endCall reason", async () => {
+    const result = await executeVoiceTool({
+      toolName: "endCall",
+      rawArguments: JSON.stringify({
+        reason: "spam",
+        message: "We'll end the call here. Goodbye.",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result.result).toEqual({
+      ok: true,
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    });
+    expect(result.endCall).toEqual({
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    });
+  });
+
   it("rejects invalid endCall reasons", async () => {
     await expect(
       executeVoiceTool({

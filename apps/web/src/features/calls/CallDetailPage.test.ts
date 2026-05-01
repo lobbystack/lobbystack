@@ -16,6 +16,10 @@ describe("resolveCallStatus", () => {
   it("keeps normal completed calls as completed", () => {
     expect(resolveCallStatus({ status: "completed", disposition: "call_completed" } as never)).toBe("completed");
   });
+
+  it("keeps AI-ended spam calls as completed terminal outcomes", () => {
+    expect(resolveCallStatus({ status: "completed", disposition: "spam_ended" } as never)).toBe("completed");
+  });
 });
 
 describe("callReachedConnectedStep", () => {

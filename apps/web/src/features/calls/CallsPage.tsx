@@ -60,12 +60,15 @@ type CallRow = Doc<"calls"> & {
   } | null;
 };
 
-function formatCallDispositionSummary(
+export function formatCallDispositionSummary(
   disposition: string,
   t: TFunction<"calls">,
 ): string {
   const normalized = disposition.trim().toLowerCase();
 
+  if (normalized.includes("spam")) {
+    return t("outcome.spam");
+  }
   if (normalized.includes("transfer_completed")) {
     return t("outcome.transferCompleted");
   }

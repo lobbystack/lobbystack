@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   createCallInactivityState,
   getCallInactivityAction,
+  getDispositionForEndCall,
   grantCallHold,
   markAssistantResponseDone,
   markCallerActivity,
   markHoldExpiryCheckInSent,
   markRealtimeIdleTimeout,
+  shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
   estimateRealtimeTotalCostUsd,
@@ -263,5 +265,19 @@ describe("call inactivity control", () => {
       holdExpiryCheckInSentAtMs: null,
       holdSecondsUsed: 60,
     });
+  });
+});
+
+describe("AI-directed call endings", () => {
+  it("maps spam endings to a durable spam disposition without auto-blocking", () => {
+    expect(getDispositionForEndCall("spam")).toBe("spam_ended");
+    expect(shouldSystemBlockForEndCall("spam")).toBe(false);
+  });
+
+  it("keeps abuse as the only AI-directed auto-blocking reason", () => {
+    expect(getDispositionForEndCall("abuse")).toBe("abuse_ended");
+    expect(shouldSystemBlockForEndCall("abuse")).toBe(true);
+    expect(shouldSystemBlockForEndCall("caller_finished")).toBe(false);
+    expect(shouldSystemBlockForEndCall("silence_timeout")).toBe(false);
   });
 });

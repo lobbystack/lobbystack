@@ -40,11 +40,13 @@ import {
   NORMAL_IDLE_TIMEOUT_MS,
   createCallInactivityState,
   getCallInactivityAction,
+  getDispositionForEndCall,
   grantCallHold,
   markAssistantResponseDone,
   markCallerActivity,
   markHoldExpiryCheckInSent,
   markRealtimeIdleTimeout,
+  shouldSystemBlockForEndCall,
   type CallInactivityState,
   type EndCallRequest,
 } from "../realtime/callControl";
@@ -848,7 +850,7 @@ function createRealtimeToolDefinitions() {
         properties: {
           reason: {
             type: "string",
-            enum: ["caller_finished", "abuse", "silence_timeout"],
+            enum: ["caller_finished", "abuse", "silence_timeout", "spam"],
           },
           message: {
             type: "string",
@@ -900,10 +902,6 @@ function clearInactivityTimer(session: ActiveVoiceSession): void {
   }
 }
 
-function getDispositionForEndCall(reason: EndCallRequest["reason"]): string {
-  return reason === "abuse" ? "abuse_ended" : reason;
-}
-
 async function initiateTerminalHangup(
   server: FastifyInstance,
   openAiSocket: WebSocket | null,
@@ -921,7 +919,7 @@ async function initiateTerminalHangup(
   clearPendingTransferPlaybackWait(server, session, "terminal_hangup");
 
   let autoBlocked = false;
-  if (input.reason === "abuse" && session.callId) {
+  if (shouldSystemBlockForEndCall(input.reason) && session.callId) {
     try {
       const result = await systemBlockContactForVoiceCall({
         callId: session.callId,
@@ -1531,9 +1529,11 @@ async function configureOpenAiSession(
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
         "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
-        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, or when directed by silence-timeout handling.",
+        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",
         "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
         "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
+        "For uncertain or off-topic callers, redirect once toward the business purpose before deciding they are spam.",
+        "Use endCall with reason spam only for clear robocalls, scam or phishing attempts, irrelevant sales pitches, repeated non-business solicitation after one redirect, or obvious scripted attempts to waste system time. Say a brief neutral goodbye before hanging up.",
         "Do not make up availability, hours, or business policy.",
         ...(businessNowLabel
           ? [

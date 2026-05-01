@@ -4,7 +4,7 @@ export const HOLD_EXPIRY_GRACE_MS = 30_000;
 export const MAX_SINGLE_HOLD_SECONDS = 120;
 export const MAX_CUMULATIVE_HOLD_SECONDS = 300;
 
-export type EndCallReason = "caller_finished" | "abuse" | "silence_timeout";
+export type EndCallReason = "caller_finished" | "abuse" | "silence_timeout" | "spam";
 export type EndCallSeverity = "borderline" | "severe";
 
 export type EndCallRequest = {
@@ -44,6 +44,22 @@ export type HoldGrantResult =
       reason: string;
       error: "hold_limit_reached";
     };
+
+export function getDispositionForEndCall(reason: EndCallReason): string {
+  if (reason === "abuse") {
+    return "abuse_ended";
+  }
+
+  if (reason === "spam") {
+    return "spam_ended";
+  }
+
+  return reason;
+}
+
+export function shouldSystemBlockForEndCall(reason: EndCallReason): boolean {
+  return reason === "abuse";
+}
 
 export function createCallInactivityState(): CallInactivityState {
   return {
