@@ -118,6 +118,13 @@ function personNamesMatch(storedName: string | undefined, providedName: string |
   return storedTokens.length > 0 && storedTokens.every((token) => providedTokens.has(token));
 }
 
+function storedContactNameMatchesIfPresent(
+  storedName: string | undefined,
+  providedName: string | undefined,
+): boolean {
+  return !storedName?.trim() || personNamesMatch(storedName, providedName);
+}
+
 function serviceNamesMatch(service: Doc<"services">, providedServiceName: string): boolean {
   const provided = normalizeComparable(providedServiceName);
   if (!provided) {
@@ -531,7 +538,7 @@ export const verifyAppointmentChangeFacts = internalMutation({
         return { ok: false, verified: false, reason: "phone_mismatch" };
       }
 
-      if (!personNamesMatch(loaded.contact.name, args.callerName)) {
+      if (!storedContactNameMatchesIfPresent(loaded.contact.name, args.callerName)) {
         return { ok: false, verified: false, reason: "name_mismatch" };
       }
 
@@ -553,7 +560,7 @@ export const verifyAppointmentChangeFacts = internalMutation({
       if (!contact) {
         return { ok: false, verified: false, reason: "phone_mismatch" };
       }
-      if (!personNamesMatch(contact.name, args.callerName)) {
+      if (!storedContactNameMatchesIfPresent(contact.name, args.callerName)) {
         return { ok: false, verified: false, reason: "name_mismatch" };
       }
 
@@ -846,7 +853,9 @@ export const rescheduleAppointmentForBusiness = internalMutation({
       serviceId: loaded.appointment.serviceId,
       startsAt: args.startsAt,
       timezone: args.timezone ?? loaded.appointment.timezone,
-      preferredStaffId: args.preferredStaffId ?? loaded.appointment.staffId,
+      ...(args.preferredStaffId !== undefined
+        ? { preferredStaffId: args.preferredStaffId }
+        : {}),
       excludeAppointmentId: loaded.appointment._id,
     });
     const selected = availability[0];

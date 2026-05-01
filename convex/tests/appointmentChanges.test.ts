@@ -47,6 +47,7 @@ async function seedAppointmentChangeFixture(
     verificationMode?: "phone_match_and_facts" | "otp_required" | "operator_only";
     allowCancel?: boolean;
     allowReschedule?: boolean;
+    contactName?: string | null;
   },
 ): Promise<AppointmentChangeFixture> {
   return await t.run(async (ctx) => {
@@ -101,10 +102,11 @@ async function seedAppointmentChangeFixture(
       });
     }
     const contactPhone = "+14165550199";
+    const contactName = input?.contactName === undefined ? "Jane Doe" : input.contactName;
     const contactId = await ctx.db.insert("contacts", {
       businessId,
       phone: contactPhone,
-      name: "Jane Doe",
+      ...(contactName ? { name: contactName } : {}),
     });
     const startsAt = "2030-05-15T14:00:00.000Z";
     const endsAt = "2030-05-15T14:30:00.000Z";
@@ -365,6 +367,42 @@ describe("appointment change authorization", () => {
     expect(appointment?.status).toBe("confirmed");
   });
 
+  it("allows verification for contacts without a stored name when appointment facts match", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t, { contactName: null });
+
+    const byAppointmentId = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        appointmentId: fixture.appointmentId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        serviceName: "Initial Consultation",
+      },
+    );
+    expect(byAppointmentId).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+
+    const byCallerPhone = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        action: "cancel",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        appointmentStartsAt: fixture.startsAt,
+      },
+    );
+    expect(byCallerPhone).toMatchObject({
+      ok: true,
+      appointmentId: fixture.appointmentId,
+    });
+  });
+
   it("rechecks availability and updates calendar sync state before rescheduling", async () => {
     const t = createHarness();
     const fixture = await seedAppointmentChangeFixture(t);
@@ -439,5 +477,75 @@ describe("appointment change authorization", () => {
     expect(appointment?.startsAt).toBe(freeStartsAt);
     expect(appointment?.endsAt).toBe("2030-05-16T15:30:00.000Z");
     expect(appointment?.calendarSyncState).toBe("pending");
+  });
+
+  it("considers other qualified staff when rescheduling without a staff preference", async () => {
+    const t = createHarness();
+    const fixture = await seedAppointmentChangeFixture(t);
+    const requestedStartsAt = "2030-05-16T14:00:00.000Z";
+    let alternateStaffId: Id<"staff"> | null = null;
+
+    await t.run(async (ctx) => {
+      alternateStaffId = await ctx.db.insert("staff", {
+        businessId: fixture.businessId,
+        name: "Second Desk",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      await ctx.db.insert("staff_service_assignments", {
+        businessId: fixture.businessId,
+        staffId: alternateStaffId,
+        serviceId: fixture.serviceId,
+      });
+      await ctx.db.insert("appointments", {
+        businessId: fixture.businessId,
+        contactId: fixture.contactId,
+        staffId: fixture.staffId,
+        serviceId: fixture.serviceId,
+        startsAt: requestedStartsAt,
+        endsAt: "2030-05-16T14:30:00.000Z",
+        timezone: "America/Toronto",
+        status: "confirmed",
+        sourceChannel: "dashboard",
+        calendarSyncState: "not_required",
+      });
+    });
+
+    const verification = await t.mutation(
+      internal.appointments.changes.verifyAppointmentChangeFacts,
+      {
+        businessId: fixture.businessId,
+        appointmentId: fixture.appointmentId,
+        action: "reschedule",
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        callerName: "Jane Doe",
+        serviceName: "Initial Consultation",
+      },
+    );
+    if (!verification.ok) {
+      throw new Error("Expected verification to succeed.");
+    }
+
+    const updated = await t.mutation(
+      internal.appointments.changes.rescheduleAppointmentForBusiness,
+      {
+        businessId: fixture.businessId,
+        appointmentId: fixture.appointmentId,
+        channel: "sms",
+        callerPhone: fixture.contactPhone,
+        startsAt: requestedStartsAt,
+        finalConfirmation: true,
+        verificationId: verification.verificationId,
+      },
+    );
+    expect(updated).toMatchObject({
+      ok: true,
+      startsAt: requestedStartsAt,
+      endsAt: "2030-05-16T14:30:00.000Z",
+    });
+
+    const appointment = await t.run(async (ctx) => await ctx.db.get(fixture.appointmentId));
+    expect(appointment?.staffId).toBe(alternateStaffId);
   });
 });
