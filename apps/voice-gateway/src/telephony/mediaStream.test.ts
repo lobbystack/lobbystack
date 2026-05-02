@@ -19,7 +19,7 @@ import {
 } from "./mediaStream";
 
 describe("buildRealtimeSessionConfig", () => {
-  it("requests phone-compatible audio responses only", () => {
+  it("requests a phone-compatible realtime audio session", () => {
     const config = buildRealtimeSessionConfig({
       snapshot: demoSnapshot,
       runtimeConfig: {
@@ -29,7 +29,7 @@ describe("buildRealtimeSessionConfig", () => {
       businessNowLabel: "Friday, 2026-05-01, 6:30 p.m.",
     });
 
-    expect(config.modalities).toEqual(["audio"]);
+    expect(config.modalities).toEqual(["audio", "text"]);
     expect(config.input_audio_format).toBe("g711_ulaw");
     expect(config.output_audio_format).toBe("g711_ulaw");
     expect(config.voice).toBe("marin");
