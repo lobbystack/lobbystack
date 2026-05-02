@@ -946,7 +946,7 @@ export function buildRealtimeSessionConfig(input: {
       "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
       "Interpret relative dates and times in the business timezone.",
     ].join("\n\n"),
-    modalities: ["audio", "text"],
+    modalities: ["audio"],
     voice: input.runtimeConfig.OPENAI_REALTIME_VOICE,
     input_audio_format: "g711_ulaw",
     output_audio_format: "g711_ulaw",
