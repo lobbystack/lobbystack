@@ -52,6 +52,7 @@ import {
 } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import {
+  endLiveCallSilently,
   endLiveCallWithMessage,
   transferLiveCall,
 } from "./transferCall";
@@ -908,6 +909,9 @@ async function initiateTerminalHangup(
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
   input: EndCallRequest,
+  options: {
+    finalMessagePlayback?: "twilio" | "silent";
+  } = {},
 ): Promise<void> {
   if (session.finalized || session.terminalHangupInProgress) {
     return;
@@ -959,10 +963,16 @@ async function initiateTerminalHangup(
   }
 
   try {
-    await endLiveCallWithMessage({
-      callSid: session.callSid,
-      sayMessage: input.message,
-    });
+    if (options.finalMessagePlayback === "silent") {
+      await endLiveCallSilently({
+        callSid: session.callSid,
+      });
+    } else {
+      await endLiveCallWithMessage({
+        callSid: session.callSid,
+        sayMessage: input.message,
+      });
+    }
   } catch (error) {
     session.terminalHangupInProgress = false;
     session.finalDispositionOverride = null;
@@ -1744,6 +1754,7 @@ async function handleToolCall(
         twilioSocket,
         session,
         result.endCall,
+        { finalMessagePlayback: "silent" },
       );
       return;
     }

@@ -25,4 +25,12 @@ describe("buildLiveCallUpdateTwiml", () => {
       "<Response><Say>We are sorry, please call back later.</Say><Hangup /></Response>",
     );
   });
+
+  it("builds a silent hangup", () => {
+    expect(
+      buildLiveCallUpdateTwiml({
+        hangup: true,
+      }),
+    ).toBe("<Response><Hangup /></Response>");
+  });
 });

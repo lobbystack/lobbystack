@@ -95,3 +95,14 @@ export async function endLiveCallWithMessage(input: {
     }),
   });
 }
+
+export async function endLiveCallSilently(input: {
+  callSid: string;
+}): Promise<void> {
+  await updateLiveCallTwiml({
+    callSid: input.callSid,
+    twiml: buildLiveCallUpdateTwiml({
+      hangup: true,
+    }),
+  });
+}
