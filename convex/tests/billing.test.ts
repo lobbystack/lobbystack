@@ -5,8 +5,12 @@ const { polarEventsIngestMock } = vi.hoisted(() => ({
   polarEventsIngestMock: vi.fn(),
 }));
 
-const { enqueuePostHogEventBestEffortMock } = vi.hoisted(() => ({
+const {
+  enqueuePostHogEventBestEffortMock,
+  enqueuePostHogProviderExceptionBestEffortMock,
+} = vi.hoisted(() => ({
   enqueuePostHogEventBestEffortMock: vi.fn(async () => {}),
+  enqueuePostHogProviderExceptionBestEffortMock: vi.fn(async () => {}),
 }));
 
 vi.mock("@polar-sh/sdk", () => ({
@@ -38,6 +42,8 @@ vi.mock("../telemetry/posthog", async () => {
   return {
     ...actual,
     enqueuePostHogEventBestEffort: enqueuePostHogEventBestEffortMock,
+    enqueuePostHogProviderExceptionBestEffort:
+      enqueuePostHogProviderExceptionBestEffortMock,
   };
 });
 
@@ -2027,6 +2033,23 @@ describe("billing", () => {
           retryScheduled: true,
           retryDelayMs: 30000,
           errorType: "Error",
+        }),
+      }),
+    );
+    expect(enqueuePostHogProviderExceptionBestEffortMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        provider: "polar",
+        error: expect.any(Error),
+        operation: "polar_usage_event_ingest",
+        businessId,
+        distinctId: `system:business:${String(businessId)}`,
+        groupKey: `business:${String(businessId)}`,
+        properties: expect.objectContaining({
+          usageKind: "voice_seconds",
+          quantity: 61,
+          attemptNumber: 1,
+          retryScheduled: true,
         }),
       }),
     );

@@ -188,6 +188,44 @@ export interface TelemetrySink {
   emit(event: TelemetryEvent): Promise<void>;
 }
 
+export const PROVIDER_ERROR_PROVIDERS = [
+  "openai",
+  "google",
+  "twilio",
+  "polar",
+  "firecrawl",
+  "unknown",
+] as const;
+
+export type ExternalProvider = (typeof PROVIDER_ERROR_PROVIDERS)[number];
+
+export const PROVIDER_ERROR_KINDS = [
+  "quota_exhausted",
+  "auth_failed",
+  "rate_limited",
+  "provider_unavailable",
+  "invalid_request",
+  "unknown",
+] as const;
+
+export type ProviderErrorKind = (typeof PROVIDER_ERROR_KINDS)[number];
+
+export type ProviderErrorClassification = {
+  provider: ExternalProvider;
+  kind: ProviderErrorKind;
+  providerErrorCode?: string;
+  providerErrorMessage?: string;
+  providerErrorStatus?: number;
+};
+
+export type ClassifyProviderErrorInput = {
+  provider?: ExternalProvider | string;
+  error?: unknown;
+  code?: string;
+  message?: string;
+  status?: number;
+};
+
 export type TelemetryRequirementKey =
   | keyof TelemetryContext
   | "deploymentMode"
@@ -621,6 +659,13 @@ const SAFE_KEY_PATTERNS = [
   "toolname",
   "providername",
   "modelname",
+  "exceptionmessage",
+  "exceptiontype",
+  "httpstatuscode",
+  "providererrorcode",
+  "providererrorkind",
+  "providererrormessage",
+  "providererrorstatus",
   "sessionid",
   "workflowname",
 ];
@@ -731,6 +776,246 @@ function hasPresentValue(
   }
 
   return true;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function normalizeExternalProvider(
+  value: ExternalProvider | string | undefined,
+): ExternalProvider {
+  if (value && PROVIDER_ERROR_PROVIDERS.includes(value as ExternalProvider)) {
+    return value as ExternalProvider;
+  }
+  return "unknown";
+}
+
+function readNestedRecord(
+  source: Record<string, unknown> | undefined,
+  key: string,
+): Record<string, unknown> | undefined {
+  const value = source?.[key];
+  return isRecord(value) ? value : undefined;
+}
+
+function readStringFromSources(
+  sources: Array<Record<string, unknown> | undefined>,
+  keys: string[],
+): string | undefined {
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value.trim();
+      }
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return String(value);
+      }
+    }
+  }
+  return undefined;
+}
+
+function readNumberFromSources(
+  sources: Array<Record<string, unknown> | undefined>,
+  keys: string[],
+): number | undefined {
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === "string" && value.trim().length > 0) {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function normalizeProviderErrorMessage(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  return collapsed.length > 500 ? `${collapsed.slice(0, 497)}...` : collapsed;
+}
+
+function inferProviderErrorKind(input: {
+  code?: string;
+  message?: string;
+  status?: number;
+}): ProviderErrorKind {
+  const code = input.code?.toLowerCase() ?? "";
+  const message = input.message?.toLowerCase() ?? "";
+  const combined = `${code} ${message}`;
+
+  if (
+    combined.includes("insufficient_quota") ||
+    combined.includes("quota_exceeded") ||
+    combined.includes("quota exceeded") ||
+    combined.includes("credits") ||
+    combined.includes("credit balance") ||
+    combined.includes("billing hard limit")
+  ) {
+    return "quota_exhausted";
+  }
+
+  if (input.status === 401 || input.status === 403) {
+    return "auth_failed";
+  }
+
+  if (
+    code.includes("invalid_api_key") ||
+    code.includes("authentication") ||
+    code.includes("unauthorized") ||
+    code.includes("permission_denied")
+  ) {
+    return "auth_failed";
+  }
+
+  if (input.status === 429 || code.includes("rate_limit") || code === "rate_limited") {
+    return "rate_limited";
+  }
+
+  if (
+    input.status !== undefined &&
+    input.status >= 500 &&
+    input.status <= 599
+  ) {
+    return "provider_unavailable";
+  }
+
+  if (
+    combined.includes("econnreset") ||
+    combined.includes("econnrefused") ||
+    combined.includes("enotfound") ||
+    combined.includes("etimedout") ||
+    combined.includes("socket hang up") ||
+    combined.includes("fetch failed") ||
+    combined.includes("network") ||
+    combined.includes("timeout")
+  ) {
+    return "provider_unavailable";
+  }
+
+  if (
+    input.status !== undefined &&
+    input.status >= 400 &&
+    input.status <= 499
+  ) {
+    return "invalid_request";
+  }
+
+  if (
+    code.includes("invalid_request") ||
+    code.includes("bad_request") ||
+    code.includes("validation")
+  ) {
+    return "invalid_request";
+  }
+
+  return "unknown";
+}
+
+export function classifyProviderError(
+  input: ClassifyProviderErrorInput,
+): ProviderErrorClassification {
+  const root = isRecord(input.error) ? input.error : undefined;
+  const nestedError = readNestedRecord(root, "error");
+  const nestedResponse = readNestedRecord(root, "response");
+  const nestedCause = readNestedRecord(root, "cause");
+  const sources = [root, nestedError, nestedResponse, nestedCause];
+  const code =
+    input.code ??
+    readStringFromSources(sources, [
+      "code",
+      "errorCode",
+      "error_code",
+      "type",
+      "statusCode",
+    ]);
+  const message =
+    input.message ??
+    (input.error instanceof Error ? input.error.message : undefined) ??
+    readStringFromSources(sources, [
+      "message",
+      "errorMessage",
+      "error_message",
+      "statusMessage",
+      "statusText",
+      "body",
+    ]) ??
+    (typeof input.error === "string" ? input.error : undefined);
+  const status =
+    input.status ??
+    readNumberFromSources(sources, [
+      "status",
+      "statusCode",
+      "status_code",
+      "httpStatus",
+      "httpStatusCode",
+    ]);
+
+  const kindInput = {
+    ...(code ? { code } : {}),
+    ...(message ? { message } : {}),
+    ...(status !== undefined ? { status } : {}),
+  };
+  const normalizedMessage = normalizeProviderErrorMessage(message);
+
+  return {
+    provider: normalizeExternalProvider(input.provider),
+    kind: inferProviderErrorKind(kindInput),
+    ...(code ? { providerErrorCode: code } : {}),
+    ...(normalizedMessage ? { providerErrorMessage: normalizedMessage } : {}),
+    ...(status !== undefined ? { providerErrorStatus: status } : {}),
+  };
+}
+
+export function getProviderErrorExceptionType(kind: ProviderErrorKind): string {
+  switch (kind) {
+    case "quota_exhausted":
+      return "ProviderQuotaExhaustedError";
+    case "auth_failed":
+      return "ProviderAuthFailedError";
+    case "rate_limited":
+      return "ProviderRateLimitedError";
+    case "provider_unavailable":
+      return "ProviderUnavailableError";
+    case "invalid_request":
+      return "ProviderInvalidRequestError";
+    case "unknown":
+    default:
+      return "ProviderFailureError";
+  }
+}
+
+export function buildProviderErrorTelemetryProperties(
+  classification: ProviderErrorClassification,
+): TelemetryProperties {
+  return {
+    provider: classification.provider,
+    providerErrorKind: classification.kind,
+    providerErrorCode: classification.providerErrorCode,
+    providerErrorMessage: classification.providerErrorMessage,
+    providerErrorStatus: classification.providerErrorStatus,
+    $exception_type: getProviderErrorExceptionType(classification.kind),
+    $exception_message:
+      classification.providerErrorMessage ??
+      `${classification.provider} provider failure (${classification.kind})`,
+  };
 }
 
 export function redactTelemetryProperties(

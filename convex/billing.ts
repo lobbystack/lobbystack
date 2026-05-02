@@ -71,7 +71,10 @@ import {
   type SmsComplianceStatus,
   type SmsSenderMode,
 } from "./lib/smsCompliance";
-import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
+import {
+  enqueuePostHogEventBestEffort,
+  enqueuePostHogProviderExceptionBestEffort,
+} from "./telemetry/posthog";
 
 type BillingContact = {
   email: string | null;
@@ -1641,6 +1644,22 @@ export const syncUsageEventToPolar = internalAction({
         retryScheduled: scheduledRetry,
         ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
         errorType: error instanceof Error ? error.name : "UnknownError",
+      });
+      await enqueuePostHogProviderExceptionBestEffort(ctx, {
+        provider: "polar",
+        error,
+        operation: "polar_usage_event_ingest",
+        businessId: payload.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(payload.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(payload.businessId)),
+        properties: {
+          usageKind: payload.usageKind,
+          quantity: payload.quantity,
+          sourceKey: payload.sourceKey,
+          attemptNumber: attempt + 1,
+          retryScheduled: scheduledRetry,
+          ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        },
       });
 
       return { synced: false, scheduledRetry, error: errorMessage };

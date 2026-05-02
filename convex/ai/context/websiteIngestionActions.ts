@@ -25,6 +25,11 @@ import {
   WEBSITE_INGESTION_PROVIDER,
   WEBSITE_PUBLIC_URL_ERROR_MESSAGE,
 } from "../../lib/websiteIngestion";
+import {
+  getPostHogBusinessGroupKey,
+  getPostHogDistinctIdForBusinessSystem,
+} from "../../telemetry/shared";
+import { enqueuePostHogProviderExceptionBestEffort } from "../../telemetry/posthog";
 
 type WebsiteIngestionJobIdArgs = {
   websiteIngestionJobId: Id<"website_ingestion_jobs">;
@@ -153,6 +158,31 @@ function requireFirecrawlApiKey(): string {
 function createFirecrawlClient(): Firecrawl {
   return new Firecrawl({
     apiKey: requireFirecrawlApiKey(),
+  });
+}
+
+async function captureFirecrawlProviderException(
+  ctx: Pick<ActionCtx, "runMutation">,
+  input: {
+    job: Doc<"website_ingestion_jobs">;
+    error: unknown;
+    operation: string;
+    providerJobId?: string;
+  },
+): Promise<void> {
+  await enqueuePostHogProviderExceptionBestEffort(ctx, {
+    provider: "firecrawl",
+    error: input.error,
+    operation: input.operation,
+    businessId: input.job.businessId,
+    distinctId: getPostHogDistinctIdForBusinessSystem(String(input.job.businessId)),
+    groupKey: getPostHogBusinessGroupKey(String(input.job.businessId)),
+    properties: {
+      websiteIngestionJobId: String(input.job._id),
+      websiteIngestionStatus: input.job.status,
+      crawlMode: input.job.crawlMode ?? WEBSITE_CRAWL_FIRECRAWL_MODE,
+      ...(input.providerJobId ? { providerJobId: input.providerJobId } : {}),
+    },
   });
 }
 
@@ -923,25 +953,36 @@ export const submitFirecrawlWebsiteCrawl = internalAction({
 
     const client = createFirecrawlClient();
     const includePaths = buildFirecrawlIncludePaths(job.websiteUrl);
-    const crawl = await client.startCrawl(job.websiteUrl, {
-      crawlEntireDomain: false,
-      allowExternalLinks: false,
-      allowSubdomains: false,
-      deduplicateSimilarURLs: true,
-      ignoreQueryParameters: true,
-      limit: resolveFirecrawlDiscoveryPageLimit(job.pageLimit),
-      maxDiscoveryDepth: job.depth,
-      sitemap: "include",
-      scrapeOptions: {
-        formats: ["markdown"],
-        onlyMainContent: true,
-        waitFor: FIRECRAWL_SCRAPE_WAIT_FOR_MS,
-      },
-      ...(includePaths ? { includePaths } : {}),
-    });
+    let providerJobId: string;
+    try {
+      const crawl = await client.startCrawl(job.websiteUrl, {
+        crawlEntireDomain: false,
+        allowExternalLinks: false,
+        allowSubdomains: false,
+        deduplicateSimilarURLs: true,
+        ignoreQueryParameters: true,
+        limit: resolveFirecrawlDiscoveryPageLimit(job.pageLimit),
+        maxDiscoveryDepth: job.depth,
+        sitemap: "include",
+        scrapeOptions: {
+          formats: ["markdown"],
+          onlyMainContent: true,
+          waitFor: FIRECRAWL_SCRAPE_WAIT_FOR_MS,
+        },
+        ...(includePaths ? { includePaths } : {}),
+      });
+      providerJobId = crawl.id;
+    } catch (error) {
+      await captureFirecrawlProviderException(ctx, {
+        job,
+        error,
+        operation: "firecrawl_start_crawl",
+      });
+      throw error;
+    }
 
     return {
-      providerJobId: crawl.id,
+      providerJobId,
       crawlMode: WEBSITE_CRAWL_FIRECRAWL_MODE,
     };
   },
@@ -972,9 +1013,20 @@ export const getFirecrawlWebsiteCrawlJobStatus = internalAction({
   ): Promise<{ status: string; finished: number; total: number | null }> => {
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
     const client = createFirecrawlClient();
-    const crawl = await client.getCrawlStatus(args.providerJobId, {
-      autoPaginate: false,
-    });
+    let crawl: CrawlJob;
+    try {
+      crawl = await client.getCrawlStatus(args.providerJobId, {
+        autoPaginate: false,
+      });
+    } catch (error) {
+      await captureFirecrawlProviderException(ctx, {
+        job,
+        error,
+        operation: "firecrawl_get_crawl_status",
+        providerJobId: args.providerJobId,
+      });
+      throw error;
+    }
 
     const total = typeof crawl.total === "number" ? crawl.total : null;
     const completed = typeof crawl.completed === "number" ? crawl.completed : 0;
@@ -1028,7 +1080,18 @@ export const importFirecrawlWebsiteCrawlResults = internalAction({
     const commitChanges = args.commitChanges ?? true;
     const job = await loadWebsiteIngestionJobRecord(ctx, args.websiteIngestionJobId);
     const client = createFirecrawlClient();
-    const crawl = await client.getCrawlStatus(args.providerJobId);
+    let crawl: CrawlJob;
+    try {
+      crawl = await client.getCrawlStatus(args.providerJobId);
+    } catch (error) {
+      await captureFirecrawlProviderException(ctx, {
+        job,
+        error,
+        operation: "firecrawl_import_crawl_results",
+        providerJobId: args.providerJobId,
+      });
+      throw error;
+    }
 
     if (crawl.status === "scraping") {
       return {

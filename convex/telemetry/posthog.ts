@@ -5,6 +5,9 @@ import {
 } from "./shared";
 import { v } from "convex/values";
 import {
+  buildProviderErrorTelemetryProperties,
+  classifyProviderError,
+  type ExternalProvider,
   isTelemetryEventName,
   validateTelemetryEvent,
 } from "../../packages/telemetry/src/index";
@@ -46,6 +49,19 @@ type SerializedOutboxEvent = {
 };
 
 type TelemetryMutationRunner = Pick<ActionCtx | MutationCtx, "runMutation">;
+
+type EnqueueProviderFailureExceptionInput = TelemetryContext & {
+  provider: ExternalProvider;
+  error?: unknown;
+  code?: string;
+  message?: string;
+  status?: number;
+  operation: string;
+  distinctId: string;
+  businessId?: Id<"businesses">;
+  groupKey?: string;
+  properties?: TelemetryProperties;
+};
 
 type FlushResult = {
   attempted: number;
@@ -191,6 +207,41 @@ export async function enqueuePostHogEventBestEffort(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+export async function enqueuePostHogProviderExceptionBestEffort(
+  ctx: TelemetryMutationRunner,
+  input: EnqueueProviderFailureExceptionInput,
+): Promise<void> {
+  const classification = classifyProviderError({
+    provider: input.provider,
+    error: input.error,
+    ...(input.code ? { code: input.code } : {}),
+    ...(input.message ? { message: input.message } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+  });
+
+  await enqueuePostHogEventBestEffort(ctx, {
+    eventName: "$exception",
+    distinctId: input.distinctId,
+    ...(input.businessId !== undefined ? { businessId: input.businessId } : {}),
+    ...(input.groupKey !== undefined ? { groupKey: input.groupKey } : {}),
+    ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
+    ...(input.callId !== undefined ? { callId: input.callId } : {}),
+    ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+    ...(input.appointmentId !== undefined
+      ? { appointmentId: input.appointmentId }
+      : {}),
+    ...(input.channel !== undefined ? { channel: input.channel } : {}),
+    provider: classification.provider,
+    ...(input.model !== undefined ? { model: input.model } : {}),
+    properties: {
+      ...buildProviderErrorTelemetryProperties(classification),
+      operation: input.operation,
+      runtime: "convex",
+      ...input.properties,
+    },
+  });
 }
 
 export const enqueueEvent = internalMutation({

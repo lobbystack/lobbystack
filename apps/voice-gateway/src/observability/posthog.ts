@@ -13,10 +13,15 @@ import {
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
+  buildProviderErrorTelemetryProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
+  getProviderErrorExceptionType,
   redactAiTraceProperties,
   redactTelemetryProperties,
+  classifyProviderError,
+  type ExternalProvider,
+  type ProviderErrorClassification,
   type TelemetryProperties,
 } from "@lobbystack/telemetry";
 
@@ -540,6 +545,41 @@ export function capturePostHogException(
         : undefined),
     additionalProperties,
   );
+}
+
+export function captureProviderFailureException(input: {
+  provider: ExternalProvider;
+  error?: unknown;
+  code?: string;
+  message?: string;
+  status?: number;
+  businessId?: string;
+  distinctId?: string;
+  properties?: TelemetryProperties;
+}): ProviderErrorClassification {
+  const classification = classifyProviderError({
+    provider: input.provider,
+    error: input.error,
+    ...(input.code ? { code: input.code } : {}),
+    ...(input.message ? { message: input.message } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+  });
+  const exceptionMessage =
+    classification.providerErrorMessage ??
+    `${classification.provider} provider failure (${classification.kind})`;
+  const exception = new Error(exceptionMessage, { cause: input.error });
+  exception.name = getProviderErrorExceptionType(classification.kind);
+
+  capturePostHogException(exception, {
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.distinctId ? { distinctId: input.distinctId } : {}),
+    properties: {
+      ...buildProviderErrorTelemetryProperties(classification),
+      ...input.properties,
+    },
+  });
+
+  return classification;
 }
 
 export function recordTwilioInvalidSignature(

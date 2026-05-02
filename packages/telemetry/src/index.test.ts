@@ -6,12 +6,16 @@ import {
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
+  buildProviderErrorTelemetryProperties,
+  classifyProviderError,
   createTelemetryFacade,
   getTelemetryRequiredProperties,
+  getProviderErrorExceptionType,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
   redactAiTraceProperties,
+  redactTelemetryProperties,
   redactOtelAttributes,
   validateTelemetryEvent,
 } from "./index";
@@ -96,6 +100,90 @@ describe("telemetry redaction", () => {
 
     expect(properties.workflowName).toBe("appointmentCalendarSyncWorkflow");
     expect(properties.customerName).toBe("[redacted]");
+  });
+
+  it("classifies OpenAI insufficient_quota as quota exhausted", () => {
+    const classified = classifyProviderError({
+      provider: "openai",
+      error: {
+        error: {
+          code: "insufficient_quota",
+          message: "You exceeded your current quota.",
+        },
+        status: 429,
+      },
+    });
+
+    expect(classified).toMatchObject({
+      provider: "openai",
+      kind: "quota_exhausted",
+      providerErrorCode: "insufficient_quota",
+      providerErrorStatus: 429,
+    });
+    expect(getProviderErrorExceptionType(classified.kind)).toBe(
+      "ProviderQuotaExhaustedError",
+    );
+  });
+
+  it("classifies HTTP 401 and 403 as auth failures", () => {
+    expect(
+      classifyProviderError({ provider: "twilio", error: { status: 401 } }).kind,
+    ).toBe("auth_failed");
+    expect(
+      classifyProviderError({
+        provider: "google",
+        error: { response: { status: 403 } },
+      }).kind,
+    ).toBe("auth_failed");
+  });
+
+  it("classifies HTTP 429 as rate limited when it is not quota exhaustion", () => {
+    expect(
+      classifyProviderError({
+        provider: "google",
+        error: { status: 429, message: "Rate limit reached." },
+      }).kind,
+    ).toBe("rate_limited");
+  });
+
+  it("classifies 5xx and network failures as provider unavailable", () => {
+    expect(
+      classifyProviderError({ provider: "polar", error: { statusCode: 503 } }).kind,
+    ).toBe("provider_unavailable");
+    expect(
+      classifyProviderError({ provider: "firecrawl", error: new Error("fetch failed") })
+        .kind,
+    ).toBe("provider_unavailable");
+  });
+
+  it("classifies unknown error shapes as unknown", () => {
+    expect(classifyProviderError({ error: { surprise: true } })).toMatchObject({
+      provider: "unknown",
+      kind: "unknown",
+    });
+  });
+
+  it("builds PostHog exception-safe provider metadata", () => {
+    const properties = buildProviderErrorTelemetryProperties({
+      provider: "openai",
+      kind: "quota_exhausted",
+      providerErrorCode: "insufficient_quota",
+      providerErrorMessage: "Credits exhausted",
+      providerErrorStatus: 429,
+    });
+
+    expect(properties).toMatchObject({
+      provider: "openai",
+      providerErrorKind: "quota_exhausted",
+      providerErrorCode: "insufficient_quota",
+      providerErrorMessage: "Credits exhausted",
+      providerErrorStatus: 429,
+      $exception_type: "ProviderQuotaExhaustedError",
+      $exception_message: "Credits exhausted",
+    });
+    expect(redactTelemetryProperties(properties).providerErrorMessage).toBe(
+      "Credits exhausted",
+    );
   });
 
   it("builds metadata-only AI generation properties without message content", () => {

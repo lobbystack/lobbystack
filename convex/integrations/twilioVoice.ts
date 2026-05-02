@@ -6,6 +6,7 @@ import { internal } from "../_generated/api";
 import { internalAction } from "../_generated/server";
 import { isTerminalTwilioCallStatus } from "../lib/voiceCallStatus";
 import { getTwilioClient } from "../lib/node/twilioClient";
+import { enqueuePostHogProviderExceptionBestEffort } from "../telemetry/posthog";
 
 const CALL_PRICE_RETRY_DELAYS_MS = [
   30_000,
@@ -117,6 +118,18 @@ export const syncCallPriceFromProvider = internalAction({
       console.warn("[twilioVoice] Failed to hydrate provider call price", {
         twilioCallSid: args.twilioCallSid,
         error: error instanceof Error ? error.message : String(error),
+      });
+      await enqueuePostHogProviderExceptionBestEffort(ctx, {
+        provider: "twilio",
+        error,
+        operation: "twilio_voice_price_sync",
+        distinctId: "system:convex:provider:twilio",
+        channel: "voice",
+        properties: {
+          twilioCallSid: args.twilioCallSid,
+          providerCallStatus: args.providerCallStatus,
+          attemptNumber: attempt + 1,
+        },
       });
       return { synced: false, scheduledRetry: false, skipped: false };
     }

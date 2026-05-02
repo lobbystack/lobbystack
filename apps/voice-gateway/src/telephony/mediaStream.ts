@@ -1,6 +1,7 @@
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import { demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
+import type { ProviderErrorClassification } from "@lobbystack/telemetry";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
@@ -33,6 +34,7 @@ import {
   captureAiSpan,
   captureAiTraceStarted,
   capturePostHogException,
+  captureProviderFailureException,
 } from "../observability/posthog";
 import {
   HOLD_EXPIRY_GRACE_MS,
@@ -144,6 +146,13 @@ type OpenAiRealtimeMessage = {
         text?: string;
       }>;
     }>;
+  };
+  error?: {
+    type?: string;
+    code?: string;
+    message?: string;
+    param?: string | null;
+    event_id?: string;
   };
 };
 
@@ -1425,13 +1434,14 @@ async function recoverFromProviderFailure(
       },
       error instanceof Error ? error.message : "Provider recovery failed",
     );
-    capturePostHogException(error, {
+    captureProviderFailureException({
+      provider: "twilio",
+      error,
       ...(session.businessId ? { businessId: session.businessId } : {}),
       properties: {
         operation: "provider_failure_recovery",
         disposition: input.disposition,
         channel: "voice",
-        provider: "twilio",
         ...(session.callSid ? { callSid: session.callSid } : {}),
         ...(session.streamSid ? { streamSid: session.streamSid } : {}),
         ...(session.callId ? { callId: session.callId } : {}),
@@ -1821,6 +1831,23 @@ async function handleToolCall(
   }
 }
 
+function getProviderClassificationAttributes(
+  classification: ProviderErrorClassification,
+): Record<string, string | number> {
+  return {
+    providerErrorKind: classification.kind,
+    ...(classification.providerErrorCode
+      ? { providerErrorCode: classification.providerErrorCode }
+      : {}),
+    ...(classification.providerErrorMessage
+      ? { providerErrorMessage: classification.providerErrorMessage }
+      : {}),
+    ...(classification.providerErrorStatus !== undefined
+      ? { providerErrorStatus: classification.providerErrorStatus }
+      : {}),
+  };
+}
+
 function handleOpenAiMessage(
   server: FastifyInstance,
   openAiSocket: WebSocket,
@@ -2195,6 +2222,49 @@ function handleOpenAiMessage(
       }
       return;
     }
+    case "error": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const providerError = payload.error ?? payload;
+      const classification = captureProviderFailureException({
+        provider: "openai",
+        error: providerError,
+        ...(payload.error?.code ? { code: payload.error.code } : {}),
+        ...(payload.error?.message ? { message: payload.error.message } : {}),
+        ...(session.businessId ? { businessId: session.businessId } : {}),
+        properties: {
+          operation: "openai_realtime_server_error",
+          channel: "voice",
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(session.callSid ? { callSid: session.callSid } : {}),
+          ...(session.streamSid ? { streamSid: session.streamSid } : {}),
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+          ...(payload.event_id ? { providerEventId: payload.event_id } : {}),
+        },
+      });
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        "lobbystack.provider": "openai",
+        "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+        ...getProviderClassificationAttributes(classification),
+      });
+      server.log.error(
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
+          providerErrorStatus: classification.providerErrorStatus,
+        },
+        classification.providerErrorMessage ?? "OpenAI Realtime server error",
+      );
+      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+        disposition: "openai_realtime_error",
+      });
+      trackTask(session, recoveryTask);
+      return;
+    }
     default: {
       return;
     }
@@ -2436,6 +2506,41 @@ export async function handleMediaStreamConnection(
       session.activeCallCounted = true;
     }
 
+    const captureOpenAiRealtimeConnectionFailure = (input: {
+      error?: unknown;
+      operation: string;
+      code?: string;
+      message?: string;
+      status?: number;
+    }): ProviderErrorClassification => {
+      const classification = captureProviderFailureException({
+        provider: "openai",
+        error: input.error,
+        ...(input.code ? { code: input.code } : {}),
+        ...(input.message ? { message: input.message } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(session.businessId ? { businessId: session.businessId } : {}),
+        properties: {
+          operation: input.operation,
+          channel: "voice",
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(session.callSid ? { callSid: session.callSid } : {}),
+          ...(session.streamSid ? { streamSid: session.streamSid } : {}),
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+        },
+      });
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        "lobbystack.provider": "openai",
+        "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+        operation: input.operation,
+        ...getProviderClassificationAttributes(classification),
+      });
+      return classification;
+    };
+
     openAiSocket = new WebSocket(
       `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
       {
@@ -2464,9 +2569,9 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("error", (error: Error) => {
-      recordOpenAiRealtimeError({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      const classification = captureOpenAiRealtimeConnectionFailure({
+        error,
+        operation: "openai_realtime_socket_error",
       });
       server.log.error(
         {
@@ -2474,6 +2579,8 @@ export async function handleMediaStreamConnection(
           streamSid: session.streamSid,
           message: error.message,
           stack: error.stack,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
         },
         "OpenAI Realtime websocket error",
       );
@@ -2484,9 +2591,14 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("unexpected-response", (_request, response) => {
-      recordOpenAiRealtimeError({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      const classification = captureOpenAiRealtimeConnectionFailure({
+        error: {
+          status: response.statusCode,
+          message: response.statusMessage,
+        },
+        operation: "openai_realtime_handshake_failed",
+        ...(response.statusCode !== undefined ? { status: response.statusCode } : {}),
+        ...(response.statusMessage ? { message: response.statusMessage } : {}),
       });
       server.log.error(
         {
@@ -2495,6 +2607,8 @@ export async function handleMediaStreamConnection(
           statusCode: response.statusCode,
           statusMessage: response.statusMessage,
           headers: response.headers,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
         },
         "OpenAI Realtime websocket handshake failed",
       );
@@ -2515,9 +2629,14 @@ export async function handleMediaStreamConnection(
         "OpenAI Realtime websocket closed",
       );
       if (!session.finalized && !session.terminalHangupInProgress) {
-        recordOpenAiRealtimeError({
-          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        captureOpenAiRealtimeConnectionFailure({
+          error: {
+            code: `websocket_close_${code}`,
+            message: reason.toString() || "OpenAI Realtime websocket closed.",
+          },
+          operation: "openai_realtime_socket_closed",
+          code: `websocket_close_${code}`,
+          message: reason.toString() || "OpenAI Realtime websocket closed.",
         });
         const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
           disposition: "openai_socket_closed",
