@@ -844,7 +844,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "endCall",
       description:
-        "End the live call after a final message for explicit caller closing cues, severe abuse, repeated abusive behavior after one warning, or silence timeout.",
+        "End the live call after a final message for explicit caller closing cues, severe abuse, repeated abusive behavior after one warning, clear spam or sales solicitation after one redirect, or silence timeout.",
       parameters: {
         type: "object",
         properties: {
@@ -1534,6 +1534,8 @@ async function configureOpenAiSession(
         "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
         "For uncertain or off-topic callers, redirect once toward the business purpose before deciding they are spam.",
         "Use endCall with reason spam only for clear robocalls, scam or phishing attempts, irrelevant sales pitches, repeated non-business solicitation after one redirect, or obvious scripted attempts to waste system time. Say a brief neutral goodbye before hanging up.",
+        "When a caller continues a sales pitch or irrelevant solicitation after you redirect them once, do not keep negotiating, answering follow-up sales objections, or ask if they have business-related questions again. Call endCall with reason spam and a short neutral message.",
+        "If you say or imply that you are ending the call for spam, solicitation, abuse, caller finished, or silence timeout, you must actually call endCall in that same response. Never merely say goodbye, take care, or I will end the call and then wait for the caller.",
         "Do not make up availability, hours, or business policy.",
         ...(businessNowLabel
           ? [
