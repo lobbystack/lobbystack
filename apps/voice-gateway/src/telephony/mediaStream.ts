@@ -1,5 +1,5 @@
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
-import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
+import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import { demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
@@ -144,13 +144,6 @@ type OpenAiRealtimeMessage = {
       }>;
     }>;
   };
-  error?: {
-    type?: string;
-    code?: string;
-    message?: string;
-    param?: string;
-    event_id?: string;
-  };
 };
 
 type ActiveVoiceSession = {
@@ -226,11 +219,6 @@ type RealtimePricingConfig = {
   audioOutputTokenPriceUsd?: number;
   cachedInputTokenPriceUsd?: number;
 };
-
-type RealtimeSessionRuntimeConfig = Pick<
-  VoiceGatewayEnv,
-  "OPENAI_REALTIME_VOICE" | "OPENAI_TRANSCRIPTION_MODEL"
->;
 
 function isTransferQuotaError(error: unknown): boolean {
   return (
@@ -907,124 +895,6 @@ function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): vo
   });
 }
 
-export function buildRealtimeSessionConfig(input: {
-  snapshot: BusinessContextSnapshot;
-  runtimeConfig: RealtimeSessionRuntimeConfig;
-  businessNowLabel: string | null;
-}) {
-  return {
-    instructions: [
-      buildVoiceSystemPrompt(input.snapshot),
-      "You are speaking on a live phone call.",
-      "Start in the language implied by the configured greeting.",
-      "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
-      "Answer from the supplied business snapshot whenever possible.",
-      "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
-      "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
-      "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",
-      "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
-      "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
-      "For uncertain or off-topic callers, redirect once toward the business purpose before deciding they are spam.",
-      "Use endCall with reason spam only for clear robocalls, scam or phishing attempts, irrelevant sales pitches, repeated non-business solicitation after one redirect, or obvious scripted attempts to waste system time. Say a brief neutral goodbye before hanging up.",
-      "Do not make up availability, hours, or business policy.",
-      ...(input.businessNowLabel
-        ? [
-            `The current local business time is ${input.businessNowLabel} in ${input.snapshot.timezone}.`,
-          ]
-        : [
-            `The business timezone is configured as ${input.snapshot.timezone}. Interpret relative dates and times using that timezone.`,
-          ]),
-      "If the caller asks what services the business offers, use getBusinessServices instead of guessing or saying the list is unavailable.",
-      "For booking, first collect the service, local day/date, and approximate time preference.",
-      "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
-      "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
-      "Only call bookAppointment after the caller confirms a specific offered time.",
-      "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If appointments exist, ask the caller for the name on the appointment and either the existing appointment time or service; do not claim to know those facts from lookup.",
-      "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they provided, such as the existing time or service.",
-      "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",
-      "Only call cancelAppointment or rescheduleAppointment after the caller gives explicit final confirmation for the exact appointment and action. Never claim the change succeeded unless that final tool result has ok true.",
-      "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
-      "Interpret relative dates and times in the business timezone.",
-    ].join("\n\n"),
-    modalities: ["audio"],
-    voice: input.runtimeConfig.OPENAI_REALTIME_VOICE,
-    input_audio_format: "g711_ulaw",
-    output_audio_format: "g711_ulaw",
-    input_audio_transcription: {
-      model: input.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
-    },
-    turn_detection: {
-      type: "server_vad",
-      create_response: true,
-      interrupt_response: true,
-      idle_timeout_ms: NORMAL_IDLE_TIMEOUT_MS,
-    },
-    tools: createRealtimeToolDefinitions(),
-    tool_choice: "auto",
-  };
-}
-
-function createInitialGreetingResponse(session: ActiveVoiceSession) {
-  if (!session.snapshot) {
-    throw new Error("Voice session snapshot is not ready.");
-  }
-
-  return {
-    instructions: [
-      `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
-      "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
-      "After the greeting, stop speaking and wait for the caller to respond.",
-      "Do not add any extra sentence before or after the greeting.",
-    ].join(" "),
-  };
-}
-
-function markOpenAiSessionReady(
-  openAiSocket: WebSocket,
-  session: ActiveVoiceSession,
-  server: FastifyInstance,
-): void {
-  if (session.openAiReady) {
-    return;
-  }
-
-  session.openAiReady = true;
-  const runtimeConfig = loadVoiceGatewayEnv(process.env);
-  if (session.businessId) {
-    captureAiTraceStarted({
-      businessId: session.businessId,
-      traceId: session.aiTraceId,
-      ...(session.callId ? { callId: session.callId } : {}),
-      ...(session.conversationId ? { conversationId: session.conversationId } : {}),
-      model: runtimeConfig.OPENAI_REALTIME_MODEL,
-      provider: "openai",
-    });
-  }
-  for (const payload of session.pendingInboundAudio) {
-    postRealtimeEvent(openAiSocket, {
-      type: "input_audio_buffer.append",
-      audio: payload,
-    });
-  }
-  session.pendingInboundAudio = [];
-
-  session.assistantResponseRequestedAtMs = Date.now();
-  session.assistantFirstOutputAtMs = null;
-  postRealtimeEvent(openAiSocket, {
-    type: "response.create",
-    response: createInitialGreetingResponse(session),
-  });
-
-  server.log.info(
-    {
-      callSid: session.callSid,
-      streamSid: session.streamSid,
-      businessId: session.businessId,
-    },
-    "OpenAI Realtime session configured; requested initial greeting",
-  );
-}
-
 function clearInactivityTimer(session: ActiveVoiceSession): void {
   if (session.inactivityTimer !== null) {
     clearTimeout(session.inactivityTimer);
@@ -1650,11 +1520,89 @@ async function configureOpenAiSession(
 
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
-    session: buildRealtimeSessionConfig({
-      snapshot: session.snapshot,
-      runtimeConfig,
-      businessNowLabel,
-    }),
+    session: {
+      instructions: [
+        buildVoiceSystemPrompt(session.snapshot),
+        "You are speaking on a live phone call.",
+        "Start in the language implied by the configured greeting.",
+        "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
+        "Answer from the supplied business snapshot whenever possible.",
+        "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
+        "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
+        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",
+        "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
+        "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
+        "For uncertain or off-topic callers, redirect once toward the business purpose before deciding they are spam.",
+        "Use endCall with reason spam only for clear robocalls, scam or phishing attempts, irrelevant sales pitches, repeated non-business solicitation after one redirect, or obvious scripted attempts to waste system time. Say a brief neutral goodbye before hanging up.",
+        "Do not make up availability, hours, or business policy.",
+        ...(businessNowLabel
+          ? [
+              `The current local business time is ${businessNowLabel} in ${session.snapshot.timezone}.`,
+            ]
+          : [
+              `The business timezone is configured as ${session.snapshot.timezone}. Interpret relative dates and times using that timezone.`,
+            ]),
+        "If the caller asks what services the business offers, use getBusinessServices instead of guessing or saying the list is unavailable.",
+        "For booking, first collect the service, local day/date, and approximate time preference.",
+        "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
+        "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
+        "Only call bookAppointment after the caller confirms a specific offered time.",
+        "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If appointments exist, ask the caller for the name on the appointment and either the existing appointment time or service; do not claim to know those facts from lookup.",
+        "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they provided, such as the existing time or service.",
+        "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",
+        "Only call cancelAppointment or rescheduleAppointment after the caller gives explicit final confirmation for the exact appointment and action. Never claim the change succeeded unless that final tool result has ok true.",
+        "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
+        "Interpret relative dates and times in the business timezone.",
+      ].join("\n\n"),
+      modalities: ["audio", "text"],
+      voice: runtimeConfig.OPENAI_REALTIME_VOICE,
+      input_audio_format: "g711_ulaw",
+      output_audio_format: "g711_ulaw",
+      input_audio_transcription: {
+        model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+      },
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+        idle_timeout_ms: NORMAL_IDLE_TIMEOUT_MS,
+      },
+      tools: createRealtimeToolDefinitions(),
+      tool_choice: "auto",
+    },
+  });
+
+  session.openAiReady = true;
+  if (session.businessId) {
+    captureAiTraceStarted({
+      businessId: session.businessId,
+      traceId: session.aiTraceId,
+      ...(session.callId ? { callId: session.callId } : {}),
+      ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+      model: runtimeConfig.OPENAI_REALTIME_MODEL,
+      provider: "openai",
+    });
+  }
+  for (const payload of session.pendingInboundAudio) {
+    postRealtimeEvent(openAiSocket, {
+      type: "input_audio_buffer.append",
+      audio: payload,
+    });
+  }
+  session.pendingInboundAudio = [];
+
+  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
+  postRealtimeEvent(openAiSocket, {
+    type: "response.create",
+    response: {
+      instructions: [
+        `Begin the call by greeting the caller with this exact greeting: "${session.snapshot.greeting}"`,
+        "After the greeting, continue in the language implied by that greeting unless the caller clearly prefers another language.",
+        "After the greeting, stop speaking and wait for the caller to respond.",
+        "Do not add any extra sentence before or after the greeting.",
+      ].join(" "),
+    },
   });
 }
 
@@ -1900,33 +1848,6 @@ function handleOpenAiMessage(
   }
 
   switch (payload.type) {
-    case "session.updated": {
-      markOpenAiSessionReady(openAiSocket, session, server);
-      return;
-    }
-    case "error": {
-      recordOpenAiRealtimeError({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
-      });
-      server.log.error(
-        {
-          callSid: session.callSid,
-          streamSid: session.streamSid,
-          errorType: payload.error?.type,
-          errorCode: payload.error?.code,
-          errorMessage: payload.error?.message,
-          errorParam: payload.error?.param,
-          eventId: payload.error?.event_id ?? payload.event_id,
-        },
-        "OpenAI Realtime server error",
-      );
-      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
-        disposition: "openai_server_error",
-      });
-      trackTask(session, recoveryTask);
-      return;
-    }
     case "response.audio.delta":
     case "response.output_audio.delta": {
       if (
