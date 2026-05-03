@@ -19,6 +19,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -110,12 +111,20 @@ export function resolveCallStatus(
   return "completed";
 }
 
+export function isContactBlockedCall(call: { disposition?: string }): boolean {
+  return call.disposition?.trim().toLowerCase().includes("contact_blocked") ?? false;
+}
+
 export function callReachedConnectedStep(call: CallRow): boolean {
   if (call.status === "in_progress") {
     return true;
   }
 
   if (call.status === "open") {
+    return false;
+  }
+
+  if (isContactBlockedCall(call)) {
     return false;
   }
 
@@ -142,7 +151,7 @@ type CallEvent = {
   failed: boolean;
 };
 
-function buildCallEvents(call: CallRow): CallEvent[] {
+export function buildCallEvents(call: CallRow): CallEvent[] {
   const events: CallEvent[] = [];
   const status = resolveCallStatus(call);
   const reachedConnectedStep = callReachedConnectedStep(call);
@@ -155,6 +164,18 @@ function buildCallEvents(call: CallRow): CallEvent[] {
     isFinal: false,
     failed: false,
   });
+
+  if (isContactBlockedCall(call)) {
+    events.push({
+      key: "blocked",
+      labelKey: "detail.events.blocked",
+      timestamp: call.endedAt ?? call.startedAt,
+      reached: true,
+      isFinal: true,
+      failed: true,
+    });
+    return events;
+  }
 
   events.push({
     key: "connected",
@@ -605,6 +626,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
     call.recordingDurationMs !== undefined
       ? call.recordingDurationMs / 1000
       : call.providerCallDurationSeconds;
+  const isBlockedCall = isContactBlockedCall(call);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -619,8 +641,21 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-col justify-center">
+        <div className="flex flex-col gap-2">
           <h1 className="type-page-title">{callerName}</h1>
+          {isBlockedCall ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="destructive">{t("detail.blocking.badge")}</Badge>
+              <span className="type-body-muted">
+                {t("detail.blocking.blockedAtInline", {
+                  time: formatDateTime(call.endedAt ?? call.startedAt, locale, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }),
+                })}
+              </span>
+            </div>
+          ) : null}
         </div>
       </div>
 

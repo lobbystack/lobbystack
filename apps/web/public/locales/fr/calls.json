@@ -132,6 +132,7 @@
       "received": "Reçu",
       "connected": "Connecté",
       "transferred": "Transféré",
+      "blocked": "Bloqué",
       "completed": "Terminé",
       "failed": "Échoué"
     },
@@ -148,6 +149,10 @@
     "recording": {
       "unavailable": "Aucun enregistrement n'est disponible pour cet appel.",
       "pending": "L'enregistrement est encore en cours de traitement."
+    },
+    "blocking": {
+      "badge": "Bloqué",
+      "blockedAtInline": "Bloqué le {{time}}"
     },
     "details": {
       "outcomeTitle": "Résultat",
