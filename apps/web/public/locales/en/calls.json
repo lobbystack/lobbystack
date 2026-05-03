@@ -36,7 +36,8 @@
     "copy": "Copy",
     "play": "Play",
     "pause": "Pause",
-    "audioPending": "Recording pending"
+    "audioPending": "Recording pending",
+    "audioUnavailable": "No recording"
   },
   "followUp": {
     "title": "Follow-up task",
@@ -90,6 +91,7 @@
     "schedulingWithService": "Caller discussed scheduling {{serviceName}}, but no appointment was confirmed.",
     "schedulingWithServiceAndTime": "Caller discussed scheduling {{serviceName}} for {{startsAt}}, but no appointment was confirmed.",
     "messageTaken": "Caller left a message for follow-up.",
+    "contactBlocked": "Call was blocked before the assistant answered.",
     "abuse": "AI ended this as an abusive call.",
     "spam": "AI ended this as a spam call.",
     "voicemail": "Call ended in voicemail or message capture.",

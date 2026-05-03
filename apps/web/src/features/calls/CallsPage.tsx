@@ -66,6 +66,9 @@ export function formatCallDispositionSummary(
 ): string {
   const normalized = disposition.trim().toLowerCase();
 
+  if (normalized.includes("contact_blocked")) {
+    return t("outcome.contactBlocked");
+  }
   if (normalized.includes("abuse")) {
     return t("outcome.abuse");
   }
@@ -104,6 +107,34 @@ export function formatCallDispositionSummary(
   }
 
   return t("outcome.none");
+}
+
+export function getCallRecordingAvailability(call: {
+  recordingUrl: string | null;
+  recordingStorageId?: unknown;
+  disposition?: string;
+}): "ready" | "pending" | "unavailable" {
+  if (call.recordingUrl) {
+    return "ready";
+  }
+
+  if (call.recordingStorageId) {
+    return "pending";
+  }
+
+  const disposition = call.disposition?.trim().toLowerCase() ?? "";
+  if (
+    disposition.includes("contact_blocked") ||
+    disposition.includes("busy") ||
+    disposition.includes("no_answer") ||
+    disposition.includes("missed") ||
+    disposition.includes("canceled") ||
+    disposition.includes("cancelled")
+  ) {
+    return "unavailable";
+  }
+
+  return "pending";
 }
 
 function formatCallOutcomeSummary(
@@ -270,13 +301,15 @@ export function CallsPage({ businessId }: CallsPageProps) {
         header: () => null,
         cell: ({ row }) => {
           const call = row.original;
-          const hasRecording = Boolean(call.recordingUrl);
+          const recordingAvailability = getCallRecordingAvailability(call);
           const isActive = call._id === activeRecordingCallId;
 
-          if (!hasRecording) {
+          if (recordingAvailability !== "ready") {
             return (
               <span className="type-body-muted">
-                {t("actions.audioPending")}
+                {recordingAvailability === "pending"
+                  ? t("actions.audioPending")
+                  : t("actions.audioUnavailable")}
               </span>
             );
           }
