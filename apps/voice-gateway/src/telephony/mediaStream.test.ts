@@ -13,6 +13,7 @@ import {
 } from "../realtime/callControl";
 import {
   estimateRealtimeTotalCostUsd,
+  getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
 } from "./mediaStream";
 
@@ -279,5 +280,52 @@ describe("AI-directed call endings", () => {
     expect(shouldSystemBlockForEndCall("abuse")).toBe(true);
     expect(shouldSystemBlockForEndCall("caller_finished")).toBe(false);
     expect(shouldSystemBlockForEndCall("silence_timeout")).toBe(false);
+  });
+
+  it("recovers an omitted endCall tool when the assistant clearly ends an abusive call", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "Je mets fin à cet appel. Au revoir.",
+        recentCallerTexts: [
+          "Vous êtes une bande de gros caves.",
+          "Va donc chier, petit attardé.",
+        ],
+      }),
+    ).toEqual({
+      reason: "abuse",
+      severity: "severe",
+      message: "Je mets fin à cet appel. Au revoir.",
+    });
+  });
+
+  it("recovers an omitted endCall tool as spam when the prior caller turns are solicitation", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "I'll be ending the call now. Goodbye.",
+        recentCallerTexts: [
+          "I'm calling with a special offer for your business.",
+          "Let me continue my sales pitch.",
+        ],
+      }),
+    ).toMatchObject({
+      reason: "spam",
+      message: "I'll be ending the call now. Goodbye.",
+    });
+  });
+
+  it("does not treat normal goodbyes or boundary warnings as implicit hangups", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "Take care, and thanks for calling.",
+        recentCallerTexts: ["Thanks, that's all."],
+      }),
+    ).toBeNull();
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText:
+          "Please keep the call respectful. If this continues, I will have to end the call.",
+        recentCallerTexts: ["You are not helpful."],
+      }),
+    ).toBeNull();
   });
 });
