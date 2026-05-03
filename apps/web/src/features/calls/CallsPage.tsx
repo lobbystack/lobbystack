@@ -66,6 +66,9 @@ export function formatCallDispositionSummary(
 ): string {
   const normalized = disposition.trim().toLowerCase();
 
+  if (normalized.includes("abuse")) {
+    return t("outcome.abuse");
+  }
   if (normalized.includes("spam")) {
     return t("outcome.spam");
   }

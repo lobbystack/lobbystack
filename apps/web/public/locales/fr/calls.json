@@ -93,6 +93,8 @@
     "schedulingWithService": "L'appelant a discuté de la planification de {{serviceName}}, mais aucun rendez-vous n'a été confirmé.",
     "schedulingWithServiceAndTime": "L'appelant a discuté de la planification de {{serviceName}} pour le {{startsAt}}, mais aucun rendez-vous n'a été confirmé.",
     "messageTaken": "L'appelant a laissé un message pour suivi.",
+    "abuse": "L'IA a mis fin à cet appel pour comportement abusif.",
+    "spam": "L'IA a mis fin à cet appel comme appel indésirable.",
     "voicemail": "L'appel s'est terminé par une boîte vocale ou une prise de message.",
     "busy": "L'appel s'est terminé parce que la ligne était occupée.",
     "noAnswer": "L'appel s'est terminé sans réponse.",

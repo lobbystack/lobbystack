@@ -90,6 +90,7 @@
     "schedulingWithService": "Caller discussed scheduling {{serviceName}}, but no appointment was confirmed.",
     "schedulingWithServiceAndTime": "Caller discussed scheduling {{serviceName}} for {{startsAt}}, but no appointment was confirmed.",
     "messageTaken": "Caller left a message for follow-up.",
+    "abuse": "AI ended this as an abusive call.",
     "spam": "AI ended this as a spam call.",
     "voicemail": "Call ended in voicemail or message capture.",
     "busy": "Call ended because the line was busy.",
