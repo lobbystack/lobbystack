@@ -383,6 +383,21 @@ describe("AI-directed call endings", () => {
     });
   });
 
+  it("does not recover ordinary business buying questions as spam", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "I'll be ending the call now. Goodbye.",
+        recentCallerTexts: [
+          "Do you sell gift cards?",
+          "I'd like to buy one for my sister if you offer them.",
+        ],
+      }),
+    ).toMatchObject({
+      reason: "caller_finished",
+      message: "I'll be ending the call now. Goodbye.",
+    });
+  });
+
   it("does not treat normal goodbyes or boundary warnings as implicit hangups", () => {
     expect(
       getImplicitEndCallForAssistantTranscript({

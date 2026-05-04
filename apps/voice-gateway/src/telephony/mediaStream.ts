@@ -1171,6 +1171,49 @@ function runImplicitTerminalHangup(
   trackTask(session, task);
 }
 
+async function applyPendingImplicitEndCallBeforeFinalize(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+): Promise<void> {
+  if (!session.pendingImplicitEndCall) {
+    return;
+  }
+
+  const request = session.pendingImplicitEndCall;
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitHangupMarkName = null;
+  session.finalDispositionOverride = getDispositionForEndCall(request.reason);
+
+  let autoBlocked = false;
+  if (shouldSystemBlockForEndCall(request.reason) && session.callId) {
+    try {
+      const result = await systemBlockContactForVoiceCall({
+        callId: session.callId,
+        blockedAt: new Date().toISOString(),
+      });
+      autoBlocked = result.blocked;
+    } catch (error) {
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          callSid: session.callSid,
+        },
+        "Failed to auto-block caller before finalizing pending terminal hangup",
+      );
+    }
+  }
+
+  recordAiDirectedCallEnd({
+    ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+    ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+    reason: request.reason,
+    ...(request.severity ? { severity: request.severity } : {}),
+    holdSecondsUsed: session.inactivity.holdSecondsUsed,
+    autoBlocked,
+  });
+}
+
 function requestAssistantFinalMessageBeforeHangup(
   server: FastifyInstance,
   openAiSocket: WebSocket,
@@ -1370,6 +1413,7 @@ async function finalizeCall(
   if (session.finalized) {
     return;
   }
+  await applyPendingImplicitEndCallBeforeFinalize(server, session);
   session.finalized = true;
   clearInactivityTimer(session);
   if (session.activeCallCounted) {
@@ -1703,17 +1747,15 @@ const ABUSE_CALLER_HINTS = [
 ];
 
 const SPAM_CALLER_HINTS = [
-  "buy",
   "extended warranty",
   "limited time offer",
   "marketing agency",
   "robocall",
   "sales pitch",
   "scam",
-  "sell",
   "solicitation",
   "special offer",
-  "warranty",
+  "telemarketing",
 ];
 
 function normalizeVoicePolicyText(value: string): string {
