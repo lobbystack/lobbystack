@@ -243,13 +243,17 @@ function CallEventTimeline({
 }) {
   const { t } = useTranslation("calls");
   return (
-    <div className="flex items-start gap-0 overflow-x-auto px-2 py-4">
+    <div className="flex min-w-max items-start overflow-x-auto px-2 py-4">
       {events.map((event, index) => {
+        const isFirst = index === 0;
         const isLast = index === events.length - 1;
         return (
-          <div key={event.key} className="flex items-start">
-            {/* Node */}
-            <div className="flex flex-col items-center gap-1.5">
+          <div
+            key={event.key}
+            className="flex w-36 shrink-0 flex-col items-center gap-1.5 sm:w-44"
+          >
+            <div className="grid w-full grid-cols-[1fr_32px_1fr] items-center">
+              <div className={cn("h-px bg-border", isFirst && "opacity-0")} />
               <div className="flex size-8 items-center justify-center">
                 {event.failed ? (
                   <XCircle className="size-5 text-destructive" />
@@ -259,38 +263,34 @@ function CallEventTimeline({
                   <Circle className="size-5 text-muted-foreground/40" />
                 )}
               </div>
-              <span
-                className={cn(
-                  "type-body whitespace-nowrap",
-                  event.reached
-                    ? event.failed
-                      ? "text-destructive"
-                      : "text-emerald-600 dark:text-emerald-400"
-                    : "text-muted-foreground",
-                )}
-              >
-                {t(event.labelKey)}
-              </span>
-              {event.timestamp ? (
-                <span className="type-meta">
-                  {formatDateTime(event.timestamp, locale, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  {", "}
-                  {formatDateTime(event.timestamp, locale, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-              ) : (
-                <span className="type-meta">&nbsp;</span>
-              )}
+              <div className={cn("h-px bg-border", isLast && "opacity-0")} />
             </div>
-
-            {/* Connector line */}
-            {!isLast && (
-              <div className="mt-3.5 h-px w-12 self-start bg-border sm:w-20" />
+            <span
+              className={cn(
+                "type-body whitespace-nowrap",
+                event.reached
+                  ? event.failed
+                    ? "text-destructive"
+                    : "text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground",
+              )}
+            >
+              {t(event.labelKey)}
+            </span>
+            {event.timestamp ? (
+              <span className="type-meta">
+                {formatDateTime(event.timestamp, locale, {
+                  month: "short",
+                  day: "numeric",
+                })}
+                {", "}
+                {formatDateTime(event.timestamp, locale, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+            ) : (
+              <span className="type-meta">&nbsp;</span>
             )}
           </div>
         );
