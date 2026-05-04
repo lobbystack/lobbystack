@@ -158,6 +158,7 @@ type CheckAvailabilityForVoiceResult = {
 };
 
 const ESTIMATED_TWILIO_INBOUND_VOICE_RATE_USD_PER_MINUTE = 0.0085;
+const LEGACY_BLOCKED_CONTACT_LOOKUP_LIMIT = 100;
 
 function estimateTwilioInboundVoiceCostUsd(durationSeconds: number): number {
   const billableMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
@@ -400,7 +401,7 @@ async function findLegacyBlockedContactForCall(
   const contacts = await ctx.db
     .query("contacts")
     .withIndex("by_business_id_and_phone", (q) => q.eq("businessId", call.businessId))
-    .collect();
+    .take(LEGACY_BLOCKED_CONTACT_LOOKUP_LIMIT);
   const blockedContacts = contacts.filter(isContactBlocked);
   if (blockedContacts.length === 1) {
     return blockedContacts[0] ?? null;

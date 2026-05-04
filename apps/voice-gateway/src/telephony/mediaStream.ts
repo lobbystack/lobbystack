@@ -173,6 +173,7 @@ type ActiveVoiceSession = {
   pendingTransferMarkName: string | null;
   pendingImplicitEndCall: EndCallRequest | null;
   pendingImplicitHangupMarkName: string | null;
+  pendingImplicitEndCallSkipNextResponseDone: boolean;
   transferExecuted: boolean;
   providerRecoveryStarted: boolean;
   finalized: boolean;
@@ -970,6 +971,7 @@ async function initiateTerminalHangup(
   clearPendingTransferPlaybackWait(server, session, "terminal_hangup");
   clearPendingImplicitHangupPlaybackWait(server, session, "terminal_hangup");
   session.pendingImplicitEndCall = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
 
   let autoBlocked = false;
   if (shouldSystemBlockForEndCall(input.reason) && session.callId) {
@@ -1165,6 +1167,7 @@ function runImplicitTerminalHangup(
   const request = session.pendingImplicitEndCall;
   session.pendingImplicitEndCall = null;
   session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
   const task = initiateTerminalHangup(server, openAiSocket, twilioSocket, session, request, {
     finalMessagePlayback: "silent",
   });
@@ -1182,6 +1185,7 @@ async function applyPendingImplicitEndCallBeforeFinalize(
   const request = session.pendingImplicitEndCall;
   session.pendingImplicitEndCall = null;
   session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
   session.finalDispositionOverride = getDispositionForEndCall(request.reason);
 
   let autoBlocked = false;
@@ -1225,6 +1229,7 @@ function requestAssistantFinalMessageBeforeHangup(
   }
 
   session.pendingImplicitEndCall = input;
+  session.pendingImplicitEndCallSkipNextResponseDone = true;
   session.assistantResponseRequestedAtMs = Date.now();
   session.assistantFirstOutputAtMs = null;
   server.log.info(
@@ -1831,6 +1836,18 @@ export function getImplicitEndCallForAssistantTranscript(input: {
   };
 }
 
+export function shouldSkipImplicitEndCallResponseDone(input: {
+  pendingImplicitEndCall: EndCallRequest | null;
+  skipNextResponseDone: boolean;
+  queuedMarkName: string | null;
+}): boolean {
+  return Boolean(
+    input.pendingImplicitEndCall &&
+      input.skipNextResponseDone &&
+      !input.queuedMarkName,
+  );
+}
+
 function queueImplicitEndCallFromAssistantTranscript(
   server: FastifyInstance,
   session: ActiveVoiceSession,
@@ -2233,7 +2250,10 @@ function handleOpenAiMessage(
     return markName;
   };
 
-  const completeImplicitEndCallAfterPlayback = (queuedMarkName: string | null): void => {
+  const completeImplicitEndCallAfterPlayback = (
+    queuedMarkName: string | null,
+    source: "audio_done" | "response_done",
+  ): void => {
     if (
       !session.pendingImplicitEndCall ||
       session.pendingImplicitHangupMarkName ||
@@ -2242,6 +2262,20 @@ function handleOpenAiMessage(
     ) {
       return;
     }
+
+    if (
+      source === "response_done" &&
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall: session.pendingImplicitEndCall,
+        skipNextResponseDone: session.pendingImplicitEndCallSkipNextResponseDone,
+        queuedMarkName,
+      })
+    ) {
+      session.pendingImplicitEndCallSkipNextResponseDone = false;
+      return;
+    }
+
+    session.pendingImplicitEndCallSkipNextResponseDone = false;
 
     const markName =
       queuedMarkName ??
@@ -2415,7 +2449,7 @@ function handleOpenAiMessage(
     case "response.audio.done":
     case "response.output_audio.done": {
       const markName = queuePendingPlaybackMark();
-      completeImplicitEndCallAfterPlayback(markName);
+      completeImplicitEndCallAfterPlayback(markName, "audio_done");
       return;
     }
     case "response.output_audio_transcript.delta":
@@ -2560,9 +2594,9 @@ function handleOpenAiMessage(
         session.pendingOutboundAudio.length > 0
       ) {
         const markName = queuePendingPlaybackMark();
-        completeImplicitEndCallAfterPlayback(markName);
+        completeImplicitEndCallAfterPlayback(markName, "response_done");
       } else {
-        completeImplicitEndCallAfterPlayback(null);
+        completeImplicitEndCallAfterPlayback(null, "response_done");
       }
 
       if (
@@ -2849,6 +2883,7 @@ export async function handleMediaStreamConnection(
     pendingTransferMarkName: null,
     pendingImplicitEndCall: null,
     pendingImplicitHangupMarkName: null,
+    pendingImplicitEndCallSkipNextResponseDone: false,
     transferExecuted: false,
     providerRecoveryStarted: false,
     finalized: false,

@@ -17,6 +17,7 @@ import {
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
   shouldRecoverFromOpenAiRealtimeServerError,
+  shouldSkipImplicitEndCallResponseDone,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
 
@@ -412,5 +413,34 @@ describe("AI-directed call endings", () => {
         recentCallerTexts: ["You are not helpful."],
       }),
     ).toBeNull();
+  });
+
+  it("skips the stale tool response completion while waiting for final-message audio", () => {
+    const pendingImplicitEndCall = {
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    } as const;
+
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        queuedMarkName: null,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        queuedMarkName: "audio-response-1",
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: false,
+        queuedMarkName: null,
+      }),
+    ).toBe(false);
   });
 });
