@@ -17,6 +17,7 @@ import {
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
   shouldRecoverFromOpenAiRealtimeServerError,
+  shouldSkipImplicitEndCallAudioDone,
   shouldSkipImplicitEndCallResponseDone,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
@@ -425,21 +426,61 @@ describe("AI-directed call endings", () => {
       shouldSkipImplicitEndCallResponseDone({
         pendingImplicitEndCall,
         skipNextResponseDone: true,
-        queuedMarkName: null,
+        staleResponseId: null,
+        responseId: null,
       }),
     ).toBe(true);
     expect(
       shouldSkipImplicitEndCallResponseDone({
         pendingImplicitEndCall,
         skipNextResponseDone: true,
-        queuedMarkName: "audio-response-1",
+        staleResponseId: "response-stale",
+        responseId: "response-stale",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        staleResponseId: "response-stale",
+        responseId: "response-final",
       }),
     ).toBe(false);
     expect(
       shouldSkipImplicitEndCallResponseDone({
         pendingImplicitEndCall,
         skipNextResponseDone: false,
-        queuedMarkName: null,
+        staleResponseId: null,
+        responseId: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("skips stale audio completion marks without skipping the final-message response", () => {
+    const pendingImplicitEndCall = {
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    } as const;
+
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: "response-stale",
+        responseId: "response-stale",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: "response-stale",
+        responseId: "response-final",
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: null,
+        responseId: "response-final",
       }),
     ).toBe(false);
   });
