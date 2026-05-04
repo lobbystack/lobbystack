@@ -163,27 +163,35 @@ describe("telemetry redaction", () => {
     });
   });
 
-  it("builds PostHog exception-safe provider metadata", () => {
+  it("builds provider exception metadata and redacts raw provider messages", () => {
     const properties = buildProviderErrorTelemetryProperties({
-      provider: "openai",
-      kind: "quota_exhausted",
-      providerErrorCode: "insufficient_quota",
-      providerErrorMessage: "Credits exhausted",
+      provider: "twilio",
+      kind: "invalid_request",
+      providerErrorCode: "21211",
+      providerErrorMessage:
+        "The 'To' number +14165550123 is not a valid phone number.",
       providerErrorStatus: 429,
     });
 
     expect(properties).toMatchObject({
-      provider: "openai",
-      providerErrorKind: "quota_exhausted",
-      providerErrorCode: "insufficient_quota",
-      providerErrorMessage: "Credits exhausted",
+      provider: "twilio",
+      providerErrorKind: "invalid_request",
+      providerErrorCode: "21211",
+      providerErrorMessage:
+        "The 'To' number +14165550123 is not a valid phone number.",
       providerErrorStatus: 429,
-      $exception_type: "ProviderQuotaExhaustedError",
-      $exception_message: "Credits exhausted",
+      $exception_type: "ProviderInvalidRequestError",
+      $exception_message:
+        "The 'To' number +14165550123 is not a valid phone number.",
     });
-    expect(redactTelemetryProperties(properties).providerErrorMessage).toBe(
-      "Credits exhausted",
-    );
+    const redacted = redactTelemetryProperties(properties);
+    expect(redacted.provider).toBe("twilio");
+    expect(redacted.providerErrorKind).toBe("invalid_request");
+    expect(redacted.providerErrorCode).toBe("21211");
+    expect(redacted.providerErrorStatus).toBe(429);
+    expect(redacted.$exception_type).toBe("ProviderInvalidRequestError");
+    expect(redacted.providerErrorMessage).toBe("[redacted]");
+    expect(redacted.$exception_message).toBe("[redacted]");
   });
 
   it("builds metadata-only AI generation properties without message content", () => {
