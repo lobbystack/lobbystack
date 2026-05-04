@@ -8,7 +8,9 @@ import {
   buildProviderErrorTelemetryProperties,
   classifyProviderError,
   type ExternalProvider,
+  getProviderErrorExceptionType,
   isTelemetryEventName,
+  type ProviderErrorKind,
   validateTelemetryEvent,
 } from "../../packages/telemetry/src/index";
 
@@ -46,6 +48,29 @@ type SerializedOutboxEvent = {
   businessId?: Id<"businesses">;
   groupKey?: string;
   payloadJson: string;
+};
+
+type PostHogExceptionFrame = {
+  platform: "node:javascript";
+  filename?: string;
+  function?: string;
+  lineno?: number;
+  colno?: number;
+  in_app?: boolean;
+};
+
+type PostHogException = {
+  type: string;
+  value: string;
+  mechanism: {
+    handled: true;
+    synthetic: boolean;
+    type: "generic";
+  };
+  stacktrace?: {
+    type: "raw";
+    frames: PostHogExceptionFrame[];
+  };
 };
 
 type TelemetryMutationRunner = Pick<ActionCtx | MutationCtx, "runMutation">;
@@ -111,6 +136,94 @@ function isPostHogExportEnabled(): boolean {
     Boolean(process.env.POSTHOG_KEY) &&
     Boolean(process.env.POSTHOG_HOST)
   );
+}
+
+function normalizeStackFilename(filename: string): string {
+  for (const marker of ["/convex/", "/apps/", "/packages/"]) {
+    const markerIndex = filename.lastIndexOf(marker);
+    if (markerIndex >= 0) {
+      return filename.slice(markerIndex + 1);
+    }
+  }
+  return filename;
+}
+
+function parseNodeStackFrames(stack: string): PostHogExceptionFrame[] {
+  const frames: PostHogExceptionFrame[] = [];
+  for (const line of stack.split("\n")) {
+    if (line.length > 1024 || /\S*Error: /.test(line)) {
+      continue;
+    }
+
+    const match = line.match(
+      /^\s*at (?:async )?(?:(.+?)\s+\()?(.+):(\d+):(\d+)\)?$/,
+    );
+    if (!match) {
+      continue;
+    }
+
+    const filename = match[2]?.startsWith("file://")
+      ? match[2].slice("file://".length)
+      : match[2];
+    if (!filename) {
+      continue;
+    }
+
+    const normalizedFilename = normalizeStackFilename(filename);
+    const frame: PostHogExceptionFrame = {
+      platform: "node:javascript",
+      filename: normalizedFilename,
+      function: match[1] ?? "<anonymous>",
+      in_app:
+        !normalizedFilename.includes("node_modules/") &&
+        !normalizedFilename.includes("convex/_generated/"),
+    };
+    const lineno = Number.parseInt(match[3] ?? "", 10) || undefined;
+    const colno = Number.parseInt(match[4] ?? "", 10) || undefined;
+    if (lineno !== undefined) {
+      frame.lineno = lineno;
+    }
+    if (colno !== undefined) {
+      frame.colno = colno;
+    }
+    frames.push(frame);
+  }
+
+  return frames.reverse().slice(0, 50);
+}
+
+function buildProviderExceptionList(input: {
+  error?: unknown;
+  provider: ExternalProvider;
+  kind: ProviderErrorKind;
+  providerErrorCode?: string;
+}): PostHogException[] {
+  const exceptionType = getProviderErrorExceptionType(input.kind);
+  const safeMessage = `${input.provider} provider failure (${input.kind}${
+    input.providerErrorCode ? `: ${input.providerErrorCode}` : ""
+  })`;
+  const stack = input.error instanceof Error ? input.error.stack : undefined;
+  const frames = stack ? parseNodeStackFrames(stack) : [];
+
+  return [
+    {
+      type: exceptionType,
+      value: safeMessage,
+      mechanism: {
+        handled: true,
+        synthetic: !(input.error instanceof Error),
+        type: "generic",
+      },
+      ...(frames.length > 0
+        ? {
+            stacktrace: {
+              type: "raw",
+              frames,
+            },
+          }
+        : {}),
+    },
+  ];
 }
 
 export function serializePostHogEvent(
@@ -237,6 +350,15 @@ export async function enqueuePostHogProviderExceptionBestEffort(
     ...(input.model !== undefined ? { model: input.model } : {}),
     properties: {
       ...buildProviderErrorTelemetryProperties(classification),
+      $exception_level: "error",
+      $exception_list: buildProviderExceptionList({
+        error: input.error,
+        provider: classification.provider,
+        kind: classification.kind,
+        ...(classification.providerErrorCode
+          ? { providerErrorCode: classification.providerErrorCode }
+          : {}),
+      }),
       operation: input.operation,
       runtime: "convex",
       ...input.properties,

@@ -114,6 +114,13 @@ function coerceProperties(
     | Array<string | number | boolean | null>
     | { business: string }
   > = {};
+  const isScalarProperty = (
+    candidate: unknown,
+  ): candidate is string | number | boolean | null =>
+    candidate === null ||
+    typeof candidate === "string" ||
+    typeof candidate === "number" ||
+    typeof candidate === "boolean";
 
   for (const [key, value] of Object.entries(properties)) {
     if (
@@ -131,6 +138,13 @@ function coerceProperties(
       value === undefined ||
       (typeof value === "object" && value !== null && !Array.isArray(value))
     ) {
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      if (value.every(isScalarProperty)) {
+        coerced[key] = value;
+      }
       continue;
     }
 

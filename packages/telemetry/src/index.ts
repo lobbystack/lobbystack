@@ -114,7 +114,7 @@ export type TelemetryEventName = (typeof TELEMETRY_EVENT_NAMES)[number];
 export type TelemetryScalar = string | number | boolean | null;
 export type TelemetryValue =
   | TelemetryScalar
-  | Array<TelemetryScalar>
+  | Array<TelemetryValue>
   | { [key: string]: TelemetryValue | undefined };
 
 export type TelemetryProperties = Record<string, TelemetryValue | undefined>;
@@ -642,6 +642,7 @@ const SAFE_KEY_PATTERNS = [
   "dimension",
   "embeddingtokens",
   "entrycount",
+  "filename",
   "inputcharcount",
   "inputtokens",
   "messagelinkkey",
@@ -710,9 +711,9 @@ function redactValue(value: TelemetryValue | undefined): TelemetryValue | undefi
   }
 
   if (Array.isArray(value)) {
-    return value.map((entry) =>
-      entry === null ? entry : typeof entry === "string" ? entry : entry,
-    );
+    return value
+      .map((entry) => redactValue(entry))
+      .filter((entry): entry is TelemetryValue => entry !== undefined);
   }
 
   const redactedEntries = Object.entries(value).map(([key, nestedValue]) => [
