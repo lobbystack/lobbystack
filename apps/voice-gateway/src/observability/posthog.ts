@@ -547,6 +547,24 @@ export function capturePostHogException(
   );
 }
 
+function getSafeProviderErrorCode(code: string | undefined): string | undefined {
+  const normalized = code?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return /^[a-z0-9_.:-]{1,80}$/i.test(normalized) ? normalized : undefined;
+}
+
+export function buildSafeProviderFailureMessage(
+  classification: ProviderErrorClassification,
+): string {
+  const safeCode = getSafeProviderErrorCode(classification.providerErrorCode);
+  return `${classification.provider} provider failure (${classification.kind}${
+    safeCode ? `: ${safeCode}` : ""
+  })`;
+}
+
 export function captureProviderFailureException(input: {
   provider: ExternalProvider;
   error?: unknown;
@@ -564,10 +582,7 @@ export function captureProviderFailureException(input: {
     ...(input.message ? { message: input.message } : {}),
     ...(input.status !== undefined ? { status: input.status } : {}),
   });
-  const exceptionMessage =
-    classification.providerErrorMessage ??
-    `${classification.provider} provider failure (${classification.kind})`;
-  const exception = new Error(exceptionMessage, { cause: input.error });
+  const exception = new Error(buildSafeProviderFailureMessage(classification));
   exception.name = getProviderErrorExceptionType(classification.kind);
 
   capturePostHogException(exception, {

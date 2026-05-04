@@ -30,6 +30,7 @@ import {
   recordTwilioInvalidSignature,
 } from "../observability/posthog";
 import {
+  buildSafeProviderFailureMessage,
   captureAiGeneration,
   captureAiSpan,
   captureAiTraceStarted,
@@ -2764,7 +2765,7 @@ function handleOpenAiMessage(
           providerErrorCode: classification.providerErrorCode,
           providerErrorStatus: classification.providerErrorStatus,
         },
-        classification.providerErrorMessage ?? "OpenAI Realtime server error",
+        buildSafeProviderFailureMessage(classification),
       );
       if (!shouldRecover) {
         return;
