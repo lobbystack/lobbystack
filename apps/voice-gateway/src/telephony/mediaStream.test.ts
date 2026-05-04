@@ -16,7 +16,7 @@ import {
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
-  shouldUseAssistantFinalMessageForEndCall,
+  shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
 
 describe("estimateRealtimeTotalCostUsd", () => {
@@ -284,18 +284,19 @@ describe("call inactivity control", () => {
 });
 
 describe("AI-directed call endings", () => {
-  it("uses assistant final messages for normal terminal endings", () => {
-    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "caller_finished" })).toBe(
+  it("uses assistant final messages for every direct endCall tool result", () => {
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "caller_finished" })).toBe(
       true,
     );
-    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "silence_timeout" })).toBe(
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "silence_timeout" })).toBe(
       true,
     );
-  });
-
-  it("keeps policy hangups silent after the assistant has already warned the caller", () => {
-    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "spam" })).toBe(false);
-    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "abuse" })).toBe(false);
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "spam" })).toBe(
+      true,
+    );
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "abuse" })).toBe(
+      true,
+    );
   });
 
   it("maps spam endings to a durable spam disposition without auto-blocking", () => {

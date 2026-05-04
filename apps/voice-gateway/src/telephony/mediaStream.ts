@@ -1007,14 +1007,15 @@ async function initiateTerminalHangup(
   }
 }
 
-export function shouldUseAssistantFinalMessageForEndCall(
+export function shouldUseAssistantFinalMessageForToolEndCall(
   input: Pick<EndCallRequest, "reason">,
 ): boolean {
-  if (input.reason === "caller_finished" || input.reason === "silence_timeout") {
-    return true;
-  }
-
-  return false;
+  return (
+    input.reason === "caller_finished" ||
+    input.reason === "silence_timeout" ||
+    input.reason === "spam" ||
+    input.reason === "abuse"
+  );
 }
 
 function scheduleInactivityTimer(
@@ -2038,7 +2039,7 @@ async function handleToolCall(
     });
 
     if (result.endCall) {
-      if (shouldUseAssistantFinalMessageForEndCall(result.endCall)) {
+      if (shouldUseAssistantFinalMessageForToolEndCall(result.endCall)) {
         requestAssistantFinalMessageBeforeHangup(
           server,
           openAiSocket,
