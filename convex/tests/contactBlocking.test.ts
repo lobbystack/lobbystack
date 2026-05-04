@@ -332,13 +332,13 @@ describe("Contact blocking", () => {
       });
     });
 
-    const legacyDashboardCall = await authed.query(api.voice.runtime.getCallForDashboard, {
+    const unlinkedDashboardCall = await authed.query(api.voice.runtime.getCallForDashboard, {
       businessId,
       callId: result.callId,
     });
-    expect(legacyDashboardCall).toMatchObject({
-      contactName: "Taylor Customer",
-      contactPhone: "+14165550193",
+    expect(unlinkedDashboardCall).toMatchObject({
+      contactName: null,
+      contactPhone: null,
     });
   });
 

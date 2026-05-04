@@ -158,7 +158,6 @@ type CheckAvailabilityForVoiceResult = {
 };
 
 const ESTIMATED_TWILIO_INBOUND_VOICE_RATE_USD_PER_MINUTE = 0.0085;
-const LEGACY_BLOCKED_CONTACT_LOOKUP_LIMIT = 100;
 
 function estimateTwilioInboundVoiceCostUsd(durationSeconds: number): number {
   const billableMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
@@ -353,7 +352,7 @@ async function hydrateDashboardCallRow(
     ? await ctx.db.get(conversation.contactId)
     : call.contactId
       ? await ctx.db.get(call.contactId)
-      : await findLegacyBlockedContactForCall(ctx, call);
+      : null;
   const outcome = await buildConversationOutcome(ctx, {
     conversation,
     fallbackDisposition: call.disposition ?? null,
@@ -388,45 +387,6 @@ async function hydrateDashboardCallRow(
       : null,
     outcome,
   };
-}
-
-async function findLegacyBlockedContactForCall(
-  ctx: QueryCtx,
-  call: Doc<"calls">,
-): Promise<Doc<"contacts"> | null> {
-  if (call.disposition !== CONTACT_BLOCKED_CALL_DISPOSITION) {
-    return null;
-  }
-
-  const contacts = await ctx.db
-    .query("contacts")
-    .withIndex("by_business_id_and_phone", (q) => q.eq("businessId", call.businessId))
-    .take(LEGACY_BLOCKED_CONTACT_LOOKUP_LIMIT);
-  const blockedContacts = contacts.filter(isContactBlocked);
-  if (blockedContacts.length === 1) {
-    return blockedContacts[0] ?? null;
-  }
-
-  const callStartedAtMs = Date.parse(call.startedAt);
-  if (!Number.isFinite(callStartedAtMs)) {
-    return null;
-  }
-
-  const closestContact = blockedContacts
-    .map((contact) => {
-      const blockedAtMs = Date.parse(contact.operatorBlockedAt ?? "");
-      return {
-        contact,
-        distanceMs: Number.isFinite(blockedAtMs)
-          ? Math.abs(blockedAtMs - callStartedAtMs)
-          : Number.POSITIVE_INFINITY,
-      };
-    })
-    .sort((a, b) => a.distanceMs - b.distanceMs)[0];
-
-  return closestContact && closestContact.distanceMs <= 5 * 60 * 1000
-    ? closestContact.contact
-    : null;
 }
 
 async function resolveServiceDocument(
