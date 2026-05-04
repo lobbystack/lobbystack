@@ -571,6 +571,28 @@ export function getRealtimeGenerationOutcome(
   };
 }
 
+export function shouldRecoverFromOpenAiRealtimeServerError(input: {
+  classification: ProviderErrorClassification;
+  error?: {
+    type?: string;
+    code?: string;
+  };
+}): boolean {
+  const errorType = input.error?.type?.trim().toLowerCase() ?? "";
+  const errorCode = input.error?.code?.trim().toLowerCase() ?? "";
+
+  if (errorType === "server_error" || errorCode.includes("server_error")) {
+    return true;
+  }
+
+  return (
+    input.classification.kind === "quota_exhausted" ||
+    input.classification.kind === "auth_failed" ||
+    input.classification.kind === "rate_limited" ||
+    input.classification.kind === "provider_unavailable"
+  );
+}
+
 export function markRealtimeToolCallHandled(
   session: { handledToolCallIds: Set<string> },
   callId: string,
@@ -2607,7 +2629,11 @@ function handleOpenAiMessage(
         "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
         ...getProviderClassificationAttributes(classification),
       });
-      server.log.error(
+      const shouldRecover = shouldRecoverFromOpenAiRealtimeServerError({
+        classification,
+        ...(payload.error ? { error: payload.error } : {}),
+      });
+      server.log[shouldRecover ? "error" : "warn"](
         {
           callSid: session.callSid,
           streamSid: session.streamSid,
@@ -2617,6 +2643,9 @@ function handleOpenAiMessage(
         },
         classification.providerErrorMessage ?? "OpenAI Realtime server error",
       );
+      if (!shouldRecover) {
+        return;
+      }
       const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
         disposition: "openai_realtime_error",
       });

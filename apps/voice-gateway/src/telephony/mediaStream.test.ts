@@ -16,6 +16,7 @@ import {
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
+  shouldRecoverFromOpenAiRealtimeServerError,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
 
@@ -191,6 +192,46 @@ describe("getRealtimeGenerationOutcome", () => {
       isError: true,
       error: "failed",
     });
+  });
+});
+
+describe("shouldRecoverFromOpenAiRealtimeServerError", () => {
+  it("keeps recoverable invalid request errors on the active session", () => {
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "invalid_request",
+          providerErrorCode: "invalid_event",
+        },
+        error: {
+          type: "invalid_request_error",
+          code: "invalid_event",
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("recovers terminal provider capacity and server errors", () => {
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "rate_limited",
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "unknown",
+        },
+        error: {
+          type: "server_error",
+        },
+      }),
+    ).toBe(true);
   });
 });
 
