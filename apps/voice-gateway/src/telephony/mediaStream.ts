@@ -1007,14 +1007,14 @@ async function initiateTerminalHangup(
   }
 }
 
-export function getFinalMessagePlaybackForEndCall(
+export function shouldUseAssistantFinalMessageForEndCall(
   input: Pick<EndCallRequest, "reason">,
-): "twilio" | "silent" {
+): boolean {
   if (input.reason === "caller_finished" || input.reason === "silence_timeout") {
-    return "twilio";
+    return true;
   }
 
-  return "silent";
+  return false;
 }
 
 function scheduleInactivityTimer(
@@ -1146,6 +1146,41 @@ function runImplicitTerminalHangup(
     finalMessagePlayback: "silent",
   });
   trackTask(session, task);
+}
+
+function requestAssistantFinalMessageBeforeHangup(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  session: ActiveVoiceSession,
+  input: EndCallRequest,
+): void {
+  if (session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  session.pendingImplicitEndCall = input;
+  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      reason: input.reason,
+    },
+    "Requesting assistant final message before terminal hangup",
+  );
+  postRealtimeEvent(openAiSocket, {
+    type: "response.create",
+    response: {
+      instructions: [
+        `Say this exact final message: ${JSON.stringify(input.message)}.`,
+        "Then stop speaking. The call will end automatically after your audio finishes.",
+        "Do not call any tools and do not add anything else.",
+      ].join(" "),
+      tool_choice: "none",
+    },
+  });
 }
 
 function cancelAssistantAudio(
@@ -2003,13 +2038,23 @@ async function handleToolCall(
     });
 
     if (result.endCall) {
+      if (shouldUseAssistantFinalMessageForEndCall(result.endCall)) {
+        requestAssistantFinalMessageBeforeHangup(
+          server,
+          openAiSocket,
+          session,
+          result.endCall,
+        );
+        return;
+      }
+
       await initiateTerminalHangup(
         server,
         openAiSocket,
         twilioSocket,
         session,
         result.endCall,
-        { finalMessagePlayback: getFinalMessagePlaybackForEndCall(result.endCall) },
+        { finalMessagePlayback: "silent" },
       );
       return;
     }

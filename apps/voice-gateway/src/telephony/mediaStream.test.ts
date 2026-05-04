@@ -13,10 +13,10 @@ import {
 } from "../realtime/callControl";
 import {
   estimateRealtimeTotalCostUsd,
-  getFinalMessagePlaybackForEndCall,
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
+  shouldUseAssistantFinalMessageForEndCall,
 } from "./mediaStream";
 
 describe("estimateRealtimeTotalCostUsd", () => {
@@ -284,18 +284,18 @@ describe("call inactivity control", () => {
 });
 
 describe("AI-directed call endings", () => {
-  it("plays final messages for normal terminal endings", () => {
-    expect(getFinalMessagePlaybackForEndCall({ reason: "caller_finished" })).toBe(
-      "twilio",
+  it("uses assistant final messages for normal terminal endings", () => {
+    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "caller_finished" })).toBe(
+      true,
     );
-    expect(getFinalMessagePlaybackForEndCall({ reason: "silence_timeout" })).toBe(
-      "twilio",
+    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "silence_timeout" })).toBe(
+      true,
     );
   });
 
   it("keeps policy hangups silent after the assistant has already warned the caller", () => {
-    expect(getFinalMessagePlaybackForEndCall({ reason: "spam" })).toBe("silent");
-    expect(getFinalMessagePlaybackForEndCall({ reason: "abuse" })).toBe("silent");
+    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "spam" })).toBe(false);
+    expect(shouldUseAssistantFinalMessageForEndCall({ reason: "abuse" })).toBe(false);
   });
 
   it("maps spam endings to a durable spam disposition without auto-blocking", () => {
