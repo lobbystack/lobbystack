@@ -8,6 +8,7 @@ Validate that:
 - Convex domain events reach PostHog through the outbox
 - voice-gateway operational logs and health events reach PostHog
 - AI traces reach PostHog without leaking sensitive content
+- alertable production failures notify through PostHog-backed Discord and email destinations
 
 ## Required environment
 
@@ -26,6 +27,8 @@ Validate that:
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
 - `POSTHOG_PRIVACY_MODE=true`
+- `APP_BASE_URL`
+- `VOICE_GATEWAY_BASE_URL`
 
 Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 
@@ -51,9 +54,12 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 7. Validate browser error tracking:
    - trigger one unhandled error in the browser console and confirm it appears in PostHog Error Tracking
    - trigger one unhandled rejection and confirm it appears in PostHog Error Tracking
+   - trigger one render error and confirm it appears with `runtime = web`, `service = web`, `operation = react_caught_error`, `alertable = true`, and `expected = false`
+   - trigger one rejected Convex mutation or action from the UI and confirm it appears with `runtime = web`, `convexFunctionType`, and `convexFunction`
    - trigger one handled technical failure path such as a calendar connect error or knowledge upload error and confirm it appears with `runtime = web`
 8. Validate browser source maps:
-   - deploy the built web assets after running `pnpm build && pnpm posthog:sourcemaps`
+   - deploy the built web assets after running `pnpm build` and `pnpm --filter @lobbystack/web posthog:sourcemaps`
+   - confirm production deploys fail or are review-blocked when `POSTHOG_CLI_API_KEY` or `POSTHOG_CLI_PROJECT_ID` is missing
    - confirm the matching release exists in PostHog symbol sets
    - confirm browser stack traces resolve to source files instead of minified bundles
 
@@ -84,6 +90,12 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
    - `ops.convex.heartbeat`
    - `ops.convex.outbox_backlog_sample`
    - `ops.convex.outbox_flush_failed` when retrying rows exist
+7. Verify service health events in PostHog:
+   - `ops.service.health_check` for `service = web`
+   - `ops.service.health_check` for `service = voice-gateway`
+   - one `ops.service.health_check_failed` when a target returns non-2xx, times out, or has missing config
+   - one matching `$exception` with `operation = service_health_check`, `runtime = convex`, and `alertable = true`
+8. Trigger one failing observed Convex action or HTTP action and confirm the `$exception` event includes `runtime = convex`, `service = convex`, `operation`, `alertable = true`, and `$exception_list`.
 
 ## Voice gateway validation
 
@@ -91,6 +103,7 @@ Set `DEPLOYMENT_MODE=cloud` for provider validation runs.
 2. Validate PostHog Error Tracking for the gateway:
    - confirm a startup or request-path failure appears with `runtime = voice-gateway`
    - confirm a provider recovery failure or call record initialization failure appears with `channel = voice` and `provider = twilio`
+   - trigger one fatal `unhandledRejection` or `uncaughtException` in a non-production validation deployment and confirm PostHog receives a fatal exception before the process exits
 3. Validate PostHog operational events for:
    - `ops.voice.heartbeat`
    - `ops.voice.invalid_signature`
@@ -165,7 +178,12 @@ Validate these runtime insights:
 
 Validate these alert policies in PostHog:
 
+- new or reopened Error Tracking issue where `deploymentMode = cloud`, `alertable = true`, and `expected = false`
+- trend alert on `$exception` where `deploymentMode = cloud`, `alertable = true`, and `expected = false`
+- any `ops.service.health_check_failed`
+- no `ops.convex.heartbeat` over a 10-minute window
 - no `ops.voice.heartbeat` for the interval
+- voice health check reports `service = voice-gateway` and `status != healthy`
 - spike in `ops.voice.openai_realtime_error`
 - spike in `ops.voice.turn_slow`
 - spike in `ops.voice.tool_failed`
@@ -174,6 +192,10 @@ Validate these alert policies in PostHog:
 - spike in `workflow.failed`
 - spike in `integration.calendar_sync_failed`
 - sustained `ops.convex.outbox_backlog_sample` with `backlogBucket = critical`
+- `ops.convex.outbox_flush_failed`
+- alertable provider exceptions for `provider = firecrawl`, `openai`, `twilio`, `polar`, and `google`
+
+Configure Discord and email destinations for health, provider, and exception alerts where PostHog supports both. If Error Tracking issue alerts only support one destination in the active PostHog edition, use the issue alert for Discord and a matching trend alert for email.
 
 ## Outbox validation
 
@@ -188,7 +210,13 @@ These checks should be run before review:
 
 - `pnpm --filter @lobbystack/telemetry test`
 - `pnpm --filter @lobbystack/web typecheck`
+- `pnpm --filter @lobbystack/web test`
 - `pnpm --filter @lobbystack/voice-gateway typecheck`
+- `pnpm --filter @lobbystack/voice-gateway test`
 - `pnpm typecheck:convex`
+- `pnpm test:convex`
+- `pnpm typecheck`
+- `pnpm build`
+- `pnpm test`
 
 Provider validation in real PostHog still requires live credentials and runtime traffic.

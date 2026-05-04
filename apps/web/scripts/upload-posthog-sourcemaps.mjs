@@ -41,11 +41,22 @@ function runPostHogCli(args) {
   });
 }
 
+function isProductionDeploy() {
+  return (
+    process.env.DEPLOYMENT_MODE === "cloud" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.CF_PAGES === "1"
+  );
+}
+
 const missingEnvVars = requiredEnvVars.filter((name) => !readOptionalEnv(name));
 if (missingEnvVars.length > 0) {
-  console.log(
-    `[posthog] skipping sourcemap upload; missing ${missingEnvVars.join(", ")}.`,
-  );
+  const message = `[posthog] sourcemap upload missing ${missingEnvVars.join(", ")}.`;
+  if (isProductionDeploy()) {
+    console.error(`${message} Production deploys must upload PostHog sourcemaps.`);
+    process.exit(1);
+  }
+  console.log(`${message} Skipping outside production deploy mode.`);
   process.exit(0);
 }
 

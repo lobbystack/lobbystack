@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useAction, useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 
 import { api } from "../../../convex/_generated/api";
@@ -12,6 +12,7 @@ import {
   OnboardingVerifyRouteSkeleton,
   WorkspaceRouteSkeleton,
 } from "@/components/app-route-skeletons";
+import { useObservedAction } from "@/lib/observed-convex";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
@@ -501,7 +502,7 @@ function OnboardingVerifyPhoneRoute() {
   const navigate = useNavigate();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  const reuseVerifiedPhoneForOnboarding = useAction(
+  const reuseVerifiedPhoneForOnboarding = useObservedAction(
     api.onboarding.phoneVerification.reuseVerifiedPhoneForOnboarding,
   );
   const activeBusiness = selectActiveBusiness(currentUser, businesses);

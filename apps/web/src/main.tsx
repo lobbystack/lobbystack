@@ -11,20 +11,32 @@ import { LocaleProvider } from "@/components/locale-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { initializeAnalytics } from "@/lib/analytics";
+import {
+  AppErrorBoundary,
+  onCaughtReactError,
+  onRecoverableReactError,
+  onUncaughtReactError,
+} from "@/lib/react-error-reporting";
 
 const convexUrl = import.meta.env.CONVEX_URL;
 const convex = new ConvexReactClient(convexUrl);
 
 initializeAnalytics();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+ReactDOM.createRoot(document.getElementById("root")!, {
+  onCaughtError: onCaughtReactError,
+  onRecoverableError: onRecoverableReactError,
+  onUncaughtError: onUncaughtReactError,
+}).render(
   <React.StrictMode>
     <ConvexAuthProvider client={convex}>
       <ThemeProvider>
         <AppearanceProvider>
           <LocaleProvider>
-            <App />
-            <Toaster richColors />
+            <AppErrorBoundary>
+              <App />
+              <Toaster richColors />
+            </AppErrorBoundary>
           </LocaleProvider>
         </AppearanceProvider>
       </ThemeProvider>

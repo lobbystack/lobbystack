@@ -3,11 +3,11 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import { internalAction } from "../_generated/server";
 import { isTerminalTwilioCallStatus } from "../lib/voiceCallStatus";
 import { getTwilioClient } from "../lib/node/twilioClient";
 import { enqueuePostHogProviderExceptionBestEffort } from "../telemetry/posthog";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 const CALL_PRICE_RETRY_DELAYS_MS = [
   30_000,
   120_000,

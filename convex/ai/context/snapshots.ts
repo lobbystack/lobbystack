@@ -1,12 +1,11 @@
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../../telemetry/shared";
+  } from "../../telemetry/shared";
+import { observedMutation as mutation } from "../../telemetry/observedFunctions";
 import { v } from "convex/values";
 import {
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type MutationCtx,
   type QueryCtx,
@@ -37,6 +36,7 @@ import {
   serializePostHogEvent,
 } from "../../telemetry/posthog";
 
+import { observedInternalMutation as internalMutation } from "../../telemetry/observedFunctions";
 type SnapshotBuilderInput = Parameters<typeof buildBusinessContextSnapshot>[0];
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type UpdateReceptionistProfileArgs = {

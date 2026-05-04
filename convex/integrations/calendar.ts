@@ -1,16 +1,14 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import { paginationOptsValidator } from "convex/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../telemetry/shared";
+  } from "../telemetry/shared";
 import {
-  action,
-  internalAction,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -26,6 +24,7 @@ import {
   serializePostHogEvent,
 } from "../telemetry/posthog";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 export const CALENDAR_RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
 const CALENDAR_SYNC_RETRY_DELAY_MS = CALENDAR_RECONCILIATION_INTERVAL_MS;
 const CALENDAR_SYNC_PENDING_TIMEOUT_MS = 15 * 60 * 1000;

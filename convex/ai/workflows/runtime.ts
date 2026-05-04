@@ -1,6 +1,5 @@
 import type { WorkflowCtx } from "@convex-dev/workflow";
 import { v } from "convex/values";
-import { internalMutation } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { CALENDAR_RECONCILIATION_INTERVAL_MS } from "../../integrations/calendar";
@@ -15,6 +14,7 @@ import {
   getPostHogDistinctIdForBusinessSystem,
 } from "../../telemetry/shared";
 
+import { observedInternalMutation as internalMutation } from "../../telemetry/observedFunctions";
 const WEBSITE_CRAWL_RESULTS_POLL_DELAY_MS = 5_000;
 
 async function waitForFirecrawlWebsiteCrawlCompletion(

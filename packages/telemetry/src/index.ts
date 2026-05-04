@@ -96,6 +96,8 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.convex.heartbeat",
   "ops.convex.outbox_backlog_sample",
   "ops.convex.outbox_flush_failed",
+  "ops.service.health_check",
+  "ops.service.health_check_failed",
 ] as const;
 
 export const TELEMETRY_EVENT_NAMES = [
@@ -216,6 +218,18 @@ export type ProviderErrorClassification = {
   providerErrorCode?: string;
   providerErrorMessage?: string;
   providerErrorStatus?: number;
+};
+
+export type AlertableExceptionTelemetryInput = {
+  runtime: "web" | "convex" | "voice-gateway";
+  service: string;
+  operation: string;
+  alertable?: boolean;
+  expected?: boolean;
+  provider?: ExternalProvider;
+  exceptionType?: string;
+  exceptionMessage?: string;
+  exceptionLevel?: "fatal" | "error" | "warning" | "info";
 };
 
 export type ClassifyProviderErrorInput = {
@@ -541,6 +555,18 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "ops.convex.heartbeat": ["deploymentMode"],
   "ops.convex.outbox_backlog_sample": ["deploymentMode", "backlogBucket"],
   "ops.convex.outbox_flush_failed": ["deploymentMode", "backlogBucket"],
+  "ops.service.health_check": [
+    "deploymentMode",
+    "service",
+    "status",
+    "latencyMs",
+  ],
+  "ops.service.health_check_failed": [
+    "deploymentMode",
+    "service",
+    "status",
+    "latencyMs",
+  ],
 } satisfies Record<TelemetryEventName, ReadonlyArray<string>>;
 
 export type TelemetryValidationInput = Partial<TelemetryContext> & {
@@ -1014,6 +1040,26 @@ export function buildProviderErrorTelemetryProperties(
     $exception_message:
       classification.providerErrorMessage ??
       `${classification.provider} provider failure (${classification.kind})`,
+  };
+}
+
+export function buildAlertableExceptionTelemetryProperties(
+  input: AlertableExceptionTelemetryInput,
+): TelemetryProperties {
+  const exceptionType = input.exceptionType ?? "ApplicationError";
+  const exceptionMessage =
+    input.exceptionMessage ?? `${input.service} ${input.operation} failed`;
+
+  return {
+    runtime: input.runtime,
+    service: input.service,
+    operation: input.operation,
+    alertable: input.alertable ?? true,
+    expected: input.expected ?? false,
+    provider: input.provider,
+    $exception_level: input.exceptionLevel ?? "error",
+    $exception_type: exceptionType,
+    $exception_message: exceptionMessage,
   };
 }
 

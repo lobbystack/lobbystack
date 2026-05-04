@@ -1,14 +1,13 @@
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../telemetry/shared";
+  } from "../telemetry/shared";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 import { v } from "convex/values";
 import {
   type ActionCtx,
   type MutationCtx,
   type QueryCtx,
-  internalAction,
-  internalMutation,
   internalQuery,
 } from "../_generated/server";
 import { internal } from "../_generated/api";

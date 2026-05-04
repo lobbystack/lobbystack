@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useAction } from "convex/react";
+
 import { Globe, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { useObservedAction } from "@/lib/observed-convex";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -37,7 +38,7 @@ export function ImportWebsiteKnowledgeSheet({
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const submitWebsiteIngestion = useAction(api.ai.context.websiteIngestion.submitWebsiteIngestion);
+  const submitWebsiteIngestion = useObservedAction(api.ai.context.websiteIngestion.submitWebsiteIngestion);
   const isControlled = open !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");

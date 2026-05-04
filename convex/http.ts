@@ -4,13 +4,13 @@ import { billingErrorCodes } from "../packages/shared/src/billing";
 import {
   normalizeTwilioFormFields,
 } from "./lib/twilioSecurity";
-import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { auth } from "./auth";
 import { streamPreviewResponse } from "./ai/preview/stream";
 import { registerBillingRoutes } from "./billing";
 
+import { observedHttpAction as httpAction } from "./telemetry/observedFunctions";
 const http = httpRouter();
 
 registerBillingRoutes(http);

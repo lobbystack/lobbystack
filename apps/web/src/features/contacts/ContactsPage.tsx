@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useMutation } from "convex/react";
+
 import { useNavigate } from "react-router-dom";
 import {
   flexRender,
@@ -9,6 +9,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -68,9 +69,9 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
     api.dashboard.contacts.listContacts,
     businessId ? { businessId } : "skip",
   );
-  const blockContact = useMutation(api.dashboard.contacts.blockContact);
-  const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
-  const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
+  const blockContact = useObservedMutation(api.dashboard.contacts.blockContact);
+  const deleteContact = useObservedMutation(api.dashboard.contacts.deleteContact);
+  const unblockContact = useObservedMutation(api.dashboard.contacts.unblockContact);
   const [searchValue, setSearchValue] = useState("");
   const navigate = useNavigate();
   const [contactPendingDelete, setContactPendingDelete] = useState<ContactRow | null>(null);

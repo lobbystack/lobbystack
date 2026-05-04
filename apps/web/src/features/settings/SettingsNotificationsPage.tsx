@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
+import { useObservedMutation } from "@/lib/observed-convex";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -88,7 +89,7 @@ export function SettingsNotificationsPage({
     api.users.preferences.getNotificationPreferences,
     { businessId },
   );
-  const updateNotificationPreferences = useMutation(
+  const updateNotificationPreferences = useObservedMutation(
     api.users.preferences.updateNotificationPreferences,
   );
   const saveVersionRef = useRef(0);

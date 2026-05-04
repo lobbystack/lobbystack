@@ -1,17 +1,14 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  getAuthUserId } from "@convex-dev/auth/server";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import {
-  action,
-  internalMutation,
-  mutation,
-  type ActionCtx,
-  type MutationCtx,
-} from "../_generated/server";
+import { type ActionCtx, type MutationCtx } from "../_generated/server";
 import { requireMembership } from "../lib/auth";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 type BusinessIdArgs = {
   businessId: Id<"businesses">;
 };

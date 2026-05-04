@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation } from "convex/react";
+
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
   Phone,
   XCircle,
 } from "lucide-react";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -459,7 +460,7 @@ function DetailsTab({
   locale: string;
 }) {
   const { t } = useTranslation("calls");
-  const completeFollowUp = useMutation(
+  const completeFollowUp = useObservedMutation(
     api.voice.runtime.completeVoiceFollowUpTask,
   );
   const [isMarkingDone, setIsMarkingDone] = useState(false);

@@ -2,14 +2,10 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
-import {
-  internalMutation,
-  internalQuery,
-  type ActionCtx,
-  type MutationCtx,
-} from "../_generated/server";
+import { internalQuery, type ActionCtx, type MutationCtx } from "../_generated/server";
 import { onboardingRateLimiter } from "../lib/components";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 const SUCCESSFUL_CLAIMS_PER_DAY = 2;
 const SUCCESSFUL_CLAIMS_PER_THIRTY_DAYS = 5;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;

@@ -1,25 +1,23 @@
 import {
   getTerminalTwilioCallReconciliationFields,
   isTerminalTwilioCallStatus,
-} from "../lib/voiceCallStatus";
+  } from "../lib/voiceCallStatus";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import type { BillingErrorCode } from "../../packages/shared/src/billing";
 import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../telemetry/shared";
+  } from "../telemetry/shared";
 import { v } from "convex/values";
 import {
   enqueuePostHogOutboxRecord,
   serializePostHogEvent,
-} from "../telemetry/posthog";
+  } from "../telemetry/posthog";
 
 import { internal } from "../_generated/api";
 import {
-  internalAction,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -43,6 +41,7 @@ import {
   finalizeVoiceSessionForCall,
 } from "../conversations/sessions";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 type BusinessIdArgs = { businessId: Id<"businesses"> };
 type ServicesForBusinessArgs = BusinessIdArgs;
 type StaffAssignmentsForServiceArgs = {

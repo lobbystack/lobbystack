@@ -1,14 +1,14 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  getAuthUserId } from "@convex-dev/auth/server";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "../../telemetry/observedFunctions";
 import type { WorkflowId } from "@convex-dev/workflow";
 import { v } from "convex/values";
 
 import { internal } from "../../_generated/api";
-import type { Doc, Id } from "../../_generated/dataModel";
+import type { Doc,
+  Id } from "../../_generated/dataModel";
 import {
-  action,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -23,6 +23,7 @@ import {
   WEBSITE_INGESTION_PROVIDER,
 } from "../../lib/websiteIngestion";
 
+import { observedAction as action } from "../../telemetry/observedFunctions";
 type WebsiteIngestionJobIdArgs = {
   websiteIngestionJobId: Id<"website_ingestion_jobs">;
 };

@@ -1,14 +1,16 @@
 import {
   StreamId,
   StreamIdValidator,
-} from "@convex-dev/persistent-text-streaming";
-import { httpAction, mutation, query } from "../../_generated/server";
+  } from "@convex-dev/persistent-text-streaming";
+import { observedMutation as mutation } from "../../telemetry/observedFunctions";
+import { query } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { v } from "convex/values";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
 import { persistentTextStreaming } from "../../lib/components";
 
+import { observedHttpAction as httpAction } from "../../telemetry/observedFunctions";
 // Convex component types can exceed local tsc recursion depth on these builders.
 // @ts-ignore Deep type instantiation from Convex component generics.
 export const createPreviewSession = mutation({

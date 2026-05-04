@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import { internalMutation, type MutationCtx } from "../_generated/server";
+import { type MutationCtx } from "../_generated/server";
 import { mapTwilioStatusToMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyMessageStatusTransition, shouldApplyNotificationStatusTransition } from "../lib/twilioMessageStatus";
 import {
   getPostHogBusinessGroupKey,
@@ -9,6 +9,7 @@ import {
 } from "../telemetry/shared";
 import { serializePostHogEvent } from "../telemetry/posthog";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 type ReconcileTwilioMessageStatusArgs = {
   providerMessageSid: string;
   providerStatus: string;

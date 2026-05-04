@@ -23,6 +23,11 @@
     "receptionist": "Réceptionniste",
     "prompt": "Demande"
   },
+  "errorBoundary": {
+    "title": "Une erreur est survenue",
+    "description": "Rechargez le tableau de bord et réessayez. L’erreur a été signalée.",
+    "reload": "Recharger"
+  },
   "feedback": {
     "trigger": "Feedback",
     "title": "Envoyer un commentaire",

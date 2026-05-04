@@ -8,7 +8,8 @@ import {
   type FormEvent,
   type ChangeEvent,
 } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+
 import {
   ArrowLeft,
   ChevronRight,
@@ -377,16 +378,16 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
     api.dashboard.messages.listConversationSummaries,
     businessId ? { businessId } : "skip",
   );
-  const sendSmsReply = useAction(api.dashboard.messages.sendSmsReply);
-  const pauseConversationAutomation = useAction(api.dashboard.messages.pauseConversationAutomation);
-  const repairConversationAttachmentPreviews = useAction(
+  const sendSmsReply = useObservedAction(api.dashboard.messages.sendSmsReply);
+  const pauseConversationAutomation = useObservedAction(api.dashboard.messages.pauseConversationAutomation);
+  const repairConversationAttachmentPreviews = useObservedAction(
     api.dashboard.messages.repairConversationAttachmentPreviews,
   );
-  const resumeConversationAutomation = useAction(api.dashboard.messages.resumeConversationAutomation);
-  const generateAttachmentUploadUrl = useMutation(api.dashboard.messages.generateAttachmentUploadUrl);
-  const finalizeStagedAttachment = useAction(api.dashboard.messages.finalizeStagedAttachment);
-  const clearStagedAttachments = useMutation(api.dashboard.messages.clearStagedAttachments);
-  const removeStagedAttachment = useMutation(api.dashboard.messages.removeStagedAttachment);
+  const resumeConversationAutomation = useObservedAction(api.dashboard.messages.resumeConversationAutomation);
+  const generateAttachmentUploadUrl = useObservedMutation(api.dashboard.messages.generateAttachmentUploadUrl);
+  const finalizeStagedAttachment = useObservedAction(api.dashboard.messages.finalizeStagedAttachment);
+  const clearStagedAttachments = useObservedMutation(api.dashboard.messages.clearStagedAttachments);
+  const removeStagedAttachment = useObservedMutation(api.dashboard.messages.removeStagedAttachment);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);

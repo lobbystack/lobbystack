@@ -4,7 +4,6 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { internalAction } from "../_generated/server";
 import { buildTwilioSmsInboundWebhookUrl } from "../lib/twilioUrls";
 import {
   assertSmsComplianceDraftReady,
@@ -19,6 +18,7 @@ import {
 } from "../lib/smsCompliance";
 import { getTwilioClient } from "../lib/node/twilioClient";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 const DEFAULT_TWILIO_A2P_TRUST_PRODUCT_POLICY_SID =
   "RNc97f3d2a7ccf01b0e53a29ee4c54d31a";
 

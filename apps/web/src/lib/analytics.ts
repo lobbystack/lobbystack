@@ -1,6 +1,7 @@
 import posthog from "posthog-js";
 
 import {
+  buildAlertableExceptionTelemetryProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForOperator,
   redactTelemetryProperties,
@@ -304,10 +305,22 @@ export function captureAnalyticsException(
     return;
   }
 
+  const operation =
+    typeof properties?.operation === "string" ? properties.operation : "web_exception";
+  const normalized = normalizeException(error);
   const nextProperties: TelemetryProperties = redactTelemetryProperties({
     ...properties,
+    ...buildAlertableExceptionTelemetryProperties({
+      runtime: "web",
+      service: "web",
+      operation,
+      alertable:
+        typeof properties?.alertable === "boolean" ? properties.alertable : true,
+      expected: typeof properties?.expected === "boolean" ? properties.expected : false,
+      exceptionType: normalized.type,
+      exceptionMessage: `${operation} failed (${normalized.type})`,
+    }),
     deploymentMode: DEPLOYMENT_MODE,
-    runtime: "web",
     ...(typeof window !== "undefined" && !properties?.pathname
       ? { pathname: window.location.pathname }
       : {}),
@@ -318,8 +331,6 @@ export function captureAnalyticsException(
       business: getPostHogBusinessGroupKey(properties.businessId),
     };
   }
-  const normalized = normalizeException(error);
-
   const errorToCapture =
     error instanceof Error
       ? error

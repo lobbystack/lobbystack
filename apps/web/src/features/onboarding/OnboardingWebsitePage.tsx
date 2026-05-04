@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Globe, LoaderCircle, LogOut } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 import {
   Field,
   FieldDescription,
@@ -37,8 +38,8 @@ export function OnboardingWebsitePage({
 }: OnboardingWebsitePageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
-  const submitOnboardingWebsite = useAction(api.onboarding.websites.submitOnboardingWebsite);
-  const skipOnboardingWebsite = useMutation(api.onboarding.websites.skipOnboardingWebsite);
+  const submitOnboardingWebsite = useObservedAction(api.onboarding.websites.submitOnboardingWebsite);
+  const skipOnboardingWebsite = useObservedMutation(api.onboarding.websites.skipOnboardingWebsite);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

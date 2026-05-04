@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction } from "convex/react";
+
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, LogOut, ShieldCheck, Smartphone } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useObservedAction } from "@/lib/observed-convex";
 import {
   Field,
   FieldDescription,
@@ -57,8 +58,8 @@ export function OnboardingVerifyPhonePage({
 }: OnboardingVerifyPhonePageProps) {
   const { i18n, t } = useTranslation("onboarding");
   const navigate = useNavigate();
-  const startPhoneVerification = useAction(api.onboarding.phoneVerification.startPhoneVerification);
-  const checkPhoneVerification = useAction(api.onboarding.phoneVerification.checkPhoneVerification);
+  const startPhoneVerification = useObservedAction(api.onboarding.phoneVerification.startPhoneVerification);
+  const checkPhoneVerification = useObservedAction(api.onboarding.phoneVerification.checkPhoneVerification);
   const [phoneInput, setPhoneInput] = useState<string | undefined>(currentUserPhone ?? undefined);
   const [verificationPhone, setVerificationPhone] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");

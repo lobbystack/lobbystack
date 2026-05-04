@@ -1,7 +1,7 @@
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
 
+import { observedInternalAction as internalAction } from "./telemetry/observedFunctions";
 const crons = cronJobs();
 
 export const dispatchDueNotifications = internalAction({
@@ -34,6 +34,12 @@ crons.interval(
   "emit telemetry observability heartbeat",
   { minutes: 5 },
   internal.telemetry.posthog.emitObservabilityHeartbeat,
+  {},
+);
+crons.interval(
+  "emit service health checks",
+  { minutes: 1 },
+  internal.telemetry.posthog.emitServiceHealthChecks,
   {},
 );
 

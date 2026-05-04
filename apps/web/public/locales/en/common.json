@@ -23,6 +23,11 @@
     "receptionist": "Receptionist",
     "prompt": "Prompt"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "Reload the dashboard and try again. The error has been reported.",
+    "reload": "Reload"
+  },
   "feedback": {
     "trigger": "Feedback",
     "title": "Send feedback",

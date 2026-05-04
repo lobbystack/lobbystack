@@ -3,10 +3,10 @@
 import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
-import { internalAction } from "../_generated/server";
 import { generateImagePreview } from "../lib/node/imagePreviews";
 import { isImageAttachment } from "../lib/messageAttachments";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 export const createImagePreviewForStorage = internalAction({
   args: {
     storageId: v.id("_storage"),

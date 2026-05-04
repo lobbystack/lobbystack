@@ -10,6 +10,7 @@ import { PostHog } from "posthog-node";
 import { loadVoiceGatewayEnv, type VoiceGatewayEnv } from "@lobbystack/config";
 import {
   bucketLatencyMs,
+  buildAlertableExceptionTelemetryProperties,
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
@@ -17,6 +18,7 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getProviderErrorExceptionType,
+  PROVIDER_ERROR_PROVIDERS,
   redactAiTraceProperties,
   redactTelemetryProperties,
   classifyProviderError,
@@ -43,9 +45,19 @@ let client: PostHog | null | undefined;
 let loggerProvider: LoggerProvider | null = null;
 let operationalLogger: Logger | null = null;
 let runtimeEnv: VoiceGatewayEnv | null | undefined;
+let fatalHandlersInstalled = false;
 
 const VOICE_GATEWAY_DISTINCT_ID = "system:voice-gateway";
 const SLOW_TURN_THRESHOLD_MS = 2_500;
+const UNSAFE_EXCEPTION_PROPERTY_KEYS = new Set([
+  "args",
+  "body",
+  "input",
+  "payload",
+  "rawargs",
+  "rawrequest",
+  "requestbody",
+]);
 
 function getRuntimeEnv(): VoiceGatewayEnv | null {
   if (runtimeEnv !== undefined) {
@@ -505,6 +517,74 @@ export async function shutdownPostHog(): Promise<void> {
   }
 }
 
+function getErrorExceptionType(error: unknown): string {
+  if (error instanceof Error && error.name) {
+    return error.name;
+  }
+  return "ApplicationError";
+}
+
+function getSafeExceptionMessage(input: {
+  service: string;
+  operation: string;
+  error: unknown;
+}): string {
+  return `${input.service} ${input.operation} failed (${getErrorExceptionType(
+    input.error,
+  )})`;
+}
+
+function getBooleanProperty(
+  properties: TelemetryProperties | undefined,
+  key: string,
+  fallback: boolean,
+): boolean {
+  const value = properties?.[key];
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function getStringProperty(
+  properties: TelemetryProperties | undefined,
+  key: string,
+): string | undefined {
+  const value = properties?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getExceptionLevel(
+  properties: TelemetryProperties | undefined,
+): "fatal" | "error" | "warning" | "info" {
+  const value = getStringProperty(properties, "$exception_level");
+  if (value === "fatal" || value === "error" || value === "warning" || value === "info") {
+    return value;
+  }
+  return "error";
+}
+
+function getProviderProperty(
+  properties: TelemetryProperties | undefined,
+): ExternalProvider | undefined {
+  const value = getStringProperty(properties, "provider");
+  if (value && PROVIDER_ERROR_PROVIDERS.includes(value as ExternalProvider)) {
+    return value as ExternalProvider;
+  }
+  return undefined;
+}
+
+function getSafeExceptionProperties(
+  properties: TelemetryProperties | undefined,
+): TelemetryProperties {
+  const safeProperties: TelemetryProperties = {};
+  for (const [key, value] of Object.entries(properties ?? {})) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, "");
+    if (UNSAFE_EXCEPTION_PROPERTY_KEYS.has(normalizedKey)) {
+      continue;
+    }
+    safeProperties[key] = value;
+  }
+  return safeProperties;
+}
+
 export function capturePostHogException(
   error: unknown,
   input?: {
@@ -523,11 +603,31 @@ export function capturePostHogException(
     return;
   }
 
+  const safeInputProperties = getSafeExceptionProperties(input?.properties);
+  const operation =
+    getStringProperty(safeInputProperties, "operation") ?? "voice_gateway_exception";
+  const exceptionType = getErrorExceptionType(error);
+  const exceptionMessage = getSafeExceptionMessage({
+    service: "voice-gateway",
+    operation,
+    error,
+  });
+  const provider = getProviderProperty(safeInputProperties);
   const additionalProperties: Record<string, unknown> = {
     ...redactTelemetryProperties({
-      ...input?.properties,
+      ...safeInputProperties,
+      ...buildAlertableExceptionTelemetryProperties({
+        runtime: "voice-gateway",
+        service: "voice-gateway",
+        operation,
+        alertable: getBooleanProperty(safeInputProperties, "alertable", true),
+        expected: getBooleanProperty(safeInputProperties, "expected", false),
+        ...(provider ? { provider } : {}),
+        exceptionLevel: getExceptionLevel(safeInputProperties),
+        exceptionType,
+        exceptionMessage,
+      }),
       deploymentMode: env.DEPLOYMENT_MODE,
-      runtime: "voice-gateway",
     }),
   };
 
@@ -545,6 +645,54 @@ export function capturePostHogException(
         : undefined),
     additionalProperties,
   );
+}
+
+export async function handleFatalPostHogException(
+  reason: unknown,
+  kind: "uncaught_exception" | "unhandled_rejection",
+  options?: {
+    exitProcess?: boolean;
+  },
+): Promise<void> {
+  const error =
+    reason instanceof Error
+      ? reason
+      : new Error(
+          typeof reason === "string"
+            ? reason
+            : `Voice gateway fatal ${kind}`,
+        );
+
+  capturePostHogException(error, {
+    distinctId: VOICE_GATEWAY_DISTINCT_ID,
+    properties: {
+      operation: `voice_gateway_${kind}`,
+      fatalKind: kind,
+      $exception_level: "fatal",
+      alertable: true,
+      expected: false,
+    },
+  });
+
+  await shutdownPostHog().catch(() => undefined);
+
+  if (options?.exitProcess ?? true) {
+    process.exit(1);
+  }
+}
+
+export function installPostHogFatalHandlers(): void {
+  if (fatalHandlersInstalled) {
+    return;
+  }
+  fatalHandlersInstalled = true;
+
+  process.on("uncaughtException", (error) => {
+    void handleFatalPostHogException(error, "uncaught_exception");
+  });
+  process.on("unhandledRejection", (reason) => {
+    void handleFatalPostHogException(reason, "unhandled_rejection");
+  });
 }
 
 function getSafeProviderErrorCode(code: string | undefined): string | undefined {

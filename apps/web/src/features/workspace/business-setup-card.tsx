@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useMutation } from "convex/react";
+
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useObservedMutation } from "@/lib/observed-convex";
 import {
   Field,
   FieldContent,
@@ -39,7 +40,7 @@ function slugify(value: string): string {
 export function BusinessSetupCard() {
   const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
-  const bootstrapBusiness = useMutation(api.businesses.admin.bootstrapBusiness);
+  const bootstrapBusiness = useObservedMutation(api.businesses.admin.bootstrapBusiness);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [timezone, setTimezone] = useState("America/Toronto");

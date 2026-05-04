@@ -7,7 +7,7 @@ import { v } from "convex/values";
 
 import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
-import { internalAction, type ActionCtx } from "../../_generated/server";
+import { type ActionCtx } from "../../_generated/server";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import { bulkWorkpool, firecrawlScrape, KNOWLEDGE_INDEX_VERSION, rag } from "../../lib/components";
 import { buildKnowledgeDocumentPreviewText } from "../../lib/knowledgeDocuments";
@@ -31,6 +31,7 @@ import {
 } from "../../telemetry/shared";
 import { enqueuePostHogProviderExceptionBestEffort } from "../../telemetry/posthog";
 
+import { observedInternalAction as internalAction } from "../../telemetry/observedFunctions";
 type WebsiteIngestionJobIdArgs = {
   websiteIngestionJobId: Id<"website_ingestion_jobs">;
 };

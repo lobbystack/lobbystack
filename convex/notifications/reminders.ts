@@ -1,10 +1,9 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import {
   type ActionCtx,
-  internalAction,
-  internalMutation,
   internalQuery,
-  mutation,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";

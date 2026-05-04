@@ -81,12 +81,27 @@ This means the app emits both:
 
 The browser also exposes a `captureAnalyticsException(...)` helper for explicit technical failures in high-signal flows such as calendar connection and knowledge document upload. This remains reserved for unexpected implementation or provider errors, not expected validation or business-rule failures.
 
+The React root is also wrapped with `AppErrorBoundary` and React 19 root error hooks. Render crashes, uncaught root errors, and recoverable root errors call `captureAnalyticsException(...)` with the shared alertable exception contract:
+
+- `runtime`
+- `service`
+- `operation`
+- `deploymentMode`
+- `alertable`
+- `expected`
+- `$exception_level`
+- `$exception_type`
+- `$exception_message`
+
+Client calls to Convex mutations and actions go through `useObservedMutation(...)` and `useObservedAction(...)`. Rejected calls are captured as alertable web exceptions and then rethrown so existing UI error handling still works.
+
 Production browser deploys continue to follow PostHog's source map flow:
 
 - `vite build` emits source maps
 - `apps/web/scripts/upload-posthog-sourcemaps.mjs` runs `posthog-cli sourcemap inject`
 - the same script uploads the injected assets to PostHog with a stable release name and commit-based release version
 - the static host serves the already-injected assets from `dist/`
+- production sourcemap uploads fail closed when `POSTHOG_CLI_API_KEY` or `POSTHOG_CLI_PROJECT_ID` is missing
 
 ### Managed reverse proxy browser ingestion
 
@@ -112,8 +127,14 @@ Convex also emits operational telemetry through the same outbox for:
 - `ops.convex.heartbeat`
 - `ops.convex.outbox_backlog_sample`
 - `ops.convex.outbox_flush_failed`
+- `ops.service.health_check`
+- `ops.service.health_check_failed`
 
 The heartbeat cron samples outbox backlog and retry state so PostHog dashboards and alerts can track delivery health without a second observability backend.
+
+The service health cron checks `APP_BASE_URL` and `${VOICE_GATEWAY_BASE_URL}/health` every minute with a short timeout. Healthy checks emit `ops.service.health_check`. Missing config, non-2xx responses, network failures, and timeouts emit both `ops.service.health_check_failed` and an alertable `$exception` with the target service and host.
+
+Production Convex write/action/http registrations use observed wrappers from `convex/telemetry/observedFunctions.ts`. These wrappers capture unexpected handler failures to PostHog Error Tracking and rethrow the original error. Queries stay unwrapped because Convex queries are side-effect-free.
 
 ### `apps/voice-gateway`
 
@@ -138,6 +159,8 @@ The gateway emits operational PostHog events for:
 - `ops.voice.recording_upload_failed`
 
 These events intentionally replace the previous runtime metrics path. Alerting is now based on event trends, thresholded slow-event volume, and heartbeat absence instead of external percentiles.
+
+Node exception autocapture remains enabled. The gateway also installs explicit `uncaughtException` and `unhandledRejection` handlers that capture a fatal PostHog exception, flush PostHog, and exit.
 
 Structured gateway logs sent to PostHog Logs should continue to include operational identifiers like:
 
@@ -180,10 +203,13 @@ The non-realtime Gemini wrapper uses the shared provider layer in `convex/lib/pr
 
 PostHog Error Tracking is enabled in both runtimes:
 
-- `apps/web` captures unhandled browser errors and unhandled promise rejections automatically, plus explicit technical exceptions through `captureAnalyticsException(...)`
-- `apps/voice-gateway` enables Node exception autocapture and uses `capturePostHogException(...)` for startup, request, and selected provider/runtime recovery failures
+- `apps/web` captures unhandled browser errors and unhandled promise rejections automatically, render/root failures through the React boundary/hooks, rejected observed Convex writes, and explicit technical exceptions through `captureAnalyticsException(...)`
+- `convex` captures observed action, mutation, internal action, internal mutation, HTTP action, provider, and service-health failures through the PostHog outbox
+- `apps/voice-gateway` enables Node exception autocapture and uses `capturePostHogException(...)` for startup, request, provider/runtime recovery, and fatal process failures
 
 Explicit exception capture should remain limited to technical failures where stack traces and runtime context materially help debugging. Business outcome failures such as `appointment.booking_failed` or `workflow.failed` should continue to be tracked as product/domain events instead of exceptions.
+
+Alertable exceptions use `alertable = true` and `expected = false`. Expected validation or business-rule outcomes should either stay as product/domain events or explicitly set `expected = true` when they must be captured for diagnostics.
 
 ## Environment variables
 
@@ -203,6 +229,8 @@ Explicit exception capture should remain limited to technical failures where sta
 - `POSTHOG_KEY`
 - `POSTHOG_HOST`
 - `POSTHOG_PRIVACY_MODE`
+- `APP_BASE_URL`
+- `VOICE_GATEWAY_BASE_URL`
 
 Telemetry export is only enabled automatically in `cloud` deployment mode.
 

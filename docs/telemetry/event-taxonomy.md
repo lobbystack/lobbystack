@@ -80,6 +80,15 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `workflow.started`
 - `workflow.failed`
 
+### Operations events
+
+- `ops.convex.heartbeat`
+- `ops.convex.outbox_backlog_sample`
+- `ops.convex.outbox_flush_failed`
+- `ops.service.health_check`
+- `ops.service.health_check_failed`
+- `ops.voice.heartbeat`
+
 ## Shared defaults
 
 All meaningful product and business events should include:
@@ -182,6 +191,40 @@ Always include:
 - `businessId`
 - `deploymentMode`
 - `workflowName`
+
+### Service health events
+
+Always include:
+
+- `deploymentMode`
+- `service`
+- `status`
+- `latencyMs`
+
+Add when relevant:
+
+- `httpStatusCode`
+- `errorKind`
+- `targetUrlHost`
+
+### Alertable exceptions
+
+Unexpected crashes, provider failures, service health failures, and observed write/action/http handler failures should include:
+
+- `runtime`
+- `service`
+- `operation`
+- `deploymentMode`
+- `alertable`
+- `expected`
+- `$exception_level`
+- `$exception_type`
+- `$exception_message`
+
+Add when relevant:
+
+- `provider`
+- safe IDs such as `businessId`, `callId`, `conversationId`, `messageId`, or `appointmentId`
 
 ## Property guidelines
 

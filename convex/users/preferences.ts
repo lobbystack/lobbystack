@@ -1,8 +1,11 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
 import { internal } from "../_generated/api";
-import type { Doc, Id } from "../_generated/dataModel";
-import { action, internalQuery, mutation, query } from "../_generated/server";
+import type { Doc,
+  Id } from "../_generated/dataModel";
+import { internalQuery, query } from "../_generated/server";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../lib/auth";
 import { dashboardAbuseRateLimiter } from "../lib/components";
 import {
@@ -16,6 +19,7 @@ import {
   type OperatorNotificationEventPreferences,
 } from "../lib/operatorNotificationPreferences";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 const localeValidator = v.union(v.literal("en"), v.literal("fr"));
 export const TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE =
   "Too many test notifications. Please try again later.";

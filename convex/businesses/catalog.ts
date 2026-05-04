@@ -1,18 +1,16 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import {
   getAuthSessionId,
   getAuthUserId,
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
-} from "@convex-dev/auth/server";
+  } from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import {
-  action,
-  internalAction,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -51,6 +49,7 @@ import {
 } from "../lib/twilioUrls";
 import { scheduleSnapshotRefresh } from "./admin";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 const phoneNumberSaveArgs = {
   businessId: v.id("businesses"),
   phoneNumberId: v.optional(v.id("phone_numbers")),
