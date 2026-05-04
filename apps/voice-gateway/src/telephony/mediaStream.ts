@@ -246,6 +246,7 @@ function isTransferQuotaError(error: unknown): boolean {
 
 const TRANSFER_QUOTA_REACHED_MESSAGE =
   "This business has reached its transfer limit for this billing period. Please try again later.";
+const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
 
 function asUnknownRecord(
   value: unknown,
@@ -921,9 +922,14 @@ function createRealtimeToolDefinitions() {
 
 function trackTask(session: ActiveVoiceSession, task: Promise<unknown>): void {
   session.pendingTasks.add(task);
-  task.finally(() => {
-    session.pendingTasks.delete(task);
-  });
+  void task.then(
+    () => {
+      session.pendingTasks.delete(task);
+    },
+    () => {
+      session.pendingTasks.delete(task);
+    },
+  );
 }
 
 function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>): void {
@@ -1157,6 +1163,118 @@ function clearPendingImplicitHangupPlaybackWait(
   session.pendingImplicitHangupMarkName = null;
 }
 
+function delayMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function restorePendingImplicitEndCall(
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): void {
+  if (session.finalized) {
+    return;
+  }
+
+  session.pendingImplicitEndCall = request;
+  session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  session.terminalHangupInProgress = false;
+  session.finalDispositionOverride = null;
+}
+
+async function completeImplicitTerminalHangupWithRetry(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): Promise<void> {
+  for (
+    let attemptIndex = 0;
+    attemptIndex <= IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS.length;
+    attemptIndex += 1
+  ) {
+    try {
+      await initiateTerminalHangup(
+        server,
+        openAiSocket,
+        twilioSocket,
+        session,
+        request,
+        {
+          finalMessagePlayback: "silent",
+        },
+      );
+      return;
+    } catch (error) {
+      restorePendingImplicitEndCall(session, request);
+
+      const retryDelayMs =
+        IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS[attemptIndex];
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          reason: request.reason,
+          attempt: attemptIndex + 1,
+          maxAttempts: IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS.length + 1,
+          ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        },
+        retryDelayMs !== undefined
+          ? "Failed to complete implicit terminal hangup; retrying"
+          : "Failed to complete implicit terminal hangup after retries",
+      );
+
+      if (session.finalized) {
+        return;
+      }
+
+      if (retryDelayMs === undefined) {
+        if (twilioSocket.readyState === WebSocket.OPEN) {
+          server.log.warn(
+            {
+              callId: session.callId,
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              reason: request.reason,
+            },
+            "Closing media stream after exhausted implicit terminal hangup retries",
+          );
+          twilioSocket.close();
+        }
+        return;
+      }
+
+      await delayMs(retryDelayMs);
+      if (session.finalized || session.pendingImplicitEndCall !== request) {
+        return;
+      }
+    }
+  }
+}
+
+function trackImplicitTerminalHangupTask(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): void {
+  const task = completeImplicitTerminalHangupWithRetry(
+    server,
+    openAiSocket,
+    twilioSocket,
+    session,
+    request,
+  );
+  trackTask(session, task);
+}
+
 function runImplicitTerminalHangup(
   server: FastifyInstance,
   openAiSocket: WebSocket | null,
@@ -1172,10 +1290,13 @@ function runImplicitTerminalHangup(
   session.pendingImplicitHangupMarkName = null;
   session.pendingImplicitEndCallSkipNextResponseDone = false;
   session.pendingImplicitEndCallStaleResponseId = null;
-  const task = initiateTerminalHangup(server, openAiSocket, twilioSocket, session, request, {
-    finalMessagePlayback: "silent",
-  });
-  trackTask(session, task);
+  trackImplicitTerminalHangupTask(
+    server,
+    openAiSocket,
+    twilioSocket,
+    session,
+    request,
+  );
 }
 
 async function applyPendingImplicitEndCallBeforeFinalize(
