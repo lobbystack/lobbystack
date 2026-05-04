@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation } from "convex/react";
@@ -21,12 +22,7 @@ import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { SectionBlock } from "@/components/section-block";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -436,6 +432,23 @@ function RecordingTab({ call }: { call: CallRow }) {
   );
 }
 
+function DetailSection({
+  children,
+  className,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title: string;
+}) {
+  return (
+    <section className={cn("flex flex-col gap-4 px-4 py-4", className)}>
+      <h3 className="font-heading text-base font-medium">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function DetailsTab({
   call,
   businessId,
@@ -471,13 +484,9 @@ function DetailsTab({
       : call.providerCallDurationSeconds;
 
   return (
-    <div className="flex flex-col gap-6 py-4">
-      {/* Follow-up task */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.followUpTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+    <div className="py-4">
+      <Surface className="flex flex-col">
+        <DetailSection title={t("detail.details.followUpTitle")}>
           {call.followUpTask ? (
             <div className="flex flex-col gap-3">
               <p className="type-item-title">{call.followUpTask.title}</p>
@@ -502,15 +511,12 @@ function DetailsTab({
               {t("detail.details.noFollowUp")}
             </p>
           )}
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      {/* Raw call info */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.callInfoTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.callInfoTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.twilioCallSid")}
@@ -539,8 +545,8 @@ function DetailsTab({
               </>
             )}
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
+      </Surface>
     </div>
   );
 }
