@@ -348,7 +348,11 @@ async function hydrateDashboardCallRow(
       .order("desc")
       .take(1),
   ]);
-  const contact = conversation?.contactId ? await ctx.db.get(conversation.contactId) : null;
+  const contact = conversation?.contactId
+    ? await ctx.db.get(conversation.contactId)
+    : call.contactId
+      ? await ctx.db.get(call.contactId)
+      : await findLegacyBlockedContactForCall(ctx, call);
   const outcome = await buildConversationOutcome(ctx, {
     conversation,
     fallbackDisposition: call.disposition ?? null,
@@ -383,6 +387,45 @@ async function hydrateDashboardCallRow(
       : null,
     outcome,
   };
+}
+
+async function findLegacyBlockedContactForCall(
+  ctx: QueryCtx,
+  call: Doc<"calls">,
+): Promise<Doc<"contacts"> | null> {
+  if (call.disposition !== CONTACT_BLOCKED_CALL_DISPOSITION) {
+    return null;
+  }
+
+  const contacts = await ctx.db
+    .query("contacts")
+    .withIndex("by_business_id_and_phone", (q) => q.eq("businessId", call.businessId))
+    .collect();
+  const blockedContacts = contacts.filter(isContactBlocked);
+  if (blockedContacts.length === 1) {
+    return blockedContacts[0] ?? null;
+  }
+
+  const callStartedAtMs = Date.parse(call.startedAt);
+  if (!Number.isFinite(callStartedAtMs)) {
+    return null;
+  }
+
+  const closestContact = blockedContacts
+    .map((contact) => {
+      const blockedAtMs = Date.parse(contact.operatorBlockedAt ?? "");
+      return {
+        contact,
+        distanceMs: Number.isFinite(blockedAtMs)
+          ? Math.abs(blockedAtMs - callStartedAtMs)
+          : Number.POSITIVE_INFINITY,
+      };
+    })
+    .sort((a, b) => a.distanceMs - b.distanceMs)[0];
+
+  return closestContact && closestContact.distanceMs <= 5 * 60 * 1000
+    ? closestContact.contact
+    : null;
 }
 
 async function resolveServiceDocument(
@@ -562,6 +605,7 @@ export const startCall = internalMutation({
         await ctx.db.patch(existingCall._id, {
           status: "completed",
           endedAt: args.startedAt,
+          contactId: contact._id,
           disposition: CONTACT_BLOCKED_CALL_DISPOSITION,
           ...(args.gatewaySessionId !== undefined
             ? { gatewaySessionId: args.gatewaySessionId }
@@ -571,6 +615,7 @@ export const startCall = internalMutation({
       } else {
         callId = await ctx.db.insert("calls", {
           businessId: args.businessId,
+          contactId: contact._id,
           twilioCallSid: args.twilioCallSid,
           ...(args.gatewaySessionId !== undefined
             ? { gatewaySessionId: args.gatewaySessionId }
@@ -624,6 +669,7 @@ export const startCall = internalMutation({
     if (existingCall) {
       await ctx.db.patch(existingCall._id, {
         conversationId,
+        contactId: contact._id,
         status: "in_progress",
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
@@ -634,6 +680,7 @@ export const startCall = internalMutation({
       callId = await ctx.db.insert("calls", {
         businessId: args.businessId,
         conversationId,
+        contactId: contact._id,
         twilioCallSid: args.twilioCallSid,
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }

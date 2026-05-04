@@ -700,6 +700,7 @@ export default defineSchema({
   calls: defineTable({
     businessId: v.id("businesses"),
     conversationId: v.optional(v.id("conversations")),
+    contactId: v.optional(v.id("contacts")),
     twilioCallSid: v.string(),
     gatewaySessionId: v.optional(v.string()),
     status: v.string(),
