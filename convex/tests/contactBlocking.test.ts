@@ -243,7 +243,7 @@ describe("Contact blocking", () => {
   });
 
   it("blocks known contacts from new voice starts and preserves the blocked disposition during reconciliation", async () => {
-    const { businessId, t, userId } = await seedWorkspace({
+    const { authed, businessId, t, userId } = await seedWorkspace({
       subject: "contact-block-voice",
     });
     const contactId = await insertContact(t, {
@@ -282,6 +282,7 @@ describe("Contact blocking", () => {
         _id: result.callId,
         status: "completed",
         disposition: "contact_blocked",
+        contactId,
         startedAt: "2026-04-15T15:00:00.000Z",
         endedAt: "2026-04-15T15:00:00.000Z",
       });
@@ -314,6 +315,30 @@ describe("Contact blocking", () => {
         disposition: "contact_blocked",
         endedAt: "2026-04-15T15:00:12.000Z",
       });
+    });
+
+    const dashboardCall = await authed.query(api.voice.runtime.getCallForDashboard, {
+      businessId,
+      callId: result.callId,
+    });
+    expect(dashboardCall).toMatchObject({
+      contactName: "Taylor Customer",
+      contactPhone: "+14165550193",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(result.callId, {
+        contactId: undefined,
+      });
+    });
+
+    const unlinkedDashboardCall = await authed.query(api.voice.runtime.getCallForDashboard, {
+      businessId,
+      callId: result.callId,
+    });
+    expect(unlinkedDashboardCall).toMatchObject({
+      contactName: null,
+      contactPhone: null,
     });
   });
 

@@ -3,7 +3,7 @@ import type { Id } from "../_generated/dataModel";
 export type TelemetryScalar = string | number | boolean | null;
 export type TelemetryValue =
   | TelemetryScalar
-  | Array<TelemetryScalar>
+  | Array<TelemetryValue>
   | { [key: string]: TelemetryValue | undefined };
 export type TelemetryProperties = Record<string, TelemetryValue | undefined>;
 
@@ -77,12 +77,18 @@ const SAFE_KEY_PATTERNS = [
   "dimension",
   "embeddingtokens",
   "entrycount",
+  "filename",
   "inputcharcount",
   "inputtokens",
+  "exceptiontype",
+  "httpstatuscode",
   "messagecount",
   "outputtokens",
   "outputcharcount",
   "prompttokens",
+  "providererrorcode",
+  "providererrorkind",
+  "providererrorstatus",
   "reasoningtokens",
   "timetofirsttoken",
   "tokencount",
@@ -127,7 +133,9 @@ function redactValue(value: TelemetryValue | undefined): TelemetryValue | undefi
     return value;
   }
   if (Array.isArray(value)) {
-    return value;
+    return value
+      .map((entry) => redactValue(entry))
+      .filter((entry): entry is TelemetryValue => entry !== undefined);
   }
   return Object.fromEntries(
     Object.entries(value).map(([key, nestedValue]) => [

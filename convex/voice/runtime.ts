@@ -348,7 +348,11 @@ async function hydrateDashboardCallRow(
       .order("desc")
       .take(1),
   ]);
-  const contact = conversation?.contactId ? await ctx.db.get(conversation.contactId) : null;
+  const contact = conversation?.contactId
+    ? await ctx.db.get(conversation.contactId)
+    : call.contactId
+      ? await ctx.db.get(call.contactId)
+      : null;
   const outcome = await buildConversationOutcome(ctx, {
     conversation,
     fallbackDisposition: call.disposition ?? null,
@@ -562,6 +566,7 @@ export const startCall = internalMutation({
         await ctx.db.patch(existingCall._id, {
           status: "completed",
           endedAt: args.startedAt,
+          contactId: contact._id,
           disposition: CONTACT_BLOCKED_CALL_DISPOSITION,
           ...(args.gatewaySessionId !== undefined
             ? { gatewaySessionId: args.gatewaySessionId }
@@ -571,6 +576,7 @@ export const startCall = internalMutation({
       } else {
         callId = await ctx.db.insert("calls", {
           businessId: args.businessId,
+          contactId: contact._id,
           twilioCallSid: args.twilioCallSid,
           ...(args.gatewaySessionId !== undefined
             ? { gatewaySessionId: args.gatewaySessionId }
@@ -624,6 +630,7 @@ export const startCall = internalMutation({
     if (existingCall) {
       await ctx.db.patch(existingCall._id, {
         conversationId,
+        contactId: contact._id,
         status: "in_progress",
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
@@ -634,6 +641,7 @@ export const startCall = internalMutation({
       callId = await ctx.db.insert("calls", {
         businessId: args.businessId,
         conversationId,
+        contactId: contact._id,
         twilioCallSid: args.twilioCallSid,
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }

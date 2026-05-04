@@ -24,6 +24,7 @@ import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
 import {
+  enqueuePostHogProviderExceptionBestEffort,
   enqueuePostHogOutboxRecord,
   serializePostHogEvent,
 } from "../telemetry/posthog";
@@ -1083,6 +1084,17 @@ export const sendStoredOutboundMessage = internalAction({
       await ctx.runMutation(internal.conversations.webhooks.markOutboundMessageSendFailed, {
         messageId: context.messageId,
         providerUpdatedAt: new Date().toISOString(),
+      });
+      await enqueuePostHogProviderExceptionBestEffort(ctx, {
+        provider: "twilio",
+        error,
+        operation: "twilio_sms_send",
+        businessId: context.businessId,
+        conversationId: context.conversationId,
+        messageId: context.messageId,
+        channel: "sms",
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(context.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(context.businessId)),
       });
       if (context.appointmentId) {
         await ctx.runMutation(

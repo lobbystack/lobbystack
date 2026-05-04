@@ -11,6 +11,7 @@ import {
   getTwilioClient,
   requireTwilioCredentials,
 } from "../lib/node/twilioClient";
+import { enqueuePostHogProviderExceptionBestEffort } from "../telemetry/posthog";
 import {
   canDeliverAsMms,
   inferFileNameFromContentType,
@@ -227,6 +228,18 @@ export const syncMessagePriceFromProvider = internalAction({
       console.warn("[twilioSms] Failed to hydrate provider message price", {
         providerMessageSid: args.providerMessageSid,
         error: error instanceof Error ? error.message : String(error),
+      });
+      await enqueuePostHogProviderExceptionBestEffort(ctx, {
+        provider: "twilio",
+        error,
+        operation: "twilio_sms_price_sync",
+        distinctId: "system:convex:provider:twilio",
+        channel: "sms",
+        properties: {
+          providerMessageSid: args.providerMessageSid,
+          providerStatus: args.providerStatus,
+          attemptNumber: attempt + 1,
+        },
       });
       return { synced: false, scheduledRetry: false, skipped: false };
     }

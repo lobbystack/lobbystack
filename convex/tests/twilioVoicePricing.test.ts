@@ -240,6 +240,150 @@ describe("Twilio voice pricing sync", () => {
     await flushImmediateScheduledFunctions(t);
   });
 
+  it("stores sub-ten-second terminal status duration while recording zero voice usage", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { callId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx);
+      const callId = await insertCall(ctx, {
+        businessId,
+        twilioCallSid: "CA-voice-short-status",
+      });
+      return { callId };
+    });
+
+    const result = await t.mutation(internal.voice.runtime.reconcileTwilioCallStatus, {
+      twilioCallSid: "CA-voice-short-status",
+      callStatus: "completed",
+      providerUpdatedAt: "2026-04-09T19:00:09.000Z",
+      providerDurationSeconds: 9,
+    });
+
+    expect(result).toEqual({
+      ignored: false,
+      callId,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(callId);
+      expect(call?.providerCostUsd).toBe(0.0085);
+      expect(call?.providerPriceUnit).toBe("usd");
+      expect(call?.providerCallDurationSeconds).toBe(9);
+
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", call!.businessId).eq("sourceKey", `voice:${String(callId)}`),
+        )
+        .unique();
+      expect(usageEvent).toMatchObject({
+        quantity: 0,
+        recordedAt: "2026-04-09T19:00:09.000Z",
+      });
+    });
+    await flushImmediateScheduledFunctions(t);
+  });
+
+  it("stores sub-ten-second completion duration while recording zero voice usage", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { callId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx);
+      const callId = await insertCall(ctx, {
+        businessId,
+        twilioCallSid: "CA-voice-short-complete",
+      });
+      return { callId };
+    });
+
+    await t.mutation(internal.voice.runtime.completeCall, {
+      callId,
+      status: "completed",
+      endedAt: "2026-04-09T19:00:09.000Z",
+      providerDurationSeconds: 9,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(callId);
+      expect(call?.providerCallDurationSeconds).toBe(9);
+
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", call!.businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", call!.businessId).eq("sourceKey", `voice:${String(callId)}`),
+        )
+        .unique();
+
+      expect(usageMonth).toMatchObject({
+        voiceSecondsUsed: 0,
+      });
+      expect(usageEvent).toMatchObject({
+        quantity: 0,
+        recordedAt: "2026-04-09T19:00:09.000Z",
+      });
+    });
+    await flushImmediateScheduledFunctions(t);
+  });
+
+  it("lets later provider reconciliation replace a short completion usage event", async () => {
+    const t = convexTest(schema, convexModules);
+
+    const { callId } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx);
+      const callId = await insertCall(ctx, {
+        businessId,
+        twilioCallSid: "CA-voice-short-then-provider",
+      });
+      return { callId };
+    });
+
+    await t.mutation(internal.voice.runtime.completeCall, {
+      callId,
+      status: "completed",
+      endedAt: "2026-04-09T19:00:09.000Z",
+      providerDurationSeconds: 9,
+    });
+    await t.mutation(internal.voice.runtime.reconcileTwilioCallStatus, {
+      twilioCallSid: "CA-voice-short-then-provider",
+      callStatus: "completed",
+      providerUpdatedAt: "2026-04-09T19:00:12.000Z",
+      providerDurationSeconds: 12,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(callId);
+      expect(call?.providerCallDurationSeconds).toBe(12);
+
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", call!.businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", call!.businessId).eq("sourceKey", `voice:${String(callId)}`),
+        )
+        .unique();
+
+      expect(usageMonth).toMatchObject({
+        voiceSecondsUsed: 12,
+      });
+      expect(usageEvent).toMatchObject({
+        quantity: 12,
+        recordedAt: "2026-04-09T19:00:12.000Z",
+      });
+    });
+    await flushImmediateScheduledFunctions(t);
+  });
+
   it("keeps the provider-reported duration when call finalization arrives later", async () => {
     const t = convexTest(schema, convexModules);
 

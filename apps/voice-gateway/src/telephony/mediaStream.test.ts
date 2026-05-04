@@ -3,15 +3,23 @@ import { describe, expect, it } from "vitest";
 import {
   createCallInactivityState,
   getCallInactivityAction,
+  getDispositionForEndCall,
   grantCallHold,
   markAssistantResponseDone,
   markCallerActivity,
   markHoldExpiryCheckInSent,
   markRealtimeIdleTimeout,
+  shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
   estimateRealtimeTotalCostUsd,
+  getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
+  markRealtimeToolCallHandled,
+  shouldRecoverFromOpenAiRealtimeServerError,
+  shouldSkipImplicitEndCallAudioDone,
+  shouldSkipImplicitEndCallResponseDone,
+  shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
 
 describe("estimateRealtimeTotalCostUsd", () => {
@@ -189,6 +197,58 @@ describe("getRealtimeGenerationOutcome", () => {
   });
 });
 
+describe("shouldRecoverFromOpenAiRealtimeServerError", () => {
+  it("keeps recoverable invalid request errors on the active session", () => {
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "invalid_request",
+          providerErrorCode: "invalid_event",
+        },
+        error: {
+          type: "invalid_request_error",
+          code: "invalid_event",
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("recovers terminal provider capacity and server errors", () => {
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "rate_limited",
+        },
+      }),
+    ).toBe(true);
+    expect(
+      shouldRecoverFromOpenAiRealtimeServerError({
+        classification: {
+          provider: "openai",
+          kind: "unknown",
+        },
+        error: {
+          type: "server_error",
+        },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("markRealtimeToolCallHandled", () => {
+  it("allows the first realtime tool event and suppresses duplicate call IDs", () => {
+    const session = {
+      handledToolCallIds: new Set<string>(),
+    };
+
+    expect(markRealtimeToolCallHandled(session, "call_123")).toBe(true);
+    expect(markRealtimeToolCallHandled(session, "call_123")).toBe(false);
+    expect(markRealtimeToolCallHandled(session, "call_456")).toBe(true);
+  });
+});
+
 describe("call inactivity control", () => {
   it("times out silent calls 75 seconds after assistant playback", () => {
     let state = createCallInactivityState();
@@ -263,5 +323,165 @@ describe("call inactivity control", () => {
       holdExpiryCheckInSentAtMs: null,
       holdSecondsUsed: 60,
     });
+  });
+});
+
+describe("AI-directed call endings", () => {
+  it("uses assistant final messages for every direct endCall tool result", () => {
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "caller_finished" })).toBe(
+      true,
+    );
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "silence_timeout" })).toBe(
+      true,
+    );
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "spam" })).toBe(
+      true,
+    );
+    expect(shouldUseAssistantFinalMessageForToolEndCall({ reason: "abuse" })).toBe(
+      true,
+    );
+  });
+
+  it("maps spam endings to a durable spam disposition without auto-blocking", () => {
+    expect(getDispositionForEndCall("spam")).toBe("spam_ended");
+    expect(shouldSystemBlockForEndCall("spam")).toBe(false);
+  });
+
+  it("keeps abuse as the only AI-directed auto-blocking reason", () => {
+    expect(getDispositionForEndCall("abuse")).toBe("abuse_ended");
+    expect(shouldSystemBlockForEndCall("abuse")).toBe(true);
+    expect(shouldSystemBlockForEndCall("caller_finished")).toBe(false);
+    expect(shouldSystemBlockForEndCall("silence_timeout")).toBe(false);
+  });
+
+  it("recovers an omitted endCall tool when the assistant clearly ends an abusive call", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "Je mets fin à cet appel. Au revoir.",
+        recentCallerTexts: [
+          "Vous êtes une bande de gros caves.",
+          "Va donc chier, petit attardé.",
+        ],
+      }),
+    ).toEqual({
+      reason: "abuse",
+      severity: "severe",
+      message: "Je mets fin à cet appel. Au revoir.",
+    });
+  });
+
+  it("recovers an omitted endCall tool as spam when the prior caller turns are solicitation", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "I'll be ending the call now. Goodbye.",
+        recentCallerTexts: [
+          "I'm calling with a special offer for your business.",
+          "Let me continue my sales pitch.",
+        ],
+      }),
+    ).toMatchObject({
+      reason: "spam",
+      message: "I'll be ending the call now. Goodbye.",
+    });
+  });
+
+  it("does not recover ordinary business buying questions as spam", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "I'll be ending the call now. Goodbye.",
+        recentCallerTexts: [
+          "Do you sell gift cards?",
+          "I'd like to buy one for my sister if you offer them.",
+        ],
+      }),
+    ).toMatchObject({
+      reason: "caller_finished",
+      message: "I'll be ending the call now. Goodbye.",
+    });
+  });
+
+  it("does not treat normal goodbyes or boundary warnings as implicit hangups", () => {
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText: "Take care, and thanks for calling.",
+        recentCallerTexts: ["Thanks, that's all."],
+      }),
+    ).toBeNull();
+    expect(
+      getImplicitEndCallForAssistantTranscript({
+        assistantText:
+          "Please keep the call respectful. If this continues, I will have to end the call.",
+        recentCallerTexts: ["You are not helpful."],
+      }),
+    ).toBeNull();
+  });
+
+  it("skips the stale tool response completion while waiting for final-message audio", () => {
+    const pendingImplicitEndCall = {
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    } as const;
+
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        staleResponseId: null,
+        responseId: null,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        staleResponseId: "response-stale",
+        responseId: "response-stale",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: true,
+        staleResponseId: "response-stale",
+        responseId: "response-final",
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall,
+        skipNextResponseDone: false,
+        staleResponseId: null,
+        responseId: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("skips stale audio completion marks without skipping the final-message response", () => {
+    const pendingImplicitEndCall = {
+      reason: "spam",
+      message: "We'll end the call here. Goodbye.",
+    } as const;
+
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: "response-stale",
+        responseId: "response-stale",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: "response-stale",
+        responseId: "response-final",
+      }),
+    ).toBe(false);
+    expect(
+      shouldSkipImplicitEndCallAudioDone({
+        pendingImplicitEndCall,
+        staleResponseId: null,
+        responseId: "response-final",
+      }),
+    ).toBe(false);
   });
 });

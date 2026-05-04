@@ -1,6 +1,7 @@
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import { demoBusinessId, type BusinessContextSnapshot } from "@lobbystack/shared";
+import type { ProviderErrorClassification } from "@lobbystack/telemetry";
 import type { IncomingHttpHeaders } from "node:http";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
@@ -29,10 +30,12 @@ import {
   recordTwilioInvalidSignature,
 } from "../observability/posthog";
 import {
+  buildSafeProviderFailureMessage,
   captureAiGeneration,
   captureAiSpan,
   captureAiTraceStarted,
   capturePostHogException,
+  captureProviderFailureException,
 } from "../observability/posthog";
 import {
   HOLD_EXPIRY_GRACE_MS,
@@ -40,16 +43,19 @@ import {
   NORMAL_IDLE_TIMEOUT_MS,
   createCallInactivityState,
   getCallInactivityAction,
+  getDispositionForEndCall,
   grantCallHold,
   markAssistantResponseDone,
   markCallerActivity,
   markHoldExpiryCheckInSent,
   markRealtimeIdleTimeout,
+  shouldSystemBlockForEndCall,
   type CallInactivityState,
   type EndCallRequest,
 } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import {
+  endLiveCallSilently,
   endLiveCallWithMessage,
   transferLiveCall,
 } from "./transferCall";
@@ -142,6 +148,13 @@ type OpenAiRealtimeMessage = {
       }>;
     }>;
   };
+  error?: {
+    type?: string;
+    code?: string;
+    message?: string;
+    param?: string | null;
+    event_id?: string;
+  };
 };
 
 type ActiveVoiceSession = {
@@ -159,12 +172,18 @@ type ActiveVoiceSession = {
   openAiReady: boolean;
   pendingTransferDestination: string | null;
   pendingTransferMarkName: string | null;
+  pendingImplicitEndCall: EndCallRequest | null;
+  pendingImplicitHangupMarkName: string | null;
+  pendingImplicitEndCallSkipNextResponseDone: boolean;
+  pendingImplicitEndCallStaleResponseId: string | null;
   transferExecuted: boolean;
   providerRecoveryStarted: boolean;
   finalized: boolean;
   finalDispositionOverride: string | null;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
+  handledToolCallIds: Set<string>;
+  recentCallerTranscripts: Array<string>;
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
   outboundCursorMs: number;
@@ -227,6 +246,7 @@ function isTransferQuotaError(error: unknown): boolean {
 
 const TRANSFER_QUOTA_REACHED_MESSAGE =
   "This business has reached its transfer limit for this billing period. Please try again later.";
+const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
 
 function asUnknownRecord(
   value: unknown,
@@ -555,6 +575,40 @@ export function getRealtimeGenerationOutcome(
   };
 }
 
+export function shouldRecoverFromOpenAiRealtimeServerError(input: {
+  classification: ProviderErrorClassification;
+  error?: {
+    type?: string;
+    code?: string;
+  };
+}): boolean {
+  const errorType = input.error?.type?.trim().toLowerCase() ?? "";
+  const errorCode = input.error?.code?.trim().toLowerCase() ?? "";
+
+  if (errorType === "server_error" || errorCode.includes("server_error")) {
+    return true;
+  }
+
+  return (
+    input.classification.kind === "quota_exhausted" ||
+    input.classification.kind === "auth_failed" ||
+    input.classification.kind === "rate_limited" ||
+    input.classification.kind === "provider_unavailable"
+  );
+}
+
+export function markRealtimeToolCallHandled(
+  session: { handledToolCallIds: Set<string> },
+  callId: string,
+): boolean {
+  if (session.handledToolCallIds.has(callId)) {
+    return false;
+  }
+
+  session.handledToolCallIds.add(callId);
+  return true;
+}
+
 type MediaStreamRequestContext = {
   url: string;
   headers: IncomingHttpHeaders;
@@ -842,13 +896,13 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "endCall",
       description:
-        "End the live call after a final message for explicit caller closing cues, severe abuse, repeated abusive behavior after one warning, or silence timeout.",
+        "End the live call after a final message for explicit caller closing cues, severe abuse, repeated abusive behavior after one warning, clear spam or sales solicitation after one redirect, or silence timeout.",
       parameters: {
         type: "object",
         properties: {
           reason: {
             type: "string",
-            enum: ["caller_finished", "abuse", "silence_timeout"],
+            enum: ["caller_finished", "abuse", "silence_timeout", "spam"],
           },
           message: {
             type: "string",
@@ -868,9 +922,14 @@ function createRealtimeToolDefinitions() {
 
 function trackTask(session: ActiveVoiceSession, task: Promise<unknown>): void {
   session.pendingTasks.add(task);
-  task.finally(() => {
-    session.pendingTasks.delete(task);
-  });
+  void task.then(
+    () => {
+      session.pendingTasks.delete(task);
+    },
+    () => {
+      session.pendingTasks.delete(task);
+    },
+  );
 }
 
 function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>): void {
@@ -900,16 +959,15 @@ function clearInactivityTimer(session: ActiveVoiceSession): void {
   }
 }
 
-function getDispositionForEndCall(reason: EndCallRequest["reason"]): string {
-  return reason === "abuse" ? "abuse_ended" : reason;
-}
-
 async function initiateTerminalHangup(
   server: FastifyInstance,
   openAiSocket: WebSocket | null,
   twilioSocket: WebSocket,
   session: ActiveVoiceSession,
   input: EndCallRequest,
+  options: {
+    finalMessagePlayback?: "twilio" | "silent";
+  } = {},
 ): Promise<void> {
   if (session.finalized || session.terminalHangupInProgress) {
     return;
@@ -919,9 +977,13 @@ async function initiateTerminalHangup(
   session.finalDispositionOverride = getDispositionForEndCall(input.reason);
   clearInactivityTimer(session);
   clearPendingTransferPlaybackWait(server, session, "terminal_hangup");
+  clearPendingImplicitHangupPlaybackWait(server, session, "terminal_hangup");
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
 
   let autoBlocked = false;
-  if (input.reason === "abuse" && session.callId) {
+  if (shouldSystemBlockForEndCall(input.reason) && session.callId) {
     try {
       const result = await systemBlockContactForVoiceCall({
         callId: session.callId,
@@ -961,15 +1023,32 @@ async function initiateTerminalHangup(
   }
 
   try {
-    await endLiveCallWithMessage({
-      callSid: session.callSid,
-      sayMessage: input.message,
-    });
+    if (options.finalMessagePlayback === "silent") {
+      await endLiveCallSilently({
+        callSid: session.callSid,
+      });
+    } else {
+      await endLiveCallWithMessage({
+        callSid: session.callSid,
+        sayMessage: input.message,
+      });
+    }
   } catch (error) {
     session.terminalHangupInProgress = false;
     session.finalDispositionOverride = null;
     throw error;
   }
+}
+
+export function shouldUseAssistantFinalMessageForToolEndCall(
+  input: Pick<EndCallRequest, "reason">,
+): boolean {
+  return (
+    input.reason === "caller_finished" ||
+    input.reason === "silence_timeout" ||
+    input.reason === "spam" ||
+    input.reason === "abuse"
+  );
 }
 
 function scheduleInactivityTimer(
@@ -1063,6 +1142,245 @@ function clearPendingTransferPlaybackWait(
   session.pendingTransferMarkName = null;
 }
 
+function clearPendingImplicitHangupPlaybackWait(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+  reason: string,
+): void {
+  if (!session.pendingImplicitHangupMarkName) {
+    return;
+  }
+
+  server.log.info(
+    {
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      markName: session.pendingImplicitHangupMarkName,
+      reason,
+    },
+    "Canceled pending implicit hangup playback wait",
+  );
+  session.pendingImplicitHangupMarkName = null;
+}
+
+function delayMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function restorePendingImplicitEndCall(
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): void {
+  if (session.finalized) {
+    return;
+  }
+
+  session.pendingImplicitEndCall = request;
+  session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  session.terminalHangupInProgress = false;
+  session.finalDispositionOverride = null;
+}
+
+async function completeImplicitTerminalHangupWithRetry(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): Promise<void> {
+  for (
+    let attemptIndex = 0;
+    attemptIndex <= IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS.length;
+    attemptIndex += 1
+  ) {
+    try {
+      await initiateTerminalHangup(
+        server,
+        openAiSocket,
+        twilioSocket,
+        session,
+        request,
+        {
+          finalMessagePlayback: "silent",
+        },
+      );
+      return;
+    } catch (error) {
+      restorePendingImplicitEndCall(session, request);
+
+      const retryDelayMs =
+        IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS[attemptIndex];
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          reason: request.reason,
+          attempt: attemptIndex + 1,
+          maxAttempts: IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS.length + 1,
+          ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        },
+        retryDelayMs !== undefined
+          ? "Failed to complete implicit terminal hangup; retrying"
+          : "Failed to complete implicit terminal hangup after retries",
+      );
+
+      if (session.finalized) {
+        return;
+      }
+
+      if (retryDelayMs === undefined) {
+        if (twilioSocket.readyState === WebSocket.OPEN) {
+          server.log.warn(
+            {
+              callId: session.callId,
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              reason: request.reason,
+            },
+            "Closing media stream after exhausted implicit terminal hangup retries",
+          );
+          twilioSocket.close();
+        }
+        return;
+      }
+
+      await delayMs(retryDelayMs);
+      if (session.finalized || session.pendingImplicitEndCall !== request) {
+        return;
+      }
+    }
+  }
+}
+
+function trackImplicitTerminalHangupTask(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  request: EndCallRequest,
+): void {
+  const task = completeImplicitTerminalHangupWithRetry(
+    server,
+    openAiSocket,
+    twilioSocket,
+    session,
+    request,
+  );
+  trackTask(session, task);
+}
+
+function runImplicitTerminalHangup(
+  server: FastifyInstance,
+  openAiSocket: WebSocket | null,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  if (!session.pendingImplicitEndCall || session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  const request = session.pendingImplicitEndCall;
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  trackImplicitTerminalHangupTask(
+    server,
+    openAiSocket,
+    twilioSocket,
+    session,
+    request,
+  );
+}
+
+async function applyPendingImplicitEndCallBeforeFinalize(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+): Promise<void> {
+  if (!session.pendingImplicitEndCall) {
+    return;
+  }
+
+  const request = session.pendingImplicitEndCall;
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitHangupMarkName = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  session.finalDispositionOverride = getDispositionForEndCall(request.reason);
+
+  let autoBlocked = false;
+  if (shouldSystemBlockForEndCall(request.reason) && session.callId) {
+    try {
+      const result = await systemBlockContactForVoiceCall({
+        callId: session.callId,
+        blockedAt: new Date().toISOString(),
+      });
+      autoBlocked = result.blocked;
+    } catch (error) {
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          callSid: session.callSid,
+        },
+        "Failed to auto-block caller before finalizing pending terminal hangup",
+      );
+    }
+  }
+
+  recordAiDirectedCallEnd({
+    ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+    ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+    reason: request.reason,
+    ...(request.severity ? { severity: request.severity } : {}),
+    holdSecondsUsed: session.inactivity.holdSecondsUsed,
+    autoBlocked,
+  });
+}
+
+function requestAssistantFinalMessageBeforeHangup(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  session: ActiveVoiceSession,
+  input: EndCallRequest,
+): void {
+  if (session.finalized || session.terminalHangupInProgress) {
+    return;
+  }
+
+  session.pendingImplicitEndCall = input;
+  session.pendingImplicitEndCallSkipNextResponseDone = true;
+  session.pendingImplicitEndCallStaleResponseId = session.activeAssistantResponseId;
+  session.assistantResponseRequestedAtMs = Date.now();
+  session.assistantFirstOutputAtMs = null;
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      reason: input.reason,
+    },
+    "Requesting assistant final message before terminal hangup",
+  );
+  postRealtimeEvent(openAiSocket, {
+    type: "response.create",
+    response: {
+      instructions: [
+        `Say this exact final message: ${JSON.stringify(input.message)}.`,
+        "Then stop speaking. The call will end automatically after your audio finishes.",
+        "Do not call any tools and do not add anything else.",
+      ].join(" "),
+      tool_choice: "none",
+    },
+  });
+}
+
 function cancelAssistantAudio(
   server: FastifyInstance,
   openAiSocket: WebSocket,
@@ -1076,6 +1394,7 @@ function cancelAssistantAudio(
 
   if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
     clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
+    clearPendingImplicitHangupPlaybackWait(server, session, "assistant_audio_cleared");
     twilioSocket.send(
       JSON.stringify({
         event: "clear",
@@ -1092,6 +1411,8 @@ function cancelAssistantAudio(
       audio_end_ms: interruptedPlayback.audioEndMs,
     });
   }
+
+  runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
 }
 
 async function performTransfer(
@@ -1224,6 +1545,7 @@ async function finalizeCall(
   if (session.finalized) {
     return;
   }
+  await applyPendingImplicitEndCallBeforeFinalize(server, session);
   session.finalized = true;
   clearInactivityTimer(session);
   if (session.activeCallCounted) {
@@ -1417,13 +1739,14 @@ async function recoverFromProviderFailure(
       },
       error instanceof Error ? error.message : "Provider recovery failed",
     );
-    capturePostHogException(error, {
+    captureProviderFailureException({
+      provider: "twilio",
+      error,
       ...(session.businessId ? { businessId: session.businessId } : {}),
       properties: {
         operation: "provider_failure_recovery",
         disposition: input.disposition,
         channel: "voice",
-        provider: "twilio",
         ...(session.callSid ? { callSid: session.callSid } : {}),
         ...(session.streamSid ? { streamSid: session.streamSid } : {}),
         ...(session.callId ? { callId: session.callId } : {}),
@@ -1502,6 +1825,207 @@ function queueTranscriptWriteIfNew(
   queueTranscriptWrite(server, session, input);
 }
 
+const RECENT_CALLER_TRANSCRIPT_LIMIT = 6;
+
+const FINAL_HANGUP_PHRASES = [
+  "i am ending this call",
+  "i am ending the call",
+  "i'm ending this call",
+  "i'm ending the call",
+  "i will end this call now",
+  "i will end the call now",
+  "i'll end this call now",
+  "i'll end the call now",
+  "i'll be ending this call now",
+  "i'll be ending the call now",
+  "i have to end this call now",
+  "i have to end the call now",
+  "i need to end this call now",
+  "i need to end the call now",
+  "this call is ending now",
+  "i am hanging up now",
+  "i'm hanging up now",
+  "i will hang up now",
+  "i'll hang up now",
+  "je mets fin a cet appel",
+  "je mets fin a l'appel",
+  "je met fin a cet appel",
+  "je met fin a l'appel",
+  "je vais mettre fin a cet appel maintenant",
+  "je vais mettre fin a l'appel maintenant",
+  "je vais raccrocher maintenant",
+  "je raccroche maintenant",
+];
+
+const ABUSE_CALLER_HINTS = [
+  "asshole",
+  "bitch",
+  "cave",
+  "connard",
+  "criss",
+  "fuck",
+  "gros cave",
+  "hostie",
+  "idiot",
+  "mental retard",
+  "osti",
+  "retard",
+  "shit",
+  "stupid",
+  "tabarnak",
+  "tabarnaque",
+  "va donc chier",
+  "attarde",
+];
+
+const SPAM_CALLER_HINTS = [
+  "extended warranty",
+  "limited time offer",
+  "marketing agency",
+  "robocall",
+  "sales pitch",
+  "scam",
+  "solicitation",
+  "special offer",
+  "telemarketing",
+];
+
+function normalizeVoicePolicyText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function containsAnyPhrase(value: string, phrases: Array<string>): boolean {
+  return phrases.some((phrase) => value.includes(phrase));
+}
+
+function rememberRecentCallerTranscript(
+  session: ActiveVoiceSession,
+  transcript: string | undefined,
+): void {
+  const normalizedTranscript = transcript?.trim();
+  if (!normalizedTranscript) {
+    return;
+  }
+
+  session.recentCallerTranscripts.push(normalizedTranscript);
+  if (session.recentCallerTranscripts.length > RECENT_CALLER_TRANSCRIPT_LIMIT) {
+    session.recentCallerTranscripts.splice(
+      0,
+      session.recentCallerTranscripts.length - RECENT_CALLER_TRANSCRIPT_LIMIT,
+    );
+  }
+}
+
+export function getImplicitEndCallForAssistantTranscript(input: {
+  assistantText: string | undefined;
+  recentCallerTexts: Array<string>;
+}): EndCallRequest | null {
+  const assistantText = input.assistantText?.trim();
+  if (!assistantText) {
+    return null;
+  }
+
+  const normalizedAssistantText = normalizeVoicePolicyText(assistantText);
+  if (!containsAnyPhrase(normalizedAssistantText, FINAL_HANGUP_PHRASES)) {
+    return null;
+  }
+
+  const normalizedCallerText = normalizeVoicePolicyText(
+    input.recentCallerTexts.join(" "),
+  );
+  const message =
+    assistantText.length > 240 ? `${assistantText.slice(0, 237)}...` : assistantText;
+
+  if (containsAnyPhrase(normalizedCallerText, ABUSE_CALLER_HINTS)) {
+    return {
+      reason: "abuse",
+      severity: "severe",
+      message,
+    };
+  }
+
+  if (containsAnyPhrase(normalizedCallerText, SPAM_CALLER_HINTS)) {
+    return {
+      reason: "spam",
+      message,
+    };
+  }
+
+  return {
+    reason: "caller_finished",
+    message,
+  };
+}
+
+export function shouldSkipImplicitEndCallResponseDone(input: {
+  pendingImplicitEndCall: EndCallRequest | null;
+  skipNextResponseDone: boolean;
+  staleResponseId: string | null;
+  responseId: string | null;
+}): boolean {
+  if (!input.pendingImplicitEndCall || !input.skipNextResponseDone) {
+    return false;
+  }
+
+  if (input.staleResponseId) {
+    return !input.responseId || input.responseId === input.staleResponseId;
+  }
+
+  return true;
+}
+
+export function shouldSkipImplicitEndCallAudioDone(input: {
+  pendingImplicitEndCall: EndCallRequest | null;
+  staleResponseId: string | null;
+  responseId: string | null;
+}): boolean {
+  return Boolean(
+    input.pendingImplicitEndCall &&
+      input.staleResponseId &&
+      (!input.responseId || input.responseId === input.staleResponseId),
+  );
+}
+
+function queueImplicitEndCallFromAssistantTranscript(
+  server: FastifyInstance,
+  session: ActiveVoiceSession,
+  transcript: string | undefined,
+): void {
+  if (
+    session.pendingImplicitEndCall ||
+    session.finalized ||
+    session.terminalHangupInProgress
+  ) {
+    return;
+  }
+
+  const endCall = getImplicitEndCallForAssistantTranscript({
+    assistantText: transcript,
+    recentCallerTexts: session.recentCallerTranscripts,
+  });
+  if (!endCall) {
+    return;
+  }
+
+  session.pendingImplicitEndCall = endCall;
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      reason: endCall.reason,
+      severity: endCall.severity,
+    },
+    "Queued implicit terminal hangup from assistant transcript",
+  );
+}
+
 async function configureOpenAiSession(
   openAiSocket: WebSocket,
   session: ActiveVoiceSession,
@@ -1531,9 +2055,13 @@ async function configureOpenAiSession(
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
         "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
-        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, or when directed by silence-timeout handling.",
+        "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",
         "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
         "For borderline abusive, manipulative, or exploitative behavior, give one brief boundary warning. For severe abuse, threats, harassment, repeated policy bypass attempts, or obvious attempts to waste system time, end the call.",
+        "For uncertain or off-topic callers, redirect once toward the business purpose before deciding they are spam.",
+        "Use endCall with reason spam only for clear robocalls, scam or phishing attempts, irrelevant sales pitches, repeated non-business solicitation after one redirect, or obvious scripted attempts to waste system time. Say a brief neutral goodbye before hanging up.",
+        "When a caller continues a sales pitch or irrelevant solicitation after you redirect them once, do not keep negotiating, answering follow-up sales objections, or ask if they have business-related questions again. Call endCall with reason spam and a short neutral message.",
+        "If you say or imply that you are ending the call for spam, solicitation, abuse, caller finished, or silence timeout, you must actually call endCall in that same response. Never merely say goodbye, take care, or I will end the call and then wait for the caller.",
         "Do not make up availability, hours, or business policy.",
         ...(businessNowLabel
           ? [
@@ -1736,12 +2264,23 @@ async function handleToolCall(
     });
 
     if (result.endCall) {
+      if (shouldUseAssistantFinalMessageForToolEndCall(result.endCall)) {
+        requestAssistantFinalMessageBeforeHangup(
+          server,
+          openAiSocket,
+          session,
+          result.endCall,
+        );
+        return;
+      }
+
       await initiateTerminalHangup(
         server,
         openAiSocket,
         twilioSocket,
         session,
         result.endCall,
+        { finalMessagePlayback: "silent" },
       );
       return;
     }
@@ -1808,6 +2347,23 @@ async function handleToolCall(
   }
 }
 
+function getProviderClassificationAttributes(
+  classification: ProviderErrorClassification,
+): Record<string, string | number> {
+  return {
+    providerErrorKind: classification.kind,
+    ...(classification.providerErrorCode
+      ? { providerErrorCode: classification.providerErrorCode }
+      : {}),
+    ...(classification.providerErrorMessage
+      ? { providerErrorMessage: classification.providerErrorMessage }
+      : {}),
+    ...(classification.providerErrorStatus !== undefined
+      ? { providerErrorStatus: classification.providerErrorStatus }
+      : {}),
+  };
+}
+
 function handleOpenAiMessage(
   server: FastifyInstance,
   openAiSocket: WebSocket,
@@ -1815,15 +2371,15 @@ function handleOpenAiMessage(
   session: ActiveVoiceSession,
   rawMessage: WebSocket.RawData,
 ): void {
-  const queuePendingPlaybackMark = (): boolean => {
+  const queuePendingPlaybackMark = (): string | null => {
     if (!session.streamSid || twilioSocket.readyState !== WebSocket.OPEN) {
-      return false;
+      return null;
     }
 
     const markName = `audio-response-${crypto.randomUUID()}`;
     const queued = queuePendingOutboundPlaybackGroup(session, markName);
     if (!queued) {
-      return false;
+      return null;
     }
 
     twilioSocket.send(
@@ -1835,7 +2391,63 @@ function handleOpenAiMessage(
         },
       }),
     );
-    return true;
+    return markName;
+  };
+
+  const completeImplicitEndCallAfterPlayback = (
+    queuedMarkName: string | null,
+    source: "audio_done" | "response_done",
+    responseId: string | null,
+  ): void => {
+    if (
+      !session.pendingImplicitEndCall ||
+      session.pendingImplicitHangupMarkName ||
+      session.finalized ||
+      session.terminalHangupInProgress
+    ) {
+      return;
+    }
+
+    if (
+      source === "response_done" &&
+      shouldSkipImplicitEndCallResponseDone({
+        pendingImplicitEndCall: session.pendingImplicitEndCall,
+        skipNextResponseDone: session.pendingImplicitEndCallSkipNextResponseDone,
+        staleResponseId: session.pendingImplicitEndCallStaleResponseId,
+        responseId,
+      })
+    ) {
+      session.pendingImplicitEndCallSkipNextResponseDone = false;
+      session.pendingImplicitEndCallStaleResponseId = null;
+      return;
+    }
+
+    session.pendingImplicitEndCallSkipNextResponseDone = false;
+    session.pendingImplicitEndCallStaleResponseId = null;
+
+    const markName =
+      queuedMarkName ??
+      session.pendingOutboundPlaybackGroups[
+        session.pendingOutboundPlaybackGroups.length - 1
+      ]?.markName ??
+      null;
+
+    if (markName) {
+      session.pendingImplicitHangupMarkName = markName;
+      server.log.info(
+        {
+          callId: session.callId,
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          markName,
+          reason: session.pendingImplicitEndCall.reason,
+        },
+        "Waiting for assistant playback before implicit terminal hangup",
+      );
+      return;
+    }
+
+    runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
   };
 
   const payload = JSON.parse(rawMessage.toString()) as OpenAiRealtimeMessage;
@@ -1970,6 +2582,7 @@ function handleOpenAiMessage(
       }
 
       resetInactivityForCallerActivity(openAiSocket, session);
+      rememberRecentCallerTranscript(session, payload.transcript);
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -1983,7 +2596,21 @@ function handleOpenAiMessage(
     }
     case "response.audio.done":
     case "response.output_audio.done": {
-      queuePendingPlaybackMark();
+      const markName = queuePendingPlaybackMark();
+      if (
+        shouldSkipImplicitEndCallAudioDone({
+          pendingImplicitEndCall: session.pendingImplicitEndCall,
+          staleResponseId: session.pendingImplicitEndCallStaleResponseId,
+          responseId: payload.response_id ?? null,
+        })
+      ) {
+        return;
+      }
+      completeImplicitEndCallAfterPlayback(
+        markName,
+        "audio_done",
+        payload.response_id ?? null,
+      );
       return;
     }
     case "response.output_audio_transcript.delta":
@@ -2000,6 +2627,7 @@ function handleOpenAiMessage(
     }
     case "response.audio_transcript.done":
     case "response.output_audio_transcript.done": {
+      queueImplicitEndCallFromAssistantTranscript(server, session, payload.transcript);
       queueTranscriptWriteIfNew(
         server,
         session,
@@ -2126,7 +2754,18 @@ function handleOpenAiMessage(
         payload.response.id === session.activeAssistantResponseId &&
         session.pendingOutboundAudio.length > 0
       ) {
-        queuePendingPlaybackMark();
+        const markName = queuePendingPlaybackMark();
+        completeImplicitEndCallAfterPlayback(
+          markName,
+          "response_done",
+          payload.response.id,
+        );
+      } else {
+        completeImplicitEndCallAfterPlayback(
+          null,
+          "response_done",
+          payload.response?.id ?? null,
+        );
       }
 
       if (
@@ -2157,6 +2796,19 @@ function handleOpenAiMessage(
     }
     case "response.function_call_arguments.done": {
       if (payload.name && payload.call_id && payload.arguments) {
+        if (!markRealtimeToolCallHandled(session, payload.call_id)) {
+          server.log.debug(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              toolName: payload.name,
+              toolCallId: payload.call_id,
+              realtimeEventType: payload.type,
+            },
+            "Ignoring duplicate OpenAI Realtime tool call event",
+          );
+          return;
+        }
         const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.name,
           callId: payload.call_id,
@@ -2173,6 +2825,19 @@ function handleOpenAiMessage(
         payload.item.call_id &&
         payload.item.arguments
       ) {
+        if (!markRealtimeToolCallHandled(session, payload.item.call_id)) {
+          server.log.debug(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              toolName: payload.item.name,
+              toolCallId: payload.item.call_id,
+              realtimeEventType: payload.type,
+            },
+            "Ignoring duplicate OpenAI Realtime tool call event",
+          );
+          return;
+        }
         const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.item.name,
           callId: payload.item.call_id,
@@ -2180,6 +2845,56 @@ function handleOpenAiMessage(
         });
         trackTask(session, task);
       }
+      return;
+    }
+    case "error": {
+      const runtimeConfig = loadVoiceGatewayEnv(process.env);
+      const providerError = payload.error ?? payload;
+      const classification = captureProviderFailureException({
+        provider: "openai",
+        error: providerError,
+        ...(payload.error?.code ? { code: payload.error.code } : {}),
+        ...(payload.error?.message ? { message: payload.error.message } : {}),
+        ...(session.businessId ? { businessId: session.businessId } : {}),
+        properties: {
+          operation: "openai_realtime_server_error",
+          channel: "voice",
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(session.callSid ? { callSid: session.callSid } : {}),
+          ...(session.streamSid ? { streamSid: session.streamSid } : {}),
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+          ...(payload.event_id ? { providerEventId: payload.event_id } : {}),
+        },
+      });
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        "lobbystack.provider": "openai",
+        "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+        ...getProviderClassificationAttributes(classification),
+      });
+      const shouldRecover = shouldRecoverFromOpenAiRealtimeServerError({
+        classification,
+        ...(payload.error ? { error: payload.error } : {}),
+      });
+      server.log[shouldRecover ? "error" : "warn"](
+        {
+          callSid: session.callSid,
+          streamSid: session.streamSid,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
+          providerErrorStatus: classification.providerErrorStatus,
+        },
+        buildSafeProviderFailureMessage(classification),
+      );
+      if (!shouldRecover) {
+        return;
+      }
+      const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
+        disposition: "openai_realtime_error",
+      });
+      trackTask(session, recoveryTask);
       return;
     }
     default: {
@@ -2234,6 +2949,24 @@ export async function handleMediaStreamConnection(
           session.pendingTransferMarkName = null;
           const transferTask = performTransfer(server, session);
           trackTask(session, transferTask);
+          return;
+        }
+        if (
+          payload.mark?.name &&
+          session.pendingImplicitHangupMarkName &&
+          payload.mark.name === session.pendingImplicitHangupMarkName
+        ) {
+          server.log.info(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              markName: payload.mark.name,
+              reason: session.pendingImplicitEndCall?.reason,
+            },
+            "Twilio confirmed assistant playback before implicit terminal hangup",
+          );
+          acknowledgeOutboundPlaybackMark(session, payload.mark.name);
+          runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
           return;
         }
         if (payload.mark?.name) {
@@ -2317,12 +3050,18 @@ export async function handleMediaStreamConnection(
     openAiReady: false,
     pendingTransferDestination: null,
     pendingTransferMarkName: null,
+    pendingImplicitEndCall: null,
+    pendingImplicitHangupMarkName: null,
+    pendingImplicitEndCallSkipNextResponseDone: false,
+    pendingImplicitEndCallStaleResponseId: null,
     transferExecuted: false,
     providerRecoveryStarted: false,
     finalized: false,
     finalDispositionOverride: null,
     transcriptSequence: 1,
     seenTranscriptKeys: new Set(),
+    handledToolCallIds: new Set(),
+    recentCallerTranscripts: [],
     inboundAudio: [],
     outboundAudio: [],
     outboundCursorMs: 0,
@@ -2423,6 +3162,41 @@ export async function handleMediaStreamConnection(
       session.activeCallCounted = true;
     }
 
+    const captureOpenAiRealtimeConnectionFailure = (input: {
+      error?: unknown;
+      operation: string;
+      code?: string;
+      message?: string;
+      status?: number;
+    }): ProviderErrorClassification => {
+      const classification = captureProviderFailureException({
+        provider: "openai",
+        error: input.error,
+        ...(input.code ? { code: input.code } : {}),
+        ...(input.message ? { message: input.message } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(session.businessId ? { businessId: session.businessId } : {}),
+        properties: {
+          operation: input.operation,
+          channel: "voice",
+          model: runtimeConfig.OPENAI_REALTIME_MODEL,
+          ...(session.callSid ? { callSid: session.callSid } : {}),
+          ...(session.streamSid ? { streamSid: session.streamSid } : {}),
+          ...(session.callId ? { callId: session.callId } : {}),
+          ...(session.conversationId ? { conversationId: session.conversationId } : {}),
+        },
+      });
+      recordOpenAiRealtimeError({
+        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
+        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        "lobbystack.provider": "openai",
+        "lobbystack.model": runtimeConfig.OPENAI_REALTIME_MODEL,
+        operation: input.operation,
+        ...getProviderClassificationAttributes(classification),
+      });
+      return classification;
+    };
+
     openAiSocket = new WebSocket(
       `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(runtimeConfig.OPENAI_REALTIME_MODEL)}`,
       {
@@ -2451,9 +3225,9 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("error", (error: Error) => {
-      recordOpenAiRealtimeError({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      const classification = captureOpenAiRealtimeConnectionFailure({
+        error,
+        operation: "openai_realtime_socket_error",
       });
       server.log.error(
         {
@@ -2461,6 +3235,8 @@ export async function handleMediaStreamConnection(
           streamSid: session.streamSid,
           message: error.message,
           stack: error.stack,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
         },
         "OpenAI Realtime websocket error",
       );
@@ -2471,9 +3247,14 @@ export async function handleMediaStreamConnection(
     });
 
     openAiSocket.on("unexpected-response", (_request, response) => {
-      recordOpenAiRealtimeError({
-        ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-        ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+      const classification = captureOpenAiRealtimeConnectionFailure({
+        error: {
+          status: response.statusCode,
+          message: response.statusMessage,
+        },
+        operation: "openai_realtime_handshake_failed",
+        ...(response.statusCode !== undefined ? { status: response.statusCode } : {}),
+        ...(response.statusMessage ? { message: response.statusMessage } : {}),
       });
       server.log.error(
         {
@@ -2482,6 +3263,8 @@ export async function handleMediaStreamConnection(
           statusCode: response.statusCode,
           statusMessage: response.statusMessage,
           headers: response.headers,
+          providerErrorKind: classification.kind,
+          providerErrorCode: classification.providerErrorCode,
         },
         "OpenAI Realtime websocket handshake failed",
       );
@@ -2502,9 +3285,14 @@ export async function handleMediaStreamConnection(
         "OpenAI Realtime websocket closed",
       );
       if (!session.finalized && !session.terminalHangupInProgress) {
-        recordOpenAiRealtimeError({
-          ...(session.businessId ? { "lobbystack.business_id": session.businessId } : {}),
-          ...(session.callId ? { "lobbystack.call_id": session.callId } : {}),
+        captureOpenAiRealtimeConnectionFailure({
+          error: {
+            code: `websocket_close_${code}`,
+            message: reason.toString() || "OpenAI Realtime websocket closed.",
+          },
+          operation: "openai_realtime_socket_closed",
+          code: `websocket_close_${code}`,
+          message: reason.toString() || "OpenAI Realtime websocket closed.",
         });
         const recoveryTask = recoverFromProviderFailure(server, twilioSocket, session, {
           disposition: "openai_socket_closed",

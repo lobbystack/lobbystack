@@ -1,6 +1,6 @@
 # Copy this file to fly.toml or pass it explicitly with `fly deploy -c fly.voice-gateway.toml`.
 # Update `app` to a globally unique Fly app name before the first deploy.
-app = "lobbystack-voice-dev-raphael"
+app = "ai-receptionist-voice-dev-raphael"
 primary_region = "iad"
 
 [build]

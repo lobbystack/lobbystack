@@ -71,7 +71,10 @@ import {
   type SmsComplianceStatus,
   type SmsSenderMode,
 } from "./lib/smsCompliance";
-import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
+import {
+  enqueuePostHogEventBestEffort,
+  enqueuePostHogProviderExceptionBestEffort,
+} from "./telemetry/posthog";
 
 type BillingContact = {
   email: string | null;
@@ -150,6 +153,8 @@ type SmsCapabilityPolicy = {
 type UsageSyncTelemetryEventName =
   | "ops.billing.usage_sync_failed"
   | "ops.billing.usage_sync_recovered";
+
+const MIN_BILLABLE_VOICE_DURATION_SECONDS = 10;
 
 const USAGE_SYNC_RETRY_DELAYS_MS = [
   30_000,
@@ -258,6 +263,13 @@ function getUsageQuantityField(
     case "ai_sms_segments":
       return "aiSmsSegmentsUsed";
   }
+}
+
+function getBillableVoiceUsageSeconds(durationSeconds: number): number {
+  const normalizedDurationSeconds = Math.max(0, durationSeconds);
+  return normalizedDurationSeconds < MIN_BILLABLE_VOICE_DURATION_SECONDS
+    ? 0
+    : normalizedDurationSeconds;
 }
 
 async function findBillingContactForRole(
@@ -1633,6 +1645,22 @@ export const syncUsageEventToPolar = internalAction({
         ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
         errorType: error instanceof Error ? error.name : "UnknownError",
       });
+      await enqueuePostHogProviderExceptionBestEffort(ctx, {
+        provider: "polar",
+        error,
+        operation: "polar_usage_event_ingest",
+        businessId: payload.businessId,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(payload.businessId)),
+        groupKey: getPostHogBusinessGroupKey(String(payload.businessId)),
+        properties: {
+          usageKind: payload.usageKind,
+          quantity: payload.quantity,
+          sourceKey: payload.sourceKey,
+          attemptNumber: attempt + 1,
+          retryScheduled: scheduledRetry,
+          ...(retryDelayMs !== undefined ? { retryDelayMs } : {}),
+        },
+      });
 
       return { synced: false, scheduledRetry, error: errorMessage };
     }
@@ -1661,7 +1689,7 @@ export const recordVoiceUsage = internalMutation({
     return await upsertUsageEventInTx(ctx, {
       businessId: args.businessId,
       usageKind: "voice_seconds",
-      quantity: args.quantity,
+      quantity: getBillableVoiceUsageSeconds(args.quantity),
       sourceKey: `voice:${String(args.callId)}`,
       recordedAt: args.recordedAt,
     });

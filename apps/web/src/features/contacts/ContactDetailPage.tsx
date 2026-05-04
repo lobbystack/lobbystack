@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -23,12 +24,6 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -294,21 +289,23 @@ function getLocaleDisplayName(
 // ---------------------------------------------------------------------------
 
 function StatCard({
+  className,
   label,
   value,
 }: {
+  className?: string;
   label: string;
   value: number;
 }) {
   return (
-    <Surface className="flex items-center px-4 py-3">
+    <div className={cn("flex items-center px-4 py-3", className)}>
       <div className="flex flex-col">
         <span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">
           {value}
         </span>
         <span className="type-meta">{label}</span>
       </div>
-    </Surface>
+    </div>
   );
 }
 
@@ -552,6 +549,23 @@ function AppointmentsTab({
   );
 }
 
+function DetailSection({
+  children,
+  className,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title: string;
+}) {
+  return (
+    <section className={cn("flex flex-col gap-4 px-4 py-4", className)}>
+      <h3 className="font-heading text-base font-medium">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function DetailsTab({
   data,
   locale,
@@ -574,13 +588,9 @@ function DetailsTab({
   const isCopied = (field: string) => copiedField === field;
 
   return (
-    <div className="flex flex-col gap-6 py-4">
-      {/* Contact information */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.contactInfoTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="py-4">
+      <Surface className="flex flex-col">
+        <DetailSection title={t("detail.details.contactInfoTitle")}>
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.name")}
@@ -613,14 +623,12 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.blockingTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.blockingTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.blockingStatus")}
@@ -650,15 +658,12 @@ function DetailsTab({
             </dt>
             <dd className="type-body">{contact.blockedByName ?? t("detail.details.notSet")}</dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      {/* SMS consent */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.smsConsentTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.smsConsentTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.smsConsentStatus")}
@@ -690,15 +695,12 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      {/* System info */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.systemTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.systemTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.contactId")}
@@ -736,8 +738,8 @@ function DetailsTab({
               })}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
+      </Surface>
     </div>
   );
 }
@@ -995,18 +997,24 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
       <Separator />
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <Surface className="grid grid-cols-2 sm:grid-cols-4">
         <StatCard label={t("detail.stats.calls")} value={counts.calls} />
-        <StatCard label={t("detail.stats.messages")} value={counts.messages} />
         <StatCard
+          className="border-l border-border"
+          label={t("detail.stats.messages")}
+          value={counts.messages}
+        />
+        <StatCard
+          className="border-t border-border sm:border-l sm:border-t-0"
           label={t("detail.stats.appointments")}
           value={counts.appointments}
         />
         <StatCard
+          className="border-l border-t border-border sm:border-t-0"
           label={t("detail.stats.conversations")}
           value={counts.conversations}
         />
-      </div>
+      </Surface>
 
       {/* Tabbed content */}
       <Tabs defaultValue="activity">

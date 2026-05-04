@@ -6,12 +6,16 @@ import {
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
+  buildProviderErrorTelemetryProperties,
+  classifyProviderError,
   createTelemetryFacade,
   getTelemetryRequiredProperties,
+  getProviderErrorExceptionType,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
   redactAiTraceProperties,
+  redactTelemetryProperties,
   redactOtelAttributes,
   validateTelemetryEvent,
 } from "./index";
@@ -96,6 +100,98 @@ describe("telemetry redaction", () => {
 
     expect(properties.workflowName).toBe("appointmentCalendarSyncWorkflow");
     expect(properties.customerName).toBe("[redacted]");
+  });
+
+  it("classifies OpenAI insufficient_quota as quota exhausted", () => {
+    const classified = classifyProviderError({
+      provider: "openai",
+      error: {
+        error: {
+          code: "insufficient_quota",
+          message: "You exceeded your current quota.",
+        },
+        status: 429,
+      },
+    });
+
+    expect(classified).toMatchObject({
+      provider: "openai",
+      kind: "quota_exhausted",
+      providerErrorCode: "insufficient_quota",
+      providerErrorStatus: 429,
+    });
+    expect(getProviderErrorExceptionType(classified.kind)).toBe(
+      "ProviderQuotaExhaustedError",
+    );
+  });
+
+  it("classifies HTTP 401 and 403 as auth failures", () => {
+    expect(
+      classifyProviderError({ provider: "twilio", error: { status: 401 } }).kind,
+    ).toBe("auth_failed");
+    expect(
+      classifyProviderError({
+        provider: "google",
+        error: { response: { status: 403 } },
+      }).kind,
+    ).toBe("auth_failed");
+  });
+
+  it("classifies HTTP 429 as rate limited when it is not quota exhaustion", () => {
+    expect(
+      classifyProviderError({
+        provider: "google",
+        error: { status: 429, message: "Rate limit reached." },
+      }).kind,
+    ).toBe("rate_limited");
+  });
+
+  it("classifies 5xx and network failures as provider unavailable", () => {
+    expect(
+      classifyProviderError({ provider: "polar", error: { statusCode: 503 } }).kind,
+    ).toBe("provider_unavailable");
+    expect(
+      classifyProviderError({ provider: "firecrawl", error: new Error("fetch failed") })
+        .kind,
+    ).toBe("provider_unavailable");
+  });
+
+  it("classifies unknown error shapes as unknown", () => {
+    expect(classifyProviderError({ error: { surprise: true } })).toMatchObject({
+      provider: "unknown",
+      kind: "unknown",
+    });
+  });
+
+  it("builds provider exception metadata and redacts raw provider messages", () => {
+    const properties = buildProviderErrorTelemetryProperties({
+      provider: "twilio",
+      kind: "invalid_request",
+      providerErrorCode: "21211",
+      providerErrorMessage:
+        "The 'To' number +14165550123 is not a valid phone number.",
+      providerErrorStatus: 429,
+    });
+
+    expect(properties).toMatchObject({
+      provider: "twilio",
+      providerErrorKind: "invalid_request",
+      providerErrorCode: "21211",
+      providerErrorMessage:
+        "The 'To' number +14165550123 is not a valid phone number.",
+      providerErrorStatus: 429,
+      $exception_type: "ProviderInvalidRequestError",
+      $exception_message:
+        "The 'To' number +14165550123 is not a valid phone number.",
+    });
+    const redacted = redactTelemetryProperties(properties);
+    expect(redacted.provider).toBe("twilio");
+    expect(redacted.providerErrorKind).toBe("invalid_request");
+    expect(redacted.providerErrorCode).toBe("21211");
+    expect(redacted.providerErrorStatus).toBe(429);
+    expect(redacted.$exception_type).toBe("ProviderInvalidRequestError");
+    expect(redacted.providerErrorMessage).toBe("[redacted]");
+    expect(redacted.$exception_message).toBe("[redacted]");
   });
 
   it("builds metadata-only AI generation properties without message content", () => {

@@ -191,7 +191,7 @@ const transferCallSchema = z.object({
 });
 
 const endCallSchema = z.object({
-  reason: z.enum(["caller_finished", "abuse", "silence_timeout"]),
+  reason: z.enum(["caller_finished", "abuse", "silence_timeout", "spam"]),
   message: z.string().min(1).max(500),
   severity: z.enum(["borderline", "severe"]).optional(),
 });

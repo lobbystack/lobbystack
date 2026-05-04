@@ -1,5 +1,18 @@
 import { loadVoiceGatewayEnv } from "@lobbystack/config";
 
+export class TwilioLiveCallUpdateError extends Error {
+  public readonly status: number;
+
+  public readonly statusText: string;
+
+  constructor(input: { status: number; statusText: string; body: string }) {
+    super(input.body || `Twilio live call update failed with status ${input.status}.`);
+    this.name = "TwilioLiveCallUpdateError";
+    this.status = input.status;
+    this.statusText = input.statusText;
+  }
+}
+
 function escapeXml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -63,7 +76,11 @@ async function updateLiveCallTwiml(input: {
   );
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw new TwilioLiveCallUpdateError({
+      status: response.status,
+      statusText: response.statusText,
+      body: await response.text(),
+    });
   }
 }
 
@@ -91,6 +108,17 @@ export async function endLiveCallWithMessage(input: {
     callSid: input.callSid,
     twiml: buildLiveCallUpdateTwiml({
       sayMessage: input.sayMessage,
+      hangup: true,
+    }),
+  });
+}
+
+export async function endLiveCallSilently(input: {
+  callSid: string;
+}): Promise<void> {
+  await updateLiveCallTwiml({
+    callSid: input.callSid,
+    twiml: buildLiveCallUpdateTwiml({
       hangup: true,
     }),
   });

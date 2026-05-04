@@ -13,10 +13,15 @@ import {
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
+  buildProviderErrorTelemetryProperties,
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
+  getProviderErrorExceptionType,
   redactAiTraceProperties,
   redactTelemetryProperties,
+  classifyProviderError,
+  type ExternalProvider,
+  type ProviderErrorClassification,
   type TelemetryProperties,
 } from "@lobbystack/telemetry";
 
@@ -540,6 +545,56 @@ export function capturePostHogException(
         : undefined),
     additionalProperties,
   );
+}
+
+function getSafeProviderErrorCode(code: string | undefined): string | undefined {
+  const normalized = code?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  return /^[a-z0-9_.:-]{1,80}$/i.test(normalized) ? normalized : undefined;
+}
+
+export function buildSafeProviderFailureMessage(
+  classification: ProviderErrorClassification,
+): string {
+  const safeCode = getSafeProviderErrorCode(classification.providerErrorCode);
+  return `${classification.provider} provider failure (${classification.kind}${
+    safeCode ? `: ${safeCode}` : ""
+  })`;
+}
+
+export function captureProviderFailureException(input: {
+  provider: ExternalProvider;
+  error?: unknown;
+  code?: string;
+  message?: string;
+  status?: number;
+  businessId?: string;
+  distinctId?: string;
+  properties?: TelemetryProperties;
+}): ProviderErrorClassification {
+  const classification = classifyProviderError({
+    provider: input.provider,
+    error: input.error,
+    ...(input.code ? { code: input.code } : {}),
+    ...(input.message ? { message: input.message } : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+  });
+  const exception = new Error(buildSafeProviderFailureMessage(classification));
+  exception.name = getProviderErrorExceptionType(classification.kind);
+
+  capturePostHogException(exception, {
+    ...(input.businessId ? { businessId: input.businessId } : {}),
+    ...(input.distinctId ? { distinctId: input.distinctId } : {}),
+    properties: {
+      ...buildProviderErrorTelemetryProperties(classification),
+      ...input.properties,
+    },
+  });
+
+  return classification;
 }
 
 export function recordTwilioInvalidSignature(

@@ -12,6 +12,7 @@ import {
 import type { Id } from "../../_generated/dataModel";
 import type { ActionCtx, MutationCtx } from "../../_generated/server";
 import { captureAiGenerationBestEffort as enqueueAiGenerationBestEffort } from "../../telemetry/ai";
+import { enqueuePostHogProviderExceptionBestEffort } from "../../telemetry/posthog";
 
 export const NON_REALTIME_TEXT_PROVIDER = "google";
 export const DEFAULT_NON_REALTIME_TEXT_MODEL_ID =
@@ -340,6 +341,36 @@ function createTelemetryMiddleware(): LanguageModelMiddleware {
             isError: true,
             error: error instanceof Error ? error.message : "LLM generation failed",
           });
+          if (telemetryContext.mutationRunner) {
+            await enqueuePostHogProviderExceptionBestEffort(
+              telemetryContext.mutationRunner,
+              {
+                provider: NON_REALTIME_TEXT_PROVIDER,
+                error,
+                operation: "non_realtime_text_generation",
+                distinctId:
+                  telemetryContext.distinctId ??
+                  (telemetryContext.businessId
+                    ? `system:business:${telemetryContext.businessId}`
+                    : CONVEX_AI_DISTINCT_ID),
+                ...(telemetryContext.businessId
+                  ? { businessId: telemetryContext.businessId }
+                  : {}),
+                ...(telemetryContext.groupKey
+                  ? { groupKey: telemetryContext.groupKey }
+                  : {}),
+                ...(telemetryContext.callId ? { callId: telemetryContext.callId } : {}),
+                ...(telemetryContext.conversationId
+                  ? { conversationId: telemetryContext.conversationId }
+                  : {}),
+                ...(telemetryContext.messageId
+                  ? { messageId: telemetryContext.messageId }
+                  : {}),
+                channel: "sms",
+                model: model.modelId,
+              },
+            );
+          }
         }
         throw error;
       }
