@@ -294,21 +294,23 @@ function getLocaleDisplayName(
 // ---------------------------------------------------------------------------
 
 function StatCard({
+  className,
   label,
   value,
 }: {
+  className?: string;
   label: string;
   value: number;
 }) {
   return (
-    <Surface className="flex items-center px-4 py-3">
+    <div className={cn("flex items-center px-4 py-3", className)}>
       <div className="flex flex-col">
         <span className="font-heading text-lg leading-none font-semibold tracking-tight text-foreground">
           {value}
         </span>
         <span className="type-meta">{label}</span>
       </div>
-    </Surface>
+    </div>
   );
 }
 
@@ -995,18 +997,24 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
       <Separator />
 
       {/* Stats bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <Surface className="grid grid-cols-2 sm:grid-cols-4">
         <StatCard label={t("detail.stats.calls")} value={counts.calls} />
-        <StatCard label={t("detail.stats.messages")} value={counts.messages} />
         <StatCard
+          className="border-l border-border"
+          label={t("detail.stats.messages")}
+          value={counts.messages}
+        />
+        <StatCard
+          className="border-t border-border sm:border-l sm:border-t-0"
           label={t("detail.stats.appointments")}
           value={counts.appointments}
         />
         <StatCard
+          className="border-l border-t border-border sm:border-t-0"
           label={t("detail.stats.conversations")}
           value={counts.conversations}
         />
-      </div>
+      </Surface>
 
       {/* Tabbed content */}
       <Tabs defaultValue="activity">
