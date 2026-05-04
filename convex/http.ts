@@ -821,7 +821,7 @@ http.route({
         : {}),
     });
 
-    return new Response("OK", { status: 200 });
+    return Response.json({ ok: true });
   }),
 });
 
