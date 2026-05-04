@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -23,12 +24,6 @@ import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { DetailPageSkeleton } from "@/components/loading-skeletons";
 import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -554,6 +549,23 @@ function AppointmentsTab({
   );
 }
 
+function DetailSection({
+  children,
+  className,
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title: string;
+}) {
+  return (
+    <section className={cn("flex flex-col gap-4 px-4 py-4", className)}>
+      <h3 className="font-heading text-base font-medium">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function DetailsTab({
   data,
   locale,
@@ -576,13 +588,9 @@ function DetailsTab({
   const isCopied = (field: string) => copiedField === field;
 
   return (
-    <div className="flex flex-col gap-6 py-4">
-      {/* Contact information */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.contactInfoTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="py-4">
+      <Surface className="flex flex-col">
+        <DetailSection title={t("detail.details.contactInfoTitle")}>
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.name")}
@@ -615,14 +623,12 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.blockingTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.blockingTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.blockingStatus")}
@@ -652,15 +658,12 @@ function DetailsTab({
             </dt>
             <dd className="type-body">{contact.blockedByName ?? t("detail.details.notSet")}</dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      {/* SMS consent */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.smsConsentTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.smsConsentTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.smsConsentStatus")}
@@ -692,15 +695,12 @@ function DetailsTab({
                 : t("detail.details.notSet")}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
 
-      {/* System info */}
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>{t("detail.details.systemTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <DetailSection
+          className="border-t border-border"
+          title={t("detail.details.systemTitle")}
+        >
           <dl className="grid items-baseline grid-cols-[auto_1fr] gap-x-6 gap-y-3">
             <dt className="type-meta">
               {t("detail.details.contactId")}
@@ -738,8 +738,8 @@ function DetailsTab({
               })}
             </dd>
           </dl>
-        </CardContent>
-      </Card>
+        </DetailSection>
+      </Surface>
     </div>
   );
 }
