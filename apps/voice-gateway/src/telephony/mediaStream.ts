@@ -179,6 +179,7 @@ type ActiveVoiceSession = {
   finalDispositionOverride: string | null;
   transcriptSequence: number;
   seenTranscriptKeys: Set<string>;
+  handledToolCallIds: Set<string>;
   recentCallerTranscripts: Array<string>;
   inboundAudio: Array<TimedAudioChunk>;
   outboundAudio: Array<TimedAudioChunk>;
@@ -568,6 +569,18 @@ export function getRealtimeGenerationOutcome(
     isError: true,
     error: status,
   };
+}
+
+export function markRealtimeToolCallHandled(
+  session: { handledToolCallIds: Set<string> },
+  callId: string,
+): boolean {
+  if (session.handledToolCallIds.has(callId)) {
+    return false;
+  }
+
+  session.handledToolCallIds.add(callId);
+  return true;
 }
 
 type MediaStreamRequestContext = {
@@ -2460,6 +2473,19 @@ function handleOpenAiMessage(
     }
     case "response.function_call_arguments.done": {
       if (payload.name && payload.call_id && payload.arguments) {
+        if (!markRealtimeToolCallHandled(session, payload.call_id)) {
+          server.log.debug(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              toolName: payload.name,
+              toolCallId: payload.call_id,
+              realtimeEventType: payload.type,
+            },
+            "Ignoring duplicate OpenAI Realtime tool call event",
+          );
+          return;
+        }
         const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.name,
           callId: payload.call_id,
@@ -2476,6 +2502,19 @@ function handleOpenAiMessage(
         payload.item.call_id &&
         payload.item.arguments
       ) {
+        if (!markRealtimeToolCallHandled(session, payload.item.call_id)) {
+          server.log.debug(
+            {
+              callSid: session.callSid,
+              streamSid: session.streamSid,
+              toolName: payload.item.name,
+              toolCallId: payload.item.call_id,
+              realtimeEventType: payload.type,
+            },
+            "Ignoring duplicate OpenAI Realtime tool call event",
+          );
+          return;
+        }
         const task = handleToolCall(server, openAiSocket, twilioSocket, session, {
           name: payload.item.name,
           callId: payload.item.call_id,
@@ -2689,6 +2728,7 @@ export async function handleMediaStreamConnection(
     finalDispositionOverride: null,
     transcriptSequence: 1,
     seenTranscriptKeys: new Set(),
+    handledToolCallIds: new Set(),
     recentCallerTranscripts: [],
     inboundAudio: [],
     outboundAudio: [],

@@ -15,6 +15,7 @@ import {
   estimateRealtimeTotalCostUsd,
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
+  markRealtimeToolCallHandled,
 } from "./mediaStream";
 
 describe("estimateRealtimeTotalCostUsd", () => {
@@ -189,6 +190,18 @@ describe("getRealtimeGenerationOutcome", () => {
       isError: true,
       error: "failed",
     });
+  });
+});
+
+describe("markRealtimeToolCallHandled", () => {
+  it("allows the first realtime tool event and suppresses duplicate call IDs", () => {
+    const session = {
+      handledToolCallIds: new Set<string>(),
+    };
+
+    expect(markRealtimeToolCallHandled(session, "call_123")).toBe(true);
+    expect(markRealtimeToolCallHandled(session, "call_123")).toBe(false);
+    expect(markRealtimeToolCallHandled(session, "call_456")).toBe(true);
   });
 });
 
