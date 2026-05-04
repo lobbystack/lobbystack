@@ -13,6 +13,7 @@ import {
 } from "../realtime/callControl";
 import {
   estimateRealtimeTotalCostUsd,
+  getFinalMessagePlaybackForEndCall,
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
   markRealtimeToolCallHandled,
@@ -283,6 +284,20 @@ describe("call inactivity control", () => {
 });
 
 describe("AI-directed call endings", () => {
+  it("plays final messages for normal terminal endings", () => {
+    expect(getFinalMessagePlaybackForEndCall({ reason: "caller_finished" })).toBe(
+      "twilio",
+    );
+    expect(getFinalMessagePlaybackForEndCall({ reason: "silence_timeout" })).toBe(
+      "twilio",
+    );
+  });
+
+  it("keeps policy hangups silent after the assistant has already warned the caller", () => {
+    expect(getFinalMessagePlaybackForEndCall({ reason: "spam" })).toBe("silent");
+    expect(getFinalMessagePlaybackForEndCall({ reason: "abuse" })).toBe("silent");
+  });
+
   it("maps spam endings to a durable spam disposition without auto-blocking", () => {
     expect(getDispositionForEndCall("spam")).toBe("spam_ended");
     expect(shouldSystemBlockForEndCall("spam")).toBe(false);

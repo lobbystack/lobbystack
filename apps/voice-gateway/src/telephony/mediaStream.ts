@@ -1007,6 +1007,16 @@ async function initiateTerminalHangup(
   }
 }
 
+export function getFinalMessagePlaybackForEndCall(
+  input: Pick<EndCallRequest, "reason">,
+): "twilio" | "silent" {
+  if (input.reason === "caller_finished" || input.reason === "silence_timeout") {
+    return "twilio";
+  }
+
+  return "silent";
+}
+
 function scheduleInactivityTimer(
   server: FastifyInstance,
   openAiSocket: WebSocket,
@@ -1999,7 +2009,7 @@ async function handleToolCall(
         twilioSocket,
         session,
         result.endCall,
-        { finalMessagePlayback: "silent" },
+        { finalMessagePlayback: getFinalMessagePlaybackForEndCall(result.endCall) },
       );
       return;
     }
