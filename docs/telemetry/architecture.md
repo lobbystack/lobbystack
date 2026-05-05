@@ -211,6 +211,10 @@ Explicit exception capture should remain limited to technical failures where sta
 
 Alertable exceptions use `alertable = true` and `expected = false`. Expected validation or business-rule outcomes should either stay as product/domain events or explicitly set `expected = true` when they must be captured for diagnostics.
 
+PostHog Error Tracking notifications are configured from Error Tracking -> Configuration -> Alerting. They are separate from the limited Product Analytics Alerts surface. Use Error Tracking notifications or internal destinations for new, reopened, and spiking exception issues; use Product Analytics Alerts only for signals that require trend or absence logic, such as a missing `ops.convex.heartbeat` window.
+
+The primary production notification destination is Discord. Creating the Discord Error Tracking notification requires a Discord webhook URL for the target incident channel, and PostHog then sends notifications automatically for the selected issue trigger.
+
 ## Environment variables
 
 ### Browser
@@ -254,3 +258,5 @@ This phase adds PostHog-first runtime assets:
 - `LobbyStack - Voice Gateway Operations`
 - `LobbyStack - AI Runtime`
 - `LobbyStack - Telemetry Delivery Health`
+
+Runtime dashboards are for triage and correlation. Production paging should come from Error Tracking notifications for alertable `$exception` issues, plus the smallest possible number of Product Analytics Alerts for missing heartbeat windows.

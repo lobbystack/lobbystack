@@ -176,26 +176,28 @@ Validate these runtime insights:
 - calendar sync failures
 - booking failures
 
-Validate these alert policies in PostHog:
+Validate these Error Tracking notifications in PostHog:
 
-- new or reopened Error Tracking issue where `deploymentMode = cloud`, `alertable = true`, and `expected = false`
-- trend alert on `$exception` where `deploymentMode = cloud`, `alertable = true`, and `expected = false`
-- any `ops.service.health_check_failed`
+- create an Error Tracking notification or internal destination for issue created events
+- create an Error Tracking notification or internal destination for issue reopened events
+- optionally create an Error Tracking notification or internal destination for issue spiking events
+- use the Discord destination for the primary "prod broke" channel
+- add email only where the active PostHog plan and destination type support it
+- filter or route to `deploymentMode = cloud`, `alertable = true`, and `expected = false` where the notification editor supports filtering
+- verify one alertable `$exception` from each critical surface reaches the notification destination:
+  - browser render/runtime crash
+  - rejected observed Convex action or mutation
+  - observed Convex action, mutation, or HTTP action failure
+  - voice-gateway request or fatal runtime failure
+  - service health check failure
+  - alertable provider exception for `provider = firecrawl`, `openai`, `twilio`, `polar`, or `google`
+
+PostHog Error Tracking notifications are separate from Product Analytics Alerts. Use Product Analytics Alerts only for signals that Error Tracking cannot infer from an exception issue, especially absence-based checks:
+
 - no `ops.convex.heartbeat` over a 10-minute window
-- no `ops.voice.heartbeat` for the interval
-- voice health check reports `service = voice-gateway` and `status != healthy`
-- spike in `ops.voice.openai_realtime_error`
-- spike in `ops.voice.turn_slow`
-- spike in `ops.voice.tool_failed`
-- drop in `voice.call_started`
-- spike in `appointment.booking_failed`
-- spike in `workflow.failed`
-- spike in `integration.calendar_sync_failed`
-- sustained `ops.convex.outbox_backlog_sample` with `backlogBucket = critical`
-- `ops.convex.outbox_flush_failed`
-- alertable provider exceptions for `provider = firecrawl`, `openai`, `twilio`, `polar`, and `google`
+- optionally no `ops.voice.heartbeat` for the expected interval when the plan has room for a second alert
 
-Configure Discord and email destinations for health, provider, and exception alerts where PostHog supports both. If Error Tracking issue alerts only support one destination in the active PostHog edition, use the issue alert for Discord and a matching trend alert for email.
+Health-check and provider failures emit alertable `$exception` events, so they should page through Error Tracking notifications instead of consuming Product Analytics alert slots. The heartbeat absence checks are the main remaining reason to use Product Analytics Alerts.
 
 ## Outbox validation
 
