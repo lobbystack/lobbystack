@@ -1,6 +1,8 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedMutation as mutation } from "./telemetry/observedFunctions";
 
-import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireMembership } from "./lib/auth";
 import { enqueuePostHogEventBestEffort } from "./telemetry/posthog";
@@ -9,6 +11,7 @@ import {
   getPostHogDistinctIdForBusinessSystem,
 } from "./telemetry/shared";
 
+import { observedInternalMutation as internalMutation } from "./telemetry/observedFunctions";
 type UnitEconomicsEventKind =
   | "voice_provider"
   | "sms_provider"

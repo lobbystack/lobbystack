@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
-import { internalMutation, internalQuery } from "../_generated/server";
+import { internalQuery } from "../_generated/server";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 function sortAttemptsDescending(
   attempts: Array<Doc<"onboarding_phone_verifications">>,
 ): Array<Doc<"onboarding_phone_verifications">> {

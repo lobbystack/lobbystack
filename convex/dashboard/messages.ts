@@ -1,13 +1,13 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  getAuthUserId } from "@convex-dev/auth/server";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Doc, Id } from "../_generated/dataModel";
+import type { Doc,
+  Id } from "../_generated/dataModel";
 import {
-  action,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -41,6 +41,7 @@ import {
   getPostHogDistinctIdForBusinessSystem,
 } from "../telemetry/shared";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 type MessageMediaRecord = NonNullable<Doc<"messages">["media"]>[number];
 type ConversationOutcome =
   | {

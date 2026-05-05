@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -20,6 +20,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { useObservedAction } from "@/lib/observed-convex";
 import {
   Select,
   SelectContent,
@@ -213,10 +214,16 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     businessId,
   });
   const isLoadingConnections = connections === undefined;
-  const connectGoogle = useAction(api.integrations.calendar.connectGoogle);
-  const disconnectGoogleCalendar = useAction(api.integrations.calendar.disconnectGoogleCalendar);
-  const listGoogleCalendars = useAction(api.integrations.calendar.listGoogleCalendars);
-  const selectGoogleCalendar = useAction(api.integrations.calendar.selectGoogleCalendar);
+  const connectGoogle = useObservedAction(api.integrations.calendar.connectGoogle, {
+    reportFailures: false,
+  });
+  const disconnectGoogleCalendar = useObservedAction(api.integrations.calendar.disconnectGoogleCalendar);
+  const listGoogleCalendars = useObservedAction(api.integrations.calendar.listGoogleCalendars, {
+    reportFailures: false,
+  });
+  const selectGoogleCalendar = useObservedAction(api.integrations.calendar.selectGoogleCalendar, {
+    reportFailures: false,
+  });
 
   const googleConnections = useMemo(
     () =>

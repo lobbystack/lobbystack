@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { AppointmentChangePolicy, RuntimeLocale } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,7 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Input } from "@/components/ui/input";
@@ -74,7 +75,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     businessId,
   });
   const isLoadingConfiguration = configuration === undefined;
-  const saveProfile = useMutation(api.ai.context.snapshots.updateReceptionistProfile);
+  const saveProfile = useObservedMutation(api.ai.context.snapshots.updateReceptionistProfile);
   const persistedProfile = configuration?.profile;
 
   const [greeting, setGreeting] = useState("");

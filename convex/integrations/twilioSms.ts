@@ -5,7 +5,6 @@ import twilio from "twilio";
 
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { internalAction } from "../_generated/server";
 import {
   buildTwilioBasicAuthHeader,
   getTwilioClient,
@@ -19,6 +18,7 @@ import {
 } from "../lib/messageAttachments";
 import { generateImagePreview } from "../lib/node/imagePreviews";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 function extractAttachmentFileName(input: {
   contentDisposition: string | null;
   contentType: string;

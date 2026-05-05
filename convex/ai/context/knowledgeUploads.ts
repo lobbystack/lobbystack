@@ -5,7 +5,7 @@ import { getConvexSize, v } from "convex/values";
 
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
-import { internalAction, type ActionCtx } from "../../_generated/server";
+import { type ActionCtx } from "../../_generated/server";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
   buildKnowledgeDocumentPreviewText,
@@ -22,6 +22,7 @@ import {
   extractPdfTextWithLocalOcr,
 } from "../../lib/node/knowledgeExtraction";
 
+import { observedInternalAction as internalAction } from "../../telemetry/observedFunctions";
 const KNOWLEDGE_DOCUMENT_UNREADABLE_ERROR =
   "We couldn't extract enough readable text from this file.";
 const KNOWLEDGE_STORAGE_LIMIT_ERROR_PREFIX = "Knowledge storage limit reached.";

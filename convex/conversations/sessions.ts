@@ -1,14 +1,10 @@
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import {
-  internalMutation,
-  internalQuery,
-  type MutationCtx,
-  type QueryCtx,
-} from "../_generated/server";
+import { internalQuery, type MutationCtx, type QueryCtx } from "../_generated/server";
 import { buildConversationOutcome } from "../dashboard/outcomes";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 export const SMS_SESSION_INACTIVITY_MS = 60 * 60 * 1000;
 
 export type PersistedConversationSessionSummary =

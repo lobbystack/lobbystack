@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 
-import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server";
+import { query, type MutationCtx, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireCurrentUser, requireMembership } from "../lib/auth";
 import { isContactBlocked } from "../lib/contactBlocking";
 
+import { observedMutation as mutation } from "../telemetry/observedFunctions";
 async function getCallsForConversation(
   ctx: QueryCtx,
   conversationId: Id<"conversations">,

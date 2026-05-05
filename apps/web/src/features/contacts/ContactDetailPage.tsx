@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { useMutation } from "convex/react";
+
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   Activity,
   User,
 } from "lucide-react";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -803,9 +804,9 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   const { contactId } = useParams<{ contactId: string }>();
   const { i18n, t } = useTranslation("contacts");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const blockContact = useMutation(api.dashboard.contacts.blockContact);
-  const deleteContact = useMutation(api.dashboard.contacts.deleteContact);
-  const unblockContact = useMutation(api.dashboard.contacts.unblockContact);
+  const blockContact = useObservedMutation(api.dashboard.contacts.blockContact);
+  const deleteContact = useObservedMutation(api.dashboard.contacts.deleteContact);
+  const unblockContact = useObservedMutation(api.dashboard.contacts.unblockContact);
   const navigate = useNavigate();
 
   const rememberedDetail = useRememberedConvexQuery(

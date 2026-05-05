@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useObservedAction } from "@/lib/observed-convex";
 import {
   Field,
   FieldError,
@@ -37,8 +38,8 @@ export function SettingsAccountPage() {
   const currentUser = useQuery(api.users.current, {});
   const isLoadingEmail = currentUser === undefined;
   
-  const changeEmail = useAction(api.businesses.catalog.changeEmail);
-  const changePassword = useAction(api.businesses.catalog.changePassword);
+  const changeEmail = useObservedAction(api.businesses.catalog.changeEmail);
+  const changePassword = useObservedAction(api.businesses.catalog.changePassword);
 
   const [email, setEmail] = useState("");
   const [currentEmailPassword, setCurrentEmailPassword] = useState("");

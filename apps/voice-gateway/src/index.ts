@@ -18,6 +18,7 @@ async function main(): Promise<void> {
     { createServer },
     {
       capturePostHogException,
+      installPostHogFatalHandlers,
       recordVoiceHeartbeat,
       shutdownPostHog,
       startPostHogObservability,
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
   ] = await Promise.all([import("./http/server"), import("./observability/posthog")]);
 
   await startPostHogObservability();
+  installPostHogFatalHandlers();
 
   const server = createServer();
   const port = Number(process.env.PORT ?? 3001);
@@ -69,7 +71,15 @@ async function main(): Promise<void> {
 void main().catch(async (error: unknown) => {
   const unknownError = error instanceof Error ? error : new Error(String(error));
   console.error(unknownError);
-  const { shutdownPostHog } = await import("./observability/posthog");
+  const { capturePostHogException, shutdownPostHog } = await import("./observability/posthog");
+  capturePostHogException(unknownError, {
+    properties: {
+      operation: "voice_gateway_main",
+      $exception_level: "fatal",
+      alertable: true,
+      expected: false,
+    },
+  });
   await shutdownPostHog().catch(() => undefined);
   process.exitCode = 1;
 });

@@ -1,5 +1,7 @@
-import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import {
+  v } from "convex/values";
+import { observedMutation as mutation } from "../telemetry/observedFunctions";
+import { internalQuery, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, getCurrentUser, requireMembership } from "../lib/auth";
@@ -22,6 +24,7 @@ import {
 } from "../lib/receptionistProfileDefaults";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 /**
  * Create the initial tenant and owner membership for the authenticated user.
  */

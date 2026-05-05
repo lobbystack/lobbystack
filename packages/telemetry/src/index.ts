@@ -96,6 +96,8 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.convex.heartbeat",
   "ops.convex.outbox_backlog_sample",
   "ops.convex.outbox_flush_failed",
+  "ops.service.health_check",
+  "ops.service.health_check_failed",
 ] as const;
 
 export const TELEMETRY_EVENT_NAMES = [
@@ -216,6 +218,18 @@ export type ProviderErrorClassification = {
   providerErrorCode?: string;
   providerErrorMessage?: string;
   providerErrorStatus?: number;
+};
+
+export type AlertableExceptionTelemetryInput = {
+  runtime: "web" | "convex" | "voice-gateway";
+  service: string;
+  operation: string;
+  alertable?: boolean;
+  expected?: boolean;
+  provider?: ExternalProvider;
+  exceptionType?: string;
+  exceptionMessage?: string;
+  exceptionLevel?: "fatal" | "error" | "warning" | "info";
 };
 
 export type ClassifyProviderErrorInput = {
@@ -541,6 +555,18 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "ops.convex.heartbeat": ["deploymentMode"],
   "ops.convex.outbox_backlog_sample": ["deploymentMode", "backlogBucket"],
   "ops.convex.outbox_flush_failed": ["deploymentMode", "backlogBucket"],
+  "ops.service.health_check": [
+    "deploymentMode",
+    "service",
+    "status",
+    "latencyMs",
+  ],
+  "ops.service.health_check_failed": [
+    "deploymentMode",
+    "service",
+    "status",
+    "latencyMs",
+  ],
 } satisfies Record<TelemetryEventName, ReadonlyArray<string>>;
 
 export type TelemetryValidationInput = Partial<TelemetryContext> & {
@@ -669,6 +695,36 @@ const SAFE_KEY_PATTERNS = [
   "workflowname",
 ];
 
+const EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS = [
+  "a billing contact email is required",
+  "already exists",
+  "already on your account",
+  "ai sms add-on is only available",
+  "calendar connection request expired",
+  "calendar connection request is no longer authorized",
+  "connect google calendar before choosing",
+  "contact is blocked",
+  "do not have access to this business",
+  "feedback is limited",
+  "feedback message is required",
+  "invalid credentials",
+  "invalid password",
+  "invalid or expired email confirmation link",
+  "invalidsecret",
+  "knowledge storage limit reached",
+  "new email is required",
+  "no email is configured",
+  "number provisioning limit reached",
+  "onboarding is no longer available",
+  "only free workspaces can start pro checkout",
+  "reconnect google calendar before choosing",
+  "requires admin access",
+  "selected google calendar was not found",
+  "selected phone number is no longer available",
+  "verification code is invalid or expired",
+  "verify your mobile number before choosing",
+];
+
 function normalizeKey(key: string): string {
   return key.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
@@ -779,6 +835,30 @@ function hasPresentValue(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
+}
+
+function getErrorSearchText(error: unknown): string {
+  if (error instanceof Error) {
+    return `${error.name} ${error.message}`.toLowerCase();
+  }
+  if (typeof error === "string") {
+    return error.toLowerCase();
+  }
+  if (isRecord(error) && typeof error.message === "string") {
+    return error.message.toLowerCase();
+  }
+  return "";
+}
+
+export function isExpectedConvexFailure(error: unknown): boolean {
+  const searchText = getErrorSearchText(error);
+  if (!searchText) {
+    return false;
+  }
+
+  return EXPECTED_CONVEX_FAILURE_MESSAGE_SNIPPETS.some((snippet) =>
+    searchText.includes(snippet),
+  );
 }
 
 function normalizeExternalProvider(
@@ -1014,6 +1094,26 @@ export function buildProviderErrorTelemetryProperties(
     $exception_message:
       classification.providerErrorMessage ??
       `${classification.provider} provider failure (${classification.kind})`,
+  };
+}
+
+export function buildAlertableExceptionTelemetryProperties(
+  input: AlertableExceptionTelemetryInput,
+): TelemetryProperties {
+  const exceptionType = input.exceptionType ?? "ApplicationError";
+  const exceptionMessage =
+    input.exceptionMessage ?? `${input.service} ${input.operation} failed`;
+
+  return {
+    runtime: input.runtime,
+    service: input.service,
+    operation: input.operation,
+    alertable: input.alertable ?? true,
+    expected: input.expected ?? false,
+    ...(input.provider !== undefined ? { provider: input.provider } : {}),
+    $exception_level: input.exceptionLevel ?? "error",
+    $exception_type: exceptionType,
+    $exception_message: exceptionMessage,
   };
 }
 

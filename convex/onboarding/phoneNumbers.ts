@@ -4,7 +4,7 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
-import { action, type ActionCtx } from "../_generated/server";
+import { type ActionCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   type AvailableNumberSummary,
@@ -36,6 +36,7 @@ import {
   recordSuccessfulPurchaseLog,
 } from "./abuse";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 type TwilioAvailableNumber = {
   phoneNumber?: string | null;
   locality?: string | null;

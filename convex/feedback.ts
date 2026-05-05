@@ -1,13 +1,17 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "./telemetry/observedFunctions";
 
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
+import type { Doc,
+  Id } from "./_generated/dataModel";
+import { internalQuery } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { requireCurrentUser, requireMembership } from "./lib/auth";
 import { dashboardAbuseRateLimiter } from "./lib/components";
 import { sendTransactionalEmail } from "./lib/providers/email";
 
+import { observedInternalAction as internalAction } from "./telemetry/observedFunctions";
 const MAX_FEEDBACK_MESSAGE_LENGTH = 2_000;
 const MAX_PAGE_PATH_LENGTH = 500;
 const MAX_USER_AGENT_LENGTH = 1_000;

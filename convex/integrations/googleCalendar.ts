@@ -6,8 +6,9 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { internalAction, type ActionCtx } from "../_generated/server";
+import { type ActionCtx } from "../_generated/server";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 const GOOGLE_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAction } from "convex/react";
+
 import type { CountryCode } from "libphonenumber-js/min";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useObservedAction } from "@/lib/observed-convex";
 import {
   Dialog,
   DialogContent,
@@ -133,9 +134,9 @@ export function OnboardingNumberPage({
 }: OnboardingNumberPageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
-  const getInitialNumberSuggestion = useAction(api.onboarding.phoneNumbers.getInitialNumberSuggestion);
-  const searchAvailableNumbers = useAction(api.onboarding.phoneNumbers.searchAvailableNumbers);
-  const claimOnboardingNumber = useAction(api.onboarding.phoneNumbers.claimOnboardingNumber);
+  const getInitialNumberSuggestion = useObservedAction(api.onboarding.phoneNumbers.getInitialNumberSuggestion);
+  const searchAvailableNumbers = useObservedAction(api.onboarding.phoneNumbers.searchAvailableNumbers);
+  const claimOnboardingNumber = useObservedAction(api.onboarding.phoneNumbers.claimOnboardingNumber);
   const [market, setMarket] = useState<VerifiedPhoneMarket | null>(null);
   const [selectedNumber, setSelectedNumber] = useState<AvailableNumberSummary | null>(null);
   const [pickerNumbers, setPickerNumbers] = useState<Array<AvailableNumberSummary>>([]);

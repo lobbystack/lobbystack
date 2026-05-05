@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { captureExceptionMock } = vi.hoisted(() => ({
+const { captureExceptionMock, postHogConstructorMock, shutdownMock } = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
+  postHogConstructorMock: vi.fn(),
+  shutdownMock: vi.fn(),
 }));
 
 vi.mock("posthog-node", () => ({
-  PostHog: vi.fn().mockImplementation(function PostHog() {
+  PostHog: vi.fn().mockImplementation(function PostHog(...args: unknown[]) {
+    postHogConstructorMock(...args);
     return {
       capture: vi.fn(),
       captureException: captureExceptionMock,
-      shutdown: vi.fn(),
+      shutdown: shutdownMock,
     };
   }),
 }));
@@ -29,6 +32,8 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
   beforeEach(() => {
     vi.resetModules();
     captureExceptionMock.mockClear();
+    postHogConstructorMock.mockClear();
+    shutdownMock.mockClear();
 
     for (const key of ENV_KEYS) {
       originalEnv.set(key, process.env[key]);
@@ -86,9 +91,64 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
     expect(distinctId).toBe("system:business:business_123");
     expect(properties).toMatchObject({
       $exception_message: "[redacted]",
+      alertable: true,
+      expected: false,
       operation: "twilio_live_call_update",
+      provider: "twilio",
       providerErrorCode: "21211",
       providerErrorMessage: "[redacted]",
+      runtime: "voice-gateway",
+      service: "voice-gateway",
     });
+  });
+
+  it("captures and flushes fatal process errors", async () => {
+    const { handleFatalPostHogException } = await import("./posthog");
+    const fatalError = new Error("fatal startup crash");
+    fatalError.name = "FatalStartupError";
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    try {
+      await handleFatalPostHogException(fatalError, "uncaught_exception", {
+        exitProcess: false,
+      });
+
+      expect(captureExceptionMock).toHaveBeenCalledOnce();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(fatalError);
+      expect(shutdownMock).toHaveBeenCalledOnce();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+
+    const [capturedError, distinctId, properties] =
+      captureExceptionMock.mock.calls[0] ?? [];
+    expect(capturedError).toBe(fatalError);
+    expect(distinctId).toBe("system:voice-gateway");
+    expect(properties).toMatchObject({
+      $exception_level: "fatal",
+      $exception_message: "[redacted]",
+      $exception_type: "FatalStartupError",
+      alertable: true,
+      expected: false,
+      fatalKind: "uncaught_exception",
+      operation: "voice_gateway_uncaught_exception",
+      runtime: "voice-gateway",
+      service: "voice-gateway",
+    });
+  });
+
+  it("leaves SDK fatal autocapture disabled for custom process handlers", async () => {
+    const { startPostHogObservability } = await import("./posthog");
+
+    await startPostHogObservability();
+
+    expect(postHogConstructorMock).toHaveBeenCalledWith(
+      "phc_test",
+      expect.objectContaining({
+        enableExceptionAutocapture: false,
+      }),
+    );
   });
 });

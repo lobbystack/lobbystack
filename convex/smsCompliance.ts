@@ -1,12 +1,12 @@
-import { v } from "convex/values";
+import {
+  v } from "convex/values";
+import { observedInternalMutation as internalMutation, observedMutation as mutation } from "./telemetry/observedFunctions";
 
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Doc,
+  Id } from "./_generated/dataModel";
 import {
-  action,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -33,6 +33,7 @@ import {
   type SmsSenderMode,
 } from "./lib/smsCompliance";
 
+import { observedAction as action } from "./telemetry/observedFunctions";
 type SmsPhoneNumberDoc = Pick<
   Doc<"phone_numbers">,
   "_id" | "e164" | "smsEnabled" | "status" | "twilioPhoneSid"

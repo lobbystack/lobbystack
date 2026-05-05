@@ -6,7 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useObservedMutation } from "@/lib/observed-convex";
+import { useConvexAuth, useQuery } from "convex/react";
 
 import i18n from "@/i18n";
 import { api } from "../../../../convex/_generated/api";
@@ -34,7 +35,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     api.users.preferences.getPreferredLocale,
     auth.isAuthenticated ? {} : "skip",
   );
-  const updatePreferredLocale = useMutation(api.users.preferences.updatePreferredLocale);
+  const updatePreferredLocale = useObservedMutation(api.users.preferences.updatePreferredLocale);
   const [locale, setLocaleState] = useState<SupportedLocale>(
     resolveStartupLocale({
       storedLocale: readStoredLocale(),

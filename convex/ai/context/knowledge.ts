@@ -1,16 +1,14 @@
-import { createThread } from "@convex-dev/agent";
+import {
+  createThread } from "@convex-dev/agent";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../../telemetry/observedFunctions";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../../telemetry/shared";
+  } from "../../telemetry/shared";
 import { v } from "convex/values";
 import {
-  action,
-  internalAction,
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -52,6 +50,7 @@ import { scheduleSnapshotRefresh } from "../../businesses/admin";
 import { captureAiTraceStartedBestEffort } from "../../telemetry/ai";
 import { enqueuePostHogEventBestEffort } from "../../telemetry/posthog";
 
+import { observedAction as action } from "../../telemetry/observedFunctions";
 type KnowledgeSearchResult = Array<{ title?: string; text: string }>;
 type PreviewKnowledgeAnswer = { text: string; threadId: string };
 type BusinessIdArgs = { businessId: Id<"businesses"> };

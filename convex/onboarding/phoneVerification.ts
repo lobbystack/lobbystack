@@ -4,10 +4,11 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
-import { action, type ActionCtx } from "../_generated/server";
+import { type ActionCtx } from "../_generated/server";
 import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
 import { assertVerificationSendAllowed } from "./abuse";
 
+import { observedAction as action } from "../telemetry/observedFunctions";
 type TwilioLookupResult = {
   phoneNumber: string;
   countryCode: string;

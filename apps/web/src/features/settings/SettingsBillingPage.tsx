@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAction, useMutation } from "convex/react";
+
 import { Link, Navigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -11,6 +11,7 @@ import {
   Lock,
   RefreshCw,
 } from "lucide-react";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -633,8 +634,8 @@ function PlanSection({
   locale: BillingLocale;
   t: BillingTranslation;
 }) {
-  const startCheckout = useAction(api.billing.startCheckout);
-  const openPortal = useAction(api.billing.openPortal);
+  const startCheckout = useObservedAction(api.billing.startCheckout);
+  const openPortal = useObservedAction(api.billing.openPortal);
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
 
   const planLabel = getPlanLabel(status.plan, t);
@@ -1137,7 +1138,7 @@ function AddonsSection({
   locale: BillingLocale;
   t: BillingTranslation;
 }) {
-  const startCheckout = useAction(api.billing.startCheckout);
+  const startCheckout = useObservedAction(api.billing.startCheckout);
   const [loading, setLoading] = useState<"ai_sms" | "pro" | null>(null);
   const isOperational = status.aiSmsReady;
   const setupRequired =
@@ -1439,10 +1440,10 @@ function AiSmsComplianceSection({
   compliance: SmsComplianceState;
   t: BillingTranslation;
 }) {
-  const saveComplianceForm = useMutation(api.smsCompliance.saveComplianceForm);
-  const startRegistration = useAction(api.smsCompliance.startRegistration);
-  const resumeRegistration = useAction(api.smsCompliance.resumeRegistration);
-  const refreshRegistration = useAction(api.smsCompliance.refreshStatus);
+  const saveComplianceForm = useObservedMutation(api.smsCompliance.saveComplianceForm);
+  const startRegistration = useObservedAction(api.smsCompliance.startRegistration);
+  const resumeRegistration = useObservedAction(api.smsCompliance.resumeRegistration);
+  const refreshRegistration = useObservedAction(api.smsCompliance.refreshStatus);
   const { data: campaignOptions } = useSmsComplianceCampaignOptions();
   const [form, setForm] = useState<SmsComplianceFormState>(() =>
     buildSmsComplianceFormState(compliance),

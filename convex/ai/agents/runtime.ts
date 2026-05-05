@@ -1,13 +1,12 @@
-import { createThread, createTool, stepCountIs } from "@convex-dev/agent";
+import {
+  createThread,
+  createTool,
+  stepCountIs } from "@convex-dev/agent";
+import { observedInternalMutation as internalMutation } from "../../telemetry/observedFunctions";
 import { DateTime } from "luxon";
 import { v } from "convex/values";
 import { z } from "zod";
-import {
-  internalAction,
-  internalMutation,
-  internalQuery,
-  type ActionCtx,
-} from "../../_generated/server";
+import { internalQuery, type ActionCtx } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 import { receptionistAgent } from "../../lib/components";
@@ -43,6 +42,7 @@ import {
 } from "../../telemetry/shared";
 import { captureAiTraceStartedBestEffort } from "../../telemetry/ai";
 
+import { observedInternalAction as internalAction } from "../../telemetry/observedFunctions";
 function buildGroundedSystemPrompt(input: {
   locale: RuntimeLocale;
   summary: string;

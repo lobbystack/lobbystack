@@ -1,12 +1,10 @@
-import { v } from "convex/values";
-import { internal } from "../_generated/api";
-import type { Doc, Id } from "../_generated/dataModel";
 import {
-  internalAction,
-  internalMutation,
-  internalQuery,
-  type ActionCtx,
-} from "../_generated/server";
+  v } from "convex/values";
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
+import { internal } from "../_generated/api";
+import type { Doc,
+  Id } from "../_generated/dataModel";
+import { internalQuery, type ActionCtx } from "../_generated/server";
 import { scheduleSnapshotRefresh } from "../businesses/admin";
 import { generateMissingLocalizedServiceNames } from "../lib/serviceNameGeneration";
 import {
@@ -15,6 +13,7 @@ import {
 } from "../lib/serviceNames";
 import { runtimeLocaleValidator } from "../lib/runtimeLocale";
 
+import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 type ServiceLocalizationState = Pick<Doc<"services">, "_id" | "businessId" | "name"> & {
   localizedNames?: Doc<"services">["localizedNames"];
 };

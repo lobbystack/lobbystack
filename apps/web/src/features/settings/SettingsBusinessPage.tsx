@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useObservedMutation } from "@/lib/observed-convex";
 import {
   Field,
   FieldGroup,
@@ -40,7 +41,7 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
     businessId: props.businessId,
   });
   const isLoadingConfigurationData = configuration === undefined;
-  const updateBusinessName = useMutation(api.businesses.catalog.updateBusinessName);
+  const updateBusinessName = useObservedMutation(api.businesses.catalog.updateBusinessName);
   const [businessName, setBusinessName] = useState("");
   const [isBusinessNameDialogOpen, setIsBusinessNameDialogOpen] = useState(false);
   const [businessNameStatus, setBusinessNameStatus] = useState<string | null>(null);

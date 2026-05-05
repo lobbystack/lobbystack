@@ -2,12 +2,7 @@ import { v } from "convex/values";
 import { DateTime } from "luxon";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import {
-  internalMutation,
-  internalQuery,
-  type MutationCtx,
-  type QueryCtx,
-} from "../_generated/server";
+import { internalQuery, type MutationCtx, type QueryCtx } from "../_generated/server";
 import { workflowManager } from "../lib/components";
 import {
   normalizeAppointmentChangePolicy,
@@ -15,6 +10,7 @@ import {
 } from "../lib/appointmentChangePolicy";
 import { getServiceNameCandidates } from "../lib/serviceNames";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 const VERIFICATION_TTL_MS = 10 * 60 * 1000;
 
 type AppointmentChangeAction = "cancel" | "reschedule";

@@ -1,4 +1,4 @@
-import { useAction, useConvex, useMutation } from "convex/react";
+import { useConvex } from "convex/react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
@@ -9,6 +9,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 import { FileText, Globe, MoreHorizontal, Pause, Play, Search, Text, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -288,12 +289,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const headerActions = outletContext?.headerActions;
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const convex = useConvex();
-  const deleteKnowledgeEntry = useAction(api.ai.context.knowledge.deleteKnowledgeEntry);
-  const setKnowledgeEntryActive = useAction(api.ai.context.knowledge.setKnowledgeEntryActive);
-  const deleteWebsiteIngestionJob = useMutation(
+  const deleteKnowledgeEntry = useObservedAction(api.ai.context.knowledge.deleteKnowledgeEntry);
+  const setKnowledgeEntryActive = useObservedAction(
+    api.ai.context.knowledge.setKnowledgeEntryActive,
+    { reportFailures: false },
+  );
+  const deleteWebsiteIngestionJob = useObservedMutation(
     api.ai.context.websiteIngestion.deleteWebsiteIngestionJob,
   );
-  const cancelWebsiteIngestionJob = useAction(
+  const cancelWebsiteIngestionJob = useObservedAction(
     api.ai.context.websiteIngestion.cancelWebsiteIngestionJob,
   );
   const { data: knowledge, isInitialLoading: isLoadingKnowledge } = useRememberedConvexQuery(

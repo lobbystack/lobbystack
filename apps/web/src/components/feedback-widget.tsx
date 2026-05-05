@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useMutation } from "convex/react";
+
 import { MessageSquareShare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { useObservedMutation } from "@/lib/observed-convex";
 import {
   Popover,
   PopoverContent,
@@ -34,7 +35,7 @@ type FeedbackWidgetProps = {
 export function FeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
   const { t } = useTranslation("common");
   const location = useLocation();
-  const submitFeedback = useMutation(api.feedback.submit);
+  const submitFeedback = useObservedMutation(api.feedback.submit);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
 

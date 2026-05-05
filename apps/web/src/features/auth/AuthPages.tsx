@@ -1,7 +1,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useAction, useConvexAuth } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Link, useSearchParams } from "react-router-dom";
@@ -13,6 +13,7 @@ import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
 
+import { useObservedAction } from "@/lib/observed-convex";
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 
 function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
@@ -293,7 +294,7 @@ export function ForgotPasswordPage() {
 export function ConfirmEmailChangePage() {
   const { t } = useTranslation("auth");
   const auth = useConvexAuth();
-  const confirmEmailChange = useAction(api.businesses.catalog.confirmEmailChange);
+  const confirmEmailChange = useObservedAction(api.businesses.catalog.confirmEmailChange);
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);

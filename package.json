@@ -78,6 +78,7 @@
     "docs:broken-links": "pnpm --filter @lobbystack/docs broken-links",
     "dev:web": "pnpm --filter @lobbystack/web dev",
     "dev:voice": "pnpm --filter @lobbystack/voice-gateway dev",
+    "posthog:sourcemaps": "pnpm --filter @lobbystack/web posthog:sourcemaps",
     "dev:onboarding:website": "tsx scripts/prepare-onboarding-website.ts",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && pnpm typecheck:convex",

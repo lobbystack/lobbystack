@@ -1,4 +1,7 @@
-import { Polar as ConvexPolar, type PolarWebhookEvent } from "@convex-dev/polar";
+import {
+  Polar as ConvexPolar,
+  type PolarWebhookEvent } from "@convex-dev/polar";
+import { observedInternalAction as internalAction, observedInternalMutation as internalMutation } from "./telemetry/observedFunctions";
 import { Polar as PolarSdk } from "@polar-sh/sdk";
 import type { HttpRouter } from "convex/server";
 import { v } from "convex/values";
@@ -14,11 +17,11 @@ import type {
   HostedCheckoutPlanSlug,
   SmsCapability,
   SmsSenderRole,
-} from "../packages/shared/src/billing";
+  } from "../packages/shared/src/billing";
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "./telemetry/shared";
+  } from "./telemetry/shared";
 import {
   billingAddonCatalog,
   billingErrorCodes,
@@ -26,13 +29,12 @@ import {
   getBillingMonthlyChargeCents,
   getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
-} from "../packages/shared/src/billing";
-import { components, internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
+  } from "../packages/shared/src/billing";
+import { components,
+  internal } from "./_generated/api";
+import type { Doc,
+  Id } from "./_generated/dataModel";
 import {
-  action,
-  internalAction,
-  internalMutation,
   internalQuery,
   query,
   type ActionCtx,
@@ -76,6 +78,7 @@ import {
   enqueuePostHogProviderExceptionBestEffort,
 } from "./telemetry/posthog";
 
+import { observedAction as action } from "./telemetry/observedFunctions";
 type BillingContact = {
   email: string | null;
   name: string | null;

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useId, useMemo, useState } from "react";
-import { useMutation } from "convex/react";
+
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 
@@ -14,6 +14,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { useObservedMutation } from "@/lib/observed-convex";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -53,7 +54,7 @@ export function AddKnowledgeSheet({
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation(["agent", "knowledge"]);
-  const upsertKnowledgeSnippet = useMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);
+  const upsertKnowledgeSnippet = useObservedMutation(api.ai.context.knowledge.upsertKnowledgeSnippet);
   const isControlled = open !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
   const [title, setTitle] = useState("");

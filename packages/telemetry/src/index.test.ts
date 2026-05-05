@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TelemetryEvent } from "./index";
 import {
   bucketLatencyMs,
+  buildAlertableExceptionTelemetryProperties,
   buildPostHogAiGenerationProperties,
   buildPostHogAiSpanProperties,
   buildPostHogAiTraceProperties,
@@ -14,6 +15,7 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   getPostHogDistinctIdForOperator,
+  isExpectedConvexFailure,
   redactAiTraceProperties,
   redactTelemetryProperties,
   redactOtelAttributes,
@@ -161,6 +163,45 @@ describe("telemetry redaction", () => {
       provider: "unknown",
       kind: "unknown",
     });
+  });
+
+  it("classifies handled Convex rejections as expected", () => {
+    expect(isExpectedConvexFailure(new Error("InvalidSecret"))).toBe(true);
+    expect(
+      isExpectedConvexFailure(
+        new Error("This email is already on your account."),
+      ),
+    ).toBe(true);
+    expect(
+      isExpectedConvexFailure(
+        new Error(
+          "That verification code is invalid or expired. Try requesting a new one.",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isExpectedConvexFailure(
+        new Error("Invalid or expired email confirmation link."),
+      ),
+    ).toBe(true);
+    expect(isExpectedConvexFailure(new Error("database exploded"))).toBe(false);
+  });
+
+  it("only includes provider on alertable exceptions when provided", () => {
+    const withoutProvider = buildAlertableExceptionTelemetryProperties({
+      runtime: "web",
+      service: "web",
+      operation: "calendar_connect",
+    });
+    const withProvider = buildAlertableExceptionTelemetryProperties({
+      runtime: "web",
+      service: "web",
+      operation: "calendar_connect",
+      provider: "google",
+    });
+
+    expect(withoutProvider).not.toHaveProperty("provider");
+    expect(withProvider).toHaveProperty("provider", "google");
   });
 
   it("builds provider exception metadata and redacts raw provider messages", () => {

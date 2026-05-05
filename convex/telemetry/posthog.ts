@@ -5,6 +5,7 @@ import {
 } from "./shared";
 import { v } from "convex/values";
 import {
+  buildAlertableExceptionTelemetryProperties,
   buildProviderErrorTelemetryProperties,
   classifyProviderError,
   type ExternalProvider,
@@ -88,6 +89,22 @@ type EnqueueProviderFailureExceptionInput = TelemetryContext & {
   properties?: TelemetryProperties;
 };
 
+type EnqueueConvexExceptionInput = Omit<TelemetryContext, "provider"> & {
+  provider?: ExternalProvider;
+  error?: unknown;
+  service: string;
+  operation: string;
+  distinctId: string;
+  businessId?: Id<"businesses">;
+  groupKey?: string;
+  alertable?: boolean;
+  expected?: boolean;
+  exceptionLevel?: "fatal" | "error" | "warning" | "info";
+  exceptionType?: string;
+  exceptionMessage?: string;
+  properties?: TelemetryProperties;
+};
+
 type FlushResult = {
   attempted: number;
   delivered: number;
@@ -104,16 +121,45 @@ type OutboxHealthSnapshot = {
   lastError?: string;
 };
 
+type ServiceHealthTarget = {
+  service: string;
+  url?: string | undefined;
+  configErrorKind?: string | undefined;
+};
+
+type ServiceHealthCheckResult = {
+  service: string;
+  status: "healthy" | "unhealthy" | "missing_config";
+  latencyMs: number;
+  targetUrlHost?: string;
+  httpStatusCode?: number;
+  errorKind?: string;
+};
+
 const TELEMETRY_DESTINATION = "posthog";
 const MAX_BATCH_SIZE = 25;
 const OUTBOX_HEALTH_QUERY_LIMIT = 26;
 const CLAIM_LEASE_MS = 60_000;
 const POSTHOG_REQUEST_TIMEOUT_MS = 30_000;
+const SERVICE_HEALTH_CHECK_TIMEOUT_MS = 5_000;
 const CLAIMED_STATUS = "processing";
 const CONVEX_TELEMETRY_DISTINCT_ID = "system:convex:telemetry";
+const UNSAFE_EXCEPTION_PROPERTY_KEYS = new Set([
+  "args",
+  "body",
+  "input",
+  "payload",
+  "rawargs",
+  "rawrequest",
+  "requestbody",
+]);
 
 function buildCaptureUrl(host: string): string {
   return new URL("/i/v0/e/", host).toString();
+}
+
+export function getPostHogDistinctIdForConvexSystem(): string {
+  return CONVEX_TELEMETRY_DISTINCT_ID;
 }
 
 function getRetryDelayMs(attemptCount: number): number {
@@ -224,6 +270,166 @@ function buildProviderExceptionList(input: {
         : {}),
     },
   ];
+}
+
+function getSafeExceptionProperties(
+  properties: TelemetryProperties | undefined,
+): TelemetryProperties {
+  const safeProperties: TelemetryProperties = {};
+  for (const [key, value] of Object.entries(properties ?? {})) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, "");
+    if (UNSAFE_EXCEPTION_PROPERTY_KEYS.has(normalizedKey)) {
+      continue;
+    }
+    safeProperties[key] = value;
+  }
+  return safeProperties;
+}
+
+function getErrorExceptionType(error: unknown): string {
+  if (error instanceof Error && error.name) {
+    return error.name;
+  }
+  return "ApplicationError";
+}
+
+function buildGenericExceptionList(input: {
+  error?: unknown;
+  exceptionType: string;
+  exceptionMessage: string;
+}): PostHogException[] {
+  const stack = input.error instanceof Error ? input.error.stack : undefined;
+  const frames = stack ? parseNodeStackFrames(stack) : [];
+
+  return [
+    {
+      type: input.exceptionType,
+      value: input.exceptionMessage,
+      mechanism: {
+        handled: true,
+        synthetic: !(input.error instanceof Error),
+        type: "generic",
+      },
+      ...(frames.length > 0
+        ? {
+            stacktrace: {
+              type: "raw",
+              frames,
+            },
+          }
+        : {}),
+    },
+  ];
+}
+
+function getUrlHost(url: string): string | undefined {
+  try {
+    return new URL(url).host;
+  } catch {
+    return undefined;
+  }
+}
+
+function getVoiceGatewayHealthUrl(baseUrl: string): string | undefined {
+  try {
+    return new URL("/health", baseUrl).toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function buildConfiguredServiceHealthTargets(): ServiceHealthTarget[] {
+  const voiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
+  const voiceGatewayHealthUrl = voiceGatewayBaseUrl
+    ? getVoiceGatewayHealthUrl(voiceGatewayBaseUrl)
+    : undefined;
+
+  return [
+    {
+      service: "web",
+      url: process.env.APP_BASE_URL,
+    },
+    {
+      service: "voice-gateway",
+      url: voiceGatewayHealthUrl,
+      ...(voiceGatewayBaseUrl && !voiceGatewayHealthUrl
+        ? { configErrorKind: "invalid_config" }
+        : {}),
+    },
+  ];
+}
+
+function classifyServiceHealthError(error: unknown): string {
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return "timeout";
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return "timeout";
+  }
+  if (error instanceof TypeError) {
+    return "network_error";
+  }
+  return "request_failed";
+}
+
+async function checkServiceHealthTarget(
+  target: ServiceHealthTarget,
+  fetchImpl: typeof fetch,
+): Promise<ServiceHealthCheckResult> {
+  if (target.configErrorKind) {
+    return {
+      service: target.service,
+      status: "unhealthy",
+      latencyMs: 0,
+      errorKind: target.configErrorKind,
+    };
+  }
+
+  if (!target.url) {
+    return {
+      service: target.service,
+      status: "missing_config",
+      latencyMs: 0,
+      errorKind: "missing_config",
+    };
+  }
+
+  const startedAt = Date.now();
+  const targetUrlHost = getUrlHost(target.url);
+  try {
+    const response = await fetchImpl(target.url, {
+      method: "GET",
+      signal: AbortSignal.timeout(SERVICE_HEALTH_CHECK_TIMEOUT_MS),
+    });
+    const latencyMs = Date.now() - startedAt;
+
+    if (response.ok) {
+      return {
+        service: target.service,
+        status: "healthy",
+        latencyMs,
+        ...(targetUrlHost ? { targetUrlHost } : {}),
+        httpStatusCode: response.status,
+      };
+    }
+
+    return {
+      service: target.service,
+      status: "unhealthy",
+      latencyMs,
+      ...(targetUrlHost ? { targetUrlHost } : {}),
+      httpStatusCode: response.status,
+      errorKind: "http_error",
+    };
+  } catch (error) {
+    return {
+      service: target.service,
+      status: "unhealthy",
+      latencyMs: Date.now() - startedAt,
+      ...(targetUrlHost ? { targetUrlHost } : {}),
+      errorKind: classifyServiceHealthError(error),
+    };
+  }
 }
 
 export function serializePostHogEvent(
@@ -360,8 +566,64 @@ export async function enqueuePostHogProviderExceptionBestEffort(
           : {}),
       }),
       operation: input.operation,
-      runtime: "convex",
-      ...input.properties,
+      ...getSafeExceptionProperties(input.properties),
+      ...buildAlertableExceptionTelemetryProperties({
+        runtime: "convex",
+        service: "convex",
+        operation: input.operation,
+        alertable: true,
+        expected: false,
+        provider: classification.provider,
+        exceptionType: getProviderErrorExceptionType(classification.kind),
+        exceptionMessage: `${classification.provider} provider failure (${classification.kind})`,
+      }),
+    },
+  });
+}
+
+export async function enqueuePostHogExceptionBestEffort(
+  ctx: TelemetryMutationRunner,
+  input: EnqueueConvexExceptionInput,
+): Promise<void> {
+  const exceptionType = input.exceptionType ?? getErrorExceptionType(input.error);
+  const exceptionMessage =
+    input.exceptionMessage ??
+    `${input.service} ${input.operation} failed (${exceptionType})`;
+
+  await enqueuePostHogEventBestEffort(ctx, {
+    eventName: "$exception",
+    distinctId: input.distinctId,
+    ...(input.businessId !== undefined ? { businessId: input.businessId } : {}),
+    ...(input.groupKey !== undefined ? { groupKey: input.groupKey } : {}),
+    ...(input.conversationId !== undefined ? { conversationId: input.conversationId } : {}),
+    ...(input.callId !== undefined ? { callId: input.callId } : {}),
+    ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+    ...(input.appointmentId !== undefined
+      ? { appointmentId: input.appointmentId }
+      : {}),
+    ...(input.channel !== undefined ? { channel: input.channel } : {}),
+    ...(input.provider !== undefined ? { provider: input.provider } : {}),
+    ...(input.model !== undefined ? { model: input.model } : {}),
+    properties: {
+      ...getSafeExceptionProperties(input.properties),
+      ...buildAlertableExceptionTelemetryProperties({
+        runtime: "convex",
+        service: input.service,
+        operation: input.operation,
+        ...(input.alertable !== undefined ? { alertable: input.alertable } : {}),
+        ...(input.expected !== undefined ? { expected: input.expected } : {}),
+        ...(input.provider !== undefined ? { provider: input.provider } : {}),
+        ...(input.exceptionLevel !== undefined
+          ? { exceptionLevel: input.exceptionLevel }
+          : {}),
+        exceptionType,
+        exceptionMessage,
+      }),
+      $exception_list: buildGenericExceptionList({
+        error: input.error,
+        exceptionType,
+        exceptionMessage,
+      }),
     },
   });
 }
@@ -538,6 +800,64 @@ export const emitObservabilityHeartbeat = internalAction({
     }
 
     return snapshot;
+  },
+});
+
+export async function emitServiceHealthCheckEvents(
+  ctx: TelemetryMutationRunner,
+  targets: ServiceHealthTarget[] = buildConfiguredServiceHealthTargets(),
+  fetchImpl: typeof fetch = fetch,
+): Promise<ServiceHealthCheckResult[]> {
+  const results: ServiceHealthCheckResult[] = [];
+
+  for (const target of targets) {
+    const result = await checkServiceHealthTarget(target, fetchImpl);
+    results.push(result);
+
+    const properties = {
+      runtime: "convex",
+      service: result.service,
+      status: result.status,
+      latencyMs: result.latencyMs,
+      ...(result.targetUrlHost ? { targetUrlHost: result.targetUrlHost } : {}),
+      ...(result.httpStatusCode !== undefined
+        ? { httpStatusCode: result.httpStatusCode }
+        : {}),
+      ...(result.errorKind ? { errorKind: result.errorKind } : {}),
+    } satisfies TelemetryProperties;
+
+    await enqueuePostHogEventBestEffort(ctx, {
+      eventName:
+        result.status === "healthy"
+          ? "ops.service.health_check"
+          : "ops.service.health_check_failed",
+      distinctId: CONVEX_TELEMETRY_DISTINCT_ID,
+      properties,
+    });
+
+    if (result.status !== "healthy") {
+      await enqueuePostHogExceptionBestEffort(ctx, {
+        service: result.service,
+        operation: "service_health_check",
+        distinctId: CONVEX_TELEMETRY_DISTINCT_ID,
+        exceptionType: "ServiceHealthCheckFailed",
+        exceptionMessage: `${result.service} health check failed (${result.status})`,
+        properties,
+      });
+    }
+  }
+
+  return results;
+}
+
+export const emitServiceHealthChecks = internalAction({
+  args: {},
+  handler: async (ctx): Promise<ServiceHealthCheckResult[] | null> => {
+    if (!isPostHogExportEnabled()) {
+      return null;
+    }
+
+    return await emitServiceHealthCheckEvents(ctx);
   },
 });
 

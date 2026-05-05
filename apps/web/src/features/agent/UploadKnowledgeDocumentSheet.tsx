@@ -1,5 +1,5 @@
 import { type DragEvent, FormEvent, useMemo, useRef, useState } from "react";
-import { useAction, useMutation } from "convex/react";
+
 import { useTranslation } from "react-i18next";
 import { Upload } from "lucide-react";
 
@@ -15,6 +15,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -106,9 +107,13 @@ export function UploadKnowledgeDocumentSheet({
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const generateUploadUrl = useMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
-  const finalizeKnowledgeDocumentUpload = useAction(
+  const generateUploadUrl = useObservedMutation(
+    api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl,
+    { reportFailures: false },
+  );
+  const finalizeKnowledgeDocumentUpload = useObservedAction(
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
+    { reportFailures: false },
   );
 
   const isControlled = open !== undefined;

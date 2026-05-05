@@ -1,13 +1,12 @@
 import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
-} from "../telemetry/shared";
+  } from "../telemetry/shared";
+import { observedMutation as mutation } from "../telemetry/observedFunctions";
 import { v } from "convex/values";
 import { DateTime } from "luxon";
 import {
-  internalMutation,
   internalQuery,
-  mutation,
   query,
   type MutationCtx,
   type QueryCtx,
@@ -23,6 +22,7 @@ import {
   serializePostHogEvent,
 } from "../telemetry/posthog";
 
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 const SLOT_INTERVAL_MINUTES = 15;
 const DEFAULT_SLOT_LIMIT = 6;
 
