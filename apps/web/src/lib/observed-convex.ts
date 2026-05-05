@@ -1,7 +1,7 @@
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, type ReactMutation } from "convex/react";
 import { getFunctionName } from "convex/server";
 import type { FunctionReference } from "convex/server";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { captureAnalyticsException } from "@/lib/analytics";
 import {
@@ -65,6 +65,34 @@ function buildCaptureOptions(input: {
   return Object.keys(options).length > 0 ? options : undefined;
 }
 
+function buildObservedMutation<
+  Reference extends FunctionReference<"mutation", "public">,
+>(
+  mutationFn: ReactMutation<Reference>,
+  referenceName: string,
+  options?: ObservedConvexOptions,
+): ReactMutation<Reference> {
+  const observedMutation = (async (...args: Parameters<ReactMutation<Reference>>) => {
+    try {
+      return await mutationFn(...args);
+    } catch (error) {
+      if (options?.reportFailures !== false) {
+        captureRejectedConvexCall(error, referenceName, "mutation", options);
+      }
+      throw error;
+    }
+  }) as ReactMutation<Reference>;
+
+  observedMutation.withOptimisticUpdate = ((optimisticUpdate) =>
+    buildObservedMutation(
+      mutationFn.withOptimisticUpdate(optimisticUpdate),
+      referenceName,
+      options,
+    )) as ReactMutation<Reference>["withOptimisticUpdate"];
+
+  return observedMutation;
+}
+
 export function useObservedAction<
   Reference extends FunctionReference<"action", "public">,
 >(
@@ -113,23 +141,17 @@ export function useObservedMutation<
   const properties = options?.properties;
   const reportFailures = options?.reportFailures;
 
-  return useCallback(
-    (async (...args: Parameters<typeof mutationFn>) => {
-      try {
-        return await mutationFn(...args);
-      } catch (error) {
-        if (reportFailures !== false) {
-          captureRejectedConvexCall(
-            error,
-            referenceName,
-            "mutation",
-            buildCaptureOptions({ operation, alertable, expected, properties }),
-          );
-        }
-        throw error;
-      }
-    }) as ReturnType<typeof useMutation<Reference>>,
-    [alertable, expected, mutationFn, operation, properties, referenceName, reportFailures],
+  const captureOptions = useMemo((): ObservedConvexOptions | undefined => {
+    const next = buildCaptureOptions({ operation, alertable, expected, properties }) ?? {};
+    if (reportFailures !== undefined) {
+      next.reportFailures = reportFailures;
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  }, [alertable, expected, operation, properties, reportFailures]);
+
+  return useMemo(
+    () => buildObservedMutation(mutationFn, referenceName, captureOptions),
+    [captureOptions, mutationFn, referenceName],
   );
 }
 

@@ -24,6 +24,7 @@ describe("observed Convex hooks", () => {
   afterEach(() => {
     actionMock.mockReset();
     mutationMock.mockReset();
+    delete (mutationMock as { withOptimisticUpdate?: unknown }).withOptimisticUpdate;
     captureAnalyticsExceptionMock.mockReset();
   });
 
@@ -57,6 +58,45 @@ describe("observed Convex hooks", () => {
         convexFunctionType: "mutation",
         expected: false,
         operation: "convex_mutation:dashboard/test:run",
+      }),
+    );
+  });
+
+  it("preserves optimistic mutation updates while reporting failures", async () => {
+    const error = new Error("optimistic mutation failed");
+    const optimisticMutationMock = vi.fn().mockRejectedValueOnce(error);
+    const withOptimisticUpdateMock = vi.fn(() => optimisticMutationMock);
+    (mutationMock as { withOptimisticUpdate?: typeof withOptimisticUpdateMock })
+      .withOptimisticUpdate = withOptimisticUpdateMock;
+
+    const { useObservedMutation } = await import("./observed-convex");
+    let observedMutation:
+      | {
+          withOptimisticUpdate: (
+            optimisticUpdate: (localStore: unknown, args: unknown) => void,
+          ) => () => Promise<unknown>;
+        }
+      | undefined;
+
+    function Probe() {
+      observedMutation = useObservedMutation({} as never);
+      return null;
+    }
+
+    render(<Probe />);
+
+    const optimisticUpdate = vi.fn();
+    const observedOptimisticMutation =
+      observedMutation?.withOptimisticUpdate(optimisticUpdate);
+
+    expect(withOptimisticUpdateMock).toHaveBeenCalledWith(optimisticUpdate);
+    await expect(observedOptimisticMutation?.()).rejects.toBe(error);
+    expect(optimisticMutationMock).toHaveBeenCalledOnce();
+    expect(captureAnalyticsExceptionMock).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        convexFunction: "dashboard/test:run",
+        convexFunctionType: "mutation",
       }),
     );
   });
