@@ -610,10 +610,6 @@ function OnboardingVerifyPhoneRoute() {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
-  if (ctx.activeBusiness.onboardingStage === "verify_phone_code") {
-    return <Navigate replace to="/onboarding/verify-phone/code" />;
-  }
-
   if (isSkipping) {
     return <OnboardingRouteSkeleton />;
   }
