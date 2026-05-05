@@ -63,6 +63,7 @@ import type * as lib_node_tesseractInProcessWorker from "../lib/node/tesseractIn
 import type * as lib_node_twilioClient from "../lib/node/twilioClient.js";
 import type * as lib_onboardingLocation from "../lib/onboardingLocation.js";
 import type * as lib_onboardingPhoneNumbers from "../lib/onboardingPhoneNumbers.js";
+import type * as lib_onboardingStage from "../lib/onboardingStage.js";
 import type * as lib_operatorNotificationPreferences from "../lib/operatorNotificationPreferences.js";
 import type * as lib_passwordPolicy from "../lib/passwordPolicy.js";
 import type * as lib_passwordReset from "../lib/passwordReset.js";
@@ -168,6 +169,7 @@ declare const fullApi: ApiFromModules<{
   "lib/node/twilioClient": typeof lib_node_twilioClient;
   "lib/onboardingLocation": typeof lib_onboardingLocation;
   "lib/onboardingPhoneNumbers": typeof lib_onboardingPhoneNumbers;
+  "lib/onboardingStage": typeof lib_onboardingStage;
   "lib/operatorNotificationPreferences": typeof lib_operatorNotificationPreferences;
   "lib/passwordPolicy": typeof lib_passwordPolicy;
   "lib/passwordReset": typeof lib_passwordReset;

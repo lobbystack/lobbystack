@@ -2,8 +2,8 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import { query, type QueryCtx } from "../_generated/server";
+import { getCurrentUser } from "../lib/auth";
 import { requireMembership } from "../lib/auth";
-import { ensureCurrentUser } from "../lib/auth";
 
 type LatestAttemptArgs = {
   businessId: Id<"businesses">;
@@ -24,7 +24,7 @@ export const getLatestPhoneVerificationAttempt = query({
     args: LatestAttemptArgs,
   ): Promise<{ phoneE164: string; status: string } | null> => {
     await requireMembership(ctx, args.businessId);
-    const user = await ensureCurrentUserReadable(ctx);
+    const user = await getCurrentUser(ctx);
     if (!user) {
       return null;
     }
@@ -50,26 +50,3 @@ export const getLatestPhoneVerificationAttempt = query({
     };
   },
 });
-
-async function ensureCurrentUserReadable(ctx: QueryCtx) {
-  // `ensureCurrentUser` accepts a writer context and may patch the user
-  // doc; in a query context we only need to *read* the user. Inline a
-  // narrow read-only resolver that mirrors `requireCurrentUser` semantics.
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("Authentication required.");
-  }
-  // Use the stable subject lookup index to find the user. This avoids the
-  // patch logic (which is only available with a writer context) and keeps
-  // the query side-effect free.
-  const direct = await ctx.db
-    .query("users")
-    .withIndex("by_auth_subject", (q) => q.eq("authSubject", identity.subject))
-    .unique();
-  if (direct) {
-    return direct;
-  }
-  // ensureCurrentUser is a no-op outside writer contexts; fall through.
-  void ensureCurrentUser;
-  return null;
-}
