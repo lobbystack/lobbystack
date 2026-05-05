@@ -1,57 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { CountryCode } from "libphonenumber-js/min";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { LoaderCircle, LogOut, MapPin, Phone, Search, Sparkles } from "lucide-react";
+import { Check, ContactRound, LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { useObservedAction } from "@/lib/observed-convex";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Surface } from "@/components/ui/surface";
+import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent } from "@/lib/analytics";
-import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { cn } from "@/lib/utils";
+import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
 type OnboardingNumberPageProps = {
   businessId: Id<"businesses">;
-  currentUserEmail?: string;
   onSignOut: () => void;
-};
-
-type VerifiedPhoneMarket = {
-  phoneE164: string;
-  countryCode: string;
-  nationalDestinationCode?: string;
-  areaCode?: string;
-  regionCode?: string;
-  city?: string;
-  metroKey?: string;
-  confidence: number;
-  source: "verified_phone" | "verified_phone_country";
 };
 
 type NumberSelectionContext = {
@@ -70,11 +44,15 @@ type AvailableNumberSummary = {
   region?: string;
   countryCode: string;
   kind: "local" | "toll_free";
-  capabilities: {
-    sms: boolean;
-    voice: boolean;
-  };
+  capabilities: { sms: boolean; voice: boolean };
   selectionContext: NumberSelectionContext;
+};
+
+type VerifiedPhoneMarket = {
+  countryCode: string;
+  regionCode?: string;
+  city?: string;
+  areaCode?: string;
 };
 
 type InitialSuggestionResult = {
@@ -90,475 +68,311 @@ type SearchResult = {
 };
 
 type ClaimResult =
-  | {
-      status: "claimed";
-      phoneNumberId: Id<"phone_numbers">;
-      e164: string;
-    }
-  | {
-      status: "unavailable";
-      message: string;
-      alternatives: Array<AvailableNumberSummary>;
-    }
-  | {
-      status: "failed";
-      message: string;
-    };
+  | { status: "claimed"; phoneNumberId: Id<"phone_numbers">; e164: string }
+  | { status: "unavailable"; message: string; alternatives: Array<AvailableNumberSummary> }
+  | { status: "failed"; message: string };
 
-function describeSuggestion(
-  market: VerifiedPhoneMarket,
-  t: ReturnType<typeof useTranslation<"onboarding">>["t"],
-): string {
-  if (market.city && market.regionCode) {
-    return t("number.detectedVerifiedLocation", {
-      city: market.city,
-      region: market.regionCode,
-    });
-  }
+const COUNTRY_OPTIONS: Array<{ code: string; label: string; flag: string }> = [
+  { code: "US", label: "US", flag: "🇺🇸" },
+  { code: "CA", label: "CA", flag: "🇨🇦" },
+];
 
-  if (market.areaCode) {
-    return t("number.detectedVerifiedAreaCode", {
-      areaCode: market.areaCode,
-    });
-  }
-
-  return t("number.detectedVerifiedCountry", {
-    country: market.countryCode,
-  });
-}
-
-export function OnboardingNumberPage({
-  businessId,
-  currentUserEmail,
-  onSignOut,
-}: OnboardingNumberPageProps) {
+export function OnboardingNumberPage({ businessId, onSignOut }: OnboardingNumberPageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
-  const getInitialNumberSuggestion = useObservedAction(api.onboarding.phoneNumbers.getInitialNumberSuggestion);
-  const searchAvailableNumbers = useObservedAction(api.onboarding.phoneNumbers.searchAvailableNumbers);
-  const claimOnboardingNumber = useObservedAction(api.onboarding.phoneNumbers.claimOnboardingNumber);
-  const [market, setMarket] = useState<VerifiedPhoneMarket | null>(null);
-  const [selectedNumber, setSelectedNumber] = useState<AvailableNumberSummary | null>(null);
-  const [pickerNumbers, setPickerNumbers] = useState<Array<AvailableNumberSummary>>([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"city" | "area_code" | "toll_free">("city");
-  const [cityQuery, setCityQuery] = useState("");
-  const [areaCodeQuery, setAreaCodeQuery] = useState("");
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [claimError, setClaimError] = useState<string | null>(null);
-  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(true);
+  const getInitialNumberSuggestion = useObservedAction(
+    api.onboarding.phoneNumbers.getInitialNumberSuggestion,
+  );
+  const searchAvailableNumbers = useObservedAction(
+    api.onboarding.phoneNumbers.searchAvailableNumbers,
+  );
+  const claimOnboardingNumber = useObservedAction(
+    api.onboarding.phoneNumbers.claimOnboardingNumber,
+  );
+  const skipOnboardingNumber = useObservedMutation(
+    api.onboarding.phoneNumbersSkip.skipOnboardingNumber,
+  );
+
+  const [country, setCountry] = useState<string>("US");
+  const [areaCode, setAreaCode] = useState<string>("");
+  const [numbers, setNumbers] = useState<Array<AvailableNumberSummary>>([]);
+  const [selectedE164, setSelectedE164] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
+  // Initial load: get the suggested market + a starter list of numbers.
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSuggestion() {
-      setIsLoadingSuggestion(true);
-      setLoadError(null);
-
+    async function load(): Promise<void> {
+      setIsLoading(true);
+      setError(null);
       try {
         const result = (await getInitialNumberSuggestion({
           businessId,
         })) as InitialSuggestionResult;
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
-        setMarket(result.market);
-        setCityQuery(result.market.city ?? "");
-        setAreaCodeQuery(result.market.areaCode ?? "");
-        const suggestion = result.suggestion ?? result.alternatives[0] ?? null;
-        setSelectedNumber(suggestion);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        const message = error instanceof Error ? error.message : t("number.loadFailed");
+        setCountry(result.market.countryCode || "US");
+        setAreaCode(result.market.areaCode ?? "");
+        const initialList = [
+          ...(result.suggestion ? [result.suggestion] : []),
+          ...result.alternatives,
+        ];
+        setNumbers(initialList);
+        setHasMore(initialList.length >= 5);
+      } catch (loadError) {
+        if (cancelled) return;
+        const message =
+          loadError instanceof Error ? loadError.message : t("number.loadFailed");
         if (message === "Verify your mobile number before choosing a business number.") {
           void navigate("/onboarding/verify-phone");
           return;
         }
-
-        setLoadError(message);
+        setError(message);
       } finally {
         if (!cancelled) {
-          setIsLoadingSuggestion(false);
+          setIsLoading(false);
         }
       }
     }
 
-    void loadSuggestion();
-
+    void load();
     return () => {
       cancelled = true;
     };
-  }, [businessId, getInitialNumberSuggestion, t]);
+  }, [businessId, getInitialNumberSuggestion, navigate, t]);
 
-  async function runSearch(tab: "city" | "area_code" | "toll_free"): Promise<void> {
-    if (tab === "area_code" && areaCodeQuery.trim().length === 0) {
-      setClaimError(t("number.areaCodeRequired"));
-      setPickerNumbers([]);
-      return;
-    }
-
+  async function handleSearch(): Promise<void> {
     setIsSearching(true);
-    setClaimError(null);
-
+    setError(null);
     try {
+      const trimmedAreaCode = areaCode.trim();
       const result = (await searchAvailableNumbers({
         businessId,
-        mode: tab,
-        ...(tab === "city" && cityQuery.trim() ? { city: cityQuery.trim() } : {}),
-        ...(tab === "area_code" && areaCodeQuery.trim()
-          ? { areaCode: areaCodeQuery.trim() }
-          : {}),
+        mode: trimmedAreaCode ? "area_code" : "suggested",
+        ...(trimmedAreaCode ? { areaCode: trimmedAreaCode } : {}),
       })) as SearchResult;
-
-      setMarket(result.market);
-      setPickerNumbers(result.numbers);
-    } catch (error) {
-      setClaimError(error instanceof Error ? error.message : t("number.claimFailed"));
+      setNumbers(result.numbers);
+      setHasMore(result.numbers.length >= 5);
+    } catch (searchError) {
+      setError(searchError instanceof Error ? searchError.message : t("number.searchFailed"));
     } finally {
       setIsSearching(false);
     }
   }
 
-  async function handleClaim(): Promise<void> {
-    if (!selectedNumber) {
-      return;
-    }
-
+  async function handleSelect(number: AvailableNumberSummary): Promise<void> {
+    if (isClaiming) return;
+    setSelectedE164(number.e164);
     setIsClaiming(true);
-    setClaimError(null);
+    setError(null);
     try {
       captureAnalyticsEvent("web.onboarding.number_claim_started", {
         businessId: String(businessId),
-        countryCode: selectedNumber.countryCode,
-        selectionMode: selectedNumber.selectionContext.mode,
-        numberKind: selectedNumber.kind,
+        countryCode: number.countryCode,
+        selectionMode: number.selectionContext.mode,
+        numberKind: number.kind,
       });
       const result = (await claimOnboardingNumber({
         businessId,
-        e164: selectedNumber.e164,
-        selectionContext: selectedNumber.selectionContext,
+        e164: number.e164,
+        selectionContext: number.selectionContext,
       })) as ClaimResult;
 
       if (result.status === "claimed") {
         captureAnalyticsEvent("web.onboarding.number_claim_completed", {
           businessId: String(businessId),
-          countryCode: selectedNumber.countryCode,
-          selectionMode: selectedNumber.selectionContext.mode,
-          numberKind: selectedNumber.kind,
+          countryCode: number.countryCode,
+          selectionMode: number.selectionContext.mode,
+          numberKind: number.kind,
         });
-        void navigate("/");
         return;
       }
 
       if (result.status === "unavailable") {
-        setClaimError(t("number.unavailable"));
-        setPickerNumbers(result.alternatives);
-        setActiveTab(
-          selectedNumber.selectionContext.mode === "area_code"
-            ? "area_code"
-            : selectedNumber.selectionContext.mode === "toll_free"
-              ? "toll_free"
-              : "city",
-        );
-        setPickerOpen(true);
+        setError(t("number.unavailable"));
+        setNumbers(result.alternatives);
+        setHasMore(result.alternatives.length >= 5);
+        setSelectedE164(null);
         return;
       }
 
-      setClaimError(result.message || t("number.claimFailed"));
-    } catch (error) {
-      setClaimError(error instanceof Error ? error.message : t("number.claimFailed"));
+      setError(result.message || t("number.claimFailed"));
+      setSelectedE164(null);
+    } catch (claimError) {
+      setError(claimError instanceof Error ? claimError.message : t("number.claimFailed"));
+      setSelectedE164(null);
     } finally {
       setIsClaiming(false);
     }
   }
 
-  const suggestionLabel = useMemo(() => {
-    if (!market) {
-      return null;
+  async function handleSkip(): Promise<void> {
+    if (isSkipping) return;
+    setIsSkipping(true);
+    setError(null);
+    try {
+      await skipOnboardingNumber({ businessId });
+    } catch (skipError) {
+      setError(skipError instanceof Error ? skipError.message : t("number.skipFailed"));
+    } finally {
+      setIsSkipping(false);
     }
-
-    return describeSuggestion(market, t);
-  }, [market, t]);
+  }
 
   return (
-    <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(82,43,173,0.16),_transparent_36%),linear-gradient(180deg,_#120f1d_0%,_#09080d_100%)] text-white">
-      <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-6 py-6">
-        <header className="flex items-center justify-between">
-          <div className="text-2xl font-semibold tracking-tight">
-            {import.meta.env.VITE_APP_NAME ?? "LobbyStack"}
+    <OnboardingShell
+      description={t("number.description")}
+      onSignOut={onSignOut}
+      progress={{ current: 8, total: 10 }}
+      title={t("number.title")}
+      width="lg"
+      footer={
+        <div className="flex flex-col items-center gap-3">
+          <button
+            className="text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
+            disabled={isSkipping || isClaiming}
+            onClick={() => void handleSkip()}
+            type="button"
+          >
+            {isSkipping ? t("number.skipping") : t("number.skipLater")}
+          </button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-[140px_1fr_auto] items-end gap-3">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium" htmlFor="number-country">
+              {t("number.countryLabel")}
+            </label>
+            <Select onValueChange={(value) => setCountry(value ?? "US")} value={country}>
+              <SelectTrigger className="h-11" id="number-country">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((option) => (
+                  <SelectItem key={option.code} value={option.code}>
+                    <span className="mr-2" aria-hidden="true">
+                      {option.flag}
+                    </span>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex items-center gap-3">
-            {currentUserEmail ? (
-              <span className="hidden text-sm text-zinc-400 sm:inline">
-                {t("number.signedInAs", { email: currentUserEmail })}
-              </span>
-            ) : null}
-            <Button
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-              onClick={onSignOut}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <LogOut className="size-4" />
-            </Button>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium" htmlFor="number-area-code">
+              {t("number.areaCodeLabel")}
+            </label>
+            <Input
+              className="h-11"
+              id="number-area-code"
+              inputMode="numeric"
+              maxLength={5}
+              onChange={(event) => setAreaCode(event.target.value.replace(/[^\d]/g, ""))}
+              placeholder={t("number.areaCodePlaceholder")}
+              value={areaCode}
+            />
           </div>
-        </header>
+          <Button
+            className="h-11"
+            disabled={isSearching || isLoading}
+            onClick={() => void handleSearch()}
+            type="button"
+            variant="outline"
+          >
+            {isSearching ? <LoaderCircle className="size-4 animate-spin" /> : t("number.search")}
+          </Button>
+        </div>
 
-        <div className="flex flex-1 items-center justify-center py-12">
-          <Card className="w-full max-w-xl border-white/10 bg-white/5 text-white shadow-2xl shadow-black/30 backdrop-blur">
-            <CardHeader className="items-center text-center">
-              <div className="flex size-20 items-center justify-center rounded-full bg-violet-500/15 text-violet-300 shadow-inner shadow-violet-950/40">
-                <Sparkles className="size-9" />
-              </div>
-              <CardTitle className="text-4xl font-semibold tracking-tight">{t("number.title")}</CardTitle>
-              <CardDescription className="type-section-description max-w-md text-zinc-300">
-                {t("number.description")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingSuggestion ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-5 w-40 rounded-full bg-white/10" />
-                  <div className="rounded-xl border border-white/10 bg-black/20 px-6 py-6 text-center">
-                    <Skeleton className="mx-auto h-4 w-24 bg-white/10" />
-                    <Skeleton className="mx-auto mt-4 h-10 w-56 bg-white/10" />
-                    <Skeleton className="mx-auto mt-3 h-4 w-32 bg-white/10" />
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Skeleton className="h-12 w-full rounded-md bg-white/10" />
-                    <Skeleton className="h-10 w-full rounded-md bg-white/10" />
-                  </div>
-                </div>
-              ) : null}
+        <Surface className="flex flex-col gap-2">
+          <div className="grid grid-cols-[1fr_auto_auto] items-center px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{t("number.tableHeaders.phoneNumber")}</span>
+            <span className="px-3">{t("number.tableHeaders.features")}</span>
+            <span className="pl-4">{t("number.tableHeaders.option")}</span>
+          </div>
 
-              {!isLoadingSuggestion && selectedNumber ? (
-                <div className="space-y-4">
-                  {suggestionLabel ? (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-zinc-300">
-                      <MapPin className="size-4" />
-                      <span>{suggestionLabel}</span>
-                    </div>
-                  ) : null}
-                  <div className="rounded-xl border border-violet-400/25 bg-violet-500/12 px-6 py-6 text-center">
-                    <div className="mb-2 flex items-center justify-center gap-2 text-zinc-400">
-                      <Phone className="size-4" />
-                      <span className="text-sm uppercase tracking-[0.24em]">
-                        {selectedNumber.kind === "toll_free" ? "Toll-free" : "Local"}
+          {isLoading ? (
+            <div className="flex flex-col gap-3 px-4 pb-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton className="h-12 w-full rounded-lg" key={index} />
+              ))}
+            </div>
+          ) : numbers.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {t("number.empty")}
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {numbers.map((number) => {
+                const isThisLoading = isClaiming && selectedE164 === number.e164;
+                return (
+                  <li
+                    className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-border px-4 py-3"
+                    key={number.e164}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                      >
+                        <ContactRound className="size-4" />
                       </span>
+                      <span className="text-sm font-medium text-foreground">{number.e164}</span>
                     </div>
-                    <div className="text-4xl font-semibold tracking-tight text-violet-300">
-                      {formatPhoneNumberDisplay(selectedNumber.e164, undefined, {
-                        defaultCountry: selectedNumber.countryCode as CountryCode,
-                      })}
-                    </div>
-                    {selectedNumber.locality || selectedNumber.region ? (
-                      <div className="mt-2 text-sm text-zinc-400">
-                        {[selectedNumber.locality, selectedNumber.region]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col gap-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                        number.capabilities.sms
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "border-border text-muted-foreground",
+                      )}
+                    >
+                      <Check className="size-3" />
+                      SMS
+                    </span>
                     <Button
-                      className="h-12 bg-violet-500 text-base font-medium text-white hover:bg-violet-400"
+                      className="h-9 rounded-full"
                       disabled={isClaiming}
-                      onClick={() => void handleClaim()}
+                      onClick={() => void handleSelect(number)}
+                      size="sm"
                       type="button"
                     >
-                      {isClaiming ? (
-                        <>
-                          <LoaderCircle className="size-4 animate-spin" />
-                          {t("number.continuing")}
-                        </>
+                      {isThisLoading ? (
+                        <LoaderCircle className="size-4 animate-spin" />
                       ) : (
-                        t("number.continue")
+                        t("number.select")
                       )}
                     </Button>
-                    <Button
-                      className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-                      onClick={() => {
-                        setPickerOpen(true);
-                        void runSearch(activeTab);
-                      }}
-                      type="button"
-                      variant="outline"
-                    >
-                      {t("number.pickDifferent")}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-              {!isLoadingSuggestion && !selectedNumber && !loadError ? (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 px-6 py-6 text-center">
-                    <div className="type-empty-title text-white">
-                      {t("number.noSuggestionTitle")}
-                    </div>
-                    <div className="type-empty-description mt-2 text-zinc-400">
-                      {t("number.noSuggestionDescription")}
-                    </div>
-                  </div>
-                  <Button
-                    className="w-full border-white/10 bg-white/5 text-white hover:bg-white/10"
-                    onClick={() => {
-                      setPickerOpen(true);
-                      void runSearch(activeTab);
-                    }}
-                    type="button"
-                    variant="outline"
-                  >
-                    {t("number.pickDifferent")}
-                  </Button>
-                </div>
-              ) : null}
-
-              {loadError ? <FieldError>{loadError || t("number.loadFailed")}</FieldError> : null}
-              {claimError ? <FieldError>{claimError}</FieldError> : null}
-              <FieldDescription className="text-center text-sm text-zinc-400">
-                {t("number.skipHint")}
-              </FieldDescription>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <Dialog onOpenChange={setPickerOpen} open={pickerOpen}>
-        <DialogContent className="max-h-[90vh] border-white/10 bg-[#161320] p-0 text-white sm:max-w-2xl">
-          <DialogHeader className="border-b border-white/10 px-6 py-5">
-            <DialogTitle>{t("number.pickerTitle")}</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              {t("number.pickerDescription")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-5 p-6">
-            <Tabs
-              onValueChange={(value) => setActiveTab(value as "city" | "area_code" | "toll_free")}
-              value={activeTab}
-            >
-              <TabsList className="w-full bg-white/5" variant="line">
-                <TabsTrigger value="city">{t("number.tabs.city")}</TabsTrigger>
-                <TabsTrigger value="area_code">{t("number.tabs.areaCode")}</TabsTrigger>
-                <TabsTrigger value="toll_free">{t("number.tabs.tollFree")}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="city">
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="onboarding-city">{t("number.fields.city")}</FieldLabel>
-                    <Input
-                      id="onboarding-city"
-                      onChange={(event) => setCityQuery(event.target.value)}
-                      placeholder={t("number.placeholders.city")}
-                      value={cityQuery}
-                    />
-                  </Field>
-                </FieldGroup>
-              </TabsContent>
-              <TabsContent value="area_code">
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="onboarding-area-code">
-                      {t("number.fields.areaCode")}
-                    </FieldLabel>
-                    <Input
-                      id="onboarding-area-code"
-                      inputMode="numeric"
-                      maxLength={3}
-                      onChange={(event) => setAreaCodeQuery(event.target.value.replace(/\D/g, ""))}
-                      placeholder={t("number.placeholders.areaCode")}
-                      value={areaCodeQuery}
-                    />
-                  </Field>
-                </FieldGroup>
-              </TabsContent>
-              <TabsContent value="toll_free">
-                <FieldDescription className="text-zinc-400">
-                  {t("number.pickerDescription")}
-                </FieldDescription>
-              </TabsContent>
-            </Tabs>
-
-            <div className="flex items-center justify-between gap-3">
-              <Button
-                className="bg-violet-500 text-white hover:bg-violet-400"
+          {hasMore && !isLoading ? (
+            <div className="border-t border-border px-4 py-3">
+              <button
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
                 disabled={isSearching}
-                onClick={() => void runSearch(activeTab)}
+                onClick={() => void handleSearch()}
                 type="button"
               >
-                {isSearching ? (
-                  <>
-                    <LoaderCircle className="size-4 animate-spin" />
-                    {t("number.searching")}
-                  </>
-                ) : (
-                  <>
-                    <Search className="size-4" />
-                    {t("number.search")}
-                  </>
-                )}
-              </Button>
-              <Button
-                className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-                onClick={() => setPickerOpen(false)}
-                type="button"
-                variant="outline"
-              >
-                {t("number.backToSuggested")}
-              </Button>
+                {t("number.loadMore")}
+              </button>
             </div>
+          ) : null}
+        </Surface>
 
-            <div className="max-h-[26rem] overflow-y-auto rounded-xl border border-white/10 bg-black/15">
-              {pickerNumbers.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-zinc-400">
-                  {t("number.empty")}
-                </div>
-              ) : (
-                <div className="divide-y divide-white/10">
-                  {pickerNumbers.map((number) => {
-                    const isSelected = number.e164 === selectedNumber?.e164;
-                    return (
-                      <button
-                        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-white/5"
-                        key={number.e164}
-                        onClick={() => {
-                          setSelectedNumber(number);
-                          setPickerOpen(false);
-                        }}
-                        type="button"
-                      >
-                        <div className="space-y-1">
-                          <div className="text-lg font-medium text-white">
-                            {formatPhoneNumberDisplay(number.e164, undefined, {
-                              defaultCountry: number.countryCode as CountryCode,
-                            })}
-                          </div>
-                          <div className="text-sm text-zinc-400">
-                            {[number.locality, number.region].filter(Boolean).join(", ") ||
-                              number.countryCode}
-                          </div>
-                        </div>
-                        <div className="shrink-0">
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-                            {isSelected ? t("number.selected") : t("number.select")}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {error ? <FieldError>{error}</FieldError> : null}
+      </div>
+    </OnboardingShell>
   );
 }

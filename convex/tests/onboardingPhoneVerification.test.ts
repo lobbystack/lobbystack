@@ -421,7 +421,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("website");
+    expect(business?.onboardingStage).toBe("phone_number");
 
     const currentUser = await authed.query(api.users.current, {});
     expect(currentUser?.phone).toBe("+15817484609");
@@ -478,7 +478,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("verify_phone");
+    expect(business?.onboardingStage).toBe("verify_phone_code");
   });
 
   it("refuses to start verification once the business leaves verify_phone", async () => {
@@ -574,7 +574,7 @@ describe("onboarding phone verification actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("website");
+    expect(business?.onboardingStage).toBe("phone_number");
 
     const attempt = await t.query(internal.onboarding.phoneVerificationState.getLatestVerificationAttempt, {
       businessId,

@@ -725,7 +725,7 @@ describe("onboarding phone-number actions", () => {
     const business = await t.query(internal.businesses.admin.getBusinessById, {
       businessId,
     });
-    expect(business?.onboardingStage).toBe("completed");
+    expect(business?.onboardingStage).toBe("plan");
 
     const phoneNumbers = await listBusinessPhoneNumbers(t, businessId);
     expect(phoneNumbers).toHaveLength(1);

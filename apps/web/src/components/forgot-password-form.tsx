@@ -3,7 +3,6 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Rows3 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -51,25 +50,9 @@ export function ForgotPasswordForm({
   const isVerifyStep = step === "verify";
 
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
+    <div className={cn("flex w-full flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
-        <FieldGroup>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Rows3 className="size-5" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h1 className="type-section-title">
-                {isVerifyStep ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")}
-              </h1>
-              <FieldDescription>
-                {isVerifyStep
-                  ? t("forgotPassword.verifySubtitle", { email })
-                  : t("forgotPassword.subtitle")}
-              </FieldDescription>
-            </div>
-          </div>
-
+        <FieldGroup className="gap-4">
           {isVerifyStep ? (
             <>
               <Field>
@@ -77,6 +60,7 @@ export function ForgotPasswordForm({
                 <Input
                   id="reset-code"
                   autoComplete="one-time-code"
+                  className="h-11"
                   inputMode="numeric"
                   onChange={(event) => onCodeChange(event.target.value)}
                   placeholder={t("forgotPassword.codePlaceholder")}
@@ -93,6 +77,7 @@ export function ForgotPasswordForm({
                 <Input
                   id="reset-new-password"
                   autoComplete="new-password"
+                  className="h-11"
                   onChange={(event) => onNewPasswordChange(event.target.value)}
                   placeholder={t("forgotPassword.newPasswordPlaceholder")}
                   required
@@ -107,6 +92,7 @@ export function ForgotPasswordForm({
               <Input
                 id="reset-email"
                 autoComplete="email"
+                className="h-11"
                 onChange={(event) => onEmailChange(event.target.value)}
                 placeholder={t("forgotPassword.emailPlaceholder")}
                 required
@@ -116,48 +102,44 @@ export function ForgotPasswordForm({
             </Field>
           )}
 
-          <div className="flex flex-col gap-6">
-            {statusMessage || errorMessage ? (
-              <div className="flex flex-col gap-2">
-                {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-                {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
-              </div>
-            ) : (
-              <div aria-hidden="true" className="h-8" />
-            )}
-
-            <div className="flex flex-col gap-3">
-              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-                {isSubmitting
-                  ? isVerifyStep
-                    ? t("forgotPassword.verifySubmitting")
-                    : t("forgotPassword.submitting")
-                  : isVerifyStep
-                    ? t("forgotPassword.verifySubmit")
-                    : t("forgotPassword.submit")}
-              </Button>
-
-              {isVerifyStep ? (
-                <Button
-                  className="w-full"
-                  disabled={isSubmitting}
-                  onClick={onBackToRequest}
-                  type="button"
-                  variant="outline"
-                >
-                  {t("forgotPassword.back")}
-                </Button>
-              ) : null}
+          {statusMessage || errorMessage ? (
+            <div className="flex flex-col gap-2 -mt-1">
+              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
             </div>
+          ) : null}
+
+          <div className="mt-2 flex flex-col gap-3">
+            <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
+              {isSubmitting
+                ? isVerifyStep
+                  ? t("forgotPassword.verifySubmitting")
+                  : t("forgotPassword.submitting")
+                : isVerifyStep
+                  ? t("forgotPassword.verifySubmit")
+                  : t("forgotPassword.submit")}
+            </Button>
+
+            {isVerifyStep ? (
+              <Button
+                className="h-11 w-full"
+                disabled={isSubmitting}
+                onClick={onBackToRequest}
+                type="button"
+                variant="outline"
+              >
+                {t("forgotPassword.back")}
+              </Button>
+            ) : null}
           </div>
         </FieldGroup>
       </form>
 
-      <FieldDescription className="text-center">
-        <Link className="font-medium text-foreground underline underline-offset-4" to="/login">
+      <p className="text-center text-sm text-muted-foreground">
+        <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/login">
           {t("forgotPassword.backToLogin")}
         </Link>
-      </FieldDescription>
+      </p>
     </div>
   );
 }

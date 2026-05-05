@@ -646,9 +646,11 @@ export const claimOnboardingNumber = action({
         twilioPhoneSid: purchased.sid,
         purchasedAt: Date.now(),
       });
+      // Advance to the plan-selection step. Phone provisioning is now
+      // followed by plan + attribution before onboarding completes.
       await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
         businessId: args.businessId,
-        onboardingStage: "completed",
+        onboardingStage: "plan",
       });
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,

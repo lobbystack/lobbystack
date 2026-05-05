@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import {
   formatDateTime,
   formatRelativeTime,
@@ -832,7 +831,7 @@ export function ContactDetailPage({ businessId }: ContactDetailPageProps) {
   }
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   if (isLoading) {

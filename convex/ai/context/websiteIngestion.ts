@@ -69,7 +69,7 @@ type WebsiteIngestionListItem = Doc<"website_ingestion_jobs"> & {
 type SubmitWebsiteIngestionArgs = {
   businessId: Id<"businesses">;
   websiteUrl: string;
-  nextOnboardingStage?: "phone_number";
+  nextOnboardingStage?: "knowledge" | "phone_number";
 };
 
 type DeleteWebsiteIngestionJobArgs = {
@@ -191,7 +191,9 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
   args: {
     businessId: v.id("businesses"),
     websiteUrl: v.string(),
-    nextOnboardingStage: v.optional(v.literal("phone_number")),
+    nextOnboardingStage: v.optional(
+      v.union(v.literal("knowledge"), v.literal("phone_number")),
+    ),
   },
   handler: async (
     ctx: MutationCtx,

@@ -1,86 +1,162 @@
 {
-  "verifyPhone": {
-    "title": "Vérifiez votre identité",
-    "description": "Entrez votre numéro mobile pour recevoir un code par SMS. Nous utiliserons ce numéro vérifié pour adapter la suite de l'onboarding à votre marché local.",
-    "verifyTitle": "Entrez votre code de vérification",
-    "verifyDescription": "Nous avons envoyé un code à {{phone}}. Une fois vérifié, vous pourrez importer votre site web avant que nous vous proposions un numéro d'entreprise correspondant à votre marché local.",
-    "fields": {
-      "mobileNumber": "Numéro mobile",
-      "code": "Code de vérification"
-    },
-    "placeholders": {
-      "mobileNumber": "+1 581 748 4609",
-      "code": "123456"
-    },
-    "hint": "Utilisez votre numéro mobile personnel au format international afin que nous puissions adapter la suite de l'onboarding, y compris votre premier numéro d'entreprise, au même marché local.",
-    "sendCode": "Obtenir le code",
-    "sending": "Envoi du code...",
-    "verifyCode": "Vérifier le code",
-    "verifying": "Vérification...",
-    "resendCode": "Renvoyer le code",
-    "resending": "Nouvel envoi du code...",
-    "useDifferentNumber": "Utiliser un autre numéro",
-    "codeSent": "Nous avons envoyé un code de vérification à {{phone}}.",
-    "sendFailed": "Impossible d'envoyer un code de vérification pour le moment. Veuillez réessayer.",
-    "verifyFailed": "Impossible de vérifier ce code pour le moment. Veuillez réessayer.",
-    "signedInAs": "Connecté comme {{email}}"
+  "shell": {
+    "signOut": "Déconnexion",
+    "terms": "Conditions",
+    "privacy": "Confidentialité"
+  },
+  "businessName": {
+    "title": "D'abord, quel est le nom de votre entreprise ?",
+    "description": "Nous l'utiliserons pour accueillir vos appelants.",
+    "label": "Nom de l'entreprise",
+    "placeholder": "Bar George",
+    "continue": "Continuer",
+    "submitting": "Enregistrement...",
+    "submitFailed": "Impossible d'enregistrer ce nom pour le moment. Réessayez."
   },
   "website": {
-    "title": "Importez votre site web",
-    "description": "Ajoutez le site public de votre entreprise pour que nous commencions à construire votre base de connaissances en arrière-plan avant que vous choisissiez votre numéro professionnel.",
+    "title": "Entraînons LobbyStack avec votre site web",
+    "description": "Nous allons apprendre depuis vos pages publiques pour répondre aux questions courantes.",
+    "label": "Site web",
+    "placeholder": "votreentreprise.com",
+    "continue": "Continuer",
+    "submitting": "Démarrage de l'import...",
+    "skip": "Ignorer pour l'instant",
+    "skipping": "Ignorer...",
+    "submitFailed": "Impossible de démarrer l'import maintenant. Réessayez.",
+    "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
+  },
+  "knowledge": {
+    "title": "Ajouter des documents d'entraînement",
+    "description": "Aidez votre IA à comprendre votre entreprise.",
+    "tabs": {
+      "upload": "Téléverser des fichiers",
+      "paste": "Coller du texte"
+    },
+    "upload": {
+      "headline": "Glissez-déposez ou cliquez pour téléverser",
+      "formats": "PDF, DOCX, CSV, TXT pris en charge",
+      "remove": "Retirer",
+      "tooLarge": "Les documents doivent faire 10 Mo ou moins.",
+      "unsupportedType": "Types pris en charge : PDF, DOCX, TXT, Markdown.",
+      "failed": "Impossible de téléverser ce document. Réessayez."
+    },
+    "paste": {
+      "placeholder": "Collez les infos de votre entreprise : services, FAQ, horaires, politiques...",
+      "hint": "Nous ajouterons ce contenu à la base de connaissances de votre IA immédiatement.",
+      "defaultTitle": "Notes d'intégration"
+    },
+    "continue": "Continuer",
+    "continuing": "Enregistrement...",
+    "skip": "Ignorer pour l'instant",
+    "skipping": "Ignorer...",
+    "continueFailed": "Impossible de continuer maintenant. Réessayez.",
+    "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
+  },
+  "greeting": {
+    "title": "Comment devons-nous accueillir vos appelants ?",
+    "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
+    "label": "Message d'accueil",
+    "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
+    "helper": "Astuce : restez sous deux phrases.",
+    "continue": "Continuer",
+    "submitting": "Enregistrement...",
+    "submitFailed": "Impossible d'enregistrer ce message maintenant. Réessayez."
+  },
+  "verifyPhone": {
+    "title": "Vérifions votre identité",
+    "description": "Nous enverrons un code par SMS pour sécuriser votre compte.",
     "fields": {
-      "url": "Site web de l'entreprise"
+      "mobileNumber": "Numéro de mobile"
     },
     "placeholders": {
-      "url": "https://exemple.com"
+      "mobileNumber": "+1 555 123 4567"
     },
-    "hint": "Nous analyserons des pages publiques comme les services, l'à-propos, la FAQ, les horaires et les coordonnées. Vous pouvez passer cette étape si vous n'avez pas encore de site web.",
-    "submit": "Importer le site",
-    "submitting": "Importation du site...",
-    "skip": "Passer pour l'instant",
-    "skipping": "Passage...",
-    "submitFailed": "Impossible de démarrer l'importation du site pour le moment. Veuillez réessayer.",
-    "skipFailed": "Impossible de passer cette étape pour le moment. Veuillez réessayer.",
-    "signedInAs": "Connecté comme {{email}}"
+    "hint": "Utilisez un numéro de mobile personnel qui peut recevoir des SMS.",
+    "sendCode": "Envoyer le code",
+    "sending": "Envoi du code...",
+    "sendFailed": "Impossible d'envoyer un code maintenant. Réessayez."
+  },
+  "verifyPhoneCode": {
+    "title": "Entrez votre code",
+    "description": "Nous avons envoyé un code à 6 chiffres au {{phone}}.",
+    "didntGet": "Pas reçu ?",
+    "resend": "Renvoyer",
+    "resending": "Renvoi...",
+    "verifying": "Vérification...",
+    "changeNumber": "Utiliser un autre numéro",
+    "failed": "Impossible de vérifier ce code. Réessayez.",
+    "resendFailed": "Impossible de renvoyer un code maintenant. Réessayez."
   },
   "number": {
-    "title": "Voici votre nouveau numéro",
-    "description": "Nous avons choisi un numéro local Twilio en utilisant votre numéro mobile vérifié comme signal principal. Vous pouvez le conserver ou en choisir un autre.",
-    "detectedVerifiedLocation": "Suggestion à partir de votre mobile vérifié à {{city}}, {{region}}",
-    "detectedVerifiedAreaCode": "Suggestion à partir de votre mobile vérifié en {{areaCode}}",
-    "detectedVerifiedCountry": "Suggestion à partir de votre mobile vérifié en {{country}}",
-    "continue": "Continuer",
-    "continuing": "Attribution du numéro...",
-    "pickDifferent": "Choisir un autre numéro",
-    "loading": "Recherche d'un numéro local correspondant...",
-    "noSuggestionTitle": "Nous n'avons pas encore pu proposer un numéro avec confiance.",
-    "noSuggestionDescription": "Recherchez par ville, indicatif ou sans frais pour choisir le meilleur numéro pour votre entreprise.",
-    "loadFailed": "Impossible de charger une suggestion pour le moment.",
-    "claimFailed": "Impossible d'attribuer ce numéro. Veuillez réessayer.",
-    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre dans la liste mise à jour.",
-    "skipHint": "Vous pourrez toujours le modifier plus tard dans vos paramètres Twilio.",
-    "pickerTitle": "Choisir un autre numéro",
-    "pickerDescription": "Recherchez des numéros locaux ou sans frais avant d'en attribuer un.",
-    "tabs": {
-      "city": "Par ville",
-      "areaCode": "Par indicatif",
-      "tollFree": "Sans frais"
-    },
-    "fields": {
-      "city": "Ville",
-      "areaCode": "Indicatif"
-    },
-    "placeholders": {
-      "city": "Entrez un nom de ville",
-      "areaCode": "418"
-    },
+    "title": "Choisissez le numéro de votre IA",
+    "description": "Choisissez un numéro local que vos appelants peuvent composer.",
+    "countryLabel": "Pays",
+    "areaCodeLabel": "Indicatif",
+    "areaCodePlaceholder": "Indicatif",
     "search": "Rechercher",
-    "searching": "Recherche...",
-    "areaCodeRequired": "Entrez un indicatif avant de lancer la recherche.",
-    "empty": "Aucun numéro ne correspond à cette recherche.",
+    "tableHeaders": {
+      "phoneNumber": "Numéro",
+      "features": "Fonctionnalités",
+      "option": "Option"
+    },
     "select": "Choisir",
-    "selected": "Choisi",
-    "backToSuggested": "Retour à la suggestion",
-    "signedInAs": "Connecté comme {{email}}"
+    "loadMore": "Charger plus",
+    "empty": "Aucun numéro ne correspond.",
+    "skipLater": "Ajouter un numéro plus tard",
+    "skipping": "Ignorer...",
+    "loadFailed": "Impossible de charger les numéros maintenant.",
+    "searchFailed": "Impossible de rechercher maintenant.",
+    "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
+    "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
+    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre."
+  },
+  "plan": {
+    "title": "Choisissez votre forfait",
+    "description": "Vous pouvez changer à tout moment.",
+    "priceMonthly": "{{price}} / mois",
+    "free_cloud": {
+      "title": "Gratuit",
+      "description": "Essayez LobbyStack avec tout ce qu'il faut pour démarrer.",
+      "priceFree": "Gratuit",
+      "features": ["1 numéro", "100 minutes / mois", "Support par email"]
+    },
+    "pro": {
+      "title": "Pro",
+      "description": "Limites plus élevées et SMS IA pour les équipes en croissance.",
+      "features": ["Numéros illimités", "Plus de minutes", "SMS IA disponible"]
+    },
+    "enterprise": {
+      "title": "Entreprise",
+      "description": "Pour les volumes élevés et les besoins sur mesure.",
+      "priceLabel": "Contactez-nous",
+      "features": ["Tarifs volume", "Support dédié", "Intégrations sur mesure"]
+    },
+    "continue": "Continuer",
+    "continuing": "Continuer...",
+    "continueFailed": "Impossible de continuer maintenant. Réessayez."
+  },
+  "attribution": {
+    "title": "Comment avez-vous connu LobbyStack ?",
+    "description": "Cela nous aide à savoir ce qui fonctionne.",
+    "options": {
+      "ai_assistant": "ChatGPT, Claude, etc.",
+      "newsletter": "Newsletter ou blog",
+      "podcast": "Podcast",
+      "news": "Dans les médias",
+      "work": "Au travail",
+      "school": "Amis ou école",
+      "x": "X",
+      "facebook": "Facebook",
+      "youtube": "YouTube",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "google": "Google",
+      "tiktok": "TikTok",
+      "other": "Autre"
+    },
+    "skip": "Ignorer",
+    "finish": "Terminer",
+    "finishing": "Finalisation...",
+    "submitFailed": "Impossible d'enregistrer maintenant. Réessayez."
   }
 }

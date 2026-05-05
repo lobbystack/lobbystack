@@ -124,8 +124,11 @@ export const markVerificationApproved = internalMutation({
       phoneVerificationTime: args.approvedAt,
     });
 
+    // After the user enters a valid OTP, advance to the phone-number
+    // selection step. In the redesigned flow, website + knowledge +
+    // greeting all happen *before* phone verification.
     await ctx.db.patch(args.businessId, {
-      onboardingStage: "website",
+      onboardingStage: "phone_number",
     });
   },
 });

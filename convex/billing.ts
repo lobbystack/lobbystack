@@ -1048,6 +1048,12 @@ export const syncSubscriptionFromWebhook = internalMutation({
       await ctx.db.insert("billing_accounts", patch);
     }
 
+    if (business?.onboardingStage === "plan" && isProProduct && subscriptionActive) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "attribution",
+      });
+    }
+
     const existingComponentCustomer = await ctx.runQuery(
       components.polar.lib.getCustomerByUserId,
       { userId: args.billingKey },

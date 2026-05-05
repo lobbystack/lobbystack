@@ -29,7 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
@@ -580,7 +580,7 @@ export function CallDetailPage({ businessId }: CallDetailPageProps) {
   }
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   if (isLoadingCall) {

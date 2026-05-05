@@ -153,6 +153,7 @@ export default defineSchema({
     activeBusinessId: v.optional(v.id("businesses")),
     platformRole: v.optional(v.string()),
     preferredLocale: v.optional(runtimeLocaleValidator),
+    signupAttribution: v.optional(v.string()),
   })
     .index("by_auth_subject", ["authSubject"])
     .index("email", ["email"])

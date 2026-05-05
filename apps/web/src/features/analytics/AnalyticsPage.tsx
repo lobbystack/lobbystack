@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 import { Analytics } from "@/features/home/components/analytics";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 
 import { useObservedMutation } from "@/lib/observed-convex";
 type AnalyticsPageProps = {
@@ -53,7 +52,7 @@ export function AnalyticsPage({ businessId }: AnalyticsPageProps) {
   }, [businessId, refreshUnitEconomicsMonth]);
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   return (

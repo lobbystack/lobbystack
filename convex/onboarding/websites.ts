@@ -82,7 +82,7 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
       {
         businessId: args.businessId,
         websiteUrl: args.websiteUrl,
-        nextOnboardingStage: "phone_number",
+        nextOnboardingStage: "knowledge",
       },
     );
   },
@@ -126,7 +126,7 @@ export const skipOnboardingWebsite = mutation({
     await requireBusinessInWebsiteStage(ctx, args.businessId);
 
     await ctx.db.patch(args.businessId, {
-      onboardingStage: "phone_number",
+      onboardingStage: "knowledge",
     });
 
     return { status: "skipped" };

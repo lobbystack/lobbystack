@@ -106,7 +106,13 @@ async function requireBusinessInPhoneVerificationStage(
   if (!business) {
     throw new Error("Business not found.");
   }
-  if (business.onboardingStage !== "verify_phone") {
+  // Both `verify_phone` (initial send) and `verify_phone_code` (post-send,
+  // entering the code or resending) are valid stages for this onboarding
+  // step. Anything else means the user has moved past phone verification.
+  if (
+    business.onboardingStage !== "verify_phone" &&
+    business.onboardingStage !== "verify_phone_code"
+  ) {
     throw new Error("Phone verification is no longer available for this business.");
   }
 }
@@ -183,6 +189,13 @@ export const startPhoneVerification = action({
         attemptCount: 0,
       });
 
+      // Advance to the OTP entry stage so a refresh resumes on the
+      // code-entry screen instead of the phone-input screen.
+      await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
+        businessId: args.businessId,
+        onboardingStage: "verify_phone_code",
+      });
+
       return {
         status: "pending" as const,
         phoneE164: lookup.phoneNumber,
@@ -233,15 +246,83 @@ export const reuseVerifiedPhoneForOnboarding = action({
       attemptCount: 1,
     });
 
+    // Skip the OTP entry sub-stage because the user already has a verified
+    // phone on file from a previous onboarding session.
     await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
       businessId: args.businessId,
-      onboardingStage: "website",
+      onboardingStage: "phone_number",
     });
 
     return {
       status: "approved" as const,
       phoneE164: user.phone,
     };
+  },
+});
+
+export const resendPhoneVerification = action({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
+    await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
+    const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
+      internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
+      {
+        businessId: args.businessId,
+        userId: user._id,
+      },
+    );
+
+    if (!attempt) {
+      throw new Error("Start verification again before requesting a new code.");
+    }
+
+    await assertVerificationSendAllowed(ctx, {
+      businessId: args.businessId,
+      userId: user._id,
+      phoneE164: attempt.phoneE164,
+    });
+
+    const now = Date.now();
+    if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
+      throw new Error("Please wait a moment before requesting another code.");
+    }
+
+    try {
+      const client = getTwilioClient();
+      const verifyServiceSid = requireTwilioVerifyServiceSid();
+      const verification: TwilioVerificationResult = await client.verify.v2
+        .services(verifyServiceSid)
+        .verifications.create({
+          to: attempt.phoneE164,
+          channel: "sms",
+        });
+
+      await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
+        businessId: args.businessId,
+        userId: user._id,
+        phoneE164: attempt.phoneE164,
+        countryCode: attempt.countryCode,
+        ...(attempt.lineType ? { lineType: attempt.lineType } : {}),
+        verificationSid: verification.sid,
+        status: verification.status,
+        startedAt: now,
+        updatedAt: now,
+        expiresAt: now + 10 * 60 * 1000,
+        attemptCount: 0,
+      });
+
+      return {
+        status: "pending" as const,
+        phoneE164: attempt.phoneE164,
+        countryCode: attempt.countryCode,
+      };
+    } catch (error) {
+      throw new Error(buildVerificationErrorMessage(error));
+    }
   },
 });
 

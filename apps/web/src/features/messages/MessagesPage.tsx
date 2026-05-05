@@ -30,7 +30,6 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { PageHeader } from "@/components/page-header";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -495,7 +494,7 @@ export function MessagesPage({ businessId }: MessagesPageProps) {
   }, [selectedConversationId]);
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   const isThreadLoading =

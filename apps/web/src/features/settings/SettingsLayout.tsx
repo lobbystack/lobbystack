@@ -1,7 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -14,7 +13,7 @@ export function SettingsLayout({ businessId }: SettingsLayoutProps) {
   const { t } = useTranslation("settings");
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   const navigationItems = [

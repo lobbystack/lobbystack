@@ -8,8 +8,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { LoadingScreen } from "@/components/loading-screen";
 import {
-  OnboardingNumberRouteSkeleton,
-  OnboardingVerifyRouteSkeleton,
+  OnboardingRouteSkeleton,
   WorkspaceRouteSkeleton,
 } from "@/components/app-route-skeletons";
 import { useObservedAction } from "@/lib/observed-convex";
@@ -45,7 +44,13 @@ import {
 } from "@/features/settings/SettingsBillingPage";
 import { SettingsAccountPage } from "@/features/settings/SettingsAccountPage";
 import { SettingsNotificationsPage } from "@/features/settings/SettingsNotificationsPage";
+import { OnboardingAttributionPage } from "@/features/onboarding/OnboardingAttributionPage";
+import { OnboardingBusinessNamePage } from "@/features/onboarding/OnboardingBusinessNamePage";
+import { OnboardingGreetingPage } from "@/features/onboarding/OnboardingGreetingPage";
+import { OnboardingKnowledgePage } from "@/features/onboarding/OnboardingKnowledgePage";
 import { OnboardingNumberPage } from "@/features/onboarding/OnboardingNumberPage";
+import { OnboardingPlanPage } from "@/features/onboarding/OnboardingPlanPage";
+import { OnboardingVerifyPhoneCodePage } from "@/features/onboarding/OnboardingVerifyPhoneCodePage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
 import {
@@ -55,6 +60,13 @@ import {
   trackPageView,
 } from "@/lib/analytics";
 import { useResetAuthScopedClientStateOnSignOut } from "@/lib/auth-scoped-client-state";
+
+type ActiveBusiness = {
+  _id: Id<"businesses">;
+  name: string;
+  slug: string;
+  onboardingStage?: string;
+};
 
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
@@ -88,15 +100,10 @@ function selectActiveBusiness(
   currentUser: { activeBusinessId?: Id<"businesses"> } | undefined | null,
   businesses:
     | Array<{
-        business: {
-          _id: Id<"businesses">;
-          onboardingStage?: string;
-          name: string;
-          slug: string;
-        };
+        business: ActiveBusiness;
       }>
     | undefined,
-) {
+): ActiveBusiness | null {
   const activeBusinessId = currentUser?.activeBusinessId;
   if (!businesses || businesses.length === 0) {
     return null;
@@ -107,6 +114,36 @@ function selectActiveBusiness(
     businesses[0]?.business ??
     null
   );
+}
+
+/**
+ * Map a server-side onboarding stage to its dashboard route. Mirrors the
+ * canonical stage→route table in `convex/lib/onboardingStage.ts`.
+ */
+function onboardingRouteForStage(stage: string | undefined): string | null {
+  switch (stage) {
+    case "create_business":
+      return "/onboarding/business";
+    case "website":
+      return "/onboarding/website";
+    case "knowledge":
+      return "/onboarding/knowledge";
+    case "greeting":
+      return "/onboarding/greeting";
+    case "verify_phone":
+      return "/onboarding/verify-phone";
+    case "verify_phone_code":
+      return "/onboarding/verify-phone/code";
+    case "phone_number":
+    case "phone_number_claiming":
+      return "/onboarding/number";
+    case "plan":
+      return "/onboarding/plan";
+    case "attribution":
+      return "/onboarding/attribution";
+    default:
+      return null;
+  }
 }
 
 function WorkspaceShell() {
@@ -179,30 +216,21 @@ function WorkspaceShell() {
     });
   }, [businessId, isBootstrapLoading]);
 
-  if (
-    !isBootstrapLoading &&
-    activeBusiness?.onboardingStage === "phone_number" &&
-    !currentUser?.phoneVerificationTime &&
-    location.pathname !== "/onboarding/verify-phone"
-  ) {
-    return <Navigate replace to="/onboarding/verify-phone" />;
+  // No business yet → user just signed up. Send them to the very first
+  // onboarding step so they can name their business.
+  if (!isBootstrapLoading && !activeBusiness) {
+    if (location.pathname !== "/onboarding/business") {
+      return <Navigate replace to="/onboarding/business" />;
+    }
   }
 
-  if (!isBootstrapLoading && activeBusiness?.onboardingStage === "verify_phone") {
-    if (location.pathname !== "/onboarding/verify-phone") {
-      return <Navigate replace to="/onboarding/verify-phone" />;
+  // Honour the server-side onboarding stage. If the active business hasn't
+  // completed onboarding, redirect to the right step.
+  if (!isBootstrapLoading && activeBusiness) {
+    const target = onboardingRouteForStage(activeBusiness.onboardingStage);
+    if (target && location.pathname !== target) {
+      return <Navigate replace to={target} />;
     }
-  } else if (!isBootstrapLoading && activeBusiness?.onboardingStage === "website") {
-    if (location.pathname !== "/onboarding/website") {
-      return <Navigate replace to="/onboarding/website" />;
-    }
-  } else if (
-    !isBootstrapLoading &&
-    (activeBusiness?.onboardingStage === "phone_number" ||
-      activeBusiness?.onboardingStage === "phone_number_claiming") &&
-    location.pathname !== "/onboarding/number"
-  ) {
-    return <Navigate replace to="/onboarding/number" />;
   }
 
   const usesFixedMain = location.pathname === "/messages";
@@ -295,9 +323,9 @@ function WorkspaceShell() {
                 }
                 path="rules"
               />
-            <Route element={<Navigate replace to="/agent" />} path="integrations" />
-            <Route element={<Navigate replace to="/agent" />} path="*" />
-          </Route>
+              <Route element={<Navigate replace to="/agent" />} path="integrations" />
+              <Route element={<Navigate replace to="/agent" />} path="*" />
+            </Route>
             <Route
               element={
                 businessId ? (
@@ -388,177 +416,169 @@ function WorkspaceShell() {
   );
 }
 
-function OnboardingNumberRoute() {
+/**
+ * Wrap an authenticated onboarding route, providing common loading state +
+ * sign-out handler. Renders `children` only once Convex auth + the user
+ * record + the business list have all loaded.
+ */
+function useOnboardingContext() {
   const { signOut } = useAuthActions();
+  const navigate = useNavigate();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const businessId = activeBusiness?._id;
+
+  useEffect(() => {
+    if (businesses === undefined || currentUser === undefined) {
+      return;
+    }
+    if (!currentUser?._id || !businessId) {
+      return;
+    }
+    identifyOperator({
+      userId: String(currentUser._id),
+      businessId: String(businessId),
+      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
+    });
+  }, [businessId, currentUser?._id, businesses, currentUser]);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
     await signOut();
   }
 
-  useEffect(() => {
-    if (businesses === undefined || currentUser === undefined) {
-      return;
+  return {
+    currentUser,
+    businesses,
+    activeBusiness,
+    isLoading: businesses === undefined || currentUser === undefined,
+    onSignOut: () => void handleSignOut(),
+    navigate,
+  };
+}
+
+function OnboardingBusinessRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  // If a business already exists, the user belongs further down the flow.
+  if (ctx.activeBusiness) {
+    const stage = ctx.activeBusiness.onboardingStage;
+    if (stage && stage !== "create_business") {
+      const target = onboardingRouteForStage(stage) ?? "/";
+      return <Navigate replace to={target} />;
     }
-
-    if (!currentUser?._id || !activeBusiness?._id) {
-      return;
-    }
-
-    identifyOperator({
-      userId: String(currentUser._id),
-      businessId: String(activeBusiness._id),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [activeBusiness?._id, currentUser?._id]);
-
-  if (businesses === undefined || currentUser === undefined) {
-    return (
-      <OnboardingNumberRouteSkeleton
-        {...(currentUser?.email ? { email: currentUser.email } : {})}
-        onSignOut={() => void handleSignOut()}
-      />
-    );
   }
 
-  if (!activeBusiness) {
-    return <Navigate replace to="/" />;
-  }
-
-  if (
-    activeBusiness.onboardingStage !== "phone_number" &&
-    activeBusiness.onboardingStage !== "phone_number_claiming"
-  ) {
-    return <Navigate replace to="/" />;
-  }
-
-  return (
-    <OnboardingNumberPage
-      businessId={activeBusiness._id}
-      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
-      onSignOut={() => void handleSignOut()}
-    />
-  );
+  return <OnboardingBusinessNamePage onSignOut={ctx.onSignOut} />;
 }
 
 function OnboardingWebsiteRoute() {
-  const { signOut } = useAuthActions();
-  const currentUser = useQuery(api.users.current, {});
-  const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const ctx = useOnboardingContext();
 
-  async function handleSignOut(): Promise<void> {
-    resetAnalyticsIdentity();
-    await signOut();
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
   }
 
-  useEffect(() => {
-    if (businesses === undefined || currentUser === undefined) {
-      return;
-    }
-
-    if (!currentUser?._id || !activeBusiness?._id) {
-      return;
-    }
-
-    identifyOperator({
-      userId: String(currentUser._id),
-      businessId: String(activeBusiness._id),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [activeBusiness?._id, currentUser?._id]);
-
-  if (businesses === undefined || currentUser === undefined) {
-    return (
-      <OnboardingNumberRouteSkeleton
-        {...(currentUser?.email ? { email: currentUser.email } : {})}
-        onSignOut={() => void handleSignOut()}
-      />
-    );
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (!activeBusiness) {
-    return <Navigate replace to="/" />;
-  }
-
-  if (activeBusiness.onboardingStage !== "website") {
-    return <Navigate replace to="/" />;
+  if (ctx.activeBusiness.onboardingStage !== "website") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
   return (
-    <OnboardingWebsitePage
-      businessId={activeBusiness._id}
-      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
-      onSignOut={() => void handleSignOut()}
+    <OnboardingWebsitePage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+  );
+}
+
+function OnboardingKnowledgeRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage !== "knowledge") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  return (
+    <OnboardingKnowledgePage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+  );
+}
+
+function OnboardingGreetingRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage !== "greeting") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  return (
+    <OnboardingGreetingPage
+      businessId={ctx.activeBusiness._id}
+      businessName={ctx.activeBusiness.name}
+      onSignOut={ctx.onSignOut}
     />
   );
 }
 
 function OnboardingVerifyPhoneRoute() {
-  const { signOut } = useAuthActions();
+  const ctx = useOnboardingContext();
   const navigate = useNavigate();
-  const currentUser = useQuery(api.users.current, {});
-  const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const reuseVerifiedPhoneForOnboarding = useObservedAction(
     api.onboarding.phoneVerification.reuseVerifiedPhoneForOnboarding,
   );
-  const activeBusiness = selectActiveBusiness(currentUser, businesses);
-  const [isSkippingVerification, setIsSkippingVerification] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [hasAttemptedAutoSkip, setHasAttemptedAutoSkip] = useState(false);
-  const hasReusableVerifiedPhone = Boolean(currentUser?.phone && currentUser?.phoneVerificationTime);
-
-  async function handleSignOut(): Promise<void> {
-    resetAnalyticsIdentity();
-    await signOut();
-  }
-
-  useEffect(() => {
-    if (businesses === undefined || currentUser === undefined) {
-      return;
-    }
-
-    if (!currentUser?._id || !activeBusiness?._id) {
-      return;
-    }
-
-    identifyOperator({
-      userId: String(currentUser._id),
-      businessId: String(activeBusiness._id),
-      deploymentMode: import.meta.env.VITE_DEPLOYMENT_MODE ?? "development",
-    });
-  }, [activeBusiness?._id, currentUser?._id]);
+  const hasReusableVerifiedPhone = Boolean(
+    ctx.currentUser?.phone && ctx.currentUser?.phoneVerificationTime,
+  );
 
   useEffect(() => {
     if (
-      businesses === undefined ||
-      currentUser === undefined ||
-      !activeBusiness ||
-      activeBusiness.onboardingStage !== "verify_phone" ||
+      ctx.isLoading ||
+      !ctx.activeBusiness ||
+      ctx.activeBusiness.onboardingStage !== "verify_phone" ||
       !hasReusableVerifiedPhone ||
-      isSkippingVerification ||
-      hasAttemptedAutoSkip
+      hasAttemptedAutoSkip ||
+      isSkipping
     ) {
       return;
     }
 
     let cancelled = false;
-    setIsSkippingVerification(true);
+    setIsSkipping(true);
     setHasAttemptedAutoSkip(true);
-
     void reuseVerifiedPhoneForOnboarding({
-      businessId: activeBusiness._id,
+      businessId: ctx.activeBusiness._id,
     })
       .then(() => {
         if (!cancelled) {
-          navigate("/onboarding/website", { replace: true });
+          navigate("/onboarding/number", { replace: true });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setIsSkippingVerification(false);
+          setIsSkipping(false);
         }
       });
 
@@ -566,52 +586,145 @@ function OnboardingVerifyPhoneRoute() {
       cancelled = true;
     };
   }, [
-    activeBusiness,
-    businesses,
-    currentUser,
+    ctx.isLoading,
+    ctx.activeBusiness,
     hasReusableVerifiedPhone,
     hasAttemptedAutoSkip,
-    isSkippingVerification,
+    isSkipping,
     navigate,
     reuseVerifiedPhoneForOnboarding,
   ]);
 
-  if (businesses === undefined || currentUser === undefined) {
-    return (
-      <OnboardingVerifyRouteSkeleton
-        {...(currentUser?.email ? { email: currentUser.email } : {})}
-        onSignOut={() => void handleSignOut()}
-      />
-    );
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
   }
 
-  if (!activeBusiness) {
-    return <Navigate replace to="/" />;
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
   }
-
-  const requiresPhoneVerification =
-    activeBusiness.onboardingStage === "verify_phone" ||
-    (activeBusiness.onboardingStage === "phone_number" && !hasReusableVerifiedPhone);
 
   if (
-    isSkippingVerification &&
-    activeBusiness.onboardingStage === "verify_phone" &&
-    hasReusableVerifiedPhone
+    ctx.activeBusiness.onboardingStage !== "verify_phone" &&
+    ctx.activeBusiness.onboardingStage !== "verify_phone_code"
   ) {
-    return <LoadingScreen />;
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
-  if (!requiresPhoneVerification) {
-    return <Navigate replace to="/" />;
+  if (ctx.activeBusiness.onboardingStage === "verify_phone_code") {
+    return <Navigate replace to="/onboarding/verify-phone/code" />;
+  }
+
+  if (isSkipping) {
+    return <OnboardingRouteSkeleton />;
   }
 
   return (
     <OnboardingVerifyPhonePage
-      businessId={activeBusiness._id}
-      {...(currentUser?.email ? { currentUserEmail: currentUser.email } : {})}
-      {...(currentUser?.phone ? { currentUserPhone: currentUser.phone } : {})}
-      onSignOut={() => void handleSignOut()}
+      businessId={ctx.activeBusiness._id}
+      {...(ctx.currentUser?.phone ? { currentUserPhone: ctx.currentUser.phone } : {})}
+      onSignOut={ctx.onSignOut}
     />
+  );
+}
+
+function OnboardingVerifyPhoneCodeRoute() {
+  const ctx = useOnboardingContext();
+  const latestAttempt = useQuery(
+    api.onboarding.phoneVerificationLookup.getLatestPhoneVerificationAttempt,
+    ctx.activeBusiness ? { businessId: ctx.activeBusiness._id } : "skip",
+  );
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage === "verify_phone") {
+    return <Navigate replace to="/onboarding/verify-phone" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage !== "verify_phone_code") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  if (latestAttempt === undefined) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!latestAttempt) {
+    return <Navigate replace to="/onboarding/verify-phone" />;
+  }
+
+  return (
+    <OnboardingVerifyPhoneCodePage
+      businessId={ctx.activeBusiness._id}
+      onSignOut={ctx.onSignOut}
+      phoneE164={latestAttempt.phoneE164}
+    />
+  );
+}
+
+function OnboardingNumberRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (
+    ctx.activeBusiness.onboardingStage !== "phone_number" &&
+    ctx.activeBusiness.onboardingStage !== "phone_number_claiming"
+  ) {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  return (
+    <OnboardingNumberPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+  );
+}
+
+function OnboardingPlanRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage !== "plan") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  return <OnboardingPlanPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />;
+}
+
+function OnboardingAttributionRoute() {
+  const ctx = useOnboardingContext();
+
+  if (ctx.isLoading) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!ctx.activeBusiness) {
+    return <Navigate replace to="/onboarding/business" />;
+  }
+
+  if (ctx.activeBusiness.onboardingStage !== "attribution") {
+    return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
+  }
+
+  return (
+    <OnboardingAttributionPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
   );
 }
 
@@ -650,10 +763,10 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <OnboardingVerifyPhoneRoute />
+                <OnboardingBusinessRoute />
               </RequireAuth>
             }
-            path="/onboarding/verify-phone"
+            path="/onboarding/business"
           />
           <Route
             element={
@@ -666,10 +779,58 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
+                <OnboardingKnowledgeRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/knowledge"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingGreetingRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/greeting"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingVerifyPhoneRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/verify-phone"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingVerifyPhoneCodeRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/verify-phone/code"
+          />
+          <Route
+            element={
+              <RequireAuth>
                 <OnboardingNumberRoute />
               </RequireAuth>
             }
             path="/onboarding/number"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingPlanRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/plan"
+          />
+          <Route
+            element={
+              <RequireAuth>
+                <OnboardingAttributionRoute />
+              </RequireAuth>
+            }
+            path="/onboarding/attribution"
           />
           <Route
             element={

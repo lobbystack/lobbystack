@@ -3,7 +3,6 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Rows3 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,24 +41,15 @@ export function SignupForm({
   const { t } = useTranslation("auth");
 
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
+    <div className={cn("flex w-full flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
-        <FieldGroup>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Rows3 className="size-5" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h1 className="type-section-title">{t("signup.title")}</h1>
-              <FieldDescription>{t("signup.subtitle")}</FieldDescription>
-            </div>
-          </div>
-
+        <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="signup-email">{t("signup.email")}</FieldLabel>
             <Input
               id="signup-email"
               autoComplete="email"
+              className="h-11"
               onChange={(event) => onEmailChange(event.target.value)}
               placeholder={t("signup.emailPlaceholder")}
               required
@@ -68,42 +58,40 @@ export function SignupForm({
             />
           </Field>
 
-          <div className="flex flex-col gap-6">
-            <Field>
-              <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
-              <Input
-                id="signup-password"
-                autoComplete="new-password"
-                onChange={(event) => onPasswordChange(event.target.value)}
-                placeholder={t("signup.passwordPlaceholder")}
-                required
-                type="password"
-                value={password}
-              />
-            </Field>
+          <Field>
+            <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
+            <Input
+              id="signup-password"
+              autoComplete="new-password"
+              className="h-11"
+              onChange={(event) => onPasswordChange(event.target.value)}
+              placeholder={t("signup.passwordPlaceholder")}
+              required
+              type="password"
+              value={password}
+            />
+            <FieldDescription>{t("signup.passwordHint")}</FieldDescription>
+          </Field>
 
-            {statusMessage || errorMessage ? (
-              <div className="flex flex-col gap-2">
-                {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-                {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
-              </div>
-            ) : (
-              <div aria-hidden="true" className="h-8" />
-            )}
+          {statusMessage || errorMessage ? (
+            <div className="flex flex-col gap-2 -mt-1">
+              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
+              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+            </div>
+          ) : null}
 
-            <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-              {isSubmitting ? t("signup.submitting") : t("signup.submit")}
-            </Button>
-          </div>
+          <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? t("signup.submitting") : t("signup.submit")}
+          </Button>
         </FieldGroup>
       </form>
 
-      <FieldDescription className="text-center">
+      <p className="text-center text-sm text-muted-foreground">
         {t("signup.haveAccount")}{" "}
-        <Link className="font-medium text-foreground underline underline-offset-4" to="/login">
+        <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/login">
           {t("signup.signIn")}
         </Link>
-      </FieldDescription>
+      </p>
     </div>
   );
 }

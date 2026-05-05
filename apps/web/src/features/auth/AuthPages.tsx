@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
@@ -11,26 +11,15 @@ import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
 import { Button } from "@/components/ui/button";
+import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
-
 import { useObservedAction } from "@/lib/observed-convex";
+
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 
 function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
   resetAnalyticsIdentity();
   captureAnalyticsEvent(name);
-}
-
-function AuthShell(props: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10">
-      <section className="flex w-full items-center justify-center">
-        <div className="w-full max-w-md rounded-xl border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
-          {props.children}
-        </div>
-      </section>
-    </div>
-  );
 }
 
 function getAuthErrorMessage(
@@ -130,7 +119,12 @@ export function LoginPage() {
   }
 
   return (
-    <AuthShell>
+    <OnboardingShell
+      description={t("login.subtitle")}
+      progress={null}
+      title={t("login.title")}
+      width="sm"
+    >
       <LoginForm
         email={email}
         errorMessage={errorMessage}
@@ -141,7 +135,7 @@ export function LoginPage() {
         password={password}
         statusMessage={statusMessage}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
@@ -188,7 +182,12 @@ export function SignupPage() {
   }
 
   return (
-    <AuthShell>
+    <OnboardingShell
+      description={t("signup.subtitle")}
+      progress={{ current: 1, total: 10 }}
+      title={t("signup.title")}
+      width="sm"
+    >
       <SignupForm
         email={email}
         errorMessage={errorMessage}
@@ -199,7 +198,7 @@ export function SignupPage() {
         password={password}
         statusMessage={statusMessage}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
@@ -271,8 +270,14 @@ export function ForgotPasswordPage() {
     setErrorMessage(null);
   }
 
+  const isVerifyStep = step === "verify";
+  const title = isVerifyStep ? t("forgotPassword.verifyTitle") : t("forgotPassword.title");
+  const description = isVerifyStep
+    ? t("forgotPassword.verifySubtitle", { email })
+    : t("forgotPassword.subtitle");
+
   return (
-    <AuthShell>
+    <OnboardingShell description={description} progress={null} title={title} width="sm">
       <ForgotPasswordForm
         code={code}
         email={email}
@@ -287,7 +292,7 @@ export function ForgotPasswordPage() {
         statusMessage={statusMessage}
         step={step}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
@@ -333,26 +338,29 @@ export function ConfirmEmailChangePage() {
     }
   }
 
-  return (
-    <AuthShell>
-      <div className="flex flex-col gap-6 text-center">
-        <div className="flex flex-col gap-2">
-          <h1 className="type-page-title">{t("confirmEmailChange.title")}</h1>
-          <p className="type-page-description">
-            {hasConfirmationParams
-              ? t("confirmEmailChange.subtitle", { email })
-              : t("confirmEmailChange.invalidLink")}
-          </p>
-        </div>
+  const description = hasConfirmationParams
+    ? t("confirmEmailChange.subtitle", { email })
+    : t("confirmEmailChange.invalidLink");
 
-        {statusMessage ? <p className="type-body-muted">{statusMessage}</p> : null}
-        {errorMessage ? <p className="type-body text-destructive">{errorMessage}</p> : null}
+  return (
+    <OnboardingShell
+      description={description}
+      progress={null}
+      title={t("confirmEmailChange.title")}
+      width="sm"
+    >
+      <div className="flex flex-col gap-6">
+        {statusMessage ? (
+          <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
+        ) : null}
+        {errorMessage ? (
+          <p className="text-center text-sm text-destructive">{errorMessage}</p>
+        ) : null}
 
         <form className="flex flex-col" onSubmit={handleSubmit}>
           <Button
-            className="w-full"
+            className="h-11 w-full"
             disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
-            size="lg"
             type="submit"
           >
             {isSubmitting
@@ -361,10 +369,15 @@ export function ConfirmEmailChangePage() {
           </Button>
         </form>
 
-        <Link className="type-body-muted hover:text-foreground" to={returnHref}>
-          {returnLabel}
-        </Link>
+        <p className="text-center text-sm">
+          <Link
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+            to={returnHref}
+          >
+            {returnLabel}
+          </Link>
+        </p>
       </div>
-    </AuthShell>
+    </OnboardingShell>
   );
 }

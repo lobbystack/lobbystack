@@ -2,7 +2,6 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
 import { KnowledgeActionsMenu } from "./KnowledgeActionsMenu";
@@ -26,7 +25,7 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
   const isKnowledgeRoute = section === "knowledge" || section === "services" || section === "rules";
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   let header = {

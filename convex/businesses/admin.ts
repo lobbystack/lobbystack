@@ -52,7 +52,10 @@ export const bootstrapBusiness = mutation({
       name: args.name,
       timezone: args.timezone,
       defaultLocale: "en",
-      onboardingStage: user.phoneVerificationTime ? "website" : "verify_phone",
+      // Always advance to the website step after bootstrap. Phone
+      // verification now happens later in the redesigned flow, after
+      // the user has supplied a website, knowledge, and greeting.
+      onboardingStage: "website",
       businessType: args.businessType,
       deploymentMode: "development",
       status: "active",
