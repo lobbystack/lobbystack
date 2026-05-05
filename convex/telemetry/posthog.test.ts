@@ -239,4 +239,68 @@ describe("PostHog provider exception telemetry", () => {
       service: "voice-gateway",
     });
   });
+
+  it("emits service health failures for malformed configured URLs", async () => {
+    type SerializedPostHogEvent = {
+      eventName: string;
+      distinctId: string;
+      payloadJson: string;
+    };
+    const originalAppBaseUrl = process.env.APP_BASE_URL;
+    const originalVoiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
+    process.env.APP_BASE_URL = "https://app.example.com";
+    process.env.VOICE_GATEWAY_BASE_URL = "voice.example.com";
+
+    const runMutation = vi.fn(
+      async (_reference: unknown, _serialized: SerializedPostHogEvent) => null,
+    );
+    const fetchImpl = vi.fn(async () => new Response("ok", { status: 200 }));
+
+    try {
+      const results = await emitServiceHealthCheckEvents(
+        { runMutation } as unknown as Parameters<
+          typeof emitServiceHealthCheckEvents
+        >[0],
+        undefined,
+        fetchImpl as unknown as typeof fetch,
+      );
+
+      expect(results).toMatchObject([
+        {
+          service: "web",
+          status: "healthy",
+        },
+        {
+          service: "voice-gateway",
+          status: "unhealthy",
+          errorKind: "invalid_config",
+        },
+      ]);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+      const serializedEvents = runMutation.mock.calls.map((call) => call[1]);
+      expect(serializedEvents.map((event) => event.eventName)).toEqual([
+        "ops.service.health_check",
+        "ops.service.health_check_failed",
+        "$exception",
+      ]);
+      const failedPayload = JSON.parse(serializedEvents[1]?.payloadJson ?? "{}");
+      expect(failedPayload.properties).toMatchObject({
+        service: "voice-gateway",
+        status: "unhealthy",
+        errorKind: "invalid_config",
+      });
+    } finally {
+      if (originalAppBaseUrl === undefined) {
+        delete process.env.APP_BASE_URL;
+      } else {
+        process.env.APP_BASE_URL = originalAppBaseUrl;
+      }
+      if (originalVoiceGatewayBaseUrl === undefined) {
+        delete process.env.VOICE_GATEWAY_BASE_URL;
+      } else {
+        process.env.VOICE_GATEWAY_BASE_URL = originalVoiceGatewayBaseUrl;
+      }
+    }
+  });
 });

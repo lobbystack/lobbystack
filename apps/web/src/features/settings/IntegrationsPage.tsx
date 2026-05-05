@@ -214,10 +214,16 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
     businessId,
   });
   const isLoadingConnections = connections === undefined;
-  const connectGoogle = useObservedAction(api.integrations.calendar.connectGoogle);
+  const connectGoogle = useObservedAction(api.integrations.calendar.connectGoogle, {
+    reportFailures: false,
+  });
   const disconnectGoogleCalendar = useObservedAction(api.integrations.calendar.disconnectGoogleCalendar);
-  const listGoogleCalendars = useObservedAction(api.integrations.calendar.listGoogleCalendars);
-  const selectGoogleCalendar = useObservedAction(api.integrations.calendar.selectGoogleCalendar);
+  const listGoogleCalendars = useObservedAction(api.integrations.calendar.listGoogleCalendars, {
+    reportFailures: false,
+  });
+  const selectGoogleCalendar = useObservedAction(api.integrations.calendar.selectGoogleCalendar, {
+    reportFailures: false,
+  });
 
   const googleConnections = useMemo(
     () =>

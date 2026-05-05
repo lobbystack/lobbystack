@@ -290,7 +290,10 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const convex = useConvex();
   const deleteKnowledgeEntry = useObservedAction(api.ai.context.knowledge.deleteKnowledgeEntry);
-  const setKnowledgeEntryActive = useObservedAction(api.ai.context.knowledge.setKnowledgeEntryActive);
+  const setKnowledgeEntryActive = useObservedAction(
+    api.ai.context.knowledge.setKnowledgeEntryActive,
+    { reportFailures: false },
+  );
   const deleteWebsiteIngestionJob = useObservedMutation(
     api.ai.context.websiteIngestion.deleteWebsiteIngestionJob,
   );

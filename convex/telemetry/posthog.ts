@@ -124,6 +124,7 @@ type OutboxHealthSnapshot = {
 type ServiceHealthTarget = {
   service: string;
   url?: string | undefined;
+  configErrorKind?: string | undefined;
 };
 
 type ServiceHealthCheckResult = {
@@ -329,11 +330,20 @@ function getUrlHost(url: string): string | undefined {
   }
 }
 
-function getVoiceGatewayHealthUrl(baseUrl: string): string {
-  return new URL("/health", baseUrl).toString();
+function getVoiceGatewayHealthUrl(baseUrl: string): string | undefined {
+  try {
+    return new URL("/health", baseUrl).toString();
+  } catch {
+    return undefined;
+  }
 }
 
 function buildConfiguredServiceHealthTargets(): ServiceHealthTarget[] {
+  const voiceGatewayBaseUrl = process.env.VOICE_GATEWAY_BASE_URL;
+  const voiceGatewayHealthUrl = voiceGatewayBaseUrl
+    ? getVoiceGatewayHealthUrl(voiceGatewayBaseUrl)
+    : undefined;
+
   return [
     {
       service: "web",
@@ -341,9 +351,10 @@ function buildConfiguredServiceHealthTargets(): ServiceHealthTarget[] {
     },
     {
       service: "voice-gateway",
-      url: process.env.VOICE_GATEWAY_BASE_URL
-        ? getVoiceGatewayHealthUrl(process.env.VOICE_GATEWAY_BASE_URL)
-        : undefined,
+      url: voiceGatewayHealthUrl,
+      ...(voiceGatewayBaseUrl && !voiceGatewayHealthUrl
+        ? { configErrorKind: "invalid_config" }
+        : {}),
     },
   ];
 }
@@ -365,6 +376,15 @@ async function checkServiceHealthTarget(
   target: ServiceHealthTarget,
   fetchImpl: typeof fetch,
 ): Promise<ServiceHealthCheckResult> {
+  if (target.configErrorKind) {
+    return {
+      service: target.service,
+      status: "unhealthy",
+      latencyMs: 0,
+      errorKind: target.configErrorKind,
+    };
+  }
+
   if (!target.url) {
     return {
       service: target.service,

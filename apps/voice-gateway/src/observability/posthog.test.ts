@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { captureExceptionMock, shutdownMock } = vi.hoisted(() => ({
+const { captureExceptionMock, postHogConstructorMock, shutdownMock } = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
+  postHogConstructorMock: vi.fn(),
   shutdownMock: vi.fn(),
 }));
 
 vi.mock("posthog-node", () => ({
-  PostHog: vi.fn().mockImplementation(function PostHog() {
+  PostHog: vi.fn().mockImplementation(function PostHog(...args: unknown[]) {
+    postHogConstructorMock(...args);
     return {
       capture: vi.fn(),
       captureException: captureExceptionMock,
@@ -30,6 +32,7 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
   beforeEach(() => {
     vi.resetModules();
     captureExceptionMock.mockClear();
+    postHogConstructorMock.mockClear();
     shutdownMock.mockClear();
 
     for (const key of ENV_KEYS) {
@@ -103,13 +106,21 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
     const { handleFatalPostHogException } = await import("./posthog");
     const fatalError = new Error("fatal startup crash");
     fatalError.name = "FatalStartupError";
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
 
-    await handleFatalPostHogException(fatalError, "uncaught_exception", {
-      exitProcess: false,
-    });
+    try {
+      await handleFatalPostHogException(fatalError, "uncaught_exception", {
+        exitProcess: false,
+      });
 
-    expect(captureExceptionMock).toHaveBeenCalledOnce();
-    expect(shutdownMock).toHaveBeenCalledOnce();
+      expect(captureExceptionMock).toHaveBeenCalledOnce();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(fatalError);
+      expect(shutdownMock).toHaveBeenCalledOnce();
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
 
     const [capturedError, distinctId, properties] =
       captureExceptionMock.mock.calls[0] ?? [];
@@ -126,5 +137,18 @@ describe("voice-gateway PostHog provider exception telemetry", () => {
       runtime: "voice-gateway",
       service: "voice-gateway",
     });
+  });
+
+  it("leaves SDK fatal autocapture disabled for custom process handlers", async () => {
+    const { startPostHogObservability } = await import("./posthog");
+
+    await startPostHogObservability();
+
+    expect(postHogConstructorMock).toHaveBeenCalledWith(
+      "phc_test",
+      expect.objectContaining({
+        enableExceptionAutocapture: false,
+      }),
+    );
   });
 });

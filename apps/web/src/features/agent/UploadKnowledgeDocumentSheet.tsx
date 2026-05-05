@@ -107,9 +107,13 @@ export function UploadKnowledgeDocumentSheet({
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const generateUploadUrl = useObservedMutation(api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl);
+  const generateUploadUrl = useObservedMutation(
+    api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl,
+    { reportFailures: false },
+  );
   const finalizeKnowledgeDocumentUpload = useObservedAction(
     api.ai.context.knowledge.finalizeKnowledgeDocumentUpload,
+    { reportFailures: false },
   );
 
   const isControlled = open !== undefined;

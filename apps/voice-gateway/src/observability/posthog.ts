@@ -93,7 +93,7 @@ function getClient(): PostHog | null {
     host: env.POSTHOG_HOST,
     flushAt: 1,
     flushInterval: 0,
-    enableExceptionAutocapture: true,
+    enableExceptionAutocapture: false,
     privacyMode: env.POSTHOG_PRIVACY_MODE,
   });
   return client;
@@ -654,6 +654,8 @@ export async function handleFatalPostHogException(
     exitProcess?: boolean;
   },
 ): Promise<void> {
+  console.error(reason);
+
   const error =
     reason instanceof Error
       ? reason

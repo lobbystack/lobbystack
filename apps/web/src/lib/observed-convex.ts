@@ -4,34 +4,65 @@ import type { FunctionReference } from "convex/server";
 import { useCallback } from "react";
 
 import { captureAnalyticsException } from "@/lib/analytics";
-import type { TelemetryProperties } from "@lobbystack/telemetry";
+import {
+  isExpectedConvexFailure,
+  type TelemetryProperties,
+} from "@lobbystack/telemetry";
 
 type ObservedConvexOptions = {
   operation?: string;
   alertable?: boolean;
   expected?: boolean;
+  reportFailures?: boolean;
   properties?: TelemetryProperties;
 };
-type AnyObservedFunctionReference = FunctionReference<
-  "query" | "mutation" | "action",
-  "public" | "internal"
->;
+
+function buildSanitizedConvexError(
+  referenceName: string,
+  type: "action" | "mutation",
+): Error {
+  const error = new Error(`Convex ${type} ${referenceName} failed.`);
+  error.name = type === "action" ? "ConvexActionError" : "ConvexMutationError";
+  return error;
+}
 
 function captureRejectedConvexCall(
   error: unknown,
-  reference: AnyObservedFunctionReference,
+  referenceName: string,
   type: "action" | "mutation",
   options?: ObservedConvexOptions,
 ): void {
-  const referenceName = getFunctionName(reference);
-  captureAnalyticsException(error, {
+  const expected = options?.expected ?? isExpectedConvexFailure(error);
+  captureAnalyticsException(buildSanitizedConvexError(referenceName, type), {
     ...options?.properties,
     operation: options?.operation ?? `convex_${type}:${referenceName}`,
     convexFunctionType: type,
     convexFunction: referenceName,
-    alertable: options?.alertable ?? true,
-    expected: options?.expected ?? false,
+    alertable: options?.alertable ?? !expected,
+    expected,
   });
+}
+
+function buildCaptureOptions(input: {
+  operation?: string | undefined;
+  alertable?: boolean | undefined;
+  expected?: boolean | undefined;
+  properties?: TelemetryProperties | undefined;
+}): ObservedConvexOptions | undefined {
+  const options: ObservedConvexOptions = {};
+  if (input.operation !== undefined) {
+    options.operation = input.operation;
+  }
+  if (input.alertable !== undefined) {
+    options.alertable = input.alertable;
+  }
+  if (input.expected !== undefined) {
+    options.expected = input.expected;
+  }
+  if (input.properties !== undefined) {
+    options.properties = input.properties;
+  }
+  return Object.keys(options).length > 0 ? options : undefined;
 }
 
 export function useObservedAction<
@@ -41,17 +72,30 @@ export function useObservedAction<
   options?: ObservedConvexOptions,
 ): ReturnType<typeof useAction<Reference>> {
   const actionFn = useAction(reference);
+  const referenceName = getFunctionName(reference);
+  const operation = options?.operation;
+  const alertable = options?.alertable;
+  const expected = options?.expected;
+  const properties = options?.properties;
+  const reportFailures = options?.reportFailures;
 
   return useCallback(
     (async (...args: Parameters<typeof actionFn>) => {
       try {
         return await actionFn(...args);
       } catch (error) {
-        captureRejectedConvexCall(error, reference, "action", options);
+        if (reportFailures !== false) {
+          captureRejectedConvexCall(
+            error,
+            referenceName,
+            "action",
+            buildCaptureOptions({ operation, alertable, expected, properties }),
+          );
+        }
         throw error;
       }
     }) as ReturnType<typeof useAction<Reference>>,
-    [actionFn, options, reference],
+    [actionFn, alertable, expected, operation, properties, referenceName, reportFailures],
   );
 }
 
@@ -62,17 +106,30 @@ export function useObservedMutation<
   options?: ObservedConvexOptions,
 ): ReturnType<typeof useMutation<Reference>> {
   const mutationFn = useMutation(reference);
+  const referenceName = getFunctionName(reference);
+  const operation = options?.operation;
+  const alertable = options?.alertable;
+  const expected = options?.expected;
+  const properties = options?.properties;
+  const reportFailures = options?.reportFailures;
 
   return useCallback(
     (async (...args: Parameters<typeof mutationFn>) => {
       try {
         return await mutationFn(...args);
       } catch (error) {
-        captureRejectedConvexCall(error, reference, "mutation", options);
+        if (reportFailures !== false) {
+          captureRejectedConvexCall(
+            error,
+            referenceName,
+            "mutation",
+            buildCaptureOptions({ operation, alertable, expected, properties }),
+          );
+        }
         throw error;
       }
     }) as ReturnType<typeof useMutation<Reference>>,
-    [mutationFn, options, reference],
+    [alertable, expected, mutationFn, operation, properties, referenceName, reportFailures],
   );
 }
 

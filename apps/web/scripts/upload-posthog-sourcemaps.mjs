@@ -42,11 +42,16 @@ function runPostHogCli(args) {
 }
 
 function isProductionDeploy() {
-  return (
-    process.env.DEPLOYMENT_MODE === "cloud" ||
-    process.env.NODE_ENV === "production" ||
-    process.env.CF_PAGES === "1"
-  );
+  if (process.env.DEPLOYMENT_MODE === "cloud") {
+    return true;
+  }
+
+  if (process.env.CF_PAGES === "1") {
+    const productionBranch = readOptionalEnv("CF_PAGES_PRODUCTION_BRANCH") ?? "main";
+    return readOptionalEnv("CF_PAGES_BRANCH") === productionBranch;
+  }
+
+  return process.env.NODE_ENV === "production";
 }
 
 const missingEnvVars = requiredEnvVars.filter((name) => !readOptionalEnv(name));

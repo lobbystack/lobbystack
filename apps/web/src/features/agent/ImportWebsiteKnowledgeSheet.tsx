@@ -38,7 +38,10 @@ export function ImportWebsiteKnowledgeSheet({
   onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation("agent");
-  const submitWebsiteIngestion = useObservedAction(api.ai.context.websiteIngestion.submitWebsiteIngestion);
+  const submitWebsiteIngestion = useObservedAction(
+    api.ai.context.websiteIngestion.submitWebsiteIngestion,
+    { reportFailures: false },
+  );
   const isControlled = open !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");

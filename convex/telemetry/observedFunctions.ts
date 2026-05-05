@@ -6,6 +6,7 @@ import {
   mutation,
 } from "../_generated/server";
 import type { ActionCtx, MutationCtx } from "../_generated/server";
+import { isExpectedConvexFailure } from "../../packages/telemetry/src/index";
 
 import {
   enqueuePostHogExceptionBestEffort,
@@ -51,13 +52,14 @@ async function reportConvexHandlerFailure(input: {
   kind: "action" | "http_action" | "internal_action" | "mutation" | "internal_mutation";
   options: ObservabilityOptions;
 }): Promise<void> {
+  const expected = input.options.expected ?? isExpectedConvexFailure(input.error);
   await enqueuePostHogExceptionBestEffort(input.ctx, {
     error: input.error,
     service: input.options.service ?? DEFAULT_SERVICE,
     operation: input.options.operation ?? `convex_${input.kind}`,
     distinctId: getPostHogDistinctIdForConvexSystem(),
-    alertable: input.options.alertable ?? true,
-    expected: input.options.expected ?? false,
+    alertable: input.options.alertable ?? !expected,
+    expected,
     properties: {
       convexFunctionType: input.kind,
     },
@@ -67,9 +69,17 @@ async function reportConvexHandlerFailure(input: {
 function observeConfigHandler<T extends ObservableDefinition>(
   definition: T,
   kind: Parameters<typeof reportConvexHandlerFailure>[0]["kind"],
+  wrapperOptions?: {
+    reportFailures?: boolean;
+  },
 ): T {
   const handler = definition.handler;
   if (typeof handler !== "function") {
+    return withoutObservabilityOption(definition);
+  }
+  if (wrapperOptions?.reportFailures === false) {
+    // Mutation failures roll back the whole transaction, including telemetry writes.
+    // Public mutations are observed by the web client and internal mutations bubble to actions.
     return withoutObservabilityOption(definition);
   }
   const options = getObservedOptions(definition);
@@ -128,9 +138,9 @@ export const observedInternalAction = ((
 
 export const observedMutation = ((definition: Parameters<typeof mutation>[0]) =>
   mutation(
-    observeConfigHandler(definition as ObservableDefinition, "mutation") as Parameters<
-      typeof mutation
-    >[0],
+    observeConfigHandler(definition as ObservableDefinition, "mutation", {
+      reportFailures: false,
+    }) as Parameters<typeof mutation>[0],
   )) as typeof mutation;
 
 export const observedInternalMutation = ((
@@ -140,6 +150,9 @@ export const observedInternalMutation = ((
     observeConfigHandler(
       definition as ObservableDefinition,
       "internal_mutation",
+      {
+        reportFailures: false,
+      },
     ) as Parameters<typeof internalMutation>[0],
   )) as typeof internalMutation;
 
