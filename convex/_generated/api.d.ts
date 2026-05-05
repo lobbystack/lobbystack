@@ -92,6 +92,7 @@ import type * as operatorNotifications from "../operatorNotifications.js";
 import type * as services_localizedNames from "../services/localizedNames.js";
 import type * as smsCompliance from "../smsCompliance.js";
 import type * as telemetry_ai from "../telemetry/ai.js";
+import type * as telemetry_observedFunctions from "../telemetry/observedFunctions.js";
 import type * as telemetry_posthog from "../telemetry/posthog.js";
 import type * as telemetry_shared from "../telemetry/shared.js";
 import type * as unitEconomics from "../unitEconomics.js";
@@ -190,6 +191,7 @@ declare const fullApi: ApiFromModules<{
   "services/localizedNames": typeof services_localizedNames;
   smsCompliance: typeof smsCompliance;
   "telemetry/ai": typeof telemetry_ai;
+  "telemetry/observedFunctions": typeof telemetry_observedFunctions;
   "telemetry/posthog": typeof telemetry_posthog;
   "telemetry/shared": typeof telemetry_shared;
   unitEconomics: typeof unitEconomics;
