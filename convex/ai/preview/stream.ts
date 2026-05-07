@@ -11,7 +11,7 @@ import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
 import { v } from "convex/values";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
-import { persistentTextStreaming } from "../../lib/components";
+import { persistentTextStreaming, receptionistAgent } from "../../lib/components";
 import {
   getSensitiveContentExpiresAt,
   isPreviewSessionExpired,
@@ -19,6 +19,16 @@ import {
 } from "../../privacy/retention";
 
 import { observedHttpAction as httpAction } from "../../telemetry/observedFunctions";
+
+function isMissingOrInvalidComponentReferenceError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("is not registered") ||
+    message.includes("Invalid") ||
+    message.includes("Value does not match validator")
+  );
+}
 // Convex component types can exceed local tsc recursion depth on these builders.
 // @ts-ignore Deep type instantiation from Convex component generics.
 export const createPreviewSession = mutation({
@@ -78,20 +88,20 @@ export const recordPreviewOutput = internalMutation({
     streamId: v.string(),
     threadId: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ recorded: boolean }> => {
     const previewSession = await ctx.db
       .query("preview_sessions")
       .withIndex("by_stream_id", (q) => q.eq("streamId", args.streamId))
       .unique();
 
-    if (!previewSession) {
-      return null;
+    if (!previewSession || isPreviewSessionExpired(previewSession)) {
+      return { recorded: false };
     }
 
     await ctx.db.patch(previewSession._id, {
       threadId: args.threadId,
     });
-    return null;
+    return { recorded: true };
   },
 });
 
@@ -117,10 +127,30 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
       prompt: body.prompt,
     },
   );
-  await ctx.runMutation(internal.ai.preview.stream.recordPreviewOutput, {
-    streamId: body.streamId,
-    threadId: preview.threadId,
-  });
+  const recordResult: { recorded: boolean } = await ctx.runMutation(
+    internal.ai.preview.stream.recordPreviewOutput,
+    {
+      streamId: body.streamId,
+      threadId: preview.threadId,
+    },
+  );
+  if (!recordResult.recorded) {
+    try {
+      await receptionistAgent.deleteThreadAsync(ctx, { threadId: preview.threadId });
+    } catch (error) {
+      if (!isMissingOrInvalidComponentReferenceError(error)) {
+        throw error;
+      }
+    }
+    try {
+      await persistentTextStreaming.deleteStream(ctx, body.streamId);
+    } catch (error) {
+      if (!isMissingOrInvalidComponentReferenceError(error)) {
+        throw error;
+      }
+    }
+    return new Response("Preview session not found.", { status: 410 });
+  }
 
   const response = await persistentTextStreaming.stream(
     ctx,

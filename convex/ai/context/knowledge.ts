@@ -567,9 +567,20 @@ async function enqueueStaleKnowledgeReindex(
   }
 }
 
+function isMissingOrInvalidComponentReferenceError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("is not registered") ||
+    message.includes("Invalid") ||
+    message.includes("Value does not match validator")
+  );
+}
+
 async function generatePreviewAnswer(
   ctx: ActionCtx,
   args: PreviewKnowledgeArgs,
+  options: { deleteThreadAfterGeneration?: boolean } = {},
 ): Promise<PreviewKnowledgeAnswer> {
   const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
     businessId: args.businessId,
@@ -605,47 +616,59 @@ async function generatePreviewAnswer(
     },
   });
 
-  const result = await receptionistAgent.generateText(
-    ctx,
-    { threadId },
-    withAiTelemetryContext({
-      prompt: [
-        `Business snapshot summary: ${snapshot.summary}`,
-        `Booking policy: ${snapshot.bookingPolicy}`,
-        `Knowledge digest: ${snapshot.knowledgeDigest || "No long-form knowledge configured."}`,
-        `Relevant knowledge: ${context.map((entry) => entry.text).join("\n---\n")}`,
-        `User prompt: ${args.prompt}`,
-      ].join("\n\n"),
-    } as any, {
-      traceId,
-      sessionId: threadId,
-      distinctId,
-      groupKey,
-      businessId: args.businessId,
-      mutationRunner: ctx,
-      properties: {
+  try {
+    const result = await receptionistAgent.generateText(
+      ctx,
+      { threadId },
+      withAiTelemetryContext({
+        prompt: [
+          `Business snapshot summary: ${snapshot.summary}`,
+          `Booking policy: ${snapshot.bookingPolicy}`,
+          `Knowledge digest: ${snapshot.knowledgeDigest || "No long-form knowledge configured."}`,
+          `Relevant knowledge: ${context.map((entry) => entry.text).join("\n---\n")}`,
+          `User prompt: ${args.prompt}`,
+        ].join("\n\n"),
+      } as any, {
+        traceId,
+        sessionId: threadId,
+        distinctId,
+        groupKey,
+        businessId: args.businessId,
+        mutationRunner: ctx,
+        properties: {
+          channel: "dashboard",
+          operation: "knowledge.preview_answer",
+        },
+      }),
+    );
+
+    const metrics = extractGenerationMetrics(result);
+    if (metrics.totalCostUsd !== undefined) {
+      await ctx.runMutation(internal.unitEconomics.recordAiGenerationCost, {
+        businessId: args.businessId,
+        occurredAt: new Date().toISOString(),
+        eventKey: `dashboard_ai:knowledge_preview:${traceId}`,
+        eventKind: "dashboard_ai",
         channel: "dashboard",
+        costUsd: metrics.totalCostUsd,
+        provider: "google",
+        model: getNonRealtimeTextModelId(),
         operation: "knowledge.preview_answer",
-      },
-    }),
-  );
+      });
+    }
 
-  const metrics = extractGenerationMetrics(result);
-  if (metrics.totalCostUsd !== undefined) {
-    await ctx.runMutation(internal.unitEconomics.recordAiGenerationCost, {
-      businessId: args.businessId,
-      occurredAt: new Date().toISOString(),
-      eventKey: `dashboard_ai:knowledge_preview:${traceId}`,
-      eventKind: "dashboard_ai",
-      channel: "dashboard",
-      costUsd: metrics.totalCostUsd,
-      provider: "google",
-      model: getNonRealtimeTextModelId(),
-      operation: "knowledge.preview_answer",
-    });
+    return { text: result.text, threadId };
+  } finally {
+    if (options.deleteThreadAfterGeneration) {
+      try {
+        await receptionistAgent.deleteThreadAsync(ctx, { threadId });
+      } catch (error) {
+        if (!isMissingOrInvalidComponentReferenceError(error)) {
+          throw error;
+        }
+      }
+    }
   }
-
-  return { text: result.text, threadId };
 }
 
 async function deleteKnowledgeEntryById(
@@ -1518,6 +1541,8 @@ export const previewKnowledgeAnswer = action({
   },
   handler: async (ctx: ActionCtx, args: PreviewKnowledgeArgs): Promise<PreviewKnowledgeAnswer> => {
     await requireKnowledgeAccess(ctx, args.businessId);
-    return await generatePreviewAnswer(ctx, args);
+    return await generatePreviewAnswer(ctx, args, {
+      deleteThreadAfterGeneration: true,
+    });
   },
 });

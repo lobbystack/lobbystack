@@ -30,6 +30,7 @@ import {
 import { ensureSessionForStoredMessage } from "./sessions";
 import {
   getMessageContentExpiresAt,
+  isMessageContentExpired,
   scheduleMessageContentExpiration,
 } from "../privacy/retention";
 
@@ -487,7 +488,12 @@ export const getOutboundMessageDeliveryContext = internalQuery({
     args: MessageIdArgs,
   ): Promise<OutboundMessageDeliveryContext | null> => {
     const message = await ctx.db.get(args.messageId);
-    if (!message || message.direction !== "outbound" || message.channel !== "sms") {
+    if (
+      !message ||
+      message.direction !== "outbound" ||
+      message.channel !== "sms" ||
+      isMessageContentExpired(message)
+    ) {
       return null;
     }
 
@@ -1211,7 +1217,10 @@ export const handleTwilioSmsInbound = internalAction({
             return {
               businessId: conversation.businessId,
               conversationId: conversation._id,
-              reply: latestReply?.body ?? "Thanks, we already received that message.",
+              reply:
+                latestReply && !isMessageContentExpired(latestReply)
+                  ? latestReply.body
+                  : "Thanks, we already received that message.",
             };
           }
         }

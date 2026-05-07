@@ -5,8 +5,11 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { getLocalizedServiceName } from "../lib/serviceNames";
 import {
+  getVisibleInboxItemBody,
+  getVisibleInboxItemTitle,
   getVisibleMessageBody,
   isCallRecordingExpired,
+  isMessageContentExpired,
   isTranscriptExpired,
 } from "../privacy/retention";
 
@@ -518,8 +521,8 @@ export const getHomeSummary = query({
       .map((item) => ({
         id: String(item._id),
         kind: item.kind,
-        title: item.title,
-        body: item.body,
+        title: getVisibleInboxItemTitle(item),
+        body: getVisibleInboxItemBody(item),
         createdAt: new Date(item._creationTime).toISOString(),
         taskId: item._id,
         ...(item.relatedId ? { callId: item.relatedId as Id<"calls"> } : {}),
@@ -535,15 +538,18 @@ export const getHomeSummary = query({
 
     const actionRequiredFromHandoffs = await Promise.all(
       handoffConversations.map(async (conversation) => {
-        const [contact, latestMessages] = await Promise.all([
+        const [contact, conversationMessages] = await Promise.all([
           conversation.contactId ? ctx.db.get(conversation.contactId) : Promise.resolve(null),
           ctx.db
             .query("messages")
             .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
             .order("desc")
-            .take(1),
+            .collect(),
         ]);
-        const latestMessage = latestMessages[0] ?? null;
+        const latestMessage = conversationMessages[0] ?? null;
+        const hasExpiredMessages = conversationMessages.some((message) =>
+          isMessageContentExpired(message),
+        );
         const latestMessageBody = latestMessage
           ? getVisibleMessageBody(latestMessage).trim()
           : "";
@@ -559,7 +565,7 @@ export const getHomeSummary = query({
           title: contact?.name ?? contact?.phone ?? "Human handoff",
           body:
             latestMessageBody ||
-            conversation.summary ||
+            (hasExpiredMessages ? "" : conversation.summary) ||
             "AI is paused and waiting for an operator reply.",
           createdAt:
             latestMessage !== null

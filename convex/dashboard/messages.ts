@@ -932,6 +932,9 @@ export const materializeMessageAttachmentUrls = internalMutation({
     if (!message?.media || message.media.length === 0) {
       return null;
     }
+    if (isMessageContentExpired(message)) {
+      return null;
+    }
 
     const nextMedia = [];
     for (const attachment of message.media) {
@@ -1690,6 +1693,10 @@ export const repairConversationAttachmentPreviews = action({
     let repairedAttachments = 0;
 
     for (const message of messages) {
+      if (isMessageContentExpired(message)) {
+        continue;
+      }
+
       let currentMedia = message.media ?? [];
       const imageMediaMissingPreview = currentMedia.filter(
         (attachment) =>

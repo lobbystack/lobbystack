@@ -19,6 +19,8 @@ const convexModules = modules;
 const NOW_ISO = "2026-05-07T12:00:00.000Z";
 const EXPIRED_ISO = "2026-05-06T12:00:00.000Z";
 const FRESH_ISO = "2026-05-08T12:00:00.000Z";
+const RETENTION_MARKER = "__OPE_127_RETENTION_MARKER__";
+const FRESH_RETENTION_MARKER = "__OPE_127_FRESH_MARKER__";
 
 type ConvexHarness = TestConvex<typeof schema>;
 type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
@@ -181,6 +183,16 @@ describe("MVP privacy retention", () => {
         recordingRetentionStatus: "active",
         recordingExpiresAt: EXPIRED_ISO,
       });
+      const inboxItemId = await ctx.db.insert("inbox_items", {
+        businessId: owner.businessId,
+        kind: "voice_message",
+        title: "Expired voice follow-up before cron",
+        body: "expired voice follow-up before cron",
+        relatedId: String(callId),
+        status: "open",
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
       await ctx.db.insert("call_recording_download_tokens", {
         businessId: owner.businessId,
         callId,
@@ -210,6 +222,7 @@ describe("MVP privacy retention", () => {
       return {
         callId,
         conversationId,
+        inboxItemId,
         messageId,
         previewSessionId,
         transcriptId,
@@ -240,6 +253,8 @@ describe("MVP privacy retention", () => {
     expect(call?.recordingRetentionStatus).toBe("expired");
     expect(call?.transcriptReady).toBe(false);
     expect(call?.transcriptPreview).toBeNull();
+    expect(call?.followUpTask?.title).toBe("Expired voice message");
+    expect(call?.followUpTask?.body).toBe(REDACTED_MESSAGE_BODY);
 
     const homeSummary = await owner.authed.query(api.dashboard.overview.getHomeSummary, {
       businessId: owner.businessId,
@@ -249,6 +264,14 @@ describe("MVP privacy retention", () => {
       (item) => item.kind === "human_handoff",
     );
     expect(handoffTask?.body).toBe(REDACTED_MESSAGE_BODY);
+    const voiceTask = homeSummary.actionRequired.find(
+      (item) =>
+        item.kind === "voice_message" &&
+        "taskId" in item &&
+        item.taskId === seeded.inboxItemId,
+    );
+    expect(voiceTask?.title).toBe("Expired voice message");
+    expect(voiceTask?.body).toBe(REDACTED_MESSAGE_BODY);
 
     await expect(
       owner.authed.query(api.voice.runtime.getCallTranscript, {
@@ -318,6 +341,16 @@ describe("MVP privacy retention", () => {
       recordingContentType: "audio/wav",
       recordingByteLength: 19,
     });
+    await t.mutation(internal.operatorNotifications.reserveDelivery, {
+      businessId: owner.businessId,
+      userId: owner.userId,
+      eventKind: "voiceMessage",
+      eventKey: "voiceMessage:scheduled-retention",
+      channel: "email",
+      subject: "Voice message scheduled for retention",
+      body: "operator delivery scheduled for retention",
+      contentExpiresAt: FRESH_ISO,
+    });
 
     const scheduledNames = await t.run(async (ctx: TestRunCtx) => {
       const jobs = await ctx.db.system.query("_scheduled_functions").collect();
@@ -327,6 +360,9 @@ describe("MVP privacy retention", () => {
     expect(scheduledNames).toContain("privacy/retention:scrubMessageContentAtExpiry");
     expect(scheduledNames).toContain("privacy/retention:deleteTranscriptAtExpiry");
     expect(scheduledNames).toContain("privacy/retention:scrubCallRecordingAtExpiry");
+    expect(scheduledNames).toContain(
+      "privacy/retention:scrubOperatorNotificationDeliveryContentAtExpiry",
+    );
   });
 
   it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {
@@ -1024,6 +1060,411 @@ describe("MVP privacy retention", () => {
       expect(inboxItem?.body).toBe(REDACTED_MESSAGE_BODY);
       expect(delivery?.subject).toBe("Expired voice message");
       expect(delivery?.body).toBe(REDACTED_MESSAGE_BODY);
+    });
+  });
+
+  it("removes a sensitive marker from retained first-party communication mirrors", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-marker-owner",
+      slug: "mvp-retention-marker",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const sms = await seedConversation(ctx, owner.businessId);
+      const smsSessionId = await ctx.db.insert("conversation_sessions", {
+        businessId: owner.businessId,
+        conversationId: sms.conversationId,
+        channel: "sms",
+        status: "closed",
+        startedAt: 1,
+        lastMessageAt: 2,
+        closedAt: 2,
+        summaryGeneratedAt: 3,
+        summaryKind: "summary",
+        summary: {
+          kind: "summary",
+          summary: `SMS session ${RETENTION_MARKER}`,
+        },
+      });
+      await ctx.db.patch(sms.conversationId, {
+        summary: `SMS conversation ${RETENTION_MARKER}`,
+      });
+      const smsStorageId = await storeTestBlob(ctx, `sms storage ${RETENTION_MARKER}`);
+      const smsPreviewStorageId = await storeTestBlob(
+        ctx,
+        `sms preview ${RETENTION_MARKER}`,
+        "image/png",
+      );
+      const smsMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId: sms.conversationId,
+        conversationSessionId: smsSessionId,
+        direction: "inbound",
+        channel: "sms",
+        fromPhoneNumber: "+14165559999",
+        body: `expired sms ${RETENTION_MARKER}`,
+        status: "received",
+        aiGenerated: false,
+        media: [
+          {
+            storageId: smsStorageId,
+            fileName: `sms-${RETENTION_MARKER}.txt`,
+            contentType: "text/plain",
+            byteLength: 12,
+            previewStorageId: smsPreviewStorageId,
+            previewFileName: `sms-${RETENTION_MARKER}.png`,
+            previewContentType: "image/png",
+            previewByteLength: 10,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      const smsUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId: sms.conversationId,
+        uploaderUserId: owner.userId,
+        storageId: smsStorageId,
+        fileName: `sent-${RETENTION_MARKER}.txt`,
+        contentType: "text/plain",
+        byteLength: 12,
+        previewStorageId: smsPreviewStorageId,
+        previewFileName: `sent-${RETENTION_MARKER}.png`,
+        previewContentType: "image/png",
+        previewByteLength: 10,
+        deliveryMode: "link",
+        status: "sent",
+        sentMessageId: smsMessageId,
+      });
+      const smsTokenId = await ctx.db.insert("message_attachment_download_tokens", {
+        businessId: owner.businessId,
+        messageId: smsMessageId,
+        storageId: smsStorageId,
+        fileName: `token-${RETENTION_MARKER}.txt`,
+        contentType: "text/plain",
+        disposition: "attachment",
+        nonce: `nonce-${RETENTION_MARKER}`,
+        expiresAt: FRESH_ISO,
+      });
+      const pausedDeliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "pausedSms",
+        eventKey: `pausedSms:${String(smsMessageId)}`,
+        channel: "email",
+        status: "sent",
+        subject: `Paused ${RETENTION_MARKER}`,
+        body: `Paused body ${RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
+      });
+
+      const voice = await seedConversation(ctx, owner.businessId);
+      const voiceCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId: voice.conversationId,
+        contactId: voice.contactId,
+        twilioCallSid: "CA-marker-voice",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+      });
+      const voiceSessionId = await ctx.db.insert("conversation_sessions", {
+        businessId: owner.businessId,
+        conversationId: voice.conversationId,
+        channel: "voice",
+        callId: voiceCallId,
+        status: "closed",
+        startedAt: 1,
+        lastMessageAt: 2,
+        closedAt: 2,
+        summaryGeneratedAt: 3,
+        summaryKind: "summary",
+        summary: {
+          kind: "summary",
+          summary: `Voice session abstract ${RETENTION_MARKER}`,
+        },
+      });
+      await ctx.db.patch(voice.conversationId, {
+        currentIntent: "summary",
+        summary: `Voice conversation abstract ${RETENTION_MARKER}`,
+      });
+      const voiceMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId: voice.conversationId,
+        conversationSessionId: voiceSessionId,
+        direction: "inbound",
+        channel: "voice",
+        body: `voice note ${RETENTION_MARKER}`,
+        status: "captured",
+        aiGenerated: false,
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      const voiceInboxItemId = await ctx.db.insert("inbox_items", {
+        businessId: owner.businessId,
+        kind: "voice_message",
+        title: `Voice title ${RETENTION_MARKER}`,
+        body: `Voice body ${RETENTION_MARKER}`,
+        relatedId: String(voiceCallId),
+        status: "open",
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      const voiceDeliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "voiceMessage",
+        eventKey: `voiceMessage:${String(voiceInboxItemId)}`,
+        channel: "email",
+        status: "sent",
+        subject: `Voice delivery ${RETENTION_MARKER}`,
+        body: `Voice delivery body ${RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
+      });
+
+      const orphanCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        twilioCallSid: "CA-marker-orphan-voice",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+      });
+      const orphanInboxItemId = await ctx.db.insert("inbox_items", {
+        businessId: owner.businessId,
+        kind: "voice_message",
+        title: `Orphan voice title ${RETENTION_MARKER}`,
+        body: `Orphan voice body ${RETENTION_MARKER}`,
+        relatedId: String(orphanCallId),
+        status: "open",
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      const orphanDeliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "voiceMessage",
+        eventKey: `voiceMessage:${String(orphanInboxItemId)}`,
+        channel: "sms",
+        status: "sent",
+        subject: `Orphan delivery ${RETENTION_MARKER}`,
+        body: `Orphan delivery body ${RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
+      });
+
+      const recordingStorageId = await storeTestBlob(
+        ctx,
+        `recording ${RETENTION_MARKER}`,
+        "audio/wav",
+      );
+      const recordingCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        twilioCallSid: "CA-marker-recording",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+        recordingStorageId,
+        recordingContentType: "audio/wav",
+        recordingByteLength: 12,
+        recordingRetentionStatus: "active",
+        recordingExpiresAt: EXPIRED_ISO,
+      });
+      const recordingTokenId = await ctx.db.insert("call_recording_download_tokens", {
+        businessId: owner.businessId,
+        callId: recordingCallId,
+        storageId: recordingStorageId,
+        fileName: `recording-${RETENTION_MARKER}.wav`,
+        contentType: "audio/wav",
+        nonce: `recording-${RETENTION_MARKER}`,
+        expiresAt: FRESH_ISO,
+      });
+      const transcriptId = await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId: recordingCallId,
+        sequence: 1,
+        speaker: "caller",
+        text: `transcript ${RETENTION_MARKER}`,
+        final: true,
+        expiresAt: EXPIRED_ISO,
+      });
+
+      const previewSessionId = await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: `preview prompt ${RETENTION_MARKER}`,
+        streamId: "marker-preview-stream",
+        threadId: "marker-preview-thread",
+        response: `preview response ${RETENTION_MARKER}`,
+        expiresAt: EXPIRED_ISO,
+      });
+      const stagedStorageId = await storeTestBlob(ctx, `staged ${RETENTION_MARKER}`);
+      const stagedUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId: sms.conversationId,
+        uploaderUserId: owner.userId,
+        storageId: stagedStorageId,
+        fileName: `staged-${RETENTION_MARKER}.txt`,
+        contentType: "text/plain",
+        byteLength: 12,
+        deliveryMode: "link",
+        status: "staged",
+        expiresAt: EXPIRED_ISO,
+      });
+
+      const fresh = await seedConversation(ctx, owner.businessId);
+      const freshMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId: fresh.conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: `fresh ${FRESH_RETENTION_MARKER}`,
+        status: "received",
+        aiGenerated: false,
+        contentRetentionStatus: "active",
+        contentExpiresAt: FRESH_ISO,
+      });
+      const freshInboxItemId = await ctx.db.insert("inbox_items", {
+        businessId: owner.businessId,
+        kind: "voice_message",
+        title: `Fresh title ${FRESH_RETENTION_MARKER}`,
+        body: `Fresh body ${FRESH_RETENTION_MARKER}`,
+        relatedId: "fresh-call",
+        status: "open",
+        contentRetentionStatus: "active",
+        contentExpiresAt: FRESH_ISO,
+      });
+      const freshDeliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "pausedSms",
+        eventKey: "pausedSms:fresh-marker",
+        channel: "email",
+        status: "sent",
+        subject: `Fresh subject ${FRESH_RETENTION_MARKER}`,
+        body: `Fresh delivery ${FRESH_RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+        contentExpiresAt: FRESH_ISO,
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
+      });
+
+      return {
+        freshDeliveryId,
+        freshInboxItemId,
+        freshMessageId,
+        orphanDeliveryId,
+        orphanInboxItemId,
+        pausedDeliveryId,
+        previewSessionId,
+        recordingStorageId,
+        recordingTokenId,
+        smsMessageId,
+        smsPreviewStorageId,
+        smsSessionId,
+        smsStorageId,
+        smsTokenId,
+        smsUploadId,
+        stagedStorageId,
+        stagedUploadId,
+        transcriptId,
+        voiceDeliveryId,
+        voiceInboxItemId,
+        voiceMessageId,
+        voiceSessionId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.messages.scrubbed).toBe(2);
+    expect(summary.inboxItems.scrubbed).toBe(1);
+    expect(summary.operatorNotificationDeliveries.scrubbed).toBe(1);
+    expect(summary.transcripts.deleted).toBe(1);
+    expect(summary.callRecordings.scrubbed).toBe(1);
+    expect(summary.previewSessions.deleted).toBe(1);
+    expect(summary.abandonedMessageAttachmentUploads.deleted).toBe(1);
+
+    await t.run(async (ctx: TestRunCtx) => {
+      expect(await ctx.db.get(seeded.smsTokenId)).toBeNull();
+      expect(await ctx.db.get(seeded.smsUploadId)).toBeNull();
+      expect(await ctx.db.get(seeded.recordingTokenId)).toBeNull();
+      expect(await ctx.db.get(seeded.transcriptId)).toBeNull();
+      expect(await ctx.db.get(seeded.previewSessionId)).toBeNull();
+      expect(await ctx.db.get(seeded.stagedUploadId)).toBeNull();
+      expect(await ctx.storage.get(seeded.smsStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.smsPreviewStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.recordingStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.stagedStorageId)).toBeNull();
+
+      expect(await ctx.db.get(seeded.smsMessageId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.voiceMessageId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.pausedDeliveryId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.voiceDeliveryId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.orphanDeliveryId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.voiceInboxItemId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(await ctx.db.get(seeded.orphanInboxItemId)).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+
+      expect(await ctx.db.get(seeded.freshMessageId)).toMatchObject({
+        body: `fresh ${FRESH_RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+      });
+      expect(await ctx.db.get(seeded.freshInboxItemId)).toMatchObject({
+        body: `Fresh body ${FRESH_RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+      });
+      expect(await ctx.db.get(seeded.freshDeliveryId)).toMatchObject({
+        body: `Fresh delivery ${FRESH_RETENTION_MARKER}`,
+        contentRetentionStatus: "active",
+      });
+
+      const remainingRows = [
+        ...(await ctx.db.query("messages").collect()),
+        ...(await ctx.db.query("conversations").collect()),
+        ...(await ctx.db.query("conversation_sessions").collect()),
+        ...(await ctx.db.query("inbox_items").collect()),
+        ...(await ctx.db.query("operator_notification_deliveries").collect()),
+        ...(await ctx.db.query("calls").collect()),
+        ...(await ctx.db.query("transcripts").collect()),
+        ...(await ctx.db.query("preview_sessions").collect()),
+        ...(await ctx.db.query("message_attachment_uploads").collect()),
+        ...(await ctx.db.query("message_attachment_download_tokens").collect()),
+        ...(await ctx.db.query("call_recording_download_tokens").collect()),
+      ];
+      for (const row of remainingRows) {
+        expect(JSON.stringify(row)).not.toContain(RETENTION_MARKER);
+      }
+      expect(JSON.stringify(remainingRows)).toContain(FRESH_RETENTION_MARKER);
     });
   });
 

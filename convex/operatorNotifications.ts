@@ -21,6 +21,10 @@ import {
   type OperatorNotificationEventKey,
   type OperatorNotificationEventPreferences,
 } from "./lib/operatorNotificationPreferences";
+import {
+  getMessageContentExpiresAt,
+  scheduleOperatorNotificationDeliveryContentExpiration,
+} from "./privacy/retention";
 
 type EffectivePreferences = {
   emailEnabled: boolean;
@@ -139,6 +143,14 @@ function estimateSmsSegments(body: string): number {
   return gsmSeptetLength <= 160
     ? 1
     : Math.max(1, Math.ceil(gsmSeptetLength / 153));
+}
+
+function getSensitiveDeliveryContentExpiresAt(
+  eventKind: "dailyDigest" | "test" | OperatorNotificationEventKey,
+): string | undefined {
+  return eventKind === "voiceMessage" || eventKind === "pausedSms"
+    ? getMessageContentExpiresAt()
+    : undefined;
 }
 
 function parseSendTime(sendTime: string): { hour: number; minute: number } {
@@ -353,6 +365,7 @@ export const reserveDelivery = internalMutation({
     scheduledFor: v.optional(v.string()),
     digestForDate: v.optional(v.string()),
     recipientEmail: v.optional(v.string()),
+    contentExpiresAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -412,8 +425,21 @@ export const reserveDelivery = internalMutation({
       body: args.body,
       ...(args.scheduledFor !== undefined ? { scheduledFor: args.scheduledFor } : {}),
       ...(args.digestForDate !== undefined ? { digestForDate: args.digestForDate } : {}),
+      ...(args.contentExpiresAt !== undefined
+        ? {
+            contentRetentionStatus: "active" as const,
+            contentExpiresAt: args.contentExpiresAt,
+          }
+        : {}),
       createdAt: new Date().toISOString(),
     });
+    if (args.contentExpiresAt !== undefined) {
+      await scheduleOperatorNotificationDeliveryContentExpiration(
+        ctx,
+        deliveryId,
+        args.contentExpiresAt,
+      );
+    }
 
     return { deliveryId, created: true };
   },
@@ -642,6 +668,7 @@ async function deliverChannel(
     body: string;
     scheduledFor?: string;
     digestForDate?: string;
+    contentExpiresAt?: string;
   },
 ): Promise<{ attempted: boolean; sent: boolean; error?: string }> {
   const reservation: { deliveryId: Id<"operator_notification_deliveries">; created: boolean } =
@@ -655,6 +682,9 @@ async function deliverChannel(
       body: input.body,
       ...(input.scheduledFor !== undefined ? { scheduledFor: input.scheduledFor } : {}),
       ...(input.digestForDate !== undefined ? { digestForDate: input.digestForDate } : {}),
+      ...(input.contentExpiresAt !== undefined
+        ? { contentExpiresAt: input.contentExpiresAt }
+        : {}),
       ...(input.eventKind === "dailyDigest" && input.channel === "email"
         ? { recipientEmail: input.to }
         : {}),
@@ -725,6 +755,7 @@ export const dispatchEvent = internalAction({
       ...(business?.name ? { businessName: business.name } : {}),
       body: args.body,
     });
+    const contentExpiresAt = getSensitiveDeliveryContentExpiresAt(args.eventKind);
     let attempted = 0;
     let sent = 0;
 
@@ -739,6 +770,7 @@ export const dispatchEvent = internalAction({
           eventKey: args.eventKey,
           subject: args.subject,
           body,
+          ...(contentExpiresAt !== undefined ? { contentExpiresAt } : {}),
         });
         attempted += result.attempted ? 1 : 0;
         sent += result.sent ? 1 : 0;
@@ -754,6 +786,7 @@ export const dispatchEvent = internalAction({
           eventKey: args.eventKey,
           subject: args.subject,
           body,
+          ...(contentExpiresAt !== undefined ? { contentExpiresAt } : {}),
         });
         attempted += result.attempted ? 1 : 0;
         sent += result.sent ? 1 : 0;

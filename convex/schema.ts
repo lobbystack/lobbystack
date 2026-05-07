@@ -914,6 +914,8 @@ export default defineSchema({
     providerNumSegments: v.optional(v.number()),
     senderRole: v.optional(smsSenderRoleValidator),
     digestForDate: v.optional(v.string()),
+    contentRetentionStatus: v.optional(retentionStatusValidator),
+    contentExpiresAt: v.optional(v.string()),
     createdAt: v.string(),
   })
     .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
@@ -929,6 +931,10 @@ export default defineSchema({
       "eventKind",
       "channel",
       "digestForDate",
+    ])
+    .index("by_content_retention_status_and_content_expires_at", [
+      "contentRetentionStatus",
+      "contentExpiresAt",
     ])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
 
@@ -1001,10 +1007,16 @@ export default defineSchema({
     body: v.string(),
     relatedId: v.optional(v.string()),
     status: v.string(),
+    contentRetentionStatus: v.optional(retentionStatusValidator),
+    contentExpiresAt: v.optional(v.string()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_kind", ["businessId", "kind"])
     .index("by_business_id_and_kind_and_status", ["businessId", "kind", "status"])
+    .index("by_content_retention_status_and_content_expires_at", [
+      "contentRetentionStatus",
+      "contentExpiresAt",
+    ])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_related_id", ["relatedId"]),
 

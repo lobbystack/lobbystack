@@ -44,9 +44,12 @@ import {
   getCallRecordingExpiresAt,
   getMessageContentExpiresAt,
   getSensitiveContentExpiresAt,
+  getVisibleInboxItemBody,
+  getVisibleInboxItemTitle,
   isCallRecordingExpired,
   isTranscriptExpired,
   scheduleCallRecordingExpiration,
+  scheduleInboxItemContentExpiration,
   scheduleMessageContentExpiration,
   scheduleTranscriptExpiration,
 } from "../privacy/retention";
@@ -403,8 +406,8 @@ async function hydrateDashboardCallRow(
     followUpTask: followUpTask
       ? {
           id: followUpTask._id,
-          title: followUpTask.title,
-          body: followUpTask.body,
+          title: getVisibleInboxItemTitle(followUpTask),
+          body: getVisibleInboxItemBody(followUpTask),
           createdAt: new Date(followUpTask._creationTime).toISOString(),
         }
       : null,
@@ -970,6 +973,7 @@ export const takeMessageForVoice = internalMutation({
     ]
       .filter((line): line is string => Boolean(line))
       .join("\n");
+    const contentExpiresAt = getMessageContentExpiresAt();
 
     const inboxItemId = await ctx.db.insert("inbox_items", {
       businessId: args.businessId,
@@ -978,10 +982,12 @@ export const takeMessageForVoice = internalMutation({
       body,
       relatedId: String(args.callId),
       status: "open",
+      contentRetentionStatus: "active",
+      contentExpiresAt,
     });
+    await scheduleInboxItemContentExpiration(ctx, inboxItemId, contentExpiresAt);
 
     if (args.conversationId) {
-      const contentExpiresAt = getMessageContentExpiresAt();
       const messageId = await ctx.db.insert("messages", {
         businessId: args.businessId,
         conversationId: args.conversationId,
@@ -1805,8 +1811,8 @@ export const getVoiceFollowUpTaskForDashboard = query({
 
     return {
       id: inboxItem._id,
-      title: inboxItem.title,
-      body: inboxItem.body,
+      title: getVisibleInboxItemTitle(inboxItem),
+      body: getVisibleInboxItemBody(inboxItem),
       createdAt: new Date(inboxItem._creationTime).toISOString(),
       callId: inboxItem.relatedId ? (inboxItem.relatedId as Id<"calls">) : null,
     };
