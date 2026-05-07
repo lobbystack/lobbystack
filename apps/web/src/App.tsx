@@ -175,6 +175,19 @@ function onboardingNavigableStep(stage: string | undefined): number {
   return stage ? (onboardingStageSteps[stage] ?? 1) : 1;
 }
 
+function hasJustClaimedPhoneNumberState(state: unknown): boolean {
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    "justClaimedPhoneNumber" in state &&
+    (state as { justClaimedPhoneNumber?: unknown }).justClaimedPhoneNumber === true
+  );
+}
+
+function isPhoneNumberClaimBridgeStage(stage: string | undefined): boolean {
+  return stage === "phone_number" || stage === "phone_number_claiming";
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -257,7 +270,11 @@ function WorkspaceShell() {
   // completed onboarding, redirect to the right step.
   if (!isBootstrapLoading && activeBusiness) {
     const target = onboardingRouteForStage(activeBusiness.onboardingStage);
-    if (target && location.pathname !== target) {
+    const isNumberClaimPlanBridge =
+      location.pathname === "/onboarding/plan" &&
+      hasJustClaimedPhoneNumberState(location.state) &&
+      isPhoneNumberClaimBridgeStage(activeBusiness.onboardingStage);
+    if (target && location.pathname !== target && !isNumberClaimPlanBridge) {
       return <Navigate replace to={target} />;
     }
   }
@@ -765,6 +782,7 @@ function OnboardingNumberRoute() {
 
 function OnboardingPlanRoute() {
   const ctx = useOnboardingContext();
+  const location = useLocation();
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -774,7 +792,14 @@ function OnboardingPlanRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")) {
+  const canUseNumberClaimBridge =
+    hasJustClaimedPhoneNumberState(location.state) &&
+    isPhoneNumberClaimBridgeStage(ctx.activeBusiness.onboardingStage);
+
+  if (
+    !canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan") &&
+    !canUseNumberClaimBridge
+  ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 

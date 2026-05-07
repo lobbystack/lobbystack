@@ -154,6 +154,7 @@ export function OnboardingNumberPage({
   const [isLoading, setIsLoading] = useState(true);
   const [searchSource, setSearchSource] = useState<"search" | "loadMore" | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [hasCompletedClaim, setHasCompletedClaim] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const isSearching = searchSource !== null;
@@ -218,6 +219,15 @@ export function OnboardingNumberPage({
     t,
   ]);
 
+  useEffect(() => {
+    if (!isComplete && primaryPhoneNumber) {
+      navigate("/onboarding/plan", {
+        replace: true,
+        state: { justClaimedPhoneNumber: true },
+      });
+    }
+  }, [isComplete, navigate, primaryPhoneNumber]);
+
   async function handleSearch(source: "search" | "loadMore" = "search"): Promise<void> {
     setSearchSource(source);
     setError(null);
@@ -276,7 +286,10 @@ export function OnboardingNumberPage({
           selectionMode: number.selectionContext.mode,
           numberKind: number.kind,
         });
-        navigate("/onboarding/plan");
+        setHasCompletedClaim(true);
+        navigate("/onboarding/plan", {
+          state: { justClaimedPhoneNumber: true },
+        });
         return;
       }
 
@@ -311,7 +324,37 @@ export function OnboardingNumberPage({
     }
   }
 
-  if (primaryPhoneNumber || isComplete) {
+  if (hasCompletedClaim || (primaryPhoneNumber && !isComplete)) {
+    return (
+      <OnboardingShell
+        onSignOut={onSignOut}
+        progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+        title={t("number.title")}
+        width="md"
+      >
+        <Surface className="flex justify-center p-6">
+          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        </Surface>
+      </OnboardingShell>
+    );
+  }
+
+  if (isComplete) {
+    if (primaryPhoneNumber === undefined) {
+      return (
+        <OnboardingShell
+          onSignOut={onSignOut}
+          progress={{ current: 8, navigableUntil: progressNavigableUntil, total: 10 }}
+          title={t("number.title")}
+          width="md"
+        >
+          <Surface className="flex justify-center p-6">
+            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+          </Surface>
+        </OnboardingShell>
+      );
+    }
+
     const selectedNumber = primaryPhoneNumber ? formatPhoneNumber(primaryPhoneNumber.e164) : null;
 
     return (

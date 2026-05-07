@@ -126,7 +126,6 @@ export function LoginPage() {
 
   return (
     <OnboardingShell
-      description={t("login.subtitle")}
       progress={null}
       title={t("login.title")}
       width="sm"
