@@ -157,6 +157,24 @@ function parseSendTime(sendTime: string): { hour: number; minute: number } {
   return { hour, minute };
 }
 
+function sendTimeSortValue(sendTime: string): number {
+  const { hour, minute } = parseSendTime(sendTime);
+  return hour * 60 + minute;
+}
+
+function normalizeDigestEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function hashDigestRecipientEmail(email: string): string {
+  let hash = 0x811c9dc5;
+  for (const char of normalizeDigestEmail(email)) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 function deliveryErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -323,6 +341,7 @@ export const reserveDelivery = internalMutation({
     body: v.string(),
     scheduledFor: v.optional(v.string()),
     digestForDate: v.optional(v.string()),
+    recipientEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -333,6 +352,47 @@ export const reserveDelivery = internalMutation({
       .unique();
     if (existing) {
       return { deliveryId: existing._id, created: false };
+    }
+
+    if (args.eventKind === "dailyDigest") {
+      const existingDigest = (
+        await ctx.db
+          .query("operator_notification_deliveries")
+          .withIndex("by_business_id_and_event_kind", (q) =>
+            q.eq("businessId", args.businessId).eq("eventKind", "dailyDigest"),
+          )
+          .collect()
+      ).find(
+        (delivery) => delivery.channel === args.channel && delivery.eventKey === args.eventKey,
+      );
+      if (existingDigest) {
+        return { deliveryId: existingDigest._id, created: false };
+      }
+
+      if (args.channel === "email" && args.digestForDate && args.recipientEmail) {
+        const recipientEmail = normalizeDigestEmail(args.recipientEmail);
+        const existingDigestDeliveries = await ctx.db
+          .query("operator_notification_deliveries")
+          .withIndex("by_business_id_and_event_kind", (q) =>
+            q.eq("businessId", args.businessId).eq("eventKind", "dailyDigest"),
+          )
+          .collect();
+        for (const delivery of existingDigestDeliveries) {
+          if (
+            delivery.channel !== "email" ||
+            delivery.digestForDate !== args.digestForDate
+          ) {
+            continue;
+          }
+          const existingRecipient = await ctx.db.get(delivery.userId);
+          if (
+            existingRecipient?.email &&
+            normalizeDigestEmail(existingRecipient.email) === recipientEmail
+          ) {
+            return { deliveryId: delivery._id, created: false };
+          }
+        }
+      }
     }
 
     const deliveryId = await ctx.db.insert("operator_notification_deliveries", {
@@ -589,6 +649,9 @@ async function deliverChannel(
       body: input.body,
       ...(input.scheduledFor !== undefined ? { scheduledFor: input.scheduledFor } : {}),
       ...(input.digestForDate !== undefined ? { digestForDate: input.digestForDate } : {}),
+      ...(input.eventKind === "dailyDigest" && input.channel === "email"
+        ? { recipientEmail: input.to }
+        : {}),
     });
 
   if (!reservation.created) {
@@ -751,7 +814,7 @@ export const listDailyDigestTargets = internalQuery({
   args: {},
   handler: async (ctx): Promise<Array<DigestTarget>> => {
     const businesses = await ctx.db.query("businesses").collect();
-    const targets: Array<DigestTarget> = [];
+    const targetsByRecipient = new Map<string, DigestTarget>();
 
     for (const business of businesses) {
       const memberships = await ctx.db
@@ -779,18 +842,27 @@ export const listDailyDigestTargets = internalQuery({
           continue;
         }
 
-        targets.push({
+        const target = {
           businessId: business._id,
           businessName: business.name,
           timezone: business.timezone,
           userId: user._id,
           email: user.email,
           dailySummarySendTime: effective.dailySummarySendTime,
-        });
+        };
+        const recipientKey = `${String(business._id)}:${normalizeDigestEmail(user.email)}`;
+        const existing = targetsByRecipient.get(recipientKey);
+        if (
+          !existing ||
+          sendTimeSortValue(target.dailySummarySendTime) <
+            sendTimeSortValue(existing.dailySummarySendTime)
+        ) {
+          targetsByRecipient.set(recipientKey, target);
+        }
       }
     }
 
-    return targets;
+    return Array.from(targetsByRecipient.values());
   },
 });
 
@@ -1008,7 +1080,12 @@ export const dispatchDueDailyDigests = internalAction({
         continue;
       }
 
-      const eventKey = `dailyDigest:${String(target.businessId)}:${String(target.userId)}:${digestForDate}`;
+      const eventKey = [
+        "dailyDigest",
+        String(target.businessId),
+        hashDigestRecipientEmail(target.email),
+        digestForDate,
+      ].join(":");
       const alreadyReserved: boolean = await ctx.runQuery(
         internal.operatorNotifications.hasDeliveryForEvent,
         { userId: target.userId, channel: "email", eventKey },
