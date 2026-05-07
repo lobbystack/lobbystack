@@ -1,8 +1,13 @@
 import { v } from "convex/values";
+import type { StreamId } from "@convex-dev/persistent-text-streaming";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
+import {
+  persistentTextStreaming,
+  receptionistAgent,
+} from "../lib/components";
 import {
   observedInternalAction as internalAction,
   observedInternalMutation as internalMutation,
@@ -50,6 +55,16 @@ function normalizeLimit(limit: number): number {
 
 function isExpired(expiresAt: string | undefined, nowIso: string): expiresAt is string {
   return typeof expiresAt === "string" && expiresAt.length > 0 && expiresAt <= nowIso;
+}
+
+function isMissingOrInvalidComponentReferenceError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("is not registered") ||
+    message.includes("Invalid") ||
+    message.includes("Value does not match validator")
+  );
 }
 
 function addStorageId(
@@ -118,6 +133,138 @@ function collectMessageStorageIds(
   }
 }
 
+async function deleteConversationAgentThread(
+  ctx: MutationCtx,
+  conversationId: Id<"conversations">,
+): Promise<number> {
+  const aiState = await ctx.db
+    .query("conversation_ai_state")
+    .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+    .unique();
+  if (!aiState) {
+    return 0;
+  }
+
+  try {
+    await receptionistAgent.deleteThreadAsync(ctx, {
+      threadId: aiState.threadId,
+    });
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  await ctx.db.delete(aiState._id);
+  return 1;
+}
+
+async function deletePreviewAgentThread(
+  ctx: MutationCtx,
+  threadId: string | undefined,
+): Promise<number> {
+  if (!threadId) {
+    return 0;
+  }
+
+  try {
+    await receptionistAgent.deleteThreadAsync(ctx, { threadId });
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  return 1;
+}
+
+async function deletePreviewStream(
+  ctx: MutationCtx,
+  streamId: string,
+): Promise<number> {
+  try {
+    await persistentTextStreaming.deleteStream(ctx, streamId as StreamId);
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  return 1;
+}
+
+async function scrubVoiceMessageMirrors(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  if (message.channel !== "voice") {
+    return;
+  }
+
+  const conversation = await ctx.db.get(message.conversationId);
+  if (
+    conversation &&
+    (conversation.currentIntent === "message_taking" ||
+      conversation.summary?.includes(message.body))
+  ) {
+    await ctx.db.patch(conversation._id, {
+      summary: REDACTED_MESSAGE_BODY,
+    });
+  }
+
+  const session = message.conversationSessionId
+    ? await ctx.db.get(message.conversationSessionId)
+    : null;
+  if (!session || session.channel !== "voice") {
+    return;
+  }
+
+  if (session.summary) {
+    await ctx.db.patch(session._id, {
+      summary: {
+        ...session.summary,
+        summary: REDACTED_MESSAGE_BODY,
+      },
+    });
+  }
+
+  if (!session.callId) {
+    return;
+  }
+
+  const inboxItems = await ctx.db
+    .query("inbox_items")
+    .withIndex("by_kind_and_related_id", (q) =>
+      q.eq("kind", "voice_message").eq("relatedId", String(session.callId)),
+    )
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+  for (const item of inboxItems) {
+    await ctx.db.patch(item._id, {
+      title: "Expired voice message",
+      body: REDACTED_MESSAGE_BODY,
+    });
+  }
+}
+
+async function drainCleanup(
+  runBatch: () => Promise<CleanupCount>,
+  limit: number,
+): Promise<CleanupCount> {
+  const total: CleanupCount = {
+    scanned: 0,
+    deleted: 0,
+    scrubbed: 0,
+  };
+
+  while (true) {
+    const batch = await runBatch();
+    total.scanned += batch.scanned;
+    total.deleted += batch.deleted;
+    total.scrubbed += batch.scrubbed;
+
+    if (batch.scanned < limit) {
+      return total;
+    }
+  }
+}
+
 async function deleteCallRecordingTokens(
   ctx: MutationCtx,
   callId: Id<"calls">,
@@ -162,6 +309,8 @@ export const scrubExpiredMessages = internalMutation({
       await deleteSentAttachmentUploads(ctx, message._id, storageIds);
       await deleteMessageAttachmentTokens(ctx, message._id);
       await deleteStorageIds(ctx, storageIds);
+      await scrubVoiceMessageMirrors(ctx, message);
+      await deleteConversationAgentThread(ctx, message.conversationId);
 
       await ctx.db.patch(message._id, {
         body: REDACTED_MESSAGE_BODY,
@@ -272,6 +421,8 @@ export const deleteExpiredPreviewSessions = internalMutation({
       if (!isExpired(session.expiresAt, args.nowIso)) {
         continue;
       }
+      await deletePreviewAgentThread(ctx, session.threadId);
+      await deletePreviewStream(ctx, session.streamId);
       await ctx.db.delete(session._id);
       deleted += 1;
     }
@@ -341,29 +492,53 @@ export const runMvpRetentionCleanup = internalAction({
     const nowIso = args.nowIso ?? new Date().toISOString();
     const limit = normalizeLimit(args.limit ?? DEFAULT_RETENTION_CLEANUP_LIMIT);
 
-    const messages: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.scrubExpiredMessages,
-      { nowIso, limit },
+    const messages = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.scrubExpiredMessages, {
+          nowIso,
+          limit,
+        }),
+      limit,
     );
-    const transcripts: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.deleteExpiredTranscripts,
-      { nowIso, limit },
+    const transcripts = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.deleteExpiredTranscripts, {
+          nowIso,
+          limit,
+        }),
+      limit,
     );
-    const callRecordings: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.scrubExpiredCallRecordings,
-      { nowIso, limit },
+    const callRecordings = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.scrubExpiredCallRecordings, {
+          nowIso,
+          limit,
+        }),
+      limit,
     );
-    const previewSessions: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.deleteExpiredPreviewSessions,
-      { nowIso, limit },
+    const previewSessions = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.deleteExpiredPreviewSessions, {
+          nowIso,
+          limit,
+        }),
+      limit,
     );
-    const messageAttachmentDownloadTokens: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.deleteExpiredMessageAttachmentDownloadTokens,
-      { nowIso, limit },
+    const messageAttachmentDownloadTokens = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredMessageAttachmentDownloadTokens,
+          { nowIso, limit },
+        ),
+      limit,
     );
-    const callRecordingDownloadTokens: CleanupCount = await ctx.runMutation(
-      internal.privacy.retention.deleteExpiredCallRecordingDownloadTokens,
-      { nowIso, limit },
+    const callRecordingDownloadTokens = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredCallRecordingDownloadTokens,
+          { nowIso, limit },
+        ),
+      limit,
     );
 
     return {

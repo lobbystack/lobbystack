@@ -1,8 +1,11 @@
 import {
   StreamId,
   StreamIdValidator,
-  } from "@convex-dev/persistent-text-streaming";
-import { observedMutation as mutation } from "../../telemetry/observedFunctions";
+} from "@convex-dev/persistent-text-streaming";
+import {
+  observedInternalMutation as internalMutation,
+  observedMutation as mutation,
+} from "../../telemetry/observedFunctions";
 import { query } from "../../_generated/server";
 import { internal } from "../../_generated/api";
 import type { Id } from "../../_generated/dataModel";
@@ -60,6 +63,28 @@ export const getPreviewBody = query({
   },
 });
 
+export const recordPreviewOutput = internalMutation({
+  args: {
+    streamId: v.string(),
+    threadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const previewSession = await ctx.db
+      .query("preview_sessions")
+      .withIndex("by_stream_id", (q) => q.eq("streamId", args.streamId))
+      .unique();
+
+    if (!previewSession) {
+      return null;
+    }
+
+    await ctx.db.patch(previewSession._id, {
+      threadId: args.threadId,
+    });
+    return null;
+  },
+});
+
 export const streamPreviewResponse = httpAction(async (ctx, request) => {
   const internalServiceToken = process.env.INTERNAL_SERVICE_TOKEN;
   if (
@@ -82,6 +107,10 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
       prompt: body.prompt,
     },
   );
+  await ctx.runMutation(internal.ai.preview.stream.recordPreviewOutput, {
+    streamId: body.streamId,
+    threadId: preview.threadId,
+  });
 
   const response = await persistentTextStreaming.stream(
     ctx,

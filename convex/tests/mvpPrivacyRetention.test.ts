@@ -165,6 +165,11 @@ describe("MVP privacy retention", () => {
         nonce: "expired-message-token",
         expiresAt: FRESH_ISO,
       });
+      const conversationAiStateId = await ctx.db.insert("conversation_ai_state", {
+        businessId: owner.businessId,
+        conversationId,
+        threadId: "thread-with-expired-sms-copy",
+      });
 
       const freshMessageId = await ctx.db.insert("messages", {
         businessId: owner.businessId,
@@ -202,6 +207,7 @@ describe("MVP privacy retention", () => {
         expiredStorageId,
         expiredPreviewStorageId,
         expiredTokenId,
+        conversationAiStateId,
         freshMessageId,
         freshStorageId,
         legacyMessageId,
@@ -226,6 +232,7 @@ describe("MVP privacy retention", () => {
       expect(expiredMessage?.media).toBeUndefined();
       expect(expiredMessage?.fromPhoneNumber).toBeUndefined();
       expect(await ctx.db.get(seeded.expiredTokenId)).toBeNull();
+      expect(await ctx.db.get(seeded.conversationAiStateId)).toBeNull();
       expect(await ctx.storage.get(seeded.expiredStorageId)).toBeNull();
       expect(await ctx.storage.get(seeded.expiredPreviewStorageId)).toBeNull();
       expect(
@@ -350,6 +357,8 @@ describe("MVP privacy retention", () => {
         userId: owner.userId,
         prompt: "old preview",
         streamId: "stream-old",
+        threadId: "thread-old-preview",
+        response: "old generated preview answer",
         expiresAt: EXPIRED_ISO,
       });
       const freshPreviewSessionId = await ctx.db.insert("preview_sessions", {
@@ -415,6 +424,163 @@ describe("MVP privacy retention", () => {
       expect(await ctx.db.get(seeded.expiredPreviewSessionId)).toBeNull();
       expect(await ctx.db.get(seeded.freshPreviewSessionId)).not.toBeNull();
       expect(await ctx.db.get(seeded.legacyPreviewSessionId)).not.toBeNull();
+    });
+  });
+
+  it("scrubs voice-message mirror fields when the retained message expires", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-voice-mirrors-owner",
+      slug: "mvp-retention-voice-mirrors",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      const callId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-voice-mirrors",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+      });
+      const sessionId = await ctx.db.insert("conversation_sessions", {
+        businessId: owner.businessId,
+        conversationId,
+        channel: "voice",
+        callId,
+        status: "closed",
+        startedAt: 1,
+        lastMessageAt: 2,
+        summaryGeneratedAt: 3,
+        summaryKind: "message_taking",
+        summary: {
+          kind: "message_taking",
+          summary: "Callback: +14165551212\n\nold voice message body",
+        },
+      });
+      const inboxItemId = await ctx.db.insert("inbox_items", {
+        businessId: owner.businessId,
+        kind: "voice_message",
+        title: "Voice message from Taylor Customer",
+        body: "Callback: +14165551212\n\nold voice message body",
+        relatedId: String(callId),
+        status: "open",
+      });
+      await ctx.db.patch(conversationId, {
+        currentIntent: "message_taking",
+        summary: "Callback: +14165551212\n\nold voice message body",
+      });
+      const messageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        conversationSessionId: sessionId,
+        direction: "inbound",
+        channel: "voice",
+        body: "old voice message body",
+        status: "captured",
+        aiGenerated: false,
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+
+      return {
+        conversationId,
+        inboxItemId,
+        messageId,
+        sessionId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.messages.scrubbed).toBe(1);
+    await t.run(async (ctx: TestRunCtx) => {
+      const message = await ctx.db.get(seeded.messageId);
+      const conversation = await ctx.db.get(seeded.conversationId);
+      const session = await ctx.db.get(seeded.sessionId);
+      const inboxItem = await ctx.db.get(seeded.inboxItemId);
+
+      expect(message?.body).toBe(REDACTED_MESSAGE_BODY);
+      expect(conversation?.summary).toBe(REDACTED_MESSAGE_BODY);
+      expect(session?.summary?.summary).toBe(REDACTED_MESSAGE_BODY);
+      expect(inboxItem?.title).toBe("Expired voice message");
+      expect(inboxItem?.body).toBe(REDACTED_MESSAGE_BODY);
+    });
+  });
+
+  it("drains expired rows across multiple batches in one cleanup action", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-batch-owner",
+      slug: "mvp-retention-batch",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const messageIds: Array<Id<"messages">> = [];
+      for (let index = 0; index < 3; index += 1) {
+        messageIds.push(
+          await ctx.db.insert("messages", {
+            businessId: owner.businessId,
+            conversationId,
+            direction: "inbound",
+            channel: "sms",
+            body: `old batched SMS body ${index}`,
+            status: "received",
+            aiGenerated: false,
+            contentRetentionStatus: "active",
+            contentExpiresAt: EXPIRED_ISO,
+          }),
+        );
+      }
+      return { messageIds };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 2,
+    });
+
+    expect(summary.messages.scanned).toBe(3);
+    expect(summary.messages.scrubbed).toBe(3);
+    await t.run(async (ctx: TestRunCtx) => {
+      for (const messageId of seeded.messageIds) {
+        const message = await ctx.db.get(messageId);
+        expect(message?.body).toBe(REDACTED_MESSAGE_BODY);
+        expect(message?.contentRetentionStatus).toBe("expired");
+      }
+    });
+  });
+
+  it("records preview thread handles for later retention cleanup", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-preview-output-owner",
+      slug: "mvp-retention-preview-output",
+    });
+
+    const previewSessionId = await t.run(async (ctx: TestRunCtx) => {
+      return await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: "preview prompt",
+        streamId: "preview-output-stream",
+        expiresAt: FRESH_ISO,
+      });
+    });
+
+    await t.mutation(internal.ai.preview.stream.recordPreviewOutput, {
+      streamId: "preview-output-stream",
+      threadId: "preview-output-thread",
+    });
+
+    await t.run(async (ctx: TestRunCtx) => {
+      const previewSession = await ctx.db.get(previewSessionId);
+      expect(previewSession?.threadId).toBe("preview-output-thread");
     });
   });
 });

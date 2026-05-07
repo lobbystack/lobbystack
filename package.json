@@ -46,7 +46,7 @@
     "@convex-dev/agent": "latest",
     "@convex-dev/auth": "latest",
     "@convex-dev/crons": "latest",
-    "@convex-dev/persistent-text-streaming": "latest",
+    "@convex-dev/persistent-text-streaming": "0.3.2",
     "@convex-dev/polar": "^0.9.0",
     "@convex-dev/rag": "latest",
     "@convex-dev/rate-limiter": "^0.3.2",
