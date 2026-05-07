@@ -572,44 +572,6 @@ async function resolveVerifiedSuggestionContext(
   };
 }
 
-async function resolveClaimableNumber(input: {
-  ctx: ActionCtx;
-  businessId: Id<"businesses">;
-  userId: Id<"users">;
-  claimE164: string;
-  requestedSelectionContext: NumberSelectionContext;
-}): Promise<AvailableNumberSummary> {
-  const { context } = await resolveVerifiedSuggestionContext(
-    input.ctx,
-    input.businessId,
-    input.userId,
-  );
-  const countryCode =
-    normalizeSupportedCountryCode(input.requestedSelectionContext.countryCode) ??
-    context.countryCode;
-  const searchContext: NumberSuggestionContext = {
-    ...context,
-    countryCode,
-  };
-  const selectionContext = buildNormalizedSelectionContext({
-    requestedSelectionContext: input.requestedSelectionContext,
-    fallbackContext: searchContext,
-  });
-  const selectableNumbers = await getNumbersForSelectionContext(
-    selectionContext,
-    searchContext,
-    20,
-  );
-  const selectedNumber =
-    selectableNumbers.find((number) => number.e164 === input.claimE164) ?? null;
-
-  if (!selectedNumber) {
-    throw new Error("The selected phone number is no longer available.");
-  }
-
-  return selectedNumber;
-}
-
 export const getInitialNumberSuggestion = action({
   args: {
     businessId: v.id("businesses"),
@@ -705,14 +667,6 @@ export const claimOnboardingNumber = action({
         userId,
       });
 
-      const selectedNumber = await resolveClaimableNumber({
-        ctx,
-        businessId: args.businessId,
-        userId,
-        claimE164,
-        requestedSelectionContext: args.selectionContext,
-      });
-
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
       const voiceStatusCallbackUrl = buildTwilioVoiceStatusCallbackUrl();
@@ -721,7 +675,7 @@ export const claimOnboardingNumber = action({
       try {
         purchased = await client.incomingPhoneNumbers.create({
           friendlyName: `business:${String(args.businessId)}`,
-          phoneNumber: selectedNumber.e164,
+          phoneNumber: claimE164,
           smsMethod: "POST",
           smsUrl: smsWebhookUrl,
           statusCallback: voiceStatusCallbackUrl,
@@ -740,7 +694,7 @@ export const claimOnboardingNumber = action({
         internal.businesses.catalog.upsertPhoneNumberInternal,
         {
           businessId: args.businessId,
-          e164: selectedNumber.e164,
+          e164: claimE164,
           twilioPhoneSid: purchased.sid,
           voiceEnabled: true,
           smsEnabled: true,
@@ -775,13 +729,13 @@ export const claimOnboardingNumber = action({
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,
         userId,
-        phoneE164: selectedNumber.e164,
+        phoneE164: claimE164,
       });
 
       return {
         status: "claimed" as const,
         phoneNumberId: saved.phoneNumberId,
-        e164: selectedNumber.e164,
+        e164: claimE164,
       };
     } catch (error) {
       let cleanupError: Error | null = null;

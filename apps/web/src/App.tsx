@@ -703,6 +703,10 @@ function OnboardingVerifyPhoneCodeRoute() {
     return <Navigate replace to="/onboarding/verify-phone" />;
   }
 
+  if (latestAttempt.status === "approved") {
+    return <Navigate replace to="/onboarding/number" />;
+  }
+
   return (
     <OnboardingVerifyPhoneCodePage
       businessId={ctx.activeBusiness._id}

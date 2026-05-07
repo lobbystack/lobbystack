@@ -880,7 +880,7 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
-  it("rejects a selected number that no longer appears in current inventory", async () => {
+  it("attempts to purchase a selected number even if a refreshed inventory page omits it", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
@@ -893,6 +893,11 @@ describe("onboarding phone-number actions", () => {
     const authed = t.withIdentity({ subject });
 
     listLocalNumbersMock.mockResolvedValue([]);
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-claim-omitted-from-refresh",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,
@@ -904,13 +909,16 @@ describe("onboarding phone-number actions", () => {
       },
     });
 
-    expect(result).toEqual({
-      status: "unavailable",
-      message: "The selected phone number is no longer available.",
-      alternatives: [],
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phoneNumber: "+14185550123",
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "claimed",
+      e164: "+14185550123",
     });
-    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
-    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
   });
 
   it("rejects claims once onboarding is no longer on the phone-number step", async () => {
@@ -1166,25 +1174,15 @@ describe("onboarding phone-number actions", () => {
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockRejectedValueOnce(new Error("Number already taken"));
-    listLocalNumbersMock
-      .mockResolvedValueOnce([
-        {
-          phoneNumber: "+14185550123",
-          locality: "Quebec City",
-          region: "QC",
-          isoCountry: "CA",
-          capabilities: { sms: true, voice: true },
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          phoneNumber: "+14185550999",
-          locality: "Quebec City",
-          region: "QC",
-          isoCountry: "CA",
-          capabilities: { sms: true, voice: true },
-        },
-      ]);
+    listLocalNumbersMock.mockResolvedValueOnce([
+      {
+        phoneNumber: "+14185550999",
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,

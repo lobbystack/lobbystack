@@ -69,16 +69,14 @@ export function OnboardingVerifyPhoneCodePage({
         captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
           businessId: String(businessId),
         });
-        navigate("/onboarding/number");
+        navigate("/onboarding/number", { replace: true });
       } else {
         setError(getSafeOnboardingErrorMessage(result.message, t, "verifyPhoneCode.failed"));
-        setCode("");
       }
     } catch (verifyError) {
       setError(
         getSafeOnboardingErrorMessage(verifyError, t, "verifyPhoneCode.failed"),
       );
-      setCode("");
     } finally {
       setIsVerifying(false);
     }
