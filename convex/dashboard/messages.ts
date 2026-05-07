@@ -40,6 +40,12 @@ import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
 } from "../telemetry/shared";
+import {
+  REDACTED_MESSAGE_BODY,
+  getUnsentAttachmentUploadExpiresAt,
+  getVisibleMessageBody,
+  isMessageContentExpired,
+} from "../privacy/retention";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
 type MessageMediaRecord = NonNullable<Doc<"messages">["media"]>[number];
@@ -68,6 +74,24 @@ type ConversationOutcome =
   | {
       kind: "none";
     };
+
+function isAttachmentUploadExpired(
+  attachment: Doc<"message_attachment_uploads">,
+  nowMs: number = Date.now(),
+): boolean {
+  if (typeof attachment.expiresAt !== "string" || attachment.expiresAt.length === 0) {
+    return false;
+  }
+  const parsed = Date.parse(attachment.expiresAt);
+  return Number.isFinite(parsed) && parsed <= nowMs;
+}
+
+function isAvailableStagedAttachment(
+  attachment: Doc<"message_attachment_uploads">,
+  nowMs: number = Date.now(),
+): boolean {
+  return attachment.status === "staged" && !isAttachmentUploadExpired(attachment, nowMs);
+}
 
 async function getContact(
   ctx: QueryCtx,
@@ -107,7 +131,7 @@ function getLatestMessagePreviewKind(
     return "text";
   }
 
-  if (message.body.trim().length > 0) {
+  if (getVisibleMessageBody(message).trim().length > 0) {
     return "text";
   }
 
@@ -233,11 +257,12 @@ function buildSummaryFromMessages(
   locale: string | null | undefined,
 ): string | null {
   const summaryLocale = getSummaryLocale(locale);
-  const inboundBodies = messages
+  const visibleMessages = messages.filter((message) => !isMessageContentExpired(message));
+  const inboundBodies = visibleMessages
     .filter((message) => message.direction === "inbound")
     .map((message) => message.body.trim())
     .filter((body) => body.length > 0);
-  const outboundBodies = messages
+  const outboundBodies = visibleMessages
     .filter((message) => message.direction === "outbound")
     .map((message) => message.body.trim())
     .filter((body) => body.length > 0);
@@ -297,7 +322,7 @@ function buildSummaryFromMessages(
     }
   }
 
-  const attachments = messages.flatMap((message) => message.media ?? []);
+  const attachments = visibleMessages.flatMap((message) => message.media ?? []);
   if (attachments.length > 0) {
     const imageCount = attachments.filter((attachment) =>
       (attachment.contentType ?? "").startsWith("image/"),
@@ -483,7 +508,7 @@ export const getSmsReplyContext = internalQuery({
             attachment.businessId !== args.businessId ||
             attachment.conversationId !== args.conversationId ||
             attachment.uploaderUserId !== args.userId ||
-            attachment.status !== "staged"
+            !isAvailableStagedAttachment(attachment)
           ) {
             throw new Error("Attachment is no longer available.");
           }
@@ -656,7 +681,9 @@ export const getFinalizeStagedAttachmentContext = internalQuery({
         q.eq("uploaderUserId", args.userId).eq("conversationId", args.conversationId),
       )
       .collect();
-    const activeAttachments = stagedAttachments.filter((attachment) => attachment.status === "staged");
+    const activeAttachments = stagedAttachments.filter((attachment) =>
+      isAvailableStagedAttachment(attachment),
+    );
     if (activeAttachments.length >= MAX_SMS_REPLY_ATTACHMENTS) {
       throw new Error(`You can send up to ${MAX_SMS_REPLY_ATTACHMENTS} attachments at a time.`);
     }
@@ -703,6 +730,7 @@ export const insertStagedAttachment = internalMutation({
       ...(args.previewByteLength ? { previewByteLength: args.previewByteLength } : {}),
       deliveryMode: args.deliveryMode,
       status: "staged",
+      expiresAt: getUnsentAttachmentUploadExpiresAt(),
     });
   },
 });
@@ -871,7 +899,7 @@ export const listStagedAttachments = query({
 
     return await Promise.all(
       attachments
-        .filter((attachment) => attachment.status === "staged")
+        .filter((attachment) => isAvailableStagedAttachment(attachment))
         .map(async (attachment) => {
           const previewUrl = attachment.previewStorageId
             ? await ctx.storage.getUrl(attachment.previewStorageId)
@@ -902,6 +930,9 @@ export const materializeMessageAttachmentUrls = internalMutation({
   handler: async (ctx: MutationCtx, args) => {
     const message = await ctx.db.get(args.messageId);
     if (!message?.media || message.media.length === 0) {
+      return null;
+    }
+    if (isMessageContentExpired(message)) {
       return null;
     }
 
@@ -987,7 +1018,7 @@ export const claimStagedAttachmentsForSend = internalMutation({
         attachment.businessId !== args.businessId ||
         attachment.conversationId !== args.conversationId ||
         attachment.uploaderUserId !== args.userId ||
-        attachment.status !== "staged"
+        !isAvailableStagedAttachment(attachment)
       ) {
         throw new Error("Attachment is no longer available.");
       }
@@ -1075,10 +1106,20 @@ export const getMessageAttachmentDownloadToken = internalQuery({
     token: v.string(),
   },
   handler: async (ctx: QueryCtx, args) => {
-    return await ctx.db
+    const token = await ctx.db
       .query("message_attachment_download_tokens")
       .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
       .unique();
+    if (!token) {
+      return null;
+    }
+
+    const message = await ctx.db.get(token.messageId);
+    if (!message || isMessageContentExpired(message)) {
+      return null;
+    }
+
+    return token;
   },
 });
 
@@ -1158,7 +1199,7 @@ export const listConversationSummaries = query({
           contactEmail: contact?.email ?? null,
           isBlocked: isContactBlocked(contact),
           messageCount: messages.length,
-          lastMessageBody: latestMessage?.body ?? null,
+          lastMessageBody: latestMessage ? getVisibleMessageBody(latestMessage) : null,
           lastMessagePreviewKind: getLatestMessagePreviewKind(latestMessage),
           lastMessageDirection: latestMessage?.direction ?? null,
           lastMessageAt: latestMessage?._creationTime ?? conversation._creationTime,
@@ -1176,6 +1217,10 @@ async function hydrateMessageAttachments(
   ctx: QueryCtx,
   message: Doc<"messages">,
 ) {
+  if (isMessageContentExpired(message)) {
+    return [];
+  }
+
   const now = Date.now();
   const tokens = await ctx.db
     .query("message_attachment_download_tokens")
@@ -1353,12 +1398,18 @@ export const getConversationThread = query({
         id: message._id,
         conversationSessionId: message.conversationSessionId ?? null,
         direction: message.direction,
-        body: message.body,
+        body: getVisibleMessageBody(message),
         status: message.status,
         channel: message.channel,
         createdAt: message._creationTime,
         attachments: await hydrateMessageAttachments(ctx, message),
       })),
+    );
+
+    const expiredMessageSessionIds = new Set(
+      messages
+        .filter((message) => isMessageContentExpired(message) && message.conversationSessionId)
+        .map((message) => String(message.conversationSessionId)),
     );
 
     const summaryTimelineItems = sessions
@@ -1371,10 +1422,19 @@ export const getConversationThread = query({
         startedAt: session.startedAt,
         closedAt: session.closedAt ?? session.lastMessageAt,
         summaryKind: session.summaryKind ?? session.summary!.kind,
-        summary: session.summary!,
+        summary: expiredMessageSessionIds.has(String(session._id))
+          ? {
+              ...session.summary!,
+              summary: REDACTED_MESSAGE_BODY,
+            }
+          : session.summary!,
       }));
 
     const legacyMessages = messages.filter((message) => message.conversationSessionId === undefined);
+    const hasExpiredLegacyMessages = legacyMessages.some((message) =>
+      isMessageContentExpired(message),
+    );
+    const hasExpiredMessages = messages.some((message) => isMessageContentExpired(message));
     const hasLegacyMessages = legacyMessages.length > 0;
     const legacyOutcome =
       sessions.length === 0
@@ -1393,7 +1453,9 @@ export const getConversationThread = query({
               legacyMessages[legacyMessages.length - 1]?._creationTime ??
               hydratedMessages[hydratedMessages.length - 1]?.createdAt ??
               conversation._creationTime,
-            legacySummary: normalizeSummary(conversation.summary),
+            legacySummary: hasExpiredLegacyMessages
+              ? REDACTED_MESSAGE_BODY
+              : normalizeSummary(conversation.summary),
           })
         : null;
 
@@ -1420,7 +1482,7 @@ export const getConversationThread = query({
         automationPausedByName: conversation.automationPausedByUserId
           ? formatOperatorDisplayName(await ctx.db.get(conversation.automationPausedByUserId))
           : null,
-        summary: conversation.summary ?? null,
+        summary: hasExpiredMessages ? REDACTED_MESSAGE_BODY : (conversation.summary ?? null),
         currentIntent: conversation.currentIntent ?? null,
       },
       contact: contact
@@ -1631,6 +1693,10 @@ export const repairConversationAttachmentPreviews = action({
     let repairedAttachments = 0;
 
     for (const message of messages) {
+      if (isMessageContentExpired(message)) {
+        continue;
+      }
+
       let currentMedia = message.media ?? [];
       const imageMediaMissingPreview = currentMedia.filter(
         (attachment) =>

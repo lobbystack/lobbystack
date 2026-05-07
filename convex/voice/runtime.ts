@@ -40,6 +40,19 @@ import {
   ensureVoiceSessionForCall,
   finalizeVoiceSessionForCall,
 } from "../conversations/sessions";
+import {
+  getCallRecordingExpiresAt,
+  getMessageContentExpiresAt,
+  getSensitiveContentExpiresAt,
+  getVisibleInboxItemBody,
+  getVisibleInboxItemTitle,
+  isCallRecordingExpired,
+  isTranscriptExpired,
+  scheduleCallRecordingExpiration,
+  scheduleInboxItemContentExpiration,
+  scheduleMessageContentExpiration,
+  scheduleTranscriptExpiration,
+} from "../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 type BusinessIdArgs = { businessId: Id<"businesses"> };
@@ -364,23 +377,43 @@ async function hydrateDashboardCallRow(
   )[0] ?? null;
   const hasActiveRecordingToken =
     recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
+  const recordingExpired = isCallRecordingExpired(call);
+  const recordingAvailable = call.recordingStorageId !== undefined && !recordingExpired;
+  const callForDashboard = recordingExpired
+    ? (() => {
+        const {
+          recordingStorageId: _recordingStorageId,
+          recordingContentType: _recordingContentType,
+          recordingByteLength: _recordingByteLength,
+          recordingDurationMs: _recordingDurationMs,
+          ...rest
+        } = call;
+        return {
+          ...rest,
+          recordingRetentionStatus: "expired" as const,
+        };
+      })()
+    : call;
+  const visibleTranscriptPreview = transcriptPreview.find(
+    (transcript) => !isTranscriptExpired(transcript),
+  );
 
   return {
-    ...call,
-    recordingUrl: call.recordingStorageId
+    ...callForDashboard,
+    recordingUrl: recordingAvailable
       ? hasActiveRecordingToken
         ? buildCallRecordingDownloadUrl(recordingToken.nonce)
-        : await ctx.storage.getUrl(call.recordingStorageId)
+        : await ctx.storage.getUrl(call.recordingStorageId!)
       : null,
-    transcriptReady: transcriptPreview.length > 0,
-    transcriptPreview: transcriptPreview[0]?.text ?? null,
+    transcriptReady: visibleTranscriptPreview !== undefined,
+    transcriptPreview: visibleTranscriptPreview?.text ?? null,
     contactName: contact?.name ?? null,
     contactPhone: contact?.phone ?? null,
     followUpTask: followUpTask
       ? {
           id: followUpTask._id,
-          title: followUpTask.title,
-          body: followUpTask.body,
+          title: getVisibleInboxItemTitle(followUpTask),
+          body: getVisibleInboxItemBody(followUpTask),
           createdAt: new Date(followUpTask._creationTime).toISOString(),
         }
       : null,
@@ -725,16 +758,22 @@ export const appendTranscriptSegment = internalMutation({
       .unique();
 
     if (existing) {
+      const expiresAt = existing.expiresAt ?? getSensitiveContentExpiresAt();
       await ctx.db.patch(existing._id, {
         speaker: args.speaker,
         text: args.text,
         final: args.final,
         ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+        expiresAt,
       });
+      if (!existing.expiresAt) {
+        await scheduleTranscriptExpiration(ctx, existing._id, expiresAt);
+      }
       return existing._id;
     }
 
-    return await ctx.db.insert("transcripts", {
+    const expiresAt = getSensitiveContentExpiresAt();
+    const transcriptId = await ctx.db.insert("transcripts", {
       businessId: args.businessId,
       callId: args.callId,
       sequence: args.sequence,
@@ -742,7 +781,10 @@ export const appendTranscriptSegment = internalMutation({
       text: args.text,
       final: args.final,
       ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+      expiresAt,
     });
+    await scheduleTranscriptExpiration(ctx, transcriptId, expiresAt);
+    return transcriptId;
   },
 });
 
@@ -937,6 +979,7 @@ export const takeMessageForVoice = internalMutation({
     ]
       .filter((line): line is string => Boolean(line))
       .join("\n");
+    const contentExpiresAt = getMessageContentExpiresAt();
 
     const inboxItemId = await ctx.db.insert("inbox_items", {
       businessId: args.businessId,
@@ -945,7 +988,10 @@ export const takeMessageForVoice = internalMutation({
       body,
       relatedId: String(args.callId),
       status: "open",
+      contentRetentionStatus: "active",
+      contentExpiresAt,
     });
+    await scheduleInboxItemContentExpiration(ctx, inboxItemId, contentExpiresAt);
 
     if (args.conversationId) {
       const messageId = await ctx.db.insert("messages", {
@@ -956,7 +1002,10 @@ export const takeMessageForVoice = internalMutation({
         body: args.message,
         status: "captured",
         aiGenerated: false,
+        contentRetentionStatus: "active",
+        contentExpiresAt,
       });
+      await scheduleMessageContentExpiration(ctx, messageId, contentExpiresAt);
       await ensureSessionForStoredMessage(ctx, {
         businessId: args.businessId,
         conversationId: args.conversationId,
@@ -1005,6 +1054,7 @@ export const attachCallRecording = internalMutation({
       await ctx.db.delete(token._id);
     }
 
+    const recordingExpiresAt = getCallRecordingExpiresAt();
     await ctx.db.patch(args.callId, {
       recordingStorageId: args.recordingStorageId,
       recordingContentType: args.recordingContentType,
@@ -1012,7 +1062,10 @@ export const attachCallRecording = internalMutation({
       ...(args.recordingDurationMs !== undefined
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
+      recordingRetentionStatus: "active",
+      recordingExpiresAt,
     });
+    await scheduleCallRecordingExpiration(ctx, args.callId, recordingExpiresAt);
 
     await ctx.db.insert("call_recording_download_tokens", {
       businessId: call.businessId,
@@ -1033,10 +1086,20 @@ export const getCallRecordingDownloadToken = internalQuery({
     token: v.string(),
   },
   handler: async (ctx: QueryCtx, args) => {
-    return await ctx.db
+    const token = await ctx.db
       .query("call_recording_download_tokens")
       .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
       .unique();
+    if (!token) {
+      return null;
+    }
+
+    const call = await ctx.db.get(token.callId);
+    if (!call || isCallRecordingExpired(call)) {
+      return null;
+    }
+
+    return token;
   },
 });
 
@@ -1754,8 +1817,8 @@ export const getVoiceFollowUpTaskForDashboard = query({
 
     return {
       id: inboxItem._id,
-      title: inboxItem.title,
-      body: inboxItem.body,
+      title: getVisibleInboxItemTitle(inboxItem),
+      body: getVisibleInboxItemBody(inboxItem),
       createdAt: new Date(inboxItem._creationTime).toISOString(),
       callId: inboxItem.relatedId ? (inboxItem.relatedId as Id<"calls">) : null,
     };
@@ -1822,10 +1885,11 @@ export const getCallTranscript = query({
       throw new Error("Call not found.");
     }
 
-    return await ctx.db
+    const transcripts = await ctx.db
       .query("transcripts")
       .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", args.callId))
       .order("asc")
       .collect();
+    return transcripts.filter((transcript) => !isTranscriptExpired(transcript));
   },
 });

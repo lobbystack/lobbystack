@@ -118,6 +118,7 @@ async function storeAttachment(
     businessId: Id<"businesses">;
     conversationId: Id<"conversations">;
     userId: Id<"users">;
+    expiresAt?: string;
   },
 ): Promise<Id<"message_attachment_uploads">> {
   const storageId = await ctx.storage.store(
@@ -139,6 +140,7 @@ async function storeAttachment(
         ? "mms"
         : "link",
     status: "staged",
+    ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
   });
 }
 
@@ -992,6 +994,59 @@ describe("Dashboard SMS replies", () => {
       byteLength: "pdf-file".length,
       previewUrl: null,
     });
+  });
+
+  it("hides and rejects expired staged attachments when cleanup is late", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId, conversationId, userId } = await seedSmsConversation(t, {
+      subject: "dashboard-sms-reply-expired-staged",
+    });
+
+    const { expiredAttachmentId } = await t.run(async (ctx) => {
+      const expiredAttachmentId = await storeAttachment(ctx, {
+        content: "old-pdf-file",
+        contentType: "application/pdf",
+        fileName: "old-details.pdf",
+        businessId,
+        conversationId,
+        userId,
+        expiresAt: "2000-01-01T00:00:00.000Z",
+      });
+      await storeAttachment(ctx, {
+        content: "fresh-pdf-file",
+        contentType: "application/pdf",
+        fileName: "fresh-details.pdf",
+        businessId,
+        conversationId,
+        userId,
+        expiresAt: "2999-01-01T00:00:00.000Z",
+      });
+      return { expiredAttachmentId };
+    });
+
+    const stagedAttachments = await authed.query(api.dashboard.messages.listStagedAttachments, {
+      businessId,
+      conversationId,
+    });
+
+    expect(stagedAttachments).toHaveLength(1);
+    expect(stagedAttachments[0]?.fileName).toBe("fresh-details.pdf");
+    await expect(
+      t.query(internal.dashboard.messages.getSmsReplyContext, {
+        businessId,
+        conversationId,
+        userId,
+        attachmentIds: [expiredAttachmentId],
+      }),
+    ).rejects.toThrow("Attachment is no longer available.");
+    await expect(
+      t.mutation(internal.dashboard.messages.claimStagedAttachmentsForSend, {
+        businessId,
+        conversationId,
+        userId,
+        attachmentIds: [expiredAttachmentId],
+      }),
+    ).rejects.toThrow("Attachment is no longer available.");
   });
 
   it("hydrates legacy media messages in the dashboard thread without a migration", async () => {

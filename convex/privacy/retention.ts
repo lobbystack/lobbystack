@@ -1,0 +1,1314 @@
+import { v } from "convex/values";
+import type { StreamId } from "@convex-dev/persistent-text-streaming";
+
+import { internal } from "../_generated/api";
+import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
+import {
+  persistentTextStreaming,
+  receptionistAgent,
+} from "../lib/components";
+import {
+  observedInternalAction as internalAction,
+  observedInternalMutation as internalMutation,
+} from "../telemetry/observedFunctions";
+
+export const RAW_SENSITIVE_CONTENT_RETENTION_DAYS = 90;
+export const CALL_RECORDING_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
+export const MESSAGE_CONTENT_RETENTION_DAYS = 365;
+export const UNSENT_ATTACHMENT_UPLOAD_RETENTION_DAYS = 1;
+export const SENSITIVE_CONTENT_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
+export const RAW_SENSITIVE_CONTENT_RETENTION_MS =
+  RAW_SENSITIVE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const CALL_RECORDING_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
+export const MESSAGE_CONTENT_RETENTION_MS =
+  MESSAGE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const UNSENT_ATTACHMENT_UPLOAD_RETENTION_MS =
+  UNSENT_ATTACHMENT_UPLOAD_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const SENSITIVE_CONTENT_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
+export const REDACTED_MESSAGE_BODY = "[Expired by 365-day retention policy]";
+
+const DEFAULT_RETENTION_CLEANUP_LIMIT = 100;
+const MAX_RETENTION_CLEANUP_LIMIT = 200;
+
+type CleanupArgs = {
+  nowIso: string;
+  limit: number;
+};
+
+type CleanupCount = {
+  scanned: number;
+  deleted: number;
+  scrubbed: number;
+};
+
+type RetentionCleanupSummary = {
+  nowIso: string;
+  messages: CleanupCount;
+  transcripts: CleanupCount;
+  callRecordings: CleanupCount;
+  previewSessions: CleanupCount;
+  inboxItems: CleanupCount;
+  operatorNotificationDeliveries: CleanupCount;
+  messageAttachmentDownloadTokens: CleanupCount;
+  callRecordingDownloadTokens: CleanupCount;
+  abandonedMessageAttachmentUploads: CleanupCount;
+};
+
+export function getSensitiveContentExpiresAt(nowMs: number = Date.now()): string {
+  return new Date(nowMs + SENSITIVE_CONTENT_RETENTION_MS).toISOString();
+}
+
+export function getCallRecordingExpiresAt(nowMs: number = Date.now()): string {
+  return new Date(nowMs + CALL_RECORDING_RETENTION_MS).toISOString();
+}
+
+export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
+  return new Date(nowMs + MESSAGE_CONTENT_RETENTION_MS).toISOString();
+}
+
+export function getUnsentAttachmentUploadExpiresAt(
+  nowMs: number = Date.now(),
+): string {
+  return new Date(nowMs + UNSENT_ATTACHMENT_UPLOAD_RETENTION_MS).toISOString();
+}
+
+export function isMessageContentExpired(
+  message: Doc<"messages">,
+  nowMs: number = Date.now(),
+): boolean {
+  return (
+    message.contentRetentionStatus === "expired" ||
+    isExpiredByTimestamp(message.contentExpiresAt, nowMs)
+  );
+}
+
+export function isCallRecordingExpired(
+  call: Doc<"calls">,
+  nowMs: number = Date.now(),
+): boolean {
+  return (
+    call.recordingRetentionStatus === "expired" ||
+    isExpiredByTimestamp(call.recordingExpiresAt, nowMs)
+  );
+}
+
+export function isTranscriptExpired(
+  transcript: Doc<"transcripts">,
+  nowMs: number = Date.now(),
+): boolean {
+  return isExpiredByTimestamp(transcript.expiresAt, nowMs);
+}
+
+export function isPreviewSessionExpired(
+  session: Doc<"preview_sessions">,
+  nowMs: number = Date.now(),
+): boolean {
+  return isExpiredByTimestamp(session.expiresAt, nowMs);
+}
+
+export function isInboxItemContentExpired(
+  item: Doc<"inbox_items">,
+  nowMs: number = Date.now(),
+): boolean {
+  return (
+    item.contentRetentionStatus === "expired" ||
+    isExpiredByTimestamp(item.contentExpiresAt, nowMs)
+  );
+}
+
+export function getVisibleInboxItemTitle(item: Doc<"inbox_items">): string {
+  if (!isInboxItemContentExpired(item)) {
+    return item.title;
+  }
+  return item.kind === "voice_message" ? "Expired voice message" : "Expired item";
+}
+
+export function getVisibleInboxItemBody(item: Doc<"inbox_items">): string {
+  return isInboxItemContentExpired(item) ? REDACTED_MESSAGE_BODY : item.body;
+}
+
+export function getVisibleMessageBody(
+  message: Doc<"messages">,
+): string {
+  return isMessageContentExpired(message) ? REDACTED_MESSAGE_BODY : message.body;
+}
+
+function parseScheduleTime(expiresAt: string): number | null {
+  const parsed = Date.parse(expiresAt);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return Math.max(parsed, Date.now());
+}
+
+function isRetentionDue(expiresAt: string): boolean {
+  const parsed = Date.parse(expiresAt);
+  return Number.isFinite(parsed) && parsed <= Date.now();
+}
+
+function isExpiredByTimestamp(
+  expiresAt: string | undefined,
+  nowMs: number,
+): boolean {
+  if (typeof expiresAt !== "string" || expiresAt.length === 0) {
+    return false;
+  }
+  const parsed = Date.parse(expiresAt);
+  return Number.isFinite(parsed) && parsed <= nowMs;
+}
+
+export async function scheduleMessageContentExpiration(
+  ctx: MutationCtx,
+  messageId: Id<"messages">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubMessageContentAtExpiry,
+    { messageId, expiresAt },
+  );
+}
+
+export async function scheduleCallRecordingExpiration(
+  ctx: MutationCtx,
+  callId: Id<"calls">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubCallRecordingAtExpiry,
+    { callId, expiresAt },
+  );
+}
+
+export async function scheduleTranscriptExpiration(
+  ctx: MutationCtx,
+  transcriptId: Id<"transcripts">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.deleteTranscriptAtExpiry,
+    { transcriptId, expiresAt },
+  );
+}
+
+export async function schedulePreviewSessionExpiration(
+  ctx: MutationCtx,
+  previewSessionId: Id<"preview_sessions">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.deletePreviewSessionAtExpiry,
+    { previewSessionId, expiresAt },
+  );
+}
+
+export async function scheduleInboxItemContentExpiration(
+  ctx: MutationCtx,
+  inboxItemId: Id<"inbox_items">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubInboxItemContentAtExpiry,
+    { inboxItemId, expiresAt },
+  );
+}
+
+export async function scheduleOperatorNotificationDeliveryContentExpiration(
+  ctx: MutationCtx,
+  deliveryId: Id<"operator_notification_deliveries">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubOperatorNotificationDeliveryContentAtExpiry,
+    { deliveryId, expiresAt },
+  );
+}
+
+function normalizeLimit(limit: number): number {
+  if (!Number.isFinite(limit)) {
+    return DEFAULT_RETENTION_CLEANUP_LIMIT;
+  }
+  return Math.max(1, Math.min(Math.floor(limit), MAX_RETENTION_CLEANUP_LIMIT));
+}
+
+function isExpired(expiresAt: string | undefined, nowIso: string): expiresAt is string {
+  return typeof expiresAt === "string" && expiresAt.length > 0 && expiresAt <= nowIso;
+}
+
+function isMissingOrInvalidComponentReferenceError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("is not registered") ||
+    message.includes("Invalid") ||
+    message.includes("Value does not match validator")
+  );
+}
+
+function isMissingOrInvalidStorageError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("non-existent doc") ||
+    message.includes("Invalid storage ID") ||
+    message.includes("does not exist")
+  );
+}
+
+function addStorageId(
+  storageIds: Set<Id<"_storage">>,
+  storageId: Id<"_storage"> | undefined,
+): void {
+  if (storageId !== undefined) {
+    storageIds.add(storageId);
+  }
+}
+
+async function deleteStorageIds(
+  ctx: MutationCtx,
+  storageIds: Set<Id<"_storage">>,
+): Promise<number> {
+  let deleted = 0;
+  for (const storageId of storageIds) {
+    try {
+      await ctx.storage.delete(storageId);
+      deleted += 1;
+    } catch (error) {
+      if (!isMissingOrInvalidStorageError(error)) {
+        throw error;
+      }
+    }
+  }
+  return deleted;
+}
+
+async function deleteMessageAttachmentTokens(
+  ctx: MutationCtx,
+  messageId: Id<"messages">,
+): Promise<number> {
+  const tokens = await ctx.db
+    .query("message_attachment_download_tokens")
+    .withIndex("by_message_id", (q) => q.eq("messageId", messageId))
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+  for (const token of tokens) {
+    await ctx.db.delete(token._id);
+  }
+
+  return tokens.length;
+}
+
+async function deleteSentAttachmentUploads(
+  ctx: MutationCtx,
+  messageId: Id<"messages">,
+  storageIds: Set<Id<"_storage">>,
+): Promise<{ deleted: number; hasMore: boolean }> {
+  const uploads = await ctx.db
+    .query("message_attachment_uploads")
+    .withIndex("by_sent_message_id", (q) => q.eq("sentMessageId", messageId))
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+  for (const upload of uploads) {
+    addStorageId(storageIds, upload.storageId);
+    addStorageId(storageIds, upload.previewStorageId);
+    await ctx.db.delete(upload._id);
+  }
+
+  return {
+    deleted: uploads.length,
+    hasMore: uploads.length === MAX_RETENTION_CLEANUP_LIMIT,
+  };
+}
+
+function collectMessageStorageIds(
+  message: Doc<"messages">,
+  storageIds: Set<Id<"_storage">>,
+): void {
+  for (const attachment of message.media ?? []) {
+    addStorageId(storageIds, attachment.storageId);
+    addStorageId(storageIds, attachment.previewStorageId);
+  }
+}
+
+async function scrubMessageContent(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  const storageIds = new Set<Id<"_storage">>();
+  collectMessageStorageIds(message, storageIds);
+  const sentAttachmentUploads = await deleteSentAttachmentUploads(ctx, message._id, storageIds);
+  await deleteMessageAttachmentTokens(ctx, message._id);
+  await deleteStorageIds(ctx, storageIds);
+  await scrubPausedSmsNotificationMirrors(ctx, message);
+  await scrubConversationSummaryMirrors(ctx, message);
+  await scrubVoiceMessageMirrors(ctx, message);
+  await deleteConversationAgentThread(ctx, message.conversationId);
+
+  await ctx.db.patch(message._id, {
+    body: REDACTED_MESSAGE_BODY,
+    fromPhoneNumber: undefined,
+    media: undefined,
+    contentRetentionStatus: "expired",
+  });
+
+  if (sentAttachmentUploads.hasMore) {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.privacy.retention.deleteSentAttachmentUploadsForExpiredMessage,
+      { messageId: message._id },
+    );
+  }
+}
+
+async function deleteConversationAgentThread(
+  ctx: MutationCtx,
+  conversationId: Id<"conversations">,
+): Promise<number> {
+  const aiState = await ctx.db
+    .query("conversation_ai_state")
+    .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversationId))
+    .unique();
+  if (!aiState) {
+    return 0;
+  }
+
+  try {
+    await receptionistAgent.deleteThreadAsync(ctx, {
+      threadId: aiState.threadId,
+    });
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  await ctx.db.delete(aiState._id);
+  return 1;
+}
+
+function getExpiredDeliverySubject(
+  eventKind: Doc<"operator_notification_deliveries">["eventKind"],
+): string {
+  if (eventKind === "voiceMessage") {
+    return "Expired voice message";
+  }
+  if (eventKind === "pausedSms") {
+    return "Expired paused SMS message";
+  }
+  return "Expired notification content";
+}
+
+async function scrubOperatorNotificationDeliveryContent(
+  ctx: MutationCtx,
+  delivery: Doc<"operator_notification_deliveries">,
+  subject: string = getExpiredDeliverySubject(delivery.eventKind),
+): Promise<void> {
+  await ctx.db.patch(delivery._id, {
+    subject,
+    body: REDACTED_MESSAGE_BODY,
+    contentRetentionStatus: "expired",
+  });
+}
+
+async function scrubInboxItemContent(
+  ctx: MutationCtx,
+  item: Doc<"inbox_items">,
+): Promise<void> {
+  await ctx.db.patch(item._id, {
+    title: item.kind === "voice_message" ? "Expired voice message" : "Expired item",
+    body: REDACTED_MESSAGE_BODY,
+    contentRetentionStatus: "expired",
+  });
+}
+
+async function deletePreviewAgentThread(
+  ctx: MutationCtx,
+  threadId: string | undefined,
+): Promise<number> {
+  if (!threadId) {
+    return 0;
+  }
+
+  try {
+    await receptionistAgent.deleteThreadAsync(ctx, { threadId });
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  return 1;
+}
+
+async function deletePreviewStream(
+  ctx: MutationCtx,
+  streamId: string,
+): Promise<number> {
+  try {
+    await persistentTextStreaming.deleteStream(ctx, streamId as StreamId);
+  } catch (error) {
+    if (!isMissingOrInvalidComponentReferenceError(error)) {
+      throw error;
+    }
+  }
+  return 1;
+}
+
+async function scrubOperatorNotificationDeliveries(
+  ctx: MutationCtx,
+  input: {
+    businessId: Id<"businesses">;
+    eventKind: Doc<"operator_notification_deliveries">["eventKind"];
+    eventKey: string;
+    subject: string;
+  },
+): Promise<void> {
+  const deliveries = await ctx.db
+    .query("operator_notification_deliveries")
+    .withIndex("by_business_id_and_event_kind_and_event_key", (q) =>
+      q
+        .eq("businessId", input.businessId)
+        .eq("eventKind", input.eventKind)
+        .eq("eventKey", input.eventKey),
+    )
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+  for (const delivery of deliveries) {
+    await scrubOperatorNotificationDeliveryContent(ctx, delivery, input.subject);
+  }
+}
+
+async function scrubConversationSummaryMirrors(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  const conversation = await ctx.db.get(message.conversationId);
+  if (conversation?.summary) {
+    await ctx.db.patch(conversation._id, {
+      summary: REDACTED_MESSAGE_BODY,
+    });
+  }
+
+  if (!message.conversationSessionId) {
+    return;
+  }
+
+  const session = await ctx.db.get(message.conversationSessionId);
+  const summary = session?.summary;
+  if (summary && "summary" in summary && summary.summary !== undefined) {
+    await ctx.db.patch(session._id, {
+      summary: {
+        ...summary,
+        summary: REDACTED_MESSAGE_BODY,
+      },
+    });
+  }
+}
+
+async function scrubPausedSmsNotificationMirrors(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  if (message.channel !== "sms") {
+    return;
+  }
+
+  await scrubOperatorNotificationDeliveries(ctx, {
+    businessId: message.businessId,
+    eventKind: "pausedSms",
+    eventKey: `pausedSms:${String(message._id)}`,
+    subject: "Expired paused SMS message",
+  });
+}
+
+async function scrubVoiceMessageMirrors(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  if (message.channel !== "voice") {
+    return;
+  }
+
+  const session = message.conversationSessionId
+    ? await ctx.db.get(message.conversationSessionId)
+    : null;
+  if (!session || session.channel !== "voice") {
+    return;
+  }
+
+  if (!session.callId) {
+    return;
+  }
+
+  const inboxItems = await ctx.db
+    .query("inbox_items")
+    .withIndex("by_kind_and_related_id", (q) =>
+      q.eq("kind", "voice_message").eq("relatedId", String(session.callId)),
+    )
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+  for (const item of inboxItems) {
+    await scrubOperatorNotificationDeliveries(ctx, {
+      businessId: message.businessId,
+      eventKind: "voiceMessage",
+      eventKey: `voiceMessage:${String(item._id)}`,
+      subject: "Expired voice message",
+    });
+    await scrubInboxItemContent(ctx, item);
+  }
+}
+
+async function drainCleanup(
+  runBatch: () => Promise<CleanupCount>,
+  limit: number,
+): Promise<CleanupCount> {
+  const total: CleanupCount = {
+    scanned: 0,
+    deleted: 0,
+    scrubbed: 0,
+  };
+
+  while (true) {
+    const batch = await runBatch();
+    total.scanned += batch.scanned;
+    total.deleted += batch.deleted;
+    total.scrubbed += batch.scrubbed;
+
+    if (batch.scanned < limit) {
+      return total;
+    }
+  }
+}
+
+async function deleteCallRecordingTokens(
+  ctx: MutationCtx,
+  callId: Id<"calls">,
+): Promise<number> {
+  const tokens = await ctx.db
+    .query("call_recording_download_tokens")
+    .withIndex("by_call_id", (q) => q.eq("callId", callId))
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+  for (const token of tokens) {
+    await ctx.db.delete(token._id);
+  }
+
+  return tokens.length;
+}
+
+async function scrubCallRecordingContent(
+  ctx: MutationCtx,
+  call: Doc<"calls">,
+): Promise<void> {
+  const storageIds = new Set<Id<"_storage">>();
+  addStorageId(storageIds, call.recordingStorageId);
+  await deleteCallRecordingTokens(ctx, call._id);
+  await deleteStorageIds(ctx, storageIds);
+
+  await ctx.db.patch(call._id, {
+    recordingStorageId: undefined,
+    recordingContentType: undefined,
+    recordingByteLength: undefined,
+    recordingDurationMs: undefined,
+    recordingRetentionStatus: "expired",
+  });
+}
+
+export const deleteSentAttachmentUploadsForExpiredMessage = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || !isMessageContentExpired(message)) {
+      return {
+        scanned: message ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    const storageIds = new Set<Id<"_storage">>();
+    const sentAttachmentUploads = await deleteSentAttachmentUploads(ctx, message._id, storageIds);
+    await deleteStorageIds(ctx, storageIds);
+
+    if (sentAttachmentUploads.hasMore) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.privacy.retention.deleteSentAttachmentUploadsForExpiredMessage,
+        { messageId: message._id },
+      );
+    }
+
+    return {
+      scanned: sentAttachmentUploads.deleted,
+      deleted: sentAttachmentUploads.deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubMessageContentAtExpiry = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const message = await ctx.db.get(args.messageId);
+    if (
+      !message ||
+      message.contentRetentionStatus === "expired" ||
+      message.contentExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: message ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleMessageContentExpiration(ctx, message._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubMessageContent(ctx, message);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const deleteTranscriptAtExpiry = internalMutation({
+  args: {
+    transcriptId: v.id("transcripts"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const transcript = await ctx.db.get(args.transcriptId);
+    if (!transcript || transcript.expiresAt !== args.expiresAt) {
+      return {
+        scanned: transcript ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleTranscriptExpiration(ctx, transcript._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await ctx.db.delete(transcript._id);
+    return {
+      scanned: 1,
+      deleted: 1,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubCallRecordingAtExpiry = internalMutation({
+  args: {
+    callId: v.id("calls"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const call = await ctx.db.get(args.callId);
+    if (
+      !call ||
+      call.recordingRetentionStatus === "expired" ||
+      call.recordingExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: call ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleCallRecordingExpiration(ctx, call._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubCallRecordingContent(ctx, call);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const deletePreviewSessionAtExpiry = internalMutation({
+  args: {
+    previewSessionId: v.id("preview_sessions"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const session = await ctx.db.get(args.previewSessionId);
+    if (!session || session.expiresAt !== args.expiresAt) {
+      return {
+        scanned: session ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await schedulePreviewSessionExpiration(ctx, session._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await deletePreviewAgentThread(ctx, session.threadId);
+    await deletePreviewStream(ctx, session.streamId);
+    await ctx.db.delete(session._id);
+    return {
+      scanned: 1,
+      deleted: 1,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubInboxItemContentAtExpiry = internalMutation({
+  args: {
+    inboxItemId: v.id("inbox_items"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const item = await ctx.db.get(args.inboxItemId);
+    if (
+      !item ||
+      item.contentRetentionStatus === "expired" ||
+      item.contentExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: item ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleInboxItemContentExpiration(ctx, item._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubInboxItemContent(ctx, item);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const scrubOperatorNotificationDeliveryContentAtExpiry = internalMutation({
+  args: {
+    deliveryId: v.id("operator_notification_deliveries"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const delivery = await ctx.db.get(args.deliveryId);
+    if (
+      !delivery ||
+      delivery.contentRetentionStatus === "expired" ||
+      delivery.contentExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: delivery ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleOperatorNotificationDeliveryContentExpiration(
+        ctx,
+        delivery._id,
+        args.expiresAt,
+      );
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubOperatorNotificationDeliveryContent(ctx, delivery);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const scrubExpiredMessages = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const messages: Array<Doc<"messages">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - messages.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("messages")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      messages.push(...batch);
+    }
+
+    let scrubbed = 0;
+    for (const message of messages) {
+      if (!isExpired(message.contentExpiresAt, args.nowIso)) {
+        continue;
+      }
+      await scrubMessageContent(ctx, message);
+      scrubbed += 1;
+    }
+
+    return {
+      scanned: messages.length,
+      deleted: 0,
+      scrubbed,
+    };
+  },
+});
+
+export const deleteExpiredTranscripts = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const transcripts = await ctx.db
+      .query("transcripts")
+      .withIndex("by_expires_at", (q) => q.gt("expiresAt", "").lte("expiresAt", args.nowIso))
+      .take(limit);
+
+    let deleted = 0;
+    for (const transcript of transcripts) {
+      if (!isExpired(transcript.expiresAt, args.nowIso)) {
+        continue;
+      }
+      await ctx.db.delete(transcript._id);
+      deleted += 1;
+    }
+
+    return {
+      scanned: transcripts.length,
+      deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubExpiredCallRecordings = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const calls: Array<Doc<"calls">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - calls.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("calls")
+        .withIndex("by_recording_retention_status_and_recording_expires_at", (q) =>
+          q
+            .eq("recordingRetentionStatus", retentionStatus)
+            .gt("recordingExpiresAt", "")
+            .lte("recordingExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      calls.push(...batch);
+    }
+
+    let scrubbed = 0;
+    for (const call of calls) {
+      if (!isExpired(call.recordingExpiresAt, args.nowIso)) {
+        continue;
+      }
+      await scrubCallRecordingContent(ctx, call);
+      scrubbed += 1;
+    }
+
+    return {
+      scanned: calls.length,
+      deleted: 0,
+      scrubbed,
+    };
+  },
+});
+
+export const deleteExpiredPreviewSessions = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const sessions = await ctx.db
+      .query("preview_sessions")
+      .withIndex("by_expires_at", (q) => q.gt("expiresAt", "").lte("expiresAt", args.nowIso))
+      .take(limit);
+
+    let deleted = 0;
+    for (const session of sessions) {
+      if (!isExpired(session.expiresAt, args.nowIso)) {
+        continue;
+      }
+      await deletePreviewAgentThread(ctx, session.threadId);
+      await deletePreviewStream(ctx, session.streamId);
+      await ctx.db.delete(session._id);
+      deleted += 1;
+    }
+
+    return {
+      scanned: sessions.length,
+      deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubExpiredInboxItems = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const items: Array<Doc<"inbox_items">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - items.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("inbox_items")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      items.push(...batch);
+    }
+
+    let scrubbed = 0;
+    for (const item of items) {
+      if (!isExpired(item.contentExpiresAt, args.nowIso)) {
+        continue;
+      }
+      await scrubInboxItemContent(ctx, item);
+      scrubbed += 1;
+    }
+
+    return {
+      scanned: items.length,
+      deleted: 0,
+      scrubbed,
+    };
+  },
+});
+
+export const scrubExpiredOperatorNotificationDeliveries = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const deliveries: Array<Doc<"operator_notification_deliveries">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - deliveries.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("operator_notification_deliveries")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      deliveries.push(...batch);
+    }
+
+    let scrubbed = 0;
+    for (const delivery of deliveries) {
+      if (!isExpired(delivery.contentExpiresAt, args.nowIso)) {
+        continue;
+      }
+      await scrubOperatorNotificationDeliveryContent(ctx, delivery);
+      scrubbed += 1;
+    }
+
+    return {
+      scanned: deliveries.length,
+      deleted: 0,
+      scrubbed,
+    };
+  },
+});
+
+export const deleteExpiredMessageAttachmentDownloadTokens = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const tokens = await ctx.db
+      .query("message_attachment_download_tokens")
+      .withIndex("by_expires_at", (q) => q.gt("expiresAt", "").lte("expiresAt", args.nowIso))
+      .take(limit);
+
+    for (const token of tokens) {
+      await ctx.db.delete(token._id);
+    }
+
+    return {
+      scanned: tokens.length,
+      deleted: tokens.length,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const deleteExpiredCallRecordingDownloadTokens = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const tokens = await ctx.db
+      .query("call_recording_download_tokens")
+      .withIndex("by_expires_at", (q) => q.gt("expiresAt", "").lte("expiresAt", args.nowIso))
+      .take(limit);
+
+    for (const token of tokens) {
+      await ctx.db.delete(token._id);
+    }
+
+    return {
+      scanned: tokens.length,
+      deleted: tokens.length,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const deleteExpiredAbandonedMessageAttachmentUploads = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const uploads: Array<Doc<"message_attachment_uploads">> = [];
+    for (const status of ["staged", "sending"]) {
+      const remaining = limit - uploads.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("message_attachment_uploads")
+        .withIndex("by_status_and_expires_at", (q) =>
+          q.eq("status", status).gt("expiresAt", "").lte("expiresAt", args.nowIso),
+        )
+        .take(remaining);
+      uploads.push(...batch);
+    }
+
+    let deleted = 0;
+    for (const upload of uploads) {
+      if (!isExpired(upload.expiresAt, args.nowIso)) {
+        continue;
+      }
+
+      if (upload.sentMessageId !== undefined) {
+        await ctx.db.patch(upload._id, {
+          status: "consumed",
+        });
+        continue;
+      }
+
+      const storageIds = new Set<Id<"_storage">>();
+      addStorageId(storageIds, upload.storageId);
+      addStorageId(storageIds, upload.previewStorageId);
+      await deleteStorageIds(ctx, storageIds);
+      await ctx.db.delete(upload._id);
+      deleted += 1;
+    }
+
+    return {
+      scanned: uploads.length,
+      deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const runMvpRetentionCleanup = internalAction({
+  args: {
+    nowIso: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<RetentionCleanupSummary> => {
+    const nowIso = args.nowIso ?? new Date().toISOString();
+    const limit = normalizeLimit(args.limit ?? DEFAULT_RETENTION_CLEANUP_LIMIT);
+
+    const messages = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.scrubExpiredMessages, {
+          nowIso,
+          limit,
+        }),
+      limit,
+    );
+    const transcripts = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.deleteExpiredTranscripts, {
+          nowIso,
+          limit,
+        }),
+      limit,
+    );
+    const callRecordings = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.scrubExpiredCallRecordings, {
+          nowIso,
+          limit,
+        }),
+      limit,
+    );
+    const previewSessions = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.deleteExpiredPreviewSessions, {
+          nowIso,
+          limit,
+        }),
+      limit,
+    );
+    const inboxItems = await drainCleanup(
+      async () =>
+        await ctx.runMutation(internal.privacy.retention.scrubExpiredInboxItems, {
+          nowIso,
+          limit,
+        }),
+      limit,
+    );
+    const operatorNotificationDeliveries = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.scrubExpiredOperatorNotificationDeliveries,
+          { nowIso, limit },
+        ),
+      limit,
+    );
+    const messageAttachmentDownloadTokens = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredMessageAttachmentDownloadTokens,
+          { nowIso, limit },
+        ),
+      limit,
+    );
+    const callRecordingDownloadTokens = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredCallRecordingDownloadTokens,
+          { nowIso, limit },
+      ),
+      limit,
+    );
+    const abandonedMessageAttachmentUploads = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredAbandonedMessageAttachmentUploads,
+          { nowIso, limit },
+        ),
+      limit,
+    );
+
+    return {
+      nowIso,
+      messages,
+      transcripts,
+      callRecordings,
+      previewSessions,
+      inboxItems,
+      operatorNotificationDeliveries,
+      messageAttachmentDownloadTokens,
+      callRecordingDownloadTokens,
+      abandonedMessageAttachmentUploads,
+    };
+  },
+});

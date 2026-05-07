@@ -41,6 +41,7 @@ import {
   getPostHogDistinctIdForBusinessSystem,
 } from "../../telemetry/shared";
 import { captureAiTraceStartedBestEffort } from "../../telemetry/ai";
+import { isMessageContentExpired } from "../../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../../telemetry/observedFunctions";
 function buildGroundedSystemPrompt(input: {
@@ -3398,6 +3399,21 @@ export const clearConversationAiState = internalMutation({
       .withIndex("by_conversation_id", (q) => q.eq("conversationId", args.conversationId))
       .unique();
     if (existing) {
+      if (typeof receptionistAgent.deleteThreadAsync === "function") {
+        try {
+          await receptionistAgent.deleteThreadAsync(ctx, { threadId: existing.threadId });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (
+            !message.includes("not found") &&
+            !message.includes("is not registered") &&
+            !message.includes("Invalid") &&
+            !message.includes("Value does not match validator")
+          ) {
+            throw error;
+          }
+        }
+      }
       await ctx.db.delete(existing._id);
     }
     return null;
@@ -3658,11 +3674,14 @@ export const getRecentConversationMessages = internalQuery({
       .order("desc")
       .take(args.limit ?? 6);
 
-    return messages.reverse().map((message) => ({
-      direction: message.direction,
-      body: message.body,
-      _creationTime: message._creationTime,
-    }));
+    return messages
+      .reverse()
+      .filter((message) => !isMessageContentExpired(message))
+      .map((message) => ({
+        direction: message.direction,
+        body: message.body,
+        _creationTime: message._creationTime,
+      }));
   },
 });
 

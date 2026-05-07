@@ -4,6 +4,7 @@ import { query, type MutationCtx, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireCurrentUser, requireMembership } from "../lib/auth";
 import { isContactBlocked } from "../lib/contactBlocking";
+import { getVisibleMessageBody } from "../privacy/retention";
 
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 async function getCallsForConversation(
@@ -311,14 +312,15 @@ export const getContactDetail = query({
     }
 
     for (const message of allMessages) {
+      const visibleBody = getVisibleMessageBody(message);
       activityItems.push({
         kind: "message",
         timestamp: message._creationTime,
         messageDirection: message.direction,
         messageBody:
-          message.body.length > 120
-            ? message.body.slice(0, 120) + "…"
-            : message.body,
+          visibleBody.length > 120
+            ? visibleBody.slice(0, 120) + "…"
+            : visibleBody,
         messageChannel: message.channel,
       });
     }

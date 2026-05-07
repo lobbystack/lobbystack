@@ -65,6 +65,8 @@ const messageMediaValidator = v.object({
   deliveryMode: v.optional(v.string()),
 });
 
+const retentionStatusValidator = v.union(v.literal("active"), v.literal("expired"));
+
 const conversationSessionSummaryKindValidator = v.union(
   v.literal("booked"),
   v.literal("booking_in_progress"),
@@ -628,12 +630,18 @@ export default defineSchema({
     providerRawDlrDoneDate: v.optional(v.string()),
     senderRole: v.optional(smsSenderRoleValidator),
     aiGenerated: v.boolean(),
+    contentRetentionStatus: v.optional(retentionStatusValidator),
+    contentExpiresAt: v.optional(v.string()),
   })
     .index("by_business_id", ["businessId"])
     .index("by_business_id_and_provider_updated_at", ["businessId", "providerUpdatedAt"])
     .index("by_conversation_id", ["conversationId"])
     .index("by_conversation_session_id", ["conversationSessionId"])
-    .index("by_provider_message_sid", ["providerMessageSid"]),
+    .index("by_provider_message_sid", ["providerMessageSid"])
+    .index("by_content_retention_status_and_content_expires_at", [
+      "contentRetentionStatus",
+      "contentExpiresAt",
+    ]),
 
   conversation_sessions: defineTable({
     businessId: v.id("businesses"),
@@ -666,10 +674,12 @@ export default defineSchema({
     previewByteLength: v.optional(v.number()),
     deliveryMode: v.string(),
     status: v.string(),
+    expiresAt: v.optional(v.string()),
     sentMessageId: v.optional(v.id("messages")),
   })
     .index("by_business_id_and_conversation_id", ["businessId", "conversationId"])
     .index("by_uploader_user_id_and_conversation_id", ["uploaderUserId", "conversationId"])
+    .index("by_status_and_expires_at", ["status", "expiresAt"])
     .index("by_sent_message_id", ["sentMessageId"]),
 
   message_attachment_download_tokens: defineTable({
@@ -722,10 +732,16 @@ export default defineSchema({
     recordingContentType: v.optional(v.string()),
     recordingByteLength: v.optional(v.number()),
     recordingDurationMs: v.optional(v.number()),
+    recordingRetentionStatus: v.optional(retentionStatusValidator),
+    recordingExpiresAt: v.optional(v.string()),
   })
     .index("by_twilio_call_sid", ["twilioCallSid"])
     .index("by_business_id_and_started_at", ["businessId", "startedAt"])
-    .index("by_conversation_id", ["conversationId"]),
+    .index("by_conversation_id", ["conversationId"])
+    .index("by_recording_retention_status_and_recording_expires_at", [
+      "recordingRetentionStatus",
+      "recordingExpiresAt",
+    ]),
 
   transcripts: defineTable({
     businessId: v.id("businesses"),
@@ -735,7 +751,10 @@ export default defineSchema({
     text: v.string(),
     confidence: v.optional(v.number()),
     final: v.boolean(),
-  }).index("by_call_id_and_sequence", ["callId", "sequence"]),
+    expiresAt: v.optional(v.string()),
+  })
+    .index("by_call_id_and_sequence", ["callId", "sequence"])
+    .index("by_expires_at", ["expiresAt"]),
 
   appointments: defineTable({
     businessId: v.id("businesses"),
@@ -895,16 +914,27 @@ export default defineSchema({
     providerNumSegments: v.optional(v.number()),
     senderRole: v.optional(smsSenderRoleValidator),
     digestForDate: v.optional(v.string()),
+    contentRetentionStatus: v.optional(retentionStatusValidator),
+    contentExpiresAt: v.optional(v.string()),
     createdAt: v.string(),
   })
     .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
     .index("by_provider_message_id", ["providerMessageId"])
     .index("by_business_id_and_event_kind", ["businessId", "eventKind"])
+    .index("by_business_id_and_event_kind_and_event_key", [
+      "businessId",
+      "eventKind",
+      "eventKey",
+    ])
     .index("by_business_id_and_event_kind_and_channel_and_digest_for_date", [
       "businessId",
       "eventKind",
       "channel",
       "digestForDate",
+    ])
+    .index("by_content_retention_status_and_content_expires_at", [
+      "contentRetentionStatus",
+      "contentExpiresAt",
     ])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
 
@@ -977,10 +1007,16 @@ export default defineSchema({
     body: v.string(),
     relatedId: v.optional(v.string()),
     status: v.string(),
+    contentRetentionStatus: v.optional(retentionStatusValidator),
+    contentExpiresAt: v.optional(v.string()),
   })
     .index("by_business_id_and_status", ["businessId", "status"])
     .index("by_business_id_and_kind", ["businessId", "kind"])
     .index("by_business_id_and_kind_and_status", ["businessId", "kind", "status"])
+    .index("by_content_retention_status_and_content_expires_at", [
+      "contentRetentionStatus",
+      "contentExpiresAt",
+    ])
     .index("by_kind_and_related_id", ["kind", "relatedId"])
     .index("by_related_id", ["relatedId"]),
 
@@ -1037,10 +1073,12 @@ export default defineSchema({
     streamId: v.string(),
     threadId: v.optional(v.string()),
     response: v.optional(v.string()),
+    expiresAt: v.optional(v.string()),
   })
     .index("by_business_id_and_user_id", ["businessId", "userId"])
     .index("by_user_id", ["userId"])
-    .index("by_stream_id", ["streamId"]),
+    .index("by_stream_id", ["streamId"])
+    .index("by_expires_at", ["expiresAt"]),
 
   billing_accounts: defineTable({
     businessId: v.id("businesses"),

@@ -42,5 +42,11 @@ crons.interval(
   internal.telemetry.posthog.emitServiceHealthChecks,
   {},
 );
+crons.interval(
+  "cleanup expired sensitive content",
+  { hours: 24 },
+  internal.privacy.retention.runMvpRetentionCleanup,
+  {},
+);
 
 export default crons;

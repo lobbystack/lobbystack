@@ -3,6 +3,7 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalQuery, type MutationCtx, type QueryCtx } from "../_generated/server";
 import { buildConversationOutcome } from "../dashboard/outcomes";
+import { isMessageContentExpired } from "../privacy/retention";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 export const SMS_SESSION_INACTIVITY_MS = 60 * 60 * 1000;
@@ -109,11 +110,12 @@ function buildPlainSummaryFromMessages(
   locale: string | null | undefined,
 ): string | null {
   const summaryLocale = getSummaryLocale(locale);
-  const inboundBodies = messages
+  const visibleMessages = messages.filter((message) => !isMessageContentExpired(message));
+  const inboundBodies = visibleMessages
     .filter((message) => message.direction === "inbound")
     .map((message) => message.body.trim())
     .filter((body) => body.length > 0);
-  const outboundBodies = messages
+  const outboundBodies = visibleMessages
     .filter((message) => message.direction === "outbound")
     .map((message) => message.body.trim())
     .filter((body) => body.length > 0);
@@ -173,7 +175,7 @@ function buildPlainSummaryFromMessages(
     }
   }
 
-  const attachments = messages.flatMap((message) => message.media ?? []);
+  const attachments = visibleMessages.flatMap((message) => message.media ?? []);
   if (attachments.length > 0) {
     const imageCount = attachments.filter((attachment) =>
       (attachment.contentType ?? "").startsWith("image/"),

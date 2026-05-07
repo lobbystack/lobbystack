@@ -548,6 +548,50 @@ describe("Dashboard home summary", () => {
     ).toBe(true);
   });
 
+  it("uses the conversation summary for attachment-only handoff messages", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(
+      t,
+      "dashboard-home-attachment-handoff",
+    );
+
+    await t.run(async (ctx) => {
+      const contactId = await insertContact(ctx, businessId, {
+        name: "Attachment Sender",
+        phone: "+14165550999",
+      });
+      const conversationId = await ctx.db.insert("conversations", {
+        businessId,
+        contactId,
+        channel: "sms",
+        status: "open",
+        automationState: "human_handoff",
+        summary: "Customer sent an attachment while automation was paused.",
+      });
+      await ctx.db.insert("messages", {
+        businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "",
+        status: "received",
+        aiGenerated: false,
+      });
+    });
+
+    const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId,
+      locale: HOME_SUMMARY_LOCALE,
+    });
+
+    const handoffTask = summary.actionRequired.find(
+      (item) => item.kind === "human_handoff",
+    );
+    expect(handoffTask?.body).toBe(
+      "Customer sent an attachment while automation was paused.",
+    );
+  });
+
   it("filters upcoming appointments by timestamp instead of lexical ISO ordering", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(

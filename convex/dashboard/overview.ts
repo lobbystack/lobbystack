@@ -4,6 +4,14 @@ import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { getLocalizedServiceName } from "../lib/serviceNames";
+import {
+  getVisibleInboxItemBody,
+  getVisibleInboxItemTitle,
+  getVisibleMessageBody,
+  isCallRecordingExpired,
+  isMessageContentExpired,
+  isTranscriptExpired,
+} from "../privacy/retention";
 
 type KpiWindow = {
   current: number;
@@ -413,6 +421,10 @@ export const getHomeSummary = query({
     );
 
     const allMessages = messagesByConversation.flatMap((entry) => entry.messages);
+    const messagesByConversationId = new Map<Id<"conversations">, Array<Doc<"messages">>>();
+    for (const entry of messagesByConversation) {
+      messagesByConversationId.set(entry.conversationId, entry.messages);
+    }
     const callsThisMonth = buildKpiWindow(
       calls.map((call) => Date.parse(call.startedAt)),
       currentMonthStart,
@@ -483,6 +495,9 @@ export const getHomeSummary = query({
               .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
               .take(1),
           ]);
+          const visibleTranscriptPreview = transcriptPreview.find(
+            (transcript) => !isTranscriptExpired(transcript),
+          );
 
           return {
             id: call._id,
@@ -490,8 +505,9 @@ export const getHomeSummary = query({
             status: call.status,
             disposition: call.disposition ?? null,
             durationSeconds: call.providerCallDurationSeconds ?? null,
-            transcriptReady: transcriptPreview.length > 0,
-            recordingAvailable: call.recordingStorageId !== undefined,
+            transcriptReady: visibleTranscriptPreview !== undefined,
+            recordingAvailable:
+              call.recordingStorageId !== undefined && !isCallRecordingExpired(call),
             contactName: contact?.name ?? null,
             contactPhone: contact?.phone ?? null,
           };
@@ -509,8 +525,8 @@ export const getHomeSummary = query({
       .map((item) => ({
         id: String(item._id),
         kind: item.kind,
-        title: item.title,
-        body: item.body,
+        title: getVisibleInboxItemTitle(item),
+        body: getVisibleInboxItemBody(item),
         createdAt: new Date(item._creationTime).toISOString(),
         taskId: item._id,
         ...(item.relatedId ? { callId: item.relatedId as Id<"calls"> } : {}),
@@ -526,15 +542,19 @@ export const getHomeSummary = query({
 
     const actionRequiredFromHandoffs = await Promise.all(
       handoffConversations.map(async (conversation) => {
-        const [contact, latestMessages] = await Promise.all([
-          conversation.contactId ? ctx.db.get(conversation.contactId) : Promise.resolve(null),
-          ctx.db
-            .query("messages")
-            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .order("desc")
-            .take(1),
-        ]);
-        const latestMessage = latestMessages[0] ?? null;
+        const contact = conversation.contactId ? await ctx.db.get(conversation.contactId) : null;
+        const conversationMessages = messagesByConversationId.get(conversation._id) ?? [];
+        const latestMessage = conversationMessages.reduce<Doc<"messages"> | null>(
+          (latest, message) =>
+            latest === null || message._creationTime > latest._creationTime ? message : latest,
+          null,
+        );
+        const hasExpiredMessages = conversationMessages.some((message) =>
+          isMessageContentExpired(message),
+        );
+        const latestMessageBody = latestMessage
+          ? getVisibleMessageBody(latestMessage).trim()
+          : "";
         const latestMessageTimestamp =
           latestMessage?._creationTime ??
           (conversation.automationPausedAt
@@ -546,8 +566,8 @@ export const getHomeSummary = query({
           kind: "human_handoff",
           title: contact?.name ?? contact?.phone ?? "Human handoff",
           body:
-            latestMessage?.body?.trim() ||
-            conversation.summary ||
+            latestMessageBody ||
+            (hasExpiredMessages ? "" : conversation.summary) ||
             "AI is paused and waiting for an operator reply.",
           createdAt:
             latestMessage !== null
