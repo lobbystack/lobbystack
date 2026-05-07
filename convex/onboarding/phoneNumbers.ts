@@ -1,5 +1,6 @@
 "use node";
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -8,7 +9,6 @@ import { type ActionCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   type AvailableNumberSummary,
-  availableNumberSummaryValidator,
   buildAreaCodeSelectionContext,
   buildCitySelectionContext,
   buildSuggestionContextFromVerifiedPhoneMarket,
@@ -28,11 +28,13 @@ import {
   buildTwilioVoiceInboundWebhookUrl,
   buildTwilioVoiceStatusCallbackUrl,
 } from "../lib/twilioUrls";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import {
   assertClaimAttemptAllowed,
   assertInitialSuggestionAllowed,
   assertInventorySearchAllowed,
   normalizeInventorySearchLimit,
+  recordFailedClaimAttempt,
   recordSuccessfulPurchaseLog,
 } from "./abuse";
 
@@ -73,8 +75,33 @@ type ClaimNumberResult =
       message: string;
     };
 
+type NumberClaimTokenPayload = {
+  version: 1;
+  businessId: string;
+  userId: string;
+  e164: string;
+  countryCode: string;
+  kind: AvailableNumberSummary["kind"];
+  capabilities: AvailableNumberSummary["capabilities"];
+  selectionContext: NumberSelectionContext;
+  expiresAt: number;
+};
+
+const NUMBER_CLAIM_TOKEN_TTL_MS = 5 * 60 * 1000;
+
 function isLikelyNumberUnavailableError(error: unknown): boolean {
   if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const code =
+    "code" in error && (typeof error.code === "number" || typeof error.code === "string")
+      ? Number(error.code)
+      : null;
+  if (code === 21422) {
+    return true;
+  }
+  if (code === 21404) {
     return false;
   }
 
@@ -82,10 +109,25 @@ function isLikelyNumberUnavailableError(error: unknown): boolean {
   return (
     message.includes("already taken") ||
     message.includes("no longer available") ||
-    message.includes("not available") ||
-    message.includes("unavailable") ||
-    message.includes("not currently available")
+    message.includes("not currently available") ||
+    message.includes("phone number is unavailable")
   );
+}
+
+function getPurchaseFailureMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const code =
+    "code" in error && (typeof error.code === "number" || typeof error.code === "string")
+      ? Number(error.code)
+      : null;
+  if (code === 21404) {
+    return "This Twilio account can't buy that number. Trial accounts can only buy eligible trial numbers and may need an existing number released or the account upgraded.";
+  }
+
+  return error.message;
 }
 
 function normalizeComparableLocation(value: string): string {
@@ -100,6 +142,152 @@ function formatDisplayPhoneNumber(e164: string): string {
   }
 
   return e164;
+}
+
+function normalizeClaimE164(e164: string): string | null {
+  const trimmed = e164.trim();
+  return /^\+\d{8,15}$/.test(trimmed) ? trimmed : null;
+}
+
+function getNumberClaimTokenSecret(): string {
+  const secret =
+    process.env.NUMBER_CLAIM_TOKEN_SECRET?.trim() ||
+    process.env.TWILIO_AUTH_TOKEN?.trim();
+  if (!secret) {
+    throw new Error("Twilio credentials are required for phone-number provisioning.");
+  }
+
+  return secret;
+}
+
+function signClaimTokenPayload(payload: string): string {
+  return createHmac("sha256", getNumberClaimTokenSecret())
+    .update(payload)
+    .digest("base64url");
+}
+
+function createNumberClaimToken(input: {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  number: AvailableNumberSummary;
+}): string {
+  const payload: NumberClaimTokenPayload = {
+    version: 1,
+    businessId: String(input.businessId),
+    userId: String(input.userId),
+    e164: input.number.e164,
+    countryCode: input.number.countryCode,
+    kind: input.number.kind,
+    capabilities: input.number.capabilities,
+    selectionContext: input.number.selectionContext,
+    expiresAt: Date.now() + NUMBER_CLAIM_TOKEN_TTL_MS,
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString(
+    "base64url",
+  );
+  return `${encodedPayload}.${signClaimTokenPayload(encodedPayload)}`;
+}
+
+function signaturesMatch(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function parseClaimTokenPayload(token: string): NumberClaimTokenPayload | null {
+  const [encodedPayload, signature, extra] = token.split(".");
+  if (!encodedPayload || !signature || extra !== undefined) {
+    return null;
+  }
+
+  const expectedSignature = signClaimTokenPayload(encodedPayload);
+  if (!signaturesMatch(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as Partial<NumberClaimTokenPayload>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.businessId !== "string" ||
+      typeof parsed.userId !== "string" ||
+      typeof parsed.e164 !== "string" ||
+      typeof parsed.countryCode !== "string" ||
+      (parsed.kind !== "local" && parsed.kind !== "toll_free") ||
+      typeof parsed.expiresAt !== "number" ||
+      !parsed.capabilities ||
+      parsed.capabilities.sms !== true ||
+      parsed.capabilities.voice !== true ||
+      !parsed.selectionContext ||
+      typeof parsed.selectionContext.countryCode !== "string" ||
+      (parsed.selectionContext.mode !== "suggested" &&
+        parsed.selectionContext.mode !== "city" &&
+        parsed.selectionContext.mode !== "area_code" &&
+        parsed.selectionContext.mode !== "toll_free")
+    ) {
+      return null;
+    }
+
+    return parsed as NumberClaimTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSelectionContextForComparison(
+  context: NumberSelectionContext,
+): NumberSelectionContext {
+  return {
+    mode: context.mode,
+    countryCode: context.countryCode,
+    ...(context.regionCode !== undefined ? { regionCode: context.regionCode } : {}),
+    ...(context.city !== undefined ? { city: context.city } : {}),
+    ...(context.areaCode !== undefined ? { areaCode: context.areaCode } : {}),
+    ...(context.metroKey !== undefined ? { metroKey: context.metroKey } : {}),
+  };
+}
+
+function selectionContextsMatch(
+  left: NumberSelectionContext,
+  right: NumberSelectionContext,
+): boolean {
+  return (
+    JSON.stringify(normalizeSelectionContextForComparison(left)) ===
+    JSON.stringify(normalizeSelectionContextForComparison(right))
+  );
+}
+
+function verifyNumberClaimToken(input: {
+  token: string;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  claimE164: string;
+  selectionContext: NumberSelectionContext;
+}): NumberClaimTokenPayload {
+  const payload = parseClaimTokenPayload(input.token);
+  if (!payload) {
+    throw new Error("The selected phone number offer is invalid. Refresh the list and try again.");
+  }
+  if (payload.expiresAt < Date.now()) {
+    throw new Error("The selected phone number offer expired. Refresh the list and try again.");
+  }
+  if (
+    payload.businessId !== String(input.businessId) ||
+    payload.userId !== String(input.userId) ||
+    payload.e164 !== input.claimE164 ||
+    !selectionContextsMatch(payload.selectionContext, input.selectionContext)
+  ) {
+    throw new Error("The selected phone number offer is invalid. Refresh the list and try again.");
+  }
+
+  return payload;
+}
+
+function normalizeSupportedCountryCode(value: string | undefined): "US" | "CA" | null {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "US" || normalized === "CA" ? normalized : null;
 }
 
 function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableNumberSummary> {
@@ -118,6 +306,22 @@ function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableN
   return unique;
 }
 
+function hasTwilioCapability(
+  capabilities: TwilioAvailableNumber["capabilities"],
+  name: "sms" | "voice",
+): boolean {
+  if (!capabilities) {
+    return false;
+  }
+
+  const titleCaseName = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  return (
+    capabilities[name] === true ||
+    capabilities[name.toUpperCase()] === true ||
+    capabilities[titleCaseName] === true
+  );
+}
+
 function toAvailableNumberSummary(input: {
   number: TwilioAvailableNumber;
   kind: AvailableNumberSummary["kind"];
@@ -125,6 +329,13 @@ function toAvailableNumberSummary(input: {
 }): AvailableNumberSummary | null {
   const e164 = input.number.phoneNumber?.trim();
   if (!e164) {
+    return null;
+  }
+
+  if (
+    !hasTwilioCapability(input.number.capabilities, "sms") ||
+    !hasTwilioCapability(input.number.capabilities, "voice")
+  ) {
     return null;
   }
 
@@ -368,6 +579,23 @@ async function getNumbersForSelectionContext(
     .filter((number): number is AvailableNumberSummary => number !== null);
 }
 
+function withClaimTokens(
+  numbers: Array<AvailableNumberSummary>,
+  input: {
+    businessId: Id<"businesses">;
+    userId: Id<"users">;
+  },
+): Array<AvailableNumberSummary> {
+  return numbers.map((number) => ({
+    ...number,
+    claimToken: createNumberClaimToken({
+      businessId: input.businessId,
+      userId: input.userId,
+      number,
+    }),
+  }));
+}
+
 function buildNormalizedSelectionContext(input: {
   requestedSelectionContext: NumberSelectionContext;
   fallbackContext: NumberSuggestionContext;
@@ -375,6 +603,9 @@ function buildNormalizedSelectionContext(input: {
   const { requestedSelectionContext, fallbackContext } = input;
   const requestedCity = requestedSelectionContext.city?.trim();
   const requestedAreaCode = requestedSelectionContext.areaCode?.trim();
+  const countryCode =
+    normalizeSupportedCountryCode(requestedSelectionContext.countryCode) ??
+    fallbackContext.countryCode;
   const shouldKeepSuggestedRegion =
     requestedSelectionContext.mode !== "city" ||
     !requestedCity ||
@@ -384,7 +615,7 @@ function buildNormalizedSelectionContext(input: {
 
   if (requestedSelectionContext.mode === "city") {
     return buildCitySelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
       city: requestedCity || fallbackContext.city || "",
       ...(shouldKeepSuggestedRegion && fallbackContext.regionCode
         ? { regionCode: fallbackContext.regionCode }
@@ -394,18 +625,21 @@ function buildNormalizedSelectionContext(input: {
 
   if (requestedSelectionContext.mode === "area_code") {
     return buildAreaCodeSelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
       areaCode: requestedAreaCode || "",
     });
   }
 
   if (requestedSelectionContext.mode === "toll_free") {
     return buildTollFreeSelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
     });
   }
 
-  return buildSuggestedSelectionContext(fallbackContext);
+  return buildSuggestedSelectionContext({
+    ...fallbackContext,
+    countryCode,
+  });
 }
 
 async function assertOnboardingAccess(
@@ -435,7 +669,8 @@ async function requireBusinessInPhoneNumberStage(
   if (!business) {
     throw new Error("Business not found.");
   }
-  if (business.onboardingStage !== "phone_number") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (stage !== "phone_number") {
     throw new Error("Phone-number onboarding is no longer available for this business.");
   }
 }
@@ -517,7 +752,10 @@ export const getInitialNumberSuggestion = action({
       userId,
     });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-    const suggestions = await getSuggestedNumbers(context, 10);
+    const suggestions = withClaimTokens(await getSuggestedNumbers(context, 10), {
+      businessId: args.businessId,
+      userId,
+    });
 
     return {
       market,
@@ -531,6 +769,7 @@ export const searchAvailableNumbers = action({
   args: {
     businessId: v.id("businesses"),
     mode: searchModeValidator,
+    countryCode: v.optional(v.union(v.literal("US"), v.literal("CA"))),
     city: v.optional(v.string()),
     areaCode: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -543,18 +782,28 @@ export const searchAvailableNumbers = action({
       userId,
     });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+    const searchContext: NumberSuggestionContext = {
+      ...context,
+      ...(args.countryCode ? { countryCode: args.countryCode } : {}),
+    };
     const limit = normalizeInventorySearchLimit(args.limit);
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: {
         mode: args.mode,
-        countryCode: context.countryCode,
+        countryCode: searchContext.countryCode,
         ...(args.city !== undefined ? { city: args.city } : {}),
         ...(args.areaCode !== undefined ? { areaCode: args.areaCode } : {}),
       },
-      fallbackContext: context,
+      fallbackContext: searchContext,
     });
 
-    const numbers = await getNumbersForSelectionContext(selectionContext, context, limit);
+    const numbers = withClaimTokens(
+      await getNumbersForSelectionContext(selectionContext, searchContext, limit),
+      {
+        businessId: args.businessId,
+        userId,
+      },
+    );
     return {
       market,
       selectionContext,
@@ -568,6 +817,7 @@ export const claimOnboardingNumber = action({
     businessId: v.id("businesses"),
     e164: v.string(),
     selectionContext: numberSelectionContextValidator,
+    claimToken: v.string(),
   },
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
@@ -575,7 +825,14 @@ export const claimOnboardingNumber = action({
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
     let claimEventId: Id<"onboarding_number_claim_events"> | null = null;
     let claimLocked = false;
-    let selectedNumber: AvailableNumberSummary | null = null;
+    const claimE164 = normalizeClaimE164(args.e164);
+    if (!claimE164) {
+      return {
+        status: "failed" as const,
+        message: "Invalid phone number.",
+      };
+    }
+    const unavailableE164s = new Set<string>();
 
     try {
       await ctx.runMutation(internal.businesses.admin.beginOnboardingNumberClaim, {
@@ -587,11 +844,17 @@ export const claimOnboardingNumber = action({
         businessId: args.businessId,
         userId,
       });
-
-      const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-      const selectionContext = buildNormalizedSelectionContext({
-        requestedSelectionContext: args.selectionContext,
-        fallbackContext: context,
+      verifyNumberClaimToken({
+        token: args.claimToken,
+        businessId: args.businessId,
+        userId,
+        claimE164,
+        selectionContext: args.selectionContext,
+      });
+      claimEventId = await ctx.runMutation(internal.onboarding.abuse.reserveSuccessfulClaimEvent, {
+        businessId: args.businessId,
+        userId,
+        reservedAt: Date.now(),
       });
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
@@ -599,28 +862,29 @@ export const claimOnboardingNumber = action({
       const voiceStatusCallbackUrl = buildTwilioVoiceStatusCallbackUrl();
       const client = getTwilioClient();
 
-      const selectableNumbers = await getNumbersForSelectionContext(selectionContext, context, 20);
-      selectedNumber = selectableNumbers.find((number) => number.e164 === args.e164) ?? null;
-      if (!selectedNumber) {
-        throw new Error("The selected phone number is no longer available.");
+      try {
+        purchased = await client.incomingPhoneNumbers.create({
+          friendlyName: `business:${String(args.businessId)}`,
+          phoneNumber: claimE164,
+          smsMethod: "POST",
+          smsUrl: smsWebhookUrl,
+          statusCallback: voiceStatusCallbackUrl,
+          statusCallbackMethod: "POST",
+          voiceMethod: "POST",
+          voiceUrl: voiceWebhookUrl,
+        });
+      } catch (purchaseError) {
+        if (isLikelyNumberUnavailableError(purchaseError)) {
+          unavailableE164s.add(claimE164);
+        }
+        throw purchaseError;
       }
-
-      purchased = await client.incomingPhoneNumbers.create({
-        friendlyName: `business:${String(args.businessId)}`,
-        phoneNumber: selectedNumber.e164,
-        smsMethod: "POST",
-        smsUrl: smsWebhookUrl,
-        statusCallback: voiceStatusCallbackUrl,
-        statusCallbackMethod: "POST",
-        voiceMethod: "POST",
-        voiceUrl: voiceWebhookUrl,
-      });
 
       const saved: { phoneNumberId: Id<"phone_numbers"> } = await ctx.runMutation(
         internal.businesses.catalog.upsertPhoneNumberInternal,
         {
           businessId: args.businessId,
-          e164: selectedNumber.e164,
+          e164: claimE164,
           twilioPhoneSid: purchased.sid,
           voiceEnabled: true,
           smsEnabled: true,
@@ -639,27 +903,28 @@ export const claimOnboardingNumber = action({
         smsWebhookTargetUrl: purchased.smsUrl ?? smsWebhookUrl,
         smsWebhookLastSyncedAt: now,
       });
-      claimEventId = await ctx.runMutation(internal.onboarding.abuse.recordSuccessfulClaimEvent, {
-        businessId: args.businessId,
-        userId,
+      await ctx.runMutation(internal.onboarding.abuse.finalizeSuccessfulClaimEvent, {
+        claimEventId,
         phoneNumberId: saved.phoneNumberId,
         twilioPhoneSid: purchased.sid,
         purchasedAt: Date.now(),
       });
-      await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
+      // Advance to the plan-selection step. Phone provisioning is now
+      // followed by plan + attribution before onboarding completes.
+      await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
         businessId: args.businessId,
-        onboardingStage: "completed",
+        onboardingStage: "plan",
       });
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,
         userId,
-        phoneE164: selectedNumber.e164,
+        phoneE164: claimE164,
       });
 
       return {
         status: "claimed" as const,
         phoneNumberId: saved.phoneNumberId,
-        e164: selectedNumber.e164,
+        e164: claimE164,
       };
     } catch (error) {
       let cleanupError: Error | null = null;
@@ -699,8 +964,8 @@ export const claimOnboardingNumber = action({
               : new Error("Automatic release of the onboarding claim lock failed.");
         }
       }
-      const client = getTwilioClient();
       if (purchased) {
+        const client = getTwilioClient();
         try {
           await client.incomingPhoneNumbers(purchased.sid).remove();
         } catch (releaseError) {
@@ -712,26 +977,68 @@ export const claimOnboardingNumber = action({
       }
 
       if (!purchased && isLikelyNumberUnavailableError(error)) {
-        let alternatives: Array<AvailableNumberSummary> = [];
-        let selectedStillListed = false;
         try {
-          const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-          const selectionContext = buildNormalizedSelectionContext({
-            requestedSelectionContext: args.selectionContext,
-            fallbackContext: context,
+          await recordFailedClaimAttempt(ctx, {
+            businessId: args.businessId,
+            userId,
           });
-          alternatives = await getNumbersForSelectionContext(selectionContext, context, 10);
-          selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
-        } catch {
-          alternatives = [];
-          selectedStillListed = false;
+        } catch (rateLimitError) {
+          return {
+            status: "failed" as const,
+            message:
+              rateLimitError instanceof Error
+                ? rateLimitError.message
+                : "Number provisioning limit reached for now. Contact support if you need more businesses today.",
+          };
         }
 
-        if (!selectedStillListed) {
+        let alternatives: Array<AvailableNumberSummary> = [];
+        try {
+          const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+          const countryCode =
+            normalizeSupportedCountryCode(args.selectionContext.countryCode) ??
+            context.countryCode;
+          const searchContext: NumberSuggestionContext = {
+            ...context,
+            countryCode,
+          };
+          const selectionContext = buildNormalizedSelectionContext({
+            requestedSelectionContext: args.selectionContext,
+            fallbackContext: searchContext,
+          });
+          alternatives = withClaimTokens(
+            (
+              await getNumbersForSelectionContext(selectionContext, searchContext, 10)
+            ).filter((number) => number.e164 !== claimE164 && !unavailableE164s.has(number.e164)),
+            {
+              businessId: args.businessId,
+              userId,
+            },
+          );
+        } catch {
+          alternatives = [];
+        }
+
+        return {
+          status: "unavailable" as const,
+          message: "The selected phone number is no longer available.",
+          alternatives,
+        };
+      }
+
+      if (!purchased) {
+        try {
+          await recordFailedClaimAttempt(ctx, {
+            businessId: args.businessId,
+            userId,
+          });
+        } catch (rateLimitError) {
           return {
-            status: "unavailable" as const,
-            message: "The selected phone number is no longer available.",
-            alternatives,
+            status: "failed" as const,
+            message:
+              rateLimitError instanceof Error
+                ? rateLimitError.message
+                : "Number provisioning limit reached for now. Contact support if you need more businesses today.",
           };
         }
       }
@@ -741,8 +1048,8 @@ export const claimOnboardingNumber = action({
         message:
           error instanceof Error
             ? cleanupError
-              ? `${error.message} Automatic cleanup of the purchased Twilio number also failed.`
-              : error.message
+              ? `${getPurchaseFailureMessage(error) ?? error.message} Automatic cleanup of the purchased Twilio number also failed.`
+              : (getPurchaseFailureMessage(error) ?? error.message)
             : cleanupError
               ? "We couldn't provision the selected phone number, and automatic Twilio cleanup also failed."
               : "We couldn't provision the selected phone number.",

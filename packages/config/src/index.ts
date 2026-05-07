@@ -54,6 +54,7 @@ const serverEnvSchema = z.object({
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
   POSTHOG_PRIVACY_MODE: booleanEnvSchema,
+  TURNSTILE_SECRET_KEY: z.string().optional(),
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_HOST: z.string().url().optional(),
@@ -69,6 +70,7 @@ const clientEnvSchema = z.object({
   VITE_POSTHOG_KEY: z.string().optional(),
   VITE_POSTHOG_HOST: z.string().min(1).optional(),
   VITE_POSTHOG_UI_HOST: z.string().url().optional(),
+  VITE_TURNSTILE_SITE_KEY: z.string().optional(),
 });
 
 const voiceGatewayEnvSchema = z.object({

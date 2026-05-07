@@ -1,6 +1,6 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../_generated/api";
 import { onboardingRateLimiter } from "../lib/components";
@@ -32,6 +32,10 @@ function createConvexHarness() {
   return t;
 }
 
+beforeEach(() => {
+  workflowStartMock.mockClear();
+});
+
 async function seedBootstrapUser(subject: string) {
   const t = createConvexHarness();
   const userId = await t.run(async (ctx) => {
@@ -45,6 +49,41 @@ async function seedBootstrapUser(subject: string) {
 }
 
 describe("onboarding abuse controls", () => {
+  it("reuses an existing same-name bootstrap business for duplicate submissions", async () => {
+    const subject = "bootstrap-idempotent";
+    const { t, userId } = await seedBootstrapUser(subject);
+    const authed = t.withIdentity({ subject });
+
+    const first = await authed.mutation(api.businesses.admin.bootstrapBusiness, {
+      name: "LobbyStack",
+      slug: "lobbystack-first",
+      timezone: "America/Toronto",
+      businessType: "general",
+    });
+    const second = await authed.mutation(api.businesses.admin.bootstrapBusiness, {
+      name: "Lobbystack",
+      slug: "lobbystack-second",
+      timezone: "America/Toronto",
+      businessType: "general",
+    });
+
+    expect(second.businessId).toBe(first.businessId);
+    expect(workflowStartMock).toHaveBeenCalledTimes(1);
+
+    await t.run(async (ctx) => {
+      const memberships = await ctx.db
+        .query("business_memberships")
+        .withIndex("by_user_id_and_business_id", (q) => q.eq("userId", userId))
+        .collect();
+      const businesses = await Promise.all(
+        memberships.map((membership) => ctx.db.get(membership.businessId)),
+      );
+
+      expect(memberships).toHaveLength(1);
+      expect(businesses.filter(Boolean)).toHaveLength(1);
+    });
+  });
+
   it("limits business creation attempts per hour for one authenticated user", async () => {
     const subject = "bootstrap-rate-limit-hourly";
     const { t } = await seedBootstrapUser(subject);

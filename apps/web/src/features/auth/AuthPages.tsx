@@ -1,5 +1,5 @@
-import type { FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import type { FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -10,27 +10,17 @@ import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
+import type { TurnstileHandle } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
+import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
-
 import { useObservedAction } from "@/lib/observed-convex";
+
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
 
 function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
   resetAnalyticsIdentity();
   captureAnalyticsEvent(name);
-}
-
-function AuthShell(props: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-10">
-      <section className="flex w-full items-center justify-center">
-        <div className="w-full max-w-md rounded-xl border border-border/70 bg-card/95 p-8 shadow-xl shadow-black/5">
-          {props.children}
-        </div>
-      </section>
-    </div>
-  );
 }
 
 function getAuthErrorMessage(
@@ -58,6 +48,10 @@ function getAuthErrorMessage(
 
     if (message.includes("Invalid password")) {
       return t("errors.invalidPassword");
+    }
+
+    if (message.includes("Turnstile")) {
+      return t("errors.turnstileFailed");
     }
 
     return t("errors.signupFailed");
@@ -93,13 +87,12 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
@@ -110,27 +103,33 @@ export function LoginPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingSignIn"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.signedInFinishing"));
+        keepSubmitting = true;
         capturePublicAuthEvent("web.auth.login_succeeded");
         return;
       }
 
-      setStatusMessage(t("status.signInCompleted"));
+      keepSubmitting = true;
       capturePublicAuthEvent("web.auth.login_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signIn", t));
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
   }
 
   return (
-    <AuthShell>
+    <OnboardingShell
+      progress={null}
+      title={t("login.title")}
+      width="sm"
+    >
       <LoginForm
         email={email}
         errorMessage={errorMessage}
@@ -139,25 +138,42 @@ export function LoginPage() {
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
         password={password}
-        statusMessage={statusMessage}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
 export function SignupPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
+  const pendingTurnstileSubmitRef = useRef(false);
+  const turnstilePreflightKeyRef = useRef<string | null>(null);
+  const normalizedEmail = email.trim().toLowerCase();
+  const hasPlausibleSignupCredentials =
+    normalizedEmail.includes("@") && password.length >= 12;
+  const shouldPrepareTurnstile = Boolean(
+    turnstileSiteKey && hasPlausibleSignupCredentials,
+  );
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const handleTurnstileError = useCallback(() => {
+    pendingTurnstileSubmitRef.current = false;
+    turnstilePreflightKeyRef.current = null;
+    setTurnstileToken(null);
+    setIsSubmitting(false);
+    setErrorMessage(t("errors.turnstileFailed"));
+  }, [t]);
+
+  const submitSignUp = useCallback(async (verifiedTurnstileToken: string | null) => {
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
@@ -165,30 +181,105 @@ export function SignupPage() {
       formData.set("flow", "signUp");
       formData.set("email", email);
       formData.set("password", password);
+      if (verifiedTurnstileToken) {
+        formData.set("cf-turnstile-response", verifiedTurnstileToken);
+      }
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingSignUp"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.accountCreatedFinishing"));
+        keepSubmitting = true;
         capturePublicAuthEvent("web.auth.signup_succeeded");
         return;
       }
 
-      setStatusMessage(t("status.accountCreatedFinalizing"));
+      keepSubmitting = true;
       capturePublicAuthEvent("web.auth.signup_succeeded");
     } catch (error) {
+      turnstilePreflightKeyRef.current = null;
+      setTurnstileToken(null);
+      setTurnstileResetKey((current) => current + 1);
       setErrorMessage(getAuthErrorMessage(error, "signUp", t));
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
+  }, [email, password, signIn, t]);
+
+  const handleTurnstileTokenChange = useCallback(
+    (token: string | null) => {
+      setTurnstileToken(token);
+      if (!token) {
+        turnstilePreflightKeyRef.current = null;
+        if (pendingTurnstileSubmitRef.current) {
+          pendingTurnstileSubmitRef.current = false;
+          setIsSubmitting(false);
+          setErrorMessage(t("errors.turnstileRequired"));
+        }
+      }
+      if (!token || !pendingTurnstileSubmitRef.current) {
+        return;
+      }
+
+      pendingTurnstileSubmitRef.current = false;
+      void submitSignUp(token);
+    },
+    [submitSignUp, t],
+  );
+
+  useEffect(() => {
+    if (!shouldPrepareTurnstile || turnstileToken || isSubmitting) {
+      return;
+    }
+
+    const preflightKey = `${normalizedEmail}\n${password}`;
+    if (turnstilePreflightKeyRef.current === preflightKey) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      turnstilePreflightKeyRef.current = preflightKey;
+      const started = turnstileRef.current?.execute() ?? false;
+      if (!started) {
+        turnstilePreflightKeyRef.current = null;
+      }
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSubmitting, normalizedEmail, password, shouldPrepareTurnstile, turnstileToken]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (turnstileSiteKey && hasPlausibleSignupCredentials && !turnstileToken) {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      pendingTurnstileSubmitRef.current = true;
+      const started = turnstileRef.current?.execute() ?? false;
+      if (!started) {
+        pendingTurnstileSubmitRef.current = false;
+        setIsSubmitting(false);
+        setErrorMessage(t("errors.turnstileRequired"));
+      }
+      return;
+    }
+
+    await submitSignUp(turnstileToken);
   }
 
   return (
-    <AuthShell>
+    <OnboardingShell
+      progress={{ current: 1, total: 10 }}
+      title={t("signup.title")}
+      width="sm"
+    >
       <SignupForm
         email={email}
         errorMessage={errorMessage}
@@ -196,10 +287,14 @@ export function SignupPage() {
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
+        onTurnstileError={handleTurnstileError}
+        onTurnstileTokenChange={handleTurnstileTokenChange}
         password={password}
-        statusMessage={statusMessage}
+        turnstileResetKey={turnstileResetKey}
+        turnstileRef={turnstileRef}
+        turnstileSiteKey={shouldPrepareTurnstile ? turnstileSiteKey : undefined}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
@@ -271,8 +366,14 @@ export function ForgotPasswordPage() {
     setErrorMessage(null);
   }
 
+  const isVerifyStep = step === "verify";
+  const title = isVerifyStep ? t("forgotPassword.verifyTitle") : t("forgotPassword.title");
+  const description = isVerifyStep
+    ? t("forgotPassword.verifySubtitle", { email })
+    : t("forgotPassword.subtitle");
+
   return (
-    <AuthShell>
+    <OnboardingShell description={description} progress={null} title={title} width="sm">
       <ForgotPasswordForm
         code={code}
         email={email}
@@ -287,7 +388,7 @@ export function ForgotPasswordPage() {
         statusMessage={statusMessage}
         step={step}
       />
-    </AuthShell>
+    </OnboardingShell>
   );
 }
 
@@ -333,26 +434,29 @@ export function ConfirmEmailChangePage() {
     }
   }
 
-  return (
-    <AuthShell>
-      <div className="flex flex-col gap-6 text-center">
-        <div className="flex flex-col gap-2">
-          <h1 className="type-page-title">{t("confirmEmailChange.title")}</h1>
-          <p className="type-page-description">
-            {hasConfirmationParams
-              ? t("confirmEmailChange.subtitle", { email })
-              : t("confirmEmailChange.invalidLink")}
-          </p>
-        </div>
+  const description = hasConfirmationParams
+    ? t("confirmEmailChange.subtitle", { email })
+    : t("confirmEmailChange.invalidLink");
 
-        {statusMessage ? <p className="type-body-muted">{statusMessage}</p> : null}
-        {errorMessage ? <p className="type-body text-destructive">{errorMessage}</p> : null}
+  return (
+    <OnboardingShell
+      description={description}
+      progress={null}
+      title={t("confirmEmailChange.title")}
+      width="sm"
+    >
+      <div className="flex flex-col gap-6">
+        {statusMessage ? (
+          <p className="text-center text-sm text-muted-foreground">{statusMessage}</p>
+        ) : null}
+        {errorMessage ? (
+          <p className="text-center text-sm text-destructive">{errorMessage}</p>
+        ) : null}
 
         <form className="flex flex-col" onSubmit={handleSubmit}>
           <Button
-            className="w-full"
+            className="h-11 w-full"
             disabled={!hasConfirmationParams || isSubmitting || statusMessage !== null}
-            size="lg"
             type="submit"
           >
             {isSubmitting
@@ -361,10 +465,15 @@ export function ConfirmEmailChangePage() {
           </Button>
         </form>
 
-        <Link className="type-body-muted hover:text-foreground" to={returnHref}>
-          {returnLabel}
-        </Link>
+        <p className="text-center text-sm">
+          <Link
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+            to={returnHref}
+          >
+            {returnLabel}
+          </Link>
+        </p>
       </div>
-    </AuthShell>
+    </OnboardingShell>
   );
 }

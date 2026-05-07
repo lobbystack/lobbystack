@@ -79,8 +79,25 @@ export function onRecoverableReactError(
   });
 }
 
-export function RootErrorFallback(): ReactNode {
+function formatErrorForDisplay(error: unknown): string | null {
+  if (!import.meta.env.DEV) {
+    return null;
+  }
+
+  if (error instanceof Error) {
+    return error.stack ?? `${error.name}: ${error.message}`;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return "Unknown render error.";
+}
+
+export function RootErrorFallback({ error }: { error?: unknown }): ReactNode {
   const { t } = useTranslation();
+  const errorDetails = formatErrorForDisplay(error);
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-6 py-16 text-foreground">
@@ -98,6 +115,11 @@ export function RootErrorFallback(): ReactNode {
         >
           {t("errorBoundary.reload")}
         </button>
+        {errorDetails ? (
+          <pre className="max-h-64 overflow-auto rounded-xl bg-muted p-3 text-left text-xs text-muted-foreground">
+            {errorDetails}
+          </pre>
+        ) : null}
       </section>
     </main>
   );
@@ -109,6 +131,7 @@ type AppErrorBoundaryProps = {
 };
 
 type AppErrorBoundaryState = {
+  error?: unknown;
   hasError: boolean;
 };
 
@@ -120,8 +143,8 @@ export class AppErrorBoundary extends Component<
     hasError: false,
   };
 
-  static getDerivedStateFromError(): AppErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown): AppErrorBoundaryState {
+    return { error, hasError: true };
   }
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
@@ -130,7 +153,7 @@ export class AppErrorBoundary extends Component<
 
   render(): ReactNode {
     if (this.state.hasError) {
-      return this.props.fallback ?? <RootErrorFallback />;
+      return this.props.fallback ?? <RootErrorFallback error={this.state.error} />;
     }
 
     return this.props.children;

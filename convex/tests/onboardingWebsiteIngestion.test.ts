@@ -173,7 +173,7 @@ describe("website onboarding and ingestion", () => {
       businessId,
     });
     expect(business?.websiteUrl).toBe("https://example.com/clinic");
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("knowledge");
 
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(1);
@@ -500,7 +500,7 @@ describe("website onboarding and ingestion", () => {
       businessId,
     });
     expect(business?.websiteUrl).toBeUndefined();
-    expect(business?.onboardingStage).toBe("phone_number");
+    expect(business?.onboardingStage).toBe("knowledge");
 
     const jobs = await listWebsiteIngestionJobs(t, businessId);
     expect(jobs).toHaveLength(0);

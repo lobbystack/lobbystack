@@ -153,6 +153,7 @@ export default defineSchema({
     activeBusinessId: v.optional(v.id("businesses")),
     platformRole: v.optional(v.string()),
     preferredLocale: v.optional(runtimeLocaleValidator),
+    signupAttribution: v.optional(v.string()),
   })
     .index("by_auth_subject", ["authSubject"])
     .index("email", ["email"])
@@ -362,8 +363,9 @@ export default defineSchema({
   onboarding_number_claim_events: defineTable({
     businessId: v.id("businesses"),
     userId: v.id("users"),
-    phoneNumberId: v.id("phone_numbers"),
-    twilioPhoneSid: v.string(),
+    phoneNumberId: v.optional(v.id("phone_numbers")),
+    twilioPhoneSid: v.optional(v.string()),
+    status: v.optional(v.union(v.literal("reserved"), v.literal("claimed"))),
     purchasedAt: v.number(),
   })
     .index("by_business_id", ["businessId"])
@@ -898,6 +900,12 @@ export default defineSchema({
     .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
     .index("by_provider_message_id", ["providerMessageId"])
     .index("by_business_id_and_event_kind", ["businessId", "eventKind"])
+    .index("by_business_id_and_event_kind_and_channel_and_digest_for_date", [
+      "businessId",
+      "eventKind",
+      "channel",
+      "digestForDate",
+    ])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
 
   unit_economics_events: defineTable({

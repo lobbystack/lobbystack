@@ -1,5 +1,3 @@
-import { LogOut, ShieldCheck, Smartphone } from "lucide-react";
-
 import {
   ChartBlockSkeleton,
   DetailPageSkeleton,
@@ -9,14 +7,6 @@ import {
   SplitPaneSkeleton,
   TableCardSkeleton,
 } from "@/components/loading-skeletons";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 
@@ -174,117 +164,35 @@ export function WorkspaceRouteSkeleton({ pathname }: { pathname: string }) {
   );
 }
 
-export function OnboardingNumberRouteSkeleton({
-  email,
-  onSignOut,
-}: {
-  email?: string;
-  onSignOut: () => void;
-}) {
+/**
+ * Generic skeleton used while any onboarding route's queries are loading.
+ *
+ * Renders the same wordmark + centred column structure as `OnboardingShell`
+ * so the layout doesn't visually shift when the real content arrives.
+ */
+export function OnboardingRouteSkeleton() {
   return (
-    <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(82,43,173,0.16),_transparent_36%),linear-gradient(180deg,_#120f1d_0%,_#09080d_100%)] text-white">
-      <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-6 py-6">
-        <header className="flex items-center justify-between">
-          <div className="text-2xl font-semibold tracking-tight">
-            {import.meta.env.VITE_APP_NAME ?? "LobbyStack"}
+    <div className="flex min-h-svh w-full flex-col bg-background">
+      <header className="flex w-full items-center justify-center pt-16 pb-8">
+        <Skeleton className="h-7 w-32" />
+      </header>
+      <main className="flex flex-1 flex-col items-center px-6">
+        <div className="flex w-full max-w-md flex-col items-center gap-4">
+          <Skeleton className="h-9 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="mt-10 flex w-full flex-col gap-3">
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
           </div>
-          <div className="flex items-center gap-3">
-            {email ? (
-              <span className="hidden text-sm text-zinc-400 sm:inline">{email}</span>
-            ) : null}
-            <Button
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-              onClick={onSignOut}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <LogOut className="size-4" />
-            </Button>
-          </div>
-        </header>
-
-        <div className="flex flex-1 items-center justify-center py-12">
-          <Card className="w-full max-w-xl border-white/10 bg-white/5 text-white shadow-2xl shadow-black/30 backdrop-blur">
-            <CardHeader className="items-center text-center">
-              <div className="flex size-20 items-center justify-center rounded-full bg-violet-500/15 text-violet-300 shadow-inner shadow-violet-950/40">
-                <Smartphone className="size-9" />
-              </div>
-              <CardTitle className="text-4xl font-semibold tracking-tight">Choose your number</CardTitle>
-              <CardDescription className="type-section-description max-w-md text-zinc-300">
-                Pick a business number that matches your market.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <Skeleton className="h-5 w-32 rounded-full bg-white/10" />
-                <div className="rounded-xl border border-white/10 bg-black/20 px-6 py-6 text-center">
-                  <Skeleton className="mx-auto h-4 w-24 bg-white/10" />
-                  <Skeleton className="mx-auto mt-4 h-10 w-56 bg-white/10" />
-                  <Skeleton className="mx-auto mt-3 h-4 w-32 bg-white/10" />
-                </div>
-                <div className="flex flex-col gap-3">
-                  <Skeleton className="h-12 w-full rounded-md bg-white/10" />
-                  <Skeleton className="h-10 w-full rounded-md bg-white/10" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
-      </div>
-    </div>
-  );
-}
-
-export function OnboardingVerifyRouteSkeleton({
-  email,
-  onSignOut,
-}: {
-  email?: string;
-  onSignOut: () => void;
-}) {
-  return (
-    <div className="min-h-svh bg-[radial-gradient(circle_at_top,_rgba(82,43,173,0.16),_transparent_36%),linear-gradient(180deg,_#120f1d_0%,_#09080d_100%)] text-white">
-      <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-6 py-6">
-        <header className="flex items-center justify-between">
-          <div className="text-2xl font-semibold tracking-tight">
-            {import.meta.env.VITE_APP_NAME ?? "LobbyStack"}
-          </div>
-          <div className="flex items-center gap-3">
-            {email ? (
-              <span className="hidden text-sm text-zinc-400 sm:inline">{email}</span>
-            ) : null}
-            <Button
-              className="border-white/10 bg-white/5 text-white hover:bg-white/10"
-              onClick={onSignOut}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <LogOut className="size-4" />
-            </Button>
-          </div>
-        </header>
-
-        <div className="flex flex-1 items-center justify-center py-12">
-          <Card className="w-full max-w-xl border-white/10 bg-white/5 text-white shadow-2xl shadow-black/30 backdrop-blur">
-            <CardHeader className="items-center text-center">
-              <div className="flex size-20 items-center justify-center rounded-full bg-violet-500/15 text-violet-300 shadow-inner shadow-violet-950/40">
-                <ShieldCheck className="size-9" />
-              </div>
-              <CardTitle className="text-4xl font-semibold tracking-tight">Verify your phone</CardTitle>
-              <CardDescription className="type-section-description max-w-md text-zinc-300">
-                Confirm your mobile number before provisioning a business line.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Skeleton className="h-12 w-full rounded-md bg-white/10" />
-              <Skeleton className="h-4 w-48 bg-white/10" />
-              <Skeleton className="h-12 w-full rounded-md bg-white/10" />
-            </CardContent>
-          </Card>
+      </main>
+      <footer className="flex justify-center pb-12 pt-16">
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <Skeleton className="h-1.5 w-1.5 rounded-full" key={index} />
+          ))}
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

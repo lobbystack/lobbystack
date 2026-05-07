@@ -40,7 +40,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Separator } from "@/components/ui/separator";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
+
 import {
   getFollowUpDisplayTitle,
   isUrgentFollowUpValue,
@@ -231,9 +231,10 @@ export function HomePage({ businessId }: HomePageProps) {
   }
 
   if (!businessId) {
-    return (
-      <BusinessSetupCard />
-    );
+    // The WorkspaceShell redirects to /onboarding/business when no active
+    // business exists, so this branch should not render in practice. Return
+    // null to keep the component tree stable while the redirect completes.
+    return null;
   }
 
   const metricCards: MetricCard[] = summary

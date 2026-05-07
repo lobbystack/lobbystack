@@ -22,6 +22,7 @@ import {
   WEBSITE_CRAWL_PAGE_LIMIT,
   WEBSITE_INGESTION_PROVIDER,
 } from "../../lib/websiteIngestion";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../../lib/onboardingStage";
 
 import { observedAction as action } from "../../telemetry/observedFunctions";
 type WebsiteIngestionJobIdArgs = {
@@ -69,7 +70,7 @@ type WebsiteIngestionListItem = Doc<"website_ingestion_jobs"> & {
 type SubmitWebsiteIngestionArgs = {
   businessId: Id<"businesses">;
   websiteUrl: string;
-  nextOnboardingStage?: "phone_number";
+  nextOnboardingStage?: "knowledge" | "phone_number";
 };
 
 type DeleteWebsiteIngestionJobArgs = {
@@ -84,6 +85,30 @@ type SubmitWebsiteIngestionResult = {
 };
 
 const ACTIVE_WEBSITE_INGESTION_STATUSES = ["queued", "crawling", "indexing"] as const;
+
+async function buildWebsiteBusinessPatch(
+  ctx: MutationCtx,
+  args: Pick<SubmitWebsiteIngestionArgs, "businessId" | "nextOnboardingStage" | "websiteUrl">,
+) {
+  const patch: { onboardingStage?: "knowledge" | "phone_number"; websiteUrl: string } = {
+    websiteUrl: args.websiteUrl,
+  };
+
+  if (!args.nextOnboardingStage) {
+    return patch;
+  }
+
+  const business = await ctx.db.get(args.businessId);
+  const currentStage = normalizeOnboardingStage(business?.onboardingStage);
+  if (
+    ONBOARDING_STAGE_INDEX[currentStage] <
+    ONBOARDING_STAGE_INDEX[args.nextOnboardingStage]
+  ) {
+    patch.onboardingStage = args.nextOnboardingStage;
+  }
+
+  return patch;
+}
 
 async function cancelWorkflowIfRunning(ctx: MutationCtx, workflowId: string): Promise<void> {
   try {
@@ -191,7 +216,9 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
   args: {
     businessId: v.id("businesses"),
     websiteUrl: v.string(),
-    nextOnboardingStage: v.optional(v.literal("phone_number")),
+    nextOnboardingStage: v.optional(
+      v.union(v.literal("knowledge"), v.literal("phone_number")),
+    ),
   },
   handler: async (
     ctx: MutationCtx,
@@ -226,10 +253,10 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
         });
       }
 
-      await ctx.db.patch(args.businessId, {
-        websiteUrl: args.websiteUrl,
-        ...(args.nextOnboardingStage ? { onboardingStage: args.nextOnboardingStage } : {}),
-      });
+      await ctx.db.patch(
+        args.businessId,
+        await buildWebsiteBusinessPatch(ctx, args),
+      );
 
       return {
         status: "submitted",
@@ -265,10 +292,10 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
         workflowId,
       });
 
-      await ctx.db.patch(args.businessId, {
-        websiteUrl: args.websiteUrl,
-        ...(args.nextOnboardingStage ? { onboardingStage: args.nextOnboardingStage } : {}),
-      });
+      await ctx.db.patch(
+        args.businessId,
+        await buildWebsiteBusinessPatch(ctx, args),
+      );
     } catch (error) {
       await ctx.db.delete(websiteIngestionJobId);
       throw error;

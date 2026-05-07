@@ -1,11 +1,13 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest, type TestConvex } from "convex-test";
+import { DateTime } from "luxon";
 import { describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import schema from "../schema";
 import { modules } from "../test.setup";
+import { buildDefaultOperatorNotificationEventPreferences } from "../lib/operatorNotificationPreferences";
 import { TEST_OPERATOR_NOTIFICATION_RATE_LIMIT_MESSAGE } from "../users/preferences";
 
 const convexModules = modules;
@@ -676,6 +678,178 @@ describe("operator notification preferences", () => {
       expect(enabledDeliveries).toHaveLength(1);
       expect(enabledDeliveries[0]?.channel).toBe("email");
       expect(disabledDeliveries).toHaveLength(0);
+    });
+  });
+
+  it("sends one daily digest per business email when duplicate users share an inbox", async () => {
+    const t = createConvexHarness();
+    const seeded = await seedMember(t, {
+      subject: "operator-digest-shared-0",
+      email: "hello@lobbystack.com",
+    });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("operator_notification_preferences", {
+        businessId: seeded.businessId,
+        userId: seeded.userId,
+        emailEnabled: true,
+        smsEnabled: false,
+        eventPreferences: buildDefaultOperatorNotificationEventPreferences(),
+        dailySummaryEnabled: true,
+        dailySummarySendTime: "00:00",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+      });
+
+      for (let index = 1; index < 7; index += 1) {
+        const userId: Id<"users"> = await ctx.db.insert("users", {
+          authSubject: `operator-digest-shared-${index}`,
+          email: "hello@lobbystack.com",
+        });
+        await ctx.db.insert("business_memberships", {
+          businessId: seeded.businessId,
+          userId,
+          role: "admin",
+          status: "active",
+        });
+        await ctx.db.insert("operator_notification_preferences", {
+          businessId: seeded.businessId,
+          userId,
+          emailEnabled: true,
+          smsEnabled: false,
+          eventPreferences: buildDefaultOperatorNotificationEventPreferences(),
+          dailySummaryEnabled: true,
+          dailySummarySendTime: "00:00",
+          updatedAt: "2026-05-06T00:00:00.000Z",
+        });
+      }
+    });
+
+    await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
+    await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
+
+    await t.run(async (ctx) => {
+      const deliveries = await ctx.db
+        .query("operator_notification_deliveries")
+        .withIndex("by_business_id_and_event_kind", (q) =>
+          q.eq("businessId", seeded.businessId).eq("eventKind", "dailyDigest"),
+        )
+        .collect();
+
+      expect(deliveries).toHaveLength(1);
+      expect(deliveries[0]?.channel).toBe("email");
+      expect(deliveries[0]?.eventKey).not.toContain("hello@lobbystack.com");
+    });
+  });
+
+  it("does not resend a daily digest already recorded with the legacy user-key", async () => {
+    const t = createConvexHarness();
+    const seeded = await seedMember(t, {
+      subject: "operator-digest-legacy-key",
+      email: "hello@lobbystack.com",
+    });
+    const digestForDate = DateTime.utc().minus({ days: 1 }).toISODate();
+    if (!digestForDate) {
+      throw new Error("Expected a valid digest date.");
+    }
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("operator_notification_deliveries", {
+        businessId: seeded.businessId,
+        userId: seeded.userId,
+        eventKind: "dailyDigest",
+        eventKey: `dailyDigest:${String(seeded.businessId)}:${String(seeded.userId)}:${digestForDate}`,
+        channel: "email",
+        status: "sent",
+        subject: "Daily summary for LobbyStack Test",
+        body: "Already sent",
+        sentAt: new Date().toISOString(),
+        providerStatus: "sent",
+        digestForDate,
+        createdAt: new Date().toISOString(),
+      });
+    });
+
+    await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
+
+    await t.run(async (ctx) => {
+      const deliveries = await ctx.db
+        .query("operator_notification_deliveries")
+        .withIndex("by_business_id_and_event_kind", (q) =>
+          q.eq("businessId", seeded.businessId).eq("eventKind", "dailyDigest"),
+        )
+        .collect();
+
+      expect(deliveries).toHaveLength(1);
+      expect(deliveries[0]?.eventKey).toContain(String(seeded.userId));
+    });
+  });
+
+  it("sends separate daily digests for same-name businesses sharing an inbox", async () => {
+    const t = createConvexHarness();
+    const seeded = await t.run(async (ctx) => {
+      const businessIds: Array<Id<"businesses">> = [];
+      for (let index = 0; index < 5; index += 1) {
+        businessIds.push(
+          await ctx.db.insert("businesses", {
+            slug: `lobbystack-same-name-${index}`,
+            name: index % 2 === 0 ? "LobbyStack" : "Lobbystack",
+            timezone: "UTC",
+            businessType: "general",
+            deploymentMode: "development",
+            status: "active",
+            onboardingStage: index === 0 ? "completed" : "website",
+          }),
+        );
+      }
+      const activeBusinessId = businessIds[2]!;
+      const userId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "operator-digest-same-name-businesses",
+        email: "hello@lobbystack.com",
+        activeBusinessId,
+      });
+
+      for (const businessId of businessIds) {
+        await ctx.db.insert("business_memberships", {
+          businessId,
+          userId,
+          role: "business_owner",
+          status: "active",
+        });
+        await ctx.db.insert("operator_notification_preferences", {
+          businessId,
+          userId,
+          emailEnabled: true,
+          smsEnabled: false,
+          eventPreferences: buildDefaultOperatorNotificationEventPreferences(),
+          dailySummaryEnabled: true,
+          dailySummarySendTime: "00:00",
+          updatedAt: "2026-05-07T00:00:00.000Z",
+        });
+      }
+
+      return { businessIds };
+    });
+
+    await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
+
+    await t.run(async (ctx) => {
+      const deliveries = (
+        await Promise.all(
+          seeded.businessIds.map((businessId) =>
+            ctx.db
+              .query("operator_notification_deliveries")
+              .withIndex("by_business_id_and_event_kind", (q) =>
+                q.eq("businessId", businessId).eq("eventKind", "dailyDigest"),
+              )
+              .collect(),
+          ),
+        )
+      ).flat();
+
+      expect(deliveries).toHaveLength(5);
+      expect(new Set(deliveries.map((delivery) => String(delivery.businessId)))).toEqual(
+        new Set(seeded.businessIds.map(String)),
+      );
     });
   });
 });

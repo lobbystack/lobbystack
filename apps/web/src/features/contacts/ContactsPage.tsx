@@ -27,7 +27,6 @@ import {
 } from "@/components/data-table/row-controls";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { ContactActionsMenu } from "@/features/contacts/ContactActionsMenu";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -313,7 +312,7 @@ export function ContactsPage({ businessId }: ContactsPageProps) {
   }, [rows.length]);
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   return (

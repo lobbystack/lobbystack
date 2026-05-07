@@ -6,6 +6,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { type ActionCtx } from "../_generated/server";
 import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
+import { normalizeOnboardingStage } from "../lib/onboardingStage";
 import { assertVerificationSendAllowed } from "./abuse";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
@@ -106,7 +107,8 @@ async function requireBusinessInPhoneVerificationStage(
   if (!business) {
     throw new Error("Business not found.");
   }
-  if (business.onboardingStage !== "verify_phone") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (stage !== "verify_phone" && stage !== "verify_phone_code") {
     throw new Error("Phone verification is no longer available for this business.");
   }
 }
@@ -183,6 +185,13 @@ export const startPhoneVerification = action({
         attemptCount: 0,
       });
 
+      // Advance to the OTP entry stage so a refresh resumes on the
+      // code-entry screen instead of the phone-input screen.
+      await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
+        businessId: args.businessId,
+        onboardingStage: "verify_phone_code",
+      });
+
       return {
         status: "pending" as const,
         phoneE164: lookup.phoneNumber,
@@ -233,15 +242,83 @@ export const reuseVerifiedPhoneForOnboarding = action({
       attemptCount: 1,
     });
 
-    await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
+    // Skip the OTP entry sub-stage because the user already has a verified
+    // phone on file from a previous onboarding session.
+    await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
       businessId: args.businessId,
-      onboardingStage: "website",
+      onboardingStage: "phone_number",
     });
 
     return {
       status: "approved" as const,
       phoneE164: user.phone,
     };
+  },
+});
+
+export const resendPhoneVerification = action({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args): Promise<StartPhoneVerificationResult> => {
+    await assertOnboardingAccess(ctx, args.businessId);
+    await requireBusinessInPhoneVerificationStage(ctx, args.businessId);
+    const user = await requireBusinessScopedAuthenticatedUser(ctx, args.businessId);
+    const attempt: Doc<"onboarding_phone_verifications"> | null = await ctx.runQuery(
+      internal.onboarding.phoneVerificationState.getLatestVerificationAttempt,
+      {
+        businessId: args.businessId,
+        userId: user._id,
+      },
+    );
+
+    if (!attempt) {
+      throw new Error("Start verification again before requesting a new code.");
+    }
+
+    const now = Date.now();
+    if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
+      throw new Error("Please wait a moment before requesting another code.");
+    }
+
+    await assertVerificationSendAllowed(ctx, {
+      businessId: args.businessId,
+      userId: user._id,
+      phoneE164: attempt.phoneE164,
+    });
+
+    try {
+      const client = getTwilioClient();
+      const verifyServiceSid = requireTwilioVerifyServiceSid();
+      const verification: TwilioVerificationResult = await client.verify.v2
+        .services(verifyServiceSid)
+        .verifications.create({
+          to: attempt.phoneE164,
+          channel: "sms",
+        });
+
+      await ctx.runMutation(internal.onboarding.phoneVerificationState.saveVerificationAttempt, {
+        businessId: args.businessId,
+        userId: user._id,
+        phoneE164: attempt.phoneE164,
+        countryCode: attempt.countryCode,
+        ...(attempt.lineType ? { lineType: attempt.lineType } : {}),
+        verificationSid: verification.sid,
+        status: verification.status,
+        startedAt: now,
+        updatedAt: now,
+        expiresAt: now + 10 * 60 * 1000,
+        attemptCount: 0,
+      });
+
+      return {
+        status: "pending" as const,
+        phoneE164: attempt.phoneE164,
+        countryCode: attempt.countryCode,
+      };
+    } catch (error) {
+      throw new Error(buildVerificationErrorMessage(error));
+    }
   },
 });
 

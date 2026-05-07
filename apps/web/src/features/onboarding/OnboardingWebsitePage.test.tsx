@@ -6,11 +6,15 @@ import { OnboardingWebsitePage } from "./OnboardingWebsitePage";
 
 const submitOnboardingWebsiteMock = vi.fn();
 const skipOnboardingWebsiteMock = vi.fn();
-const navigateMock = vi.fn();
 
 vi.mock("convex/react", () => ({
   useAction: () => submitOnboardingWebsiteMock,
   useMutation: () => skipOnboardingWebsiteMock,
+}));
+
+vi.mock("@/lib/observed-convex", () => ({
+  useObservedAction: () => submitOnboardingWebsiteMock,
+  useObservedMutation: () => skipOnboardingWebsiteMock,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -20,8 +24,10 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+const navigateMock = vi.fn();
 vi.mock("react-router-dom", () => ({
   useNavigate: () => navigateMock,
+  Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 describe("OnboardingWebsitePage", () => {
@@ -31,7 +37,7 @@ describe("OnboardingWebsitePage", () => {
     navigateMock.mockReset();
   });
 
-  it("submits the onboarding website and navigates to the phone number step", async () => {
+  it("submits the onboarding website URL", async () => {
     submitOnboardingWebsiteMock.mockResolvedValue({
       status: "submitted",
       websiteUrl: "https://example.com",
@@ -39,40 +45,44 @@ describe("OnboardingWebsitePage", () => {
     });
 
     render(
-      <OnboardingWebsitePage
-        businessId={"business-1" as never}
-        currentUserEmail="owner@example.com"
-        onSignOut={() => {}}
-      />,
+      <OnboardingWebsitePage businessId={"business-1" as never} onSignOut={() => {}} />,
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("website.fields.url"), "example.com");
-    await user.click(screen.getByRole("button", { name: "website.submit" }));
+    await user.type(screen.getByLabelText("website.label"), "example.com");
+    await user.click(screen.getByRole("button", { name: "website.continue" }));
 
     expect(submitOnboardingWebsiteMock).toHaveBeenCalledWith({
       businessId: "business-1",
       websiteUrl: "example.com",
     });
-    expect(navigateMock).toHaveBeenCalledWith("/onboarding/number");
+  });
+
+  it("prefills an existing website URL when revisiting the step", () => {
+    render(
+      <OnboardingWebsitePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+        websiteUrl="https://example.com"
+      />,
+    );
+
+    expect((screen.getByLabelText("website.label") as HTMLInputElement).value).toBe(
+      "https://example.com",
+    );
   });
 
   it("renders the submission error when onboarding website import fails", async () => {
     submitOnboardingWebsiteMock.mockRejectedValueOnce(new Error("Import failed."));
 
     render(
-      <OnboardingWebsitePage
-        businessId={"business-1" as never}
-        currentUserEmail="owner@example.com"
-        onSignOut={() => {}}
-      />,
+      <OnboardingWebsitePage businessId={"business-1" as never} onSignOut={() => {}} />,
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("website.fields.url"), "example.com");
-    await user.click(screen.getByRole("button", { name: "website.submit" }));
+    await user.type(screen.getByLabelText("website.label"), "example.com");
+    await user.click(screen.getByRole("button", { name: "website.continue" }));
 
-    expect(screen.getByText("Import failed.")).toBeTruthy();
-    expect(navigateMock).not.toHaveBeenCalled();
+    expect(screen.getByText("website.submitFailed")).toBeTruthy();
   });
 });

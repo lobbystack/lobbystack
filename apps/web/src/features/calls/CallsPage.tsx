@@ -18,7 +18,6 @@ import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DataTablePagination } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
-import { BusinessSetupCard } from "@/features/workspace/business-setup-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -370,7 +369,7 @@ export function CallsPage({ businessId }: CallsPageProps) {
   }, [filteredRows.length]);
 
   if (!businessId) {
-    return <BusinessSetupCard />;
+    return null;
   }
 
   return (

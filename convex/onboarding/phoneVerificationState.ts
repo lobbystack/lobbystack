@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import { internalQuery } from "../_generated/server";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 function sortAttemptsDescending(
@@ -124,9 +125,13 @@ export const markVerificationApproved = internalMutation({
       phoneVerificationTime: args.approvedAt,
     });
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "website",
-    });
+    const business = await ctx.db.get(args.businessId);
+    const stage = normalizeOnboardingStage(business?.onboardingStage);
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "phone_number",
+      });
+    }
   },
 });
 

@@ -1,86 +1,303 @@
 {
-  "verifyPhone": {
-    "title": "Verify you're real",
-    "description": "Enter your mobile number to receive an SMS verification code. We'll use the verified number to tailor the rest of onboarding to your local market.",
-    "verifyTitle": "Enter your verification code",
-    "verifyDescription": "We sent a code to {{phone}}. Once it's verified, you'll be able to import your website before we suggest a business number that matches your local market.",
-    "fields": {
-      "mobileNumber": "Mobile number",
-      "code": "Verification code"
-    },
-    "placeholders": {
-      "mobileNumber": "+1 581 748 4609",
-      "code": "123456"
-    },
-    "hint": "Use your personal mobile number in international format so we can tailor the rest of onboarding, including your first business number, to the same local market.",
-    "sendCode": "Get code",
-    "sending": "Sending code...",
-    "verifyCode": "Verify code",
-    "verifying": "Verifying...",
-    "resendCode": "Resend code",
-    "resending": "Resending code...",
-    "useDifferentNumber": "Use a different number",
-    "codeSent": "We sent a verification code to {{phone}}.",
-    "sendFailed": "We couldn't send a verification code right now. Please try again.",
-    "verifyFailed": "We couldn't verify that code right now. Please try again.",
-    "signedInAs": "Signed in as {{email}}"
+  "shell": {
+    "signOut": "Sign out",
+    "terms": "Terms",
+    "privacy": "Privacy"
   },
-  "number": {
-    "title": "Say hello to your new number",
-    "description": "We picked a local Twilio number using your verified mobile number as the primary signal. You can keep it or choose a different one.",
-    "detectedVerifiedLocation": "Suggested from your verified mobile in {{city}}, {{region}}",
-    "detectedVerifiedAreaCode": "Suggested from your verified {{areaCode}} mobile number",
-    "detectedVerifiedCountry": "Suggested from your verified mobile in {{country}}",
+  "errors": {
+    "tooManyBusinesses": "Too many setup attempts. Please wait a bit and try again."
+  },
+  "businessName": {
+    "title": "First, what is the name of your business?",
+    "description": "",
+    "label": "Business name",
+    "placeholder": "Bar George",
     "continue": "Continue",
-    "continuing": "Claiming number...",
-    "pickDifferent": "Pick a different number",
-    "loading": "Finding a matching local number...",
-    "noSuggestionTitle": "We couldn't confidently auto-pick a number yet.",
-    "noSuggestionDescription": "Search by city, area code, or toll-free to choose the best number for your business.",
-    "loadFailed": "We couldn't load a suggested number right now.",
-    "claimFailed": "We couldn't provision that number. Please try again.",
-    "unavailable": "That number was just taken. Pick another one from the refreshed list.",
-    "skipHint": "You can always change this later from your Twilio number settings.",
-    "pickerTitle": "Pick a different number",
-    "pickerDescription": "Search local or toll-free numbers before you claim one.",
-    "tabs": {
-      "city": "By city",
-      "areaCode": "By area code",
-      "tollFree": "Toll-free"
-    },
-    "fields": {
-      "city": "City",
-      "areaCode": "Area code"
-    },
-    "placeholders": {
-      "city": "Enter a city name",
-      "areaCode": "418"
-    },
-    "search": "Search",
-    "searching": "Searching...",
-    "areaCodeRequired": "Enter an area code before searching.",
-    "empty": "No numbers matched that search.",
-    "select": "Select",
-    "selected": "Selected",
-    "backToSuggested": "Back to suggested number",
-    "signedInAs": "Signed in as {{email}}"
+    "submitting": "Saving...",
+    "submitFailed": "We couldn't save that business name right now. Please try again."
   },
   "website": {
-    "title": "Import your website",
-    "description": "Add your public company website so we can start building your knowledge base in the background before you pick your business number.",
-    "fields": {
-      "url": "Website URL"
-    },
-    "placeholders": {
-      "url": "https://example.com"
-    },
-    "hint": "We'll crawl public pages like services, about, FAQ, hours, and contact details. You can skip this if you do not have a website yet.",
-    "submit": "Import website",
+    "title": "Now let's train LobbyStack on your website",
+    "description": "",
+    "label": "Website",
+    "placeholder": "yourcompany.com",
+    "continue": "Continue",
     "submitting": "Starting import...",
     "skip": "Skip for now",
     "skipping": "Skipping...",
     "submitFailed": "We couldn't start the website import right now. Please try again.",
+    "skipFailed": "We couldn't skip this step right now. Please try again."
+  },
+  "knowledge": {
+    "title": "Add training documents",
+    "description": "Help your AI understand your business.",
+    "tabs": {
+      "upload": "Upload files",
+      "paste": "Paste text"
+    },
+    "upload": {
+      "headline": "Drag & drop or click to upload",
+      "formats": "PDF, DOCX, TXT, MD supported",
+      "remove": "Remove",
+      "tooLarge": "Documents must be 10 MB or smaller.",
+      "unsupportedType": "Supported types are PDF, DOCX, TXT, and Markdown.",
+      "failed": "We couldn't upload that document. Please try again."
+    },
+    "paste": {
+      "placeholder": "Paste any business info: services, FAQ, hours, policies...",
+      "hint": "We'll add this to your AI's knowledge base immediately.",
+      "defaultTitle": "Onboarding notes"
+    },
+    "continue": "Continue",
+    "continuing": "Saving...",
+    "skip": "Skip for now",
+    "skipping": "Skipping...",
+    "continueFailed": "We couldn't continue right now. Please try again.",
+    "skipFailed": "We couldn't skip this step right now. Please try again."
+  },
+  "greeting": {
+    "title": "How should we greet your callers?",
+    "description": "This is what your AI says first. You can change it any time.",
+    "label": "Greeting",
+    "placeholder": "Thanks for calling. How can I help?",
+    "continue": "Continue",
+    "submitting": "Saving...",
+    "submitFailed": "We couldn't save that greeting right now. Please try again."
+  },
+  "verifyPhone": {
+    "title": "Let's verify you're real",
+    "description": "",
+    "fields": {
+      "mobileNumber": "Mobile number"
+    },
+    "placeholders": {
+      "mobileNumber": "+1 555 123 4567"
+    },
+    "hint": "Use a personal mobile number that can receive SMS.",
+    "sendCode": "Send code",
+    "sending": "Sending code...",
+    "invalidNumber": "Enter a valid mobile number, including the country code.",
+    "mobileRequired": "Use a mobile number that can receive SMS verification.",
+    "tooManyAttempts": "Too many verification attempts. Please wait a bit and try again.",
+    "waitBeforeRetry": "We just sent a code. Please wait a moment before trying again.",
+    "sendFailed": "We couldn't send a verification code right now. Please try again."
+  },
+  "verifyPhoneCode": {
+    "title": "Enter your code",
+    "description": "We sent a 6-digit code to {{phone}}.",
+    "didntGet": "Didn't get it?",
+    "resend": "Resend",
+    "resending": "Resending...",
+    "verifying": "Verifying...",
+    "changeNumber": "Use a different number",
+    "invalidCode": "That code is invalid or expired. Try requesting a new one.",
+    "startAgain": "Start phone verification again before entering a code.",
+    "failed": "We couldn't verify that code right now. Please try again.",
+    "resendFailed": "We couldn't resend a code right now. Please try again."
+  },
+  "number": {
+    "title": "Pick your AI's phone number",
+    "description": "Choose a local number callers can reach you on.",
+    "countryLabel": "Country",
+    "areaCodeLabel": "Area code",
+    "areaCodePlaceholder": "Area code",
+    "search": "Search",
+    "tableHeaders": {
+      "phoneNumber": "Phone number"
+    },
+    "select": "Select",
+    "loadMore": "Load more",
+    "empty": "No numbers matched that search.",
+    "skipLater": "I'll add a number later",
+    "skipping": "Skipping...",
+    "loadFailed": "We couldn't load numbers right now.",
+    "searchFailed": "We couldn't search numbers right now.",
+    "claimFailed": "We couldn't provision that number. Please try again.",
+    "claimRateLimited": "You've tried several numbers. Please wait a bit before trying again.",
+    "trialAccountPurchaseLimit": "This Twilio account can't buy that number yet. Trial accounts can only buy eligible trial numbers; release an existing number or upgrade the account, then try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
-    "signedInAs": "Signed in as {{email}}"
+    "tooManySearches": "Too many searches. Please wait a bit and try again.",
+    "verifyPhoneRequired": "Verify your mobile number before choosing a business number.",
+    "unavailable": "That number was just taken. Pick another one from the refreshed list.",
+    "selectedTitle": "Your AI's phone number",
+    "selectedNumberLabel": "Selected number",
+    "skippedTitle": "No phone number added",
+    "skippedDescription": "You can add one after onboarding.",
+    "continue": "Continue"
+  },
+  "plan": {
+    "title": "Choose your plan",
+    "description": "You can upgrade or change later.",
+    "popular": "Popular",
+    "enterpriseSubject": "Enterprise plan",
+    "compareTitle": "Compare plans in detail",
+    "compareDescription": "Every plan gets all features. Pro gives you higher usage and access to the AI SMS add-on.",
+    "featureHeader": "Feature",
+    "tiers": {
+      "free_cloud": {
+        "name": "Free",
+        "price": "$0",
+        "period": "",
+        "description": "Try LobbyStack with enough usage to see it work.",
+        "cta": "Start free",
+        "highlights": {
+          "voiceMinutes": "10 voice minutes included",
+          "phoneNumber": "Dedicated phone number",
+          "bookingContacts": "Unlimited booking and contacts",
+          "support": "Community support"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$15",
+        "period": "/mo",
+        "description": "Everything you need to run a production AI receptionist.",
+        "cta": "Upgrade",
+        "highlights": {
+          "voiceMinutes": "80 voice minutes + pay-as-you-go",
+          "aiSms": "Two-way AI SMS add-on",
+          "knowledgeStorage": "2 GB knowledge storage",
+          "support": "Priority email support"
+        }
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "Custom",
+        "period": "",
+        "description": "For higher volume, multiple numbers, or custom deployment needs.",
+        "cta": "Contact us",
+        "highlights": {
+          "phoneNumbers": "Multiple dedicated numbers",
+          "routing": "Multi-location routing",
+          "selfHosted": "Self-hosted deployment option",
+          "support": "Dedicated implementation support"
+        }
+      }
+    },
+    "comparison": {
+      "groups": {
+        "usage": "Usage & limits",
+        "core": "Core receptionist",
+        "booking": "Booking & follow-up",
+        "routing": "Routing & transfers",
+        "notifications": "Notifications & messaging",
+        "data": "Data & dashboard",
+        "deployment": "Deployment & support"
+      },
+      "features": {
+        "voiceMinutes": "Voice minutes",
+        "outboundCalls": "Outbound call attempts",
+        "alertSms": "Alert SMS segments",
+        "knowledgeStorage": "Knowledge storage",
+        "phoneNumbers": "Phone numbers",
+        "callAnswering": "24/7 call answering",
+        "callerDetails": "Caller details and message capture",
+        "knowledgeAnswers": "Knowledge base answers",
+        "workflows": "Plain-language workflows",
+        "spamFiltering": "Spam filtering",
+        "shortCalls": "Calls under 10s excluded from billing",
+        "concurrentCalls": "Concurrent call handling",
+        "multilingual": "Multilingual support",
+        "appointmentBooking": "Appointment booking",
+        "confirmationTexts": "Appointment confirmation texts",
+        "googleCalendar": "Google Calendar integration",
+        "outlook": "Outlook integration",
+        "missedCallFollowUp": "Missed-call follow-up",
+        "outboundCalling": "Outbound calls",
+        "urgentHandoff": "Urgent call handoff",
+        "callTransfers": "Call transfers",
+        "afterHours": "After-hours answering",
+        "multiLocation": "Multi-location routing",
+        "customEscalation": "Custom fallback and escalation rules",
+        "emailNotifications": "Email notifications",
+        "smsNotifications": "SMS notifications",
+        "aiSms": "Two-way AI SMS conversations",
+        "summaries": "Call summaries and transcripts",
+        "history": "Call history and recordings",
+        "callerProfiles": "Caller profiles and notes",
+        "contacts": "Contacts",
+        "websiteImport": "Website knowledge import",
+        "retentionGuidance": "Data retention guidance",
+        "hosting": "Hosting",
+        "usageBilling": "Usage-based billing",
+        "support": "Support"
+      },
+      "values": {
+        "common": {
+          "custom": "Custom",
+          "multiple": "Multiple",
+          "unlimited": "Unlimited"
+        },
+        "usage": {
+          "voiceMinutes": {
+            "freeIncluded": "10 included",
+            "proIncluded": "80 included",
+            "proThen": "then $0.18/min"
+          },
+          "outboundCalls": {
+            "freeIncluded": "2 included",
+            "proIncluded": "20 included",
+            "proThen": "then $0.02/attempt"
+          },
+          "alertSms": {
+            "freeIncluded": "10 included",
+            "proIncluded": "50 included",
+            "proThen": "then $0.02/segment"
+          },
+          "knowledgeStorage": {
+            "free": "100 MB",
+            "pro": "2 GB"
+          },
+          "phoneNumbers": {
+            "free": "1 dedicated",
+            "pro": "1 dedicated"
+          }
+        },
+        "notifications": {
+          "aiSms": {
+            "proIncluded": "$5/mo + $19 setup",
+            "proThen": "then $0.03/segment"
+          }
+        },
+        "deployment": {
+          "hosting": {
+            "managed": "Managed cloud",
+            "enterprise": "Cloud or self-hosted"
+          },
+          "support": {
+            "community": "Community",
+            "priority": "Priority email",
+            "dedicated": "Dedicated implementation"
+          }
+        }
+      }
+    },
+    "continue": "Continue",
+    "continuing": "Continuing...",
+    "continueFailed": "We couldn't continue right now. Please try again."
+  },
+  "attribution": {
+    "title": "How did you hear about LobbyStack?",
+    "description": "It helps us focus on what's working.",
+    "options": {
+      "ai_assistant": "ChatGPT, Claude, etc.",
+      "newsletter": "Newsletter or blog",
+      "podcast": "Podcast",
+      "news": "In the news",
+      "work": "From work",
+      "school": "Friends or school",
+      "x": "X",
+      "facebook": "Facebook",
+      "youtube": "YouTube",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn",
+      "google": "Google",
+      "tiktok": "TikTok",
+      "other": "Other"
+    },
+    "skip": "Skip",
+    "finish": "Finish",
+    "finishing": "Finishing...",
+    "submitFailed": "We couldn't save that right now. Please try again."
   }
 }

@@ -19,12 +19,20 @@ export const WEB_EVENT_NAMES = [
   "web.messages.thread_opened",
   "web.messages.reply_sent",
   "web.agent.settings_saved",
+  "web.onboarding.business_name_submitted",
   "web.onboarding.verify_phone_started",
   "web.onboarding.verify_phone_completed",
+  "web.onboarding.verify_phone_code_resent",
   "web.onboarding.website_submitted",
   "web.onboarding.website_skipped",
+  "web.onboarding.knowledge_uploaded",
+  "web.onboarding.knowledge_skipped",
+  "web.onboarding.greeting_submitted",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
+  "web.onboarding.plan_selected",
+  "web.onboarding.plan_checkout_started",
+  "web.onboarding.attribution_submitted",
   "web.knowledge.upload_started",
   "web.knowledge.upload_completed",
   "web.knowledge.preview_answer_requested",
@@ -261,7 +269,8 @@ export type TelemetryRequirementKey =
   | "latencyBucket"
   | "toolName"
   | "backlogBucket"
-  | "monthKey";
+  | "monthKey"
+  | "plan";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -293,14 +302,19 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "channel",
   ],
   "web.agent.settings_saved": ["businessId", "deploymentMode", "setting"],
+  "web.onboarding.business_name_submitted": ["deploymentMode"],
   "web.onboarding.verify_phone_started": [
     "businessId",
     "deploymentMode",
     "countryCode",
   ],
   "web.onboarding.verify_phone_completed": ["businessId", "deploymentMode"],
+  "web.onboarding.verify_phone_code_resent": ["businessId", "deploymentMode"],
   "web.onboarding.website_submitted": ["businessId", "deploymentMode"],
   "web.onboarding.website_skipped": ["businessId", "deploymentMode"],
+  "web.onboarding.knowledge_uploaded": ["businessId", "deploymentMode"],
+  "web.onboarding.knowledge_skipped": ["businessId", "deploymentMode"],
+  "web.onboarding.greeting_submitted": ["businessId", "deploymentMode"],
   "web.onboarding.number_claim_started": [
     "businessId",
     "deploymentMode",
@@ -315,6 +329,9 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "selectionMode",
     "numberKind",
   ],
+  "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
+  "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
+  "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.knowledge.upload_started": [
     "businessId",
     "deploymentMode",

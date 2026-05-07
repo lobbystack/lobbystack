@@ -18,28 +18,56 @@ import {
   onUncaughtReactError,
 } from "@/lib/react-error-reporting";
 
-const convexUrl = import.meta.env.CONVEX_URL;
-const convex = new ConvexReactClient(convexUrl);
+function MissingConvexConfig() {
+  return (
+    <main className="flex min-h-svh items-center justify-center bg-background px-6 text-foreground">
+      <div className="flex max-w-md flex-col gap-4 text-center">
+        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Missing configuration
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Convex URL is not configured</h1>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Set <code className="font-mono text-foreground">CONVEX_URL</code> in the root environment, or
+          run <code className="font-mono text-foreground">pnpm convex dev</code> to configure the local
+          deployment before starting the web app.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+const convexUrl = import.meta.env.CONVEX_URL ?? import.meta.env.VITE_CONVEX_URL;
 
 initializeAnalytics();
 
-ReactDOM.createRoot(document.getElementById("root")!, {
+const root = ReactDOM.createRoot(document.getElementById("root")!, {
   onCaughtError: onCaughtReactError,
   onRecoverableError: onRecoverableReactError,
   onUncaughtError: onUncaughtReactError,
-}).render(
-  <React.StrictMode>
-    <ConvexAuthProvider client={convex}>
-      <ThemeProvider>
-        <AppearanceProvider>
-          <LocaleProvider>
-            <AppErrorBoundary>
-              <App />
-              <Toaster richColors />
-            </AppErrorBoundary>
-          </LocaleProvider>
-        </AppearanceProvider>
-      </ThemeProvider>
-    </ConvexAuthProvider>
-  </React.StrictMode>,
-);
+});
+
+if (!convexUrl) {
+  root.render(
+    <React.StrictMode>
+      <MissingConvexConfig />
+    </React.StrictMode>,
+  );
+} else {
+  const convex = new ConvexReactClient(convexUrl);
+  root.render(
+    <React.StrictMode>
+      <ConvexAuthProvider client={convex}>
+        <ThemeProvider>
+          <AppearanceProvider>
+            <LocaleProvider>
+              <AppErrorBoundary>
+                <App />
+                <Toaster richColors />
+              </AppErrorBoundary>
+            </LocaleProvider>
+          </AppearanceProvider>
+        </ThemeProvider>
+      </ConvexAuthProvider>
+    </React.StrictMode>,
+  );
+}

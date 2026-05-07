@@ -1,12 +1,13 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Rows3 } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Turnstile, type TurnstileHandle } from "@/components/turnstile";
 import {
   Field,
   FieldDescription,
@@ -22,10 +23,14 @@ type SignupFormProps = {
   password: string;
   isSubmitting: boolean;
   errorMessage: string | null;
-  statusMessage: string | null;
+  turnstileResetKey?: number;
+  turnstileSiteKey?: string;
+  turnstileRef?: Ref<TurnstileHandle>;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onTurnstileError?: () => void;
+  onTurnstileTokenChange?: (token: string | null) => void;
 };
 
 export function SignupForm({
@@ -34,32 +39,29 @@ export function SignupForm({
   password,
   isSubmitting,
   errorMessage,
-  statusMessage,
+  turnstileResetKey = 0,
+  turnstileSiteKey,
+  turnstileRef,
   onEmailChange,
   onPasswordChange,
   onSubmit,
+  onTurnstileError,
+  onTurnstileTokenChange,
 }: SignupFormProps) {
   const { t } = useTranslation("auth");
+  const [shouldReserveTurnstileSpace, setShouldReserveTurnstileSpace] =
+    useState(false);
 
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
-      <form onSubmit={onSubmit}>
-        <FieldGroup>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Rows3 className="size-5" />
-            </div>
-            <div className="flex flex-col gap-2">
-              <h1 className="type-section-title">{t("signup.title")}</h1>
-              <FieldDescription>{t("signup.subtitle")}</FieldDescription>
-            </div>
-          </div>
-
+    <div className={cn("flex w-full flex-col gap-6", className)}>
+      <form className="relative" onSubmit={onSubmit}>
+        <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="signup-email">{t("signup.email")}</FieldLabel>
             <Input
               id="signup-email"
               autoComplete="email"
+              className="h-11"
               onChange={(event) => onEmailChange(event.target.value)}
               placeholder={t("signup.emailPlaceholder")}
               required
@@ -68,42 +70,65 @@ export function SignupForm({
             />
           </Field>
 
-          <div className="flex flex-col gap-6">
-            <Field>
-              <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
-              <Input
-                id="signup-password"
-                autoComplete="new-password"
-                onChange={(event) => onPasswordChange(event.target.value)}
-                placeholder={t("signup.passwordPlaceholder")}
-                required
-                type="password"
-                value={password}
+          <Field>
+            <FieldLabel htmlFor="signup-password">{t("signup.password")}</FieldLabel>
+            <Input
+              id="signup-password"
+              autoComplete="new-password"
+              className="h-11"
+              onChange={(event) => onPasswordChange(event.target.value)}
+              placeholder={t("signup.passwordPlaceholder")}
+              required
+              type="password"
+              value={password}
+            />
+            <FieldDescription>{t("signup.passwordHint")}</FieldDescription>
+          </Field>
+
+          {turnstileSiteKey ? (
+            <div
+              className={
+                shouldReserveTurnstileSpace
+                  ? "-mt-1"
+                  : "pointer-events-none absolute left-0 top-0 h-0 w-full overflow-hidden"
+              }
+            >
+              <Turnstile
+                key={turnstileResetKey}
+                ref={turnstileRef}
+                onReserveSpaceChange={setShouldReserveTurnstileSpace}
+                onTokenChange={onTurnstileTokenChange ?? (() => {})}
+                siteKey={turnstileSiteKey}
+                {...(onTurnstileError ? { onError: onTurnstileError } : {})}
               />
-            </Field>
+            </div>
+          ) : null}
 
-            {statusMessage || errorMessage ? (
-              <div className="flex flex-col gap-2">
-                {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-                {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
-              </div>
+          {errorMessage ? (
+            <div className="flex flex-col gap-2 -mt-1">
+              <FieldError>{errorMessage}</FieldError>
+            </div>
+          ) : null}
+
+          <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                <span className="sr-only">{t("signup.submitting")}</span>
+              </>
             ) : (
-              <div aria-hidden="true" className="h-8" />
+              t("signup.submit")
             )}
-
-            <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-              {isSubmitting ? t("signup.submitting") : t("signup.submit")}
-            </Button>
-          </div>
+          </Button>
         </FieldGroup>
       </form>
 
-      <FieldDescription className="text-center">
+      <p className="text-center text-sm text-muted-foreground">
         {t("signup.haveAccount")}{" "}
-        <Link className="font-medium text-foreground underline underline-offset-4" to="/login">
+        <Link className="font-medium text-foreground underline-offset-4 hover:underline" to="/login">
           {t("signup.signIn")}
         </Link>
-      </FieldDescription>
+      </p>
     </div>
   );
 }
