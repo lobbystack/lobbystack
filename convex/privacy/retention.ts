@@ -13,10 +13,17 @@ import {
   observedInternalMutation as internalMutation,
 } from "../telemetry/observedFunctions";
 
-export const SENSITIVE_CONTENT_RETENTION_DAYS = 90;
-export const SENSITIVE_CONTENT_RETENTION_MS =
-  SENSITIVE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-export const REDACTED_MESSAGE_BODY = "[Expired by 90-day retention policy]";
+export const RAW_SENSITIVE_CONTENT_RETENTION_DAYS = 90;
+export const CALL_RECORDING_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
+export const MESSAGE_CONTENT_RETENTION_DAYS = 365;
+export const SENSITIVE_CONTENT_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
+export const RAW_SENSITIVE_CONTENT_RETENTION_MS =
+  RAW_SENSITIVE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const CALL_RECORDING_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
+export const MESSAGE_CONTENT_RETENTION_MS =
+  MESSAGE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const SENSITIVE_CONTENT_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
+export const REDACTED_MESSAGE_BODY = "[Expired by 365-day retention policy]";
 
 const DEFAULT_RETENTION_CLEANUP_LIMIT = 100;
 const MAX_RETENTION_CLEANUP_LIMIT = 200;
@@ -44,6 +51,14 @@ type RetentionCleanupSummary = {
 
 export function getSensitiveContentExpiresAt(nowMs: number = Date.now()): string {
   return new Date(nowMs + SENSITIVE_CONTENT_RETENTION_MS).toISOString();
+}
+
+export function getCallRecordingExpiresAt(nowMs: number = Date.now()): string {
+  return new Date(nowMs + CALL_RECORDING_RETENTION_MS).toISOString();
+}
+
+export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
+  return new Date(nowMs + MESSAGE_CONTENT_RETENTION_MS).toISOString();
 }
 
 function normalizeLimit(limit: number): number {

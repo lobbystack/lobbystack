@@ -40,7 +40,11 @@ import {
   ensureVoiceSessionForCall,
   finalizeVoiceSessionForCall,
 } from "../conversations/sessions";
-import { getSensitiveContentExpiresAt } from "../privacy/retention";
+import {
+  getCallRecordingExpiresAt,
+  getMessageContentExpiresAt,
+  getSensitiveContentExpiresAt,
+} from "../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 type BusinessIdArgs = { businessId: Id<"businesses"> };
@@ -960,7 +964,7 @@ export const takeMessageForVoice = internalMutation({
         status: "captured",
         aiGenerated: false,
         contentRetentionStatus: "active",
-        contentExpiresAt: getSensitiveContentExpiresAt(),
+        contentExpiresAt: getMessageContentExpiresAt(),
       });
       await ensureSessionForStoredMessage(ctx, {
         businessId: args.businessId,
@@ -1018,7 +1022,7 @@ export const attachCallRecording = internalMutation({
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
       recordingRetentionStatus: "active",
-      recordingExpiresAt: getSensitiveContentExpiresAt(),
+      recordingExpiresAt: getCallRecordingExpiresAt(),
     });
 
     await ctx.db.insert("call_recording_download_tokens", {

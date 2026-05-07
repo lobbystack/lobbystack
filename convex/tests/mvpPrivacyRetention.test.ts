@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { getBillingKey } from "../lib/billing";
-import { REDACTED_MESSAGE_BODY } from "../privacy/retention";
+import {
+  CALL_RECORDING_RETENTION_DAYS,
+  MESSAGE_CONTENT_RETENTION_DAYS,
+  REDACTED_MESSAGE_BODY,
+  getCallRecordingExpiresAt,
+  getMessageContentExpiresAt,
+  getSensitiveContentExpiresAt,
+} from "../privacy/retention";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -101,6 +108,20 @@ async function storeTestBlob(
 }
 
 describe("MVP privacy retention", () => {
+  it("uses 365 days for message content and 90 days for raw sensitive artifacts", () => {
+    const nowMs = Date.parse(NOW_ISO);
+
+    expect(Date.parse(getMessageContentExpiresAt(nowMs)) - nowMs).toBe(
+      MESSAGE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+    );
+    expect(Date.parse(getCallRecordingExpiresAt(nowMs)) - nowMs).toBe(
+      CALL_RECORDING_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+    );
+    expect(Date.parse(getSensitiveContentExpiresAt(nowMs)) - nowMs).toBe(
+      CALL_RECORDING_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+    );
+  });
+
   it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {
