@@ -118,9 +118,17 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const executeWhenReadyRef = useRef(false);
+  const onTokenChangeRef = useRef(onTokenChange);
+  const onErrorRef = useRef(onError);
+  const [isActive, setIsActive] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
+  onTokenChangeRef.current = onTokenChange;
+  onErrorRef.current = onError;
+
   function executeChallenge(): boolean {
+    setIsActive(false);
+
     if (!containerRef.current || !window.turnstile) {
       executeWhenReadyRef.current = true;
       return true;
@@ -137,8 +145,9 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   useEffect(() => {
     let isMounted = true;
 
+    setIsActive(true);
     setErrorCode(null);
-    onTokenChange(null);
+    onTokenChangeRef.current(null);
 
     loadTurnstileScript()
       .then(() => {
@@ -157,14 +166,24 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
             execution: "execute",
             size: "flexible",
             theme: "light",
-            callback: (token) => onTokenChange(token),
-            "expired-callback": () => onTokenChange(null),
-            "timeout-callback": () => onTokenChange(null),
+            callback: (token) => {
+              setIsActive(false);
+              onTokenChangeRef.current(token);
+            },
+            "expired-callback": () => {
+              setIsActive(false);
+              onTokenChangeRef.current(null);
+            },
+            "timeout-callback": () => {
+              setIsActive(true);
+              onTokenChangeRef.current(null);
+            },
             "error-callback": (errorCode) => {
               console.warn("Turnstile challenge failed to render.", { errorCode });
-              onTokenChange(null);
+              onTokenChangeRef.current(null);
+              setIsActive(false);
               setErrorCode(errorCode ?? "unknown");
-              onError?.(errorCode);
+              onErrorRef.current?.(errorCode);
               return true;
             },
           });
@@ -176,9 +195,10 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       })
       .catch((error: unknown) => {
         if (isMounted) {
-          onTokenChange(null);
+          onTokenChangeRef.current(null);
+          setIsActive(false);
           setErrorCode(error instanceof Error ? error.message : "script-load-failed");
-          onError?.();
+          onErrorRef.current?.();
         }
       });
 
@@ -189,10 +209,18 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       }
       widgetIdRef.current = null;
     };
-  }, [onError, onTokenChange, siteKey]);
+  }, [siteKey]);
+
+  const shouldReserveSpace = isActive || Boolean(errorCode);
 
   return (
-    <div className="flex min-h-[65px] w-full flex-col items-start justify-center gap-2">
+    <div
+      className={
+        shouldReserveSpace
+          ? "flex min-h-[65px] w-full flex-col items-start justify-center gap-2"
+          : "h-0 w-full overflow-hidden"
+      }
+    >
       <div className="h-[65px] w-full min-w-[300px]" ref={containerRef} />
       {errorCode && import.meta.env.DEV ? (
         <p className="text-sm text-destructive">Turnstile error: {errorCode}</p>
