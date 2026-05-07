@@ -67,6 +67,16 @@ function isMissingOrInvalidComponentReferenceError(error: unknown): boolean {
   );
 }
 
+function isMissingOrInvalidStorageError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("not found") ||
+    message.includes("non-existent doc") ||
+    message.includes("Invalid storage ID") ||
+    message.includes("does not exist")
+  );
+}
+
 function addStorageId(
   storageIds: Set<Id<"_storage">>,
   storageId: Id<"_storage"> | undefined,
@@ -82,8 +92,14 @@ async function deleteStorageIds(
 ): Promise<number> {
   let deleted = 0;
   for (const storageId of storageIds) {
-    await ctx.storage.delete(storageId);
-    deleted += 1;
+    try {
+      await ctx.storage.delete(storageId);
+      deleted += 1;
+    } catch (error) {
+      if (!isMissingOrInvalidStorageError(error)) {
+        throw error;
+      }
+    }
   }
   return deleted;
 }
@@ -229,6 +245,27 @@ async function scrubVoiceMessageMirrors(
     return;
   }
 
+  async function scrubOperatorNotificationDeliveries(
+    inboxItemId: Id<"inbox_items">,
+  ): Promise<void> {
+    const deliveries = await ctx.db
+      .query("operator_notification_deliveries")
+      .withIndex("by_business_id_and_event_kind_and_event_key", (q) =>
+        q
+          .eq("businessId", message.businessId)
+          .eq("eventKind", "voiceMessage")
+          .eq("eventKey", `voiceMessage:${String(inboxItemId)}`),
+      )
+      .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+    for (const delivery of deliveries) {
+      await ctx.db.patch(delivery._id, {
+        subject: "Expired voice message",
+        body: REDACTED_MESSAGE_BODY,
+      });
+    }
+  }
+
   const inboxItems = await ctx.db
     .query("inbox_items")
     .withIndex("by_kind_and_related_id", (q) =>
@@ -236,6 +273,7 @@ async function scrubVoiceMessageMirrors(
     )
     .take(MAX_RETENTION_CLEANUP_LIMIT);
   for (const item of inboxItems) {
+    await scrubOperatorNotificationDeliveries(item._id);
     await ctx.db.patch(item._id, {
       title: "Expired voice message",
       body: REDACTED_MESSAGE_BODY,

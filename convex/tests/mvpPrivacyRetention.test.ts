@@ -251,6 +251,92 @@ describe("MVP privacy retention", () => {
     });
   });
 
+  it("scrubs expired attachment messages when consumed upload blobs are already gone", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-consumed-upload-owner",
+      slug: "mvp-retention-consumed-upload",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const sentStorageId = await storeTestBlob(ctx, "sent attachment clone");
+      const sentPreviewStorageId = await storeTestBlob(ctx, "sent preview clone", "image/png");
+      const consumedStorageId = await storeTestBlob(ctx, "already deleted upload");
+      const consumedPreviewStorageId = await storeTestBlob(
+        ctx,
+        "already deleted preview",
+        "image/png",
+      );
+      await ctx.storage.delete(consumedStorageId);
+      await ctx.storage.delete(consumedPreviewStorageId);
+
+      const messageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "old outbound attachment body",
+        status: "sent",
+        aiGenerated: false,
+        media: [
+          {
+            storageId: sentStorageId,
+            fileName: "sent.txt",
+            contentType: "text/plain",
+            byteLength: 21,
+            previewStorageId: sentPreviewStorageId,
+            previewFileName: "sent.png",
+            previewContentType: "image/png",
+            previewByteLength: 18,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      const uploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: consumedStorageId,
+        fileName: "original.txt",
+        contentType: "text/plain",
+        byteLength: 22,
+        previewStorageId: consumedPreviewStorageId,
+        previewFileName: "original.png",
+        previewContentType: "image/png",
+        previewByteLength: 21,
+        deliveryMode: "link",
+        status: "consumed",
+        sentMessageId: messageId,
+      });
+
+      return {
+        messageId,
+        sentPreviewStorageId,
+        sentStorageId,
+        uploadId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.messages.scrubbed).toBe(1);
+    await t.run(async (ctx: TestRunCtx) => {
+      const message = await ctx.db.get(seeded.messageId);
+      expect(message?.body).toBe(REDACTED_MESSAGE_BODY);
+      expect(message?.contentRetentionStatus).toBe("expired");
+      expect(message?.media).toBeUndefined();
+      expect(await ctx.db.get(seeded.uploadId)).toBeNull();
+      expect(await ctx.storage.get(seeded.sentStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.sentPreviewStorageId)).toBeNull();
+    });
+  });
+
   it("deletes expired transcripts, preview sessions, recordings, and standalone download tokens", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {
@@ -467,6 +553,18 @@ describe("MVP privacy retention", () => {
         relatedId: String(callId),
         status: "open",
       });
+      const deliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "voiceMessage",
+        eventKey: `voiceMessage:${String(inboxItemId)}`,
+        channel: "sms",
+        status: "sent",
+        subject: "Voice message from Taylor Customer",
+        body: "Callback: +14165551212\n\nold voice message body",
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
+      });
       await ctx.db.patch(conversationId, {
         currentIntent: "message_taking",
         summary: "Callback: +14165551212\n\nold voice message body",
@@ -486,6 +584,7 @@ describe("MVP privacy retention", () => {
 
       return {
         conversationId,
+        deliveryId,
         inboxItemId,
         messageId,
         sessionId,
@@ -501,6 +600,7 @@ describe("MVP privacy retention", () => {
     await t.run(async (ctx: TestRunCtx) => {
       const message = await ctx.db.get(seeded.messageId);
       const conversation = await ctx.db.get(seeded.conversationId);
+      const delivery = await ctx.db.get(seeded.deliveryId);
       const session = await ctx.db.get(seeded.sessionId);
       const inboxItem = await ctx.db.get(seeded.inboxItemId);
 
@@ -509,6 +609,8 @@ describe("MVP privacy retention", () => {
       expect(session?.summary?.summary).toBe(REDACTED_MESSAGE_BODY);
       expect(inboxItem?.title).toBe("Expired voice message");
       expect(inboxItem?.body).toBe(REDACTED_MESSAGE_BODY);
+      expect(delivery?.subject).toBe("Expired voice message");
+      expect(delivery?.body).toBe(REDACTED_MESSAGE_BODY);
     });
   });
 
