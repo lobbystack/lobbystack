@@ -44,6 +44,16 @@ describe("getCallRecordingAvailability", () => {
     ).toBe("pending");
   });
 
+  it("marks expired retained recordings as unavailable", () => {
+    expect(
+      getCallRecordingAvailability({
+        recordingUrl: null,
+        recordingRetentionStatus: "expired",
+        disposition: "call_completed",
+      }),
+    ).toBe("unavailable");
+  });
+
   it("marks calls with a recording URL as ready", () => {
     expect(
       getCallRecordingAvailability({

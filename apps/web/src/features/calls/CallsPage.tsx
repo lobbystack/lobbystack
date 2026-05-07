@@ -111,10 +111,15 @@ export function formatCallDispositionSummary(
 export function getCallRecordingAvailability(call: {
   recordingUrl: string | null;
   recordingStorageId?: unknown;
+  recordingRetentionStatus?: string;
   disposition?: string;
 }): "ready" | "pending" | "unavailable" {
   if (call.recordingUrl) {
     return "ready";
+  }
+
+  if (call.recordingRetentionStatus === "expired") {
+    return "unavailable";
   }
 
   if (call.recordingStorageId) {
