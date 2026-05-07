@@ -126,16 +126,90 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   onTokenChangeRef.current = onTokenChange;
   onErrorRef.current = onError;
 
+  function handleLoadError(error?: unknown): void {
+    onTokenChangeRef.current(null);
+    setIsActive(false);
+    setErrorCode(error instanceof Error ? error.message : "script-load-failed");
+    onErrorRef.current?.();
+  }
+
+  function renderWidget(): boolean {
+    if (widgetIdRef.current) {
+      return true;
+    }
+
+    if (!containerRef.current || !window.turnstile) {
+      return false;
+    }
+
+    widgetIdRef.current = window.turnstile.render(containerRef.current, {
+      sitekey: siteKey,
+      appearance: "interaction-only",
+      execution: "execute",
+      size: "flexible",
+      theme: "light",
+      callback: (token) => {
+        setIsActive(false);
+        onTokenChangeRef.current(token);
+      },
+      "expired-callback": () => {
+        setIsActive(false);
+        onTokenChangeRef.current(null);
+      },
+      "timeout-callback": () => {
+        setIsActive(true);
+        onTokenChangeRef.current(null);
+      },
+      "error-callback": (errorCode) => {
+        console.warn("Turnstile challenge failed to render.", { errorCode });
+        onTokenChangeRef.current(null);
+        setIsActive(false);
+        setErrorCode(errorCode ?? "unknown");
+        onErrorRef.current?.(errorCode);
+        return true;
+      },
+    });
+
+    return true;
+  }
+
   function executeChallenge(): boolean {
     setIsActive(true);
     setErrorCode(null);
 
-    if (!containerRef.current || !window.turnstile) {
+    if (!renderWidget()) {
       executeWhenReadyRef.current = true;
+      void loadTurnstileScript()
+        .then(() => {
+          if (!window.turnstile) {
+            handleLoadError();
+            return;
+          }
+
+          window.turnstile.ready(() => {
+            if (!renderWidget()) {
+              handleLoadError();
+              return;
+            }
+
+            if (executeWhenReadyRef.current) {
+              executeWhenReadyRef.current = false;
+              executeChallenge();
+            }
+          });
+        })
+        .catch(handleLoadError);
       return true;
     }
 
-    window.turnstile.execute(containerRef.current);
+    const container = containerRef.current;
+    const turnstile = window.turnstile;
+    if (!container || !turnstile) {
+      handleLoadError();
+      return false;
+    }
+
+    turnstile.execute(container);
     return true;
   }
 
@@ -161,33 +235,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
             return;
           }
 
-          widgetIdRef.current = window.turnstile.render(containerRef.current, {
-            sitekey: siteKey,
-            appearance: "interaction-only",
-            execution: "execute",
-            size: "flexible",
-            theme: "light",
-            callback: (token) => {
-              setIsActive(false);
-              onTokenChangeRef.current(token);
-            },
-            "expired-callback": () => {
-              setIsActive(false);
-              onTokenChangeRef.current(null);
-            },
-            "timeout-callback": () => {
-              setIsActive(true);
-              onTokenChangeRef.current(null);
-            },
-            "error-callback": (errorCode) => {
-              console.warn("Turnstile challenge failed to render.", { errorCode });
-              onTokenChangeRef.current(null);
-              setIsActive(false);
-              setErrorCode(errorCode ?? "unknown");
-              onErrorRef.current?.(errorCode);
-              return true;
-            },
-          });
+          renderWidget();
           if (executeWhenReadyRef.current) {
             executeWhenReadyRef.current = false;
             executeChallenge();
@@ -196,10 +244,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       })
       .catch((error: unknown) => {
         if (isMounted) {
-          onTokenChangeRef.current(null);
-          setIsActive(false);
-          setErrorCode(error instanceof Error ? error.message : "script-load-failed");
-          onErrorRef.current?.();
+          handleLoadError(error);
         }
       });
 

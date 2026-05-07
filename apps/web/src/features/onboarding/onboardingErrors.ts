@@ -69,5 +69,9 @@ export function getSafeOnboardingErrorMessage(
     return t("number.claimRateLimited");
   }
 
+  if (includesAny(message, ["Trial accounts can only buy eligible trial numbers"])) {
+    return t("number.trialAccountPurchaseLimit");
+  }
+
   return t(fallbackKey);
 }

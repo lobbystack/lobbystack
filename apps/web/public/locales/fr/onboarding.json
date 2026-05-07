@@ -37,7 +37,7 @@
     },
     "upload": {
       "headline": "Glissez-déposez ou cliquez pour téléverser",
-      "formats": "PDF, DOCX, CSV, TXT pris en charge",
+      "formats": "PDF, DOCX, TXT, MD pris en charge",
       "remove": "Retirer",
       "tooLarge": "Les documents doivent faire 10 Mo ou moins.",
       "unsupportedType": "Types pris en charge : PDF, DOCX, TXT, Markdown.",
@@ -114,6 +114,7 @@
     "searchFailed": "Impossible de rechercher maintenant.",
     "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
     "claimRateLimited": "Vous avez essayé plusieurs numéros. Attendez un peu avant de réessayer.",
+    "trialAccountPurchaseLimit": "Ce compte Twilio ne peut pas encore acheter ce numéro. Les comptes d'essai ne peuvent acheter que des numéros admissibles; libérez un numéro existant ou mettez le compte à niveau, puis réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
     "tooManySearches": "Trop de recherches. Attendez un peu, puis réessayez.",
     "verifyPhoneRequired": "Vérifiez votre numéro de mobile avant de choisir un numéro d'entreprise.",
