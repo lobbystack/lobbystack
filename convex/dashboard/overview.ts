@@ -421,6 +421,10 @@ export const getHomeSummary = query({
     );
 
     const allMessages = messagesByConversation.flatMap((entry) => entry.messages);
+    const messagesByConversationId = new Map<Id<"conversations">, Array<Doc<"messages">>>();
+    for (const entry of messagesByConversation) {
+      messagesByConversationId.set(entry.conversationId, entry.messages);
+    }
     const callsThisMonth = buildKpiWindow(
       calls.map((call) => Date.parse(call.startedAt)),
       currentMonthStart,
@@ -538,15 +542,13 @@ export const getHomeSummary = query({
 
     const actionRequiredFromHandoffs = await Promise.all(
       handoffConversations.map(async (conversation) => {
-        const [contact, conversationMessages] = await Promise.all([
-          conversation.contactId ? ctx.db.get(conversation.contactId) : Promise.resolve(null),
-          ctx.db
-            .query("messages")
-            .withIndex("by_conversation_id", (q) => q.eq("conversationId", conversation._id))
-            .order("desc")
-            .collect(),
-        ]);
-        const latestMessage = conversationMessages[0] ?? null;
+        const contact = conversation.contactId ? await ctx.db.get(conversation.contactId) : null;
+        const conversationMessages = messagesByConversationId.get(conversation._id) ?? [];
+        const latestMessage = conversationMessages.reduce<Doc<"messages"> | null>(
+          (latest, message) =>
+            latest === null || message._creationTime > latest._creationTime ? message : latest,
+          null,
+        );
         const hasExpiredMessages = conversationMessages.some((message) =>
           isMessageContentExpired(message),
         );

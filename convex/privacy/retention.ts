@@ -30,7 +30,6 @@ export const REDACTED_MESSAGE_BODY = "[Expired by 365-day retention policy]";
 
 const DEFAULT_RETENTION_CLEANUP_LIMIT = 100;
 const MAX_RETENTION_CLEANUP_LIMIT = 200;
-const MAX_RETENTION_SCHEDULE_DELAY_MS = 2_000_000_000;
 
 type CleanupArgs = {
   nowIso: string;
@@ -140,8 +139,7 @@ function parseScheduleTime(expiresAt: string): number | null {
   if (!Number.isFinite(parsed)) {
     return null;
   }
-  const now = Date.now();
-  return Math.min(Math.max(parsed, now), now + MAX_RETENTION_SCHEDULE_DELAY_MS);
+  return Math.max(parsed, Date.now());
 }
 
 function isRetentionDue(expiresAt: string): boolean {
@@ -334,26 +332,22 @@ async function deleteSentAttachmentUploads(
   ctx: MutationCtx,
   messageId: Id<"messages">,
   storageIds: Set<Id<"_storage">>,
-): Promise<number> {
-  let deleted = 0;
+): Promise<{ deleted: number; hasMore: boolean }> {
+  const uploads = await ctx.db
+    .query("message_attachment_uploads")
+    .withIndex("by_sent_message_id", (q) => q.eq("sentMessageId", messageId))
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
 
-  while (true) {
-    const uploads = await ctx.db
-      .query("message_attachment_uploads")
-      .withIndex("by_sent_message_id", (q) => q.eq("sentMessageId", messageId))
-      .take(MAX_RETENTION_CLEANUP_LIMIT);
-
-    if (uploads.length === 0) {
-      return deleted;
-    }
-
-    for (const upload of uploads) {
-      addStorageId(storageIds, upload.storageId);
-      addStorageId(storageIds, upload.previewStorageId);
-      await ctx.db.delete(upload._id);
-      deleted += 1;
-    }
+  for (const upload of uploads) {
+    addStorageId(storageIds, upload.storageId);
+    addStorageId(storageIds, upload.previewStorageId);
+    await ctx.db.delete(upload._id);
   }
+
+  return {
+    deleted: uploads.length,
+    hasMore: uploads.length === MAX_RETENTION_CLEANUP_LIMIT,
+  };
 }
 
 function collectMessageStorageIds(
@@ -372,7 +366,7 @@ async function scrubMessageContent(
 ): Promise<void> {
   const storageIds = new Set<Id<"_storage">>();
   collectMessageStorageIds(message, storageIds);
-  await deleteSentAttachmentUploads(ctx, message._id, storageIds);
+  const sentAttachmentUploads = await deleteSentAttachmentUploads(ctx, message._id, storageIds);
   await deleteMessageAttachmentTokens(ctx, message._id);
   await deleteStorageIds(ctx, storageIds);
   await scrubPausedSmsNotificationMirrors(ctx, message);
@@ -386,6 +380,14 @@ async function scrubMessageContent(
     media: undefined,
     contentRetentionStatus: "expired",
   });
+
+  if (sentAttachmentUploads.hasMore) {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.privacy.retention.deleteSentAttachmentUploadsForExpiredMessage,
+      { messageId: message._id },
+    );
+  }
 }
 
 async function deleteConversationAgentThread(
@@ -639,6 +641,40 @@ async function scrubCallRecordingContent(
   });
 }
 
+export const deleteSentAttachmentUploadsForExpiredMessage = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || !isMessageContentExpired(message)) {
+      return {
+        scanned: message ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    const storageIds = new Set<Id<"_storage">>();
+    const sentAttachmentUploads = await deleteSentAttachmentUploads(ctx, message._id, storageIds);
+    await deleteStorageIds(ctx, storageIds);
+
+    if (sentAttachmentUploads.hasMore) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.privacy.retention.deleteSentAttachmentUploadsForExpiredMessage,
+        { messageId: message._id },
+      );
+    }
+
+    return {
+      scanned: sentAttachmentUploads.deleted,
+      deleted: sentAttachmentUploads.deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
 export const scrubMessageContentAtExpiry = internalMutation({
   args: {
     messageId: v.id("messages"),
@@ -648,7 +684,7 @@ export const scrubMessageContentAtExpiry = internalMutation({
     const message = await ctx.db.get(args.messageId);
     if (
       !message ||
-      message.contentRetentionStatus !== "active" ||
+      message.contentRetentionStatus === "expired" ||
       message.contentExpiresAt !== args.expiresAt
     ) {
       return {
@@ -716,7 +752,7 @@ export const scrubCallRecordingAtExpiry = internalMutation({
     const call = await ctx.db.get(args.callId);
     if (
       !call ||
-      call.recordingRetentionStatus !== "active" ||
+      call.recordingRetentionStatus === "expired" ||
       call.recordingExpiresAt !== args.expiresAt
     ) {
       return {
@@ -786,7 +822,7 @@ export const scrubInboxItemContentAtExpiry = internalMutation({
     const item = await ctx.db.get(args.inboxItemId);
     if (
       !item ||
-      item.contentRetentionStatus !== "active" ||
+      item.contentRetentionStatus === "expired" ||
       item.contentExpiresAt !== args.expiresAt
     ) {
       return {
@@ -822,7 +858,7 @@ export const scrubOperatorNotificationDeliveryContentAtExpiry = internalMutation
     const delivery = await ctx.db.get(args.deliveryId);
     if (
       !delivery ||
-      delivery.contentRetentionStatus !== "active" ||
+      delivery.contentRetentionStatus === "expired" ||
       delivery.contentExpiresAt !== args.expiresAt
     ) {
       return {
@@ -860,15 +896,23 @@ export const scrubExpiredMessages = internalMutation({
   },
   handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
     const limit = normalizeLimit(args.limit);
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
-        q
-          .eq("contentRetentionStatus", "active")
-          .gt("contentExpiresAt", "")
-          .lte("contentExpiresAt", args.nowIso),
-      )
-      .take(limit);
+    const messages: Array<Doc<"messages">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - messages.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("messages")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      messages.push(...batch);
+    }
 
     let scrubbed = 0;
     for (const message of messages) {
@@ -923,15 +967,23 @@ export const scrubExpiredCallRecordings = internalMutation({
   },
   handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
     const limit = normalizeLimit(args.limit);
-    const calls = await ctx.db
-      .query("calls")
-      .withIndex("by_recording_retention_status_and_recording_expires_at", (q) =>
-        q
-          .eq("recordingRetentionStatus", "active")
-          .gt("recordingExpiresAt", "")
-          .lte("recordingExpiresAt", args.nowIso),
-      )
-      .take(limit);
+    const calls: Array<Doc<"calls">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - calls.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("calls")
+        .withIndex("by_recording_retention_status_and_recording_expires_at", (q) =>
+          q
+            .eq("recordingRetentionStatus", retentionStatus)
+            .gt("recordingExpiresAt", "")
+            .lte("recordingExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      calls.push(...batch);
+    }
 
     let scrubbed = 0;
     for (const call of calls) {
@@ -988,15 +1040,23 @@ export const scrubExpiredInboxItems = internalMutation({
   },
   handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
     const limit = normalizeLimit(args.limit);
-    const items = await ctx.db
-      .query("inbox_items")
-      .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
-        q
-          .eq("contentRetentionStatus", "active")
-          .gt("contentExpiresAt", "")
-          .lte("contentExpiresAt", args.nowIso),
-      )
-      .take(limit);
+    const items: Array<Doc<"inbox_items">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - items.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("inbox_items")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      items.push(...batch);
+    }
 
     let scrubbed = 0;
     for (const item of items) {
@@ -1022,15 +1082,23 @@ export const scrubExpiredOperatorNotificationDeliveries = internalMutation({
   },
   handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
     const limit = normalizeLimit(args.limit);
-    const deliveries = await ctx.db
-      .query("operator_notification_deliveries")
-      .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
-        q
-          .eq("contentRetentionStatus", "active")
-          .gt("contentExpiresAt", "")
-          .lte("contentExpiresAt", args.nowIso),
-      )
-      .take(limit);
+    const deliveries: Array<Doc<"operator_notification_deliveries">> = [];
+    for (const retentionStatus of ["active", undefined] as const) {
+      const remaining = limit - deliveries.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("operator_notification_deliveries")
+        .withIndex("by_content_retention_status_and_content_expires_at", (q) =>
+          q
+            .eq("contentRetentionStatus", retentionStatus)
+            .gt("contentExpiresAt", "")
+            .lte("contentExpiresAt", args.nowIso),
+        )
+        .take(remaining);
+      deliveries.push(...batch);
+    }
 
     let scrubbed = 0;
     for (const delivery of deliveries) {

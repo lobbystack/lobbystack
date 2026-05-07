@@ -381,7 +381,13 @@ async function hydrateDashboardCallRow(
   const recordingAvailable = call.recordingStorageId !== undefined && !recordingExpired;
   const callForDashboard = recordingExpired
     ? (() => {
-        const { recordingStorageId: _recordingStorageId, ...rest } = call;
+        const {
+          recordingStorageId: _recordingStorageId,
+          recordingContentType: _recordingContentType,
+          recordingByteLength: _recordingByteLength,
+          recordingDurationMs: _recordingDurationMs,
+          ...rest
+        } = call;
         return {
           ...rest,
           recordingRetentionStatus: "expired" as const,

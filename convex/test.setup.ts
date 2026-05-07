@@ -3,4 +3,5 @@ export const modules = import.meta.glob([
   "./**/*.js",
   "!./**/*.test.ts",
   "!./**/*.test.js",
+  "!./vitest.setup.ts",
 ]);

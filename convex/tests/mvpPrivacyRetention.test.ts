@@ -1,5 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -24,6 +24,16 @@ const FRESH_RETENTION_MARKER = "__OPE_127_FRESH_MARKER__";
 
 type ConvexHarness = TestConvex<typeof schema>;
 type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(NOW_ISO));
+});
+
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
 
 type WorkspaceSeed = {
   authed: ReturnType<ConvexHarness["withIdentity"]>;
@@ -352,17 +362,37 @@ describe("MVP privacy retention", () => {
       contentExpiresAt: FRESH_ISO,
     });
 
-    const scheduledNames = await t.run(async (ctx: TestRunCtx) => {
+    const scheduled = await t.run(async (ctx: TestRunCtx) => {
+      const message = await ctx.db
+        .query("messages")
+        .withIndex("by_business_id", (q) => q.eq("businessId", owner.businessId))
+        .filter((q) => q.eq(q.field("body"), "message scheduled for retention"))
+        .first();
       const jobs = await ctx.db.system.query("_scheduled_functions").collect();
-      return jobs.map((job) => String(job.name));
+      return {
+        messageExpiresAt: message?.contentExpiresAt ?? null,
+        jobs: jobs.map((job) => ({
+          name: String(job.name),
+          scheduledTime: job.scheduledTime,
+        })),
+      };
     });
 
+    const scheduledNames = scheduled.jobs.map((job) => job.name);
     expect(scheduledNames).toContain("privacy/retention:scrubMessageContentAtExpiry");
     expect(scheduledNames).toContain("privacy/retention:deleteTranscriptAtExpiry");
     expect(scheduledNames).toContain("privacy/retention:scrubCallRecordingAtExpiry");
     expect(scheduledNames).toContain(
       "privacy/retention:scrubOperatorNotificationDeliveryContentAtExpiry",
     );
+
+    if (scheduled.messageExpiresAt === null) {
+      throw new Error("Expected scheduled message to have contentExpiresAt");
+    }
+    const messageRetentionJob = scheduled.jobs.find(
+      (job) => job.name === "privacy/retention:scrubMessageContentAtExpiry",
+    );
+    expect(messageRetentionJob?.scheduledTime).toBe(Date.parse(scheduled.messageExpiresAt));
   });
 
   it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {
@@ -477,6 +507,17 @@ describe("MVP privacy retention", () => {
         status: "received",
         aiGenerated: false,
       });
+      const statuslessExpiredMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        fromPhoneNumber: "+14165550003",
+        body: "statusless expired body",
+        status: "received",
+        aiGenerated: false,
+        contentExpiresAt: EXPIRED_ISO,
+      });
 
       return {
         expiredMessageId,
@@ -488,6 +529,7 @@ describe("MVP privacy retention", () => {
         freshMessageId,
         freshStorageId,
         legacyMessageId,
+        statuslessExpiredMessageId,
       };
     });
 
@@ -496,11 +538,12 @@ describe("MVP privacy retention", () => {
       limit: 100,
     });
 
-    expect(summary.messages.scrubbed).toBe(1);
+    expect(summary.messages.scrubbed).toBe(2);
     await t.run(async (ctx: TestRunCtx) => {
       const expiredMessage = await ctx.db.get(seeded.expiredMessageId);
       const freshMessage = await ctx.db.get(seeded.freshMessageId);
       const legacyMessage = await ctx.db.get(seeded.legacyMessageId);
+      const statuslessExpiredMessage = await ctx.db.get(seeded.statuslessExpiredMessageId);
 
       expect(expiredMessage).toMatchObject({
         body: REDACTED_MESSAGE_BODY,
@@ -529,6 +572,11 @@ describe("MVP privacy retention", () => {
       expect(freshMessage?.media).toHaveLength(1);
       expect(await ctx.storage.get(seeded.freshStorageId)).not.toBeNull();
       expect(legacyMessage?.body).toBe("legacy body without retention fields");
+      expect(statuslessExpiredMessage).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(statuslessExpiredMessage?.fromPhoneNumber).toBeUndefined();
     });
   });
 
@@ -615,6 +663,86 @@ describe("MVP privacy retention", () => {
       expect(await ctx.db.get(seeded.uploadId)).toBeNull();
       expect(await ctx.storage.get(seeded.sentStorageId)).toBeNull();
       expect(await ctx.storage.get(seeded.sentPreviewStorageId)).toBeNull();
+    });
+  });
+
+  it("scrubs expired messages before draining very large linked attachment upload batches", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-large-upload-owner",
+      slug: "mvp-retention-large-upload",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const storageId = await storeTestBlob(ctx, "large linked upload");
+      const messageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "old outbound attachment body with many upload rows",
+        status: "sent",
+        aiGenerated: false,
+        media: [
+          {
+            storageId,
+            fileName: "large.txt",
+            contentType: "text/plain",
+            byteLength: 19,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+
+      for (let index = 0; index < 201; index += 1) {
+        await ctx.db.insert("message_attachment_uploads", {
+          businessId: owner.businessId,
+          conversationId,
+          uploaderUserId: owner.userId,
+          storageId,
+          fileName: `large-${index}.txt`,
+          contentType: "text/plain",
+          byteLength: 19,
+          deliveryMode: "link",
+          status: "consumed",
+          sentMessageId: messageId,
+        });
+      }
+
+      return { messageId, storageId };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.messages.scrubbed).toBe(1);
+    await t.run(async (ctx: TestRunCtx) => {
+      const message = await ctx.db.get(seeded.messageId);
+      const remainingUploads = await ctx.db
+        .query("message_attachment_uploads")
+        .withIndex("by_sent_message_id", (q) => q.eq("sentMessageId", seeded.messageId))
+        .collect();
+
+      expect(message?.body).toBe(REDACTED_MESSAGE_BODY);
+      expect(message?.contentRetentionStatus).toBe("expired");
+      expect(remainingUploads).toHaveLength(1);
+    });
+
+    await vi.runOnlyPendingTimersAsync();
+
+    await t.run(async (ctx: TestRunCtx) => {
+      expect(
+        await ctx.db
+          .query("message_attachment_uploads")
+          .withIndex("by_sent_message_id", (q) => q.eq("sentMessageId", seeded.messageId))
+          .collect(),
+      ).toHaveLength(0);
+      expect(await ctx.storage.get(seeded.storageId)).toBeNull();
     });
   });
 
@@ -796,6 +924,11 @@ describe("MVP privacy retention", () => {
     const seeded = await t.run(async (ctx: TestRunCtx) => {
       const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
       const expiredRecordingStorageId = await storeTestBlob(ctx, "expired recording", "audio/wav");
+      const statuslessExpiredRecordingStorageId = await storeTestBlob(
+        ctx,
+        "statusless expired recording",
+        "audio/wav",
+      );
       const freshRecordingStorageId = await storeTestBlob(ctx, "fresh recording", "audio/wav");
       const expiredCallId = await ctx.db.insert("calls", {
         businessId: owner.businessId,
@@ -809,6 +942,19 @@ describe("MVP privacy retention", () => {
         recordingByteLength: 17,
         recordingDurationMs: 12000,
         recordingRetentionStatus: "active",
+        recordingExpiresAt: EXPIRED_ISO,
+      });
+      const statuslessExpiredCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-statusless-expired",
+        status: "completed",
+        startedAt: "2026-01-02T12:00:00.000Z",
+        recordingStorageId: statuslessExpiredRecordingStorageId,
+        recordingContentType: "audio/wav",
+        recordingByteLength: 29,
+        recordingDurationMs: 9000,
         recordingExpiresAt: EXPIRED_ISO,
       });
       const freshCallId = await ctx.db.insert("calls", {
@@ -912,8 +1058,10 @@ describe("MVP privacy retention", () => {
 
       return {
         expiredCallId,
+        statuslessExpiredCallId,
         freshCallId,
         expiredRecordingStorageId,
+        statuslessExpiredRecordingStorageId,
         freshRecordingStorageId,
         expiredRecordingTokenId,
         standaloneMessageTokenId,
@@ -933,11 +1081,12 @@ describe("MVP privacy retention", () => {
     });
 
     expect(summary.transcripts.deleted).toBe(1);
-    expect(summary.callRecordings.scrubbed).toBe(1);
+    expect(summary.callRecordings.scrubbed).toBe(2);
     expect(summary.previewSessions.deleted).toBe(1);
     expect(summary.messageAttachmentDownloadTokens.deleted).toBe(1);
     await t.run(async (ctx: TestRunCtx) => {
       const expiredCall = await ctx.db.get(seeded.expiredCallId);
+      const statuslessExpiredCall = await ctx.db.get(seeded.statuslessExpiredCallId);
       const freshCall = await ctx.db.get(seeded.freshCallId);
 
       expect(expiredCall?.recordingRetentionStatus).toBe("expired");
@@ -947,6 +1096,12 @@ describe("MVP privacy retention", () => {
       expect(expiredCall?.recordingDurationMs).toBeUndefined();
       expect(await ctx.storage.get(seeded.expiredRecordingStorageId)).toBeNull();
       expect(await ctx.db.get(seeded.expiredRecordingTokenId)).toBeNull();
+      expect(statuslessExpiredCall?.recordingRetentionStatus).toBe("expired");
+      expect(statuslessExpiredCall?.recordingStorageId).toBeUndefined();
+      expect(statuslessExpiredCall?.recordingContentType).toBeUndefined();
+      expect(statuslessExpiredCall?.recordingByteLength).toBeUndefined();
+      expect(statuslessExpiredCall?.recordingDurationMs).toBeUndefined();
+      expect(await ctx.storage.get(seeded.statuslessExpiredRecordingStorageId)).toBeNull();
 
       expect(freshCall?.recordingStorageId).toBe(seeded.freshRecordingStorageId);
       expect(await ctx.storage.get(seeded.freshRecordingStorageId)).not.toBeNull();

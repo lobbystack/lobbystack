@@ -10,5 +10,6 @@ export default defineConfig({
     environment: "edge-runtime",
     include: ["**/*.test.ts"],
     exclude: ["dist/**", "**/dist/**", "node_modules/**"],
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
