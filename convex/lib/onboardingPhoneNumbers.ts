@@ -101,6 +101,7 @@ export const availableNumberSummaryValidator = v.object({
     voice: v.boolean(),
   }),
   selectionContext: numberSelectionContextValidator,
+  claimToken: v.optional(v.string()),
 });
 
 export type AvailableNumberSummary = {
@@ -115,6 +116,7 @@ export type AvailableNumberSummary = {
     voice: boolean;
   };
   selectionContext: NumberSelectionContext;
+  claimToken?: string;
 };
 
 type MetroDefinition = {

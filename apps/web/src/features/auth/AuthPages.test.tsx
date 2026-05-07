@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ForgotPasswordPage, SignupPage } from "./AuthPages";
 
-const { signInMock, turnstileExecuteMock } = vi.hoisted(() => ({
+const { signInMock, turnstileExecuteMock, turnstileTokenMock } = vi.hoisted(() => ({
   signInMock: vi.fn(),
   turnstileExecuteMock: vi.fn(),
+  turnstileTokenMock: vi.fn(() => "turnstile-token" as string | null),
 }));
 
 vi.mock("@convex-dev/auth/react", () => ({
@@ -38,7 +39,7 @@ vi.mock("@/components/turnstile", async () => {
         execute: () => {
           const result = turnstileExecuteMock();
           if (result !== false) {
-            props.onTokenChange("turnstile-token");
+            props.onTokenChange(turnstileTokenMock());
           }
           return result ?? true;
         },
@@ -57,6 +58,8 @@ describe("ForgotPasswordPage", () => {
   beforeEach(() => {
     signInMock.mockReset();
     turnstileExecuteMock.mockReset();
+    turnstileTokenMock.mockReset();
+    turnstileTokenMock.mockReturnValue("turnstile-token");
   });
 
   it("submits a reset request with the expected FormData", async () => {
@@ -173,6 +176,8 @@ describe("SignupPage", () => {
   beforeEach(() => {
     signInMock.mockReset();
     turnstileExecuteMock.mockReset();
+    turnstileTokenMock.mockReset();
+    turnstileTokenMock.mockReturnValue("turnstile-token");
   });
 
   it("shows password guidance when signup fails through the Turnstile provider password policy", async () => {
@@ -194,6 +199,27 @@ describe("SignupPage", () => {
 
     expect(await screen.findByText("errors.invalidPassword")).toBeTruthy();
     expect(screen.queryByText("errors.turnstileFailed")).toBeNull();
+  });
+
+  it("shows account-exists guidance when signup uses an existing email", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
+    signInMock.mockRejectedValueOnce(
+      new Error("Uncaught Error: Account owner@example.com already exists"),
+    );
+
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("signup.password"), "123456789012");
+    await user.click(screen.getByRole("button", { name: "signup.submit" }));
+
+    expect(await screen.findByText("errors.accountExists")).toBeTruthy();
+    expect(screen.queryByText("errors.signupFailed")).toBeNull();
   });
 
   it("preflights Turnstile after the user fills plausible credentials", async () => {
@@ -223,5 +249,29 @@ describe("SignupPage", () => {
     await waitFor(() => expect(turnstileExecuteMock).toHaveBeenCalledOnce(), {
       timeout: 1000,
     });
+  });
+
+  it("unblocks signup when Turnstile returns without a token during submit", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
+    turnstileExecuteMock.mockReturnValue(true);
+    turnstileTokenMock.mockReturnValue(null);
+
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("signup.password"), "123456789012");
+    await user.click(screen.getByRole("button", { name: "signup.submit" }));
+
+    expect(await screen.findByText("errors.turnstileRequired")).toBeTruthy();
+    expect(signInMock).not.toHaveBeenCalled();
+    const submitButton = screen.getByRole("button", {
+      name: "signup.submit",
+    }) as HTMLButtonElement;
+    expect(submitButton.disabled).toBe(false);
   });
 });

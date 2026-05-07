@@ -1,5 +1,6 @@
 "use node";
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -74,6 +75,20 @@ type ClaimNumberResult =
       message: string;
     };
 
+type NumberClaimTokenPayload = {
+  version: 1;
+  businessId: string;
+  userId: string;
+  e164: string;
+  countryCode: string;
+  kind: AvailableNumberSummary["kind"];
+  capabilities: AvailableNumberSummary["capabilities"];
+  selectionContext: NumberSelectionContext;
+  expiresAt: number;
+};
+
+const NUMBER_CLAIM_TOKEN_TTL_MS = 5 * 60 * 1000;
+
 function isLikelyNumberUnavailableError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -132,6 +147,142 @@ function formatDisplayPhoneNumber(e164: string): string {
 function normalizeClaimE164(e164: string): string | null {
   const trimmed = e164.trim();
   return /^\+\d{8,15}$/.test(trimmed) ? trimmed : null;
+}
+
+function getNumberClaimTokenSecret(): string {
+  const secret =
+    process.env.NUMBER_CLAIM_TOKEN_SECRET?.trim() ||
+    process.env.TWILIO_AUTH_TOKEN?.trim();
+  if (!secret) {
+    throw new Error("Twilio credentials are required for phone-number provisioning.");
+  }
+
+  return secret;
+}
+
+function signClaimTokenPayload(payload: string): string {
+  return createHmac("sha256", getNumberClaimTokenSecret())
+    .update(payload)
+    .digest("base64url");
+}
+
+function createNumberClaimToken(input: {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  number: AvailableNumberSummary;
+}): string {
+  const payload: NumberClaimTokenPayload = {
+    version: 1,
+    businessId: String(input.businessId),
+    userId: String(input.userId),
+    e164: input.number.e164,
+    countryCode: input.number.countryCode,
+    kind: input.number.kind,
+    capabilities: input.number.capabilities,
+    selectionContext: input.number.selectionContext,
+    expiresAt: Date.now() + NUMBER_CLAIM_TOKEN_TTL_MS,
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString(
+    "base64url",
+  );
+  return `${encodedPayload}.${signClaimTokenPayload(encodedPayload)}`;
+}
+
+function signaturesMatch(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function parseClaimTokenPayload(token: string): NumberClaimTokenPayload | null {
+  const [encodedPayload, signature, extra] = token.split(".");
+  if (!encodedPayload || !signature || extra !== undefined) {
+    return null;
+  }
+
+  const expectedSignature = signClaimTokenPayload(encodedPayload);
+  if (!signaturesMatch(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as Partial<NumberClaimTokenPayload>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.businessId !== "string" ||
+      typeof parsed.userId !== "string" ||
+      typeof parsed.e164 !== "string" ||
+      typeof parsed.countryCode !== "string" ||
+      (parsed.kind !== "local" && parsed.kind !== "toll_free") ||
+      typeof parsed.expiresAt !== "number" ||
+      !parsed.capabilities ||
+      parsed.capabilities.sms !== true ||
+      parsed.capabilities.voice !== true ||
+      !parsed.selectionContext ||
+      typeof parsed.selectionContext.countryCode !== "string" ||
+      (parsed.selectionContext.mode !== "suggested" &&
+        parsed.selectionContext.mode !== "city" &&
+        parsed.selectionContext.mode !== "area_code" &&
+        parsed.selectionContext.mode !== "toll_free")
+    ) {
+      return null;
+    }
+
+    return parsed as NumberClaimTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSelectionContextForComparison(
+  context: NumberSelectionContext,
+): NumberSelectionContext {
+  return {
+    mode: context.mode,
+    countryCode: context.countryCode,
+    ...(context.regionCode !== undefined ? { regionCode: context.regionCode } : {}),
+    ...(context.city !== undefined ? { city: context.city } : {}),
+    ...(context.areaCode !== undefined ? { areaCode: context.areaCode } : {}),
+    ...(context.metroKey !== undefined ? { metroKey: context.metroKey } : {}),
+  };
+}
+
+function selectionContextsMatch(
+  left: NumberSelectionContext,
+  right: NumberSelectionContext,
+): boolean {
+  return (
+    JSON.stringify(normalizeSelectionContextForComparison(left)) ===
+    JSON.stringify(normalizeSelectionContextForComparison(right))
+  );
+}
+
+function verifyNumberClaimToken(input: {
+  token: string;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  claimE164: string;
+  selectionContext: NumberSelectionContext;
+}): NumberClaimTokenPayload {
+  const payload = parseClaimTokenPayload(input.token);
+  if (!payload) {
+    throw new Error("The selected phone number offer is invalid. Refresh the list and try again.");
+  }
+  if (payload.expiresAt < Date.now()) {
+    throw new Error("The selected phone number offer expired. Refresh the list and try again.");
+  }
+  if (
+    payload.businessId !== String(input.businessId) ||
+    payload.userId !== String(input.userId) ||
+    payload.e164 !== input.claimE164 ||
+    !selectionContextsMatch(payload.selectionContext, input.selectionContext)
+  ) {
+    throw new Error("The selected phone number offer is invalid. Refresh the list and try again.");
+  }
+
+  return payload;
 }
 
 function normalizeSupportedCountryCode(value: string | undefined): "US" | "CA" | null {
@@ -428,6 +579,23 @@ async function getNumbersForSelectionContext(
     .filter((number): number is AvailableNumberSummary => number !== null);
 }
 
+function withClaimTokens(
+  numbers: Array<AvailableNumberSummary>,
+  input: {
+    businessId: Id<"businesses">;
+    userId: Id<"users">;
+  },
+): Array<AvailableNumberSummary> {
+  return numbers.map((number) => ({
+    ...number,
+    claimToken: createNumberClaimToken({
+      businessId: input.businessId,
+      userId: input.userId,
+      number,
+    }),
+  }));
+}
+
 function buildNormalizedSelectionContext(input: {
   requestedSelectionContext: NumberSelectionContext;
   fallbackContext: NumberSuggestionContext;
@@ -584,7 +752,10 @@ export const getInitialNumberSuggestion = action({
       userId,
     });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-    const suggestions = await getSuggestedNumbers(context, 10);
+    const suggestions = withClaimTokens(await getSuggestedNumbers(context, 10), {
+      businessId: args.businessId,
+      userId,
+    });
 
     return {
       market,
@@ -626,7 +797,13 @@ export const searchAvailableNumbers = action({
       fallbackContext: searchContext,
     });
 
-    const numbers = await getNumbersForSelectionContext(selectionContext, searchContext, limit);
+    const numbers = withClaimTokens(
+      await getNumbersForSelectionContext(selectionContext, searchContext, limit),
+      {
+        businessId: args.businessId,
+        userId,
+      },
+    );
     return {
       market,
       selectionContext,
@@ -640,6 +817,7 @@ export const claimOnboardingNumber = action({
     businessId: v.id("businesses"),
     e164: v.string(),
     selectionContext: numberSelectionContextValidator,
+    claimToken: v.string(),
   },
   handler: async (ctx, args): Promise<ClaimNumberResult> => {
     const { userId } = await assertOnboardingAccess(ctx, args.businessId);
@@ -665,6 +843,13 @@ export const claimOnboardingNumber = action({
       await assertClaimAttemptAllowed(ctx, {
         businessId: args.businessId,
         userId,
+      });
+      verifyNumberClaimToken({
+        token: args.claimToken,
+        businessId: args.businessId,
+        userId,
+        claimE164,
+        selectionContext: args.selectionContext,
       });
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
@@ -775,8 +960,8 @@ export const claimOnboardingNumber = action({
               : new Error("Automatic release of the onboarding claim lock failed.");
         }
       }
-      const client = getTwilioClient();
       if (purchased) {
+        const client = getTwilioClient();
         try {
           await client.incomingPhoneNumbers(purchased.sid).remove();
         } catch (releaseError) {
@@ -802,9 +987,15 @@ export const claimOnboardingNumber = action({
             requestedSelectionContext: args.selectionContext,
             fallbackContext: searchContext,
           });
-          alternatives = (
-            await getNumbersForSelectionContext(selectionContext, searchContext, 10)
-          ).filter((number) => number.e164 !== claimE164 && !unavailableE164s.has(number.e164));
+          alternatives = withClaimTokens(
+            (
+              await getNumbersForSelectionContext(selectionContext, searchContext, 10)
+            ).filter((number) => number.e164 !== claimE164 && !unavailableE164s.has(number.e164)),
+            {
+              businessId: args.businessId,
+              userId,
+            },
+          );
         } catch {
           alternatives = [];
         }

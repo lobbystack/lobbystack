@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { v } from "convex/values";
 import { convexTest, type TestConvex } from "convex-test";
@@ -7,6 +8,7 @@ import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation } from "../_generated/server";
 import { onboardingRateLimiter } from "../lib/components";
+import type { NumberSelectionContext } from "../lib/onboardingPhoneNumbers";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -238,6 +240,71 @@ async function seedVerifiedPhone(input: {
   });
 }
 
+function defaultAreaCodeSelectionContext(areaCode = "418"): NumberSelectionContext {
+  return {
+    mode: "area_code",
+    countryCode: "CA",
+    areaCode,
+  };
+}
+
+function createTestClaimToken(input: {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  e164?: string;
+  selectionContext?: NumberSelectionContext;
+  expiresAt?: number;
+}): string {
+  const selectionContext = input.selectionContext ?? defaultAreaCodeSelectionContext();
+  const encodedPayload = Buffer.from(
+    JSON.stringify({
+      version: 1,
+      businessId: String(input.businessId),
+      userId: String(input.userId),
+      e164: input.e164 ?? "+14185550123",
+      countryCode: selectionContext.countryCode,
+      kind: selectionContext.mode === "toll_free" ? "toll_free" : "local",
+      capabilities: {
+        sms: true,
+        voice: true,
+      },
+      selectionContext,
+      expiresAt: input.expiresAt ?? Date.now() + 5 * 60 * 1000,
+    }),
+    "utf8",
+  ).toString("base64url");
+  const secret =
+    process.env.NUMBER_CLAIM_TOKEN_SECRET?.trim() ||
+    process.env.TWILIO_AUTH_TOKEN?.trim() ||
+    "test-auth-token";
+  const signature = createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
+
+function claimNumberArgs(input: {
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  e164?: string;
+  selectionContext?: NumberSelectionContext;
+  claimToken?: string;
+}) {
+  const e164 = input.e164 ?? "+14185550123";
+  const selectionContext = input.selectionContext ?? defaultAreaCodeSelectionContext();
+  return {
+    businessId: input.businessId,
+    e164,
+    selectionContext,
+    claimToken:
+      input.claimToken ??
+      createTestClaimToken({
+        businessId: input.businessId,
+        userId: input.userId,
+        e164,
+        selectionContext,
+      }),
+  };
+}
+
 async function listBusinessPhoneNumbers(
   t: ConvexHarness,
   businessId: Id<"businesses">,
@@ -416,6 +483,7 @@ describe("onboarding phone-number actions", () => {
         countryCode: "CA",
       },
     });
+    expect(typeof result.suggestion?.claimToken).toBe("string");
   });
 
   it("uses the business-scoped legacy user phone for migrated-account suggestions", async () => {
@@ -518,6 +586,7 @@ describe("onboarding phone-number actions", () => {
       e164: "+18885550101",
       kind: "toll_free",
     });
+    expect(typeof result.numbers[0]?.claimToken).toBe("string");
   });
 
   it("only returns inventory with both voice and SMS capabilities", async () => {
@@ -567,6 +636,7 @@ describe("onboarding phone-number actions", () => {
       "+14185550123",
       "+14185550125",
     ]);
+    expect(result.numbers.every((number) => typeof number.claimToken === "string")).toBe(true);
   });
 
   it("refuses to suggest numbers once onboarding leaves the phone-number step", async () => {
@@ -838,15 +908,10 @@ describe("onboarding phone-number actions", () => {
       voiceUrl: "https://voice.example.com/twilio/voice/inbound",
     });
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(createIncomingPhoneNumberMock).toHaveBeenCalledWith({
       friendlyName: `business:${String(businessId)}`,
@@ -899,15 +964,10 @@ describe("onboarding phone-number actions", () => {
       voiceUrl: "https://voice.example.com/twilio/voice/inbound",
     });
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(createIncomingPhoneNumberMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -919,6 +979,74 @@ describe("onboarding phone-number actions", () => {
       e164: "+14185550123",
     });
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
+  });
+
+  it("rejects a selected number when the claim token is invalid", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({
+        businessId,
+        userId,
+        claimToken: "not-a-valid-token",
+      }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "The selected phone number offer is invalid. Refresh the list and try again.",
+    });
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.onboardingStage,
+    ).toBe("phone_number");
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a selected number when the claim token belongs to a different number", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({
+        businessId,
+        userId,
+        claimToken: createTestClaimToken({
+          businessId,
+          userId,
+          e164: "+14185550999",
+        }),
+      }),
+    );
+
+    expect(result).toEqual({
+      status: "failed",
+      message: "The selected phone number offer is invalid. Refresh the list and try again.",
+    });
+    expect(
+      (await t.query(internal.businesses.admin.getBusinessById, { businessId }))
+        ?.onboardingStage,
+    ).toBe("phone_number");
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
   it("rejects claims once onboarding is no longer on the phone-number step", async () => {
@@ -939,15 +1067,10 @@ describe("onboarding phone-number actions", () => {
       });
     });
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",
@@ -974,15 +1097,10 @@ describe("onboarding phone-number actions", () => {
       });
     });
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",
@@ -1006,15 +1124,10 @@ describe("onboarding phone-number actions", () => {
     createIncomingPhoneNumberMock.mockRejectedValue(new Error("Temporary Twilio failure."));
 
     for (let index = 0; index < 3; index += 1) {
-      const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-        businessId,
-        e164: "+14185550123",
-        selectionContext: {
-          mode: "area_code",
-          countryCode: "CA",
-          areaCode: "418",
-        },
-      });
+      const result = await authed.action(
+        api.onboarding.phoneNumbers.claimOnboardingNumber,
+        claimNumberArgs({ businessId, userId }),
+      );
 
       expect(result).toEqual({
         status: "failed",
@@ -1022,15 +1135,10 @@ describe("onboarding phone-number actions", () => {
       });
     }
 
-    const blockedResult = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const blockedResult = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(blockedResult).toEqual({
       status: "failed",
@@ -1120,37 +1228,32 @@ describe("onboarding phone-number actions", () => {
         voiceUrl: "https://voice.example.com/twilio/voice/inbound",
       });
 
-    const firstClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const firstClaim = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
     expect(firstClaim.status).toBe("claimed");
 
-    const secondClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId: additionalBusinessIds[0],
-      e164: "+15815550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "581",
-      },
-    });
+    const secondClaim = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({
+        businessId: additionalBusinessIds[0],
+        userId,
+        e164: "+15815550123",
+        selectionContext: defaultAreaCodeSelectionContext("581"),
+      }),
+    );
     expect(secondClaim.status).toBe("claimed");
 
-    const blockedClaim = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId: additionalBusinessIds[1],
-      e164: "+18195550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "819",
-      },
-    });
+    const blockedClaim = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({
+        businessId: additionalBusinessIds[1],
+        userId,
+        e164: "+18195550123",
+        selectionContext: defaultAreaCodeSelectionContext("819"),
+      }),
+    );
 
     expect(blockedClaim).toEqual({
       status: "failed",
@@ -1184,15 +1287,10 @@ describe("onboarding phone-number actions", () => {
       },
     ]);
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toMatchObject({
       status: "unavailable",
@@ -1233,15 +1331,10 @@ describe("onboarding phone-number actions", () => {
 
     createIncomingPhoneNumberMock.mockRejectedValueOnce(trialLimitError);
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",
@@ -1307,15 +1400,10 @@ describe("onboarding phone-number actions", () => {
     );
 
     for (let index = 0; index < 3; index += 1) {
-      const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-        businessId,
-        e164: selectedE164,
-        selectionContext: {
-          mode: "area_code",
-          countryCode: "CA",
-          areaCode: "418",
-        },
-      });
+      const result = await authed.action(
+        api.onboarding.phoneNumbers.claimOnboardingNumber,
+        claimNumberArgs({ businessId, userId, e164: selectedE164 }),
+      );
 
       expect(result).toMatchObject({
         status: "unavailable",
@@ -1335,15 +1423,10 @@ describe("onboarding phone-number actions", () => {
       },
     ]);
 
-    const nextResult = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: selectedE164,
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const nextResult = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId, e164: selectedE164 }),
+    );
 
     expect(nextResult).toEqual({
       status: "failed",
@@ -1383,15 +1466,10 @@ describe("onboarding phone-number actions", () => {
       voiceUrl: "https://voice.example.com/twilio/voice/inbound",
     });
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",
@@ -1422,15 +1500,10 @@ describe("onboarding phone-number actions", () => {
       "Failed to complete onboarding after the number was saved.",
     );
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",
@@ -1499,15 +1572,10 @@ describe("onboarding phone-number actions", () => {
       },
     );
 
-    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId,
-      e164: "+14185550123",
-      selectionContext: {
-        mode: "area_code",
-        countryCode: "CA",
-        areaCode: "418",
-      },
-    });
+    const result = await authed.action(
+      api.onboarding.phoneNumbers.claimOnboardingNumber,
+      claimNumberArgs({ businessId, userId }),
+    );
 
     expect(result).toEqual({
       status: "failed",

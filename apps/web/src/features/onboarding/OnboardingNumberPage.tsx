@@ -49,6 +49,7 @@ type AvailableNumberSummary = {
   kind: "local" | "toll_free";
   capabilities: { sms: boolean; voice: boolean };
   selectionContext: NumberSelectionContext;
+  claimToken: string;
 };
 
 type VerifiedPhoneMarket = {
@@ -265,6 +266,7 @@ export function OnboardingNumberPage({
         businessId,
         e164: number.e164,
         selectionContext: number.selectionContext,
+        claimToken: number.claimToken,
       })) as ClaimResult;
 
       if (result.status === "claimed") {

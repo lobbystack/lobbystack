@@ -43,6 +43,11 @@ function validateDefaultPasswordRequirements(password: string | undefined) {
   }
 }
 
+function isMissingAccountError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+  return message.includes("InvalidAccountId");
+}
+
 export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
   config: PasswordConfig<DataModel> = {},
 ) {
@@ -81,6 +86,18 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
         }
 
         await verifyTurnstileForSignUp(params);
+
+        try {
+          await retrieveAccount(ctx, {
+            provider,
+            account: { id: email },
+          });
+          throw new Error("Account already exists");
+        } catch (error) {
+          if (!isMissingAccountError(error)) {
+            throw error;
+          }
+        }
 
         const created = await createAccount(ctx, {
           provider,

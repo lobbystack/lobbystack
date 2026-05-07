@@ -217,6 +217,11 @@ export function SignupPage() {
       setTurnstileToken(token);
       if (!token) {
         turnstilePreflightKeyRef.current = null;
+        if (pendingTurnstileSubmitRef.current) {
+          pendingTurnstileSubmitRef.current = false;
+          setIsSubmitting(false);
+          setErrorMessage(t("errors.turnstileRequired"));
+        }
       }
       if (!token || !pendingTurnstileSubmitRef.current) {
         return;
@@ -225,7 +230,7 @@ export function SignupPage() {
       pendingTurnstileSubmitRef.current = false;
       void submitSignUp(token);
     },
-    [submitSignUp],
+    [submitSignUp, t],
   );
 
   useEffect(() => {
