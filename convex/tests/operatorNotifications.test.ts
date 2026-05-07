@@ -784,14 +784,14 @@ describe("operator notification preferences", () => {
     });
   });
 
-  it("collapses duplicate same-name businesses for a recipient and prefers their active business", async () => {
+  it("sends separate daily digests for same-name businesses sharing an inbox", async () => {
     const t = createConvexHarness();
     const seeded = await t.run(async (ctx) => {
-      const duplicateBusinessIds: Array<Id<"businesses">> = [];
+      const businessIds: Array<Id<"businesses">> = [];
       for (let index = 0; index < 5; index += 1) {
-        duplicateBusinessIds.push(
+        businessIds.push(
           await ctx.db.insert("businesses", {
-            slug: `lobbystack-duplicate-${index}`,
+            slug: `lobbystack-same-name-${index}`,
             name: index % 2 === 0 ? "LobbyStack" : "Lobbystack",
             timezone: "UTC",
             businessType: "general",
@@ -801,14 +801,14 @@ describe("operator notification preferences", () => {
           }),
         );
       }
-      const activeBusinessId = duplicateBusinessIds[2]!;
+      const activeBusinessId = businessIds[2]!;
       const userId: Id<"users"> = await ctx.db.insert("users", {
-        authSubject: "operator-digest-duplicate-businesses",
+        authSubject: "operator-digest-same-name-businesses",
         email: "hello@lobbystack.com",
         activeBusinessId,
       });
 
-      for (const businessId of duplicateBusinessIds) {
+      for (const businessId of businessIds) {
         await ctx.db.insert("business_memberships", {
           businessId,
           userId,
@@ -827,7 +827,7 @@ describe("operator notification preferences", () => {
         });
       }
 
-      return { activeBusinessId, duplicateBusinessIds };
+      return { businessIds };
     });
 
     await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
@@ -835,7 +835,7 @@ describe("operator notification preferences", () => {
     await t.run(async (ctx) => {
       const deliveries = (
         await Promise.all(
-          seeded.duplicateBusinessIds.map((businessId) =>
+          seeded.businessIds.map((businessId) =>
             ctx.db
               .query("operator_notification_deliveries")
               .withIndex("by_business_id_and_event_kind", (q) =>
@@ -846,8 +846,10 @@ describe("operator notification preferences", () => {
         )
       ).flat();
 
-      expect(deliveries).toHaveLength(1);
-      expect(deliveries[0]?.businessId).toBe(seeded.activeBusinessId);
+      expect(deliveries).toHaveLength(5);
+      expect(new Set(deliveries.map((delivery) => String(delivery.businessId)))).toEqual(
+        new Set(seeded.businessIds.map(String)),
+      );
     });
   });
 });

@@ -176,10 +176,6 @@ function hashDigestRecipientEmail(email: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-function normalizeDigestBusinessName(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
 function shouldPreferDigestTarget(candidate: DigestTarget, existing: DigestTarget): boolean {
   if (candidate.isActiveBusinessForUser !== existing.isActiveBusinessForUser) {
     return candidate.isActiveBusinessForUser;
@@ -868,7 +864,7 @@ export const listDailyDigestTargets = internalQuery({
         };
         const recipientKey = [
           normalizeDigestEmail(user.email),
-          normalizeDigestBusinessName(business.name),
+          String(business._id),
         ].join(":");
         const existing = targetsByRecipient.get(recipientKey);
         if (!existing || shouldPreferDigestTarget(target, existing)) {
