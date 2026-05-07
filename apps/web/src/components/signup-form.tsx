@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent, Ref } from "react";
+import { useState, type FormEvent, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { LoaderCircle } from "lucide-react";
@@ -49,10 +49,12 @@ export function SignupForm({
   onTurnstileTokenChange,
 }: SignupFormProps) {
   const { t } = useTranslation("auth");
+  const [shouldReserveTurnstileSpace, setShouldReserveTurnstileSpace] =
+    useState(false);
 
   return (
     <div className={cn("flex w-full flex-col gap-6", className)}>
-      <form onSubmit={onSubmit}>
+      <form className="relative" onSubmit={onSubmit}>
         <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="signup-email">{t("signup.email")}</FieldLabel>
@@ -84,10 +86,17 @@ export function SignupForm({
           </Field>
 
           {turnstileSiteKey ? (
-            <div className="-mt-1">
+            <div
+              className={
+                shouldReserveTurnstileSpace
+                  ? "-mt-1"
+                  : "pointer-events-none absolute left-0 top-0 h-0 w-full overflow-hidden"
+              }
+            >
               <Turnstile
                 key={turnstileResetKey}
                 ref={turnstileRef}
+                onReserveSpaceChange={setShouldReserveTurnstileSpace}
                 onTokenChange={onTurnstileTokenChange ?? (() => {})}
                 siteKey={turnstileSiteKey}
                 {...(onTurnstileError ? { onError: onTurnstileError } : {})}

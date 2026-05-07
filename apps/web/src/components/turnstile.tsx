@@ -8,9 +8,13 @@ type TurnstileWidgetOptions = {
   "expired-callback": () => void;
   "timeout-callback": () => void;
   "error-callback": (errorCode?: string) => boolean;
+  "before-interactive-callback"?: () => void;
+  "after-interactive-callback"?: () => void;
   appearance?: "always" | "execute" | "interaction-only";
   execution?: "render" | "execute";
+  "response-field"?: boolean;
   size?: "normal" | "flexible" | "compact";
+  tabindex?: number;
   theme?: "auto" | "light" | "dark";
 };
 
@@ -105,6 +109,7 @@ type TurnstileProps = {
   siteKey: string;
   onTokenChange: (token: string | null) => void;
   onError?: (errorCode?: string) => void;
+  onReserveSpaceChange?: (shouldReserveSpace: boolean) => void;
 };
 
 export type TurnstileHandle = {
@@ -112,12 +117,13 @@ export type TurnstileHandle = {
 };
 
 export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Turnstile(
-  { siteKey, onTokenChange, onError },
+  { siteKey, onTokenChange, onError, onReserveSpaceChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const executeWhenReadyRef = useRef(false);
+  const executeTimerRef = useRef<number | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
   const onErrorRef = useRef(onError);
   const [isActive, setIsActive] = useState(false);
@@ -146,8 +152,10 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       sitekey: siteKey,
       appearance: "interaction-only",
       execution: "execute",
+      "response-field": false,
       size: "flexible",
-      theme: "light",
+      tabindex: -1,
+      theme: "auto",
       callback: (token) => {
         setIsActive(false);
         onTokenChangeRef.current(token);
@@ -159,6 +167,12 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       "timeout-callback": () => {
         setIsActive(true);
         onTokenChangeRef.current(null);
+      },
+      "before-interactive-callback": () => {
+        setIsActive(true);
+      },
+      "after-interactive-callback": () => {
+        setIsActive(false);
       },
       "error-callback": (errorCode) => {
         console.warn("Turnstile challenge failed to render.", { errorCode });
@@ -173,8 +187,28 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
     return true;
   }
 
+  function executeRenderedWidget(): boolean {
+    const container = containerRef.current;
+    const turnstile = window.turnstile;
+    if (!container || !turnstile) {
+      handleLoadError();
+      return false;
+    }
+
+    if (executeTimerRef.current !== null) {
+      window.clearTimeout(executeTimerRef.current);
+    }
+
+    // Let React commit the reset state before Cloudflare executes the widget.
+    executeTimerRef.current = window.setTimeout(() => {
+      executeTimerRef.current = null;
+      turnstile.execute(container);
+    }, 0);
+    return true;
+  }
+
   function executeChallenge(): boolean {
-    setIsActive(true);
+    setIsActive(false);
     setErrorCode(null);
 
     if (!renderWidget()) {
@@ -194,7 +228,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
 
             if (executeWhenReadyRef.current) {
               executeWhenReadyRef.current = false;
-              executeChallenge();
+              executeRenderedWidget();
             }
           });
         })
@@ -202,15 +236,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       return true;
     }
 
-    const container = containerRef.current;
-    const turnstile = window.turnstile;
-    if (!container || !turnstile) {
-      handleLoadError();
-      return false;
-    }
-
-    turnstile.execute(container);
-    return true;
+    return executeRenderedWidget();
   }
 
   useImperativeHandle(ref, () => ({
@@ -220,7 +246,7 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   useEffect(() => {
     let isMounted = true;
 
-    setIsActive(true);
+    setIsActive(false);
     setErrorCode(null);
     onTokenChangeRef.current(null);
 
@@ -253,22 +279,38 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
       }
+      if (executeTimerRef.current !== null) {
+        window.clearTimeout(executeTimerRef.current);
+      }
       widgetIdRef.current = null;
+      executeTimerRef.current = null;
     };
   }, [siteKey]);
 
-  const shouldReserveSpace = isActive || Boolean(errorCode);
+  const shouldShowDevError = Boolean(errorCode && import.meta.env.DEV);
+  const shouldReserveSpace = isActive || shouldShowDevError;
+
+  useEffect(() => {
+    onReserveSpaceChange?.(shouldReserveSpace);
+  }, [onReserveSpaceChange, shouldReserveSpace]);
+
+  useEffect(() => {
+    return () => {
+      onReserveSpaceChange?.(false);
+    };
+  }, [onReserveSpaceChange]);
 
   return (
     <div
+      inert={shouldReserveSpace ? undefined : true}
       className={
         shouldReserveSpace
           ? "flex min-h-[65px] w-full flex-col items-start justify-center gap-2"
-          : "h-0 w-full overflow-hidden"
+          : "pointer-events-none h-0 w-full overflow-hidden"
       }
     >
       <div className="h-[65px] w-full min-w-[300px]" ref={containerRef} />
-      {errorCode && import.meta.env.DEV ? (
+      {shouldShowDevError ? (
         <p className="text-sm text-destructive">Turnstile error: {errorCode}</p>
       ) : null}
     </div>
