@@ -693,7 +693,60 @@ describe("MVP privacy retention", () => {
       expect(await ctx.db.get(seeded.freshUploadId)).not.toBeNull();
       expect(await ctx.storage.get(seeded.freshStorageId)).not.toBeNull();
       expect(await ctx.db.get(seeded.linkedUploadId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.linkedUploadId)).toMatchObject({
+        status: "consumed",
+      });
       expect(await ctx.storage.get(seeded.linkedStorageId)).not.toBeNull();
+    });
+  });
+
+  it("does not loop on full batches of linked expired attachment uploads", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-linked-upload-owner",
+      slug: "mvp-retention-linked-upload",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const messageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "linked message body",
+        status: "sent",
+        aiGenerated: false,
+      });
+      const storageId = await storeTestBlob(ctx, "linked expired upload");
+      const uploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId,
+        fileName: "linked-expired.txt",
+        contentType: "text/plain",
+        byteLength: 21,
+        deliveryMode: "link",
+        status: "staged",
+        expiresAt: EXPIRED_ISO,
+        sentMessageId: messageId,
+      });
+      return { storageId, uploadId };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 1,
+    });
+
+    expect(summary.abandonedMessageAttachmentUploads.scanned).toBe(1);
+    expect(summary.abandonedMessageAttachmentUploads.deleted).toBe(0);
+    await t.run(async (ctx: TestRunCtx) => {
+      expect(await ctx.db.get(seeded.uploadId)).toMatchObject({
+        status: "consumed",
+      });
+      expect(await ctx.storage.get(seeded.storageId)).not.toBeNull();
     });
   });
 

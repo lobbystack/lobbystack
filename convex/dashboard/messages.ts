@@ -75,6 +75,24 @@ type ConversationOutcome =
       kind: "none";
     };
 
+function isAttachmentUploadExpired(
+  attachment: Doc<"message_attachment_uploads">,
+  nowMs: number = Date.now(),
+): boolean {
+  if (typeof attachment.expiresAt !== "string" || attachment.expiresAt.length === 0) {
+    return false;
+  }
+  const parsed = Date.parse(attachment.expiresAt);
+  return Number.isFinite(parsed) && parsed <= nowMs;
+}
+
+function isAvailableStagedAttachment(
+  attachment: Doc<"message_attachment_uploads">,
+  nowMs: number = Date.now(),
+): boolean {
+  return attachment.status === "staged" && !isAttachmentUploadExpired(attachment, nowMs);
+}
+
 async function getContact(
   ctx: QueryCtx,
   contactId: Id<"contacts"> | undefined,
@@ -490,7 +508,7 @@ export const getSmsReplyContext = internalQuery({
             attachment.businessId !== args.businessId ||
             attachment.conversationId !== args.conversationId ||
             attachment.uploaderUserId !== args.userId ||
-            attachment.status !== "staged"
+            !isAvailableStagedAttachment(attachment)
           ) {
             throw new Error("Attachment is no longer available.");
           }
@@ -663,7 +681,9 @@ export const getFinalizeStagedAttachmentContext = internalQuery({
         q.eq("uploaderUserId", args.userId).eq("conversationId", args.conversationId),
       )
       .collect();
-    const activeAttachments = stagedAttachments.filter((attachment) => attachment.status === "staged");
+    const activeAttachments = stagedAttachments.filter((attachment) =>
+      isAvailableStagedAttachment(attachment),
+    );
     if (activeAttachments.length >= MAX_SMS_REPLY_ATTACHMENTS) {
       throw new Error(`You can send up to ${MAX_SMS_REPLY_ATTACHMENTS} attachments at a time.`);
     }
@@ -879,7 +899,7 @@ export const listStagedAttachments = query({
 
     return await Promise.all(
       attachments
-        .filter((attachment) => attachment.status === "staged")
+        .filter((attachment) => isAvailableStagedAttachment(attachment))
         .map(async (attachment) => {
           const previewUrl = attachment.previewStorageId
             ? await ctx.storage.getUrl(attachment.previewStorageId)
@@ -995,7 +1015,7 @@ export const claimStagedAttachmentsForSend = internalMutation({
         attachment.businessId !== args.businessId ||
         attachment.conversationId !== args.conversationId ||
         attachment.uploaderUserId !== args.userId ||
-        attachment.status !== "staged"
+        !isAvailableStagedAttachment(attachment)
       ) {
         throw new Error("Attachment is no longer available.");
       }

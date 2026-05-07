@@ -878,10 +878,14 @@ export const deleteExpiredAbandonedMessageAttachmentUploads = internalMutation({
 
     let deleted = 0;
     for (const upload of uploads) {
-      if (
-        upload.sentMessageId !== undefined ||
-        !isExpired(upload.expiresAt, args.nowIso)
-      ) {
+      if (!isExpired(upload.expiresAt, args.nowIso)) {
+        continue;
+      }
+
+      if (upload.sentMessageId !== undefined) {
+        await ctx.db.patch(upload._id, {
+          status: "consumed",
+        });
         continue;
       }
 
