@@ -29,7 +29,7 @@ function getStringParam(
 function defaultProfile<DataModel extends GenericDataModel>(
   params: Partial<Record<string, Value | undefined>>,
 ): PasswordProfile<DataModel> {
-  const email = getStringParam(params, "email")?.trim().toLowerCase();
+  const email = getStringParam(params, "email")?.trim();
   if (!email) {
     throw new Error("Missing `email` param");
   }

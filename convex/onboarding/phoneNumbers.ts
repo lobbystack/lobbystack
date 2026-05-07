@@ -588,6 +588,7 @@ export const searchAvailableNumbers = action({
   args: {
     businessId: v.id("businesses"),
     mode: searchModeValidator,
+    countryCode: v.optional(v.union(v.literal("US"), v.literal("CA"))),
     city: v.optional(v.string()),
     areaCode: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -600,18 +601,22 @@ export const searchAvailableNumbers = action({
       userId,
     });
     const { market, context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+    const searchContext: NumberSuggestionContext = {
+      ...context,
+      ...(args.countryCode ? { countryCode: args.countryCode } : {}),
+    };
     const limit = normalizeInventorySearchLimit(args.limit);
     const selectionContext = buildNormalizedSelectionContext({
       requestedSelectionContext: {
         mode: args.mode,
-        countryCode: context.countryCode,
+        countryCode: searchContext.countryCode,
         ...(args.city !== undefined ? { city: args.city } : {}),
         ...(args.areaCode !== undefined ? { areaCode: args.areaCode } : {}),
       },
-      fallbackContext: context,
+      fallbackContext: searchContext,
     });
 
-    const numbers = await getNumbersForSelectionContext(selectionContext, context, limit);
+    const numbers = await getNumbersForSelectionContext(selectionContext, searchContext, limit);
     return {
       market,
       selectionContext,

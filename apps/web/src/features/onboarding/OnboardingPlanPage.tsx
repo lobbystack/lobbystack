@@ -23,213 +23,139 @@ type OnboardingPlanPageProps = {
 
 type PlanSlug = "free_cloud" | "pro" | "enterprise";
 
-type Tier = {
+type TierConfig = {
   slug: PlanSlug;
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  cta: string;
   ctaVariant: "default" | "outline";
   highlight: boolean;
-  highlights: string[];
+  highlightKeys: string[];
 };
 
 type ComparisonValue =
-  | string
   | boolean
   | {
-      included: string;
-      then?: string;
+      key: string;
+    }
+  | {
+      includedKey: string;
+      thenKey?: string;
     };
 
 type ComparisonRow = {
-  feature: string;
+  key: string;
   free: ComparisonValue;
   pro: ComparisonValue;
   enterprise: ComparisonValue;
 };
 
 type ComparisonGroup = {
-  category: string;
+  key: string;
   rows: ComparisonRow[];
 };
 
-const tiers: Tier[] = [
+const tierConfigs: TierConfig[] = [
   {
     slug: "free_cloud",
-    name: "Free",
-    price: "$0",
-    period: "",
-    description: "Try LobbyStack with enough usage to see it work.",
-    cta: "Start free",
     ctaVariant: "outline",
     highlight: false,
-    highlights: [
-      "10 voice minutes included",
-      "Dedicated phone number",
-      "Unlimited booking and contacts",
-      "Community support",
-    ],
+    highlightKeys: ["voiceMinutes", "phoneNumber", "bookingContacts", "support"],
   },
   {
     slug: "pro",
-    name: "Pro",
-    price: "$15",
-    period: "/mo",
-    description: "Everything you need to run a production AI receptionist.",
-    cta: "Upgrade",
     ctaVariant: "default",
     highlight: true,
-    highlights: [
-      "80 voice minutes + pay-as-you-go",
-      "Two-way AI SMS add-on",
-      "2 GB knowledge storage",
-      "Priority email support",
-    ],
+    highlightKeys: ["voiceMinutes", "aiSms", "knowledgeStorage", "support"],
   },
   {
     slug: "enterprise",
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "For higher volume, multiple numbers, or custom deployment needs.",
-    cta: "Contact us",
     ctaVariant: "outline",
     highlight: false,
-    highlights: [
-      "Multiple dedicated numbers",
-      "Multi-location routing",
-      "Self-hosted deployment option",
-      "Dedicated implementation support",
-    ],
+    highlightKeys: ["phoneNumbers", "routing", "selfHosted", "support"],
   },
 ];
 
 const comparisonGroups: ComparisonGroup[] = [
   {
-    category: "Usage & limits",
+    key: "usage",
     rows: [
       {
-        feature: "Voice minutes",
-        free: { included: "10 included" },
-        pro: { included: "80 included", then: "then $0.18/min" },
-        enterprise: "Custom",
+        key: "voiceMinutes",
+        free: { includedKey: "usage.voiceMinutes.freeIncluded" },
+        pro: { includedKey: "usage.voiceMinutes.proIncluded", thenKey: "usage.voiceMinutes.proThen" },
+        enterprise: { key: "common.custom" },
       },
       {
-        feature: "Outbound call attempts",
-        free: { included: "2 included" },
-        pro: { included: "20 included", then: "then $0.02/attempt" },
-        enterprise: "Custom",
+        key: "outboundCalls",
+        free: { includedKey: "usage.outboundCalls.freeIncluded" },
+        pro: { includedKey: "usage.outboundCalls.proIncluded", thenKey: "usage.outboundCalls.proThen" },
+        enterprise: { key: "common.custom" },
       },
       {
-        feature: "Alert SMS segments",
-        free: { included: "10 included" },
-        pro: { included: "50 included", then: "then $0.02/segment" },
-        enterprise: "Custom",
+        key: "alertSms",
+        free: { includedKey: "usage.alertSms.freeIncluded" },
+        pro: { includedKey: "usage.alertSms.proIncluded", thenKey: "usage.alertSms.proThen" },
+        enterprise: { key: "common.custom" },
       },
       {
-        feature: "Knowledge storage",
-        free: "100 MB",
-        pro: "2 GB",
-        enterprise: "Custom",
+        key: "knowledgeStorage",
+        free: { key: "usage.knowledgeStorage.free" },
+        pro: { key: "usage.knowledgeStorage.pro" },
+        enterprise: { key: "common.custom" },
       },
       {
-        feature: "Phone numbers",
-        free: "1 dedicated",
-        pro: "1 dedicated",
-        enterprise: "Multiple",
+        key: "phoneNumbers",
+        free: { key: "usage.phoneNumbers.free" },
+        pro: { key: "usage.phoneNumbers.pro" },
+        enterprise: { key: "common.multiple" },
       },
     ],
   },
   {
-    category: "Core receptionist",
+    key: "core",
     rows: [
       {
-        feature: "24/7 call answering",
+        key: "callAnswering",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Caller details and message capture",
+        key: "callerDetails",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Knowledge base answers",
+        key: "knowledgeAnswers",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Plain-language workflows",
+        key: "workflows",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Spam filtering",
+        key: "spamFiltering",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Calls under 10s excluded from billing",
+        key: "shortCalls",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Concurrent call handling",
+        key: "concurrentCalls",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Multilingual support",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    category: "Booking & follow-up",
-    rows: [
-      {
-        feature: "Appointment booking",
-        free: "Unlimited",
-        pro: "Unlimited",
-        enterprise: "Unlimited",
-      },
-      {
-        feature: "Appointment confirmation texts",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Google Calendar integration",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Outlook integration",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Missed-call follow-up",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        feature: "Outbound calls",
+        key: "multilingual",
         free: true,
         pro: true,
         enterprise: true,
@@ -237,34 +163,75 @@ const comparisonGroups: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Routing & transfers",
+    key: "booking",
     rows: [
       {
-        feature: "Urgent call handoff",
+        key: "appointmentBooking",
+        free: { key: "common.unlimited" },
+        pro: { key: "common.unlimited" },
+        enterprise: { key: "common.unlimited" },
+      },
+      {
+        key: "confirmationTexts",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Call transfers",
+        key: "googleCalendar",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "After-hours answering",
+        key: "outlook",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Multi-location routing",
+        key: "missedCallFollowUp",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        key: "outboundCalling",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    key: "routing",
+    rows: [
+      {
+        key: "urgentHandoff",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        key: "callTransfers",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        key: "afterHours",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        key: "multiLocation",
         free: false,
         pro: false,
         enterprise: true,
       },
       {
-        feature: "Custom fallback and escalation rules",
+        key: "customEscalation",
         free: false,
         pro: false,
         enterprise: true,
@@ -272,66 +239,66 @@ const comparisonGroups: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Notifications & messaging",
+    key: "notifications",
     rows: [
       {
-        feature: "Email notifications",
+        key: "emailNotifications",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "SMS notifications",
+        key: "smsNotifications",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Two-way AI SMS conversations",
+        key: "aiSms",
         free: false,
         pro: {
-          included: "$5/mo + $19 setup",
-          then: "then $0.03/segment",
+          includedKey: "notifications.aiSms.proIncluded",
+          thenKey: "notifications.aiSms.proThen",
         },
-        enterprise: "Custom",
+        enterprise: { key: "common.custom" },
       },
     ],
   },
   {
-    category: "Data & dashboard",
+    key: "data",
     rows: [
       {
-        feature: "Call summaries and transcripts",
-        free: "Unlimited",
-        pro: "Unlimited",
-        enterprise: "Unlimited",
+        key: "summaries",
+        free: { key: "common.unlimited" },
+        pro: { key: "common.unlimited" },
+        enterprise: { key: "common.unlimited" },
       },
       {
-        feature: "Call history and recordings",
-        free: "Unlimited",
-        pro: "Unlimited",
-        enterprise: "Unlimited",
+        key: "history",
+        free: { key: "common.unlimited" },
+        pro: { key: "common.unlimited" },
+        enterprise: { key: "common.unlimited" },
       },
       {
-        feature: "Caller profiles and notes",
+        key: "callerProfiles",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Contacts",
-        free: "Unlimited",
-        pro: "Unlimited",
-        enterprise: "Unlimited",
+        key: "contacts",
+        free: { key: "common.unlimited" },
+        pro: { key: "common.unlimited" },
+        enterprise: { key: "common.unlimited" },
       },
       {
-        feature: "Website knowledge import",
+        key: "websiteImport",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Data retention guidance",
+        key: "retentionGuidance",
         free: false,
         pro: false,
         enterprise: true,
@@ -339,31 +306,33 @@ const comparisonGroups: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Deployment & support",
+    key: "deployment",
     rows: [
       {
-        feature: "Hosting",
-        free: "Managed cloud",
-        pro: "Managed cloud",
-        enterprise: "Cloud or self-hosted",
+        key: "hosting",
+        free: { key: "deployment.hosting.managed" },
+        pro: { key: "deployment.hosting.managed" },
+        enterprise: { key: "deployment.hosting.enterprise" },
       },
       {
-        feature: "Usage-based billing",
+        key: "usageBilling",
         free: false,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Support",
-        free: "Community",
-        pro: "Priority email",
-        enterprise: "Dedicated implementation",
+        key: "support",
+        free: { key: "deployment.support.community" },
+        pro: { key: "deployment.support.priority" },
+        enterprise: { key: "deployment.support.dedicated" },
       },
     ],
   },
 ];
 
-function ComparisonCell({ value }: { value: ComparisonValue }) {
+type OnboardingT = ReturnType<typeof useTranslation<"onboarding">>["t"];
+
+function ComparisonCell({ t, value }: { t: OnboardingT; value: ComparisonValue }) {
   if (typeof value === "boolean") {
     return value ? (
       <Check className="mx-auto size-4 text-foreground/60" />
@@ -372,18 +341,25 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
     );
   }
 
-  if (typeof value === "string") {
+  if ("key" in value) {
+    const label = t(`plan.comparison.values.${value.key}`);
     return (
-      <span className={value === "-" ? "text-muted-foreground/40" : "text-muted-foreground"}>
-        {value}
+      <span className={label === "-" ? "text-muted-foreground/40" : "text-muted-foreground"}>
+        {label}
       </span>
     );
   }
 
   return (
     <span className="inline-flex flex-col gap-0.5 leading-tight">
-      <span className="font-medium text-foreground">{value.included}</span>
-      {value.then ? <span className="text-xs text-muted-foreground">{value.then}</span> : null}
+      <span className="font-medium text-foreground">
+        {t(`plan.comparison.values.${value.includedKey}`)}
+      </span>
+      {value.thenKey ? (
+        <span className="text-xs text-muted-foreground">
+          {t(`plan.comparison.values.${value.thenKey}`)}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -434,7 +410,9 @@ export function OnboardingPlanPage({
         return;
       }
 
-      window.location.assign("mailto:hello@lobbystack.ai?subject=Enterprise%20plan");
+      window.location.assign(
+        `mailto:hello@lobbystack.ai?subject=${encodeURIComponent(t("plan.enterpriseSubject"))}`,
+      );
     } catch (continueError) {
       setError(
         getSafeOnboardingErrorMessage(continueError, t, "plan.continueFailed"),
@@ -454,9 +432,10 @@ export function OnboardingPlanPage({
     >
       <div className="flex flex-col gap-12">
         <div className="grid gap-6 lg:grid-cols-3">
-          {tiers.map((tier) => {
+          {tierConfigs.map((tier) => {
             const isSubmitting = submittingPlan === tier.slug;
             const isUnavailable = tier.slug === "pro" && !proAvailable;
+            const period = t(`plan.tiers.${tier.slug}.period`);
 
             return (
               <section
@@ -470,24 +449,24 @@ export function OnboardingPlanPage({
               >
                 {tier.highlight ? (
                   <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">
-                    Most popular
+                    {t("plan.popular")}
                   </div>
                 ) : null}
 
                 <div className="mb-6">
                   <h3 className="font-heading text-lg font-semibold tracking-tight">
-                    {tier.name}
+                    {t(`plan.tiers.${tier.slug}.name`)}
                   </h3>
                   <div className="mt-3 flex items-baseline gap-1">
                     <span className="font-heading text-4xl font-semibold tracking-tighter">
-                      {tier.price}
+                      {t(`plan.tiers.${tier.slug}.price`)}
                     </span>
-                    {tier.period ? (
-                      <span className="text-sm text-muted-foreground">{tier.period}</span>
+                    {period ? (
+                      <span className="text-sm text-muted-foreground">{period}</span>
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {tier.description}
+                    {t(`plan.tiers.${tier.slug}.description`)}
                   </p>
                 </div>
 
@@ -502,7 +481,7 @@ export function OnboardingPlanPage({
                     <LoaderCircle className="size-4 animate-spin" />
                   ) : (
                     <>
-                      {tier.cta}
+                      {t(`plan.tiers.${tier.slug}.cta`)}
                       <ArrowRight className="ml-1 size-4" />
                     </>
                   )}
@@ -510,10 +489,10 @@ export function OnboardingPlanPage({
 
                 <div className="flex-1 border-t border-border/50 pt-5">
                   <ul className="space-y-2.5">
-                    {tier.highlights.map((item) => (
+                    {tier.highlightKeys.map((item) => (
                       <li className="flex items-start gap-2.5 text-sm" key={item}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" />
-                        <span>{item}</span>
+                        <span>{t(`plan.tiers.${tier.slug}.highlights.${item}`)}</span>
                       </li>
                     ))}
                   </ul>
@@ -527,11 +506,10 @@ export function OnboardingPlanPage({
 
         <section id="compare">
           <h2 className="mb-4 text-center font-heading text-2xl font-semibold tracking-tighter md:text-3xl">
-            Compare plans in detail
+            {t("plan.compareTitle")}
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gets all features, Pro gives you higher usage and access to AI SMS
-            add-on.
+            {t("plan.compareDescription")}
           </p>
 
           <div className="overflow-x-auto">
@@ -539,44 +517,46 @@ export function OnboardingPlanPage({
               <thead>
                 <tr className="border-b border-border/60">
                   <th className="pr-8 pb-4 text-left text-xs font-medium text-muted-foreground">
-                    Feature
+                    {t("plan.featureHeader")}
                   </th>
                   <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
-                    Free
+                    {t("plan.tiers.free_cloud.name")}
                   </th>
                   <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
-                      Pro
+                      {t("plan.tiers.pro.name")}
                       <span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">
-                        Popular
+                        {t("plan.popular")}
                       </span>
                     </span>
                   </th>
                   <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
-                    Enterprise
+                    {t("plan.tiers.enterprise.name")}
                   </th>
                 </tr>
               </thead>
 
               <tbody>
                 {comparisonGroups.map((group) => (
-                  <Fragment key={group.category}>
+                  <Fragment key={group.key}>
                     <tr>
                       <td
                         className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
                         colSpan={4}
                       >
-                        {group.category}
+                        {t(`plan.comparison.groups.${group.key}`)}
                       </td>
                     </tr>
 
                     {group.rows.map((row) => (
-                      <tr className="border-b border-border/40 last:border-0" key={row.feature}>
-                        <td className="py-3 pr-8 text-foreground">{row.feature}</td>
+                      <tr className="border-b border-border/40 last:border-0" key={row.key}>
+                        <td className="py-3 pr-8 text-foreground">
+                          {t(`plan.comparison.features.${row.key}`)}
+                        </td>
                         {([row.free, row.pro, row.enterprise] as ComparisonValue[]).map(
                           (value, index) => (
                             <td className="px-4 py-3 text-center" key={index}>
-                              <ComparisonCell value={value} />
+                              <ComparisonCell t={t} value={value} />
                             </td>
                           ),
                         )}

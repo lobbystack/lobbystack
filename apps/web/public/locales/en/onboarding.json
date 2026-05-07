@@ -127,23 +127,149 @@
   "plan": {
     "title": "Choose your plan",
     "description": "You can upgrade or change later.",
-    "priceMonthly": "{{price}} / mo",
-    "free_cloud": {
-      "title": "Free",
-      "description": "Try LobbyStack with everything you need to get started.",
-      "priceFree": "Free",
-      "features": ["1 phone number", "100 minutes / month", "Email support"]
+    "popular": "Popular",
+    "enterpriseSubject": "Enterprise plan",
+    "compareTitle": "Compare plans in detail",
+    "compareDescription": "Every plan gets all features. Pro gives you higher usage and access to the AI SMS add-on.",
+    "featureHeader": "Feature",
+    "tiers": {
+      "free_cloud": {
+        "name": "Free",
+        "price": "$0",
+        "period": "",
+        "description": "Try LobbyStack with enough usage to see it work.",
+        "cta": "Start free",
+        "highlights": {
+          "voiceMinutes": "10 voice minutes included",
+          "phoneNumber": "Dedicated phone number",
+          "bookingContacts": "Unlimited booking and contacts",
+          "support": "Community support"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "$15",
+        "period": "/mo",
+        "description": "Everything you need to run a production AI receptionist.",
+        "cta": "Upgrade",
+        "highlights": {
+          "voiceMinutes": "80 voice minutes + pay-as-you-go",
+          "aiSms": "Two-way AI SMS add-on",
+          "knowledgeStorage": "2 GB knowledge storage",
+          "support": "Priority email support"
+        }
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "price": "Custom",
+        "period": "",
+        "description": "For higher volume, multiple numbers, or custom deployment needs.",
+        "cta": "Contact us",
+        "highlights": {
+          "phoneNumbers": "Multiple dedicated numbers",
+          "routing": "Multi-location routing",
+          "selfHosted": "Self-hosted deployment option",
+          "support": "Dedicated implementation support"
+        }
+      }
     },
-    "pro": {
-      "title": "Pro",
-      "description": "Higher limits and AI SMS for growing teams.",
-      "features": ["Unlimited numbers", "Higher monthly minutes", "AI SMS available"]
-    },
-    "enterprise": {
-      "title": "Enterprise",
-      "description": "Tailored for high-volume operations and custom needs.",
-      "priceLabel": "Talk to us",
-      "features": ["Volume pricing", "Dedicated support", "Custom integrations"]
+    "comparison": {
+      "groups": {
+        "usage": "Usage & limits",
+        "core": "Core receptionist",
+        "booking": "Booking & follow-up",
+        "routing": "Routing & transfers",
+        "notifications": "Notifications & messaging",
+        "data": "Data & dashboard",
+        "deployment": "Deployment & support"
+      },
+      "features": {
+        "voiceMinutes": "Voice minutes",
+        "outboundCalls": "Outbound call attempts",
+        "alertSms": "Alert SMS segments",
+        "knowledgeStorage": "Knowledge storage",
+        "phoneNumbers": "Phone numbers",
+        "callAnswering": "24/7 call answering",
+        "callerDetails": "Caller details and message capture",
+        "knowledgeAnswers": "Knowledge base answers",
+        "workflows": "Plain-language workflows",
+        "spamFiltering": "Spam filtering",
+        "shortCalls": "Calls under 10s excluded from billing",
+        "concurrentCalls": "Concurrent call handling",
+        "multilingual": "Multilingual support",
+        "appointmentBooking": "Appointment booking",
+        "confirmationTexts": "Appointment confirmation texts",
+        "googleCalendar": "Google Calendar integration",
+        "outlook": "Outlook integration",
+        "missedCallFollowUp": "Missed-call follow-up",
+        "outboundCalling": "Outbound calls",
+        "urgentHandoff": "Urgent call handoff",
+        "callTransfers": "Call transfers",
+        "afterHours": "After-hours answering",
+        "multiLocation": "Multi-location routing",
+        "customEscalation": "Custom fallback and escalation rules",
+        "emailNotifications": "Email notifications",
+        "smsNotifications": "SMS notifications",
+        "aiSms": "Two-way AI SMS conversations",
+        "summaries": "Call summaries and transcripts",
+        "history": "Call history and recordings",
+        "callerProfiles": "Caller profiles and notes",
+        "contacts": "Contacts",
+        "websiteImport": "Website knowledge import",
+        "retentionGuidance": "Data retention guidance",
+        "hosting": "Hosting",
+        "usageBilling": "Usage-based billing",
+        "support": "Support"
+      },
+      "values": {
+        "common": {
+          "custom": "Custom",
+          "multiple": "Multiple",
+          "unlimited": "Unlimited"
+        },
+        "usage": {
+          "voiceMinutes": {
+            "freeIncluded": "10 included",
+            "proIncluded": "80 included",
+            "proThen": "then $0.18/min"
+          },
+          "outboundCalls": {
+            "freeIncluded": "2 included",
+            "proIncluded": "20 included",
+            "proThen": "then $0.02/attempt"
+          },
+          "alertSms": {
+            "freeIncluded": "10 included",
+            "proIncluded": "50 included",
+            "proThen": "then $0.02/segment"
+          },
+          "knowledgeStorage": {
+            "free": "100 MB",
+            "pro": "2 GB"
+          },
+          "phoneNumbers": {
+            "free": "1 dedicated",
+            "pro": "1 dedicated"
+          }
+        },
+        "notifications": {
+          "aiSms": {
+            "proIncluded": "$5/mo + $19 setup",
+            "proThen": "then $0.03/segment"
+          }
+        },
+        "deployment": {
+          "hosting": {
+            "managed": "Managed cloud",
+            "enterprise": "Cloud or self-hosted"
+          },
+          "support": {
+            "community": "Community",
+            "priority": "Priority email",
+            "dedicated": "Dedicated implementation"
+          }
+        }
+      }
     },
     "continue": "Continue",
     "continuing": "Continuing...",

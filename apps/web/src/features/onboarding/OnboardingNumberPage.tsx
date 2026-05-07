@@ -106,6 +106,21 @@ function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
   return parts.length > 0 ? parts.join(", ") : null;
 }
 
+function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableNumberSummary> {
+  const seen = new Set<string>();
+  const unique: Array<AvailableNumberSummary> = [];
+
+  for (const number of numbers) {
+    if (seen.has(number.e164)) {
+      continue;
+    }
+    seen.add(number.e164);
+    unique.push(number);
+  }
+
+  return unique;
+}
+
 export function OnboardingNumberPage({
   businessId,
   onSignOut,
@@ -172,7 +187,7 @@ export function OnboardingNumberPage({
           ...result.alternatives,
         ];
         setNumbers(initialList);
-        setHasMore(initialList.length >= 5);
+        setHasMore(initialList.length >= 10);
       } catch (loadError) {
         if (cancelled) return;
         const rawMessage = loadError instanceof Error ? loadError.message : "";
@@ -207,13 +222,22 @@ export function OnboardingNumberPage({
     setError(null);
     try {
       const trimmedAreaCode = areaCode.trim();
+      const limit = source === "loadMore" ? Math.min(numbers.length + 10, 20) : 10;
       const result = (await searchAvailableNumbers({
         businessId,
         mode: trimmedAreaCode ? "area_code" : "suggested",
+        countryCode: country === "CA" ? "CA" : "US",
         ...(trimmedAreaCode ? { areaCode: trimmedAreaCode } : {}),
+        limit,
       })) as SearchResult;
-      setNumbers(result.numbers);
-      setHasMore(result.numbers.length >= 5);
+      const nextNumbers =
+        source === "loadMore" ? dedupeNumbers([...numbers, ...result.numbers]) : result.numbers;
+      setNumbers(nextNumbers);
+      setHasMore(
+        source === "loadMore"
+          ? nextNumbers.length > numbers.length && nextNumbers.length < 20
+          : nextNumbers.length >= 10,
+      );
     } catch (searchError) {
       setError(getSafeOnboardingErrorMessage(searchError, t, "number.searchFailed"));
     } finally {

@@ -90,7 +90,7 @@ export const onboardingRateLimiter = new RateLimiter(components.rateLimiter, {
   },
   onboardingInventorySearchPerTenMinutes: {
     kind: "fixed window",
-    rate: 1000,
+    rate: 20,
     period: 10 * MINUTE,
   },
   onboardingInitialSuggestionPerTenMinutes: {
@@ -100,7 +100,7 @@ export const onboardingRateLimiter = new RateLimiter(components.rateLimiter, {
   },
   onboardingClaimAttemptPerHour: {
     kind: "fixed window",
-    rate: 1000,
+    rate: 3,
     period: HOUR,
   },
 });

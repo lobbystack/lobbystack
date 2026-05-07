@@ -710,7 +710,7 @@ describe("onboarding phone-number actions", () => {
     expect(listLocalNumbersMock).toHaveBeenCalledTimes(callsBeforeBlockedAttempt);
   });
 
-  it("rate limits repeated inventory searches after a generous allowance", async () => {
+  it("rate limits repeated inventory searches after the configured allowance", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
@@ -722,7 +722,7 @@ describe("onboarding phone-number actions", () => {
     });
     const authed = t.withIdentity({ subject });
 
-    for (let index = 0; index < 1000; index += 1) {
+    for (let index = 0; index < 20; index += 1) {
       await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
         businessId,
         mode: "area_code",
@@ -1011,7 +1011,7 @@ describe("onboarding phone-number actions", () => {
 
     createIncomingPhoneNumberMock.mockRejectedValue(new Error("Temporary Twilio failure."));
 
-    for (let index = 0; index < 1000; index += 1) {
+    for (let index = 0; index < 3; index += 1) {
       const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
         businessId,
         e164: "+14185550123",
@@ -1043,7 +1043,7 @@ describe("onboarding phone-number actions", () => {
       message:
         "Number provisioning limit reached for now. Contact support if you need more businesses today.",
     });
-    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(1000);
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(3);
   });
 
   it("counts only successful purchases toward the durable claim quota", async () => {

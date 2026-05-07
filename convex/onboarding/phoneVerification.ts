@@ -277,16 +277,16 @@ export const resendPhoneVerification = action({
       throw new Error("Start verification again before requesting a new code.");
     }
 
+    const now = Date.now();
+    if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
+      throw new Error("Please wait a moment before requesting another code.");
+    }
+
     await assertVerificationSendAllowed(ctx, {
       businessId: args.businessId,
       userId: user._id,
       phoneE164: attempt.phoneE164,
     });
-
-    const now = Date.now();
-    if (now - attempt.updatedAt < VERIFICATION_RESEND_COOLDOWN_MS) {
-      throw new Error("Please wait a moment before requesting another code.");
-    }
 
     try {
       const client = getTwilioClient();

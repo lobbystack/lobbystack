@@ -127,23 +127,149 @@
   "plan": {
     "title": "Choisissez votre forfait",
     "description": "Vous pouvez changer à tout moment.",
-    "priceMonthly": "{{price}} / mois",
-    "free_cloud": {
-      "title": "Gratuit",
-      "description": "Essayez LobbyStack avec tout ce qu'il faut pour démarrer.",
-      "priceFree": "Gratuit",
-      "features": ["1 numéro", "100 minutes / mois", "Support par email"]
+    "popular": "Populaire",
+    "enterpriseSubject": "Forfait Entreprise",
+    "compareTitle": "Comparer les forfaits en détail",
+    "compareDescription": "Tous les forfaits incluent toutes les fonctionnalités. Pro offre plus d'utilisation et l'accès au module SMS IA.",
+    "featureHeader": "Fonctionnalité",
+    "tiers": {
+      "free_cloud": {
+        "name": "Gratuit",
+        "price": "0 $",
+        "period": "",
+        "description": "Essayez LobbyStack avec assez d'utilisation pour le voir en action.",
+        "cta": "Commencer gratuitement",
+        "highlights": {
+          "voiceMinutes": "10 minutes vocales incluses",
+          "phoneNumber": "Numéro dédié",
+          "bookingContacts": "Réservations et contacts illimités",
+          "support": "Support communautaire"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "15 $",
+        "period": "/mois",
+        "description": "Tout ce qu'il faut pour exploiter une réceptionniste IA en production.",
+        "cta": "Passer à Pro",
+        "highlights": {
+          "voiceMinutes": "80 minutes vocales + paiement à l'usage",
+          "aiSms": "Module SMS IA bidirectionnel",
+          "knowledgeStorage": "2 Go de connaissances",
+          "support": "Support prioritaire par email"
+        }
+      },
+      "enterprise": {
+        "name": "Entreprise",
+        "price": "Sur mesure",
+        "period": "",
+        "description": "Pour les volumes plus élevés, plusieurs numéros ou des besoins de déploiement personnalisés.",
+        "cta": "Nous contacter",
+        "highlights": {
+          "phoneNumbers": "Plusieurs numéros dédiés",
+          "routing": "Routage multi-sites",
+          "selfHosted": "Option de déploiement auto-hébergé",
+          "support": "Accompagnement dédié"
+        }
+      }
     },
-    "pro": {
-      "title": "Pro",
-      "description": "Limites plus élevées et SMS IA pour les équipes en croissance.",
-      "features": ["Numéros illimités", "Plus de minutes", "SMS IA disponible"]
-    },
-    "enterprise": {
-      "title": "Entreprise",
-      "description": "Pour les volumes élevés et les besoins sur mesure.",
-      "priceLabel": "Contactez-nous",
-      "features": ["Tarifs volume", "Support dédié", "Intégrations sur mesure"]
+    "comparison": {
+      "groups": {
+        "usage": "Utilisation et limites",
+        "core": "Réceptionniste principale",
+        "booking": "Réservations et suivi",
+        "routing": "Routage et transferts",
+        "notifications": "Notifications et messagerie",
+        "data": "Données et tableau de bord",
+        "deployment": "Déploiement et support"
+      },
+      "features": {
+        "voiceMinutes": "Minutes vocales",
+        "outboundCalls": "Tentatives d'appels sortants",
+        "alertSms": "Segments SMS d'alerte",
+        "knowledgeStorage": "Stockage des connaissances",
+        "phoneNumbers": "Numéros de téléphone",
+        "callAnswering": "Réponse aux appels 24/7",
+        "callerDetails": "Détails des appelants et prise de messages",
+        "knowledgeAnswers": "Réponses de la base de connaissances",
+        "workflows": "Flux en langage naturel",
+        "spamFiltering": "Filtrage du spam",
+        "shortCalls": "Appels de moins de 10 s exclus de la facturation",
+        "concurrentCalls": "Gestion des appels simultanés",
+        "multilingual": "Support multilingue",
+        "appointmentBooking": "Réservation de rendez-vous",
+        "confirmationTexts": "SMS de confirmation de rendez-vous",
+        "googleCalendar": "Intégration Google Agenda",
+        "outlook": "Intégration Outlook",
+        "missedCallFollowUp": "Suivi des appels manqués",
+        "outboundCalling": "Appels sortants",
+        "urgentHandoff": "Transfert des appels urgents",
+        "callTransfers": "Transferts d'appels",
+        "afterHours": "Réponse hors horaires",
+        "multiLocation": "Routage multi-sites",
+        "customEscalation": "Règles personnalisées de repli et d'escalade",
+        "emailNotifications": "Notifications par email",
+        "smsNotifications": "Notifications SMS",
+        "aiSms": "Conversations SMS IA bidirectionnelles",
+        "summaries": "Résumés et transcriptions d'appels",
+        "history": "Historique et enregistrements d'appels",
+        "callerProfiles": "Profils et notes d'appelants",
+        "contacts": "Contacts",
+        "websiteImport": "Import des connaissances du site web",
+        "retentionGuidance": "Conseils de conservation des données",
+        "hosting": "Hébergement",
+        "usageBilling": "Facturation à l'usage",
+        "support": "Support"
+      },
+      "values": {
+        "common": {
+          "custom": "Sur mesure",
+          "multiple": "Plusieurs",
+          "unlimited": "Illimité"
+        },
+        "usage": {
+          "voiceMinutes": {
+            "freeIncluded": "10 incluses",
+            "proIncluded": "80 incluses",
+            "proThen": "puis 0,18 $/min"
+          },
+          "outboundCalls": {
+            "freeIncluded": "2 incluses",
+            "proIncluded": "20 incluses",
+            "proThen": "puis 0,02 $/tentative"
+          },
+          "alertSms": {
+            "freeIncluded": "10 inclus",
+            "proIncluded": "50 inclus",
+            "proThen": "puis 0,02 $/segment"
+          },
+          "knowledgeStorage": {
+            "free": "100 Mo",
+            "pro": "2 Go"
+          },
+          "phoneNumbers": {
+            "free": "1 dédié",
+            "pro": "1 dédié"
+          }
+        },
+        "notifications": {
+          "aiSms": {
+            "proIncluded": "5 $/mois + 19 $ de configuration",
+            "proThen": "puis 0,03 $/segment"
+          }
+        },
+        "deployment": {
+          "hosting": {
+            "managed": "Cloud géré",
+            "enterprise": "Cloud ou auto-hébergé"
+          },
+          "support": {
+            "community": "Communautaire",
+            "priority": "Prioritaire par email",
+            "dedicated": "Accompagnement dédié"
+          }
+        }
+      }
     },
     "continue": "Continuer",
     "continuing": "Continuer...",
