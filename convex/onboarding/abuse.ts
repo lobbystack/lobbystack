@@ -144,16 +144,87 @@ export const getSuccessfulClaimQuotaState = internalQuery({
   },
 });
 
-export const recordSuccessfulClaimEvent = internalMutation({
+async function assertSuccessfulClaimQuotaAvailable(
+  ctx: MutationCtx,
+  input: {
+    businessId: Id<"businesses">;
+    userId: Id<"users">;
+    now: number;
+  },
+): Promise<void> {
+  const dailyEvents = await ctx.db
+    .query("onboarding_number_claim_events")
+    .withIndex("by_user_id_and_purchased_at", (q) =>
+      q.eq("userId", input.userId).gte("purchasedAt", input.now - 24 * 60 * 60 * 1000),
+    )
+    .order("desc")
+    .take(SUCCESSFUL_CLAIMS_PER_DAY);
+  if (dailyEvents.length >= SUCCESSFUL_CLAIMS_PER_DAY) {
+    logOnboardingAbuseEvent({
+      limiter: "onboardingSuccessfulClaimsPerDay",
+      decision: "blocked",
+      reason: "daily_quota",
+      userId: input.userId,
+      businessId: input.businessId,
+    });
+    throw new Error(NUMBER_CLAIM_RATE_LIMIT_MESSAGE);
+  }
+
+  const monthlyEvents = await ctx.db
+    .query("onboarding_number_claim_events")
+    .withIndex("by_user_id_and_purchased_at", (q) =>
+      q.eq("userId", input.userId).gte("purchasedAt", input.now - THIRTY_DAYS_MS),
+    )
+    .order("desc")
+    .take(SUCCESSFUL_CLAIMS_PER_THIRTY_DAYS);
+  if (monthlyEvents.length >= SUCCESSFUL_CLAIMS_PER_THIRTY_DAYS) {
+    logOnboardingAbuseEvent({
+      limiter: "onboardingSuccessfulClaimsPerThirtyDays",
+      decision: "blocked",
+      reason: "monthly_quota",
+      userId: input.userId,
+      businessId: input.businessId,
+    });
+    throw new Error(NUMBER_CLAIM_RATE_LIMIT_MESSAGE);
+  }
+}
+
+export const reserveSuccessfulClaimEvent = internalMutation({
   args: {
     businessId: v.id("businesses"),
     userId: v.id("users"),
+    reservedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await assertSuccessfulClaimQuotaAvailable(ctx, {
+      businessId: args.businessId,
+      userId: args.userId,
+      now: args.reservedAt,
+    });
+    return await ctx.db.insert("onboarding_number_claim_events", {
+      businessId: args.businessId,
+      userId: args.userId,
+      purchasedAt: args.reservedAt,
+      status: "reserved",
+    });
+  },
+});
+
+export const finalizeSuccessfulClaimEvent = internalMutation({
+  args: {
+    claimEventId: v.id("onboarding_number_claim_events"),
     phoneNumberId: v.id("phone_numbers"),
     twilioPhoneSid: v.string(),
     purchasedAt: v.number(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("onboarding_number_claim_events", args);
+    await ctx.db.patch(args.claimEventId, {
+      phoneNumberId: args.phoneNumberId,
+      twilioPhoneSid: args.twilioPhoneSid,
+      purchasedAt: args.purchasedAt,
+      status: "claimed",
+    });
+    return null;
   },
 });
 

@@ -363,8 +363,9 @@ export default defineSchema({
   onboarding_number_claim_events: defineTable({
     businessId: v.id("businesses"),
     userId: v.id("users"),
-    phoneNumberId: v.id("phone_numbers"),
-    twilioPhoneSid: v.string(),
+    phoneNumberId: v.optional(v.id("phone_numbers")),
+    twilioPhoneSid: v.optional(v.string()),
+    status: v.optional(v.union(v.literal("reserved"), v.literal("claimed"))),
     purchasedAt: v.number(),
   })
     .index("by_business_id", ["businessId"])

@@ -851,6 +851,11 @@ export const claimOnboardingNumber = action({
         claimE164,
         selectionContext: args.selectionContext,
       });
+      claimEventId = await ctx.runMutation(internal.onboarding.abuse.reserveSuccessfulClaimEvent, {
+        businessId: args.businessId,
+        userId,
+        reservedAt: Date.now(),
+      });
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
       const voiceWebhookUrl = buildTwilioVoiceInboundWebhookUrl();
@@ -898,9 +903,8 @@ export const claimOnboardingNumber = action({
         smsWebhookTargetUrl: purchased.smsUrl ?? smsWebhookUrl,
         smsWebhookLastSyncedAt: now,
       });
-      claimEventId = await ctx.runMutation(internal.onboarding.abuse.recordSuccessfulClaimEvent, {
-        businessId: args.businessId,
-        userId,
+      await ctx.runMutation(internal.onboarding.abuse.finalizeSuccessfulClaimEvent, {
+        claimEventId,
         phoneNumberId: saved.phoneNumberId,
         twilioPhoneSid: purchased.sid,
         purchasedAt: Date.now(),
