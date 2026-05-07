@@ -674,10 +674,12 @@ export default defineSchema({
     previewByteLength: v.optional(v.number()),
     deliveryMode: v.string(),
     status: v.string(),
+    expiresAt: v.optional(v.string()),
     sentMessageId: v.optional(v.id("messages")),
   })
     .index("by_business_id_and_conversation_id", ["businessId", "conversationId"])
     .index("by_uploader_user_id_and_conversation_id", ["uploaderUserId", "conversationId"])
+    .index("by_status_and_expires_at", ["status", "expiresAt"])
     .index("by_sent_message_id", ["sentMessageId"]),
 
   message_attachment_download_tokens: defineTable({

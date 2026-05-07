@@ -42,6 +42,7 @@ import {
 } from "../telemetry/shared";
 import {
   REDACTED_MESSAGE_BODY,
+  getUnsentAttachmentUploadExpiresAt,
   getVisibleMessageBody,
   isMessageContentExpired,
 } from "../privacy/retention";
@@ -709,6 +710,7 @@ export const insertStagedAttachment = internalMutation({
       ...(args.previewByteLength ? { previewByteLength: args.previewByteLength } : {}),
       deliveryMode: args.deliveryMode,
       status: "staged",
+      expiresAt: getUnsentAttachmentUploadExpiresAt(),
     });
   },
 });

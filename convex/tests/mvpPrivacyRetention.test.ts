@@ -582,6 +582,121 @@ describe("MVP privacy retention", () => {
     });
   });
 
+  it("deletes expired abandoned staged and sending attachment uploads", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-abandoned-upload-owner",
+      slug: "mvp-retention-abandoned-upload",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const expiredStagedStorageId = await storeTestBlob(ctx, "expired staged upload");
+      const expiredStagedPreviewStorageId = await storeTestBlob(
+        ctx,
+        "expired staged preview",
+        "image/png",
+      );
+      const expiredSendingStorageId = await storeTestBlob(ctx, "expired sending upload");
+      const freshStorageId = await storeTestBlob(ctx, "fresh staged upload");
+      const linkedStorageId = await storeTestBlob(ctx, "linked staged upload");
+      const linkedMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "outbound",
+        channel: "sms",
+        body: "linked message body",
+        status: "sent",
+        aiGenerated: false,
+      });
+
+      const expiredStagedUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: expiredStagedStorageId,
+        fileName: "expired-staged.txt",
+        contentType: "text/plain",
+        byteLength: 21,
+        previewStorageId: expiredStagedPreviewStorageId,
+        previewFileName: "expired-staged.png",
+        previewContentType: "image/png",
+        previewByteLength: 22,
+        deliveryMode: "link",
+        status: "staged",
+        expiresAt: EXPIRED_ISO,
+      });
+      const expiredSendingUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: expiredSendingStorageId,
+        fileName: "expired-sending.txt",
+        contentType: "text/plain",
+        byteLength: 22,
+        deliveryMode: "link",
+        status: "sending",
+        expiresAt: EXPIRED_ISO,
+      });
+      const freshUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: freshStorageId,
+        fileName: "fresh-staged.txt",
+        contentType: "text/plain",
+        byteLength: 18,
+        deliveryMode: "link",
+        status: "staged",
+        expiresAt: FRESH_ISO,
+      });
+      const linkedUploadId = await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: linkedStorageId,
+        fileName: "linked-staged.txt",
+        contentType: "text/plain",
+        byteLength: 19,
+        deliveryMode: "link",
+        status: "staged",
+        expiresAt: EXPIRED_ISO,
+        sentMessageId: linkedMessageId,
+      });
+
+      return {
+        expiredSendingStorageId,
+        expiredSendingUploadId,
+        expiredStagedPreviewStorageId,
+        expiredStagedStorageId,
+        expiredStagedUploadId,
+        freshStorageId,
+        freshUploadId,
+        linkedStorageId,
+        linkedUploadId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.abandonedMessageAttachmentUploads.deleted).toBe(2);
+    await t.run(async (ctx: TestRunCtx) => {
+      expect(await ctx.db.get(seeded.expiredStagedUploadId)).toBeNull();
+      expect(await ctx.db.get(seeded.expiredSendingUploadId)).toBeNull();
+      expect(await ctx.storage.get(seeded.expiredStagedStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.expiredStagedPreviewStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.expiredSendingStorageId)).toBeNull();
+
+      expect(await ctx.db.get(seeded.freshUploadId)).not.toBeNull();
+      expect(await ctx.storage.get(seeded.freshStorageId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.linkedUploadId)).not.toBeNull();
+      expect(await ctx.storage.get(seeded.linkedStorageId)).not.toBeNull();
+    });
+  });
+
   it("deletes expired transcripts, preview sessions, recordings, and standalone download tokens", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {

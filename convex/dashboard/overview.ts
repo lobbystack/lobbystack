@@ -559,7 +559,7 @@ export const getHomeSummary = query({
           title: contact?.name ?? contact?.phone ?? "Human handoff",
           body:
             latestMessageBody ||
-            (latestMessage === null ? conversation.summary : null) ||
+            conversation.summary ||
             "AI is paused and waiting for an operator reply.",
           createdAt:
             latestMessage !== null

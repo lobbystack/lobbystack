@@ -16,12 +16,15 @@ import {
 export const RAW_SENSITIVE_CONTENT_RETENTION_DAYS = 90;
 export const CALL_RECORDING_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
 export const MESSAGE_CONTENT_RETENTION_DAYS = 365;
+export const UNSENT_ATTACHMENT_UPLOAD_RETENTION_DAYS = 1;
 export const SENSITIVE_CONTENT_RETENTION_DAYS = RAW_SENSITIVE_CONTENT_RETENTION_DAYS;
 export const RAW_SENSITIVE_CONTENT_RETENTION_MS =
   RAW_SENSITIVE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 export const CALL_RECORDING_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
 export const MESSAGE_CONTENT_RETENTION_MS =
   MESSAGE_CONTENT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const UNSENT_ATTACHMENT_UPLOAD_RETENTION_MS =
+  UNSENT_ATTACHMENT_UPLOAD_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 export const SENSITIVE_CONTENT_RETENTION_MS = RAW_SENSITIVE_CONTENT_RETENTION_MS;
 export const REDACTED_MESSAGE_BODY = "[Expired by 365-day retention policy]";
 
@@ -48,6 +51,7 @@ type RetentionCleanupSummary = {
   previewSessions: CleanupCount;
   messageAttachmentDownloadTokens: CleanupCount;
   callRecordingDownloadTokens: CleanupCount;
+  abandonedMessageAttachmentUploads: CleanupCount;
 };
 
 export function getSensitiveContentExpiresAt(nowMs: number = Date.now()): string {
@@ -60,6 +64,12 @@ export function getCallRecordingExpiresAt(nowMs: number = Date.now()): string {
 
 export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
   return new Date(nowMs + MESSAGE_CONTENT_RETENTION_MS).toISOString();
+}
+
+export function getUnsentAttachmentUploadExpiresAt(
+  nowMs: number = Date.now(),
+): string {
+  return new Date(nowMs + UNSENT_ATTACHMENT_UPLOAD_RETENTION_MS).toISOString();
 }
 
 export function isMessageContentExpired(
@@ -844,6 +854,53 @@ export const deleteExpiredCallRecordingDownloadTokens = internalMutation({
   },
 });
 
+export const deleteExpiredAbandonedMessageAttachmentUploads = internalMutation({
+  args: {
+    nowIso: v.string(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args: CleanupArgs): Promise<CleanupCount> => {
+    const limit = normalizeLimit(args.limit);
+    const uploads: Array<Doc<"message_attachment_uploads">> = [];
+    for (const status of ["staged", "sending"]) {
+      const remaining = limit - uploads.length;
+      if (remaining <= 0) {
+        break;
+      }
+      const batch = await ctx.db
+        .query("message_attachment_uploads")
+        .withIndex("by_status_and_expires_at", (q) =>
+          q.eq("status", status).gt("expiresAt", "").lte("expiresAt", args.nowIso),
+        )
+        .take(remaining);
+      uploads.push(...batch);
+    }
+
+    let deleted = 0;
+    for (const upload of uploads) {
+      if (
+        upload.sentMessageId !== undefined ||
+        !isExpired(upload.expiresAt, args.nowIso)
+      ) {
+        continue;
+      }
+
+      const storageIds = new Set<Id<"_storage">>();
+      addStorageId(storageIds, upload.storageId);
+      addStorageId(storageIds, upload.previewStorageId);
+      await deleteStorageIds(ctx, storageIds);
+      await ctx.db.delete(upload._id);
+      deleted += 1;
+    }
+
+    return {
+      scanned: uploads.length,
+      deleted,
+      scrubbed: 0,
+    };
+  },
+});
+
 export const runMvpRetentionCleanup = internalAction({
   args: {
     nowIso: v.optional(v.string()),
@@ -898,6 +955,14 @@ export const runMvpRetentionCleanup = internalAction({
         await ctx.runMutation(
           internal.privacy.retention.deleteExpiredCallRecordingDownloadTokens,
           { nowIso, limit },
+      ),
+      limit,
+    );
+    const abandonedMessageAttachmentUploads = await drainCleanup(
+      async () =>
+        await ctx.runMutation(
+          internal.privacy.retention.deleteExpiredAbandonedMessageAttachmentUploads,
+          { nowIso, limit },
         ),
       limit,
     );
@@ -910,6 +975,7 @@ export const runMvpRetentionCleanup = internalAction({
       previewSessions,
       messageAttachmentDownloadTokens,
       callRecordingDownloadTokens,
+      abandonedMessageAttachmentUploads,
     };
   },
 });
