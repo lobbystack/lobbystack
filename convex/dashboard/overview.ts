@@ -5,6 +5,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { getLocalizedServiceName } from "../lib/serviceNames";
 import {
+  getVisibleMessageBody,
   isCallRecordingExpired,
   isTranscriptExpired,
 } from "../privacy/retention";
@@ -543,6 +544,9 @@ export const getHomeSummary = query({
             .take(1),
         ]);
         const latestMessage = latestMessages[0] ?? null;
+        const latestMessageBody = latestMessage
+          ? getVisibleMessageBody(latestMessage).trim()
+          : "";
         const latestMessageTimestamp =
           latestMessage?._creationTime ??
           (conversation.automationPausedAt
@@ -554,8 +558,8 @@ export const getHomeSummary = query({
           kind: "human_handoff",
           title: contact?.name ?? contact?.phone ?? "Human handoff",
           body:
-            latestMessage?.body?.trim() ||
-            conversation.summary ||
+            latestMessageBody ||
+            (latestMessage === null ? conversation.summary : null) ||
             "AI is paused and waiting for an operator reply.",
           createdAt:
             latestMessage !== null

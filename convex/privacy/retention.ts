@@ -220,6 +220,7 @@ async function scrubMessageContent(
   await deleteSentAttachmentUploads(ctx, message._id, storageIds);
   await deleteMessageAttachmentTokens(ctx, message._id);
   await deleteStorageIds(ctx, storageIds);
+  await scrubPausedSmsNotificationMirrors(ctx, message);
   await scrubVoiceMessageMirrors(ctx, message);
   await deleteConversationAgentThread(ctx, message.conversationId);
 
@@ -288,6 +289,49 @@ async function deletePreviewStream(
   return 1;
 }
 
+async function scrubOperatorNotificationDeliveries(
+  ctx: MutationCtx,
+  input: {
+    businessId: Id<"businesses">;
+    eventKind: Doc<"operator_notification_deliveries">["eventKind"];
+    eventKey: string;
+    subject: string;
+  },
+): Promise<void> {
+  const deliveries = await ctx.db
+    .query("operator_notification_deliveries")
+    .withIndex("by_business_id_and_event_kind_and_event_key", (q) =>
+      q
+        .eq("businessId", input.businessId)
+        .eq("eventKind", input.eventKind)
+        .eq("eventKey", input.eventKey),
+    )
+    .take(MAX_RETENTION_CLEANUP_LIMIT);
+
+  for (const delivery of deliveries) {
+    await ctx.db.patch(delivery._id, {
+      subject: input.subject,
+      body: REDACTED_MESSAGE_BODY,
+    });
+  }
+}
+
+async function scrubPausedSmsNotificationMirrors(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  if (message.channel !== "sms") {
+    return;
+  }
+
+  await scrubOperatorNotificationDeliveries(ctx, {
+    businessId: message.businessId,
+    eventKind: "pausedSms",
+    eventKey: `pausedSms:${String(message._id)}`,
+    subject: "Expired paused SMS message",
+  });
+}
+
 async function scrubVoiceMessageMirrors(
   ctx: MutationCtx,
   message: Doc<"messages">,
@@ -327,27 +371,6 @@ async function scrubVoiceMessageMirrors(
     return;
   }
 
-  async function scrubOperatorNotificationDeliveries(
-    inboxItemId: Id<"inbox_items">,
-  ): Promise<void> {
-    const deliveries = await ctx.db
-      .query("operator_notification_deliveries")
-      .withIndex("by_business_id_and_event_kind_and_event_key", (q) =>
-        q
-          .eq("businessId", message.businessId)
-          .eq("eventKind", "voiceMessage")
-          .eq("eventKey", `voiceMessage:${String(inboxItemId)}`),
-      )
-      .take(MAX_RETENTION_CLEANUP_LIMIT);
-
-    for (const delivery of deliveries) {
-      await ctx.db.patch(delivery._id, {
-        subject: "Expired voice message",
-        body: REDACTED_MESSAGE_BODY,
-      });
-    }
-  }
-
   const inboxItems = await ctx.db
     .query("inbox_items")
     .withIndex("by_kind_and_related_id", (q) =>
@@ -355,7 +378,12 @@ async function scrubVoiceMessageMirrors(
     )
     .take(MAX_RETENTION_CLEANUP_LIMIT);
   for (const item of inboxItems) {
-    await scrubOperatorNotificationDeliveries(item._id);
+    await scrubOperatorNotificationDeliveries(ctx, {
+      businessId: message.businessId,
+      eventKind: "voiceMessage",
+      eventKey: `voiceMessage:${String(item._id)}`,
+      subject: "Expired voice message",
+    });
     await ctx.db.patch(item._id, {
       title: "Expired voice message",
       body: REDACTED_MESSAGE_BODY,

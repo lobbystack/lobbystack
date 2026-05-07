@@ -131,6 +131,10 @@ describe("MVP privacy retention", () => {
 
     const seeded = await t.run(async (ctx: TestRunCtx) => {
       const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      await ctx.db.patch(conversationId, {
+        automationState: "human_handoff",
+        summary: "Leaky handoff summary before cron",
+      });
       const messageStorageId = await storeTestBlob(ctx, "expired visible attachment");
       const messageId = await ctx.db.insert("messages", {
         businessId: owner.businessId,
@@ -227,8 +231,21 @@ describe("MVP privacy retention", () => {
       callId: seeded.callId,
     });
     expect(call?.recordingUrl).toBeNull();
+    expect(
+      call && "recordingStorageId" in call ? call.recordingStorageId : undefined,
+    ).toBeUndefined();
+    expect(call?.recordingRetentionStatus).toBe("expired");
     expect(call?.transcriptReady).toBe(false);
     expect(call?.transcriptPreview).toBeNull();
+
+    const homeSummary = await owner.authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId: owner.businessId,
+      locale: "en",
+    });
+    const handoffTask = homeSummary.actionRequired.find(
+      (item) => item.kind === "human_handoff",
+    );
+    expect(handoffTask?.body).toBe(REDACTED_MESSAGE_BODY);
 
     await expect(
       owner.authed.query(api.voice.runtime.getCallTranscript, {
@@ -285,6 +302,18 @@ describe("MVP privacy retention", () => {
         ],
         contentRetentionStatus: "active",
         contentExpiresAt: EXPIRED_ISO,
+      });
+      const pausedSmsDeliveryId = await ctx.db.insert("operator_notification_deliveries", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        eventKind: "pausedSms",
+        eventKey: `pausedSms:${String(expiredMessageId)}`,
+        channel: "sms",
+        status: "sent",
+        subject: "New message in paused SMS conversation",
+        body: "A customer sent a new SMS while automation is paused.\n\nFrom: +14165550001\n\nold sensitive SMS body",
+        sentAt: "2026-05-01T12:00:00.000Z",
+        createdAt: "2026-05-01T12:00:00.000Z",
       });
       await ctx.db.insert("message_attachment_uploads", {
         businessId: owner.businessId,
@@ -354,6 +383,7 @@ describe("MVP privacy retention", () => {
         expiredStorageId,
         expiredPreviewStorageId,
         expiredTokenId,
+        pausedSmsDeliveryId,
         conversationAiStateId,
         freshMessageId,
         freshStorageId,
@@ -380,6 +410,10 @@ describe("MVP privacy retention", () => {
       expect(expiredMessage?.fromPhoneNumber).toBeUndefined();
       expect(await ctx.db.get(seeded.expiredTokenId)).toBeNull();
       expect(await ctx.db.get(seeded.conversationAiStateId)).toBeNull();
+      expect(await ctx.db.get(seeded.pausedSmsDeliveryId)).toMatchObject({
+        subject: "Expired paused SMS message",
+        body: REDACTED_MESSAGE_BODY,
+      });
       expect(await ctx.storage.get(seeded.expiredStorageId)).toBeNull();
       expect(await ctx.storage.get(seeded.expiredPreviewStorageId)).toBeNull();
       expect(

@@ -399,13 +399,17 @@ function TranscriptTab({
 
 function RecordingTab({ call }: { call: CallRow }) {
   const { t } = useTranslation("calls");
+  const recordingExpired =
+    call.recordingRetentionStatus === "expired" ||
+    (typeof call.recordingExpiresAt === "string" &&
+      Date.parse(call.recordingExpiresAt) <= Date.now());
 
   if (!call.recordingUrl) {
     return (
       <div className="flex flex-col items-center gap-2 py-16 text-center">
         <Headphones className="size-8 text-muted-foreground/40" />
         <p className="type-empty-description">
-          {call.recordingStorageId
+          {call.recordingStorageId && !recordingExpired
             ? t("detail.recording.pending")
             : t("detail.recording.unavailable")}
         </p>

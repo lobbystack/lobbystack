@@ -371,14 +371,23 @@ async function hydrateDashboardCallRow(
   )[0] ?? null;
   const hasActiveRecordingToken =
     recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
-  const recordingAvailable =
-    call.recordingStorageId !== undefined && !isCallRecordingExpired(call);
+  const recordingExpired = isCallRecordingExpired(call);
+  const recordingAvailable = call.recordingStorageId !== undefined && !recordingExpired;
+  const callForDashboard = recordingExpired
+    ? (() => {
+        const { recordingStorageId: _recordingStorageId, ...rest } = call;
+        return {
+          ...rest,
+          recordingRetentionStatus: "expired" as const,
+        };
+      })()
+    : call;
   const visibleTranscriptPreview = transcriptPreview.find(
     (transcript) => !isTranscriptExpired(transcript),
   );
 
   return {
-    ...call,
+    ...callForDashboard,
     recordingUrl: recordingAvailable
       ? hasActiveRecordingToken
         ? buildCallRecordingDownloadUrl(recordingToken.nonce)
