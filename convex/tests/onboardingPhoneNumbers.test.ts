@@ -1344,7 +1344,7 @@ describe("onboarding phone-number actions", () => {
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
   });
 
-  it("does not count unavailable inventory races toward the claim attempt limiter", async () => {
+  it("counts unavailable inventory races toward the claim attempt limiter", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
@@ -1430,9 +1430,10 @@ describe("onboarding phone-number actions", () => {
 
     expect(nextResult).toEqual({
       status: "failed",
-      message: "Temporary Twilio failure.",
+      message:
+        "Number provisioning limit reached for now. Contact support if you need more businesses today.",
     });
-    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
   });
 
   it("releases the purchased Twilio number if local persistence fails", async () => {

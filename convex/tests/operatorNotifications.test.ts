@@ -783,4 +783,71 @@ describe("operator notification preferences", () => {
       expect(deliveries[0]?.eventKey).toContain(String(seeded.userId));
     });
   });
+
+  it("collapses duplicate same-name businesses for a recipient and prefers their active business", async () => {
+    const t = createConvexHarness();
+    const seeded = await t.run(async (ctx) => {
+      const duplicateBusinessIds: Array<Id<"businesses">> = [];
+      for (let index = 0; index < 5; index += 1) {
+        duplicateBusinessIds.push(
+          await ctx.db.insert("businesses", {
+            slug: `lobbystack-duplicate-${index}`,
+            name: index % 2 === 0 ? "LobbyStack" : "Lobbystack",
+            timezone: "UTC",
+            businessType: "general",
+            deploymentMode: "development",
+            status: "active",
+            onboardingStage: index === 0 ? "completed" : "website",
+          }),
+        );
+      }
+      const activeBusinessId = duplicateBusinessIds[2]!;
+      const userId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "operator-digest-duplicate-businesses",
+        email: "hello@lobbystack.com",
+        activeBusinessId,
+      });
+
+      for (const businessId of duplicateBusinessIds) {
+        await ctx.db.insert("business_memberships", {
+          businessId,
+          userId,
+          role: "business_owner",
+          status: "active",
+        });
+        await ctx.db.insert("operator_notification_preferences", {
+          businessId,
+          userId,
+          emailEnabled: true,
+          smsEnabled: false,
+          eventPreferences: buildDefaultOperatorNotificationEventPreferences(),
+          dailySummaryEnabled: true,
+          dailySummarySendTime: "00:00",
+          updatedAt: "2026-05-07T00:00:00.000Z",
+        });
+      }
+
+      return { activeBusinessId, duplicateBusinessIds };
+    });
+
+    await t.action(internal.operatorNotifications.dispatchDueDailyDigests, {});
+
+    await t.run(async (ctx) => {
+      const deliveries = (
+        await Promise.all(
+          seeded.duplicateBusinessIds.map((businessId) =>
+            ctx.db
+              .query("operator_notification_deliveries")
+              .withIndex("by_business_id_and_event_kind", (q) =>
+                q.eq("businessId", businessId).eq("eventKind", "dailyDigest"),
+              )
+              .collect(),
+          ),
+        )
+      ).flat();
+
+      expect(deliveries).toHaveLength(1);
+      expect(deliveries[0]?.businessId).toBe(seeded.activeBusinessId);
+    });
+  });
 });

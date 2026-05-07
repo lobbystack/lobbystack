@@ -6,7 +6,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { type ActionCtx } from "../_generated/server";
 import { getTwilioClient, requireTwilioVerifyServiceSid } from "../lib/node/twilioClient";
-import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
+import { normalizeOnboardingStage } from "../lib/onboardingStage";
 import { assertVerificationSendAllowed } from "./abuse";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
@@ -108,7 +108,7 @@ async function requireBusinessInPhoneVerificationStage(
     throw new Error("Business not found.");
   }
   const stage = normalizeOnboardingStage(business.onboardingStage);
-  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.verify_phone) {
+  if (stage !== "verify_phone" && stage !== "verify_phone_code") {
     throw new Error("Phone verification is no longer available for this business.");
   }
 }
@@ -186,8 +186,7 @@ export const startPhoneVerification = action({
       });
 
       // Advance to the OTP entry stage so a refresh resumes on the
-      // code-entry screen instead of the phone-input screen. Do not regress
-      // businesses that are revisiting verification from a later step.
+      // code-entry screen instead of the phone-input screen.
       await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
         businessId: args.businessId,
         onboardingStage: "verify_phone_code",

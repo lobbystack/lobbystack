@@ -26,6 +26,50 @@ import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolic
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
+
+function normalizeBootstrapBusinessName(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+async function findExistingBootstrapBusiness(
+  ctx: Parameters<typeof ensureCurrentUser>[0],
+  input: {
+    userId: Id<"users">;
+    activeBusinessId?: Id<"businesses">;
+    name: string;
+  },
+): Promise<Id<"businesses"> | null> {
+  const normalizedName = normalizeBootstrapBusinessName(input.name);
+  if (!normalizedName) {
+    return null;
+  }
+
+  const memberships = await ctx.db
+    .query("business_memberships")
+    .withIndex("by_user_id_and_business_id", (q) => q.eq("userId", input.userId))
+    .collect();
+  const matchingBusinessIds: Array<Id<"businesses">> = [];
+
+  for (const membership of memberships) {
+    if (membership.status !== "active") {
+      continue;
+    }
+    const business = await ctx.db.get(membership.businessId);
+    if (
+      business?.status === "active" &&
+      normalizeBootstrapBusinessName(business.name) === normalizedName
+    ) {
+      matchingBusinessIds.push(business._id);
+    }
+  }
+
+  if (input.activeBusinessId && matchingBusinessIds.includes(input.activeBusinessId)) {
+    return input.activeBusinessId;
+  }
+
+  return matchingBusinessIds[0] ?? null;
+}
+
 /**
  * Create the initial tenant and owner membership for the authenticated user.
  */
@@ -38,6 +82,18 @@ export const bootstrapBusiness = mutation({
   },
   handler: async (ctx, args) => {
     const user = await ensureCurrentUser(ctx);
+    const existingBusinessId = await findExistingBootstrapBusiness(ctx, {
+      userId: user._id,
+      ...(user.activeBusinessId ? { activeBusinessId: user.activeBusinessId } : {}),
+      name: args.name,
+    });
+    if (existingBusinessId) {
+      if (user.activeBusinessId !== existingBusinessId) {
+        await ctx.db.patch(user._id, { activeBusinessId: existingBusinessId });
+      }
+      return { businessId: existingBusinessId };
+    }
+
     await assertBootstrapAllowed(ctx, user._id);
     const existing = await ctx.db
       .query("businesses")

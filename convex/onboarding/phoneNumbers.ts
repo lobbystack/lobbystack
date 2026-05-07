@@ -973,6 +973,21 @@ export const claimOnboardingNumber = action({
       }
 
       if (!purchased && isLikelyNumberUnavailableError(error)) {
+        try {
+          await recordFailedClaimAttempt(ctx, {
+            businessId: args.businessId,
+            userId,
+          });
+        } catch (rateLimitError) {
+          return {
+            status: "failed" as const,
+            message:
+              rateLimitError instanceof Error
+                ? rateLimitError.message
+                : "Number provisioning limit reached for now. Contact support if you need more businesses today.",
+          };
+        }
+
         let alternatives: Array<AvailableNumberSummary> = [];
         try {
           const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);

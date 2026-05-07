@@ -46,6 +46,7 @@ type DigestTarget = {
   userId: Id<"users">;
   email: string;
   dailySummarySendTime: string;
+  isActiveBusinessForUser: boolean;
 };
 
 type DigestSummary = {
@@ -173,6 +174,20 @@ function hashDigestRecipientEmail(email: string): string {
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function normalizeDigestBusinessName(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function shouldPreferDigestTarget(candidate: DigestTarget, existing: DigestTarget): boolean {
+  if (candidate.isActiveBusinessForUser !== existing.isActiveBusinessForUser) {
+    return candidate.isActiveBusinessForUser;
+  }
+  return (
+    sendTimeSortValue(candidate.dailySummarySendTime) <
+    sendTimeSortValue(existing.dailySummarySendTime)
+  );
 }
 
 function deliveryErrorMessage(error: unknown): string {
@@ -849,14 +864,14 @@ export const listDailyDigestTargets = internalQuery({
           userId: user._id,
           email: user.email,
           dailySummarySendTime: effective.dailySummarySendTime,
+          isActiveBusinessForUser: user.activeBusinessId === business._id,
         };
-        const recipientKey = `${String(business._id)}:${normalizeDigestEmail(user.email)}`;
+        const recipientKey = [
+          normalizeDigestEmail(user.email),
+          normalizeDigestBusinessName(business.name),
+        ].join(":");
         const existing = targetsByRecipient.get(recipientKey);
-        if (
-          !existing ||
-          sendTimeSortValue(target.dailySummarySendTime) <
-            sendTimeSortValue(existing.dailySummarySendTime)
-        ) {
+        if (!existing || shouldPreferDigestTarget(target, existing)) {
           targetsByRecipient.set(recipientKey, target);
         }
       }
