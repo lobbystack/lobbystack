@@ -4,6 +4,10 @@ import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership } from "../lib/auth";
 import { getLocalizedServiceName } from "../lib/serviceNames";
+import {
+  isCallRecordingExpired,
+  isTranscriptExpired,
+} from "../privacy/retention";
 
 type KpiWindow = {
   current: number;
@@ -483,6 +487,9 @@ export const getHomeSummary = query({
               .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
               .take(1),
           ]);
+          const visibleTranscriptPreview = transcriptPreview.find(
+            (transcript) => !isTranscriptExpired(transcript),
+          );
 
           return {
             id: call._id,
@@ -490,8 +497,9 @@ export const getHomeSummary = query({
             status: call.status,
             disposition: call.disposition ?? null,
             durationSeconds: call.providerCallDurationSeconds ?? null,
-            transcriptReady: transcriptPreview.length > 0,
-            recordingAvailable: call.recordingStorageId !== undefined,
+            transcriptReady: visibleTranscriptPreview !== undefined,
+            recordingAvailable:
+              call.recordingStorageId !== undefined && !isCallRecordingExpired(call),
             contactName: contact?.name ?? null,
             contactPhone: contact?.phone ?? null,
           };

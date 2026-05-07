@@ -122,6 +122,132 @@ describe("MVP privacy retention", () => {
     );
   });
 
+  it("hides expired content from read paths before cleanup runs", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-read-guards-owner",
+      slug: "mvp-retention-read-guards",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      const messageStorageId = await storeTestBlob(ctx, "expired visible attachment");
+      const messageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "expired body before cron",
+        status: "received",
+        aiGenerated: false,
+        media: [
+          {
+            storageId: messageStorageId,
+            fileName: "expired.txt",
+            contentType: "text/plain",
+            byteLength: 25,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      await ctx.db.insert("message_attachment_download_tokens", {
+        businessId: owner.businessId,
+        messageId,
+        storageId: messageStorageId,
+        fileName: "expired.txt",
+        contentType: "text/plain",
+        disposition: "attachment",
+        nonce: "expired-read-guard-message-token",
+        expiresAt: FRESH_ISO,
+      });
+
+      const recordingStorageId = await storeTestBlob(ctx, "expired recording", "audio/wav");
+      const callId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-read-guards",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+        recordingStorageId,
+        recordingContentType: "audio/wav",
+        recordingByteLength: 17,
+        recordingRetentionStatus: "active",
+        recordingExpiresAt: EXPIRED_ISO,
+      });
+      await ctx.db.insert("call_recording_download_tokens", {
+        businessId: owner.businessId,
+        callId,
+        storageId: recordingStorageId,
+        fileName: "expired-recording.wav",
+        contentType: "audio/wav",
+        nonce: "expired-read-guard-recording-token",
+        expiresAt: FRESH_ISO,
+      });
+      await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId,
+        sequence: 1,
+        speaker: "caller",
+        text: "expired transcript before cron",
+        final: true,
+        expiresAt: EXPIRED_ISO,
+      });
+      await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: "expired preview before cron",
+        streamId: "expired-read-guard-preview-stream",
+        expiresAt: EXPIRED_ISO,
+      });
+
+      return {
+        callId,
+        conversationId,
+      };
+    });
+
+    const thread = await owner.authed.query(api.dashboard.messages.getConversationThread, {
+      businessId: owner.businessId,
+      conversationId: seeded.conversationId,
+    });
+    expect(thread.messages[0]?.body).toBe(REDACTED_MESSAGE_BODY);
+    expect(thread.messages[0]?.attachments).toEqual([]);
+
+    await expect(
+      t.query(internal.dashboard.messages.getMessageAttachmentDownloadToken, {
+        token: "expired-read-guard-message-token",
+      }),
+    ).resolves.toBeNull();
+
+    const call = await owner.authed.query(api.voice.runtime.getCallForDashboard, {
+      businessId: owner.businessId,
+      callId: seeded.callId,
+    });
+    expect(call?.recordingUrl).toBeNull();
+    expect(call?.transcriptReady).toBe(false);
+    expect(call?.transcriptPreview).toBeNull();
+
+    await expect(
+      owner.authed.query(api.voice.runtime.getCallTranscript, {
+        businessId: owner.businessId,
+        callId: seeded.callId,
+      }),
+    ).resolves.toEqual([]);
+    await expect(
+      t.query(internal.voice.runtime.getCallRecordingDownloadToken, {
+        token: "expired-read-guard-recording-token",
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      owner.authed.query(api.ai.preview.stream.getPreviewBody, {
+        streamId: "expired-read-guard-preview-stream",
+      }),
+    ).rejects.toThrow("Preview session not found.");
+  });
+
   it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {

@@ -44,6 +44,8 @@ import {
   getCallRecordingExpiresAt,
   getMessageContentExpiresAt,
   getSensitiveContentExpiresAt,
+  isCallRecordingExpired,
+  isTranscriptExpired,
 } from "../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
@@ -369,16 +371,21 @@ async function hydrateDashboardCallRow(
   )[0] ?? null;
   const hasActiveRecordingToken =
     recordingToken !== null && Date.parse(recordingToken.expiresAt) >= Date.now();
+  const recordingAvailable =
+    call.recordingStorageId !== undefined && !isCallRecordingExpired(call);
+  const visibleTranscriptPreview = transcriptPreview.find(
+    (transcript) => !isTranscriptExpired(transcript),
+  );
 
   return {
     ...call,
-    recordingUrl: call.recordingStorageId
+    recordingUrl: recordingAvailable
       ? hasActiveRecordingToken
         ? buildCallRecordingDownloadUrl(recordingToken.nonce)
-        : await ctx.storage.getUrl(call.recordingStorageId)
+        : await ctx.storage.getUrl(call.recordingStorageId!)
       : null,
-    transcriptReady: transcriptPreview.length > 0,
-    transcriptPreview: transcriptPreview[0]?.text ?? null,
+    transcriptReady: visibleTranscriptPreview !== undefined,
+    transcriptPreview: visibleTranscriptPreview?.text ?? null,
     contactName: contact?.name ?? null,
     contactPhone: contact?.phone ?? null,
     followUpTask: followUpTask
@@ -1044,10 +1051,20 @@ export const getCallRecordingDownloadToken = internalQuery({
     token: v.string(),
   },
   handler: async (ctx: QueryCtx, args) => {
-    return await ctx.db
+    const token = await ctx.db
       .query("call_recording_download_tokens")
       .withIndex("by_nonce", (q) => q.eq("nonce", args.token))
       .unique();
+    if (!token) {
+      return null;
+    }
+
+    const call = await ctx.db.get(token.callId);
+    if (!call || isCallRecordingExpired(call)) {
+      return null;
+    }
+
+    return token;
   },
 });
 
@@ -1833,10 +1850,11 @@ export const getCallTranscript = query({
       throw new Error("Call not found.");
     }
 
-    return await ctx.db
+    const transcripts = await ctx.db
       .query("transcripts")
       .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", args.callId))
       .order("asc")
       .collect();
+    return transcripts.filter((transcript) => !isTranscriptExpired(transcript));
   },
 });

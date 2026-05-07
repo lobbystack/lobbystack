@@ -61,6 +61,53 @@ export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
   return new Date(nowMs + MESSAGE_CONTENT_RETENTION_MS).toISOString();
 }
 
+export function isMessageContentExpired(
+  message: Doc<"messages">,
+  nowMs: number = Date.now(),
+): boolean {
+  if (message.contentRetentionStatus === "expired") {
+    return true;
+  }
+  return (
+    typeof message.contentExpiresAt === "string" &&
+    Date.parse(message.contentExpiresAt) <= nowMs
+  );
+}
+
+export function isCallRecordingExpired(
+  call: Doc<"calls">,
+  nowMs: number = Date.now(),
+): boolean {
+  if (call.recordingRetentionStatus === "expired") {
+    return true;
+  }
+  return (
+    typeof call.recordingExpiresAt === "string" &&
+    Date.parse(call.recordingExpiresAt) <= nowMs
+  );
+}
+
+export function isTranscriptExpired(
+  transcript: Doc<"transcripts">,
+  nowMs: number = Date.now(),
+): boolean {
+  return typeof transcript.expiresAt === "string" && Date.parse(transcript.expiresAt) <= nowMs;
+}
+
+export function isPreviewSessionExpired(
+  session: Doc<"preview_sessions">,
+  nowMs: number = Date.now(),
+): boolean {
+  return typeof session.expiresAt === "string" && Date.parse(session.expiresAt) <= nowMs;
+}
+
+export function getVisibleMessageBody(
+  message: Doc<"messages">,
+  nowMs: number = Date.now(),
+): string {
+  return isMessageContentExpired(message, nowMs) ? REDACTED_MESSAGE_BODY : message.body;
+}
+
 function normalizeLimit(limit: number): number {
   if (!Number.isFinite(limit)) {
     return DEFAULT_RETENTION_CLEANUP_LIMIT;
@@ -162,6 +209,26 @@ function collectMessageStorageIds(
     addStorageId(storageIds, attachment.storageId);
     addStorageId(storageIds, attachment.previewStorageId);
   }
+}
+
+async function scrubMessageContent(
+  ctx: MutationCtx,
+  message: Doc<"messages">,
+): Promise<void> {
+  const storageIds = new Set<Id<"_storage">>();
+  collectMessageStorageIds(message, storageIds);
+  await deleteSentAttachmentUploads(ctx, message._id, storageIds);
+  await deleteMessageAttachmentTokens(ctx, message._id);
+  await deleteStorageIds(ctx, storageIds);
+  await scrubVoiceMessageMirrors(ctx, message);
+  await deleteConversationAgentThread(ctx, message.conversationId);
+
+  await ctx.db.patch(message._id, {
+    body: REDACTED_MESSAGE_BODY,
+    fromPhoneNumber: undefined,
+    media: undefined,
+    contentRetentionStatus: "expired",
+  });
 }
 
 async function deleteConversationAgentThread(
@@ -334,6 +401,24 @@ async function deleteCallRecordingTokens(
   return tokens.length;
 }
 
+async function scrubCallRecordingContent(
+  ctx: MutationCtx,
+  call: Doc<"calls">,
+): Promise<void> {
+  const storageIds = new Set<Id<"_storage">>();
+  addStorageId(storageIds, call.recordingStorageId);
+  await deleteCallRecordingTokens(ctx, call._id);
+  await deleteStorageIds(ctx, storageIds);
+
+  await ctx.db.patch(call._id, {
+    recordingStorageId: undefined,
+    recordingContentType: undefined,
+    recordingByteLength: undefined,
+    recordingDurationMs: undefined,
+    recordingRetentionStatus: "expired",
+  });
+}
+
 export const scrubExpiredMessages = internalMutation({
   args: {
     nowIso: v.string(),
@@ -356,21 +441,7 @@ export const scrubExpiredMessages = internalMutation({
       if (!isExpired(message.contentExpiresAt, args.nowIso)) {
         continue;
       }
-
-      const storageIds = new Set<Id<"_storage">>();
-      collectMessageStorageIds(message, storageIds);
-      await deleteSentAttachmentUploads(ctx, message._id, storageIds);
-      await deleteMessageAttachmentTokens(ctx, message._id);
-      await deleteStorageIds(ctx, storageIds);
-      await scrubVoiceMessageMirrors(ctx, message);
-      await deleteConversationAgentThread(ctx, message.conversationId);
-
-      await ctx.db.patch(message._id, {
-        body: REDACTED_MESSAGE_BODY,
-        fromPhoneNumber: undefined,
-        media: undefined,
-        contentRetentionStatus: "expired",
-      });
+      await scrubMessageContent(ctx, message);
       scrubbed += 1;
     }
 
@@ -433,19 +504,7 @@ export const scrubExpiredCallRecordings = internalMutation({
       if (!isExpired(call.recordingExpiresAt, args.nowIso)) {
         continue;
       }
-
-      const storageIds = new Set<Id<"_storage">>();
-      addStorageId(storageIds, call.recordingStorageId);
-      await deleteCallRecordingTokens(ctx, call._id);
-      await deleteStorageIds(ctx, storageIds);
-
-      await ctx.db.patch(call._id, {
-        recordingStorageId: undefined,
-        recordingContentType: undefined,
-        recordingByteLength: undefined,
-        recordingDurationMs: undefined,
-        recordingRetentionStatus: "expired",
-      });
+      await scrubCallRecordingContent(ctx, call);
       scrubbed += 1;
     }
 

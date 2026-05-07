@@ -12,7 +12,10 @@ import type { Id } from "../../_generated/dataModel";
 import { v } from "convex/values";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
 import { persistentTextStreaming } from "../../lib/components";
-import { getSensitiveContentExpiresAt } from "../../privacy/retention";
+import {
+  getSensitiveContentExpiresAt,
+  isPreviewSessionExpired,
+} from "../../privacy/retention";
 
 import { observedHttpAction as httpAction } from "../../telemetry/observedFunctions";
 // Convex component types can exceed local tsc recursion depth on these builders.
@@ -50,7 +53,11 @@ export const getPreviewBody = query({
       .withIndex("by_stream_id", (q) => q.eq("streamId", String(args.streamId)))
       .unique();
 
-    if (!previewSession || previewSession.userId !== user._id) {
+    if (
+      !previewSession ||
+      previewSession.userId !== user._id ||
+      isPreviewSessionExpired(previewSession)
+    ) {
       throw new Error("Preview session not found.");
     }
 
