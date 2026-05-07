@@ -188,6 +188,10 @@ function isPhoneNumberClaimBridgeStage(stage: string | undefined): boolean {
   return stage === "phone_number" || stage === "phone_number_claiming";
 }
 
+function isPhoneVerificationStage(stage: string | undefined): boolean {
+  return stage === "verify_phone" || stage === "verify_phone_code";
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -673,9 +677,7 @@ function OnboardingVerifyPhoneRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (
-    !canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "verify_phone")
-  ) {
+  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -708,7 +710,7 @@ function OnboardingVerifyPhoneCodeRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "verify_phone")) {
+  if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 

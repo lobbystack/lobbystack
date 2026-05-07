@@ -54,7 +54,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
   const provider = config.id ?? "password";
 
   return ConvexCredentials<DataModel>({
-    id: "password",
+    id: provider,
     authorize: async (params, ctx) => {
       const flow = getStringParam(params, "flow");
       const passwordToValidate =
