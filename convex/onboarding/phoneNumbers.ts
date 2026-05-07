@@ -8,7 +8,6 @@ import { type ActionCtx } from "../_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
   type AvailableNumberSummary,
-  availableNumberSummaryValidator,
   buildAreaCodeSelectionContext,
   buildCitySelectionContext,
   buildSuggestionContextFromVerifiedPhoneMarket,
@@ -133,6 +132,11 @@ function formatDisplayPhoneNumber(e164: string): string {
 function normalizeClaimE164(e164: string): string | null {
   const trimmed = e164.trim();
   return /^\+\d{8,15}$/.test(trimmed) ? trimmed : null;
+}
+
+function normalizeSupportedCountryCode(value: string | undefined): "US" | "CA" | null {
+  const normalized = value?.trim().toUpperCase();
+  return normalized === "US" || normalized === "CA" ? normalized : null;
 }
 
 function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableNumberSummary> {
@@ -431,6 +435,9 @@ function buildNormalizedSelectionContext(input: {
   const { requestedSelectionContext, fallbackContext } = input;
   const requestedCity = requestedSelectionContext.city?.trim();
   const requestedAreaCode = requestedSelectionContext.areaCode?.trim();
+  const countryCode =
+    normalizeSupportedCountryCode(requestedSelectionContext.countryCode) ??
+    fallbackContext.countryCode;
   const shouldKeepSuggestedRegion =
     requestedSelectionContext.mode !== "city" ||
     !requestedCity ||
@@ -440,7 +447,7 @@ function buildNormalizedSelectionContext(input: {
 
   if (requestedSelectionContext.mode === "city") {
     return buildCitySelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
       city: requestedCity || fallbackContext.city || "",
       ...(shouldKeepSuggestedRegion && fallbackContext.regionCode
         ? { regionCode: fallbackContext.regionCode }
@@ -450,18 +457,21 @@ function buildNormalizedSelectionContext(input: {
 
   if (requestedSelectionContext.mode === "area_code") {
     return buildAreaCodeSelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
       areaCode: requestedAreaCode || "",
     });
   }
 
   if (requestedSelectionContext.mode === "toll_free") {
     return buildTollFreeSelectionContext({
-      countryCode: fallbackContext.countryCode,
+      countryCode,
     });
   }
 
-  return buildSuggestedSelectionContext(fallbackContext);
+  return buildSuggestedSelectionContext({
+    ...fallbackContext,
+    countryCode,
+  });
 }
 
 async function assertOnboardingAccess(
@@ -562,6 +572,44 @@ async function resolveVerifiedSuggestionContext(
   };
 }
 
+async function resolveClaimableNumber(input: {
+  ctx: ActionCtx;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+  claimE164: string;
+  requestedSelectionContext: NumberSelectionContext;
+}): Promise<AvailableNumberSummary> {
+  const { context } = await resolveVerifiedSuggestionContext(
+    input.ctx,
+    input.businessId,
+    input.userId,
+  );
+  const countryCode =
+    normalizeSupportedCountryCode(input.requestedSelectionContext.countryCode) ??
+    context.countryCode;
+  const searchContext: NumberSuggestionContext = {
+    ...context,
+    countryCode,
+  };
+  const selectionContext = buildNormalizedSelectionContext({
+    requestedSelectionContext: input.requestedSelectionContext,
+    fallbackContext: searchContext,
+  });
+  const selectableNumbers = await getNumbersForSelectionContext(
+    selectionContext,
+    searchContext,
+    20,
+  );
+  const selectedNumber =
+    selectableNumbers.find((number) => number.e164 === input.claimE164) ?? null;
+
+  if (!selectedNumber) {
+    throw new Error("The selected phone number is no longer available.");
+  }
+
+  return selectedNumber;
+}
+
 export const getInitialNumberSuggestion = action({
   args: {
     businessId: v.id("businesses"),
@@ -657,10 +705,12 @@ export const claimOnboardingNumber = action({
         userId,
       });
 
-      const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
-      const selectionContext = buildNormalizedSelectionContext({
+      const selectedNumber = await resolveClaimableNumber({
+        ctx,
+        businessId: args.businessId,
+        userId,
+        claimE164,
         requestedSelectionContext: args.selectionContext,
-        fallbackContext: context,
       });
 
       const smsWebhookUrl = buildTwilioSmsInboundWebhookUrl();
@@ -671,7 +721,7 @@ export const claimOnboardingNumber = action({
       try {
         purchased = await client.incomingPhoneNumbers.create({
           friendlyName: `business:${String(args.businessId)}`,
-          phoneNumber: claimE164,
+          phoneNumber: selectedNumber.e164,
           smsMethod: "POST",
           smsUrl: smsWebhookUrl,
           statusCallback: voiceStatusCallbackUrl,
@@ -690,7 +740,7 @@ export const claimOnboardingNumber = action({
         internal.businesses.catalog.upsertPhoneNumberInternal,
         {
           businessId: args.businessId,
-          e164: claimE164,
+          e164: selectedNumber.e164,
           twilioPhoneSid: purchased.sid,
           voiceEnabled: true,
           smsEnabled: true,
@@ -725,13 +775,13 @@ export const claimOnboardingNumber = action({
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,
         userId,
-        phoneE164: claimE164,
+        phoneE164: selectedNumber.e164,
       });
 
       return {
         status: "claimed" as const,
         phoneNumberId: saved.phoneNumberId,
-        e164: claimE164,
+        e164: selectedNumber.e164,
       };
     } catch (error) {
       let cleanupError: Error | null = null;
@@ -787,13 +837,20 @@ export const claimOnboardingNumber = action({
         let alternatives: Array<AvailableNumberSummary> = [];
         try {
           const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
+          const countryCode =
+            normalizeSupportedCountryCode(args.selectionContext.countryCode) ??
+            context.countryCode;
+          const searchContext: NumberSuggestionContext = {
+            ...context,
+            countryCode,
+          };
           const selectionContext = buildNormalizedSelectionContext({
             requestedSelectionContext: args.selectionContext,
-            fallbackContext: context,
+            fallbackContext: searchContext,
           });
-          alternatives = (await getNumbersForSelectionContext(selectionContext, context, 10)).filter(
-            (number) => !unavailableE164s.has(number.e164),
-          );
+          alternatives = (
+            await getNumbersForSelectionContext(selectionContext, searchContext, 10)
+          ).filter((number) => number.e164 !== claimE164 && !unavailableE164s.has(number.e164));
         } catch {
           alternatives = [];
         }

@@ -127,7 +127,8 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   onErrorRef.current = onError;
 
   function executeChallenge(): boolean {
-    setIsActive(false);
+    setIsActive(true);
+    setErrorCode(null);
 
     if (!containerRef.current || !window.turnstile) {
       executeWhenReadyRef.current = true;

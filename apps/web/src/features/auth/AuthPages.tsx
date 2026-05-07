@@ -42,6 +42,10 @@ function getAuthErrorMessage(
   }
 
   if (flow === "signUp") {
+    if (message.includes("already exists")) {
+      return t("errors.accountExists");
+    }
+
     if (message.includes("Turnstile")) {
       return t("errors.turnstileFailed");
     }

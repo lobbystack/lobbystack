@@ -356,7 +356,7 @@ export function OnboardingNumberPage({
       }
     >
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-[140px_1fr_160px_auto] items-end gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[140px_1fr_160px_auto] sm:items-end">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="number-country">
               {t("number.countryLabel")}
@@ -377,7 +377,7 @@ export function OnboardingNumberPage({
               </SelectContent>
             </Select>
           </div>
-          <div aria-hidden="true" />
+          <div aria-hidden="true" className="hidden sm:block" />
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="number-area-code">
               {t("number.areaCodeLabel")}
@@ -392,6 +392,7 @@ export function OnboardingNumberPage({
             />
           </div>
           <Button
+            className="h-11 w-full sm:w-auto"
             disabled={isSearching || isLoading}
             onClick={() => void handleSearch()}
             type="button"
