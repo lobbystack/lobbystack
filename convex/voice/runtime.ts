@@ -45,6 +45,7 @@ import {
   getMessageContentExpiresAt,
   getSensitiveContentExpiresAt,
   isCallRecordingExpired,
+  isTranscriptExpired,
   scheduleCallRecordingExpiration,
   scheduleMessageContentExpiration,
   scheduleTranscriptExpiration,
@@ -384,7 +385,9 @@ async function hydrateDashboardCallRow(
         };
       })()
     : call;
-  const visibleTranscriptPreview = transcriptPreview[0];
+  const visibleTranscriptPreview = transcriptPreview.find(
+    (transcript) => !isTranscriptExpired(transcript),
+  );
 
   return {
     ...callForDashboard,
@@ -1875,6 +1878,6 @@ export const getCallTranscript = query({
       .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", args.callId))
       .order("asc")
       .collect();
-    return transcripts;
+    return transcripts.filter((transcript) => !isTranscriptExpired(transcript));
   },
 });

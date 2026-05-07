@@ -14,6 +14,7 @@ import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../
 import { persistentTextStreaming } from "../../lib/components";
 import {
   getSensitiveContentExpiresAt,
+  isPreviewSessionExpired,
   schedulePreviewSessionExpiration,
 } from "../../privacy/retention";
 
@@ -57,7 +58,8 @@ export const getPreviewBody = query({
 
     if (
       !previewSession ||
-      previewSession.userId !== user._id
+      previewSession.userId !== user._id ||
+      isPreviewSessionExpired(previewSession)
     ) {
       throw new Error("Preview session not found.");
     }

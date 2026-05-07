@@ -122,7 +122,7 @@ describe("MVP privacy retention", () => {
     );
   });
 
-  it("hides expired content after scheduled row-level retention runs", async () => {
+  it("hides expired content from fresh reads when scheduled cleanup is late", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {
       subject: "mvp-retention-read-guards-owner",
@@ -216,23 +216,6 @@ describe("MVP privacy retention", () => {
       };
     });
 
-    await t.mutation(internal.privacy.retention.scrubMessageContentAtExpiry, {
-      messageId: seeded.messageId,
-      expiresAt: EXPIRED_ISO,
-    });
-    await t.mutation(internal.privacy.retention.scrubCallRecordingAtExpiry, {
-      callId: seeded.callId,
-      expiresAt: EXPIRED_ISO,
-    });
-    await t.mutation(internal.privacy.retention.deleteTranscriptAtExpiry, {
-      transcriptId: seeded.transcriptId,
-      expiresAt: EXPIRED_ISO,
-    });
-    await t.mutation(internal.privacy.retention.deletePreviewSessionAtExpiry, {
-      previewSessionId: seeded.previewSessionId,
-      expiresAt: EXPIRED_ISO,
-    });
-
     const thread = await owner.authed.query(api.dashboard.messages.getConversationThread, {
       businessId: owner.businessId,
       conversationId: seeded.conversationId,
@@ -283,6 +266,15 @@ describe("MVP privacy retention", () => {
         streamId: "expired-read-guard-preview-stream",
       }),
     ).rejects.toThrow("Preview session not found.");
+
+    await t.run(async (ctx: TestRunCtx) => {
+      const message = await ctx.db.get(seeded.messageId);
+      const call = await ctx.db.get(seeded.callId);
+      expect(message?.contentRetentionStatus).toBe("active");
+      expect(call?.recordingRetentionStatus).toBe("active");
+      expect(await ctx.db.get(seeded.transcriptId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.previewSessionId)).not.toBeNull();
+    });
   });
 
   it("schedules row-level retention mutations when sensitive content is created", async () => {

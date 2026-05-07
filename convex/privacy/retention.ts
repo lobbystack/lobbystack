@@ -64,14 +64,36 @@ export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
 
 export function isMessageContentExpired(
   message: Doc<"messages">,
+  nowMs: number = Date.now(),
 ): boolean {
-  return message.contentRetentionStatus === "expired";
+  return (
+    message.contentRetentionStatus === "expired" ||
+    isExpiredByTimestamp(message.contentExpiresAt, nowMs)
+  );
 }
 
 export function isCallRecordingExpired(
   call: Doc<"calls">,
+  nowMs: number = Date.now(),
 ): boolean {
-  return call.recordingRetentionStatus === "expired";
+  return (
+    call.recordingRetentionStatus === "expired" ||
+    isExpiredByTimestamp(call.recordingExpiresAt, nowMs)
+  );
+}
+
+export function isTranscriptExpired(
+  transcript: Doc<"transcripts">,
+  nowMs: number = Date.now(),
+): boolean {
+  return isExpiredByTimestamp(transcript.expiresAt, nowMs);
+}
+
+export function isPreviewSessionExpired(
+  session: Doc<"preview_sessions">,
+  nowMs: number = Date.now(),
+): boolean {
+  return isExpiredByTimestamp(session.expiresAt, nowMs);
 }
 
 export function getVisibleMessageBody(
@@ -92,6 +114,17 @@ function parseScheduleTime(expiresAt: string): number | null {
 function isRetentionDue(expiresAt: string): boolean {
   const parsed = Date.parse(expiresAt);
   return Number.isFinite(parsed) && parsed <= Date.now();
+}
+
+function isExpiredByTimestamp(
+  expiresAt: string | undefined,
+  nowMs: number,
+): boolean {
+  if (typeof expiresAt !== "string" || expiresAt.length === 0) {
+    return false;
+  }
+  const parsed = Date.parse(expiresAt);
+  return Number.isFinite(parsed) && parsed <= nowMs;
 }
 
 export async function scheduleMessageContentExpiration(
