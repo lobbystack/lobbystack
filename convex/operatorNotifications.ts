@@ -366,41 +366,36 @@ export const reserveDelivery = internalMutation({
     }
 
     if (args.eventKind === "dailyDigest") {
-      const existingDigest = (
-        await ctx.db
-          .query("operator_notification_deliveries")
-          .withIndex("by_business_id_and_event_kind", (q) =>
-            q.eq("businessId", args.businessId).eq("eventKind", "dailyDigest"),
-          )
-          .collect()
-      ).find(
-        (delivery) => delivery.channel === args.channel && delivery.eventKey === args.eventKey,
-      );
-      if (existingDigest) {
-        return { deliveryId: existingDigest._id, created: false };
-      }
-
-      if (args.channel === "email" && args.digestForDate && args.recipientEmail) {
-        const recipientEmail = normalizeDigestEmail(args.recipientEmail);
+      if (args.digestForDate) {
         const existingDigestDeliveries = await ctx.db
           .query("operator_notification_deliveries")
-          .withIndex("by_business_id_and_event_kind", (q) =>
-            q.eq("businessId", args.businessId).eq("eventKind", "dailyDigest"),
+          .withIndex(
+            "by_business_id_and_event_kind_and_channel_and_digest_for_date",
+            (q) =>
+              q
+                .eq("businessId", args.businessId)
+                .eq("eventKind", "dailyDigest")
+                .eq("channel", args.channel)
+                .eq("digestForDate", args.digestForDate),
           )
           .collect();
-        for (const delivery of existingDigestDeliveries) {
-          if (
-            delivery.channel !== "email" ||
-            delivery.digestForDate !== args.digestForDate
-          ) {
-            continue;
-          }
-          const existingRecipient = await ctx.db.get(delivery.userId);
-          if (
-            existingRecipient?.email &&
-            normalizeDigestEmail(existingRecipient.email) === recipientEmail
-          ) {
-            return { deliveryId: delivery._id, created: false };
+        const existingDigest = existingDigestDeliveries.find(
+          (delivery) => delivery.eventKey === args.eventKey,
+        );
+        if (existingDigest) {
+          return { deliveryId: existingDigest._id, created: false };
+        }
+
+        if (args.channel === "email" && args.recipientEmail) {
+          const recipientEmail = normalizeDigestEmail(args.recipientEmail);
+          for (const delivery of existingDigestDeliveries) {
+            const existingRecipient = await ctx.db.get(delivery.userId);
+            if (
+              existingRecipient?.email &&
+              normalizeDigestEmail(existingRecipient.email) === recipientEmail
+            ) {
+              return { deliveryId: delivery._id, created: false };
+            }
           }
         }
       }

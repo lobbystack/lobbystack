@@ -899,6 +899,12 @@ export default defineSchema({
     .index("by_user_id_and_channel_and_event_key", ["userId", "channel", "eventKey"])
     .index("by_provider_message_id", ["providerMessageId"])
     .index("by_business_id_and_event_kind", ["businessId", "eventKind"])
+    .index("by_business_id_and_event_kind_and_channel_and_digest_for_date", [
+      "businessId",
+      "eventKind",
+      "channel",
+      "digestForDate",
+    ])
     .index("by_status_and_scheduled_for", ["status", "scheduledFor"]),
 
   unit_economics_events: defineTable({
