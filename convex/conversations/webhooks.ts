@@ -28,7 +28,10 @@ import {
   serializePostHogEvent,
 } from "../telemetry/posthog";
 import { ensureSessionForStoredMessage } from "./sessions";
-import { getMessageContentExpiresAt } from "../privacy/retention";
+import {
+  getMessageContentExpiresAt,
+  scheduleMessageContentExpiration,
+} from "../privacy/retention";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
@@ -600,6 +603,7 @@ export const storeInboundMessage = internalMutation({
         automationState: "ai_active",
       }));
 
+    const contentExpiresAt = getMessageContentExpiresAt();
     const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId,
@@ -613,8 +617,9 @@ export const storeInboundMessage = internalMutation({
       status: "received",
       aiGenerated: false,
       contentRetentionStatus: "active",
-      contentExpiresAt: getMessageContentExpiresAt(),
+      contentExpiresAt,
     });
+    await scheduleMessageContentExpiration(ctx, messageId, contentExpiresAt);
 
     await ensureSessionForStoredMessage(ctx, {
       businessId: args.businessId,
@@ -692,6 +697,7 @@ export const storeOutboundMessage = internalMutation({
     senderRole: v.optional(v.literal("business_ai")),
   },
   handler: async (ctx: MutationCtx, args: StoreOutboundMessageArgs): Promise<Id<"messages">> => {
+    const contentExpiresAt = getMessageContentExpiresAt();
     const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId: args.conversationId,
@@ -705,8 +711,9 @@ export const storeOutboundMessage = internalMutation({
       ...(args.senderRole !== undefined ? { senderRole: args.senderRole } : {}),
       aiGenerated: args.aiGenerated ?? true,
       contentRetentionStatus: "active",
-      contentExpiresAt: getMessageContentExpiresAt(),
+      contentExpiresAt,
     });
+    await scheduleMessageContentExpiration(ctx, messageId, contentExpiresAt);
 
     await ensureSessionForStoredMessage(ctx, {
       businessId: args.businessId,
@@ -771,7 +778,8 @@ export const reserveOutboundAiMessage = internalMutation({
     ctx: MutationCtx,
     args: ReserveOutboundAiMessageArgs,
   ): Promise<Id<"messages">> => {
-    return await ctx.db.insert("messages", {
+    const contentExpiresAt = getMessageContentExpiresAt();
+    const messageId = await ctx.db.insert("messages", {
       businessId: args.businessId,
       conversationId: args.conversationId,
       direction: "outbound",
@@ -782,8 +790,10 @@ export const reserveOutboundAiMessage = internalMutation({
       senderRole: args.senderRole ?? "business_ai",
       aiGenerated: true,
       contentRetentionStatus: "active",
-      contentExpiresAt: getMessageContentExpiresAt(),
+      contentExpiresAt,
     });
+    await scheduleMessageContentExpiration(ctx, messageId, contentExpiresAt);
+    return messageId;
   },
 });
 
@@ -820,14 +830,16 @@ export const finalizeReservedOutboundMessage = internalMutation({
       throw new Error("Only outbound messages can be finalized.");
     }
 
+    const contentExpiresAt = getMessageContentExpiresAt();
     await ctx.db.patch(args.messageId, {
       body: args.body,
       status: "queued",
       ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
       ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
       contentRetentionStatus: "active",
-      contentExpiresAt: getMessageContentExpiresAt(),
+      contentExpiresAt,
     });
+    await scheduleMessageContentExpiration(ctx, args.messageId, contentExpiresAt);
 
     await ensureSessionForStoredMessage(ctx, {
       businessId: message.businessId,

@@ -45,7 +45,9 @@ import {
   getMessageContentExpiresAt,
   getSensitiveContentExpiresAt,
   isCallRecordingExpired,
-  isTranscriptExpired,
+  scheduleCallRecordingExpiration,
+  scheduleMessageContentExpiration,
+  scheduleTranscriptExpiration,
 } from "../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
@@ -382,9 +384,7 @@ async function hydrateDashboardCallRow(
         };
       })()
     : call;
-  const visibleTranscriptPreview = transcriptPreview.find(
-    (transcript) => !isTranscriptExpired(transcript),
-  );
+  const visibleTranscriptPreview = transcriptPreview[0];
 
   return {
     ...callForDashboard,
@@ -746,17 +746,22 @@ export const appendTranscriptSegment = internalMutation({
       .unique();
 
     if (existing) {
+      const expiresAt = existing.expiresAt ?? getSensitiveContentExpiresAt();
       await ctx.db.patch(existing._id, {
         speaker: args.speaker,
         text: args.text,
         final: args.final,
         ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
-        expiresAt: existing.expiresAt ?? getSensitiveContentExpiresAt(),
+        expiresAt,
       });
+      if (!existing.expiresAt) {
+        await scheduleTranscriptExpiration(ctx, existing._id, expiresAt);
+      }
       return existing._id;
     }
 
-    return await ctx.db.insert("transcripts", {
+    const expiresAt = getSensitiveContentExpiresAt();
+    const transcriptId = await ctx.db.insert("transcripts", {
       businessId: args.businessId,
       callId: args.callId,
       sequence: args.sequence,
@@ -764,8 +769,10 @@ export const appendTranscriptSegment = internalMutation({
       text: args.text,
       final: args.final,
       ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
-      expiresAt: getSensitiveContentExpiresAt(),
+      expiresAt,
     });
+    await scheduleTranscriptExpiration(ctx, transcriptId, expiresAt);
+    return transcriptId;
   },
 });
 
@@ -971,6 +978,7 @@ export const takeMessageForVoice = internalMutation({
     });
 
     if (args.conversationId) {
+      const contentExpiresAt = getMessageContentExpiresAt();
       const messageId = await ctx.db.insert("messages", {
         businessId: args.businessId,
         conversationId: args.conversationId,
@@ -980,8 +988,9 @@ export const takeMessageForVoice = internalMutation({
         status: "captured",
         aiGenerated: false,
         contentRetentionStatus: "active",
-        contentExpiresAt: getMessageContentExpiresAt(),
+        contentExpiresAt,
       });
+      await scheduleMessageContentExpiration(ctx, messageId, contentExpiresAt);
       await ensureSessionForStoredMessage(ctx, {
         businessId: args.businessId,
         conversationId: args.conversationId,
@@ -1030,6 +1039,7 @@ export const attachCallRecording = internalMutation({
       await ctx.db.delete(token._id);
     }
 
+    const recordingExpiresAt = getCallRecordingExpiresAt();
     await ctx.db.patch(args.callId, {
       recordingStorageId: args.recordingStorageId,
       recordingContentType: args.recordingContentType,
@@ -1038,8 +1048,9 @@ export const attachCallRecording = internalMutation({
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
       recordingRetentionStatus: "active",
-      recordingExpiresAt: getCallRecordingExpiresAt(),
+      recordingExpiresAt,
     });
+    await scheduleCallRecordingExpiration(ctx, args.callId, recordingExpiresAt);
 
     await ctx.db.insert("call_recording_download_tokens", {
       businessId: call.businessId,
@@ -1864,6 +1875,6 @@ export const getCallTranscript = query({
       .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", args.callId))
       .order("asc")
       .collect();
-    return transcripts.filter((transcript) => !isTranscriptExpired(transcript));
+    return transcripts;
   },
 });

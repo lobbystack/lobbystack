@@ -122,7 +122,7 @@ describe("MVP privacy retention", () => {
     );
   });
 
-  it("hides expired content from read paths before cleanup runs", async () => {
+  it("hides expired content after scheduled row-level retention runs", async () => {
     const t = convexTest(schema, convexModules);
     const owner = await seedWorkspace(t, {
       subject: "mvp-retention-read-guards-owner",
@@ -190,7 +190,7 @@ describe("MVP privacy retention", () => {
         nonce: "expired-read-guard-recording-token",
         expiresAt: FRESH_ISO,
       });
-      await ctx.db.insert("transcripts", {
+      const transcriptId = await ctx.db.insert("transcripts", {
         businessId: owner.businessId,
         callId,
         sequence: 1,
@@ -199,7 +199,7 @@ describe("MVP privacy retention", () => {
         final: true,
         expiresAt: EXPIRED_ISO,
       });
-      await ctx.db.insert("preview_sessions", {
+      const previewSessionId = await ctx.db.insert("preview_sessions", {
         businessId: owner.businessId,
         userId: owner.userId,
         prompt: "expired preview before cron",
@@ -210,7 +210,27 @@ describe("MVP privacy retention", () => {
       return {
         callId,
         conversationId,
+        messageId,
+        previewSessionId,
+        transcriptId,
       };
+    });
+
+    await t.mutation(internal.privacy.retention.scrubMessageContentAtExpiry, {
+      messageId: seeded.messageId,
+      expiresAt: EXPIRED_ISO,
+    });
+    await t.mutation(internal.privacy.retention.scrubCallRecordingAtExpiry, {
+      callId: seeded.callId,
+      expiresAt: EXPIRED_ISO,
+    });
+    await t.mutation(internal.privacy.retention.deleteTranscriptAtExpiry, {
+      transcriptId: seeded.transcriptId,
+      expiresAt: EXPIRED_ISO,
+    });
+    await t.mutation(internal.privacy.retention.deletePreviewSessionAtExpiry, {
+      previewSessionId: seeded.previewSessionId,
+      expiresAt: EXPIRED_ISO,
     });
 
     const thread = await owner.authed.query(api.dashboard.messages.getConversationThread, {
@@ -263,6 +283,58 @@ describe("MVP privacy retention", () => {
         streamId: "expired-read-guard-preview-stream",
       }),
     ).rejects.toThrow("Preview session not found.");
+  });
+
+  it("schedules row-level retention mutations when sensitive content is created", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-schedule-owner",
+      slug: "mvp-retention-schedule",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      const callId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-schedule",
+        status: "completed",
+        startedAt: NOW_ISO,
+      });
+      const recordingStorageId = await storeTestBlob(ctx, "scheduled recording", "audio/wav");
+      return { callId, contactId, recordingStorageId };
+    });
+
+    await t.mutation(internal.conversations.webhooks.storeInboundMessage, {
+      businessId: owner.businessId,
+      contactId: seeded.contactId,
+      channel: "sms",
+      body: "message scheduled for retention",
+    });
+    await t.mutation(internal.voice.runtime.appendTranscriptSegment, {
+      businessId: owner.businessId,
+      callId: seeded.callId,
+      sequence: 1,
+      speaker: "caller",
+      text: "transcript scheduled for retention",
+      final: true,
+    });
+    await t.mutation(internal.voice.runtime.attachCallRecording, {
+      callId: seeded.callId,
+      recordingStorageId: seeded.recordingStorageId,
+      recordingContentType: "audio/wav",
+      recordingByteLength: 19,
+    });
+
+    const scheduledNames = await t.run(async (ctx: TestRunCtx) => {
+      const jobs = await ctx.db.system.query("_scheduled_functions").collect();
+      return jobs.map((job) => String(job.name));
+    });
+
+    expect(scheduledNames).toContain("privacy/retention:scrubMessageContentAtExpiry");
+    expect(scheduledNames).toContain("privacy/retention:deleteTranscriptAtExpiry");
+    expect(scheduledNames).toContain("privacy/retention:scrubCallRecordingAtExpiry");
   });
 
   it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {

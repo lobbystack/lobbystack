@@ -399,10 +399,7 @@ function TranscriptTab({
 
 function RecordingTab({ call }: { call: CallRow }) {
   const { t } = useTranslation("calls");
-  const recordingExpired =
-    call.recordingRetentionStatus === "expired" ||
-    (typeof call.recordingExpiresAt === "string" &&
-      Date.parse(call.recordingExpiresAt) <= Date.now());
+  const recordingExpired = call.recordingRetentionStatus === "expired";
 
   if (!call.recordingUrl) {
     return (

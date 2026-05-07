@@ -27,6 +27,7 @@ export const REDACTED_MESSAGE_BODY = "[Expired by 365-day retention policy]";
 
 const DEFAULT_RETENTION_CLEANUP_LIMIT = 100;
 const MAX_RETENTION_CLEANUP_LIMIT = 200;
+const MAX_RETENTION_SCHEDULE_DELAY_MS = 2_000_000_000;
 
 type CleanupArgs = {
   nowIso: string;
@@ -63,49 +64,98 @@ export function getMessageContentExpiresAt(nowMs: number = Date.now()): string {
 
 export function isMessageContentExpired(
   message: Doc<"messages">,
-  nowMs: number = Date.now(),
 ): boolean {
-  if (message.contentRetentionStatus === "expired") {
-    return true;
-  }
-  return (
-    typeof message.contentExpiresAt === "string" &&
-    Date.parse(message.contentExpiresAt) <= nowMs
-  );
+  return message.contentRetentionStatus === "expired";
 }
 
 export function isCallRecordingExpired(
   call: Doc<"calls">,
-  nowMs: number = Date.now(),
 ): boolean {
-  if (call.recordingRetentionStatus === "expired") {
-    return true;
-  }
-  return (
-    typeof call.recordingExpiresAt === "string" &&
-    Date.parse(call.recordingExpiresAt) <= nowMs
-  );
-}
-
-export function isTranscriptExpired(
-  transcript: Doc<"transcripts">,
-  nowMs: number = Date.now(),
-): boolean {
-  return typeof transcript.expiresAt === "string" && Date.parse(transcript.expiresAt) <= nowMs;
-}
-
-export function isPreviewSessionExpired(
-  session: Doc<"preview_sessions">,
-  nowMs: number = Date.now(),
-): boolean {
-  return typeof session.expiresAt === "string" && Date.parse(session.expiresAt) <= nowMs;
+  return call.recordingRetentionStatus === "expired";
 }
 
 export function getVisibleMessageBody(
   message: Doc<"messages">,
-  nowMs: number = Date.now(),
 ): string {
-  return isMessageContentExpired(message, nowMs) ? REDACTED_MESSAGE_BODY : message.body;
+  return isMessageContentExpired(message) ? REDACTED_MESSAGE_BODY : message.body;
+}
+
+function parseScheduleTime(expiresAt: string): number | null {
+  const parsed = Date.parse(expiresAt);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  const now = Date.now();
+  return Math.min(Math.max(parsed, now), now + MAX_RETENTION_SCHEDULE_DELAY_MS);
+}
+
+function isRetentionDue(expiresAt: string): boolean {
+  const parsed = Date.parse(expiresAt);
+  return Number.isFinite(parsed) && parsed <= Date.now();
+}
+
+export async function scheduleMessageContentExpiration(
+  ctx: MutationCtx,
+  messageId: Id<"messages">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubMessageContentAtExpiry,
+    { messageId, expiresAt },
+  );
+}
+
+export async function scheduleCallRecordingExpiration(
+  ctx: MutationCtx,
+  callId: Id<"calls">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.scrubCallRecordingAtExpiry,
+    { callId, expiresAt },
+  );
+}
+
+export async function scheduleTranscriptExpiration(
+  ctx: MutationCtx,
+  transcriptId: Id<"transcripts">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.deleteTranscriptAtExpiry,
+    { transcriptId, expiresAt },
+  );
+}
+
+export async function schedulePreviewSessionExpiration(
+  ctx: MutationCtx,
+  previewSessionId: Id<"preview_sessions">,
+  expiresAt: string,
+): Promise<void> {
+  const scheduledAt = parseScheduleTime(expiresAt);
+  if (scheduledAt === null) {
+    return;
+  }
+  await ctx.scheduler.runAt(
+    scheduledAt,
+    internal.privacy.retention.deletePreviewSessionAtExpiry,
+    { previewSessionId, expiresAt },
+  );
 }
 
 function normalizeLimit(limit: number): number {
@@ -446,6 +496,144 @@ async function scrubCallRecordingContent(
     recordingRetentionStatus: "expired",
   });
 }
+
+export const scrubMessageContentAtExpiry = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const message = await ctx.db.get(args.messageId);
+    if (
+      !message ||
+      message.contentRetentionStatus !== "active" ||
+      message.contentExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: message ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleMessageContentExpiration(ctx, message._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubMessageContent(ctx, message);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const deleteTranscriptAtExpiry = internalMutation({
+  args: {
+    transcriptId: v.id("transcripts"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const transcript = await ctx.db.get(args.transcriptId);
+    if (!transcript || transcript.expiresAt !== args.expiresAt) {
+      return {
+        scanned: transcript ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleTranscriptExpiration(ctx, transcript._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await ctx.db.delete(transcript._id);
+    return {
+      scanned: 1,
+      deleted: 1,
+      scrubbed: 0,
+    };
+  },
+});
+
+export const scrubCallRecordingAtExpiry = internalMutation({
+  args: {
+    callId: v.id("calls"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const call = await ctx.db.get(args.callId);
+    if (
+      !call ||
+      call.recordingRetentionStatus !== "active" ||
+      call.recordingExpiresAt !== args.expiresAt
+    ) {
+      return {
+        scanned: call ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await scheduleCallRecordingExpiration(ctx, call._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await scrubCallRecordingContent(ctx, call);
+    return {
+      scanned: 1,
+      deleted: 0,
+      scrubbed: 1,
+    };
+  },
+});
+
+export const deletePreviewSessionAtExpiry = internalMutation({
+  args: {
+    previewSessionId: v.id("preview_sessions"),
+    expiresAt: v.string(),
+  },
+  handler: async (ctx, args): Promise<CleanupCount> => {
+    const session = await ctx.db.get(args.previewSessionId);
+    if (!session || session.expiresAt !== args.expiresAt) {
+      return {
+        scanned: session ? 1 : 0,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+    if (!isRetentionDue(args.expiresAt)) {
+      await schedulePreviewSessionExpiration(ctx, session._id, args.expiresAt);
+      return {
+        scanned: 1,
+        deleted: 0,
+        scrubbed: 0,
+      };
+    }
+
+    await deletePreviewAgentThread(ctx, session.threadId);
+    await deletePreviewStream(ctx, session.streamId);
+    await ctx.db.delete(session._id);
+    return {
+      scanned: 1,
+      deleted: 1,
+      scrubbed: 0,
+    };
+  },
+});
 
 export const scrubExpiredMessages = internalMutation({
   args: {

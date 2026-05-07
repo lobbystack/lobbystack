@@ -7,7 +7,6 @@ import { getLocalizedServiceName } from "../lib/serviceNames";
 import {
   getVisibleMessageBody,
   isCallRecordingExpired,
-  isTranscriptExpired,
 } from "../privacy/retention";
 
 type KpiWindow = {
@@ -488,9 +487,7 @@ export const getHomeSummary = query({
               .withIndex("by_call_id_and_sequence", (q) => q.eq("callId", call._id))
               .take(1),
           ]);
-          const visibleTranscriptPreview = transcriptPreview.find(
-            (transcript) => !isTranscriptExpired(transcript),
-          );
+          const visibleTranscriptPreview = transcriptPreview[0];
 
           return {
             id: call._id,

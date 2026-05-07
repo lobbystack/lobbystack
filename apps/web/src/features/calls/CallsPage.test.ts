@@ -48,19 +48,8 @@ describe("getCallRecordingAvailability", () => {
     expect(
       getCallRecordingAvailability({
         recordingUrl: null,
-        recordingRetentionStatus: "expired",
-        disposition: "call_completed",
-      }),
-    ).toBe("unavailable");
-  });
-
-  it("marks recordings past their retention expiry as unavailable before cleanup", () => {
-    expect(
-      getCallRecordingAvailability({
-        recordingUrl: null,
         recordingStorageId: "recording-storage-id",
-        recordingRetentionStatus: "active",
-        recordingExpiresAt: "2000-01-01T00:00:00.000Z",
+        recordingRetentionStatus: "expired",
         disposition: "call_completed",
       }),
     ).toBe("unavailable");

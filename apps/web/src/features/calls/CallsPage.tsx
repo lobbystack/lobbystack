@@ -112,18 +112,13 @@ export function getCallRecordingAvailability(call: {
   recordingUrl: string | null;
   recordingStorageId?: unknown;
   recordingRetentionStatus?: string;
-  recordingExpiresAt?: string;
   disposition?: string;
 }): "ready" | "pending" | "unavailable" {
   if (call.recordingUrl) {
     return "ready";
   }
 
-  if (
-    call.recordingRetentionStatus === "expired" ||
-    (typeof call.recordingExpiresAt === "string" &&
-      Date.parse(call.recordingExpiresAt) <= Date.now())
-  ) {
+  if (call.recordingRetentionStatus === "expired") {
     return "unavailable";
   }
 

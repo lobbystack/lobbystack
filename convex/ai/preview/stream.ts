@@ -14,7 +14,7 @@ import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../
 import { persistentTextStreaming } from "../../lib/components";
 import {
   getSensitiveContentExpiresAt,
-  isPreviewSessionExpired,
+  schedulePreviewSessionExpiration,
 } from "../../privacy/retention";
 
 import { observedHttpAction as httpAction } from "../../telemetry/observedFunctions";
@@ -30,13 +30,15 @@ export const createPreviewSession = mutation({
     await requireMembership(ctx, args.businessId);
     const streamId = await persistentTextStreaming.createStream(ctx);
     // @ts-ignore Deep type instantiation from Convex component generics.
+    const expiresAt = getSensitiveContentExpiresAt();
     const previewSessionId = await ctx.db.insert("preview_sessions", {
       businessId: args.businessId,
       userId: user._id,
       prompt: args.prompt,
       streamId,
-      expiresAt: getSensitiveContentExpiresAt(),
+      expiresAt,
     });
+    await schedulePreviewSessionExpiration(ctx, previewSessionId, expiresAt);
     return { previewSessionId, streamId };
   },
 });
@@ -55,8 +57,7 @@ export const getPreviewBody = query({
 
     if (
       !previewSession ||
-      previewSession.userId !== user._id ||
-      isPreviewSessionExpired(previewSession)
+      previewSession.userId !== user._id
     ) {
       throw new Error("Preview session not found.");
     }
