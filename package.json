@@ -11,7 +11,7 @@
     "overrides": {
       "@hono/node-server": "1.19.13",
       "@xmldom/xmldom": "0.8.13",
-      "axios": "1.15.0",
+      "axios": "1.15.2",
       "brace-expansion@>=4.0.0 <5.0.5": "5.0.5",
       "dompurify": "3.4.0",
       "follow-redirects": "1.16.0",
