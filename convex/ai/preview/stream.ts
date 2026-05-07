@@ -9,6 +9,7 @@ import type { Id } from "../../_generated/dataModel";
 import { v } from "convex/values";
 import { ensureCurrentUser, requireCurrentUser, requireMembership } from "../../lib/auth";
 import { persistentTextStreaming } from "../../lib/components";
+import { getSensitiveContentExpiresAt } from "../../privacy/retention";
 
 import { observedHttpAction as httpAction } from "../../telemetry/observedFunctions";
 // Convex component types can exceed local tsc recursion depth on these builders.
@@ -28,6 +29,7 @@ export const createPreviewSession = mutation({
       userId: user._id,
       prompt: args.prompt,
       streamId,
+      expiresAt: getSensitiveContentExpiresAt(),
     });
     return { previewSessionId, streamId };
   },

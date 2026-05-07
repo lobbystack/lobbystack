@@ -28,6 +28,7 @@ import {
   serializePostHogEvent,
 } from "../telemetry/posthog";
 import { ensureSessionForStoredMessage } from "./sessions";
+import { getSensitiveContentExpiresAt } from "../privacy/retention";
 
 function asConversationId(value: string): Id<"conversations"> {
   return value as Id<"conversations">;
@@ -611,6 +612,8 @@ export const storeInboundMessage = internalMutation({
       body: args.body,
       status: "received",
       aiGenerated: false,
+      contentRetentionStatus: "active",
+      contentExpiresAt: getSensitiveContentExpiresAt(),
     });
 
     await ensureSessionForStoredMessage(ctx, {
@@ -701,6 +704,8 @@ export const storeOutboundMessage = internalMutation({
       status: "queued",
       ...(args.senderRole !== undefined ? { senderRole: args.senderRole } : {}),
       aiGenerated: args.aiGenerated ?? true,
+      contentRetentionStatus: "active",
+      contentExpiresAt: getSensitiveContentExpiresAt(),
     });
 
     await ensureSessionForStoredMessage(ctx, {
@@ -776,6 +781,8 @@ export const reserveOutboundAiMessage = internalMutation({
       status: "draft",
       senderRole: args.senderRole ?? "business_ai",
       aiGenerated: true,
+      contentRetentionStatus: "active",
+      contentExpiresAt: getSensitiveContentExpiresAt(),
     });
   },
 });
@@ -818,6 +825,8 @@ export const finalizeReservedOutboundMessage = internalMutation({
       status: "queued",
       ...(args.appointmentId !== undefined ? { appointmentId: args.appointmentId } : {}),
       ...(args.media !== undefined && args.media.length > 0 ? { media: args.media } : {}),
+      contentRetentionStatus: "active",
+      contentExpiresAt: getSensitiveContentExpiresAt(),
     });
 
     await ensureSessionForStoredMessage(ctx, {

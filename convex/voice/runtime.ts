@@ -40,6 +40,7 @@ import {
   ensureVoiceSessionForCall,
   finalizeVoiceSessionForCall,
 } from "../conversations/sessions";
+import { getSensitiveContentExpiresAt } from "../privacy/retention";
 
 import { observedInternalAction as internalAction } from "../telemetry/observedFunctions";
 type BusinessIdArgs = { businessId: Id<"businesses"> };
@@ -730,6 +731,7 @@ export const appendTranscriptSegment = internalMutation({
         text: args.text,
         final: args.final,
         ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+        expiresAt: existing.expiresAt ?? getSensitiveContentExpiresAt(),
       });
       return existing._id;
     }
@@ -742,6 +744,7 @@ export const appendTranscriptSegment = internalMutation({
       text: args.text,
       final: args.final,
       ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+      expiresAt: getSensitiveContentExpiresAt(),
     });
   },
 });
@@ -956,6 +959,8 @@ export const takeMessageForVoice = internalMutation({
         body: args.message,
         status: "captured",
         aiGenerated: false,
+        contentRetentionStatus: "active",
+        contentExpiresAt: getSensitiveContentExpiresAt(),
       });
       await ensureSessionForStoredMessage(ctx, {
         businessId: args.businessId,
@@ -1012,6 +1017,8 @@ export const attachCallRecording = internalMutation({
       ...(args.recordingDurationMs !== undefined
         ? { recordingDurationMs: args.recordingDurationMs }
         : {}),
+      recordingRetentionStatus: "active",
+      recordingExpiresAt: getSensitiveContentExpiresAt(),
     });
 
     await ctx.db.insert("call_recording_download_tokens", {

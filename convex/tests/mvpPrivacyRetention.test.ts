@@ -1,0 +1,564 @@
+import { convexTest, type TestConvex } from "convex-test";
+import { describe, expect, it } from "vitest";
+
+import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { getBillingKey } from "../lib/billing";
+import { REDACTED_MESSAGE_BODY } from "../privacy/retention";
+import schema from "../schema";
+import { modules } from "../test.setup";
+
+const convexModules = modules;
+const NOW_ISO = "2026-05-07T12:00:00.000Z";
+const EXPIRED_ISO = "2026-05-06T12:00:00.000Z";
+const FRESH_ISO = "2026-05-08T12:00:00.000Z";
+
+type ConvexHarness = TestConvex<typeof schema>;
+type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
+
+type WorkspaceSeed = {
+  authed: ReturnType<ConvexHarness["withIdentity"]>;
+  businessId: Id<"businesses">;
+  userId: Id<"users">;
+};
+
+async function seedWorkspace(
+  t: ConvexHarness,
+  input: {
+    subject: string;
+    slug: string;
+    role?: "business_owner" | "business_admin" | "scheduler" | "viewer";
+  },
+): Promise<WorkspaceSeed> {
+  const { businessId, userId } = await t.run(async (ctx: TestRunCtx) => {
+    const businessId = await ctx.db.insert("businesses", {
+      slug: input.slug,
+      name: "MVP Privacy Test Business",
+      timezone: "America/Toronto",
+      businessType: "clinic",
+      defaultLocale: "en",
+      deploymentMode: "cloud",
+      status: "active",
+    });
+    const userId = await ctx.db.insert("users", {
+      authSubject: input.subject,
+      email: `${input.subject}@example.com`,
+      displayName: "MVP Privacy Tester",
+    });
+    await ctx.db.insert("business_memberships", {
+      businessId,
+      userId,
+      role: input.role ?? "business_owner",
+      status: "active",
+    });
+
+    return { businessId, userId };
+  });
+
+  return {
+    authed: t.withIdentity({ subject: input.subject }),
+    businessId,
+    userId,
+  };
+}
+
+async function seedUserWithoutMembership(
+  t: ConvexHarness,
+  subject: string,
+): Promise<ReturnType<ConvexHarness["withIdentity"]>> {
+  await t.run(async (ctx: TestRunCtx) => {
+    await ctx.db.insert("users", {
+      authSubject: subject,
+      email: `${subject}@example.com`,
+      displayName: "Outside User",
+    });
+  });
+  return t.withIdentity({ subject });
+}
+
+async function seedConversation(ctx: TestRunCtx, businessId: Id<"businesses">) {
+  const contactId = await ctx.db.insert("contacts", {
+    businessId,
+    phone: "+14165550111",
+    name: "Taylor Customer",
+  });
+  const conversationId = await ctx.db.insert("conversations", {
+    businessId,
+    contactId,
+    channel: "sms",
+    status: "open",
+  });
+
+  return { contactId, conversationId };
+}
+
+async function storeTestBlob(
+  ctx: TestRunCtx,
+  contents: string,
+  contentType: string = "text/plain",
+): Promise<Id<"_storage">> {
+  return await ctx.storage.store(new Blob([contents], { type: contentType }));
+}
+
+describe("MVP privacy retention", () => {
+  it("scrubs expired message content and attachment storage while preserving fresh and legacy rows", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-messages-owner",
+      slug: "mvp-retention-messages",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { conversationId } = await seedConversation(ctx, owner.businessId);
+      const expiredStorageId = await storeTestBlob(ctx, "expired attachment", "text/plain");
+      const expiredPreviewStorageId = await storeTestBlob(ctx, "expired preview", "image/png");
+      const freshStorageId = await storeTestBlob(ctx, "fresh attachment", "text/plain");
+
+      const expiredMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        fromPhoneNumber: "+14165550001",
+        body: "old sensitive SMS body",
+        status: "received",
+        aiGenerated: false,
+        media: [
+          {
+            storageId: expiredStorageId,
+            fileName: "expired.txt",
+            contentType: "text/plain",
+            byteLength: 18,
+            previewStorageId: expiredPreviewStorageId,
+            previewFileName: "expired.png",
+            previewContentType: "image/png",
+            previewByteLength: 15,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: EXPIRED_ISO,
+      });
+      await ctx.db.insert("message_attachment_uploads", {
+        businessId: owner.businessId,
+        conversationId,
+        uploaderUserId: owner.userId,
+        storageId: expiredStorageId,
+        fileName: "expired.txt",
+        contentType: "text/plain",
+        byteLength: 18,
+        previewStorageId: expiredPreviewStorageId,
+        previewFileName: "expired.png",
+        previewContentType: "image/png",
+        previewByteLength: 15,
+        deliveryMode: "link",
+        status: "sent",
+        sentMessageId: expiredMessageId,
+      });
+      const expiredTokenId = await ctx.db.insert("message_attachment_download_tokens", {
+        businessId: owner.businessId,
+        messageId: expiredMessageId,
+        storageId: expiredStorageId,
+        fileName: "expired.txt",
+        contentType: "text/plain",
+        disposition: "attachment",
+        nonce: "expired-message-token",
+        expiresAt: FRESH_ISO,
+      });
+
+      const freshMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        fromPhoneNumber: "+14165550002",
+        body: "fresh SMS body",
+        status: "received",
+        aiGenerated: false,
+        media: [
+          {
+            storageId: freshStorageId,
+            fileName: "fresh.txt",
+            contentType: "text/plain",
+            byteLength: 16,
+            deliveryMode: "link",
+          },
+        ],
+        contentRetentionStatus: "active",
+        contentExpiresAt: FRESH_ISO,
+      });
+      const legacyMessageId = await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "legacy body without retention fields",
+        status: "received",
+        aiGenerated: false,
+      });
+
+      return {
+        expiredMessageId,
+        expiredStorageId,
+        expiredPreviewStorageId,
+        expiredTokenId,
+        freshMessageId,
+        freshStorageId,
+        legacyMessageId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.messages.scrubbed).toBe(1);
+    await t.run(async (ctx: TestRunCtx) => {
+      const expiredMessage = await ctx.db.get(seeded.expiredMessageId);
+      const freshMessage = await ctx.db.get(seeded.freshMessageId);
+      const legacyMessage = await ctx.db.get(seeded.legacyMessageId);
+
+      expect(expiredMessage).toMatchObject({
+        body: REDACTED_MESSAGE_BODY,
+        contentRetentionStatus: "expired",
+      });
+      expect(expiredMessage?.media).toBeUndefined();
+      expect(expiredMessage?.fromPhoneNumber).toBeUndefined();
+      expect(await ctx.db.get(seeded.expiredTokenId)).toBeNull();
+      expect(await ctx.storage.get(seeded.expiredStorageId)).toBeNull();
+      expect(await ctx.storage.get(seeded.expiredPreviewStorageId)).toBeNull();
+      expect(
+        await ctx.db
+          .query("message_attachment_uploads")
+          .withIndex("by_sent_message_id", (q) =>
+            q.eq("sentMessageId", seeded.expiredMessageId),
+          )
+          .take(1),
+      ).toHaveLength(0);
+
+      expect(freshMessage?.body).toBe("fresh SMS body");
+      expect(freshMessage?.media).toHaveLength(1);
+      expect(await ctx.storage.get(seeded.freshStorageId)).not.toBeNull();
+      expect(legacyMessage?.body).toBe("legacy body without retention fields");
+    });
+  });
+
+  it("deletes expired transcripts, preview sessions, recordings, and standalone download tokens", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-retention-voice-owner",
+      slug: "mvp-retention-voice",
+    });
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      const expiredRecordingStorageId = await storeTestBlob(ctx, "expired recording", "audio/wav");
+      const freshRecordingStorageId = await storeTestBlob(ctx, "fresh recording", "audio/wav");
+      const expiredCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-expired",
+        status: "completed",
+        startedAt: "2026-01-01T12:00:00.000Z",
+        recordingStorageId: expiredRecordingStorageId,
+        recordingContentType: "audio/wav",
+        recordingByteLength: 17,
+        recordingDurationMs: 12000,
+        recordingRetentionStatus: "active",
+        recordingExpiresAt: EXPIRED_ISO,
+      });
+      const freshCallId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-retention-fresh",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+        recordingStorageId: freshRecordingStorageId,
+        recordingContentType: "audio/wav",
+        recordingByteLength: 15,
+        recordingDurationMs: 8000,
+        recordingRetentionStatus: "active",
+        recordingExpiresAt: FRESH_ISO,
+      });
+      const expiredRecordingTokenId = await ctx.db.insert("call_recording_download_tokens", {
+        businessId: owner.businessId,
+        callId: expiredCallId,
+        storageId: expiredRecordingStorageId,
+        fileName: "expired.wav",
+        contentType: "audio/wav",
+        nonce: "expired-recording-token",
+        expiresAt: FRESH_ISO,
+      });
+      const standaloneMessageTokenId = await ctx.db.insert("message_attachment_download_tokens", {
+        businessId: owner.businessId,
+        messageId: await ctx.db.insert("messages", {
+          businessId: owner.businessId,
+          conversationId,
+          direction: "inbound",
+          channel: "sms",
+          body: "token owner",
+          status: "received",
+          aiGenerated: false,
+        }),
+        storageId: await storeTestBlob(ctx, "standalone token storage"),
+        fileName: "standalone.txt",
+        contentType: "text/plain",
+        disposition: "attachment",
+        nonce: "standalone-message-token",
+        expiresAt: EXPIRED_ISO,
+      });
+      const standaloneRecordingTokenId = await ctx.db.insert("call_recording_download_tokens", {
+        businessId: owner.businessId,
+        callId: freshCallId,
+        storageId: freshRecordingStorageId,
+        fileName: "standalone-recording.wav",
+        contentType: "audio/wav",
+        nonce: "standalone-recording-token",
+        expiresAt: EXPIRED_ISO,
+      });
+      const expiredTranscriptId = await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId: expiredCallId,
+        sequence: 1,
+        speaker: "caller",
+        text: "old transcript",
+        final: true,
+        expiresAt: EXPIRED_ISO,
+      });
+      const freshTranscriptId = await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId: freshCallId,
+        sequence: 1,
+        speaker: "caller",
+        text: "fresh transcript",
+        final: true,
+        expiresAt: FRESH_ISO,
+      });
+      const legacyTranscriptId = await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId: freshCallId,
+        sequence: 2,
+        speaker: "agent",
+        text: "legacy transcript",
+        final: true,
+      });
+      const expiredPreviewSessionId = await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: "old preview",
+        streamId: "stream-old",
+        expiresAt: EXPIRED_ISO,
+      });
+      const freshPreviewSessionId = await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: "fresh preview",
+        streamId: "stream-fresh",
+        expiresAt: FRESH_ISO,
+      });
+      const legacyPreviewSessionId = await ctx.db.insert("preview_sessions", {
+        businessId: owner.businessId,
+        userId: owner.userId,
+        prompt: "legacy preview",
+        streamId: "stream-legacy",
+      });
+
+      return {
+        expiredCallId,
+        freshCallId,
+        expiredRecordingStorageId,
+        freshRecordingStorageId,
+        expiredRecordingTokenId,
+        standaloneMessageTokenId,
+        standaloneRecordingTokenId,
+        expiredTranscriptId,
+        freshTranscriptId,
+        legacyTranscriptId,
+        expiredPreviewSessionId,
+        freshPreviewSessionId,
+        legacyPreviewSessionId,
+      };
+    });
+
+    const summary = await t.action(internal.privacy.retention.runMvpRetentionCleanup, {
+      nowIso: NOW_ISO,
+      limit: 100,
+    });
+
+    expect(summary.transcripts.deleted).toBe(1);
+    expect(summary.callRecordings.scrubbed).toBe(1);
+    expect(summary.previewSessions.deleted).toBe(1);
+    expect(summary.messageAttachmentDownloadTokens.deleted).toBe(1);
+    await t.run(async (ctx: TestRunCtx) => {
+      const expiredCall = await ctx.db.get(seeded.expiredCallId);
+      const freshCall = await ctx.db.get(seeded.freshCallId);
+
+      expect(expiredCall?.recordingRetentionStatus).toBe("expired");
+      expect(expiredCall?.recordingStorageId).toBeUndefined();
+      expect(expiredCall?.recordingContentType).toBeUndefined();
+      expect(expiredCall?.recordingByteLength).toBeUndefined();
+      expect(expiredCall?.recordingDurationMs).toBeUndefined();
+      expect(await ctx.storage.get(seeded.expiredRecordingStorageId)).toBeNull();
+      expect(await ctx.db.get(seeded.expiredRecordingTokenId)).toBeNull();
+
+      expect(freshCall?.recordingStorageId).toBe(seeded.freshRecordingStorageId);
+      expect(await ctx.storage.get(seeded.freshRecordingStorageId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.standaloneMessageTokenId)).toBeNull();
+      expect(await ctx.db.get(seeded.standaloneRecordingTokenId)).toBeNull();
+
+      expect(await ctx.db.get(seeded.expiredTranscriptId)).toBeNull();
+      expect(await ctx.db.get(seeded.freshTranscriptId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.legacyTranscriptId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.expiredPreviewSessionId)).toBeNull();
+      expect(await ctx.db.get(seeded.freshPreviewSessionId)).not.toBeNull();
+      expect(await ctx.db.get(seeded.legacyPreviewSessionId)).not.toBeNull();
+    });
+  });
+});
+
+describe("MVP tenant access boundaries", () => {
+  it("rejects non-members across high-risk public business data functions", async () => {
+    const t = convexTest(schema, convexModules);
+    const owner = await seedWorkspace(t, {
+      subject: "mvp-access-owner",
+      slug: "mvp-access-owner",
+    });
+    const outsider = await seedUserWithoutMembership(t, "mvp-access-outsider");
+
+    const seeded = await t.run(async (ctx: TestRunCtx) => {
+      const { contactId, conversationId } = await seedConversation(ctx, owner.businessId);
+      await ctx.db.insert("messages", {
+        businessId: owner.businessId,
+        conversationId,
+        direction: "inbound",
+        channel: "sms",
+        body: "tenant-private message",
+        status: "received",
+        aiGenerated: false,
+      });
+      const callId = await ctx.db.insert("calls", {
+        businessId: owner.businessId,
+        conversationId,
+        contactId,
+        twilioCallSid: "CA-mvp-access",
+        status: "completed",
+        startedAt: "2026-05-01T12:00:00.000Z",
+      });
+      await ctx.db.insert("transcripts", {
+        businessId: owner.businessId,
+        callId,
+        sequence: 1,
+        speaker: "caller",
+        text: "tenant-private transcript",
+        final: true,
+      });
+      await ctx.db.insert("knowledge_documents", {
+        businessId: owner.businessId,
+        sourceType: "manual",
+        title: "Tenant-private policy",
+        textContent: "Private knowledge",
+        status: "ready",
+        tags: [],
+        importance: 75,
+      });
+      await ctx.db.insert("knowledge_snippets", {
+        businessId: owner.businessId,
+        title: "Tenant-private snippet",
+        content: "Private snippet",
+        tags: [],
+        priority: 10,
+        active: true,
+      });
+      await ctx.db.insert("calendar_connections", {
+        businessId: owner.businessId,
+        provider: "google",
+        ownerUserId: owner.userId,
+        externalAccountId: "google-account",
+        externalAccountEmail: "calendar@example.com",
+        selectedCalendarId: "primary",
+        selectedCalendarSummary: "Primary",
+        status: "connected",
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId: owner.businessId,
+        billingKey: getBillingKey(owner.businessId),
+        currentPlan: "pro",
+        activeAddons: ["ai_sms"],
+        subscriptionState: "active",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "Owner",
+        lastSyncedAt: NOW_ISO,
+      });
+
+      return { contactId, conversationId, callId };
+    });
+
+    await expect(
+      owner.authed.query(api.dashboard.messages.getConversationThread, {
+        businessId: owner.businessId,
+        conversationId: seeded.conversationId,
+      }),
+    ).resolves.toMatchObject({
+      conversation: expect.objectContaining({ id: seeded.conversationId }),
+    });
+
+    const denied = "You do not have access to this business.";
+    await expect(
+      outsider.query(api.dashboard.overview.getHomeSummary, {
+        businessId: owner.businessId,
+        locale: "en",
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.dashboard.messages.listConversationSummaries, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.dashboard.messages.getConversationThread, {
+        businessId: owner.businessId,
+        conversationId: seeded.conversationId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.dashboard.contacts.listContacts, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.dashboard.contacts.getContactDetail, {
+        businessId: owner.businessId,
+        contactId: seeded.contactId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.voice.runtime.listRecentCalls, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.voice.runtime.getCallTranscript, {
+        businessId: owner.businessId,
+        callId: seeded.callId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.ai.context.knowledge.listKnowledge, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.integrations.calendar.listCalendarConnections, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+    await expect(
+      outsider.query(api.billing.getStatus, {
+        businessId: owner.businessId,
+      }),
+    ).rejects.toThrow(denied);
+  });
+});
