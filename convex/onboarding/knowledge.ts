@@ -3,24 +3,30 @@ import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { requireMembership } from "../lib/auth";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
 type BusinessIdArgs = {
   businessId: Id<"businesses">;
 };
 
-async function requireBusinessInKnowledgeStage(
+async function requireBusinessAtOrPastKnowledgeStage(
   ctx: MutationCtx,
   businessId: Id<"businesses">,
-): Promise<void> {
+): Promise<{ shouldAdvance: boolean }> {
   const business = await ctx.db.get(businessId);
   if (!business) {
     throw new Error("Business not found.");
   }
 
-  if (business.onboardingStage !== "knowledge") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.knowledge) {
     throw new Error("Knowledge onboarding is no longer available for this business.");
   }
+
+  return {
+    shouldAdvance: ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.greeting,
+  };
 }
 
 export const completeOnboardingKnowledge = mutation({
@@ -29,11 +35,13 @@ export const completeOnboardingKnowledge = mutation({
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "completed" }> => {
     await requireMembership(ctx, args.businessId);
-    await requireBusinessInKnowledgeStage(ctx, args.businessId);
+    const { shouldAdvance } = await requireBusinessAtOrPastKnowledgeStage(ctx, args.businessId);
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "greeting",
-    });
+    if (shouldAdvance) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "greeting",
+      });
+    }
 
     return { status: "completed" };
   },
@@ -45,11 +53,13 @@ export const skipOnboardingKnowledge = mutation({
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "skipped" }> => {
     await requireMembership(ctx, args.businessId);
-    await requireBusinessInKnowledgeStage(ctx, args.businessId);
+    const { shouldAdvance } = await requireBusinessAtOrPastKnowledgeStage(ctx, args.businessId);
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "greeting",
-    });
+    if (shouldAdvance) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "greeting",
+      });
+    }
 
     return { status: "skipped" };
   },

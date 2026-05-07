@@ -7,6 +7,7 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { type ActionCtx, type MutationCtx } from "../_generated/server";
 import { requireMembership } from "../lib/auth";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
 type BusinessIdArgs = {
@@ -19,7 +20,7 @@ type SubmitOnboardingWebsiteResult = {
   websiteIngestionJobId: Id<"website_ingestion_jobs">;
 };
 
-async function requireBusinessInWebsiteStage(
+async function requireBusinessAtOrPastWebsiteStage(
   ctx: MutationCtx,
   businessId: Id<"businesses">,
 ): Promise<void> {
@@ -28,7 +29,8 @@ async function requireBusinessInWebsiteStage(
     throw new Error("Business not found.");
   }
 
-  if (business.onboardingStage !== "website") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.website) {
     throw new Error("Website onboarding is no longer available for this business.");
   }
 }
@@ -50,7 +52,7 @@ async function assertOnboardingWebsiteAccess(
   });
 }
 
-async function requireBusinessInWebsiteStageForAction(
+async function requireBusinessAtOrPastWebsiteStageForAction(
   ctx: ActionCtx,
   businessId: Id<"businesses">,
 ): Promise<void> {
@@ -61,7 +63,8 @@ async function requireBusinessInWebsiteStageForAction(
     throw new Error("Business not found.");
   }
 
-  if (business.onboardingStage !== "website") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.website) {
     throw new Error("Website onboarding is no longer available for this business.");
   }
 }
@@ -75,7 +78,7 @@ export const submitOnboardingWebsiteAfterPreflight = internalMutation({
     ctx,
     args,
   ): Promise<SubmitOnboardingWebsiteResult> => {
-    await requireBusinessInWebsiteStage(ctx, args.businessId);
+    await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
     return await ctx.runMutation(
       internal.ai.context.websiteIngestion.submitWebsiteIngestionAfterPreflight,
@@ -98,7 +101,7 @@ export const submitOnboardingWebsite = action({
     args,
   ): Promise<SubmitOnboardingWebsiteResult> => {
     await assertOnboardingWebsiteAccess(ctx, args.businessId);
-    await requireBusinessInWebsiteStageForAction(ctx, args.businessId);
+    await requireBusinessAtOrPastWebsiteStageForAction(ctx, args.businessId);
 
     const websiteUrl: string = await ctx.runAction(
       internal.ai.context.websiteIngestionActions.preflightWebsiteCrawlTarget,
@@ -123,11 +126,15 @@ export const skipOnboardingWebsite = mutation({
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "skipped" }> => {
     await requireMembership(ctx, args.businessId);
-    await requireBusinessInWebsiteStage(ctx, args.businessId);
+    await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "knowledge",
-    });
+    const business = await ctx.db.get(args.businessId);
+    const stage = normalizeOnboardingStage(business?.onboardingStage);
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.knowledge) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "knowledge",
+      });
+    }
 
     return { status: "skipped" };
   },

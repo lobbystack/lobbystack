@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Building2, LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -13,11 +15,15 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedMutation } from "@/lib/observed-convex";
 
 type OnboardingBusinessNamePageProps = {
+  businessId?: Id<"businesses">;
+  businessName?: string;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
 };
 
 function slugify(value: string): string {
@@ -36,15 +42,32 @@ function resolveTimezone(): string {
   }
 }
 
-export function OnboardingBusinessNamePage({ onSignOut }: OnboardingBusinessNamePageProps) {
+export function OnboardingBusinessNamePage({
+  businessId,
+  businessName,
+  onSignOut,
+  progressNavigableUntil,
+}: OnboardingBusinessNamePageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const bootstrapBusiness = useObservedMutation(api.businesses.admin.bootstrapBusiness);
-  const [name, setName] = useState("");
+  const updateBusinessName = useObservedMutation(api.businesses.catalog.updateBusinessName);
+  const [name, setName] = useState(businessName ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bootstrappedBusinessId, setBootstrappedBusinessId] =
+    useState<Id<"businesses"> | null>(null);
 
   const trimmedName = name.trim();
   const isDisabled = trimmedName.length === 0 || isSubmitting;
+
+  useEffect(() => {
+    if (!bootstrappedBusinessId || businessId !== bootstrappedBusinessId) {
+      return;
+    }
+
+    navigate("/onboarding/website");
+  }, [bootstrappedBusinessId, businessId, navigate]);
 
   async function handleSubmit(): Promise<void> {
     if (isDisabled) {
@@ -55,18 +78,28 @@ export function OnboardingBusinessNamePage({ onSignOut }: OnboardingBusinessName
     setError(null);
 
     try {
-      const slugBase = slugify(trimmedName);
-      const slug = slugBase.length > 0 ? `${slugBase}-${Date.now().toString(36)}` : `business-${Date.now().toString(36)}`;
-      await bootstrapBusiness({
-        name: trimmedName,
-        slug,
-        timezone: resolveTimezone(),
-        businessType: "general",
-      });
+      if (businessId) {
+        await updateBusinessName({ businessId, name: trimmedName });
+        navigate("/onboarding/website");
+      } else {
+        const slugBase = slugify(trimmedName);
+        const slug = slugBase.length > 0 ? `${slugBase}-${Date.now().toString(36)}` : `business-${Date.now().toString(36)}`;
+        const result = await bootstrapBusiness({
+          name: trimmedName,
+          slug,
+          timezone: resolveTimezone(),
+          businessType: "general",
+        });
+        setBootstrappedBusinessId(result.businessId);
+      }
       captureAnalyticsEvent("web.onboarding.business_name_submitted");
     } catch (submissionError) {
       setError(
-        submissionError instanceof Error ? submissionError.message : t("businessName.submitFailed"),
+        getSafeOnboardingErrorMessage(
+          submissionError,
+          t,
+          "businessName.submitFailed",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -77,7 +110,7 @@ export function OnboardingBusinessNamePage({ onSignOut }: OnboardingBusinessName
     <OnboardingShell
       description={t("businessName.description")}
       onSignOut={onSignOut}
-      progress={{ current: 2, total: 10 }}
+      progress={{ current: 2, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("businessName.title")}
     >
       <form

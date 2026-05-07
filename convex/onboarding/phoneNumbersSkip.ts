@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { requireMembership } from "../lib/auth";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
 /**
@@ -23,13 +24,16 @@ export const skipOnboardingNumber = mutation({
       throw new Error("Business not found.");
     }
 
-    if (business.onboardingStage !== "phone_number") {
+    const stage = normalizeOnboardingStage(business.onboardingStage);
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number) {
       throw new Error("Phone-number onboarding is no longer available for this business.");
     }
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "plan",
-    });
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.plan) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "plan",
+      });
+    }
 
     return { status: "skipped" };
   },

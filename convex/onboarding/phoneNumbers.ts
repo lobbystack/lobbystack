@@ -28,11 +28,13 @@ import {
   buildTwilioVoiceInboundWebhookUrl,
   buildTwilioVoiceStatusCallbackUrl,
 } from "../lib/twilioUrls";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import {
   assertClaimAttemptAllowed,
   assertInitialSuggestionAllowed,
   assertInventorySearchAllowed,
   normalizeInventorySearchLimit,
+  recordFailedClaimAttempt,
   recordSuccessfulPurchaseLog,
 } from "./abuse";
 
@@ -78,14 +80,40 @@ function isLikelyNumberUnavailableError(error: unknown): boolean {
     return false;
   }
 
+  const code =
+    "code" in error && (typeof error.code === "number" || typeof error.code === "string")
+      ? Number(error.code)
+      : null;
+  if (code === 21422) {
+    return true;
+  }
+  if (code === 21404) {
+    return false;
+  }
+
   const message = error.message.toLowerCase();
   return (
     message.includes("already taken") ||
     message.includes("no longer available") ||
-    message.includes("not available") ||
-    message.includes("unavailable") ||
-    message.includes("not currently available")
+    message.includes("not currently available") ||
+    message.includes("phone number is unavailable")
   );
+}
+
+function getPurchaseFailureMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const code =
+    "code" in error && (typeof error.code === "number" || typeof error.code === "string")
+      ? Number(error.code)
+      : null;
+  if (code === 21404) {
+    return "This Twilio account can't buy that number. Trial accounts can only buy eligible trial numbers and may need an existing number released or the account upgraded.";
+  }
+
+  return error.message;
 }
 
 function normalizeComparableLocation(value: string): string {
@@ -100,6 +128,11 @@ function formatDisplayPhoneNumber(e164: string): string {
   }
 
   return e164;
+}
+
+function normalizeClaimE164(e164: string): string | null {
+  const trimmed = e164.trim();
+  return /^\+\d{8,15}$/.test(trimmed) ? trimmed : null;
 }
 
 function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableNumberSummary> {
@@ -118,6 +151,22 @@ function dedupeNumbers(numbers: Array<AvailableNumberSummary>): Array<AvailableN
   return unique;
 }
 
+function hasTwilioCapability(
+  capabilities: TwilioAvailableNumber["capabilities"],
+  name: "sms" | "voice",
+): boolean {
+  if (!capabilities) {
+    return false;
+  }
+
+  const titleCaseName = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  return (
+    capabilities[name] === true ||
+    capabilities[name.toUpperCase()] === true ||
+    capabilities[titleCaseName] === true
+  );
+}
+
 function toAvailableNumberSummary(input: {
   number: TwilioAvailableNumber;
   kind: AvailableNumberSummary["kind"];
@@ -125,6 +174,13 @@ function toAvailableNumberSummary(input: {
 }): AvailableNumberSummary | null {
   const e164 = input.number.phoneNumber?.trim();
   if (!e164) {
+    return null;
+  }
+
+  if (
+    !hasTwilioCapability(input.number.capabilities, "sms") ||
+    !hasTwilioCapability(input.number.capabilities, "voice")
+  ) {
     return null;
   }
 
@@ -435,7 +491,8 @@ async function requireBusinessInPhoneNumberStage(
   if (!business) {
     throw new Error("Business not found.");
   }
-  if (business.onboardingStage !== "phone_number") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (stage !== "phone_number") {
     throw new Error("Phone-number onboarding is no longer available for this business.");
   }
 }
@@ -575,7 +632,14 @@ export const claimOnboardingNumber = action({
     let savedPhoneNumberId: Id<"phone_numbers"> | null = null;
     let claimEventId: Id<"onboarding_number_claim_events"> | null = null;
     let claimLocked = false;
-    let selectedNumber: AvailableNumberSummary | null = null;
+    const claimE164 = normalizeClaimE164(args.e164);
+    if (!claimE164) {
+      return {
+        status: "failed" as const,
+        message: "Invalid phone number.",
+      };
+    }
+    const unavailableE164s = new Set<string>();
 
     try {
       await ctx.runMutation(internal.businesses.admin.beginOnboardingNumberClaim, {
@@ -599,28 +663,29 @@ export const claimOnboardingNumber = action({
       const voiceStatusCallbackUrl = buildTwilioVoiceStatusCallbackUrl();
       const client = getTwilioClient();
 
-      const selectableNumbers = await getNumbersForSelectionContext(selectionContext, context, 20);
-      selectedNumber = selectableNumbers.find((number) => number.e164 === args.e164) ?? null;
-      if (!selectedNumber) {
-        throw new Error("The selected phone number is no longer available.");
+      try {
+        purchased = await client.incomingPhoneNumbers.create({
+          friendlyName: `business:${String(args.businessId)}`,
+          phoneNumber: claimE164,
+          smsMethod: "POST",
+          smsUrl: smsWebhookUrl,
+          statusCallback: voiceStatusCallbackUrl,
+          statusCallbackMethod: "POST",
+          voiceMethod: "POST",
+          voiceUrl: voiceWebhookUrl,
+        });
+      } catch (purchaseError) {
+        if (isLikelyNumberUnavailableError(purchaseError)) {
+          unavailableE164s.add(claimE164);
+        }
+        throw purchaseError;
       }
-
-      purchased = await client.incomingPhoneNumbers.create({
-        friendlyName: `business:${String(args.businessId)}`,
-        phoneNumber: selectedNumber.e164,
-        smsMethod: "POST",
-        smsUrl: smsWebhookUrl,
-        statusCallback: voiceStatusCallbackUrl,
-        statusCallbackMethod: "POST",
-        voiceMethod: "POST",
-        voiceUrl: voiceWebhookUrl,
-      });
 
       const saved: { phoneNumberId: Id<"phone_numbers"> } = await ctx.runMutation(
         internal.businesses.catalog.upsertPhoneNumberInternal,
         {
           businessId: args.businessId,
-          e164: selectedNumber.e164,
+          e164: claimE164,
           twilioPhoneSid: purchased.sid,
           voiceEnabled: true,
           smsEnabled: true,
@@ -648,20 +713,20 @@ export const claimOnboardingNumber = action({
       });
       // Advance to the plan-selection step. Phone provisioning is now
       // followed by plan + attribution before onboarding completes.
-      await ctx.runMutation(internal.businesses.admin.setOnboardingStage, {
+      await ctx.runMutation(internal.businesses.admin.advanceOnboardingStage, {
         businessId: args.businessId,
         onboardingStage: "plan",
       });
       recordSuccessfulPurchaseLog({
         businessId: args.businessId,
         userId,
-        phoneE164: selectedNumber.e164,
+        phoneE164: claimE164,
       });
 
       return {
         status: "claimed" as const,
         phoneNumberId: saved.phoneNumberId,
-        e164: selectedNumber.e164,
+        e164: claimE164,
       };
     } catch (error) {
       let cleanupError: Error | null = null;
@@ -715,25 +780,39 @@ export const claimOnboardingNumber = action({
 
       if (!purchased && isLikelyNumberUnavailableError(error)) {
         let alternatives: Array<AvailableNumberSummary> = [];
-        let selectedStillListed = false;
         try {
           const { context } = await resolveVerifiedSuggestionContext(ctx, args.businessId, userId);
           const selectionContext = buildNormalizedSelectionContext({
             requestedSelectionContext: args.selectionContext,
             fallbackContext: context,
           });
-          alternatives = await getNumbersForSelectionContext(selectionContext, context, 10);
-          selectedStillListed = alternatives.some((number) => number.e164 === args.e164);
+          alternatives = (await getNumbersForSelectionContext(selectionContext, context, 10)).filter(
+            (number) => !unavailableE164s.has(number.e164),
+          );
         } catch {
           alternatives = [];
-          selectedStillListed = false;
         }
 
-        if (!selectedStillListed) {
+        return {
+          status: "unavailable" as const,
+          message: "The selected phone number is no longer available.",
+          alternatives,
+        };
+      }
+
+      if (!purchased) {
+        try {
+          await recordFailedClaimAttempt(ctx, {
+            businessId: args.businessId,
+            userId,
+          });
+        } catch (rateLimitError) {
           return {
-            status: "unavailable" as const,
-            message: "The selected phone number is no longer available.",
-            alternatives,
+            status: "failed" as const,
+            message:
+              rateLimitError instanceof Error
+                ? rateLimitError.message
+                : "Number provisioning limit reached for now. Contact support if you need more businesses today.",
           };
         }
       }
@@ -743,8 +822,8 @@ export const claimOnboardingNumber = action({
         message:
           error instanceof Error
             ? cleanupError
-              ? `${error.message} Automatic cleanup of the purchased Twilio number also failed.`
-              : error.message
+              ? `${getPurchaseFailureMessage(error) ?? error.message} Automatic cleanup of the purchased Twilio number also failed.`
+              : (getPurchaseFailureMessage(error) ?? error.message)
             : cleanupError
               ? "We couldn't provision the selected phone number, and automatic Twilio cleanup also failed."
               : "We couldn't provision the selected phone number.",

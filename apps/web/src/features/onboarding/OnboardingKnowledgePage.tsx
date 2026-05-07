@@ -1,17 +1,20 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 
+import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, FileText, LoaderCircle, Upload, X } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { Surface } from "@/components/ui/surface";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent, captureAnalyticsException } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
@@ -19,6 +22,7 @@ import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 type OnboardingKnowledgePageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
 };
 
 const ACCEPTED_FILE_TYPES =
@@ -33,6 +37,8 @@ type UploadEntry = {
   status: UploadStatus;
   errorMessage?: string;
 };
+
+type StoredUploadDocument = Doc<"knowledge_documents">;
 
 function inferContentTypeFromFileName(fileName: string): string {
   const extension = fileName.split(".").pop()?.toLowerCase();
@@ -73,8 +79,49 @@ function stripExtension(fileName: string): string {
   return fileName.replace(/\.[^.]+$/u, "").trim();
 }
 
-export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKnowledgePageProps) {
+function extensionForStoredDocument(document: StoredUploadDocument): string {
+  if (/\.[A-Za-z0-9]+$/u.test(document.title)) {
+    return "";
+  }
+
+  switch (document.mimeType) {
+    case "application/pdf":
+      return ".pdf";
+    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+      return ".docx";
+    case "text/markdown":
+    case "text/x-markdown":
+      return ".md";
+    case "text/plain":
+      return ".txt";
+    default:
+      return "";
+  }
+}
+
+function getStoredUploadFileName(document: StoredUploadDocument): string {
+  return `${document.title}${extensionForStoredDocument(document)}`;
+}
+
+function getStoredUploadStatus(document: StoredUploadDocument): UploadStatus {
+  if (document.status === "error") {
+    return "error";
+  }
+
+  if (document.status === "queued" || document.status === "indexing") {
+    return "uploading";
+  }
+
+  return "completed";
+}
+
+export function OnboardingKnowledgePage({
+  businessId,
+  onSignOut,
+  progressNavigableUntil,
+}: OnboardingKnowledgePageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const generateUploadUrl = useObservedMutation(
     api.ai.context.knowledge.generateKnowledgeDocumentUploadUrl,
     { reportFailures: false },
@@ -92,6 +139,7 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
   const skipOnboardingKnowledge = useObservedMutation(
     api.onboarding.knowledge.skipOnboardingKnowledge,
   );
+  const knowledge = useQuery(api.ai.context.knowledge.listKnowledge, { businessId });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<"upload" | "paste">("upload");
@@ -104,6 +152,29 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
 
   const isWorking = isFinalizing || isSkipping;
   const hasPasted = pastedText.trim().length > 0;
+  const storedUploadDocuments = useMemo(
+    () =>
+      ((knowledge?.documents ?? []) as Array<StoredUploadDocument>)
+        .filter((document) => document.sourceType === "upload" && document.active !== false)
+        .sort((first, second) => second._creationTime - first._creationTime),
+    [knowledge?.documents],
+  );
+  const storedUploadFileKeys = useMemo(
+    () =>
+      new Set(
+        storedUploadDocuments.map((document) =>
+          stripExtension(getStoredUploadFileName(document)).toLocaleLowerCase(),
+        ),
+      ),
+    [storedUploadDocuments],
+  );
+  const visibleLocalUploads = uploads.filter(
+    (entry) =>
+      entry.status !== "completed" ||
+      !storedUploadFileKeys.has(stripExtension(entry.fileName).toLocaleLowerCase()),
+  );
+  const hasVisibleUploads =
+    storedUploadDocuments.length > 0 || visibleLocalUploads.length > 0;
 
   function pushUpload(entry: UploadEntry): void {
     setUploads((existing) => [...existing, entry]);
@@ -201,10 +272,7 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
       });
       patchUpload(id, {
         status: "error",
-        errorMessage:
-          uploadError instanceof Error
-            ? uploadError.message
-            : t("knowledge.upload.failed"),
+        errorMessage: t("knowledge.upload.failed"),
       });
     }
   }
@@ -245,11 +313,14 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
       captureAnalyticsEvent("web.onboarding.knowledge_uploaded", {
         businessId: String(businessId),
       });
+      navigate("/onboarding/greeting");
     } catch (continueError) {
       setError(
-        continueError instanceof Error
-          ? continueError.message
-          : t("knowledge.continueFailed"),
+        getSafeOnboardingErrorMessage(
+          continueError,
+          t,
+          "knowledge.continueFailed",
+        ),
       );
     } finally {
       setIsFinalizing(false);
@@ -269,8 +340,9 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
       captureAnalyticsEvent("web.onboarding.knowledge_skipped", {
         businessId: String(businessId),
       });
+      navigate("/onboarding/greeting");
     } catch (skipError) {
-      setError(skipError instanceof Error ? skipError.message : t("knowledge.skipFailed"));
+      setError(getSafeOnboardingErrorMessage(skipError, t, "knowledge.skipFailed"));
     } finally {
       setIsSkipping(false);
     }
@@ -280,7 +352,7 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
     <OnboardingShell
       description={t("knowledge.description")}
       onSignOut={onSignOut}
-      progress={{ current: 4, total: 10 }}
+      progress={{ current: 4, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("knowledge.title")}
       width="lg"
       footer={
@@ -348,9 +420,35 @@ export function OnboardingKnowledgePage({ businessId, onSignOut }: OnboardingKno
               </div>
             </label>
 
-            {uploads.length > 0 ? (
+            {hasVisibleUploads ? (
               <ul className="mt-4 flex flex-col gap-2">
-                {uploads.map((entry) => (
+                {storedUploadDocuments.map((document) => {
+                  const fileName = getStoredUploadFileName(document);
+                  const status = getStoredUploadStatus(document);
+
+                  return (
+                    <li className="contents" key={document._id}>
+                      <Surface className="flex w-full items-center gap-3 px-4 py-3">
+                        <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
+                        <div className="flex flex-1 flex-col">
+                          <span className="text-sm font-medium text-foreground">
+                            {fileName}
+                          </span>
+                          {status === "error" && document.error ? (
+                            <span className="text-xs text-destructive">{document.error}</span>
+                          ) : null}
+                        </div>
+                        {status === "uploading" ? (
+                          <LoaderCircle className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
+                        ) : null}
+                        {status === "completed" ? (
+                          <CheckCircle2 className="size-4 text-foreground" aria-hidden="true" />
+                        ) : null}
+                      </Surface>
+                    </li>
+                  );
+                })}
+                {visibleLocalUploads.map((entry) => (
                   <li className="contents" key={entry.id}>
                     <Surface className="flex w-full items-center gap-3 px-4 py-3">
                       <FileText className="size-4 text-muted-foreground" aria-hidden="true" />

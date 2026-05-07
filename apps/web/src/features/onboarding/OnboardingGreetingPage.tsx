@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedMutation } from "@/lib/observed-convex";
 
@@ -22,6 +18,7 @@ type OnboardingGreetingPageProps = {
   businessId: Id<"businesses">;
   businessName?: string;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
 };
 
 function buildDefaultGreeting(name: string | undefined): string {
@@ -36,8 +33,10 @@ export function OnboardingGreetingPage({
   businessId,
   businessName,
   onSignOut,
+  progressNavigableUntil,
 }: OnboardingGreetingPageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const submitOnboardingGreeting = useObservedMutation(
     api.onboarding.greeting.submitOnboardingGreeting,
   );
@@ -68,11 +67,10 @@ export function OnboardingGreetingPage({
       captureAnalyticsEvent("web.onboarding.greeting_submitted", {
         businessId: String(businessId),
       });
+      navigate("/onboarding/verify-phone");
     } catch (submissionError) {
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : t("greeting.submitFailed"),
+        getSafeOnboardingErrorMessage(submissionError, t, "greeting.submitFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -83,7 +81,7 @@ export function OnboardingGreetingPage({
     <OnboardingShell
       description={t("greeting.description")}
       onSignOut={onSignOut}
-      progress={{ current: 5, total: 10 }}
+      progress={{ current: 5, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("greeting.title")}
     >
       <form
@@ -107,7 +105,6 @@ export function OnboardingGreetingPage({
               placeholder={t("greeting.placeholder")}
               value={greeting}
             />
-            <FieldDescription>{t("greeting.helper")}</FieldDescription>
           </Field>
 
           {error ? <FieldError>{error}</FieldError> : null}

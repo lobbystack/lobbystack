@@ -86,6 +86,33 @@ async function consumeRateLimit(input: {
   }
 }
 
+async function checkRateLimit(input: {
+  ctx: AbuseControlCtx;
+  limiterName: "onboardingClaimAttemptPerHour";
+  key: string;
+  message: string;
+  reason: string;
+  userId?: Id<"users">;
+  businessId?: Id<"businesses">;
+  phoneE164?: string;
+}) {
+  const result = await onboardingRateLimiter.check(input.ctx, input.limiterName, {
+    key: input.key,
+  });
+
+  if (!result.ok) {
+    logOnboardingAbuseEvent({
+      limiter: input.limiterName,
+      decision: "blocked",
+      reason: input.reason,
+      ...(input.userId ? { userId: input.userId } : {}),
+      ...(input.businessId ? { businessId: input.businessId } : {}),
+      ...(input.phoneE164 ? { phoneE164: input.phoneE164 } : {}),
+    });
+    throw new Error(input.message);
+  }
+}
+
 export const getSuccessfulClaimQuotaState = internalQuery({
   args: {
     userId: v.id("users"),
@@ -236,7 +263,7 @@ export async function assertClaimAttemptAllowed(
     userId: Id<"users">;
   },
 ): Promise<void> {
-  await consumeRateLimit({
+  await checkRateLimit({
     ctx,
     limiterName: "onboardingClaimAttemptPerHour",
     key: String(input.userId),
@@ -274,6 +301,24 @@ export async function assertClaimAttemptAllowed(
     });
     throw new Error(NUMBER_CLAIM_RATE_LIMIT_MESSAGE);
   }
+}
+
+export async function recordFailedClaimAttempt(
+  ctx: AbuseControlCtx,
+  input: {
+    businessId: Id<"businesses">;
+    userId: Id<"users">;
+  },
+): Promise<void> {
+  await consumeRateLimit({
+    ctx,
+    limiterName: "onboardingClaimAttemptPerHour",
+    key: String(input.userId),
+    message: NUMBER_CLAIM_RATE_LIMIT_MESSAGE,
+    reason: "rate_limit_claim_attempt",
+    userId: input.userId,
+    businessId: input.businessId,
+  });
 }
 
 export function recordSuccessfulPurchaseLog(input: {

@@ -233,6 +233,14 @@ export function resetAnalyticsIdentity(): void {
   posthog.reset();
 }
 
+export function setAnalyticsPersonProperties(properties: TelemetryProperties): void {
+  if (!isAnalyticsEnabled()) {
+    return;
+  }
+
+  posthog.people.set(coerceProperties(properties));
+}
+
 export function captureAnalyticsEvent(
   name: TelemetryEventName,
   properties?: TelemetryProperties,

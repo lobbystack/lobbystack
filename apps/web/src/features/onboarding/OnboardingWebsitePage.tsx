@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Globe, LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -14,23 +15,32 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
 type OnboardingWebsitePageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
+  websiteUrl?: string;
 };
 
-export function OnboardingWebsitePage({ businessId, onSignOut }: OnboardingWebsitePageProps) {
+export function OnboardingWebsitePage({
+  businessId,
+  onSignOut,
+  progressNavigableUntil,
+  websiteUrl: initialWebsiteUrl,
+}: OnboardingWebsitePageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const submitOnboardingWebsite = useObservedAction(
     api.onboarding.websites.submitOnboardingWebsite,
   );
   const skipOnboardingWebsite = useObservedMutation(
     api.onboarding.websites.skipOnboardingWebsite,
   );
-  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
@@ -50,11 +60,10 @@ export function OnboardingWebsitePage({ businessId, onSignOut }: OnboardingWebsi
       captureAnalyticsEvent("web.onboarding.website_submitted", {
         businessId: String(businessId),
       });
+      navigate("/onboarding/knowledge");
     } catch (submissionError) {
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : t("website.submitFailed"),
+        getSafeOnboardingErrorMessage(submissionError, t, "website.submitFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -73,8 +82,9 @@ export function OnboardingWebsitePage({ businessId, onSignOut }: OnboardingWebsi
       captureAnalyticsEvent("web.onboarding.website_skipped", {
         businessId: String(businessId),
       });
+      navigate("/onboarding/knowledge");
     } catch (skipError) {
-      setError(skipError instanceof Error ? skipError.message : t("website.skipFailed"));
+      setError(getSafeOnboardingErrorMessage(skipError, t, "website.skipFailed"));
     } finally {
       setIsSkipping(false);
     }
@@ -84,7 +94,7 @@ export function OnboardingWebsitePage({ businessId, onSignOut }: OnboardingWebsi
     <OnboardingShell
       description={t("website.description")}
       onSignOut={onSignOut}
-      progress={{ current: 3, total: 10 }}
+      progress={{ current: 3, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("website.title")}
       footer={
         <div className="flex flex-col items-center gap-3">

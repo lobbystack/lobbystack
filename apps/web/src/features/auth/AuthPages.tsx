@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +10,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
+import type { TurnstileHandle } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
@@ -41,8 +42,8 @@ function getAuthErrorMessage(
   }
 
   if (flow === "signUp") {
-    if (message.includes("already exists")) {
-      return t("errors.accountExists");
+    if (message.includes("Turnstile")) {
+      return t("errors.turnstileFailed");
     }
 
     if (message.includes("Invalid password")) {
@@ -82,13 +83,12 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
@@ -99,22 +99,24 @@ export function LoginPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingSignIn"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.signedInFinishing"));
+        keepSubmitting = true;
         capturePublicAuthEvent("web.auth.login_succeeded");
         return;
       }
 
-      setStatusMessage(t("status.signInCompleted"));
+      keepSubmitting = true;
       capturePublicAuthEvent("web.auth.login_succeeded");
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error, "signIn", t));
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -133,7 +135,6 @@ export function LoginPage() {
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
         password={password}
-        statusMessage={statusMessage}
       />
     </OnboardingShell>
   );
@@ -142,16 +143,26 @@ export function LoginPage() {
 export function SignupPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle | null>(null);
+  const pendingTurnstileSubmitRef = useRef(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const handleTurnstileError = useCallback(() => {
+    pendingTurnstileSubmitRef.current = false;
+    setTurnstileToken(null);
+    setIsSubmitting(false);
+    setErrorMessage(t("errors.turnstileFailed"));
+  }, [t]);
+
+  const submitSignUp = useCallback(async (verifiedTurnstileToken: string | null) => {
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
@@ -159,31 +170,69 @@ export function SignupPage() {
       formData.set("flow", "signUp");
       formData.set("email", email);
       formData.set("password", password);
+      if (verifiedTurnstileToken) {
+        formData.set("cf-turnstile-response", verifiedTurnstileToken);
+      }
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingSignUp"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.accountCreatedFinishing"));
+        keepSubmitting = true;
         capturePublicAuthEvent("web.auth.signup_succeeded");
         return;
       }
 
-      setStatusMessage(t("status.accountCreatedFinalizing"));
+      keepSubmitting = true;
       capturePublicAuthEvent("web.auth.signup_succeeded");
     } catch (error) {
+      setTurnstileToken(null);
+      setTurnstileResetKey((current) => current + 1);
       setErrorMessage(getAuthErrorMessage(error, "signUp", t));
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
+  }, [email, password, signIn, t]);
+
+  const handleTurnstileTokenChange = useCallback(
+    (token: string | null) => {
+      setTurnstileToken(token);
+      if (!token || !pendingTurnstileSubmitRef.current) {
+        return;
+      }
+
+      pendingTurnstileSubmitRef.current = false;
+      void submitSignUp(token);
+    },
+    [submitSignUp],
+  );
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (turnstileSiteKey && !turnstileToken) {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      pendingTurnstileSubmitRef.current = true;
+      const started = turnstileRef.current?.execute() ?? false;
+      if (!started) {
+        pendingTurnstileSubmitRef.current = false;
+        setIsSubmitting(false);
+        setErrorMessage(t("errors.turnstileRequired"));
+      }
+      return;
+    }
+
+    await submitSignUp(turnstileToken);
   }
 
   return (
     <OnboardingShell
-      description={t("signup.subtitle")}
       progress={{ current: 1, total: 10 }}
       title={t("signup.title")}
       width="sm"
@@ -195,8 +244,12 @@ export function SignupPage() {
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
         onSubmit={handleSubmit}
+        onTurnstileError={handleTurnstileError}
+        onTurnstileTokenChange={handleTurnstileTokenChange}
         password={password}
-        statusMessage={statusMessage}
+        turnstileResetKey={turnstileResetKey}
+        turnstileRef={turnstileRef}
+        turnstileSiteKey={turnstileSiteKey}
       />
     </OnboardingShell>
   );

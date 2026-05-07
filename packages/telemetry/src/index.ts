@@ -331,7 +331,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "web.onboarding.plan_selected": ["businessId", "deploymentMode", "plan"],
   "web.onboarding.plan_checkout_started": ["businessId", "deploymentMode", "plan"],
-  "web.onboarding.attribution_submitted": ["businessId", "deploymentMode"],
+  "web.onboarding.attribution_submitted": ["businessId", "deploymentMode", "source"],
   "web.knowledge.upload_started": [
     "businessId",
     "deploymentMode",

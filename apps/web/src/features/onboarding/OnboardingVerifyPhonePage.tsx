@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction } from "@/lib/observed-convex";
 
@@ -22,14 +24,17 @@ type OnboardingVerifyPhonePageProps = {
   businessId: Id<"businesses">;
   currentUserPhone?: string;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
 };
 
 export function OnboardingVerifyPhonePage({
   businessId,
   currentUserPhone,
   onSignOut,
+  progressNavigableUntil,
 }: OnboardingVerifyPhonePageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const startPhoneVerification = useObservedAction(
     api.onboarding.phoneVerification.startPhoneVerification,
   );
@@ -51,11 +56,10 @@ export function OnboardingVerifyPhonePage({
         businessId: String(businessId),
         countryCode: result.countryCode,
       });
+      navigate("/onboarding/verify-phone/code");
     } catch (submissionError) {
       setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : t("verifyPhone.sendFailed"),
+        getSafeOnboardingErrorMessage(submissionError, t, "verifyPhone.sendFailed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -66,7 +70,7 @@ export function OnboardingVerifyPhonePage({
     <OnboardingShell
       description={t("verifyPhone.description")}
       onSignOut={onSignOut}
-      progress={{ current: 6, total: 10 }}
+      progress={{ current: 6, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("verifyPhone.title")}
     >
       <form

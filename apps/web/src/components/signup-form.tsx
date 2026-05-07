@@ -1,11 +1,13 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, Ref } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Turnstile, type TurnstileHandle } from "@/components/turnstile";
 import {
   Field,
   FieldDescription,
@@ -21,10 +23,14 @@ type SignupFormProps = {
   password: string;
   isSubmitting: boolean;
   errorMessage: string | null;
-  statusMessage: string | null;
+  turnstileResetKey?: number;
+  turnstileSiteKey?: string;
+  turnstileRef?: Ref<TurnstileHandle>;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onTurnstileError?: () => void;
+  onTurnstileTokenChange?: (token: string | null) => void;
 };
 
 export function SignupForm({
@@ -33,10 +39,14 @@ export function SignupForm({
   password,
   isSubmitting,
   errorMessage,
-  statusMessage,
+  turnstileResetKey = 0,
+  turnstileSiteKey,
+  turnstileRef,
   onEmailChange,
   onPasswordChange,
   onSubmit,
+  onTurnstileError,
+  onTurnstileTokenChange,
 }: SignupFormProps) {
   const { t } = useTranslation("auth");
 
@@ -73,15 +83,33 @@ export function SignupForm({
             <FieldDescription>{t("signup.passwordHint")}</FieldDescription>
           </Field>
 
-          {statusMessage || errorMessage ? (
+          {turnstileSiteKey ? (
+            <div className="-mt-1">
+              <Turnstile
+                key={turnstileResetKey}
+                ref={turnstileRef}
+                onTokenChange={onTurnstileTokenChange ?? (() => {})}
+                siteKey={turnstileSiteKey}
+                {...(onTurnstileError ? { onError: onTurnstileError } : {})}
+              />
+            </div>
+          ) : null}
+
+          {errorMessage ? (
             <div className="flex flex-col gap-2 -mt-1">
-              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+              <FieldError>{errorMessage}</FieldError>
             </div>
           ) : null}
 
           <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? t("signup.submitting") : t("signup.submit")}
+            {isSubmitting ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                <span className="sr-only">{t("signup.submitting")}</span>
+              </>
+            ) : (
+              t("signup.submit")
+            )}
           </Button>
         </FieldGroup>
       </form>

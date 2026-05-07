@@ -3,12 +3,12 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -21,7 +21,6 @@ type LoginFormProps = {
   password: string;
   isSubmitting: boolean;
   errorMessage: string | null;
-  statusMessage: string | null;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -33,7 +32,6 @@ export function LoginForm({
   password,
   isSubmitting,
   errorMessage,
-  statusMessage,
   onEmailChange,
   onPasswordChange,
   onSubmit,
@@ -80,15 +78,21 @@ export function LoginForm({
             />
           </Field>
 
-          {statusMessage || errorMessage ? (
+          {errorMessage ? (
             <div className="flex flex-col gap-2 -mt-1">
-              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+              <FieldError>{errorMessage}</FieldError>
             </div>
           ) : null}
 
           <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? t("login.submitting") : t("login.submit")}
+            {isSubmitting ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                <span className="sr-only">{t("login.submitting")}</span>
+              </>
+            ) : (
+              t("login.submit")
+            )}
           </Button>
         </FieldGroup>
       </form>

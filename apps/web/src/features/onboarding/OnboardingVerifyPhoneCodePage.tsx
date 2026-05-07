@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, LoaderCircle } from "lucide-react";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -9,6 +9,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { FieldError } from "@/components/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useObservedAction } from "@/lib/observed-convex";
 
@@ -16,6 +17,7 @@ type OnboardingVerifyPhoneCodePageProps = {
   businessId: Id<"businesses">;
   phoneE164: string;
   onSignOut: () => void;
+  progressNavigableUntil?: number;
 };
 
 function maskPhone(phone: string): string {
@@ -31,8 +33,10 @@ export function OnboardingVerifyPhoneCodePage({
   businessId,
   phoneE164,
   onSignOut,
+  progressNavigableUntil,
 }: OnboardingVerifyPhoneCodePageProps) {
   const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
   const checkPhoneVerification = useObservedAction(
     api.onboarding.phoneVerification.checkPhoneVerification,
   );
@@ -65,13 +69,14 @@ export function OnboardingVerifyPhoneCodePage({
         captureAnalyticsEvent("web.onboarding.verify_phone_completed", {
           businessId: String(businessId),
         });
+        navigate("/onboarding/number");
       } else {
-        setError(result.message);
+        setError(getSafeOnboardingErrorMessage(result.message, t, "verifyPhoneCode.failed"));
         setCode("");
       }
     } catch (verifyError) {
       setError(
-        verifyError instanceof Error ? verifyError.message : t("verifyPhoneCode.failed"),
+        getSafeOnboardingErrorMessage(verifyError, t, "verifyPhoneCode.failed"),
       );
       setCode("");
     } finally {
@@ -93,7 +98,11 @@ export function OnboardingVerifyPhoneCodePage({
       });
     } catch (resendError) {
       setError(
-        resendError instanceof Error ? resendError.message : t("verifyPhoneCode.resendFailed"),
+        getSafeOnboardingErrorMessage(
+          resendError,
+          t,
+          "verifyPhoneCode.resendFailed",
+        ),
       );
     } finally {
       setIsResending(false);
@@ -104,7 +113,7 @@ export function OnboardingVerifyPhoneCodePage({
     <OnboardingShell
       description={t("verifyPhoneCode.description", { phone: maskPhone(phoneE164) })}
       onSignOut={onSignOut}
-      progress={{ current: 7, total: 10 }}
+      progress={{ current: 7, navigableUntil: progressNavigableUntil, total: 10 }}
       title={t("verifyPhoneCode.title")}
       footer={
         <div className="flex flex-col items-center gap-4">

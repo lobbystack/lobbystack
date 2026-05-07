@@ -66,6 +66,7 @@ type ActiveBusiness = {
   name: string;
   slug: string;
   onboardingStage?: string;
+  websiteUrl?: string;
 };
 
 function RequireAuth(props: { children: ReactNode }) {
@@ -144,6 +145,34 @@ function onboardingRouteForStage(stage: string | undefined): string | null {
     default:
       return null;
   }
+}
+
+const onboardingStageSteps: Record<string, number> = {
+  create_business: 2,
+  website: 3,
+  knowledge: 4,
+  greeting: 5,
+  verify_phone: 6,
+  verify_phone_code: 7,
+  phone_number: 8,
+  phone_number_claiming: 8,
+  plan: 9,
+  attribution: 10,
+  completed: 11,
+};
+
+function canVisitOnboardingStage(
+  currentStage: string | undefined,
+  targetStage: string,
+): boolean {
+  const currentStep = currentStage ? onboardingStageSteps[currentStage] : undefined;
+  const targetStep = onboardingStageSteps[targetStage];
+
+  return currentStep !== undefined && targetStep !== undefined && targetStep <= currentStep;
+}
+
+function onboardingNavigableStep(stage: string | undefined): number {
+  return stage ? (onboardingStageSteps[stage] ?? 1) : 1;
 }
 
 function WorkspaceShell() {
@@ -465,16 +494,28 @@ function OnboardingBusinessRoute() {
     return <OnboardingRouteSkeleton />;
   }
 
-  // If a business already exists, the user belongs further down the flow.
   if (ctx.activeBusiness) {
     const stage = ctx.activeBusiness.onboardingStage;
-    if (stage && stage !== "create_business") {
+    if (stage && !canVisitOnboardingStage(stage, "create_business")) {
       const target = onboardingRouteForStage(stage) ?? "/";
       return <Navigate replace to={target} />;
     }
   }
 
-  return <OnboardingBusinessNamePage onSignOut={ctx.onSignOut} />;
+  return (
+    <OnboardingBusinessNamePage
+      {...(ctx.activeBusiness
+        ? {
+            businessId: ctx.activeBusiness._id,
+            businessName: ctx.activeBusiness.name,
+            progressNavigableUntil: onboardingNavigableStep(
+              ctx.activeBusiness.onboardingStage,
+            ),
+          }
+        : {})}
+      onSignOut={ctx.onSignOut}
+    />
+  );
 }
 
 function OnboardingWebsiteRoute() {
@@ -488,12 +529,19 @@ function OnboardingWebsiteRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage !== "website") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "website")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
   return (
-    <OnboardingWebsitePage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+    <OnboardingWebsitePage
+      businessId={ctx.activeBusiness._id}
+      onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
+      {...(ctx.activeBusiness.websiteUrl
+        ? { websiteUrl: ctx.activeBusiness.websiteUrl }
+        : {})}
+    />
   );
 }
 
@@ -508,12 +556,16 @@ function OnboardingKnowledgeRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage !== "knowledge") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "knowledge")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
   return (
-    <OnboardingKnowledgePage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+    <OnboardingKnowledgePage
+      businessId={ctx.activeBusiness._id}
+      onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
+    />
   );
 }
 
@@ -528,7 +580,7 @@ function OnboardingGreetingRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage !== "greeting") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "greeting")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -537,6 +589,7 @@ function OnboardingGreetingRoute() {
       businessId={ctx.activeBusiness._id}
       businessName={ctx.activeBusiness.name}
       onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
   );
 }
@@ -604,8 +657,7 @@ function OnboardingVerifyPhoneRoute() {
   }
 
   if (
-    ctx.activeBusiness.onboardingStage !== "verify_phone" &&
-    ctx.activeBusiness.onboardingStage !== "verify_phone_code"
+    !canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "verify_phone")
   ) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
@@ -619,6 +671,7 @@ function OnboardingVerifyPhoneRoute() {
       businessId={ctx.activeBusiness._id}
       {...(ctx.currentUser?.phone ? { currentUserPhone: ctx.currentUser.phone } : {})}
       onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
   );
 }
@@ -638,11 +691,7 @@ function OnboardingVerifyPhoneCodeRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage === "verify_phone") {
-    return <Navigate replace to="/onboarding/verify-phone" />;
-  }
-
-  if (ctx.activeBusiness.onboardingStage !== "verify_phone_code") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "verify_phone")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
@@ -659,12 +708,17 @@ function OnboardingVerifyPhoneCodeRoute() {
       businessId={ctx.activeBusiness._id}
       onSignOut={ctx.onSignOut}
       phoneE164={latestAttempt.phoneE164}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
     />
   );
 }
 
 function OnboardingNumberRoute() {
   const ctx = useOnboardingContext();
+  const latestAttempt = useQuery(
+    api.onboarding.phoneVerificationLookup.getLatestPhoneVerificationAttempt,
+    ctx.activeBusiness ? { businessId: ctx.activeBusiness._id } : "skip",
+  );
 
   if (ctx.isLoading) {
     return <OnboardingRouteSkeleton />;
@@ -674,15 +728,34 @@ function OnboardingNumberRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (
-    ctx.activeBusiness.onboardingStage !== "phone_number" &&
-    ctx.activeBusiness.onboardingStage !== "phone_number_claiming"
-  ) {
+  const canVisitNumber = canVisitOnboardingStage(
+    ctx.activeBusiness.onboardingStage,
+    "phone_number",
+  );
+  const canVerifyPhoneCode = canVisitOnboardingStage(
+    ctx.activeBusiness.onboardingStage,
+    "verify_phone_code",
+  );
+  const hasApprovedVerification = latestAttempt?.status === "approved";
+
+  if (!canVisitNumber && canVerifyPhoneCode && latestAttempt === undefined) {
+    return <OnboardingRouteSkeleton />;
+  }
+
+  if (!canVisitNumber && !hasApprovedVerification) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
   return (
-    <OnboardingNumberPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+    <OnboardingNumberPage
+      businessId={ctx.activeBusiness._id}
+      isComplete={canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")}
+      onSignOut={ctx.onSignOut}
+      progressNavigableUntil={Math.max(
+        onboardingNavigableStep(ctx.activeBusiness.onboardingStage),
+        hasApprovedVerification ? 8 : 1,
+      )}
+    />
   );
 }
 
@@ -697,11 +770,17 @@ function OnboardingPlanRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage !== "plan") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "plan")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
-  return <OnboardingPlanPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />;
+  return (
+    <OnboardingPlanPage
+      businessId={ctx.activeBusiness._id}
+      onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
+    />
+  );
 }
 
 function OnboardingAttributionRoute() {
@@ -715,12 +794,16 @@ function OnboardingAttributionRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
-  if (ctx.activeBusiness.onboardingStage !== "attribution") {
+  if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "attribution")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
 
   return (
-    <OnboardingAttributionPage businessId={ctx.activeBusiness._id} onSignOut={ctx.onSignOut} />
+    <OnboardingAttributionPage
+      businessId={ctx.activeBusiness._id}
+      onSignOut={ctx.onSignOut}
+      progressNavigableUntil={onboardingNavigableStep(ctx.activeBusiness.onboardingStage)}
+    />
   );
 }
 

@@ -58,6 +58,20 @@ describe("OnboardingWebsitePage", () => {
     });
   });
 
+  it("prefills an existing website URL when revisiting the step", () => {
+    render(
+      <OnboardingWebsitePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+        websiteUrl="https://example.com"
+      />,
+    );
+
+    expect((screen.getByLabelText("website.label") as HTMLInputElement).value).toBe(
+      "https://example.com",
+    );
+  });
+
   it("renders the submission error when onboarding website import fails", async () => {
     submitOnboardingWebsiteMock.mockRejectedValueOnce(new Error("Import failed."));
 
@@ -69,6 +83,6 @@ describe("OnboardingWebsitePage", () => {
     await user.type(screen.getByLabelText("website.label"), "example.com");
     await user.click(screen.getByRole("button", { name: "website.continue" }));
 
-    expect(screen.getByText("Import failed.")).toBeTruthy();
+    expect(screen.getByText("website.submitFailed")).toBeTruthy();
   });
 });

@@ -481,7 +481,7 @@ describe("onboarding phone verification actions", () => {
     expect(business?.onboardingStage).toBe("verify_phone_code");
   });
 
-  it("refuses to start verification once the business leaves verify_phone", async () => {
+  it("allows restarting verification from later onboarding steps without regressing progress", async () => {
     const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
@@ -492,15 +492,24 @@ describe("onboarding phone verification actions", () => {
       });
     });
 
-    await expect(
-      authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
-        businessId,
-        phoneE164: "+15817484609",
-      }),
-    ).rejects.toThrow("Phone verification is no longer available for this business.");
+    const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
+      businessId,
+      phoneE164: "+15817484609",
+    });
+
+    expect(result).toEqual({
+      status: "pending",
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("phone_number");
   });
 
-  it("refuses to approve a code once the business leaves verify_phone", async () => {
+  it("allows code approval from later onboarding steps without regressing progress", async () => {
     const t = createConvexHarness();
     const { businessId, subject } = await seedBusinessOwner(t);
     const authed = t.withIdentity({ subject });
@@ -516,13 +525,21 @@ describe("onboarding phone verification actions", () => {
       });
     });
 
-    await expect(
-      authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
-        businessId,
-        phoneE164: "+15817484609",
-        code: "123456",
-      }),
-    ).rejects.toThrow("Phone verification is no longer available for this business.");
+    const result = await authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
+      businessId,
+      phoneE164: "+15817484609",
+      code: "123456",
+    });
+
+    expect(result).toEqual({
+      status: "approved",
+      phoneE164: "+15817484609",
+    });
+
+    const business = await t.query(internal.businesses.admin.getBusinessById, {
+      businessId,
+    });
+    expect(business?.onboardingStage).toBe("completed");
   });
 
   it("lets already verified owners skip repeat verification for a new business", async () => {

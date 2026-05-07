@@ -4,9 +4,12 @@
     "terms": "Conditions",
     "privacy": "Confidentialité"
   },
+  "errors": {
+    "tooManyBusinesses": "Trop de tentatives de configuration. Attendez un peu, puis réessayez."
+  },
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
-    "description": "Nous l'utiliserons pour accueillir vos appelants.",
+    "description": "",
     "label": "Nom de l'entreprise",
     "placeholder": "Bar George",
     "continue": "Continuer",
@@ -15,7 +18,7 @@
   },
   "website": {
     "title": "Entraînons LobbyStack avec votre site web",
-    "description": "Nous allons apprendre depuis vos pages publiques pour répondre aux questions courantes.",
+    "description": "",
     "label": "Site web",
     "placeholder": "votreentreprise.com",
     "continue": "Continuer",
@@ -57,14 +60,13 @@
     "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
     "label": "Message d'accueil",
     "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
-    "helper": "Astuce : restez sous deux phrases.",
     "continue": "Continuer",
     "submitting": "Enregistrement...",
     "submitFailed": "Impossible d'enregistrer ce message maintenant. Réessayez."
   },
   "verifyPhone": {
     "title": "Vérifions votre identité",
-    "description": "Nous enverrons un code par SMS pour sécuriser votre compte.",
+    "description": "",
     "fields": {
       "mobileNumber": "Numéro de mobile"
     },
@@ -74,6 +76,10 @@
     "hint": "Utilisez un numéro de mobile personnel qui peut recevoir des SMS.",
     "sendCode": "Envoyer le code",
     "sending": "Envoi du code...",
+    "invalidNumber": "Entrez un numéro de mobile valide avec l'indicatif du pays.",
+    "mobileRequired": "Utilisez un numéro de mobile qui peut recevoir des SMS de vérification.",
+    "tooManyAttempts": "Trop de tentatives de vérification. Attendez un peu, puis réessayez.",
+    "waitBeforeRetry": "Nous venons d'envoyer un code. Attendez un moment avant de réessayer.",
     "sendFailed": "Impossible d'envoyer un code maintenant. Réessayez."
   },
   "verifyPhoneCode": {
@@ -84,6 +90,8 @@
     "resending": "Renvoi...",
     "verifying": "Vérification...",
     "changeNumber": "Utiliser un autre numéro",
+    "invalidCode": "Ce code est invalide ou expiré. Essayez d'en demander un nouveau.",
+    "startAgain": "Recommencez la vérification du téléphone avant d'entrer un code.",
     "failed": "Impossible de vérifier ce code. Réessayez.",
     "resendFailed": "Impossible de renvoyer un code maintenant. Réessayez."
   },
@@ -95,9 +103,7 @@
     "areaCodePlaceholder": "Indicatif",
     "search": "Rechercher",
     "tableHeaders": {
-      "phoneNumber": "Numéro",
-      "features": "Fonctionnalités",
-      "option": "Option"
+      "phoneNumber": "Numéro"
     },
     "select": "Choisir",
     "loadMore": "Charger plus",
@@ -107,8 +113,16 @@
     "loadFailed": "Impossible de charger les numéros maintenant.",
     "searchFailed": "Impossible de rechercher maintenant.",
     "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
+    "claimRateLimited": "Vous avez essayé plusieurs numéros. Attendez un peu avant de réessayer.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",
-    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre."
+    "tooManySearches": "Trop de recherches. Attendez un peu, puis réessayez.",
+    "verifyPhoneRequired": "Vérifiez votre numéro de mobile avant de choisir un numéro d'entreprise.",
+    "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
+    "selectedTitle": "Le numéro de votre IA",
+    "selectedNumberLabel": "Numéro sélectionné",
+    "skippedTitle": "Aucun numéro ajouté",
+    "skippedDescription": "Vous pourrez en ajouter un après l'intégration.",
+    "continue": "Continuer"
   },
   "plan": {
     "title": "Choisissez votre forfait",

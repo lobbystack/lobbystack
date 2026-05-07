@@ -87,6 +87,23 @@ vi.mock("../businesses/admin.ts", async () => {
         return args.onboardingStage;
       },
     }),
+    advanceOnboardingStage: internalMutation({
+      args: {
+        businessId: v.id("businesses"),
+        onboardingStage: v.string(),
+      },
+      handler: async (ctx, args) => {
+        const failureMessage = setOnboardingStageFailureMessageMock();
+        if (failureMessage) {
+          throw new Error(failureMessage);
+        }
+
+        await ctx.db.patch(args.businessId, {
+          onboardingStage: args.onboardingStage,
+        });
+        return args.onboardingStage;
+      },
+    }),
   };
 });
 
@@ -280,6 +297,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -294,6 +312,42 @@ describe("onboarding phone-number actions", () => {
       sid: "PN-default",
       smsUrl: "https://example.convex.site/twilio/sms/inbound",
       voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+  });
+
+  it("returns the active business phone number for onboarding revisits", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject } = await seedBusinessOwner(t);
+    const authed = t.withIdentity({ subject });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+15815550000",
+        twilioPhoneSid: "PN-inactive",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "inactive",
+      });
+      await ctx.db.insert("phone_numbers", {
+        businessId,
+        e164: "+15815550123",
+        twilioPhoneSid: "PN-active",
+        voiceEnabled: true,
+        smsEnabled: true,
+        status: "active",
+      });
+    });
+
+    const result = await authed.query(api.businesses.catalog.getPrimaryPhoneNumber, {
+      businessId,
+    });
+
+    expect(result).toMatchObject({
+      e164: "+15815550123",
+      voiceEnabled: true,
+      smsEnabled: true,
+      status: "active",
     });
   });
 
@@ -328,6 +382,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -394,6 +449,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -436,6 +492,7 @@ describe("onboarding phone-number actions", () => {
       {
         phoneNumber: "+18885550101",
         isoCountry: "CA",
+        capabilities: { sms: true, voice: true },
       },
     ]);
 
@@ -461,6 +518,55 @@ describe("onboarding phone-number actions", () => {
       e164: "+18885550101",
       kind: "toll_free",
     });
+  });
+
+  it("only returns inventory with both voice and SMS capabilities", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+14185550123",
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { sms: true, voice: true },
+      },
+      {
+        phoneNumber: "+14185550124",
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { sms: true, voice: false },
+      },
+      {
+        phoneNumber: "+14185550125",
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { SMS: true, Voice: true },
+      },
+    ]);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+      businessId,
+      mode: "area_code",
+      areaCode: "418",
+      limit: 5,
+    });
+
+    expect(result.numbers.map((number) => number.e164)).toEqual([
+      "+14185550123",
+      "+14185550125",
+    ]);
   });
 
   it("refuses to suggest numbers once onboarding leaves the phone-number step", async () => {
@@ -604,6 +710,39 @@ describe("onboarding phone-number actions", () => {
     expect(listLocalNumbersMock).toHaveBeenCalledTimes(callsBeforeBlockedAttempt);
   });
 
+  it("rate limits repeated inventory searches after a generous allowance", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+
+    for (let index = 0; index < 1000; index += 1) {
+      await authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+        businessId,
+        mode: "area_code",
+        areaCode: "418",
+      });
+    }
+
+    const callsBeforeBlockedAttempt = listLocalNumbersMock.mock.calls.length;
+
+    await expect(
+      authed.action(api.onboarding.phoneNumbers.searchAvailableNumbers, {
+        businessId,
+        mode: "area_code",
+        areaCode: "418",
+      }),
+    ).rejects.toThrow("Too many number searches. Try again shortly.");
+
+    expect(listLocalNumbersMock).toHaveBeenCalledTimes(callsBeforeBlockedAttempt);
+  });
+
   it("clamps search limits before forwarding them to Twilio", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
@@ -654,6 +793,7 @@ describe("onboarding phone-number actions", () => {
             locality: "Quebec City",
             region: "QC",
             isoCountry: "CA",
+            capabilities: { sms: true, voice: true },
           },
         ];
       }
@@ -665,6 +805,7 @@ describe("onboarding phone-number actions", () => {
             locality: "Toronto",
             region: "ON",
             isoCountry: "CA",
+            capabilities: { sms: true, voice: true },
           },
         ];
       }
@@ -739,7 +880,7 @@ describe("onboarding phone-number actions", () => {
     });
   });
 
-  it("rejects claims for numbers outside the current selection results", async () => {
+  it("claims the exact selected number without requiring it to appear in a second inventory search", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
     await seedVerifiedPhone({
@@ -751,49 +892,39 @@ describe("onboarding phone-number actions", () => {
     });
     const authed = t.withIdentity({ subject });
 
-    listLocalNumbersMock.mockImplementation(
-      async ({
-        args,
-      }: {
-        countryCode: string;
-        args: {
-          areaCode?: number;
-          limit: number;
-          smsEnabled: boolean;
-          voiceEnabled: boolean;
-        };
-      }) => {
-        if (args.areaCode === 418) {
-          return [
-            {
-              phoneNumber: "+14185550123",
-              locality: "Quebec City",
-              region: "QC",
-              isoCountry: "CA",
-            },
-          ];
-        }
-
-        return [];
-      },
-    );
+    listLocalNumbersMock.mockResolvedValue([]);
+    createIncomingPhoneNumberMock.mockResolvedValueOnce({
+      sid: "PN-exact-claim",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,
-      e164: "+12125550123",
+      e164: "+14185550123",
       selectionContext: {
         mode: "area_code",
-        countryCode: "US",
-        areaCode: "212",
+        countryCode: "CA",
+        areaCode: "418",
       },
     });
 
     expect(result).toMatchObject({
-      status: "unavailable",
-      message: "The selected phone number is no longer available.",
+      status: "claimed",
+      e164: "+14185550123",
     });
-    expect(createIncomingPhoneNumberMock).not.toHaveBeenCalled();
-    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledWith({
+      friendlyName: `business:${String(businessId)}`,
+      phoneNumber: "+14185550123",
+      smsMethod: "POST",
+      smsUrl: "https://example.convex.site/twilio/sms/inbound",
+      statusCallback: "https://voice.example.com/twilio/voice/call-status",
+      statusCallbackMethod: "POST",
+      voiceMethod: "POST",
+      voiceUrl: "https://voice.example.com/twilio/voice/inbound",
+    });
+    expect(listLocalNumbersMock).not.toHaveBeenCalled();
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(1);
   });
 
   it("rejects claims once onboarding is no longer on the phone-number step", async () => {
@@ -869,27 +1000,20 @@ describe("onboarding phone-number actions", () => {
   it("rate limits repeated claim attempts before another Twilio purchase is made", async () => {
     const t = createConvexHarness();
     const { businessId, subject, userId } = await seedBusinessOwner(t);
-    const additionalBusinessIds = await Promise.all([
-      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-2" }),
-      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-3" }),
-      seedAdditionalBusinessForUser({ t, userId, slug: "claim-limit-4" }),
-    ]);
-    for (const targetBusinessId of [businessId, ...additionalBusinessIds]) {
-      await seedVerifiedPhone({
-        t,
-        businessId: targetBusinessId,
-        userId,
-        phoneE164: "+15817484609",
-        countryCode: "CA",
-      });
-    }
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockRejectedValue(new Error("Temporary Twilio failure."));
 
-    for (const targetBusinessId of [businessId, additionalBusinessIds[0], additionalBusinessIds[1]]) {
+    for (let index = 0; index < 1000; index += 1) {
       const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-        businessId: targetBusinessId,
+        businessId,
         e164: "+14185550123",
         selectionContext: {
           mode: "area_code",
@@ -905,7 +1029,7 @@ describe("onboarding phone-number actions", () => {
     }
 
     const blockedResult = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
-      businessId: additionalBusinessIds[2],
+      businessId,
       e164: "+14185550123",
       selectionContext: {
         mode: "area_code",
@@ -919,7 +1043,7 @@ describe("onboarding phone-number actions", () => {
       message:
         "Number provisioning limit reached for now. Contact support if you need more businesses today.",
     });
-    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(3);
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(1000);
   });
 
   it("counts only successful purchases toward the durable claim quota", async () => {
@@ -960,6 +1084,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -970,6 +1095,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Quebec City",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -980,6 +1106,7 @@ describe("onboarding phone-number actions", () => {
               locality: "Gatineau",
               region: "QC",
               isoCountry: "CA",
+              capabilities: { sms: true, voice: true },
             },
           ];
         }
@@ -1053,43 +1180,15 @@ describe("onboarding phone-number actions", () => {
     const authed = t.withIdentity({ subject });
 
     createIncomingPhoneNumberMock.mockRejectedValueOnce(new Error("Number already taken"));
-    let areaCodeSearchCount = 0;
-    listLocalNumbersMock.mockImplementation(
-      async ({
-        args,
-      }: {
-        countryCode: string;
-        args: {
-          areaCode?: number;
-          limit: number;
-          smsEnabled: boolean;
-          voiceEnabled: boolean;
-        };
-      }) => {
-        if (args.areaCode === 418) {
-          areaCodeSearchCount += 1;
-          return areaCodeSearchCount === 1
-            ? [
-                {
-                  phoneNumber: "+14185550123",
-                  locality: "Quebec City",
-                  region: "QC",
-                  isoCountry: "CA",
-                },
-              ]
-            : [
-                {
-                  phoneNumber: "+14185550999",
-                  locality: "Quebec City",
-                  region: "QC",
-                  isoCountry: "CA",
-                },
-              ];
-        }
-
-        return [];
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: "+14185550999",
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { sms: true, voice: true },
       },
-    );
+    ]);
 
     const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
       businessId,
@@ -1119,6 +1218,144 @@ describe("onboarding phone-number actions", () => {
     });
     expect(business?.onboardingStage).toBe("phone_number");
     expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not mask Twilio trial-account purchase limits as unavailable inventory", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+    const trialLimitError = Object.assign(
+      new Error("Inbound Phone number not available to trial account"),
+      { code: 21404 },
+    );
+
+    createIncomingPhoneNumberMock.mockRejectedValueOnce(trialLimitError);
+
+    const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: "+14185550123",
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(result).toEqual({
+      status: "failed",
+      message:
+        "This Twilio account can't buy that number. Trial accounts can only buy eligible trial numbers and may need an existing number released or the account upgraded.",
+    });
+    expect(await listBusinessPhoneNumbers(t, businessId)).toHaveLength(0);
+  });
+
+  it("does not count unavailable inventory races toward the claim attempt limiter", async () => {
+    const t = createConvexHarness();
+    const { businessId, subject, userId } = await seedBusinessOwner(t);
+    await seedVerifiedPhone({
+      t,
+      businessId,
+      userId,
+      phoneE164: "+15817484609",
+      countryCode: "CA",
+    });
+    const authed = t.withIdentity({ subject });
+    const selectedE164 = "+14185550123";
+
+    createIncomingPhoneNumberMock.mockRejectedValue(new Error("Number already taken"));
+
+    let areaCodeSearchCount = 0;
+    listLocalNumbersMock.mockImplementation(
+      async ({
+        args,
+      }: {
+        countryCode: string;
+        args: {
+          areaCode?: number;
+          limit: number;
+          smsEnabled: boolean;
+          voiceEnabled: boolean;
+        };
+      }) => {
+        if (args.areaCode !== 418) {
+          return [];
+        }
+
+        areaCodeSearchCount += 1;
+        return areaCodeSearchCount % 2 === 1
+          ? [
+              {
+                phoneNumber: selectedE164,
+                locality: "Quebec City",
+                region: "QC",
+                isoCountry: "CA",
+                capabilities: { sms: true, voice: true },
+              },
+            ]
+          : [
+              {
+                phoneNumber: "+14185550999",
+                locality: "Quebec City",
+                region: "QC",
+                isoCountry: "CA",
+                capabilities: { sms: true, voice: true },
+              },
+            ];
+      },
+    );
+
+    for (let index = 0; index < 3; index += 1) {
+      const result = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+        businessId,
+        e164: selectedE164,
+        selectionContext: {
+          mode: "area_code",
+          countryCode: "CA",
+          areaCode: "418",
+        },
+      });
+
+      expect(result).toMatchObject({
+        status: "unavailable",
+        message: "The selected phone number is no longer available.",
+      });
+    }
+
+    createIncomingPhoneNumberMock.mockReset();
+    createIncomingPhoneNumberMock.mockRejectedValueOnce(new Error("Temporary Twilio failure."));
+    listLocalNumbersMock.mockResolvedValue([
+      {
+        phoneNumber: selectedE164,
+        locality: "Quebec City",
+        region: "QC",
+        isoCountry: "CA",
+        capabilities: { sms: true, voice: true },
+      },
+    ]);
+
+    const nextResult = await authed.action(api.onboarding.phoneNumbers.claimOnboardingNumber, {
+      businessId,
+      e164: selectedE164,
+      selectionContext: {
+        mode: "area_code",
+        countryCode: "CA",
+        areaCode: "418",
+      },
+    });
+
+    expect(nextResult).toEqual({
+      status: "failed",
+      message: "Temporary Twilio failure.",
+    });
+    expect(createIncomingPhoneNumberMock).toHaveBeenCalledTimes(1);
   });
 
   it("releases the purchased Twilio number if local persistence fails", async () => {
@@ -1250,6 +1487,7 @@ describe("onboarding phone-number actions", () => {
                   locality: "Quebec City",
                   region: "QC",
                   isoCountry: "CA",
+                  capabilities: { sms: true, voice: true },
                 },
               ]
             : [
@@ -1258,6 +1496,7 @@ describe("onboarding phone-number actions", () => {
                   locality: "Quebec City",
                   region: "QC",
                   isoCountry: "CA",
+                  capabilities: { sms: true, voice: true },
                 },
               ];
         }

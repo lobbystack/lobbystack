@@ -352,6 +352,38 @@ export const getBusinessSettingsAccount = query({
   },
 });
 
+export const getPrimaryPhoneNumber = query({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx, args) => {
+    await requireMembership(ctx, args.businessId);
+
+    const phoneNumbers = await ctx.db
+      .query("phone_numbers")
+      .withIndex("by_business_id", (q) => q.eq("businessId", args.businessId))
+      .collect();
+    const activeVoicePhoneNumber =
+      phoneNumbers.find(
+        (phoneNumber) => phoneNumber.status === "active" && phoneNumber.voiceEnabled,
+      ) ?? null;
+    const activePhoneNumber =
+      activeVoicePhoneNumber ??
+      phoneNumbers.find((phoneNumber) => phoneNumber.status === "active") ??
+      null;
+
+    return activePhoneNumber
+      ? {
+          _id: activePhoneNumber._id,
+          e164: activePhoneNumber.e164,
+          voiceEnabled: activePhoneNumber.voiceEnabled,
+          smsEnabled: activePhoneNumber.smsEnabled,
+          status: activePhoneNumber.status,
+        }
+      : null;
+  },
+});
+
 export const getAgentBasicSettings = query({
   args: {
     businessId: v.id("businesses"),

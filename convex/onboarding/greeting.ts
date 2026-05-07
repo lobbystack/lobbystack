@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { scheduleSnapshotRefresh } from "../businesses/admin";
 import { requireMembership } from "../lib/auth";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import {
   buildDefaultReceptionistSummary,
   DEFAULT_RECEPTIONIST_BOOKING_POLICY,
@@ -18,20 +19,24 @@ type SubmitGreetingArgs = {
   greeting: string;
 };
 
-async function requireBusinessInGreetingStage(
+async function requireBusinessAtOrPastGreetingStage(
   ctx: MutationCtx,
   businessId: Id<"businesses">,
-) {
+): Promise<{ business: Doc<"businesses">; shouldAdvance: boolean }> {
   const business = await ctx.db.get(businessId);
   if (!business) {
     throw new Error("Business not found.");
   }
 
-  if (business.onboardingStage !== "greeting") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.greeting) {
     throw new Error("Greeting onboarding is no longer available for this business.");
   }
 
-  return business;
+  return {
+    business,
+    shouldAdvance: ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.verify_phone,
+  };
 }
 
 export const submitOnboardingGreeting = mutation({
@@ -41,7 +46,10 @@ export const submitOnboardingGreeting = mutation({
   },
   handler: async (ctx, args: SubmitGreetingArgs): Promise<{ status: "submitted" }> => {
     await requireMembership(ctx, args.businessId);
-    const business = await requireBusinessInGreetingStage(ctx, args.businessId);
+    const { business, shouldAdvance } = await requireBusinessAtOrPastGreetingStage(
+      ctx,
+      args.businessId,
+    );
     const greeting = args.greeting.trim();
 
     if (greeting.length === 0) {
@@ -67,9 +75,11 @@ export const submitOnboardingGreeting = mutation({
       });
     }
 
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "verify_phone",
-    });
+    if (shouldAdvance) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "verify_phone",
+      });
+    }
     await scheduleSnapshotRefresh(ctx, args.businessId);
 
     return { status: "submitted" };

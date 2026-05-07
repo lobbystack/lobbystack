@@ -69,6 +69,25 @@ describe("extended onboarding stage flow", () => {
     expect(await getBusinessStage(t, businessId)).toBe("greeting");
   });
 
+  it("keeps later progress when revisiting completed onboarding steps", async () => {
+    const t = createConvexHarness();
+    const subject = "revisit-knowledge-owner";
+    const { businessId } = await seedBusinessOwner({
+      t,
+      onboardingStage: "verify_phone",
+      subject,
+    });
+    const authed = t.withIdentity({ subject });
+
+    await expect(
+      authed.mutation(api.onboarding.knowledge.completeOnboardingKnowledge, {
+        businessId,
+      }),
+    ).resolves.toEqual({ status: "completed" });
+
+    expect(await getBusinessStage(t, businessId)).toBe("verify_phone");
+  });
+
   it("saves the greeting and advances to phone verification", async () => {
     vi.useFakeTimers();
     const t = createConvexHarness();

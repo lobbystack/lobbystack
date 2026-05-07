@@ -4,9 +4,12 @@
     "terms": "Terms",
     "privacy": "Privacy"
   },
+  "errors": {
+    "tooManyBusinesses": "Too many setup attempts. Please wait a bit and try again."
+  },
   "businessName": {
     "title": "First, what is the name of your business?",
-    "description": "We'll use this when greeting your callers.",
+    "description": "",
     "label": "Business name",
     "placeholder": "Bar George",
     "continue": "Continue",
@@ -15,7 +18,7 @@
   },
   "website": {
     "title": "Now let's train LobbyStack on your website",
-    "description": "We'll learn from your public pages so the AI can answer common questions.",
+    "description": "",
     "label": "Website",
     "placeholder": "yourcompany.com",
     "continue": "Continue",
@@ -57,14 +60,13 @@
     "description": "This is what your AI says first. You can change it any time.",
     "label": "Greeting",
     "placeholder": "Thanks for calling. How can I help?",
-    "helper": "Tip: keep it under two sentences.",
     "continue": "Continue",
     "submitting": "Saving...",
     "submitFailed": "We couldn't save that greeting right now. Please try again."
   },
   "verifyPhone": {
     "title": "Let's verify you're real",
-    "description": "We'll send a code to your mobile so we can keep your account secure.",
+    "description": "",
     "fields": {
       "mobileNumber": "Mobile number"
     },
@@ -74,6 +76,10 @@
     "hint": "Use a personal mobile number that can receive SMS.",
     "sendCode": "Send code",
     "sending": "Sending code...",
+    "invalidNumber": "Enter a valid mobile number, including the country code.",
+    "mobileRequired": "Use a mobile number that can receive SMS verification.",
+    "tooManyAttempts": "Too many verification attempts. Please wait a bit and try again.",
+    "waitBeforeRetry": "We just sent a code. Please wait a moment before trying again.",
     "sendFailed": "We couldn't send a verification code right now. Please try again."
   },
   "verifyPhoneCode": {
@@ -84,6 +90,8 @@
     "resending": "Resending...",
     "verifying": "Verifying...",
     "changeNumber": "Use a different number",
+    "invalidCode": "That code is invalid or expired. Try requesting a new one.",
+    "startAgain": "Start phone verification again before entering a code.",
     "failed": "We couldn't verify that code right now. Please try again.",
     "resendFailed": "We couldn't resend a code right now. Please try again."
   },
@@ -95,9 +103,7 @@
     "areaCodePlaceholder": "Area code",
     "search": "Search",
     "tableHeaders": {
-      "phoneNumber": "Phone Number",
-      "features": "Features",
-      "option": "Option"
+      "phoneNumber": "Phone number"
     },
     "select": "Select",
     "loadMore": "Load more",
@@ -107,8 +113,16 @@
     "loadFailed": "We couldn't load numbers right now.",
     "searchFailed": "We couldn't search numbers right now.",
     "claimFailed": "We couldn't provision that number. Please try again.",
+    "claimRateLimited": "You've tried several numbers. Please wait a bit before trying again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
-    "unavailable": "That number was just taken. Pick another one from the refreshed list."
+    "tooManySearches": "Too many searches. Please wait a bit and try again.",
+    "verifyPhoneRequired": "Verify your mobile number before choosing a business number.",
+    "unavailable": "That number was just taken. Pick another one from the refreshed list.",
+    "selectedTitle": "Your AI's phone number",
+    "selectedNumberLabel": "Selected number",
+    "skippedTitle": "No phone number added",
+    "skippedDescription": "You can add one after onboarding.",
+    "continue": "Continue"
   },
   "plan": {
     "title": "Choose your plan",

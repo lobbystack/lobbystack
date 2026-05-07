@@ -23,6 +23,7 @@ import {
   DEFAULT_RECEPTIONIST_TRANSFER_MODE,
 } from "../lib/receptionistProfileDefaults";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 /**
@@ -130,6 +131,28 @@ export const setOnboardingStage = internalMutation({
       onboardingStage: args.onboardingStage,
     });
     return args.onboardingStage;
+  },
+});
+
+export const advanceOnboardingStage = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    onboardingStage: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found.");
+    }
+
+    const currentStage = normalizeOnboardingStage(business.onboardingStage);
+    const nextStage = normalizeOnboardingStage(args.onboardingStage);
+    if (ONBOARDING_STAGE_INDEX[currentStage] < ONBOARDING_STAGE_INDEX[nextStage]) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: nextStage,
+      });
+    }
+    return business.onboardingStage;
   },
 });
 

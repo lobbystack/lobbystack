@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 import { internalQuery } from "../_generated/server";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 function sortAttemptsDescending(
@@ -124,12 +125,13 @@ export const markVerificationApproved = internalMutation({
       phoneVerificationTime: args.approvedAt,
     });
 
-    // After the user enters a valid OTP, advance to the phone-number
-    // selection step. In the redesigned flow, website + knowledge +
-    // greeting all happen *before* phone verification.
-    await ctx.db.patch(args.businessId, {
-      onboardingStage: "phone_number",
-    });
+    const business = await ctx.db.get(args.businessId);
+    const stage = normalizeOnboardingStage(business?.onboardingStage);
+    if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.phone_number) {
+      await ctx.db.patch(args.businessId, {
+        onboardingStage: "phone_number",
+      });
+    }
   },
 });
 

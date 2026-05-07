@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
+import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
 type SubmitAttributionArgs = {
@@ -19,7 +20,8 @@ async function requireBusinessInAttributionStage(
     throw new Error("Business not found.");
   }
 
-  if (business.onboardingStage !== "attribution") {
+  const stage = normalizeOnboardingStage(business.onboardingStage);
+  if (ONBOARDING_STAGE_INDEX[stage] < ONBOARDING_STAGE_INDEX.attribution) {
     throw new Error("Attribution onboarding is no longer available for this business.");
   }
 }
