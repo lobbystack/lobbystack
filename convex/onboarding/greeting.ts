@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { scheduleSnapshotRefresh } from "../businesses/admin";
-import { requireMembership } from "../lib/auth";
+import { requireTenantAdminMembership } from "../lib/auth";
 import { DEFAULT_APPOINTMENT_CHANGE_POLICY } from "../lib/appointmentChangePolicy";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import {
@@ -45,7 +45,7 @@ export const submitOnboardingGreeting = mutation({
     greeting: v.string(),
   },
   handler: async (ctx, args: SubmitGreetingArgs): Promise<{ status: "submitted" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const { business, shouldAdvance } = await requireBusinessAtOrPastGreetingStage(
       ctx,
       args.businessId,

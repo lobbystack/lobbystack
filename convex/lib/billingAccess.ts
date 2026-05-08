@@ -1,11 +1,7 @@
-const BILLING_ADMIN_ROLES = new Set([
-  "business_owner",
-  "business_admin",
-  "owner",
-]);
+import { hasTenantAdminAccess } from "./auth";
 
 export function hasBillingManagementAccess(role: string): boolean {
-  return BILLING_ADMIN_ROLES.has(role);
+  return hasTenantAdminAccess(role);
 }
 
 export function requireBillingManagementAccess(role: string): void {

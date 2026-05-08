@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import { requireMembership } from "../lib/auth";
+import { requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
@@ -40,7 +40,7 @@ export const selectOnboardingPlan = mutation({
     plan: onboardingPlanValidator,
   },
   handler: async (ctx, args: SelectPlanArgs): Promise<{ status: "selected" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const { shouldAdvance } = await requireBusinessAtOrPastPlanStage(ctx, args.businessId);
 
     if (args.plan === "pro") {

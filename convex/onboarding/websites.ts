@@ -6,7 +6,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { type ActionCtx, type MutationCtx } from "../_generated/server";
-import { requireMembership } from "../lib/auth";
+import { requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
@@ -125,7 +125,7 @@ export const skipOnboardingWebsite = mutation({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "skipped" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     await requireBusinessAtOrPastWebsiteStage(ctx, args.businessId);
 
     const business = await ctx.db.get(args.businessId);

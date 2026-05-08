@@ -231,3 +231,28 @@ export async function requireMembership(
   }
   return membership;
 }
+
+export const TENANT_ADMIN_ROLES: ReadonlySet<string> = new Set([
+  "business_owner",
+  "business_admin",
+  "owner",
+]);
+
+export function hasTenantAdminAccess(role: string): boolean {
+  return TENANT_ADMIN_ROLES.has(role);
+}
+
+export function requireTenantAdminAccess(role: string): void {
+  if (!hasTenantAdminAccess(role)) {
+    throw new Error("Tenant admin access required.");
+  }
+}
+
+export async function requireTenantAdminMembership(
+  ctx: ReaderAuthContext,
+  businessId: Id<"businesses">,
+): Promise<Doc<"business_memberships">> {
+  const membership = await requireMembership(ctx, businessId);
+  requireTenantAdminAccess(membership.role);
+  return membership;
+}

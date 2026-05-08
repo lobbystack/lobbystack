@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import { ensureCurrentUser, requireMembership } from "../lib/auth";
+import { ensureCurrentUser, requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
@@ -32,7 +32,7 @@ export const submitOnboardingAttribution = mutation({
     source: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args: SubmitAttributionArgs): Promise<{ status: "submitted" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     await requireBusinessInAttributionStage(ctx, args.businessId);
     const user = await ensureCurrentUser(ctx);
     const source = args.source?.trim();

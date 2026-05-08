@@ -16,7 +16,12 @@ import {
 } from "../../_generated/server";
 import { api, internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
-import { requireIdentity, requireMembership } from "../../lib/auth";
+import {
+  requireIdentity,
+  requireMembership,
+  requireTenantAdminAccess,
+  requireTenantAdminMembership,
+} from "../../lib/auth";
 import { getKnowledgeStorageLimitBytes } from "../../lib/billing";
 import {
   bulkWorkpool,
@@ -177,6 +182,10 @@ async function requireKnowledgeAccess(
   if (!membership) {
     throw new Error("Unauthorized.");
   }
+  if (membership.status !== "active") {
+    throw new Error("Unauthorized.");
+  }
+  requireTenantAdminAccess(membership.role);
 }
 
 function isKnowledgeDocumentActive(
@@ -1099,7 +1108,7 @@ export const upsertKnowledgeSnippet = mutation({
     active: v.boolean(),
   },
   handler: async (ctx: MutationCtx, args: UpsertKnowledgeSnippetArgs) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
 
     const snippetId =
       args.snippetId ??
@@ -1114,6 +1123,11 @@ export const upsertKnowledgeSnippet = mutation({
       }));
 
     if (args.snippetId) {
+      const existingSnippet = await ctx.db.get(args.snippetId);
+      if (!existingSnippet || existingSnippet.businessId !== args.businessId) {
+        throw new Error("Knowledge snippet not found.");
+      }
+
       await ctx.db.patch(args.snippetId, {
         ...(args.section !== undefined ? { section: args.section } : {}),
         title: args.title,
@@ -1151,7 +1165,7 @@ export const createKnowledgeDocument = mutation({
     contentHash: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args: CreateKnowledgeDocumentArgs) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const documentId = await ctx.db.insert("knowledge_documents", {
       businessId: args.businessId,
       ...(args.section !== undefined ? { section: args.section } : {}),
@@ -1193,7 +1207,7 @@ export const generateKnowledgeDocumentUploadUrl = mutation({
     businessId: v.id("businesses"),
   },
   handler: async (ctx: MutationCtx, args: BusinessIdArgs): Promise<string> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     return await ctx.storage.generateUploadUrl();
   },
 });
