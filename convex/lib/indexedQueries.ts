@@ -24,6 +24,20 @@ export async function replaceBusinessStaffServiceAssignments(
     }>;
   },
 ): Promise<void> {
+  for (const assignment of input.assignments) {
+    const [staff, service] = await Promise.all([
+      ctx.db.get(assignment.staffId),
+      ctx.db.get(assignment.serviceId),
+    ]);
+
+    if (!staff || staff.businessId !== input.businessId) {
+      throw new Error("Staff member not found for this business.");
+    }
+    if (!service || service.businessId !== input.businessId) {
+      throw new Error("Service not found for this business.");
+    }
+  }
+
   const existing = await listStaffServiceAssignmentsForBusiness(ctx, input.businessId);
 
   for (const row of existing) {

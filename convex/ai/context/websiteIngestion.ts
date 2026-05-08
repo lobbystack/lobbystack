@@ -15,7 +15,7 @@ import {
   type QueryCtx,
 } from "../../_generated/server";
 import { workflowManager } from "../../lib/components";
-import { requireMembership } from "../../lib/auth";
+import { requireMembership, requireTenantAdminMembership } from "../../lib/auth";
 import {
   WEBSITE_CRAWL_DEPTH,
   WEBSITE_CRAWL_FIRECRAWL_MODE,
@@ -224,7 +224,7 @@ export const submitWebsiteIngestionAfterPreflight = internalMutation({
     ctx: MutationCtx,
     args: SubmitWebsiteIngestionArgs,
   ): Promise<SubmitWebsiteIngestionResult> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
 
     const existingJobs = await ctx.db
       .query("website_ingestion_jobs")
@@ -318,7 +318,7 @@ export const deleteWebsiteIngestionJob = mutation({
     ctx: MutationCtx,
     args: DeleteWebsiteIngestionJobArgs,
   ): Promise<null> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
 
     const job = await ctx.db.get(args.websiteIngestionJobId);
     if (!job || job.businessId !== args.businessId) {

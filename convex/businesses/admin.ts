@@ -272,6 +272,9 @@ export const listForCurrentUser = query({
 
     const businesses = [];
     for (const membership of memberships) {
+      if (membership.status !== "active") {
+        continue;
+      }
       const business = await ctx.db.get(membership.businessId);
       if (business) {
         businesses.push({

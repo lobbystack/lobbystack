@@ -25,6 +25,7 @@ import { captureAnalyticsEvent } from "@/lib/analytics";
 
 type AgentBasicSettingsPageProps = {
   businessId: Id<"businesses">;
+  canManageTenant: boolean;
 };
 
 export function resolveTransferNumberForSave({
@@ -69,7 +70,10 @@ export function buildAppointmentChangePolicyForSave({
   };
 }
 
-export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPageProps) {
+export function AgentBasicSettingsPage({
+  businessId,
+  canManageTenant,
+}: AgentBasicSettingsPageProps) {
   const { i18n, t } = useTranslation(["agent", "common"]);
   const configuration = useQuery(api.businesses.catalog.getAgentBasicSettings, {
     businessId,
@@ -149,7 +153,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }, [appointmentChangeStatus, greetingStatus, localeStatus, transferStatus]);
 
   async function saveGreeting(): Promise<void> {
-    if (!persistedProfile) {
+    if (!canManageTenant || !persistedProfile) {
       return;
     }
 
@@ -183,7 +187,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
   }
 
   async function saveTransferNumber(): Promise<void> {
-    if (!persistedProfile) {
+    if (!canManageTenant || !persistedProfile) {
       return;
     }
 
@@ -226,7 +230,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
     allowReschedule?: boolean;
     requireOtp?: boolean;
   } = {}): Promise<void> {
-    if (!persistedProfile) {
+    if (!canManageTenant || !persistedProfile) {
       return;
     }
 
@@ -285,13 +289,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   ) : (
                     <Input
                       className="w-full sm:max-w-md"
+                      disabled={!canManageTenant}
                       id="agent-greeting"
-                      placeholder={t("agent:fields.greeting.placeholder")}
-                      value={greeting}
                       onChange={(event) => {
                         setGreeting(event.target.value);
                         setGreetingStatus(null);
                       }}
+                      placeholder={t("agent:fields.greeting.placeholder")}
+                      value={greeting}
                     />
                   )}
                 </div>
@@ -299,7 +304,12 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
                 <Button
-                  disabled={isLoadingConfiguration || isGreetingSaving || !persistedProfile}
+                  disabled={
+                    isLoadingConfiguration ||
+                    isGreetingSaving ||
+                    !persistedProfile ||
+                    !canManageTenant
+                  }
                   onClick={() => void saveGreeting()}
                   size="sm"
                   type="button"
@@ -331,13 +341,14 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   <NativeSelect
                     aria-label={t("agent:fields.defaultLocale.label")}
                     className="w-full sm:w-[9.5ch]"
+                    disabled={!canManageTenant}
                     id="agent-default-language"
                     onChange={(event) => {
                       const nextLocale = ((event.target.value as RuntimeLocale | "") || "en");
                       setDefaultLocale(nextLocale);
                       setLocaleStatus(null);
                       void (async () => {
-                        if (!persistedProfile) {
+                        if (!canManageTenant || !persistedProfile) {
                           return;
                         }
 
@@ -396,20 +407,21 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                     <PhoneInput
                       className="w-full min-w-0 sm:w-[12ch]"
                       containerClassName="w-full sm:w-fit"
+                      disabled={!canManageTenant}
                       id="agent-transfer-number"
                       locale={i18n.language}
                       maxLength={18}
+                      onChange={(nextValue) => {
+                        setTransferNumber(nextValue ?? "");
+                        setTransferStatus(null);
+                        setTransferStatusTone("success");
+                      }}
                       onRawValueChange={(nextRawValue) => {
                         setTransferNumberInputValue(nextRawValue);
                         setTransferStatus(null);
                         setTransferStatusTone("success");
                       }}
                       value={transferNumber || undefined}
-                      onChange={(nextValue) => {
-                        setTransferNumber(nextValue ?? "");
-                        setTransferStatus(null);
-                        setTransferStatusTone("success");
-                      }}
                     />
                   )}
                 </div>
@@ -423,7 +435,12 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
               </ItemContent>
               <ItemActions className="w-full justify-end self-center sm:w-auto">
                 <Button
-                  disabled={isLoadingConfiguration || isTransferSaving || !persistedProfile}
+                  disabled={
+                    isLoadingConfiguration ||
+                    isTransferSaving ||
+                    !persistedProfile ||
+                    !canManageTenant
+                  }
                   onClick={() => void saveTransferNumber()}
                   size="sm"
                   type="button"
@@ -458,7 +475,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   <Switch
                     aria-label={t("agent:appointmentChanges.allowCancel.label")}
                     checked={allowAppointmentCancel}
-                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
                     onCheckedChange={(checked) => {
                       setAllowAppointmentCancel(checked);
                       setAppointmentChangeStatus(null);
@@ -486,7 +503,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   <Switch
                     aria-label={t("agent:appointmentChanges.allowReschedule.label")}
                     checked={allowAppointmentReschedule}
-                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
                     onCheckedChange={(checked) => {
                       setAllowAppointmentReschedule(checked);
                       setAppointmentChangeStatus(null);
@@ -517,7 +534,7 @@ export function AgentBasicSettingsPage({ businessId }: AgentBasicSettingsPagePro
                   <Switch
                     aria-label={t("agent:appointmentChanges.requireOtp.label")}
                     checked={requireAppointmentChangeOtp}
-                    disabled={isAppointmentChangeSaving || !persistedProfile}
+                    disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
                     onCheckedChange={(checked) => {
                       setRequireAppointmentChangeOtp(checked);
                       setAppointmentChangeStatus(null);

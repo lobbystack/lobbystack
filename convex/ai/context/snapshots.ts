@@ -11,7 +11,7 @@ import {
   type QueryCtx,
 } from "../../_generated/server";
 import type { Doc, Id } from "../../_generated/dataModel";
-import { requireMembership } from "../../lib/auth";
+import { requireMembership, requireTenantAdminMembership } from "../../lib/auth";
 import { scheduleSnapshotRefresh } from "../../businesses/admin";
 import {
   buildDefaultReceptionistSummary,
@@ -113,7 +113,7 @@ export const updateReceptionistProfile = mutation({
     appointmentChangePolicy: v.optional(appointmentChangePolicyValidator),
   },
   handler: async (ctx: MutationCtx, args: UpdateReceptionistProfileArgs) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const [business, existing] = await Promise.all([
       ctx.db.get(args.businessId),
       ctx.db

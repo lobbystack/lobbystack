@@ -7,6 +7,15 @@
   "errors": {
     "tooManyBusinesses": "Too many setup attempts. Please wait a bit and try again."
   },
+  "adminRequired": {
+    "eyebrow": "Workspace setup",
+    "title": "Setup is waiting on an admin",
+    "description": "This workspace is still being configured. Ask a business owner or admin to finish setup before you use it.",
+    "descriptionWithBusiness": "{{businessName}} is still being configured. Ask a business owner or admin to finish setup before you use it.",
+    "statusTitle": "Your access is active",
+    "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to business owners and admins.",
+    "goToWorkspace": "Go to workspace"
+  },
   "businessName": {
     "title": "First, what is the name of your business?",
     "description": "",

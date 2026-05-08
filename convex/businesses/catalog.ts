@@ -21,7 +21,12 @@ import {
   getPasswordAccountForUser,
   resolveUserForPasswordCredentials,
 } from "../lib/accountCredentials";
-import { getCurrentUser, requireMembership } from "../lib/auth";
+import {
+  getCurrentUser,
+  requireMembership,
+  requireTenantAdminAccess,
+  requireTenantAdminMembership,
+} from "../lib/auth";
 import {
   EMAIL_CHANGE_MAX_AGE_SECONDS,
   generateEmailChangeToken,
@@ -425,7 +430,7 @@ export const updateBusinessName = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
 
     const name = args.name.trim();
     if (!name) {
@@ -787,6 +792,7 @@ export const assertCatalogWriteAccess = internalQuery({
     if (!membership || membership.status !== "active") {
       throw new Error("You do not have access to this business.");
     }
+    requireTenantAdminAccess(membership.role);
 
     return { userId: user._id };
   },
@@ -811,6 +817,11 @@ export const upsertServiceInternal = internalMutation({
     const localizedNames = normalizeLocalizedServiceNames(args.localizedNames);
 
     if (args.serviceId) {
+      const existingService = await ctx.db.get(args.serviceId);
+      if (!existingService || existingService.businessId !== args.businessId) {
+        throw new Error("Service not found for this business.");
+      }
+
       await ctx.db.patch(args.serviceId, {
         name: args.name,
         ...(localizedNames !== undefined ? { localizedNames } : {}),
@@ -928,9 +939,14 @@ export const upsertStaff = mutation({
     transferNumber: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
 
     if (args.staffId) {
+      const existingStaff = await ctx.db.get(args.staffId);
+      if (!existingStaff || existingStaff.businessId !== args.businessId) {
+        throw new Error("Staff member not found for this business.");
+      }
+
       await ctx.db.patch(args.staffId, {
         name: args.name,
         timezone: args.timezone,
@@ -969,7 +985,7 @@ export const replaceBusinessHours = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const existing = await ctx.db
       .query("business_hours")
       .withIndex("by_business_id_and_day_of_week", (q) =>
@@ -1007,7 +1023,7 @@ export const replaceClosures = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const existing = await ctx.db
       .query("closures")
       .withIndex("by_business_id_and_starts_at", (q) => q.eq("businessId", args.businessId))
@@ -1042,7 +1058,7 @@ export const replaceStaffServiceAssignments = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     await replaceBusinessStaffServiceAssignments(ctx, {
       businessId: args.businessId,
       assignments: args.assignments,

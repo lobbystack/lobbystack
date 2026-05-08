@@ -16,7 +16,11 @@ import {
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { requireIdentity, requireMembership } from "../lib/auth";
+import {
+  hasTenantAdminAccess,
+  requireIdentity,
+  requireMembership,
+} from "../lib/auth";
 import { workflowManager } from "../lib/components";
 import {
   enqueuePostHogEventBestEffort,
@@ -139,12 +143,6 @@ async function ensureAuthorizedDefaultStaffAccess(
   );
 }
 
-const CALENDAR_INTEGRATION_ADMIN_ROLES = new Set([
-  "business_owner",
-  "business_admin",
-  "owner",
-]);
-
 const CALENDAR_CONNECTION_RESET_STATES = new Set<CalendarSyncState>([
   "pending",
   "syncing",
@@ -155,7 +153,7 @@ const CALENDAR_CONNECTION_RESET_STATES = new Set<CalendarSyncState>([
 ]);
 
 function requireCalendarIntegrationAdminRole(role: string): void {
-  if (!CALENDAR_INTEGRATION_ADMIN_ROLES.has(role)) {
+  if (!hasTenantAdminAccess(role)) {
     throw new Error("Calendar integrations require admin access.");
   }
 }

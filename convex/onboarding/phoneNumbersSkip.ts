@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { requireMembership } from "../lib/auth";
+import { requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
@@ -18,7 +18,7 @@ export const skipOnboardingNumber = mutation({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args): Promise<{ status: "skipped" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const business = await ctx.db.get(args.businessId);
     if (!business) {
       throw new Error("Business not found.");

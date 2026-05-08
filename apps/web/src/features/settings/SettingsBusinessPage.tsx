@@ -33,6 +33,7 @@ import {
 
 type SettingsBusinessPageProps = {
   businessId: Id<"businesses">;
+  canManageTenant: boolean;
 };
 
 export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
@@ -70,6 +71,10 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
   }, [businessNameStatus]);
 
   async function handleBusinessNameSave(): Promise<void> {
+    if (!props.canManageTenant) {
+      return;
+    }
+
     setIsSavingBusinessName(true);
     setBusinessNameStatus(null);
 
@@ -103,58 +108,60 @@ export function SettingsBusinessPage(props: SettingsBusinessPageProps) {
               )}
               {businessNameStatus ? <ItemDescription>{businessNameStatus}</ItemDescription> : null}
             </ItemContent>
-            <ItemActions>
-              <Dialog
-                onOpenChange={(open) => {
-                  setIsBusinessNameDialogOpen(open);
-                  if (open) {
-                    setBusinessName(configuredBusinessName || businessName);
-                  }
-                }}
-                open={isBusinessNameDialogOpen}
-              >
-                <DialogTrigger
-                  render={<Button disabled={isLoadingBusinessName} size="sm" variant="outline" />}
+            {props.canManageTenant ? (
+              <ItemActions>
+                <Dialog
+                  onOpenChange={(open) => {
+                    setIsBusinessNameDialogOpen(open);
+                    if (open) {
+                      setBusinessName(configuredBusinessName || businessName);
+                    }
+                  }}
+                  open={isBusinessNameDialogOpen}
                 >
-                  {t("account.actions.change")}
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("account.businessName.label")}</DialogTitle>
-                    <DialogDescription>{t("account.businessName.description")}</DialogDescription>
-                  </DialogHeader>
+                  <DialogTrigger
+                    render={<Button disabled={isLoadingBusinessName} size="sm" variant="outline" />}
+                  >
+                    {t("account.actions.change")}
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{t("account.businessName.label")}</DialogTitle>
+                      <DialogDescription>{t("account.businessName.description")}</DialogDescription>
+                    </DialogHeader>
 
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="profile-username">
-                        {t("account.businessName.label")}
-                      </FieldLabel>
-                      <Input
-                        id="profile-username"
-                        placeholder={t("account.businessName.placeholder")}
-                        value={businessName}
-                        onChange={(event) => {
-                          setBusinessName(event.target.value);
-                          setBusinessNameStatus(null);
-                        }}
-                      />
-                    </Field>
-                  </FieldGroup>
+                    <FieldGroup>
+                      <Field>
+                        <FieldLabel htmlFor="profile-username">
+                          {t("account.businessName.label")}
+                        </FieldLabel>
+                        <Input
+                          id="profile-username"
+                          onChange={(event) => {
+                            setBusinessName(event.target.value);
+                            setBusinessNameStatus(null);
+                          }}
+                          placeholder={t("account.businessName.placeholder")}
+                          value={businessName}
+                        />
+                      </Field>
+                    </FieldGroup>
 
-                  <DialogFooter>
-                    <Button
-                      disabled={isSavingBusinessName}
-                      type="button"
-                      onClick={() => void handleBusinessNameSave()}
-                    >
-                      {isSavingBusinessName
-                        ? t("account.businessName.saving")
-                        : t("account.businessName.save")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </ItemActions>
+                    <DialogFooter>
+                      <Button
+                        disabled={isSavingBusinessName}
+                        onClick={() => void handleBusinessNameSave()}
+                        type="button"
+                      >
+                        {isSavingBusinessName
+                          ? t("account.businessName.saving")
+                          : t("account.businessName.save")}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </ItemActions>
+            ) : null}
           </Item>
         </ItemGroup>
       </div>

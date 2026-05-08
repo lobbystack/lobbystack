@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
-import { requireMembership } from "../lib/auth";
+import { requireTenantAdminMembership } from "../lib/auth";
 import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboardingStage";
 import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
@@ -34,7 +34,7 @@ export const completeOnboardingKnowledge = mutation({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "completed" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const { shouldAdvance } = await requireBusinessAtOrPastKnowledgeStage(ctx, args.businessId);
 
     if (shouldAdvance) {
@@ -52,7 +52,7 @@ export const skipOnboardingKnowledge = mutation({
     businessId: v.id("businesses"),
   },
   handler: async (ctx, args: BusinessIdArgs): Promise<{ status: "skipped" }> => {
-    await requireMembership(ctx, args.businessId);
+    await requireTenantAdminMembership(ctx, args.businessId);
     const { shouldAdvance } = await requireBusinessAtOrPastKnowledgeStage(ctx, args.businessId);
 
     if (shouldAdvance) {

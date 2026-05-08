@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 
 type AgentKnowledgePageProps = {
   businessId: Id<"businesses">;
+  canManageTenant: boolean;
   section: KnowledgeSection;
 };
 
@@ -283,7 +284,11 @@ function RowActionsMenu({
   );
 }
 
-export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePageProps) {
+export function AgentKnowledgePage({
+  businessId,
+  canManageTenant,
+  section,
+}: AgentKnowledgePageProps) {
   const { i18n, t } = useTranslation(["agent", "knowledge"]);
   const outletContext = useOutletContext<AgentLayoutOutletContext | null>();
   const headerActions = outletContext?.headerActions;
@@ -810,19 +815,19 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
 
           return (
             <DataTableRowActions>
-              {!isWebsiteIngestionJobRow(rowData) || rowData.status !== "completed" ? (
+              {canManageTenant && (!isWebsiteIngestionJobRow(rowData) || rowData.status !== "completed") ? (
                 <RowActionsMenu
                   deleting={deletingEntryId === String(rowData._id)}
                   {...(toggleableRow
                     ? {
-                      onToggleActive: () => {
-                        void handleSetEntryActive(toggleableRow, !isKnowledgeEntryActive(toggleableRow));
-                      },
-                      toggleActiveDisabled: togglingEntryIds.includes(String(rowData._id)),
-                      toggleActiveLabel: getEntryToggleActionLabel(toggleableRow),
-                      toggleActiveVariant: isKnowledgeEntryActive(toggleableRow) ? "disable" : "enable",
-                    }
-                  : {})}
+                        onToggleActive: () => {
+                          void handleSetEntryActive(toggleableRow, !isKnowledgeEntryActive(toggleableRow));
+                        },
+                        toggleActiveDisabled: togglingEntryIds.includes(String(rowData._id)),
+                        toggleActiveLabel: getEntryToggleActionLabel(toggleableRow),
+                        toggleActiveVariant: isKnowledgeEntryActive(toggleableRow) ? "disable" : "enable",
+                      }
+                    : {})}
                   {...(isWebsiteIngestionJobRow(rowData) && rowData.status !== "failed"
                     ? { actionLabel: t("agent:actions.cancelImport") }
                     : {})}
@@ -841,6 +846,7 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     ],
     [
       businessId,
+      canManageTenant,
       deletingEntryId,
       locale,
       section,
@@ -874,10 +880,15 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   }, [expandedDocumentId, filteredRows]);
 
   useEffect(() => {
+    if (!canManageTenant && editingSnippet) {
+      setEditingSnippet(null);
+      return;
+    }
+
     if (editingSnippet && !filteredRows.some((row) => row.entryType === "snippet" && row._id === editingSnippet._id)) {
       setEditingSnippet(null);
     }
-  }, [editingSnippet, filteredRows]);
+  }, [canManageTenant, editingSnippet, filteredRows]);
 
   useEffect(() => {
     setPagination((current) => {
@@ -894,6 +905,10 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
   }, [filteredRows.length]);
 
   async function handleDelete(row: KnowledgeRow): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
+
     const entryId = String(row._id);
     setDeletingEntryId(entryId);
     setOptimisticDeletedIds((current) => (current.includes(entryId) ? current : [...current, entryId]));
@@ -955,6 +970,10 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
     row: KnowledgeDocumentRow | KnowledgeSnippetRow,
     nextActive: boolean,
   ): Promise<void> {
+    if (!canManageTenant) {
+      return;
+    }
+
     const entryId = String(row._id);
     setTogglingEntryIds((current) => [...current, entryId]);
 
@@ -1159,7 +1178,8 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                   const rowData = row.original;
                   const rowId = String(rowData._id);
                   const rowIsInteractive =
-                    rowData.entryType === "snippet" || rowData.entryType === "document";
+                    rowData.entryType === "document" ||
+                    (canManageTenant && rowData.entryType === "snippet");
                   const isSelected =
                     rowData.entryType === "snippet"
                       ? editingSnippet?._id === rowData._id
@@ -1180,6 +1200,9 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
                         data-state={isSelected ? "selected" : undefined}
                         onClick={() => {
                           if (rowData.entryType === "snippet") {
+                            if (!canManageTenant) {
+                              return;
+                            }
                             setExpandedDocumentId(null);
                             setEditingSnippet(rowData);
                             return;
@@ -1289,18 +1312,20 @@ export function AgentKnowledgePage({ businessId, section }: AgentKnowledgePagePr
         </>
       )}
 
-      <AddKnowledgeSheet
-        businessId={businessId}
-        mode="edit"
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingSnippet(null);
-          }
-        }}
-        open={editingSnippet !== null}
-        section={section}
-        snippet={editingSnippet}
-      />
+      {canManageTenant ? (
+        <AddKnowledgeSheet
+          businessId={businessId}
+          mode="edit"
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingSnippet(null);
+            }
+          }}
+          open={editingSnippet !== null}
+          section={section}
+          snippet={editingSnippet}
+        />
+      ) : null}
     </div>
   );
 }
