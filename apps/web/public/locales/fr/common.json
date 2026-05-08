@@ -23,6 +23,10 @@
     "receptionist": "Réceptionniste",
     "prompt": "Demande"
   },
+  "aiPhoneNumber": {
+    "copy": "Copier le numéro de téléphone IA",
+    "copied": "Numéro de téléphone IA copié"
+  },
   "errorBoundary": {
     "title": "Une erreur est survenue",
     "description": "Rechargez le tableau de bord et réessayez. L’erreur a été signalée.",

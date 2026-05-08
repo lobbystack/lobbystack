@@ -23,6 +23,10 @@
     "receptionist": "Receptionist",
     "prompt": "Prompt"
   },
+  "aiPhoneNumber": {
+    "copy": "Copy AI phone number",
+    "copied": "AI phone number copied"
+  },
   "errorBoundary": {
     "title": "Something went wrong",
     "description": "Reload the dashboard and try again. The error has been reported.",
