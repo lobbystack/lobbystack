@@ -1,13 +1,12 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { useQuery } from "convex/react";
-import { CheckIcon, CopyIcon, PhoneIcon } from "lucide-react";
+import { PhoneIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { api } from "../../../../../convex/_generated/api";
 
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Button } from "@/components/ui/button";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -47,21 +46,11 @@ function AiPhoneNumberPill({
 }: {
   businessId?: Id<"businesses">;
 }) {
-  const { i18n, t } = useTranslation("common");
-  const [copied, setCopied] = useState(false);
+  const { i18n } = useTranslation("common");
   const primaryPhoneNumber = useQuery(
     api.businesses.catalog.getPrimaryPhoneNumber,
     businessId ? { businessId } : "skip",
   ) as PrimaryPhoneNumber | null | undefined;
-
-  useEffect(() => {
-    if (!copied) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => setCopied(false), 1800);
-    return () => window.clearTimeout(timeoutId);
-  }, [copied]);
 
   if (!businessId) {
     return null;
@@ -85,27 +74,15 @@ function AiPhoneNumberPill({
     i18n.resolvedLanguage ?? i18n.language,
   );
 
-  async function handleCopy(): Promise<void> {
-    await navigator.clipboard.writeText(primaryPhoneNumber?.e164 ?? "");
-    setCopied(true);
-  }
-
   return (
     <div className="pointer-events-auto flex h-8 max-w-sm items-center gap-1 rounded-4xl border border-border bg-input/30 px-3 text-sm">
       <PhoneIcon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 truncate font-medium tabular-nums text-foreground">
-        {displayNumber}
-      </span>
-      <Button
-        aria-label={copied ? t("aiPhoneNumber.copied") : t("aiPhoneNumber.copy")}
-        className="-mr-1 size-6 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
-        onClick={() => void handleCopy()}
-        size="icon"
-        type="button"
-        variant="ghost"
+      <a
+        className="min-w-0 truncate font-medium tabular-nums text-foreground hover:underline"
+        href={`tel:${primaryPhoneNumber.e164}`}
       >
-        {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-      </Button>
+        {displayNumber}
+      </a>
     </div>
   );
 }
