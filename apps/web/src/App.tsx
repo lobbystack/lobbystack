@@ -69,6 +69,19 @@ type ActiveBusiness = {
   websiteUrl?: string;
 };
 
+type ActiveBusinessEntry = {
+  business: ActiveBusiness;
+  membership: {
+    role: string;
+  };
+};
+
+const TENANT_ADMIN_ROLES = new Set(["business_owner", "business_admin", "owner"]);
+
+function hasTenantAdminAccess(role: string | undefined): boolean {
+  return role !== undefined && TENANT_ADMIN_ROLES.has(role);
+}
+
 function RequireAuth(props: { children: ReactNode }) {
   const auth = useConvexAuth();
 
@@ -97,22 +110,18 @@ function PublicOnly(props: { children: ReactNode }) {
   return props.children;
 }
 
-function selectActiveBusiness(
+function selectActiveBusinessEntry(
   currentUser: { activeBusinessId?: Id<"businesses"> } | undefined | null,
-  businesses:
-    | Array<{
-        business: ActiveBusiness;
-      }>
-    | undefined,
-): ActiveBusiness | null {
+  businesses: Array<ActiveBusinessEntry> | undefined,
+): ActiveBusinessEntry | null {
   const activeBusinessId = currentUser?.activeBusinessId;
   if (!businesses || businesses.length === 0) {
     return null;
   }
 
   return (
-    businesses.find((entry) => entry.business._id === activeBusinessId)?.business ??
-    businesses[0]?.business ??
+    businesses.find((entry) => entry.business._id === activeBusinessId) ??
+    businesses[0] ??
     null
   );
 }
@@ -197,7 +206,9 @@ function WorkspaceShell() {
   const location = useLocation();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const activeBusinessEntry = selectActiveBusinessEntry(currentUser, businesses);
+  const activeBusiness = activeBusinessEntry?.business ?? null;
+  const canManageTenant = hasTenantAdminAccess(activeBusinessEntry?.membership.role);
   const businessId = activeBusiness?._id;
   const billingStatus = useQuery(
     api.billing.getStatus,
@@ -320,13 +331,21 @@ function WorkspaceShell() {
               path="/analytics"
             />
             <Route
-              element={<AgentLayout {...(businessId ? { businessId } : {})} />}
+              element={
+                <AgentLayout
+                  {...(businessId ? { businessId } : {})}
+                  canManageTenant={canManageTenant}
+                />
+              }
               path="/agent/*"
             >
               <Route
                 element={
                   businessId ? (
-                    <AgentBasicSettingsPage businessId={businessId} />
+                    <AgentBasicSettingsPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/agent" />
                   )
@@ -336,7 +355,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <AgentBasicSettingsPage businessId={businessId} />
+                    <AgentBasicSettingsPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/agent" />
                   )
@@ -346,7 +368,11 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <AgentKnowledgePage businessId={businessId} section="knowledge" />
+                    <AgentKnowledgePage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                      section="knowledge"
+                    />
                   ) : (
                     <Navigate replace to="/agent" />
                   )
@@ -356,7 +382,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <AgentServicesPage businessId={businessId} />
+                    <AgentServicesPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/agent" />
                   )
@@ -366,7 +395,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <AgentRulesPage businessId={businessId} />
+                    <AgentRulesPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/agent" />
                   )
@@ -399,7 +431,10 @@ function WorkspaceShell() {
               <Route
                 element={
                   businessId ? (
-                    <SettingsBusinessPage businessId={businessId} />
+                    <SettingsBusinessPage
+                      businessId={businessId}
+                      canManageTenant={canManageTenant}
+                    />
                   ) : (
                     <Navigate replace to="/settings/usage" />
                   )
@@ -476,7 +511,8 @@ function useOnboardingContext() {
   const navigate = useNavigate();
   const currentUser = useQuery(api.users.current, {});
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
-  const activeBusiness = selectActiveBusiness(currentUser, businesses);
+  const activeBusinessEntry = selectActiveBusinessEntry(currentUser, businesses);
+  const activeBusiness = activeBusinessEntry?.business ?? null;
   const businessId = activeBusiness?._id;
 
   useEffect(() => {

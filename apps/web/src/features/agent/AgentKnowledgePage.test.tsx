@@ -312,7 +312,7 @@ describe("AgentKnowledgePage", () => {
         },
       });
 
-      render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+      render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section={section} />);
 
       expect(screen.getByPlaceholderText("agent:table.searchPlaceholder")).toBeTruthy();
       expect(screen.getByText("agent:table.title")).toBeTruthy();
@@ -335,7 +335,7 @@ describe("AgentKnowledgePage", () => {
     });
     upsertKnowledgeSnippetMock.mockResolvedValue({ snippetId: "snippet-1" });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByLabelText("agent:sections.knowledge.textBadge")).toBeTruthy();
 
@@ -373,6 +373,40 @@ describe("AgentKnowledgePage", () => {
     });
   });
 
+  it("hides tenant-admin knowledge controls for non-admin operators", async () => {
+    mockAgentKnowledgeQueries({
+      knowledge: {
+        documents: [createDocument()],
+        snippets: [createSnippet()],
+      },
+      websiteJobs: [
+        createWebsiteIngestionJob({
+          _id: "website-job-active",
+          status: "crawling",
+        }),
+      ],
+    });
+
+    render(
+      <AgentKnowledgePage
+        businessId={"business-1" as never}
+        canManageTenant={false}
+        section="knowledge"
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "actions.moreOptions" })).toBeNull();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Hours"));
+
+    expect(screen.queryByText("agent:sections.knowledge.editKnowledge")).toBeNull();
+    expect(deleteKnowledgeEntryMock).not.toHaveBeenCalled();
+    expect(setKnowledgeEntryActiveMock).not.toHaveBeenCalled();
+    expect(cancelWebsiteIngestionJobMock).not.toHaveBeenCalled();
+    expect(deleteWebsiteIngestionJobMock).not.toHaveBeenCalled();
+  });
+
   it("toggles snippet activity from the row actions menu", async () => {
     mockAgentKnowledgeQueries({
       knowledge: {
@@ -382,7 +416,7 @@ describe("AgentKnowledgePage", () => {
     });
     setKnowledgeEntryActiveMock.mockResolvedValue(null);
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
@@ -406,7 +440,7 @@ describe("AgentKnowledgePage", () => {
     });
     deleteKnowledgeEntryMock.mockResolvedValue(null);
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
@@ -446,7 +480,7 @@ describe("AgentKnowledgePage", () => {
       text: async () => "Full document text loaded",
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     const user = userEvent.setup();
     await user.click(screen.getByText("Clinic Policies"));
@@ -483,7 +517,7 @@ describe("AgentKnowledgePage", () => {
         text: async () => "Full document text loaded",
       });
 
-      render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+      render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section={section} />);
 
       const user = userEvent.setup();
       await user.click(screen.getByText("Clinic Policies"));
@@ -508,7 +542,7 @@ describe("AgentKnowledgePage", () => {
       ],
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("example.com/team")).toBeTruthy();
     expect(
@@ -536,7 +570,7 @@ describe("AgentKnowledgePage", () => {
       ],
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("99%")).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
@@ -558,7 +592,7 @@ describe("AgentKnowledgePage", () => {
     });
 
     const { rerender } = render(
-      <AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />,
+      <AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />,
     );
 
     expect(screen.getByText("50%")).toBeTruthy();
@@ -577,7 +611,7 @@ describe("AgentKnowledgePage", () => {
       ],
     });
 
-    rerender(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    rerender(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("50%")).toBeTruthy();
     expect(screen.queryByText("30%")).toBeNull();
@@ -598,7 +632,7 @@ describe("AgentKnowledgePage", () => {
     });
     cancelWebsiteIngestionJobMock.mockResolvedValue(null);
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
@@ -628,7 +662,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("Clinic Policies")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.documentBadge")).toBeTruthy();
@@ -652,7 +686,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("Existing document content remains visible.")).toBeTruthy();
     expect(screen.getByText("agent:sections.knowledge.status.indexing")).toBeTruthy();
@@ -674,7 +708,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.queryByText(/!\[CallRail logo\]/)).toBeNull();
     expect(
@@ -699,7 +733,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("Imported website page content is already available.")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
@@ -716,7 +750,7 @@ describe("AgentKnowledgePage", () => {
     });
     setKnowledgeEntryActiveMock.mockResolvedValue(null);
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "actions.moreOptions" }));
@@ -745,7 +779,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("Changelog")).toBeTruthy();
     expect(screen.getByLabelText("agent:sections.knowledge.websiteImport.badge")).toBeTruthy();
@@ -779,7 +813,7 @@ describe("AgentKnowledgePage", () => {
       },
     });
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section={section} />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section={section} />);
 
     expect(screen.getByText(title)).toBeTruthy();
     expect(screen.queryByLabelText(`agent:sections.${section}.textBadge`)).toBeNull();
@@ -802,7 +836,7 @@ describe("AgentKnowledgePage", () => {
     });
     deleteWebsiteIngestionJobMock.mockResolvedValue(null);
 
-    render(<AgentKnowledgePage businessId={"business-1" as never} section="knowledge" />);
+    render(<AgentKnowledgePage businessId={"business-1" as never} canManageTenant={true} section="knowledge" />);
 
     expect(screen.getByText("agent:sections.knowledge.websiteImport.previewFailed")).toBeTruthy();
     expect(screen.queryByText("Firecrawl request failed")).toBeNull();

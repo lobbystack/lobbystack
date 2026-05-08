@@ -10,13 +10,14 @@ import { getAgentSectionFromPathname } from "./sections";
 
 type AgentLayoutProps = {
   businessId?: Id<"businesses">;
+  canManageTenant: boolean;
 };
 
 type AgentLayoutOutletContext = {
   headerActions?: ReactNode;
 };
 
-export function AgentLayout({ businessId }: AgentLayoutProps) {
+export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
   const { t } = useTranslation("agent");
   const location = useLocation();
   const section = getAgentSectionFromPathname(location.pathname);
@@ -56,7 +57,7 @@ export function AgentLayout({ businessId }: AgentLayoutProps) {
   }
 
   const headerActions =
-    !isBasicSettingsRoute && isKnowledgeRoute ? (
+    canManageTenant && !isBasicSettingsRoute && isKnowledgeRoute ? (
       <>
         {section === "knowledge" ? (
           <KnowledgeActionsMenu businessId={businessId} />
