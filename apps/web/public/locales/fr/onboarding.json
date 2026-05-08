@@ -7,6 +7,15 @@
   "errors": {
     "tooManyBusinesses": "Trop de tentatives de configuration. Attendez un peu, puis réessayez."
   },
+  "adminRequired": {
+    "eyebrow": "Configuration de l'espace de travail",
+    "title": "La configuration attend un administrateur",
+    "description": "Cet espace de travail est encore en configuration. Demandez à un propriétaire ou à un administrateur de terminer la configuration avant de l'utiliser.",
+    "descriptionWithBusiness": "{{businessName}} est encore en configuration. Demandez à un propriétaire ou à un administrateur de terminer la configuration avant de l'utiliser.",
+    "statusTitle": "Votre accès est actif",
+    "statusDescription": "Vous pourrez utiliser l'espace de travail dès qu'un administrateur aura terminé l'accueil. Les changements de configuration sont réservés aux propriétaires et aux administrateurs.",
+    "goToWorkspace": "Aller à l'espace de travail"
+  },
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
     "description": "",

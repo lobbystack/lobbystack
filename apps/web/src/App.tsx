@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useTranslation } from "react-i18next";
 
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -13,6 +14,7 @@ import {
 } from "@/components/app-route-skeletons";
 import { useObservedAction } from "@/lib/observed-convex";
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout";
+import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Main } from "@/components/layout/main";
 import {
@@ -53,6 +55,7 @@ import { OnboardingPlanPage } from "@/features/onboarding/OnboardingPlanPage";
 import { OnboardingVerifyPhoneCodePage } from "@/features/onboarding/OnboardingVerifyPhoneCodePage";
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
+import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import {
   captureAnalyticsEvent,
   identifyOperator,
@@ -201,6 +204,96 @@ function isPhoneVerificationStage(stage: string | undefined): boolean {
   return stage === "verify_phone" || stage === "verify_phone_code";
 }
 
+function WorkspaceSetupPendingPage(props: { businessName?: string }) {
+  const { t } = useTranslation("onboarding");
+
+  return (
+    <div className="mx-auto flex min-h-[420px] w-full max-w-2xl flex-col justify-center py-16">
+      <div className="space-y-4">
+        <p className="text-sm font-medium text-muted-foreground">
+          {t("adminRequired.eyebrow")}
+        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {t("adminRequired.title")}
+        </h1>
+        <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+          {props.businessName
+            ? t("adminRequired.descriptionWithBusiness", {
+                businessName: props.businessName,
+              })
+            : t("adminRequired.description")}
+        </p>
+      </div>
+
+      <div className="mt-8 rounded-xl border bg-muted/30 p-6">
+        <p className="text-sm font-medium text-foreground">
+          {t("adminRequired.statusTitle")}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          {t("adminRequired.statusDescription")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingSetupPendingPage(props: {
+  businessName?: string;
+  onSignOut: () => void;
+}) {
+  const { t } = useTranslation("onboarding");
+  const navigate = useNavigate();
+
+  return (
+    <OnboardingShell
+      description={
+        props.businessName
+          ? t("adminRequired.descriptionWithBusiness", {
+              businessName: props.businessName,
+            })
+          : t("adminRequired.description")
+      }
+      eyebrow={t("adminRequired.eyebrow")}
+      onSignOut={props.onSignOut}
+      progress={null}
+      title={t("adminRequired.title")}
+    >
+      <div className="rounded-xl border bg-muted/30 p-6 text-left">
+        <p className="text-sm font-medium text-foreground">
+          {t("adminRequired.statusTitle")}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          {t("adminRequired.statusDescription")}
+        </p>
+      </div>
+      <Button className="mt-6 h-11 w-full" onClick={() => navigate("/")} type="button">
+        {t("adminRequired.goToWorkspace")}
+      </Button>
+    </OnboardingShell>
+  );
+}
+
+function getNonAdminOnboardingElement(
+  activeBusiness: ActiveBusiness,
+  canManageTenant: boolean,
+  onSignOut: () => void,
+): ReactNode | null {
+  if (canManageTenant) {
+    return null;
+  }
+
+  if (!onboardingRouteForStage(activeBusiness.onboardingStage)) {
+    return <Navigate replace to="/" />;
+  }
+
+  return (
+    <OnboardingSetupPendingPage
+      businessName={activeBusiness.name}
+      onSignOut={onSignOut}
+    />
+  );
+}
+
 function WorkspaceShell() {
   const { signOut } = useAuthActions();
   const location = useLocation();
@@ -220,6 +313,11 @@ function WorkspaceShell() {
     billingStatus?.hasCheckoutAccess === true &&
     billingStatus.availableCheckoutPlans.includes("pro") &&
     billingStatus.plan === "free_cloud";
+  const onboardingTarget = activeBusiness
+    ? onboardingRouteForStage(activeBusiness.onboardingStage)
+    : null;
+  const shouldShowSetupPending =
+    !isBootstrapLoading && Boolean(activeBusiness && onboardingTarget && !canManageTenant);
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -283,14 +381,13 @@ function WorkspaceShell() {
 
   // Honour the server-side onboarding stage. If the active business hasn't
   // completed onboarding, redirect to the right step.
-  if (!isBootstrapLoading && activeBusiness) {
-    const target = onboardingRouteForStage(activeBusiness.onboardingStage);
+  if (!isBootstrapLoading && activeBusiness && onboardingTarget && canManageTenant) {
     const isNumberClaimPlanBridge =
       location.pathname === "/onboarding/plan" &&
       hasJustClaimedPhoneNumberState(location.state) &&
       isPhoneNumberClaimBridgeStage(activeBusiness.onboardingStage);
-    if (target && location.pathname !== target && !isNumberClaimPlanBridge) {
-      return <Navigate replace to={target} />;
+    if (location.pathname !== onboardingTarget && !isNumberClaimPlanBridge) {
+      return <Navigate replace to={onboardingTarget} />;
     }
   }
 
@@ -314,6 +411,10 @@ function WorkspaceShell() {
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         {isBootstrapLoading ? (
           <WorkspaceRouteSkeleton pathname={location.pathname} />
+        ) : shouldShowSetupPending ? (
+          <WorkspaceSetupPendingPage
+            {...(activeBusiness?.name ? { businessName: activeBusiness.name } : {})}
+          />
         ) : (
           <Routes>
             <Route element={<HomePage {...(businessId ? { businessId } : {})} />} path="/" />
@@ -513,6 +614,7 @@ function useOnboardingContext() {
   const businesses = useQuery(api.businesses.admin.listForCurrentUser, {});
   const activeBusinessEntry = selectActiveBusinessEntry(currentUser, businesses);
   const activeBusiness = activeBusinessEntry?.business ?? null;
+  const canManageTenant = hasTenantAdminAccess(activeBusinessEntry?.membership.role);
   const businessId = activeBusiness?._id;
 
   useEffect(() => {
@@ -538,6 +640,7 @@ function useOnboardingContext() {
     currentUser,
     businesses,
     activeBusiness,
+    canManageTenant,
     isLoading: businesses === undefined || currentUser === undefined,
     onSignOut: () => void handleSignOut(),
     navigate,
@@ -552,6 +655,15 @@ function OnboardingBusinessRoute() {
   }
 
   if (ctx.activeBusiness) {
+    const nonAdminElement = getNonAdminOnboardingElement(
+      ctx.activeBusiness,
+      ctx.canManageTenant,
+      ctx.onSignOut,
+    );
+    if (nonAdminElement) {
+      return nonAdminElement;
+    }
+
     const stage = ctx.activeBusiness.onboardingStage;
     if (stage && !canVisitOnboardingStage(stage, "create_business")) {
       const target = onboardingRouteForStage(stage) ?? "/";
@@ -586,6 +698,15 @@ function OnboardingWebsiteRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
+  }
+
   if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "website")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
@@ -613,6 +734,15 @@ function OnboardingKnowledgeRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
+  }
+
   if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "knowledge")) {
     return <Navigate replace to={onboardingRouteForStage(ctx.activeBusiness.onboardingStage) ?? "/"} />;
   }
@@ -635,6 +765,15 @@ function OnboardingGreetingRoute() {
 
   if (!ctx.activeBusiness) {
     return <Navigate replace to="/onboarding/business" />;
+  }
+
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
   }
 
   if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "greeting")) {
@@ -667,6 +806,7 @@ function OnboardingVerifyPhoneRoute() {
     if (
       ctx.isLoading ||
       !ctx.activeBusiness ||
+      !ctx.canManageTenant ||
       ctx.activeBusiness.onboardingStage !== "verify_phone" ||
       !hasReusableVerifiedPhone ||
       hasAttemptedAutoSkip ||
@@ -698,6 +838,7 @@ function OnboardingVerifyPhoneRoute() {
   }, [
     ctx.isLoading,
     ctx.activeBusiness,
+    ctx.canManageTenant,
     hasReusableVerifiedPhone,
     hasAttemptedAutoSkip,
     isSkipping,
@@ -711,6 +852,15 @@ function OnboardingVerifyPhoneRoute() {
 
   if (!ctx.activeBusiness) {
     return <Navigate replace to="/onboarding/business" />;
+  }
+
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
   }
 
   if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
@@ -744,6 +894,15 @@ function OnboardingVerifyPhoneCodeRoute() {
 
   if (!ctx.activeBusiness) {
     return <Navigate replace to="/onboarding/business" />;
+  }
+
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
   }
 
   if (!isPhoneVerificationStage(ctx.activeBusiness.onboardingStage)) {
@@ -785,6 +944,15 @@ function OnboardingNumberRoute() {
 
   if (!ctx.activeBusiness) {
     return <Navigate replace to="/onboarding/business" />;
+  }
+
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
   }
 
   const canVisitNumber = canVisitOnboardingStage(
@@ -830,6 +998,15 @@ function OnboardingPlanRoute() {
     return <Navigate replace to="/onboarding/business" />;
   }
 
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
+  }
+
   const canUseNumberClaimBridge =
     hasJustClaimedPhoneNumberState(location.state) &&
     isPhoneNumberClaimBridgeStage(ctx.activeBusiness.onboardingStage);
@@ -859,6 +1036,15 @@ function OnboardingAttributionRoute() {
 
   if (!ctx.activeBusiness) {
     return <Navigate replace to="/onboarding/business" />;
+  }
+
+  const nonAdminElement = getNonAdminOnboardingElement(
+    ctx.activeBusiness,
+    ctx.canManageTenant,
+    ctx.onSignOut,
+  );
+  if (nonAdminElement) {
+    return nonAdminElement;
   }
 
   if (!canVisitOnboardingStage(ctx.activeBusiness.onboardingStage, "attribution")) {
