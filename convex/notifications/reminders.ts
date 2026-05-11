@@ -162,6 +162,9 @@ export const getNotificationDeliveryContext = internalQuery({
     if (!contact) {
       throw new Error("Contact not found for notification.");
     }
+    if (contact.smsConsentStatus === "opted_out") {
+      throw new Error("Contact has opted out of SMS messages.");
+    }
 
     if (!business) {
       throw new Error("Business not found for notification.");

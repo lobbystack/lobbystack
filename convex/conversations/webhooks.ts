@@ -159,6 +159,10 @@ type SmsConsentUpdate = {
   status: "opted_out" | "subscribed";
   source: string;
 };
+type SmsKeywordReply = {
+  body: string;
+  idempotencyStatus: string;
+};
 type IngestInboundSmsArgs = {
   businessId: Id<"businesses">;
   from: string;
@@ -179,6 +183,11 @@ type IngestInboundSmsResult = {
 
 const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
+const SMS_HELP_KEYWORDS = new Set(["HELP"]);
+const SMS_HELP_REPLY =
+  "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.";
+const SMS_START_REPLY =
+  "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.";
 
 function normalizeSmsKeyword(value: string): string {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -215,6 +224,31 @@ function classifySmsConsentUpdate(input: {
     return {
       status: "subscribed",
       source: `keyword:${normalizedBody}`,
+    };
+  }
+
+  return null;
+}
+
+function classifySmsKeywordReply(input: {
+  body: string;
+  optOutType?: string;
+}): SmsKeywordReply | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  const normalizedBody = normalizeSmsKeyword(input.body);
+  const keyword = normalizedOptOutType || normalizedBody;
+
+  if (SMS_HELP_KEYWORDS.has(keyword)) {
+    return {
+      body: SMS_HELP_REPLY,
+      idempotencyStatus: "processed_help_reply",
+    };
+  }
+
+  if (SMS_START_KEYWORDS.has(keyword)) {
+    return {
+      body: SMS_START_REPLY,
+      idempotencyStatus: "processed_start_reply",
     };
   }
 
@@ -1142,6 +1176,32 @@ export const sendStoredOutboundMessage = internalAction({
   },
 });
 
+async function sendSmsKeywordReply(
+  ctx: ActionCtx,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId: Id<"conversations">;
+    fromPhoneNumber: string;
+    body: string;
+  },
+): Promise<SendStoredOutboundMessageResult> {
+  const messageId: Id<"messages"> = await ctx.runMutation(
+    internal.conversations.webhooks.storeOutboundMessage,
+    {
+      businessId: input.businessId,
+      conversationId: input.conversationId,
+      channel: "sms",
+      fromPhoneNumber: input.fromPhoneNumber,
+      body: input.body,
+      aiGenerated: false,
+    },
+  );
+
+  return await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+    messageId,
+  });
+}
+
 export const handleTwilioSmsInbound = internalAction({
   args: {
     from: v.string(),
@@ -1259,6 +1319,35 @@ export const handleTwilioSmsInbound = internalAction({
         ...(normalizedMedia !== undefined ? { media: normalizedMedia } : {}),
       },
     );
+
+    const keywordReply = classifySmsKeywordReply({
+      body: args.body,
+      ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+    });
+
+    if (keywordReply && !replySuppressed) {
+      const sent = await sendSmsKeywordReply(ctx, {
+        businessId: phoneNumber.businessId,
+        conversationId,
+        fromPhoneNumber: phoneNumber.e164,
+        body: keywordReply.body,
+      });
+
+      if (idempotencyKeyId) {
+        await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+          idempotencyKeyId,
+          resourceTable: "messages",
+          resourceId: String(sent.messageId),
+          status: keywordReply.idempotencyStatus,
+        });
+      }
+
+      return {
+        businessId: phoneNumber.businessId,
+        conversationId,
+        reply: sent.reply,
+      };
+    }
 
     if (replySuppressed) {
       if (automationState === "human_handoff") {

@@ -449,6 +449,84 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
+  it("responds to HELP with support instructions instead of AI generation", async () => {
+    const t = createTestHarness();
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-help-reply",
+      status: "queued",
+    });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-help-keyword",
+        name: "Twilio Help Keyword",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550133",
+      });
+      return {
+        businessId,
+        smsNumber: "+14165550133",
+      };
+    });
+
+    const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-help-1",
+      From: "+14165550195",
+      To: smsNumber,
+      Body: "HELP",
+      OptOutType: "HELP",
+    });
+
+    expect(response.status).toBe(200);
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+    expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendTwilioMessageMock).toHaveBeenCalledWith({
+      to: "+14165550195",
+      from: smsNumber,
+      body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_business_id_and_phone", (q) =>
+          q.eq("businessId", businessId).eq("phone", "+14165550195"),
+        )
+        .unique();
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) =>
+          q.eq("businessId", businessId).eq("channel", "sms"),
+        )
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      const outbound = messages.find((message) => message.direction === "outbound");
+
+      expect(contact?.smsConsentStatus).toBeUndefined();
+      expect(messages.map((message) => message.direction)).toEqual(["inbound", "outbound"]);
+      expect(outbound).toMatchObject({
+        body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+        aiGenerated: false,
+        providerMessageSid: "SM-outbound-help-reply",
+      });
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-help-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "messages",
+        status: "processed_help_reply",
+        resourceId: String(outbound!._id),
+      });
+    });
+  });
+
   it("stores inbound SMS during human handoff and suppresses AI replies", async () => {
     const t = createTestHarness();
 
@@ -579,7 +657,7 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
-  it("clears opt-out on START and resumes reply generation", async () => {
+  it("clears opt-out on START and sends a deterministic resubscribe reply", async () => {
     const t = createTestHarness();
     sendTwilioMessageMock.mockResolvedValue({
       sid: "SM-outbound-start-reply",
@@ -616,12 +694,12 @@ describe("Twilio SMS delivery flow", () => {
       OptOutType: "START",
     });
 
-    expect(generateSmsReplyMock).toHaveBeenCalledTimes(1);
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
     expect(sendTwilioMessageMock).toHaveBeenCalledTimes(1);
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550191",
       from: smsNumber,
-      body: "Auto-reply: START",
+      body: "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.",
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
 
@@ -1584,6 +1662,77 @@ describe("Twilio SMS delivery flow", () => {
         providerStatus: "delivered",
         providerRawDlrDoneDate: "2606141505",
       });
+    });
+  });
+
+  it("does not deliver appointment notifications to opted-out contacts", async () => {
+    const t = createTestHarness();
+
+    const notificationId = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-notification-opted-out",
+        name: "Twilio Notification Opted Out",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550104",
+      });
+
+      const contactId = await ctx.db.insert("contacts", {
+        businessId,
+        name: "Taylor Customer",
+        phone: "+14165550155",
+        smsConsentStatus: "opted_out",
+        smsConsentSource: "twilio_opt_out:STOP",
+      });
+      const staffId = await ctx.db.insert("staff", {
+        businessId,
+        name: "Jordan Stylist",
+        timezone: "America/Toronto",
+        active: true,
+      });
+      const serviceId = await ctx.db.insert("services", {
+        businessId,
+        name: "Cut and Style",
+        slug: "cut-and-style-opted-out",
+        durationMinutes: 45,
+        active: true,
+      });
+      const appointmentId = await ctx.db.insert("appointments", {
+        businessId,
+        contactId,
+        staffId,
+        serviceId,
+        startsAt: "2026-06-15T15:00:00.000Z",
+        endsAt: "2026-06-15T15:45:00.000Z",
+        timezone: "America/Toronto",
+        status: "booked",
+        sourceChannel: "sms",
+        calendarSyncState: "not_required",
+      });
+
+      return await ctx.db.insert("notifications", {
+        businessId,
+        channel: "sms",
+        kind: "appointment_reminder",
+        relatedId: String(appointmentId),
+        scheduledFor: "2026-06-14T15:00:00.000Z",
+        status: "pending",
+      });
+    });
+
+    await expect(
+      t.action(internal.notifications.reminders.deliverNotification, {
+        notificationId,
+      }),
+    ).rejects.toThrow("opted out");
+
+    expect(sendTwilioMessageMock).not.toHaveBeenCalled();
+
+    await t.run(async (ctx) => {
+      const notification = await ctx.db.get(notificationId);
+      expect(notification?.status).toBe("pending");
+      expect(notification?.providerStatus).toBeUndefined();
     });
   });
 
