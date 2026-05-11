@@ -104,8 +104,11 @@ const originalTwilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const originalTwilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
 const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
 const originalFetch = globalThis.fetch;
+const originalSetTimeout = globalThis.setTimeout;
+const MAX_NODE_TIMEOUT_MS = 2_147_483_647;
 const activeHarnesses: Array<TestConvex<typeof schema>> = [];
 let tinyPngBuffer: Buffer;
+let ignoredLongTimeoutId = 0;
 
 function createTestHarness(): TestConvex<typeof schema> {
   const t = convexTest(schema, convexModules);
@@ -222,6 +225,17 @@ beforeEach(() => {
 });
 
 beforeEach(async () => {
+  vi.stubGlobal(
+    "setTimeout",
+    ((handler: TimerHandler, timeout?: number, ...args: Array<unknown>) => {
+      // Convex retention jobs are scheduled one year out; Node clamps those timers to 1ms.
+      if (typeof timeout === "number" && timeout > MAX_NODE_TIMEOUT_MS) {
+        return ++ignoredLongTimeoutId as unknown as ReturnType<typeof setTimeout>;
+      }
+      return originalSetTimeout(handler, timeout, ...args);
+    }) as typeof setTimeout,
+  );
+
   const image = new Jimp({ width: 2, height: 2, color: 0xff3366ff });
   tinyPngBuffer = await image.getBuffer(JimpMime.png);
   vi.stubGlobal(
@@ -517,6 +531,157 @@ describe("Twilio SMS delivery flow", () => {
         .query("idempotency_keys")
         .withIndex("by_scope_and_key", (q) =>
           q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-help-1"),
+        )
+        .unique();
+      expect(idempotency).toMatchObject({
+        resourceTable: "messages",
+        status: "processed_help_reply",
+        resourceId: String(outbound!._id),
+      });
+    });
+  });
+
+  it("sends keyword compliance replies even when AI SMS is disabled", async () => {
+    const t = createTestHarness();
+    sendTwilioMessageMock.mockResolvedValue({
+      sid: "SM-outbound-help-no-ai",
+      status: "queued",
+    });
+
+    const smsNumber = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-help-no-ai",
+        name: "Twilio Help No AI",
+        deploymentMode: "cloud",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550134",
+      });
+      await ctx.db.insert("billing_accounts", {
+        businessId,
+        billingKey: getBillingKey(businessId),
+        currentPlan: "free_cloud",
+        activeAddons: [],
+        subscriptionState: "inactive",
+        billingContactEmail: "owner@example.com",
+        billingContactName: "No AI Owner",
+        lastSyncedAt: "2026-04-18T12:00:00.000Z",
+      });
+
+      return "+14165550134";
+    });
+
+    const cases = [
+      {
+        sid: "SM-inbound-help-no-ai",
+        from: "+14165550196",
+        body: "HELP",
+        expected:
+          "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+      },
+      {
+        sid: "SM-inbound-start-no-ai",
+        from: "+14165550197",
+        body: "START",
+        expected:
+          "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.",
+      },
+    ];
+
+    for (const input of cases) {
+      const response = await postTwilioForm(t, "/twilio/sms/inbound", {
+        MessageSid: input.sid,
+        From: input.from,
+        To: smsNumber,
+        Body: input.body,
+        OptOutType: input.body,
+      });
+
+      expect(response.status).toBe(200);
+    }
+
+    expect(generateSmsReplyMock).not.toHaveBeenCalled();
+    cases.forEach((input, index) => {
+      expect(sendTwilioMessageMock).toHaveBeenNthCalledWith(index + 1, {
+        to: input.from,
+        from: smsNumber,
+        body: input.expected,
+        statusCallback: "https://example.convex.site/twilio/sms/status",
+      });
+    });
+  });
+
+  it("retries keyword replies from the stored outbound message after a transient send failure", async () => {
+    const t = createTestHarness();
+    sendTwilioMessageMock
+      .mockRejectedValueOnce(new Error("Twilio send failed"))
+      .mockResolvedValueOnce({
+        sid: "SM-outbound-help-retry",
+        status: "queued",
+      });
+
+    const { businessId, smsNumber } = await t.run(async (ctx) => {
+      const businessId = await insertBusiness(ctx, {
+        slug: "twilio-help-retry",
+        name: "Twilio Help Retry",
+      });
+      await insertSmsPhoneNumber(ctx, {
+        businessId,
+        e164: "+14165550135",
+      });
+
+      return {
+        businessId,
+        smsNumber: "+14165550135",
+      };
+    });
+
+    await expect(
+      postTwilioForm(t, "/twilio/sms/inbound", {
+        MessageSid: "SM-inbound-help-retry",
+        From: "+14165550197",
+        To: smsNumber,
+        Body: "HELP",
+        OptOutType: "HELP",
+      }),
+    ).rejects.toThrow("Twilio send failed");
+    const retryResponse = await postTwilioForm(t, "/twilio/sms/inbound", {
+      MessageSid: "SM-inbound-help-retry",
+      From: "+14165550197",
+      To: smsNumber,
+      Body: "HELP",
+      OptOutType: "HELP",
+    });
+
+    expect(retryResponse.status).toBe(200);
+    expect(sendTwilioMessageMock).toHaveBeenCalledTimes(2);
+    expect(sendTwilioMessageMock).toHaveBeenLastCalledWith({
+      to: "+14165550197",
+      from: smsNumber,
+      body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+      statusCallback: "https://example.convex.site/twilio/sms/status",
+    });
+
+    await t.run(async (ctx) => {
+      const conversation = await ctx.db
+        .query("conversations")
+        .withIndex("by_business_id_and_channel", (q) =>
+          q.eq("businessId", businessId).eq("channel", "sms"),
+        )
+        .unique();
+      const messages = await fetchConversationMessages(ctx, conversation!._id);
+      const outbound = messages.find((message) => message.direction === "outbound");
+      expect(messages.map((message) => message.direction)).toEqual(["inbound", "outbound"]);
+      expect(outbound).toMatchObject({
+        status: "queued",
+        providerMessageSid: "SM-outbound-help-retry",
+      });
+
+      const idempotency = await ctx.db
+        .query("idempotency_keys")
+        .withIndex("by_scope_and_key", (q) =>
+          q.eq("scope", "twilio_sms_inbound").eq("key", "SM-inbound-help-retry"),
         )
         .unique();
       expect(idempotency).toMatchObject({
@@ -1721,18 +1886,25 @@ describe("Twilio SMS delivery flow", () => {
       });
     });
 
-    await expect(
-      t.action(internal.notifications.reminders.deliverNotification, {
+    const deliveryResult = await t.action(
+      internal.notifications.reminders.deliverNotification,
+      {
         notificationId,
-      }),
-    ).rejects.toThrow("opted out");
+      },
+    );
 
+    expect(deliveryResult).toEqual({
+      delivered: false,
+      reason: "sms_opted_out",
+    });
     expect(sendTwilioMessageMock).not.toHaveBeenCalled();
 
     await t.run(async (ctx) => {
       const notification = await ctx.db.get(notificationId);
-      expect(notification?.status).toBe("pending");
-      expect(notification?.providerStatus).toBeUndefined();
+      expect(notification).toMatchObject({
+        status: "failed",
+        providerStatus: "skipped_opted_out",
+      });
     });
   });
 

@@ -38,12 +38,23 @@ type NotificationDeliveryContext = {
   timezone: string;
   locale: "en" | "fr";
   senderRole: "platform_alert" | "business_ai";
+} | {
+  deliveryBlockedReason: "sms_opted_out";
+  businessId: Id<"businesses">;
+  notificationId: Id<"notifications">;
+  appointmentId: Id<"appointments">;
+  kind: AppointmentNotificationKind;
 };
 
-type DeliverNotificationResult = {
-  delivered: true;
-  providerMessageId: string;
-};
+type DeliverNotificationResult =
+  | {
+      delivered: true;
+      providerMessageId: string;
+    }
+  | {
+      delivered: false;
+      reason: "sms_opted_out";
+    };
 
 function isAppointmentNotificationKind(kind: string): kind is AppointmentNotificationKind {
   return kind === "appointment_reminder" || kind === "booking_confirmation";
@@ -162,15 +173,21 @@ export const getNotificationDeliveryContext = internalQuery({
     if (!contact) {
       throw new Error("Contact not found for notification.");
     }
-    if (contact.smsConsentStatus === "opted_out") {
-      throw new Error("Contact has opted out of SMS messages.");
-    }
 
     if (!business) {
       throw new Error("Business not found for notification.");
     }
     if (!isAppointmentNotificationKind(notification.kind)) {
       throw new Error("Unsupported notification kind.");
+    }
+    if (contact.smsConsentStatus === "opted_out") {
+      return {
+        deliveryBlockedReason: "sms_opted_out",
+        businessId: notification.businessId,
+        notificationId: notification._id,
+        appointmentId,
+        kind: notification.kind,
+      };
     }
 
     if (!smsPolicy.allowed) {
@@ -458,6 +475,18 @@ export const deliverNotification = internalAction({
     );
     if (!deliveryContext) {
       throw new Error("Notification not found.");
+    }
+
+    if ("deliveryBlockedReason" in deliveryContext) {
+      await ctx.runMutation(internal.notifications.reminders.markNotificationSendFailed, {
+        notificationId: args.notificationId,
+        providerUpdatedAt: new Date().toISOString(),
+        providerStatus: "skipped_opted_out",
+      });
+      return {
+        delivered: false,
+        reason: deliveryContext.deliveryBlockedReason,
+      };
     }
 
     let messageAcceptedByProvider = false;

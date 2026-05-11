@@ -58,6 +58,7 @@ type MessageMediaAttachment = {
 
 type ConversationIdArgs = { conversationId: Id<"conversations"> };
 type MessageIdArgs = { messageId: Id<"messages"> };
+type OutboundSmsDeliveryPolicy = "ai" | "compliance_keyword";
 type ClaimInboundMessageSidArgs = { scope: string; key: string };
 type ClaimInboundMessageSidResult =
   | { claimed: false; existing: Doc<"idempotency_keys"> }
@@ -140,6 +141,10 @@ type SendStoredOutboundMessageResult = {
   reply: string;
   providerMessageSid?: string;
   status: string;
+};
+type SendStoredOutboundMessageArgs = {
+  messageId: Id<"messages">;
+  deliveryPolicy?: OutboundSmsDeliveryPolicy;
 };
 type HandleTwilioSmsInboundArgs = {
   from: string;
@@ -253,6 +258,10 @@ function classifySmsKeywordReply(input: {
   }
 
   return null;
+}
+
+function isKeywordReplyIdempotencyStatus(status?: string): boolean {
+  return status === "processed_help_reply" || status === "processed_start_reply";
 }
 
 function buildInboundSmsPrompt(input: {
@@ -516,10 +525,13 @@ export const getOrCreateContact = internalMutation({
 export const getOutboundMessageDeliveryContext = internalQuery({
   args: {
     messageId: v.id("messages"),
+    deliveryPolicy: v.optional(
+      v.union(v.literal("ai"), v.literal("compliance_keyword")),
+    ),
   },
   handler: async (
     ctx: QueryCtx,
-    args: MessageIdArgs,
+    args: SendStoredOutboundMessageArgs,
   ): Promise<OutboundMessageDeliveryContext | null> => {
     const message = await ctx.db.get(args.messageId);
     if (
@@ -544,14 +556,41 @@ export const getOutboundMessageDeliveryContext = internalQuery({
         .collect(),
     ]);
 
+    if (!contact) {
+      throw new Error("Contact not found for SMS delivery.");
+    }
+
+    if (args.deliveryPolicy === "compliance_keyword") {
+      const senderPhoneNumber = selectSmsSenderPhoneNumber(
+        phoneNumbers,
+        message.fromPhoneNumber ?? undefined,
+      );
+      if (!senderPhoneNumber) {
+        throw new Error(
+          "At least one active SMS-enabled phone number must be mapped to the business.",
+        );
+      }
+
+      return {
+        businessId: message.businessId,
+        conversationId: message.conversationId,
+        messageId: message._id,
+        body: message.body,
+        from: senderPhoneNumber,
+        to: contact.phone,
+        ...(message.providerMessageSid
+          ? { providerMessageSid: message.providerMessageSid }
+          : {}),
+        status: message.status,
+        ...(message.media ? { media: message.media } : {}),
+        ...(message.appointmentId ? { appointmentId: message.appointmentId } : {}),
+      };
+    }
+
     const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
       businessId: message.businessId,
       capability: "ai",
     });
-
-    if (!contact) {
-      throw new Error("Contact not found for SMS delivery.");
-    }
 
     if (!smsPolicy.allowed) {
       throw new Error(
@@ -1054,15 +1093,19 @@ export const markOutboundMessageSendFailed = internalMutation({
 export const sendStoredOutboundMessage = internalAction({
   args: {
     messageId: v.id("messages"),
+    deliveryPolicy: v.optional(
+      v.union(v.literal("ai"), v.literal("compliance_keyword")),
+    ),
   },
   handler: async (
     ctx: ActionCtx,
-    args: MessageIdArgs,
+    args: SendStoredOutboundMessageArgs,
   ): Promise<SendStoredOutboundMessageResult> => {
     const context: OutboundMessageDeliveryContext | null = await ctx.runQuery(
       internal.conversations.webhooks.getOutboundMessageDeliveryContext,
       {
         messageId: args.messageId,
+        ...(args.deliveryPolicy ? { deliveryPolicy: args.deliveryPolicy } : {}),
       },
     );
 
@@ -1183,6 +1226,8 @@ async function sendSmsKeywordReply(
     conversationId: Id<"conversations">;
     fromPhoneNumber: string;
     body: string;
+    idempotencyStatus: string;
+    idempotencyKeyId?: Id<"idempotency_keys">;
   },
 ): Promise<SendStoredOutboundMessageResult> {
   const messageId: Id<"messages"> = await ctx.runMutation(
@@ -1197,8 +1242,18 @@ async function sendSmsKeywordReply(
     },
   );
 
+  if (input.idempotencyKeyId) {
+    await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+      idempotencyKeyId: input.idempotencyKeyId,
+      resourceTable: "messages",
+      resourceId: String(messageId),
+      status: input.idempotencyStatus,
+    });
+  }
+
   return await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
     messageId,
+    deliveryPolicy: "compliance_keyword",
   });
 }
 
@@ -1250,6 +1305,9 @@ export const handleTwilioSmsInbound = internalAction({
             internal.conversations.webhooks.sendStoredOutboundMessage,
             {
               messageId: asMessageId(claim.existing.resourceId),
+              ...(isKeywordReplyIdempotencyStatus(claim.existing.status)
+                ? { deliveryPolicy: "compliance_keyword" as const }
+                : {}),
             },
           );
 
@@ -1331,16 +1389,9 @@ export const handleTwilioSmsInbound = internalAction({
         conversationId,
         fromPhoneNumber: phoneNumber.e164,
         body: keywordReply.body,
+        idempotencyStatus: keywordReply.idempotencyStatus,
+        ...(idempotencyKeyId ? { idempotencyKeyId } : {}),
       });
-
-      if (idempotencyKeyId) {
-        await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
-          idempotencyKeyId,
-          resourceTable: "messages",
-          resourceId: String(sent.messageId),
-          status: keywordReply.idempotencyStatus,
-        });
-      }
 
       return {
         businessId: phoneNumber.businessId,
