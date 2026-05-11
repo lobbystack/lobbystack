@@ -66,9 +66,7 @@ import {
 import {
   captureOutboundAudio,
   acknowledgeOutboundPlaybackMark,
-  clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
-  getInterruptedAssistantPlayback,
   queuePendingOutboundPlaybackGroup,
 } from "./outboundPlayback";
 import {
@@ -1379,40 +1377,6 @@ function requestAssistantFinalMessageBeforeHangup(
       tool_choice: "none",
     },
   });
-}
-
-function cancelAssistantAudio(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  twilioSocket: WebSocket,
-  session: ActiveVoiceSession,
-): void {
-  const elapsedMs = Date.now() - session.startedAtMs;
-  const interruptedPlayback = getInterruptedAssistantPlayback(session, elapsedMs);
-
-  clearPendingOutboundPlayback(session, elapsedMs);
-
-  if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
-    clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
-    clearPendingImplicitHangupPlaybackWait(server, session, "assistant_audio_cleared");
-    twilioSocket.send(
-      JSON.stringify({
-        event: "clear",
-        streamSid: session.streamSid,
-      }),
-    );
-  }
-
-  if (interruptedPlayback) {
-    postRealtimeEvent(openAiSocket, {
-      type: "conversation.item.truncate",
-      item_id: interruptedPlayback.itemId,
-      content_index: interruptedPlayback.contentIndex,
-      audio_end_ms: interruptedPlayback.audioEndMs,
-    });
-  }
-
-  runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
 }
 
 async function performTransfer(
@@ -2786,7 +2750,6 @@ function handleOpenAiMessage(
     }
     case "input_audio_buffer.speech_started": {
       resetInactivityForCallerActivity(openAiSocket, session);
-      cancelAssistantAudio(server, openAiSocket, twilioSocket, session);
       return;
     }
     case "input_audio_buffer.timeout_triggered": {

@@ -42,7 +42,7 @@ fly secrets set -a <your-app-name> \
   CONVEX_SITE_URL=<your-convex-site-url> \
   INTERNAL_SERVICE_TOKEN=<your-internal-service-token> \
   OPENAI_API_KEY=<your-openai-api-key> \
-  OPENAI_REALTIME_MODEL=gpt-realtime \
+  OPENAI_REALTIME_MODEL=gpt-realtime-2 \
   OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD=<optional-legacy-text-input-price-per-token> \
   OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD=<optional-legacy-text-output-price-per-token> \
   OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD=<optional-text-input-price-per-token> \
