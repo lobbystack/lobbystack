@@ -2295,6 +2295,14 @@ describe("billing", () => {
     });
     expect(account?.polarCustomerId).toBe("cus_existing");
     expect(account?.polarCustomerExternalId).toBe(billingKey);
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.hasCustomerPortalAccess).toBe(false);
+    await expect(
+      authed.action(api.billing.openPortal, {
+        businessId,
+      }),
+    ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {

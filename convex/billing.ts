@@ -376,6 +376,12 @@ async function resolveBillingContact(
   };
 }
 
+function hasPolarCustomerPortalAccess(account: Doc<"billing_accounts"> | null): boolean {
+  return Boolean(
+    account?.polarCustomerId && (account.proSubscriptionId || account.aiSmsSubscriptionId),
+  );
+}
+
 function buildBillingStatus(input: {
   billingKey: string;
   plan: BillingPlanSlug;
@@ -1392,6 +1398,16 @@ export const openPortal = action({
     const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
       businessId: args.businessId,
     });
+    const hasCustomerPortalAccess: boolean = await ctx.runQuery(
+      internal.billing.getCustomerPortalAccess,
+      {
+        businessId: args.businessId,
+      },
+    );
+    if (!hasCustomerPortalAccess) {
+      throw new Error("A paid subscription is required before opening the customer portal.");
+    }
+
     const customer = await ensurePolarCustomer(ctx, {
       businessId: args.businessId,
       checkoutContext,
@@ -1403,6 +1419,20 @@ export const openPortal = action({
     });
 
     return { url: session.customerPortalUrl };
+  },
+});
+
+export const getCustomerPortalAccess = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const membership = await requireMembership(ctx, args.businessId);
+    requireBillingManagementAccess(membership.role);
+
+    const account = await getBillingAccount(ctx, args.businessId);
+    return hasPolarCustomerPortalAccess(account);
   },
 });
 
@@ -1530,7 +1560,7 @@ export const getStatus = query({
         invoiceUrl: transaction.invoiceUrl ?? null,
       })),
       hasBillingManagementAccess: hasManagementAccess,
-      hasCustomerPortalAccess: Boolean(snapshot.account?.polarCustomerId),
+      hasCustomerPortalAccess: hasPolarCustomerPortalAccess(snapshot.account),
       availableCheckoutPlans,
       aiSmsAddonCheckoutConfigured:
         siteUrlConfigured && isAiSmsAddonCheckoutConfigured(),
