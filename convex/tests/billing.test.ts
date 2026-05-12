@@ -884,6 +884,63 @@ describe("billing", () => {
     });
   });
 
+  it("allows a duplicate active voice start after the initial free cloud reservation", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-start-idempotent",
+      deploymentMode: "cloud",
+    });
+
+    const initialStart = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-free-cloud-active-duplicate",
+      from: "+14165550123",
+      to: "+14165550999",
+      startedAt: "2026-04-12T14:00:00.000Z",
+    });
+    const duplicateStart = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-free-cloud-active-duplicate",
+      gatewaySessionId: "gateway-session-after-reservation",
+      from: "+14165550123",
+      to: "+14165550999",
+      startedAt: "2026-04-12T14:00:01.000Z",
+    });
+
+    const persistedState = await t.run(async (ctx: TestContext) => {
+      const call = await ctx.db.get(initialStart.callId);
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvents = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(initialStart.callId)}`),
+        )
+        .collect();
+      return { call, usageMonth, usageEvents };
+    });
+
+    expect(duplicateStart).toEqual({
+      callId: initialStart.callId,
+      conversationId: initialStart.conversationId,
+      blocked: false,
+      contactId: initialStart.contactId,
+    });
+    expect(persistedState.call).toMatchObject({
+      status: "in_progress",
+      gatewaySessionId: "gateway-session-after-reservation",
+    });
+    expect(persistedState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 600,
+      voiceBlocked: true,
+    });
+    expect(persistedState.usageEvents).toHaveLength(1);
+  });
+
   it("treats duplicate voice start reservations for the same call as idempotent", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId } = await seedWorkspace(t, {

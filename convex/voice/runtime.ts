@@ -545,6 +545,44 @@ export const startCall = internalMutation({
     startedAt: v.string(),
   },
   handler: async (ctx: MutationCtx, args: StartCallArgs): Promise<StartCallResult> => {
+    const existingCall: Doc<"calls"> | null = await ctx.db
+      .query("calls")
+      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
+      .unique();
+    const activeExistingCall:
+      | (Doc<"calls"> & {
+          contactId: Id<"contacts">;
+          conversationId: Id<"conversations">;
+        })
+      | null =
+      existingCall &&
+      existingCall.contactId !== undefined &&
+      existingCall.conversationId !== undefined &&
+      existingCall.endedAt === undefined
+        ? (existingCall as Doc<"calls"> & {
+            contactId: Id<"contacts">;
+            conversationId: Id<"conversations">;
+          })
+        : null;
+
+    if (activeExistingCall) {
+      if (
+        args.gatewaySessionId !== undefined &&
+        activeExistingCall.gatewaySessionId !== args.gatewaySessionId
+      ) {
+        await ctx.db.patch(activeExistingCall._id, {
+          gatewaySessionId: args.gatewaySessionId,
+        });
+      }
+
+      return {
+        callId: activeExistingCall._id,
+        conversationId: activeExistingCall.conversationId,
+        blocked: false,
+        contactId: activeExistingCall.contactId,
+      };
+    }
+
     const voicePolicy: {
       allowed: boolean;
       errorCode: BillingErrorCode | null;
@@ -561,37 +599,8 @@ export const startCall = internalMutation({
         q.eq("businessId", args.businessId).eq("phone", args.from),
       )
       .unique();
-    const existingCall: Doc<"calls"> | null = await ctx.db
-      .query("calls")
-      .withIndex("by_twilio_call_sid", (q) => q.eq("twilioCallSid", args.twilioCallSid))
-      .unique();
-
-    const activeExistingCall: (Doc<"calls"> & { conversationId: Id<"conversations"> }) | null =
-      existingCall &&
-      existingCall.conversationId !== undefined &&
-      existingCall.endedAt === undefined
-        ? (existingCall as Doc<"calls"> & { conversationId: Id<"conversations"> })
-        : null;
 
     if (contact && isContactBlocked(contact)) {
-      if (activeExistingCall) {
-        if (
-          args.gatewaySessionId !== undefined &&
-          activeExistingCall.gatewaySessionId !== args.gatewaySessionId
-        ) {
-          await ctx.db.patch(activeExistingCall._id, {
-            gatewaySessionId: args.gatewaySessionId,
-          });
-        }
-
-        return {
-          callId: activeExistingCall._id,
-          conversationId: activeExistingCall.conversationId,
-          blocked: false,
-          contactId: contact._id,
-        };
-      }
-
       let callId: Id<"calls">;
 
       if (existingCall) {
