@@ -66,7 +66,9 @@ import {
 import {
   captureOutboundAudio,
   acknowledgeOutboundPlaybackMark,
+  clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
+  getInterruptedAssistantPlayback,
   queuePendingOutboundPlaybackGroup,
 } from "./outboundPlayback";
 import {
@@ -1126,6 +1128,59 @@ function resetInactivityForCallerActivity(
   session.inactivity = markCallerActivity(session.inactivity);
   clearInactivityTimer(session);
   updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
+}
+
+function interruptAssistantPlaybackForCallerSpeech(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  const elapsedMs = Date.now() - session.startedAtMs;
+  const interrupted = getInterruptedAssistantPlayback(session, elapsedMs);
+  const hadPendingPlayback =
+    session.pendingOutboundAudio.length > 0 ||
+    session.pendingOutboundPlaybackGroups.length > 0;
+
+  if (!hadPendingPlayback) {
+    return;
+  }
+
+  if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+    twilioSocket.send(
+      JSON.stringify({
+        event: "clear",
+        streamSid: session.streamSid,
+      }),
+    );
+  }
+
+  clearPendingTransferPlaybackWait(server, session, "caller_speech_started");
+  clearPendingImplicitHangupPlaybackWait(server, session, "caller_speech_started");
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  clearPendingOutboundPlayback(session, elapsedMs);
+
+  if (interrupted) {
+    postRealtimeEvent(openAiSocket, {
+      type: "conversation.item.truncate",
+      item_id: interrupted.itemId,
+      content_index: interrupted.contentIndex,
+      audio_end_ms: Math.max(0, Math.round(interrupted.audioEndMs)),
+    });
+  }
+
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      truncatedItemId: interrupted?.itemId,
+      audioEndMs: interrupted?.audioEndMs,
+    },
+    "Interrupted assistant playback for caller speech",
+  );
 }
 
 function clearPendingTransferPlaybackWait(
@@ -2760,6 +2815,7 @@ function handleOpenAiMessage(
       return;
     }
     case "input_audio_buffer.speech_started": {
+      interruptAssistantPlaybackForCallerSpeech(server, openAiSocket, twilioSocket, session);
       resetInactivityForCallerActivity(openAiSocket, session);
       return;
     }
