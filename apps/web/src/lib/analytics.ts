@@ -19,7 +19,7 @@ type IdentifyOperatorArgs = {
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
 const DEPLOYMENT_MODE = import.meta.env.VITE_DEPLOYMENT_MODE ?? "development";
 const LEGACY_WORKER_PROXY_HOST = "/ingest/posthog";
-const MANAGED_POSTHOG_PROXY_HOST = "https://t.nontia.com";
+const MANAGED_POSTHOG_PROXY_HOST = "https://ts.lobbystack.com";
 
 function resolvePostHogHost(rawHost?: string): string | undefined {
   const host = rawHost?.trim();

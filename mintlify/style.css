@@ -1,6 +1,6 @@
-#navbar a[href*="github.com/morencyr/LobbyStack"],
-#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]),
-navbar-link[href*="github.com/morencyr/LobbyStack"],
+#navbar a[href*="github.com/lobbystack/lobbystack"],
+#navbar *:has(> a[href*="github.com/lobbystack/lobbystack"]),
+navbar-link[href*="github.com/lobbystack/lobbystack"],
 #navbar a[href="https://lobbystack.com"],
 #navbar *:has(> a[href="https://lobbystack.com"]),
 navbar-link[href="https://lobbystack.com"],
@@ -25,18 +25,18 @@ topbar-right-container navbar-link,
   font-weight: 400 !important;
 }
 
-#navbar a[href*="github.com/morencyr/LobbyStack"] span,
-#navbar a[href*="github.com/morencyr/LobbyStack"] p,
-#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) span,
-#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) p,
-navbar-link[href*="github.com/morencyr/LobbyStack"] span,
-navbar-link[href*="github.com/morencyr/LobbyStack"] p {
+#navbar a[href*="github.com/lobbystack/lobbystack"] span,
+#navbar a[href*="github.com/lobbystack/lobbystack"] p,
+#navbar *:has(> a[href*="github.com/lobbystack/lobbystack"]) span,
+#navbar *:has(> a[href*="github.com/lobbystack/lobbystack"]) p,
+navbar-link[href*="github.com/lobbystack/lobbystack"] span,
+navbar-link[href*="github.com/lobbystack/lobbystack"] p {
   display: none !important;
 }
 
-#navbar a[href*="github.com/morencyr/LobbyStack"] svg,
-#navbar *:has(> a[href*="github.com/morencyr/LobbyStack"]) svg,
-navbar-link[href*="github.com/morencyr/LobbyStack"] svg {
+#navbar a[href*="github.com/lobbystack/lobbystack"] svg,
+#navbar *:has(> a[href*="github.com/lobbystack/lobbystack"]) svg,
+navbar-link[href*="github.com/lobbystack/lobbystack"] svg {
   margin: 0 !important;
 }
 

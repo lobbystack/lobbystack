@@ -69,7 +69,7 @@ describe("OnboardingNumberPage", () => {
   it("moves forward to plan when a fresh number claim appears before route state catches up", async () => {
     primaryPhoneNumberMock = {
       _id: "phone-1",
-      e164: "+15812024352",
+      e164: "+15815550102",
       voiceEnabled: true,
       smsEnabled: true,
       status: "active",
@@ -94,7 +94,7 @@ describe("OnboardingNumberPage", () => {
   it("shows the selected-number review when the user goes back after reaching plan", () => {
     primaryPhoneNumberMock = {
       _id: "phone-1",
-      e164: "+15812024352",
+      e164: "+15815550102",
       voiceEnabled: true,
       smsEnabled: true,
       status: "active",
@@ -109,7 +109,7 @@ describe("OnboardingNumberPage", () => {
     );
 
     expect(screen.getByText("number.selectedTitle")).toBeTruthy();
-    expect(screen.getByText("(581) 202-4352")).toBeTruthy();
+    expect(screen.getByText("(581) 555-0102")).toBeTruthy();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 });

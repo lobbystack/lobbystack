@@ -1361,7 +1361,7 @@ describe("SMS scheduling flow", () => {
       const { conversationId } = await seedSmsConversation(ctx, {
         businessId,
         contactPhone: "+14165550975",
-        contactName: "Raphaël Morency",
+        contactName: "Morgan Lee",
       });
       await ctx.db.insert("conversation_booking_state", {
         businessId,
@@ -1383,7 +1383,7 @@ describe("SMS scheduling flow", () => {
     const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
       businessId,
       conversationId,
-      prompt: "Raphael Morency",
+      prompt: "Morgan Lee",
     });
 
     expect(reply).toBe(
@@ -1420,7 +1420,7 @@ describe("SMS scheduling flow", () => {
       const { conversationId } = await seedSmsConversation(ctx, {
         businessId,
         contactPhone: "+14165550977",
-        contactName: "Raphaël Morency",
+        contactName: "Morgan Lee",
       });
       await ctx.db.insert("conversation_booking_state", {
         businessId,
@@ -1451,7 +1451,7 @@ describe("SMS scheduling flow", () => {
     const reply = await t.action(internal.ai.agents.runtime.generateSmsReply, {
       businessId,
       conversationId,
-      prompt: "Raphael Morency",
+      prompt: "Morgan Lee",
     });
 
     expect(reply).toBe(
@@ -4052,7 +4052,7 @@ describe("SMS scheduling flow", () => {
       const { conversationId } = await seedSmsConversation(ctx, {
         businessId,
         contactPhone: "+14165550979",
-        contactName: "Raphaël Morency",
+        contactName: "Morgan Lee",
       });
       return { businessId, conversationId };
     });
@@ -4066,7 +4066,7 @@ describe("SMS scheduling flow", () => {
 
     const request = getCapturedAgentRequest();
     expect(request.system).toContain("Customer name on file: known.");
-    expect(request.system).not.toContain("Raphaël Morency");
+    expect(request.system).not.toContain("Morgan Lee");
     expect(request.system).toContain(
       "do not ask for the customer's name again unless the customer is explicitly correcting or changing it",
     );
