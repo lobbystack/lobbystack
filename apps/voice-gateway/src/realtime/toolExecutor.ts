@@ -246,7 +246,7 @@ export async function executeVoiceTool(input: {
     ...(input.conversationId
       ? { "lobbystack.conversation_id": input.conversationId }
       : {}),
-    "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2",
+    "lobbystack.model": process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
     "lobbystack.tool_name": input.toolName,
   };
 

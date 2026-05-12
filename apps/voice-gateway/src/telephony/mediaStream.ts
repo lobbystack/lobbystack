@@ -66,9 +66,7 @@ import {
 import {
   captureOutboundAudio,
   acknowledgeOutboundPlaybackMark,
-  clearPendingOutboundPlayback,
   flushElapsedOutboundPlayback,
-  getInterruptedAssistantPlayback,
   queuePendingOutboundPlaybackGroup,
 } from "./outboundPlayback";
 import {
@@ -203,7 +201,6 @@ type ActiveVoiceSession = {
   }>;
   pendingInboundAudio: Array<string>;
   pendingTasks: Set<Promise<unknown>>;
-  pendingToolLatencyFillerResolvers: Set<() => void>;
   inactivity: CallInactivityState;
   inactivityTimer: ReturnType<typeof setTimeout> | null;
   terminalHangupInProgress: boolean;
@@ -248,9 +245,6 @@ function isTransferQuotaError(error: unknown): boolean {
 const TRANSFER_QUOTA_REACHED_MESSAGE =
   "This business has reached its transfer limit for this billing period. Please try again later.";
 const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
-const TOOL_LATENCY_FILLER_DELAY_MS = 900;
-const TOOL_LATENCY_FILLER_MAX_WAIT_MS = 3_000;
-const TOOL_LATENCY_FILLER_METADATA_KIND = "tool_latency_filler";
 
 function asUnknownRecord(
   value: unknown,
@@ -644,7 +638,7 @@ function createRealtimeToolDefinitions() {
     {
       type: "function",
       name: "getBusinessHours",
-      description: "Get configured business hours and closure information.",
+      description: "Get the authoritative business hours and closure information.",
       parameters: {
         type: "object",
         properties: {},
@@ -942,24 +936,15 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   }
 }
 
-function createRealtimeTurnDetectionConfig(idleTimeoutMs: number): Record<string, unknown> {
-  return {
-    type: "server_vad",
-    create_response: true,
-    interrupt_response: true,
-    idle_timeout_ms: idleTimeoutMs,
-  };
-}
-
 function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
   postRealtimeEvent(socket, {
     type: "session.update",
     session: {
-      type: "realtime",
-      audio: {
-        input: {
-          turn_detection: createRealtimeTurnDetectionConfig(idleTimeoutMs),
-        },
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+        idle_timeout_ms: idleTimeoutMs,
       },
     },
   });
@@ -1134,63 +1119,6 @@ function resetInactivityForCallerActivity(
   updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
 }
 
-function interruptAssistantPlaybackForCallerSpeech(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  twilioSocket: WebSocket,
-  session: ActiveVoiceSession,
-): void {
-  const elapsedMs = Date.now() - session.startedAtMs;
-  const interruptedPlayback = getInterruptedAssistantPlayback(session, elapsedMs);
-  const activeResponseId = session.activeAssistantResponseId;
-  const hasBufferedPlayback =
-    session.pendingOutboundAudio.length > 0 ||
-    session.pendingOutboundPlaybackGroups.length > 0 ||
-    Boolean(activeResponseId);
-
-  if (activeResponseId) {
-    postRealtimeEvent(openAiSocket, {
-      type: "response.cancel",
-      response_id: activeResponseId,
-    });
-    session.assistantResponseRequestedAtMs = null;
-    session.assistantFirstOutputAtMs = null;
-  }
-
-  if (interruptedPlayback) {
-    postRealtimeEvent(openAiSocket, {
-      type: "conversation.item.truncate",
-      item_id: interruptedPlayback.itemId,
-      content_index: interruptedPlayback.contentIndex,
-      audio_end_ms: interruptedPlayback.audioEndMs,
-    });
-  }
-
-  if (hasBufferedPlayback && session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
-    twilioSocket.send(
-      JSON.stringify({
-        event: "clear",
-        streamSid: session.streamSid,
-      }),
-    );
-  }
-
-  if (hasBufferedPlayback) {
-    clearPendingOutboundPlayback(session, elapsedMs);
-    server.log.info(
-      {
-        callId: session.callId,
-        callSid: session.callSid,
-        streamSid: session.streamSid,
-        activeResponseId,
-        interruptedItemId: interruptedPlayback?.itemId ?? null,
-        interruptedAudioEndMs: interruptedPlayback?.audioEndMs ?? null,
-      },
-      "Interrupted assistant playback after caller speech started",
-    );
-  }
-}
-
 function clearPendingTransferPlaybackWait(
   server: FastifyInstance,
   session: ActiveVoiceSession,
@@ -1237,122 +1165,6 @@ function delayMs(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-
-function isToolLatencyFillerResponse(
-  response: OpenAiRealtimeMessage["response"] | undefined,
-): boolean {
-  return response?.metadata?.lobbystack_kind === TOOL_LATENCY_FILLER_METADATA_KIND;
-}
-
-function resolvePendingToolLatencyFillers(session: ActiveVoiceSession): void {
-  for (const resolve of session.pendingToolLatencyFillerResolvers) {
-    resolve();
-  }
-  session.pendingToolLatencyFillerResolvers.clear();
-}
-
-function waitForToolLatencyFillerDone(session: ActiveVoiceSession): Promise<void> {
-  return new Promise((resolve) => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    let completed = false;
-
-    const complete = () => {
-      if (completed) {
-        return;
-      }
-      completed = true;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      session.pendingToolLatencyFillerResolvers.delete(complete);
-      resolve();
-    };
-
-    timeout = setTimeout(complete, TOOL_LATENCY_FILLER_MAX_WAIT_MS);
-    session.pendingToolLatencyFillerResolvers.add(complete);
-  });
-}
-
-function scheduleToolLatencyFiller(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  session: ActiveVoiceSession,
-  toolName: string,
-): { cancelAndWait: () => Promise<void> } {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let completion: Promise<void> | null = null;
-
-  timer = setTimeout(() => {
-    timer = null;
-
-    if (
-      session.finalized ||
-      session.terminalHangupInProgress ||
-      openAiSocket.readyState !== WebSocket.OPEN
-    ) {
-      return;
-    }
-
-    if (session.assistantResponseRequestedAtMs !== null) {
-      server.log.debug(
-        {
-          callId: session.callId,
-          callSid: session.callSid,
-          streamSid: session.streamSid,
-          toolName,
-        },
-        "Skipping controlled tool latency filler because an assistant response is still active",
-      );
-      return;
-    }
-
-    completion = waitForToolLatencyFillerDone(session);
-    session.assistantResponseRequestedAtMs = Date.now();
-    session.assistantFirstOutputAtMs = null;
-
-    postRealtimeEvent(openAiSocket, {
-      type: "response.create",
-      response: {
-        conversation: "none",
-        output_modalities: ["audio"],
-        metadata: {
-          lobbystack_kind: TOOL_LATENCY_FILLER_METADATA_KIND,
-        },
-        instructions: [
-          'Say exactly: "One moment."',
-          "Do not answer the caller's question yet.",
-          "Do not call tools.",
-          "Do not add anything else.",
-        ].join(" "),
-        tools: [],
-        tool_choice: "none",
-        max_output_tokens: 16,
-      },
-    });
-
-    server.log.info(
-      {
-        callId: session.callId,
-        callSid: session.callSid,
-        streamSid: session.streamSid,
-        toolName,
-      },
-      "Started controlled tool latency filler while waiting for voice tool result",
-    );
-  }, TOOL_LATENCY_FILLER_DELAY_MS);
-
-  return {
-    async cancelAndWait() {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      if (completion) {
-        await completion;
-      }
-    },
-  };
 }
 
 function restorePendingImplicitEndCall(
@@ -1700,7 +1512,6 @@ async function finalizeCall(
   await applyPendingImplicitEndCallBeforeFinalize(server, session);
   session.finalized = true;
   clearInactivityTimer(session);
-  resolvePendingToolLatencyFillers(session);
   if (session.activeCallCounted) {
     session.activeCallCounted = false;
   }
@@ -2200,21 +2011,13 @@ async function configureOpenAiSession(
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
-      type: "realtime",
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
         "You are speaking on a live phone call.",
         "Start in the language implied by the configured greeting.",
         "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
-        "Never switch to a language the caller has not used or requested. Do not switch to Spanish unless the caller speaks Spanish or explicitly asks for Spanish.",
-        "If the caller speaks French, respond in French. If the caller speaks English, respond in English. If the caller mixes languages, follow the language they most recently used.",
-        "For simple greetings or small talk such as how are you, answer briefly in the caller's language and ask how you can help with the business. Do not give generic step-by-step advice unless the caller asks for it.",
         "Answer from the supplied business snapshot whenever possible.",
-        "Do not announce that you are checking tools, official information, the knowledge base, listed offerings, background, or internal sources. If a lookup is needed, use it silently and then answer naturally.",
-        "When a tool is needed, call it immediately without speaking first; the platform will handle any short waiting phrase if one is needed.",
-        'Never say phrases like "let me check", "let me quickly check", "let me think", "let me see", "official info", "official list", "accurate answer", or "in a simple way."',
-        "For broad public facts about a well-known business, you may answer from general knowledge. Be careful not to invent exact local availability, hours, prices, policies, or appointment details.",
-        "Use tools silently for authoritative actions like booking, appointment changes, transfer, and message taking.",
+        "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
         "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
         "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",
         "When the platform indicates normal caller silence, ask once: Are you still there? Then wait for the caller.",
@@ -2231,7 +2034,7 @@ async function configureOpenAiSession(
           : [
               `The business timezone is configured as ${session.snapshot.timezone}. Interpret relative dates and times using that timezone.`,
             ]),
-        "If the caller asks what services the business offers, use getBusinessServices.",
+        "If the caller asks what services the business offers, use getBusinessServices instead of guessing or saying the list is unavailable.",
         "For booking, first collect the service, local day/date, and approximate time preference.",
         "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
         "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
@@ -2243,19 +2046,18 @@ async function configureOpenAiSession(
         "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
         "Interpret relative dates and times in the business timezone.",
       ].join("\n\n"),
-      output_modalities: ["audio"],
-      audio: {
-        input: {
-          format: { type: "audio/pcmu" },
-          transcription: {
-            model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
-          },
-          turn_detection: createRealtimeTurnDetectionConfig(NORMAL_IDLE_TIMEOUT_MS),
-        },
-        output: {
-          format: { type: "audio/pcmu" },
-          voice: runtimeConfig.OPENAI_REALTIME_VOICE,
-        },
+      modalities: ["audio", "text"],
+      voice: runtimeConfig.OPENAI_REALTIME_VOICE,
+      input_audio_format: "g711_ulaw",
+      output_audio_format: "g711_ulaw",
+      input_audio_transcription: {
+        model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+      },
+      turn_detection: {
+        type: "server_vad",
+        create_response: true,
+        interrupt_response: true,
+        idle_timeout_ms: NORMAL_IDLE_TIMEOUT_MS,
       },
       tools: createRealtimeToolDefinitions(),
       tool_choice: "auto",
@@ -2348,19 +2150,11 @@ async function handleToolCall(
 ): Promise<void> {
   const startedAt = Date.now();
   const runtimeConfig = loadVoiceGatewayEnv(process.env);
-  let toolLatencyFiller: { cancelAndWait: () => Promise<void> } | null = null;
 
   try {
     if (!session.snapshot || !session.businessId) {
       throw new Error("Voice session has not been initialized.");
     }
-
-    toolLatencyFiller = scheduleToolLatencyFiller(
-      server,
-      openAiSocket,
-      session,
-      message.name,
-    );
 
     const result = await executeVoiceTool({
       toolName: message.name,
@@ -2424,8 +2218,6 @@ async function handleToolCall(
       },
     });
 
-    await toolLatencyFiller.cancelAndWait();
-
     postRealtimeEvent(openAiSocket, {
       type: "conversation.item.create",
       item: {
@@ -2463,8 +2255,6 @@ async function handleToolCall(
       type: "response.create",
     });
   } catch (error) {
-    await toolLatencyFiller?.cancelAndWait();
-
     server.log.error(error);
     if (session.businessId) {
       captureAiSpan({
@@ -2923,21 +2713,6 @@ function handleOpenAiMessage(
       session.assistantResponseRequestedAtMs = null;
       session.assistantFirstOutputAtMs = null;
 
-      if (isToolLatencyFillerResponse(payload.response)) {
-        resolvePendingToolLatencyFillers(session);
-        server.log.debug(
-          {
-            callId: session.callId,
-            callSid: session.callSid,
-            streamSid: session.streamSid,
-            responseId: payload.response?.id,
-            status: payload.response?.status,
-          },
-          "Completed controlled tool latency filler response",
-        );
-        return;
-      }
-
       if (
         payload.response?.id &&
         payload.response.id === session.activeAssistantResponseId &&
@@ -2975,12 +2750,6 @@ function handleOpenAiMessage(
     }
     case "input_audio_buffer.speech_started": {
       resetInactivityForCallerActivity(openAiSocket, session);
-      interruptAssistantPlaybackForCallerSpeech(
-        server,
-        openAiSocket,
-        twilioSocket,
-        session,
-      );
       return;
     }
     case "input_audio_buffer.timeout_triggered": {
@@ -3268,7 +3037,6 @@ export async function handleMediaStreamConnection(
     pendingOutboundPlaybackGroups: [],
     pendingInboundAudio: [],
     pendingTasks: new Set(),
-    pendingToolLatencyFillerResolvers: new Set(),
     inactivity: createCallInactivityState(),
     inactivityTimer: null,
     terminalHangupInProgress: false,
@@ -3397,6 +3165,7 @@ export async function handleMediaStreamConnection(
       {
         headers: {
           Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
+          "OpenAI-Beta": "realtime=v1",
         },
       },
     );
