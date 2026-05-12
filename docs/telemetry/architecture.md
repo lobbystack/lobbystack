@@ -68,7 +68,7 @@ The web app initializes PostHog in `apps/web/src/main.tsx` with:
 - `capture_pageleave: "if_capture_pageview"` for Web Analytics lifecycle coverage
 - browser exception autocapture for unhandled errors and unhandled rejections
 - session replay enabled with masked inputs and block selectors
-- `api_host = https://t.nontia.com` when using the managed reverse proxy
+- `api_host = https://t.lobbystack.com` when using the managed reverse proxy
 - `ui_host = https://us.posthog.com` so replay and insight links still resolve to PostHog Cloud
 
 Page views are tracked manually from route changes in `apps/web/src/App.tsx`.
@@ -107,9 +107,9 @@ Production browser deploys continue to follow PostHog's source map flow:
 
 Browser analytics should use PostHog's managed reverse proxy directly:
 
-- browser `api_host = https://t.nontia.com`
+- browser `api_host = https://t.lobbystack.com`
 - browser `ui_host = https://us.posthog.com`
-- the old worker proxy path `/ingest/posthog` is treated as a legacy value and mapped to `https://t.nontia.com` in the web client for a safe rollout
+- the old worker proxy path `/ingest/posthog` is treated as a legacy value and mapped to `https://t.lobbystack.com` in the web client for a safe rollout
 
 ### `convex`
 

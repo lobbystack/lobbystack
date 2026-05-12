@@ -81,7 +81,7 @@ describe("onboarding phone-number suggestion context", () => {
 
   it("prefers the exact verified NANP area code before cluster fallbacks", () => {
     const market = resolveVerifiedPhoneMarket({
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const context = buildSuggestionContextFromVerifiedPhoneMarket(market);

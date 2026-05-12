@@ -209,8 +209,8 @@ describe("Dashboard home summary", () => {
 
     const { callId, newestVoiceTaskId, handoffConversationId } = await t.run(async (ctx) => {
       const voiceContactId = await insertContact(ctx, businessId, {
-        name: "Raphael Morency",
-        phone: "+15817484609",
+        name: "Morgan Lee",
+        phone: "+15815550100",
       });
       const voiceConversationId = await ctx.db.insert("conversations", {
         businessId,
@@ -229,16 +229,16 @@ describe("Dashboard home summary", () => {
       await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
-        title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\n\nOlder callback note.",
+        title: "Voice message from Morgan Lee",
+        body: "Callback: +15815550100\n\nOlder callback note.",
         relatedId: String(callId),
         status: "open",
       });
       const newestVoiceTaskId = await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
-        title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\nPreferred callback: Tomorrow morning\n\nNewest callback note.",
+        title: "Voice message from Morgan Lee",
+        body: "Callback: +15815550100\nPreferred callback: Tomorrow morning\n\nNewest callback note.",
         relatedId: String(callId),
         status: "open",
       });
@@ -313,8 +313,8 @@ describe("Dashboard home summary", () => {
 
     const { voiceTaskId, handoffConversationId } = await t.run(async (ctx) => {
       const voiceContactId = await insertContact(ctx, businessId, {
-        name: "Raphael Morency",
-        phone: "+15817484609",
+        name: "Morgan Lee",
+        phone: "+15815550100",
       });
       const voiceConversationId = await ctx.db.insert("conversations", {
         businessId,
@@ -332,16 +332,16 @@ describe("Dashboard home summary", () => {
       await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
-        title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\n\nOlder callback note.",
+        title: "Voice message from Morgan Lee",
+        body: "Callback: +15815550100\n\nOlder callback note.",
         relatedId: String(callId),
         status: "open",
       });
       const voiceTaskId = await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
-        title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\n\nNewest callback note.",
+        title: "Voice message from Morgan Lee",
+        body: "Callback: +15815550100\n\nNewest callback note.",
         relatedId: String(callId),
         status: "open",
       });
@@ -427,8 +427,8 @@ describe("Dashboard home summary", () => {
 
     const { olderCallId } = await t.run(async (ctx) => {
       const oldContactId = await insertContact(ctx, businessId, {
-        name: "Raphael Morency",
-        phone: "+15817484609",
+        name: "Morgan Lee",
+        phone: "+15815550100",
       });
       const oldConversationId = await ctx.db.insert("conversations", {
         businessId,
@@ -446,8 +446,8 @@ describe("Dashboard home summary", () => {
       await ctx.db.insert("inbox_items", {
         businessId,
         kind: "voice_message",
-        title: "Voice message from Raphael Morency",
-        body: "Callback: +15817484609\n\nPlease call me back.",
+        title: "Voice message from Morgan Lee",
+        body: "Callback: +15815550100\n\nPlease call me back.",
         relatedId: String(olderCallId),
         status: "open",
       });

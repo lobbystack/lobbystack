@@ -390,7 +390,7 @@ describe("onboarding phone-number actions", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("phone_numbers", {
         businessId,
-        e164: "+15815550000",
+        e164: "+15815550100",
         twilioPhoneSid: "PN-inactive",
         voiceEnabled: true,
         smsEnabled: true,
@@ -425,7 +425,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -493,7 +493,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId: legacyUserId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -531,7 +531,7 @@ describe("onboarding phone-number actions", () => {
     });
 
     expect(result.market).toMatchObject({
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       areaCode: "581",
       metroKey: "quebec_city",
     });
@@ -551,7 +551,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -596,7 +596,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -646,7 +646,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -672,7 +672,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -700,7 +700,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -730,7 +730,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -758,7 +758,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -787,7 +787,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -820,7 +820,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -850,7 +850,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -871,7 +871,7 @@ describe("onboarding phone-number actions", () => {
       if (args.areaCode === 437) {
         return [
           {
-            phoneNumber: "+14375250420",
+            phoneNumber: "+14375550100",
             locality: "Toronto",
             region: "ON",
             isoCountry: "CA",
@@ -897,7 +897,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -952,7 +952,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -988,7 +988,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1020,7 +1020,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1056,7 +1056,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1086,7 +1086,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1116,7 +1116,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1160,7 +1160,7 @@ describe("onboarding phone-number actions", () => {
         t,
         businessId: targetBusinessId,
         userId,
-        phoneE164: "+15817484609",
+        phoneE164: "+15815550100",
         countryCode: "CA",
       });
     }
@@ -1271,7 +1271,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1320,7 +1320,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1351,7 +1351,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1443,7 +1443,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1487,7 +1487,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });
@@ -1525,7 +1525,7 @@ describe("onboarding phone-number actions", () => {
       t,
       businessId,
       userId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
     const authed = t.withIdentity({ subject });

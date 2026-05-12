@@ -90,7 +90,7 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
           />
         </SidebarProvider>
       </MemoryRouter>,
@@ -113,7 +113,7 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
           />
         </SidebarProvider>
       </MemoryRouter>,
@@ -137,8 +137,8 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="Tim Hortons"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
-            operatorName="Raphael"
+            operatorEmail="operator@example.com"
+            operatorName="Morgan"
           />
         </SidebarProvider>
       </MemoryRouter>,
@@ -156,13 +156,13 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
           />
         </SidebarProvider>
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+    await user.click(screen.getByRole("button", { name: /operator@example.com/i }));
     expect(screen.queryByRole("menuitem", { name: "Upgrade to Pro" })).toBeNull();
     unmount();
 
@@ -172,14 +172,14 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
             showUpgradeToPro
           />
         </SidebarProvider>
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+    await user.click(screen.getByRole("button", { name: /operator@example.com/i }));
 
     const upgradeLink = await screen.findByRole("menuitem", { name: "Upgrade to Pro" });
     expect(upgradeLink.getAttribute("href")).toBe("/settings/plan");
@@ -194,13 +194,13 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
           />
         </SidebarProvider>
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole("button", { name: /raphael@example.com/i }));
+    await user.click(screen.getByRole("button", { name: /operator@example.com/i }));
 
     expect(screen.queryByRole("menuitem", { name: "Billing" })).toBeNull();
 
@@ -220,7 +220,7 @@ describe("AppSidebar", () => {
           <AppSidebar
             businessName="LobbyStack"
             onSignOut={() => {}}
-            operatorEmail="raphael@example.com"
+            operatorEmail="operator@example.com"
           />
           <Routes>
             <Route element={<div>Home page</div>} path="/" />

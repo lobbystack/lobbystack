@@ -125,7 +125,7 @@ describe("website onboarding and ingestion", () => {
       await ctx.db.insert("users", {
         authSubject: subject,
         email: "verified@example.com",
-        phone: "+15817484609",
+        phone: "+15815550100",
         phoneVerificationTime,
       });
     });

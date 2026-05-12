@@ -73,7 +73,7 @@ describe("ContactsPage", () => {
         {
           id: "contact-1",
           name: "Unknown contact",
-          phone: "(581) 748-4609",
+          phone: "(581) 555-0100",
           email: null,
           isBlocked: false,
           blockedAt: null,

@@ -15,5 +15,10 @@ node_modules
 apps/web/dist
 *.tsbuildinfo
 references/shadcn-admin
-.agents
+.agents/
+.claude/
+.codex/
+CLAUDE.md
+PLAN.md
+security_best_practices_report.md
 mintlify/.atlas-analysis.json

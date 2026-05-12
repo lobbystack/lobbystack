@@ -138,7 +138,7 @@ async function seedMigratedBusinessOwner(t: ConvexHarness) {
     const legacyUserId: Id<"users"> = await ctx.db.insert("users", {
       authSubject: subject,
       email: "legacy-business-owner@example.com",
-      phone: "+15817484609",
+      phone: "+15815550100",
       phoneVerificationTime: Date.now() - 1000,
     });
     const businessId = await ctx.db.insert("businesses", {
@@ -216,29 +216,29 @@ describe("onboarding phone verification actions", () => {
 
     const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+1 (581) 748-4609",
+      phoneE164: "+1 (581) 555-0100",
     });
 
     expect(lookupFetchMock).toHaveBeenCalledWith({
-      phoneNumber: "+1 (581) 748-4609",
+      phoneNumber: "+1 (581) 555-0100",
       args: {
         fields: "line_type_intelligence",
       },
     });
     expect(verificationCreateMock).toHaveBeenCalledWith({
-      to: "+15817484609",
+      to: "+15815550100",
       channel: "sms",
     });
     expect(result).toEqual({
       status: "pending",
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
 
     const attempts = await listVerificationAttempts(t, businessId);
     expect(attempts).toHaveLength(1);
     expect(attempts[0]).toMatchObject({
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
       verificationSid: "VE123",
       status: "pending",
@@ -253,13 +253,13 @@ describe("onboarding phone verification actions", () => {
 
     await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     await expect(
       authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
         businessId,
-        phoneE164: "+15817484609",
+        phoneE164: "+15815550100",
       }),
     ).rejects.toThrow("We just sent a verification code. Please wait a moment before retrying.");
 
@@ -337,7 +337,7 @@ describe("onboarding phone verification actions", () => {
       }),
     ]);
     const authed = t.withIdentity({ subject });
-    const samePhone = "+15817484609";
+    const samePhone = "+15815550100";
 
     await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
@@ -369,12 +369,12 @@ describe("onboarding phone verification actions", () => {
 
     const result = await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+1 (581) 748-4609",
+      phoneE164: "+1 (581) 555-0100",
     });
 
     expect(result).toEqual({
       status: "pending",
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
     });
 
@@ -400,12 +400,12 @@ describe("onboarding phone verification actions", () => {
 
     await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     const result = await authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       code: "123456",
     });
 
@@ -415,7 +415,7 @@ describe("onboarding phone verification actions", () => {
     });
     expect(result).toEqual({
       status: "approved",
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     const business = await t.query(internal.businesses.admin.getBusinessById, {
@@ -424,7 +424,7 @@ describe("onboarding phone verification actions", () => {
     expect(business?.onboardingStage).toBe("phone_number");
 
     const currentUser = await authed.query(api.users.current, {});
-    expect(currentUser?.phone).toBe("+15817484609");
+    expect(currentUser?.phone).toBe("+15815550100");
     expect(currentUser?.phoneVerificationTime).toEqual(expect.any(Number));
   });
 
@@ -461,12 +461,12 @@ describe("onboarding phone verification actions", () => {
 
     await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     const result = await authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       code: "000000",
     });
 
@@ -495,7 +495,7 @@ describe("onboarding phone verification actions", () => {
     await expect(
       authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
         businessId,
-        phoneE164: "+15817484609",
+        phoneE164: "+15815550100",
       }),
     ).rejects.toThrow("Phone verification is no longer available for this business.");
 
@@ -514,7 +514,7 @@ describe("onboarding phone verification actions", () => {
 
     await authed.action(api.onboarding.phoneVerification.startPhoneVerification, {
       businessId,
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     await t.run(async (ctx) => {
@@ -526,7 +526,7 @@ describe("onboarding phone verification actions", () => {
     await expect(
       authed.action(api.onboarding.phoneVerification.checkPhoneVerification, {
         businessId,
-        phoneE164: "+15817484609",
+        phoneE164: "+15815550100",
         code: "123456",
       }),
     ).rejects.toThrow("Phone verification is no longer available for this business.");
@@ -545,7 +545,7 @@ describe("onboarding phone verification actions", () => {
 
     await t.run(async (ctx) => {
       await ctx.db.patch(userId, {
-        phone: "+15817484609",
+        phone: "+15815550100",
         phoneVerificationTime: 1_700_000_000_000,
       });
       await ctx.db.insert("onboarding_phone_verifications", {
@@ -560,7 +560,7 @@ describe("onboarding phone verification actions", () => {
           status: "active",
         }),
         userId,
-        phoneE164: "+15817484609",
+        phoneE164: "+15815550100",
         countryCode: "CA",
         verificationSid: "VE-prior-approved",
         status: "approved",
@@ -581,7 +581,7 @@ describe("onboarding phone verification actions", () => {
 
     expect(result).toEqual({
       status: "approved",
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
     });
 
     const business = await t.query(internal.businesses.admin.getBusinessById, {
@@ -594,7 +594,7 @@ describe("onboarding phone verification actions", () => {
       userId,
     });
     expect(attempt).toMatchObject({
-      phoneE164: "+15817484609",
+      phoneE164: "+15815550100",
       countryCode: "CA",
       status: "approved",
     });
