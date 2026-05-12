@@ -938,15 +938,24 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
   }
 }
 
+function createRealtimeTurnDetectionConfig(idleTimeoutMs: number): Record<string, unknown> {
+  return {
+    type: "server_vad",
+    create_response: true,
+    interrupt_response: true,
+    idle_timeout_ms: idleTimeoutMs,
+  };
+}
+
 function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
   postRealtimeEvent(socket, {
     type: "session.update",
     session: {
-      turn_detection: {
-        type: "server_vad",
-        create_response: true,
-        interrupt_response: true,
-        idle_timeout_ms: idleTimeoutMs,
+      type: "realtime",
+      audio: {
+        input: {
+          turn_detection: createRealtimeTurnDetectionConfig(idleTimeoutMs),
+        },
       },
     },
   });
@@ -1119,6 +1128,59 @@ function resetInactivityForCallerActivity(
   session.inactivity = markCallerActivity(session.inactivity);
   clearInactivityTimer(session);
   updateRealtimeIdleTimeout(openAiSocket, NORMAL_IDLE_TIMEOUT_MS);
+}
+
+function interruptAssistantPlaybackForCallerSpeech(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+): void {
+  const elapsedMs = Date.now() - session.startedAtMs;
+  const interrupted = getInterruptedAssistantPlayback(session, elapsedMs);
+  const hadPendingPlayback =
+    session.pendingOutboundAudio.length > 0 ||
+    session.pendingOutboundPlaybackGroups.length > 0;
+
+  if (!hadPendingPlayback) {
+    return;
+  }
+
+  if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
+    twilioSocket.send(
+      JSON.stringify({
+        event: "clear",
+        streamSid: session.streamSid,
+      }),
+    );
+  }
+
+  clearPendingTransferPlaybackWait(server, session, "caller_speech_started");
+  clearPendingImplicitHangupPlaybackWait(server, session, "caller_speech_started");
+  session.pendingImplicitEndCall = null;
+  session.pendingImplicitEndCallSkipNextResponseDone = false;
+  session.pendingImplicitEndCallStaleResponseId = null;
+  clearPendingOutboundPlayback(session, elapsedMs);
+
+  if (interrupted) {
+    postRealtimeEvent(openAiSocket, {
+      type: "conversation.item.truncate",
+      item_id: interrupted.itemId,
+      content_index: interrupted.contentIndex,
+      audio_end_ms: Math.max(0, Math.round(interrupted.audioEndMs)),
+    });
+  }
+
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      truncatedItemId: interrupted?.itemId,
+      audioEndMs: interrupted?.audioEndMs,
+    },
+    "Interrupted assistant playback for caller speech",
+  );
 }
 
 function clearPendingTransferPlaybackWait(
@@ -1379,40 +1441,6 @@ function requestAssistantFinalMessageBeforeHangup(
       tool_choice: "none",
     },
   });
-}
-
-function cancelAssistantAudio(
-  server: FastifyInstance,
-  openAiSocket: WebSocket,
-  twilioSocket: WebSocket,
-  session: ActiveVoiceSession,
-): void {
-  const elapsedMs = Date.now() - session.startedAtMs;
-  const interruptedPlayback = getInterruptedAssistantPlayback(session, elapsedMs);
-
-  clearPendingOutboundPlayback(session, elapsedMs);
-
-  if (session.streamSid && twilioSocket.readyState === WebSocket.OPEN) {
-    clearPendingTransferPlaybackWait(server, session, "assistant_audio_cleared");
-    clearPendingImplicitHangupPlaybackWait(server, session, "assistant_audio_cleared");
-    twilioSocket.send(
-      JSON.stringify({
-        event: "clear",
-        streamSid: session.streamSid,
-      }),
-    );
-  }
-
-  if (interruptedPlayback) {
-    postRealtimeEvent(openAiSocket, {
-      type: "conversation.item.truncate",
-      item_id: interruptedPlayback.itemId,
-      content_index: interruptedPlayback.contentIndex,
-      audio_end_ms: interruptedPlayback.audioEndMs,
-    });
-  }
-
-  runImplicitTerminalHangup(server, openAiSocket, twilioSocket, session);
 }
 
 async function performTransfer(
@@ -2047,6 +2075,7 @@ async function configureOpenAiSession(
   postRealtimeEvent(openAiSocket, {
     type: "session.update",
     session: {
+      type: "realtime",
       instructions: [
         buildVoiceSystemPrompt(session.snapshot),
         "You are speaking on a live phone call.",
@@ -2082,18 +2111,19 @@ async function configureOpenAiSession(
         "If the caller names a service loosely, map it to the closest configured service when there is an obvious match.",
         "Interpret relative dates and times in the business timezone.",
       ].join("\n\n"),
-      modalities: ["audio", "text"],
-      voice: runtimeConfig.OPENAI_REALTIME_VOICE,
-      input_audio_format: "g711_ulaw",
-      output_audio_format: "g711_ulaw",
-      input_audio_transcription: {
-        model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
-      },
-      turn_detection: {
-        type: "server_vad",
-        create_response: true,
-        interrupt_response: true,
-        idle_timeout_ms: NORMAL_IDLE_TIMEOUT_MS,
+      output_modalities: ["audio"],
+      audio: {
+        input: {
+          format: { type: "audio/pcmu" },
+          transcription: {
+            model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
+          },
+          turn_detection: createRealtimeTurnDetectionConfig(NORMAL_IDLE_TIMEOUT_MS),
+        },
+        output: {
+          format: { type: "audio/pcmu" },
+          voice: runtimeConfig.OPENAI_REALTIME_VOICE,
+        },
       },
       tools: createRealtimeToolDefinitions(),
       tool_choice: "auto",
@@ -2785,8 +2815,8 @@ function handleOpenAiMessage(
       return;
     }
     case "input_audio_buffer.speech_started": {
+      interruptAssistantPlaybackForCallerSpeech(server, openAiSocket, twilioSocket, session);
       resetInactivityForCallerActivity(openAiSocket, session);
-      cancelAssistantAudio(server, openAiSocket, twilioSocket, session);
       return;
     }
     case "input_audio_buffer.timeout_triggered": {
@@ -3202,7 +3232,6 @@ export async function handleMediaStreamConnection(
       {
         headers: {
           Authorization: `Bearer ${runtimeConfig.OPENAI_API_KEY}`,
-          "OpenAI-Beta": "realtime=v1",
         },
       },
     );

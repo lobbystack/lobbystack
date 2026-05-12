@@ -38,12 +38,23 @@ type NotificationDeliveryContext = {
   timezone: string;
   locale: "en" | "fr";
   senderRole: "platform_alert" | "business_ai";
+} | {
+  deliveryBlockedReason: "sms_opted_out";
+  businessId: Id<"businesses">;
+  notificationId: Id<"notifications">;
+  appointmentId: Id<"appointments">;
+  kind: AppointmentNotificationKind;
 };
 
-type DeliverNotificationResult = {
-  delivered: true;
-  providerMessageId: string;
-};
+type DeliverNotificationResult =
+  | {
+      delivered: true;
+      providerMessageId: string;
+    }
+  | {
+      delivered: false;
+      reason: "sms_opted_out";
+    };
 
 function isAppointmentNotificationKind(kind: string): kind is AppointmentNotificationKind {
   return kind === "appointment_reminder" || kind === "booking_confirmation";
@@ -169,6 +180,15 @@ export const getNotificationDeliveryContext = internalQuery({
     if (!isAppointmentNotificationKind(notification.kind)) {
       throw new Error("Unsupported notification kind.");
     }
+    if (contact.smsConsentStatus === "opted_out") {
+      return {
+        deliveryBlockedReason: "sms_opted_out",
+        businessId: notification.businessId,
+        notificationId: notification._id,
+        appointmentId,
+        kind: notification.kind,
+      };
+    }
 
     if (!smsPolicy.allowed) {
       throw new Error("Alert SMS quota reached. Upgrade to continue sending notifications.");
@@ -256,6 +276,28 @@ export const markNotificationSendFailed = internalMutation({
       eventKey: `smsFailed:${String(args.notificationId)}`,
       subject: "Customer SMS notification failed",
       body: `A ${notification.kind} SMS scheduled for ${notification.scheduledFor} failed.`,
+    });
+
+    return null;
+  },
+});
+
+export const markNotificationDeliverySkipped = internalMutation({
+  args: {
+    notificationId: v.id("notifications"),
+    providerUpdatedAt: v.string(),
+    providerStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification) {
+      throw new Error("Notification not found.");
+    }
+
+    await ctx.db.patch(args.notificationId, {
+      status: "skipped",
+      providerStatus: args.providerStatus,
+      providerUpdatedAt: args.providerUpdatedAt,
     });
 
     return null;
@@ -455,6 +497,18 @@ export const deliverNotification = internalAction({
     );
     if (!deliveryContext) {
       throw new Error("Notification not found.");
+    }
+
+    if ("deliveryBlockedReason" in deliveryContext) {
+      await ctx.runMutation(internal.notifications.reminders.markNotificationDeliverySkipped, {
+        notificationId: args.notificationId,
+        providerUpdatedAt: new Date().toISOString(),
+        providerStatus: "skipped_opted_out",
+      });
+      return {
+        delivered: false,
+        reason: deliveryContext.deliveryBlockedReason,
+      };
     }
 
     let messageAcceptedByProvider = false;

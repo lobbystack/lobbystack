@@ -58,6 +58,7 @@ type MessageMediaAttachment = {
 
 type ConversationIdArgs = { conversationId: Id<"conversations"> };
 type MessageIdArgs = { messageId: Id<"messages"> };
+type OutboundSmsDeliveryPolicy = "ai" | "compliance_keyword";
 type ClaimInboundMessageSidArgs = { scope: string; key: string };
 type ClaimInboundMessageSidResult =
   | { claimed: false; existing: Doc<"idempotency_keys"> }
@@ -141,6 +142,10 @@ type SendStoredOutboundMessageResult = {
   providerMessageSid?: string;
   status: string;
 };
+type SendStoredOutboundMessageArgs = {
+  messageId: Id<"messages">;
+  deliveryPolicy?: OutboundSmsDeliveryPolicy;
+};
 type HandleTwilioSmsInboundArgs = {
   from: string;
   to: string;
@@ -158,6 +163,10 @@ type HandleTwilioSmsInboundResult = {
 type SmsConsentUpdate = {
   status: "opted_out" | "subscribed";
   source: string;
+};
+type SmsKeywordReply = {
+  body: string;
+  idempotencyStatus: string;
 };
 type IngestInboundSmsArgs = {
   businessId: Id<"businesses">;
@@ -179,6 +188,11 @@ type IngestInboundSmsResult = {
 
 const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
+const SMS_HELP_KEYWORDS = new Set(["HELP"]);
+const SMS_HELP_REPLY =
+  "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.";
+const SMS_START_REPLY =
+  "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.";
 
 function normalizeSmsKeyword(value: string): string {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -219,6 +233,35 @@ function classifySmsConsentUpdate(input: {
   }
 
   return null;
+}
+
+function classifySmsKeywordReply(input: {
+  body: string;
+  optOutType?: string;
+}): SmsKeywordReply | null {
+  const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
+  const normalizedBody = normalizeSmsKeyword(input.body);
+  const keyword = normalizedOptOutType || normalizedBody;
+
+  if (SMS_HELP_KEYWORDS.has(keyword)) {
+    return {
+      body: SMS_HELP_REPLY,
+      idempotencyStatus: "processed_help_reply",
+    };
+  }
+
+  if (SMS_START_KEYWORDS.has(keyword)) {
+    return {
+      body: SMS_START_REPLY,
+      idempotencyStatus: "processed_start_reply",
+    };
+  }
+
+  return null;
+}
+
+function isKeywordReplyIdempotencyStatus(status?: string): boolean {
+  return status === "processed_help_reply" || status === "processed_start_reply";
 }
 
 function buildInboundSmsPrompt(input: {
@@ -482,10 +525,13 @@ export const getOrCreateContact = internalMutation({
 export const getOutboundMessageDeliveryContext = internalQuery({
   args: {
     messageId: v.id("messages"),
+    deliveryPolicy: v.optional(
+      v.union(v.literal("ai"), v.literal("compliance_keyword")),
+    ),
   },
   handler: async (
     ctx: QueryCtx,
-    args: MessageIdArgs,
+    args: SendStoredOutboundMessageArgs,
   ): Promise<OutboundMessageDeliveryContext | null> => {
     const message = await ctx.db.get(args.messageId);
     if (
@@ -510,14 +556,41 @@ export const getOutboundMessageDeliveryContext = internalQuery({
         .collect(),
     ]);
 
+    if (!contact) {
+      throw new Error("Contact not found for SMS delivery.");
+    }
+
+    if (args.deliveryPolicy === "compliance_keyword") {
+      const senderPhoneNumber = selectSmsSenderPhoneNumber(
+        phoneNumbers,
+        message.fromPhoneNumber ?? undefined,
+      );
+      if (!senderPhoneNumber) {
+        throw new Error(
+          "At least one active SMS-enabled phone number must be mapped to the business.",
+        );
+      }
+
+      return {
+        businessId: message.businessId,
+        conversationId: message.conversationId,
+        messageId: message._id,
+        body: message.body,
+        from: senderPhoneNumber,
+        to: contact.phone,
+        ...(message.providerMessageSid
+          ? { providerMessageSid: message.providerMessageSid }
+          : {}),
+        status: message.status,
+        ...(message.media ? { media: message.media } : {}),
+        ...(message.appointmentId ? { appointmentId: message.appointmentId } : {}),
+      };
+    }
+
     const smsPolicy = await ctx.runQuery(internal.billing.getSmsCapabilityPolicy, {
       businessId: message.businessId,
       capability: "ai",
     });
-
-    if (!contact) {
-      throw new Error("Contact not found for SMS delivery.");
-    }
 
     if (!smsPolicy.allowed) {
       throw new Error(
@@ -1020,15 +1093,19 @@ export const markOutboundMessageSendFailed = internalMutation({
 export const sendStoredOutboundMessage = internalAction({
   args: {
     messageId: v.id("messages"),
+    deliveryPolicy: v.optional(
+      v.union(v.literal("ai"), v.literal("compliance_keyword")),
+    ),
   },
   handler: async (
     ctx: ActionCtx,
-    args: MessageIdArgs,
+    args: SendStoredOutboundMessageArgs,
   ): Promise<SendStoredOutboundMessageResult> => {
     const context: OutboundMessageDeliveryContext | null = await ctx.runQuery(
       internal.conversations.webhooks.getOutboundMessageDeliveryContext,
       {
         messageId: args.messageId,
+        ...(args.deliveryPolicy ? { deliveryPolicy: args.deliveryPolicy } : {}),
       },
     );
 
@@ -1142,6 +1219,44 @@ export const sendStoredOutboundMessage = internalAction({
   },
 });
 
+async function sendSmsKeywordReply(
+  ctx: ActionCtx,
+  input: {
+    businessId: Id<"businesses">;
+    conversationId: Id<"conversations">;
+    fromPhoneNumber: string;
+    body: string;
+    idempotencyStatus: string;
+    idempotencyKeyId?: Id<"idempotency_keys">;
+  },
+): Promise<SendStoredOutboundMessageResult> {
+  const messageId: Id<"messages"> = await ctx.runMutation(
+    internal.conversations.webhooks.storeOutboundMessage,
+    {
+      businessId: input.businessId,
+      conversationId: input.conversationId,
+      channel: "sms",
+      fromPhoneNumber: input.fromPhoneNumber,
+      body: input.body,
+      aiGenerated: false,
+    },
+  );
+
+  if (input.idempotencyKeyId) {
+    await ctx.runMutation(internal.conversations.webhooks.linkIdempotencyKey, {
+      idempotencyKeyId: input.idempotencyKeyId,
+      resourceTable: "messages",
+      resourceId: String(messageId),
+      status: input.idempotencyStatus,
+    });
+  }
+
+  return await ctx.runAction(internal.conversations.webhooks.sendStoredOutboundMessage, {
+    messageId,
+    deliveryPolicy: "compliance_keyword",
+  });
+}
+
 export const handleTwilioSmsInbound = internalAction({
   args: {
     from: v.string(),
@@ -1190,6 +1305,9 @@ export const handleTwilioSmsInbound = internalAction({
             internal.conversations.webhooks.sendStoredOutboundMessage,
             {
               messageId: asMessageId(claim.existing.resourceId),
+              ...(isKeywordReplyIdempotencyStatus(claim.existing.status)
+                ? { deliveryPolicy: "compliance_keyword" as const }
+                : {}),
             },
           );
 
@@ -1259,6 +1377,28 @@ export const handleTwilioSmsInbound = internalAction({
         ...(normalizedMedia !== undefined ? { media: normalizedMedia } : {}),
       },
     );
+
+    const keywordReply = classifySmsKeywordReply({
+      body: args.body,
+      ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+    });
+
+    if (keywordReply && !replySuppressed) {
+      const sent = await sendSmsKeywordReply(ctx, {
+        businessId: phoneNumber.businessId,
+        conversationId,
+        fromPhoneNumber: phoneNumber.e164,
+        body: keywordReply.body,
+        idempotencyStatus: keywordReply.idempotencyStatus,
+        ...(idempotencyKeyId ? { idempotencyKeyId } : {}),
+      });
+
+      return {
+        businessId: phoneNumber.businessId,
+        conversationId,
+        reply: sent.reply,
+      };
+    }
 
     if (replySuppressed) {
       if (automationState === "human_handoff") {
