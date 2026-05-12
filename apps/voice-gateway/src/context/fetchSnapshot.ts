@@ -28,7 +28,7 @@ export async function fetchSnapshotForPhoneNumber(
     const payload = (await response.json()) as VoiceContextResponse;
     return payload.snapshot;
   } catch (error) {
-    if (env.DEPLOYMENT_MODE === "development") {
+    if (env.DEPLOYMENT_MODE === "development" && env.NODE_ENV !== "production") {
       console.warn("[voice-gateway] Falling back to demo snapshot.", error);
       return demoSnapshot;
     }

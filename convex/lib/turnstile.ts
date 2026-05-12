@@ -20,7 +20,7 @@ export async function verifyTurnstileForSignUp(
 ): Promise<void> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!secret) {
-    if (process.env.DEPLOYMENT_MODE === "development") {
+    if (process.env.DEPLOYMENT_MODE === "development" && process.env.NODE_ENV !== "production") {
       return;
     }
 

@@ -380,7 +380,7 @@ function isTransientDnsLookupError(error: unknown): boolean {
   );
 }
 
-async function assertWebsiteCrawlTargetIsPublic(websiteUrl: string): Promise<void> {
+export async function assertWebsiteCrawlTargetIsPublic(websiteUrl: string): Promise<void> {
   const parsed = new URL(websiteUrl);
   if (isDirectlyBlockedWebsiteHostname(parsed.hostname)) {
     throw new Error(WEBSITE_PUBLIC_URL_ERROR_MESSAGE);
@@ -405,7 +405,7 @@ async function assertWebsiteCrawlTargetIsPublic(websiteUrl: string): Promise<voi
       throw new Error("Enter a public website URL with a live hostname.");
     }
     if (isTransientDnsLookupError(error)) {
-      return;
+      throw new Error("Could not verify that the website URL resolves to a public hostname. Please retry.");
     }
     throw error;
   }

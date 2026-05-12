@@ -98,6 +98,14 @@ const voiceGatewayEnvSchema = z.object({
   POSTHOG_KEY: z.string().optional(),
   POSTHOG_HOST: z.string().url().optional(),
   POSTHOG_PRIVACY_MODE: booleanEnvSchema,
+}).superRefine((env, ctx) => {
+  if (env.NODE_ENV === "production" && env.DEPLOYMENT_MODE === "development") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "DEPLOYMENT_MODE=development is not allowed when NODE_ENV=production.",
+      path: ["DEPLOYMENT_MODE"],
+    });
+  }
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

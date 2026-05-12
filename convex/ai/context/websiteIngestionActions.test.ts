@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { lookup } from "node:dns/promises";
 
 import {
+  assertWebsiteCrawlTargetIsPublic,
   buildExistingWebsiteDocumentsBySourceUrl,
   isWebsiteDocumentInScope,
   resolveRunningWebsiteCrawlStatus,
@@ -8,8 +10,13 @@ import {
   startOrReuseFirecrawlScrapeJob,
 } from "./websiteIngestionActions";
 
+vi.mock("node:dns/promises", () => ({
+  lookup: vi.fn(),
+}));
+
 describe("websiteIngestionActions helpers", () => {
   afterEach(() => {
+    vi.clearAllMocks();
     vi.unstubAllEnvs();
   });
 
@@ -96,6 +103,16 @@ describe("websiteIngestionActions helpers", () => {
         fetchMock,
       ),
     ).rejects.toThrow("Failed to fetch Firecrawl markdown file (503 Service Unavailable).");
+  });
+
+  it("fails closed when DNS public-target verification has a transient error", async () => {
+    const error = new Error("temporary resolver failure") as NodeJS.ErrnoException;
+    error.code = "EAI_AGAIN";
+    vi.mocked(lookup).mockRejectedValueOnce(error);
+
+    await expect(assertWebsiteCrawlTargetIsPublic("https://example.com")).rejects.toThrow(
+      "Could not verify that the website URL resolves to a public hostname. Please retry.",
+    );
   });
 
   it("marks running crawls stalled when provider progress stops", () => {
