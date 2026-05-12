@@ -1830,7 +1830,7 @@ describe("Twilio SMS delivery flow", () => {
     });
   });
 
-  it("does not deliver appointment notifications to opted-out contacts", async () => {
+  it("skips appointment notifications to opted-out contacts without marking a failure", async () => {
     const t = createTestHarness();
 
     const notificationId = await t.run(async (ctx) => {
@@ -1902,7 +1902,7 @@ describe("Twilio SMS delivery flow", () => {
     await t.run(async (ctx) => {
       const notification = await ctx.db.get(notificationId);
       expect(notification).toMatchObject({
-        status: "failed",
+        status: "skipped",
         providerStatus: "skipped_opted_out",
       });
     });

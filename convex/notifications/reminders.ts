@@ -282,6 +282,28 @@ export const markNotificationSendFailed = internalMutation({
   },
 });
 
+export const markNotificationDeliverySkipped = internalMutation({
+  args: {
+    notificationId: v.id("notifications"),
+    providerUpdatedAt: v.string(),
+    providerStatus: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification) {
+      throw new Error("Notification not found.");
+    }
+
+    await ctx.db.patch(args.notificationId, {
+      status: "skipped",
+      providerStatus: args.providerStatus,
+      providerUpdatedAt: args.providerUpdatedAt,
+    });
+
+    return null;
+  },
+});
+
 export const markNotificationPending = internalMutation({
   args: {
     notificationId: v.id("notifications"),
@@ -478,7 +500,7 @@ export const deliverNotification = internalAction({
     }
 
     if ("deliveryBlockedReason" in deliveryContext) {
-      await ctx.runMutation(internal.notifications.reminders.markNotificationSendFailed, {
+      await ctx.runMutation(internal.notifications.reminders.markNotificationDeliverySkipped, {
         notificationId: args.notificationId,
         providerUpdatedAt: new Date().toISOString(),
         providerStatus: "skipped_opted_out",
