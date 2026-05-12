@@ -12,7 +12,7 @@ describe("Convex provider adapters", () => {
   });
 
   it("keeps the default Gemini model ids stable", async () => {
-    vi.stubEnv("GEMINI_TEXT_MODEL", "gemini-3.1-flash-lite-preview");
+    vi.stubEnv("GEMINI_TEXT_MODEL", "gemini-3.1-flash-lite");
     vi.stubEnv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001");
 
     const {
@@ -24,7 +24,7 @@ describe("Convex provider adapters", () => {
     const { getKnowledgeNamespace, KNOWLEDGE_INDEX_VERSION } = await import("../components");
 
     expect(DEFAULT_NON_REALTIME_TEXT_MODEL_ID).toBe(
-      "gemini-3.1-flash-lite-preview",
+      "gemini-3.1-flash-lite",
     );
     expect(DEFAULT_EMBEDDING_MODEL_ID).toBe("gemini-embedding-001");
     expect(getEmbeddingConfig()).toMatchObject({
