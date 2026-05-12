@@ -80,7 +80,7 @@ importers:
         specifier: ^0.47.0
         version: 0.47.0
       ai:
-        specifier: latest
+        specifier: ^6.0.116
         version: 6.0.116(zod@3.25.76)
       convex:
         specifier: ^1.37.0
