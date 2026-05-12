@@ -16,7 +16,7 @@ import { enqueuePostHogProviderExceptionBestEffort } from "../../telemetry/posth
 
 export const NON_REALTIME_TEXT_PROVIDER = "google";
 export const DEFAULT_NON_REALTIME_TEXT_MODEL_ID =
-  "gemini-3.1-flash-lite-preview";
+  "gemini-3.1-flash-lite";
 
 const AI_RECEPTIONIST_PROVIDER_OPTION_KEY = "aiReceptionistTelemetry";
 const CONVEX_AI_DISTINCT_ID = "system:convex:ai";
