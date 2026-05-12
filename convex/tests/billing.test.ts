@@ -1,7 +1,20 @@
 import { convexTest, type TestConvex } from "convex-test";
+import { register as registerPolarComponent } from "@convex-dev/polar/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { polarEventsIngestMock } = vi.hoisted(() => ({
+const {
+  polarCheckoutsCreateMock,
+  polarCustomerSessionsCreateMock,
+  polarCustomersCreateMock,
+  polarCustomersListMock,
+  polarCustomersUpdateMock,
+  polarEventsIngestMock,
+} = vi.hoisted(() => ({
+  polarCheckoutsCreateMock: vi.fn(),
+  polarCustomerSessionsCreateMock: vi.fn(),
+  polarCustomersCreateMock: vi.fn(),
+  polarCustomersListMock: vi.fn(),
+  polarCustomersUpdateMock: vi.fn(),
   polarEventsIngestMock: vi.fn(),
 }));
 
@@ -17,13 +30,15 @@ vi.mock("@polar-sh/sdk", () => ({
   Polar: vi.fn(function MockPolar() {
     return {
       checkouts: {
-        create: vi.fn(),
+        create: polarCheckoutsCreateMock,
       },
       customerSessions: {
-        create: vi.fn(),
+        create: polarCustomerSessionsCreateMock,
       },
       customers: {
-        create: vi.fn(),
+        create: polarCustomersCreateMock,
+        list: polarCustomersListMock,
+        update: polarCustomersUpdateMock,
       },
       events: {
         ingest: polarEventsIngestMock,
@@ -2185,6 +2200,101 @@ describe("billing", () => {
         }),
       }),
     );
+  });
+
+  it("reuses an existing Polar customer when checkout email already exists", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-existing",
+      deploymentMode: "cloud",
+    });
+    const billingKey = getBillingKey(businessId);
+    const duplicateEmailError = Object.assign(
+      new Error("A customer with this email address already exists."),
+      {
+        detail: [
+          {
+            loc: ["body", "email"],
+            msg: "A customer with this email address already exists.",
+            type: "value_error",
+            input: "billing-existing@example.com",
+          },
+        ],
+      },
+    );
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.SITE_URL = "https://app.example.com";
+
+    polarCustomersCreateMock.mockRejectedValueOnce(duplicateEmailError);
+    polarCustomersListMock.mockResolvedValueOnce({
+      result: {
+        items: [
+          {
+            id: "cus_existing",
+            externalId: null,
+            email: "billing-existing@example.com",
+            type: "team",
+            name: "Existing Customer",
+          },
+        ],
+      },
+    });
+    polarCustomersUpdateMock.mockResolvedValueOnce({
+      id: "cus_existing",
+      externalId: billingKey,
+      email: "billing-existing@example.com",
+      type: "team",
+      name: "Billing Owner",
+    });
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_existing",
+      url: "https://polar.sh/checkout/existing",
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+    });
+
+    expect(result.url).toBe("https://polar.sh/checkout/existing");
+    expect(polarCustomersListMock).toHaveBeenCalledWith({
+      email: "billing-existing@example.com",
+      limit: 1,
+    });
+    expect(polarCustomersUpdateMock).toHaveBeenCalledWith({
+      id: "cus_existing",
+      customerUpdate: {
+        externalId: billingKey,
+        type: "team",
+        name: "Billing Owner",
+      },
+    });
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: "cus_existing",
+        products: ["prod_pro"],
+        successUrl: "https://app.example.com/settings/plan?checkout=success",
+        returnUrl: "https://app.example.com/settings/plan",
+        embedOrigin: "https://app.example.com",
+        metadata: expect.objectContaining({
+          billingKey,
+          businessId: String(businessId),
+          checkoutTarget: "pro",
+        }),
+      }),
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.polarCustomerId).toBe("cus_existing");
+    expect(account?.polarCustomerExternalId).toBe(billingKey);
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {

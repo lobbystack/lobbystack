@@ -108,6 +108,9 @@ type CheckoutContext = {
   polarCustomerExternalId: string | null;
 };
 
+type PolarClient = ReturnType<typeof createPolarClient>;
+type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
+
 type UsageSyncPayload = {
   businessId: Id<"businesses">;
   billingKey: string;
@@ -251,6 +254,34 @@ function parseBusinessIdFromBillingKey(
   }
 
   return billingKey.slice("business:".length) as Id<"businesses">;
+}
+
+function getMetadataString(
+  metadata: Record<string, string | number | boolean>,
+  key: string,
+): string | null {
+  const value = metadata[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function resolvePolarBillingKey(input: {
+  customerExternalId?: string | null;
+  metadata: Record<string, string | number | boolean>;
+}): string | null {
+  const customerBillingKey = parseBusinessIdFromBillingKey(input.customerExternalId)
+    ? input.customerExternalId
+    : null;
+  if (customerBillingKey) {
+    return customerBillingKey;
+  }
+
+  const metadataBillingKey = getMetadataString(input.metadata, "billingKey");
+  if (parseBusinessIdFromBillingKey(metadataBillingKey)) {
+    return metadataBillingKey;
+  }
+
+  const metadataBusinessId = getMetadataString(input.metadata, "businessId");
+  return metadataBusinessId ? getBillingKey(metadataBusinessId as Id<"businesses">) : null;
 }
 
 function getUsageQuantityField(
@@ -660,6 +691,85 @@ function getTargetProductIds(target: CheckoutTarget): Array<string> {
   return [addonProducts.recurringProductId, addonProducts.setupFeeProductId];
 }
 
+function isDuplicatePolarCustomerEmailError(error: unknown): boolean {
+  const detail = (error as { detail?: unknown }).detail;
+  if (Array.isArray(detail)) {
+    return detail.some((item) => {
+      if (!item || typeof item !== "object") {
+        return false;
+      }
+      const loc = (item as { loc?: unknown }).loc;
+      const msg = (item as { msg?: unknown }).msg;
+      return (
+        Array.isArray(loc) &&
+        loc.includes("email") &&
+        typeof msg === "string" &&
+        msg.includes("already exists")
+      );
+    });
+  }
+
+  return getErrorMessage(error).includes("A customer with this email address already exists.");
+}
+
+function getPolarCustomerExternalId(customer: PolarCustomer): string | null {
+  const externalId = customer.externalId?.trim();
+  return externalId && externalId.length > 0 ? externalId : null;
+}
+
+async function findPolarCustomerByEmail(
+  client: PolarClient,
+  email: string,
+): Promise<PolarCustomer | null> {
+  const customers = await client.customers.list({
+    email,
+    limit: 1,
+  });
+
+  return customers.result.items[0] ?? null;
+}
+
+async function recoverExistingPolarCustomer(
+  client: PolarClient,
+  args: {
+    billingKey: string;
+    billingContactEmail: string;
+    billingContactName: string | null;
+  },
+): Promise<PolarCustomer | null> {
+  const existingCustomer = await findPolarCustomerByEmail(
+    client,
+    args.billingContactEmail,
+  );
+  if (!existingCustomer) {
+    return null;
+  }
+
+  const externalId = getPolarCustomerExternalId(existingCustomer);
+  if (externalId === args.billingKey) {
+    return existingCustomer;
+  }
+  if (externalId) {
+    return existingCustomer;
+  }
+
+  try {
+    return await client.customers.update({
+      id: existingCustomer.id,
+      customerUpdate: {
+        externalId: args.billingKey,
+        type: "team",
+        ...(args.billingContactName ? { name: args.billingContactName } : {}),
+      },
+    });
+  } catch (error) {
+    console.warn("Failed to attach billing key to existing Polar customer.", {
+      error: getErrorMessage(error),
+    });
+    return existingCustomer;
+  }
+}
+
 async function ensurePolarCustomer(
   ctx: ActionCtx,
   args: {
@@ -681,20 +791,39 @@ async function ensurePolarCustomer(
     throw new Error("A billing contact email is required before starting checkout.");
   }
 
-  const customer = await createPolarClient().customers.create({
-    type: "team",
-    externalId: args.checkoutContext.billingKey,
-    email: args.checkoutContext.billingContactEmail,
-    ...(args.checkoutContext.billingContactName
-      ? { name: args.checkoutContext.billingContactName }
-      : {}),
-  });
+  const client = createPolarClient();
+  let customer: PolarCustomer;
+  try {
+    customer = await client.customers.create({
+      type: "team",
+      externalId: args.checkoutContext.billingKey,
+      email: args.checkoutContext.billingContactEmail,
+      ...(args.checkoutContext.billingContactName
+        ? { name: args.checkoutContext.billingContactName }
+        : {}),
+    });
+  } catch (error) {
+    if (!isDuplicatePolarCustomerEmailError(error)) {
+      throw error;
+    }
+
+    const existingCustomer = await recoverExistingPolarCustomer(client, {
+      billingKey: args.checkoutContext.billingKey,
+      billingContactEmail: args.checkoutContext.billingContactEmail,
+      billingContactName: args.checkoutContext.billingContactName,
+    });
+    if (!existingCustomer) {
+      throw error;
+    }
+    customer = existingCustomer;
+  }
 
   await ctx.runMutation(internal.billing.ensureBillingAccountCustomerLink, {
     businessId: args.businessId,
     billingKey: args.checkoutContext.billingKey,
     polarCustomerId: customer.id,
-    polarCustomerExternalId: args.checkoutContext.billingKey,
+    polarCustomerExternalId:
+      getPolarCustomerExternalId(customer) ?? args.checkoutContext.billingKey,
     ...(args.checkoutContext.billingContactEmail
       ? { billingContactEmail: args.checkoutContext.billingContactEmail }
       : {}),
@@ -718,7 +847,7 @@ async function ensurePolarCustomer(
 
   return {
     id: customer.id,
-    externalId: args.checkoutContext.billingKey,
+    externalId: getPolarCustomerExternalId(customer) ?? args.checkoutContext.billingKey,
   };
 }
 
@@ -804,7 +933,10 @@ async function syncSubscriptionFromWebhookEvent(
     }
   >,
 ): Promise<void> {
-  const billingKey = event.data.customer.externalId ?? null;
+  const billingKey = resolvePolarBillingKey({
+    customerExternalId: event.data.customer.externalId ?? null,
+    metadata: event.data.metadata,
+  });
   const businessId = parseBusinessIdFromBillingKey(billingKey);
   if (!businessId || !billingKey) {
     return;
@@ -1217,7 +1349,7 @@ export const startCheckout = action({
     });
     const siteUrl = getBillingSiteUrl();
     const checkout = await createPolarClient().checkouts.create({
-      externalCustomerId: customer.externalId,
+      customerId: customer.id,
       ...(checkoutContext.billingContactEmail
         ? { customerEmail: checkoutContext.billingContactEmail }
         : {}),
@@ -1266,7 +1398,7 @@ export const openPortal = action({
     });
     const siteUrl = getBillingSiteUrl();
     const session = await createPolarClient().customerSessions.create({
-      externalCustomerId: customer.externalId,
+      customerId: customer.id,
       returnUrl: new URL("/settings/plan", siteUrl).toString(),
     });
 
