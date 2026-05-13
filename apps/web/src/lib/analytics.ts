@@ -88,12 +88,7 @@ export function initializeAnalytics(): void {
   });
 
   if (!posthog.sessionRecordingStarted()) {
-    posthog.startSessionRecording({
-      sampling: true,
-      linked_flag: true,
-      url_trigger: true,
-      event_trigger: true,
-    });
+    posthog.startSessionRecording();
   }
 }
 
