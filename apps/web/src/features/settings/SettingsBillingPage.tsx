@@ -1160,6 +1160,12 @@ function AddonsSection({
     billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
     locale,
   );
+  const currentMonthlyPrice = formatCents(status.monthlyChargeCents ?? 0, locale);
+  const upgradedMonthlyPrice = formatCents(
+    (status.monthlyChargeCents ?? 0) +
+      billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
+    locale,
+  );
   const isFreePlanLocked =
     status.plan === "free_cloud" &&
     !isOperational &&
@@ -1328,6 +1334,19 @@ function AddonsSection({
                 <span>{t("billing.currentPlan.monthlySuffix")}</span>
               </span>
             </div>
+            {!status.aiSmsEnabled && status.plan === "pro" && (
+              <div className="flex items-center justify-between border-b border-border/60 py-3.5 text-[15px]">
+                <span className="text-muted-foreground">
+                  {t("billing.addon.subscriptionAfterSetup")}
+                </span>
+                <span className="font-medium text-foreground">
+                  {t("billing.addon.subscriptionAfterSetupValue", {
+                    currentAmount: currentMonthlyPrice,
+                    upgradedAmount: upgradedMonthlyPrice,
+                  })}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between py-3.5 text-[15px]">
               <span className="text-muted-foreground">{t("billing.addon.messagingRate")}</span>
               <span className="font-medium text-foreground">

@@ -149,6 +149,8 @@
       "carrierSetupFees": "Carrier review & setup fees",
       "oneTimeFeeValue": "{{amount}} one-time",
       "monthlyFee": "Monthly subscription fee",
+      "subscriptionAfterSetup": "Subscription after setup",
+      "subscriptionAfterSetupValue": "{{currentAmount}} → {{upgradedAmount}} / month",
       "messagingRate": "Messaging rate",
       "perSegmentFeeValue": "{{amount}}/segment"
     },
