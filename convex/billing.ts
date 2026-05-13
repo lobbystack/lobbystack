@@ -809,23 +809,52 @@ function getPolarSubscriptionPriceId(subscription: PolarBillingSubscription): st
   return subscription.prices[0]?.id;
 }
 
+function getCheckoutTargetFromMetadata(
+  metadata: Record<string, string | number | boolean> | undefined,
+): CheckoutTarget | null {
+  return metadata?.checkoutTarget === "pro" || metadata?.checkoutTarget === "ai_sms"
+    ? metadata.checkoutTarget
+    : null;
+}
+
+function getPolarProductIdForCheckoutTarget(target: CheckoutTarget | null): string | undefined {
+  if (target === "ai_sms") {
+    return process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+  }
+  return process.env.POLAR_PRO_PRODUCT_ID?.trim();
+}
+
 function selectMatchingPolarSubscription(
   subscriptions: Array<PolarBillingSubscription>,
   input: {
-    proProductId: string | undefined;
+    expectedProductId: string | undefined;
     expectedCustomerId: string | null;
+    expectedCheckoutId: string | null;
   },
 ): PolarBillingSubscription | null {
-  const scopedSubscriptions = input.expectedCustomerId
+  const checkoutScopedSubscriptions = input.expectedCheckoutId
+    ? subscriptions.filter((subscription) => subscription.checkoutId === input.expectedCheckoutId)
+    : [];
+  const customerScopedSubscriptions = input.expectedCustomerId
     ? subscriptions.filter((subscription) => subscription.customerId === input.expectedCustomerId)
-    : subscriptions;
-  return (
-    scopedSubscriptions.find(
-      (subscription) => subscription.productId === input.proProductId,
-    ) ??
-    scopedSubscriptions[0] ??
-    null
+    : [];
+  const hasExpectedScope = Boolean(input.expectedCheckoutId || input.expectedCustomerId);
+  const scopedSubscriptions =
+    checkoutScopedSubscriptions.length > 0 || customerScopedSubscriptions.length > 0
+      ? [...checkoutScopedSubscriptions, ...customerScopedSubscriptions].filter(
+          (subscription, index, all) =>
+            all.findIndex((candidate) => candidate.id === subscription.id) === index,
+        )
+      : hasExpectedScope
+        ? []
+      : subscriptions;
+  const productMatch = scopedSubscriptions.find(
+    (subscription) => subscription.productId === input.expectedProductId,
   );
+  if (input.expectedProductId) {
+    return productMatch ?? null;
+  }
+  return scopedSubscriptions[0] ?? null;
 }
 
 async function findPolarSubscriptionForCheckoutSuccess(
@@ -853,26 +882,28 @@ async function findPolarSubscriptionForCheckoutSuccess(
     }
   }
 
-  const proProductId = process.env.POLAR_PRO_PRODUCT_ID?.trim();
+  const checkoutTarget = getCheckoutTargetFromMetadata(checkout?.metadata);
+  const expectedProductId = getPolarProductIdForCheckoutTarget(checkoutTarget);
   const expectedCustomerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
+  const expectedCheckoutId = checkout?.id ?? checkoutContext.checkoutId;
   if (customerSessionToken) {
+    if (!expectedCustomerId && !expectedCheckoutId) {
+      return null;
+    }
     const subscriptions = await client.customerPortal.subscriptions.list(
       { customerSession: customerSessionToken },
       {
         active: true,
-        ...(proProductId ? { productId: proProductId } : {}),
+        ...(expectedProductId ? { productId: expectedProductId } : {}),
         limit: 10,
       },
     );
-    let firstSubscription: PolarBillingSubscription | null = null;
     for await (const page of subscriptions) {
       const pageSubscriptions = page.result.items;
-      if (!expectedCustomerId) {
-        firstSubscription ??= pageSubscriptions[0] ?? null;
-      }
       const matchingSubscription = selectMatchingPolarSubscription(pageSubscriptions, {
-        proProductId,
+        expectedProductId,
         expectedCustomerId,
+        expectedCheckoutId,
       });
       if (matchingSubscription) {
         return {
@@ -883,16 +914,7 @@ async function findPolarSubscriptionForCheckoutSuccess(
       }
     }
 
-    if (expectedCustomerId) {
-      return null;
-    }
-
-    return firstSubscription
-      ? {
-          subscription: firstSubscription,
-          checkoutId: firstSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
-        }
-      : null;
+    return null;
   }
 
   const customerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
@@ -910,8 +932,9 @@ async function findPolarSubscriptionForCheckoutSuccess(
     const pageSubscriptions = page.result.items;
     firstSubscription ??= pageSubscriptions[0] ?? null;
     const matchingSubscription = selectMatchingPolarSubscription(pageSubscriptions, {
-      proProductId,
+      expectedProductId,
       expectedCustomerId: customerId,
+      expectedCheckoutId,
     });
     if (matchingSubscription) {
       return {
@@ -919,6 +942,10 @@ async function findPolarSubscriptionForCheckoutSuccess(
         checkoutId: matchingSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
       };
     }
+  }
+
+  if (expectedProductId) {
+    return null;
   }
 
   return firstSubscription

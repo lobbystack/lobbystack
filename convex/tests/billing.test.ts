@@ -2461,6 +2461,131 @@ describe("billing", () => {
     expect(account?.proSubscriptionId).toBeUndefined();
   });
 
+  it("does not sync an unscoped customer-session token into a fresh workspace", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-unscoped-session-token",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_unscoped",
+    });
+
+    expect(result).toEqual({
+      synced: false,
+      subscriptionId: null,
+    });
+    expect(polarCustomerPortalSubscriptionsListMock).not.toHaveBeenCalled();
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account).toBeNull();
+  });
+
+  it("uses checkout target metadata when reconciling AI SMS customer-session subscriptions", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-session-token",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_expected",
+      });
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account.");
+      }
+      await ctx.db.patch(account._id, {
+        checkoutId: "checkout_ai_sms",
+      });
+    });
+
+    polarCheckoutsGetMock.mockResolvedValueOnce({
+      id: "checkout_ai_sms",
+      customerId: "cus_expected",
+      subscriptionId: null,
+      metadata: {
+        checkoutTarget: "ai_sms",
+        businessId: String(businessId),
+        billingKey: getBillingKey(businessId),
+      },
+    });
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_ai_sms",
+            customerId: "cus_expected",
+            productId: "prod_ai_sms",
+            prices: [{ id: "price_ai_sms" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_ai_sms",
+            customer: {
+              externalId: getBillingKey(businessId),
+              email: "billing-ai-sms-session-token@example.com",
+              name: "Billing Owner",
+            },
+            metadata: {},
+          },
+        ],
+      ]),
+    );
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_ai_sms",
+    });
+
+    expect(result).toEqual({
+      synced: true,
+      subscriptionId: "sub_ai_sms",
+    });
+    expect(polarCustomerPortalSubscriptionsListMock).toHaveBeenCalledWith(
+      { customerSession: "polar_cst_ai_sms" },
+      {
+        active: true,
+        productId: "prod_ai_sms",
+        limit: 10,
+      },
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.aiSmsSubscriptionId).toBe("sub_ai_sms");
+    expect(account?.proSubscriptionId).toBeUndefined();
+  });
+
   it("requires admin access for billing checkout and portal actions", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {
