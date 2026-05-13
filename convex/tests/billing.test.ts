@@ -2850,8 +2850,76 @@ describe("billing", () => {
       id: "sub_pro",
       subscriptionUpdate: {
         productId: "prod_pro_ai_sms",
+        prorationBehavior: "prorate",
       },
     });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_pro");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_ai_sms");
+    expect(account?.aiSmsSubscriptionId).toBeUndefined();
+  });
+
+  it("syncs the AI SMS upgrade when the Polar SDK rejects a successful update response", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-setup-response-validation",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_pro",
+        proSubscriptionProductId: "prod_pro",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockRejectedValueOnce({
+      name: "ResponseValidationError",
+      message: "Response validation failed",
+      statusCode: 200,
+      pretty: () => "Response validation failed",
+      rawValue: {
+        id: "sub_pro",
+        customer_id: "cus_expected",
+        product_id: "prod_pro_ai_sms",
+        prices: [{ id: "price_pro_ai_sms" }],
+        status: "active",
+        current_period_start: "2026-04-15T00:00:00.000Z",
+        current_period_end: "2026-05-15T00:00:00.000Z",
+        cancel_at_period_end: false,
+        checkout_id: null,
+        customer: {
+          external_id: getBillingKey(businessId),
+          email: "billing-ai-sms-setup-response-validation@example.com",
+          name: "Billing Owner",
+        },
+        metadata: {},
+      },
+    });
+
+    const upgraded = await t.action(
+      internal.billing.upgradeAiSmsSubscriptionAfterSetupPayment,
+      { businessId },
+    );
+
+    expect(upgraded).toBe(true);
 
     const account = await t.run(async (ctx: TestContext) => {
       return await ctx.db
