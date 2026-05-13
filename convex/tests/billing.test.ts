@@ -449,7 +449,6 @@ describe("billing", () => {
   it("enables the AI SMS add-on only for eligible Pro workspaces", async () => {
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
     process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
-    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
     process.env.SITE_URL = "https://example.com";
 
     const t = convexTest(schema, convexModules);
@@ -2330,6 +2329,52 @@ describe("billing", () => {
         businessId,
       }),
     ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
+  });
+
+  it("starts AI SMS checkout with one bundled Polar product", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-checkout-bundle",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_ai_sms",
+      });
+    });
+
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_ai_sms",
+      url: "https://polar.sh/checkout/ai-sms",
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "ai_sms",
+    });
+
+    expect(result.url).toBe("https://polar.sh/checkout/ai-sms");
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: "cus_ai_sms",
+        products: ["prod_ai_sms"],
+        successUrl:
+          "https://app.example.com/settings/plan?checkout=success&checkout_target=ai_sms",
+        returnUrl: "https://app.example.com/settings/plan",
+        embedOrigin: "https://app.example.com",
+        metadata: expect.objectContaining({
+          businessId: String(businessId),
+          checkoutTarget: "ai_sms",
+        }),
+      }),
+    );
   });
 
   it("rejects duplicate-email Polar customers linked to another billing key", async () => {

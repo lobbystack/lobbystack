@@ -17,11 +17,16 @@ Create these Polar products:
   - recurring monthly product
   - mapped to `POLAR_PRO_PRODUCT_ID`
 - `AI SMS add-on`
-  - recurring monthly product
-  - mapped to `POLAR_AI_SMS_ADDON_PRODUCT_ID`
-- `AI SMS setup`
-  - one-time product
-  - mapped to `POLAR_AI_SMS_SETUP_PRODUCT_ID`
+  - single checkout product mapped to `POLAR_AI_SMS_ADDON_PRODUCT_ID`
+  - include the `$5/month` recurring price on this product
+  - include the `$0.03` metered unit price for AI SMS segments on this product
+
+Do not model the `$19` AI SMS setup fee as metered usage. Polar renders every
+metered price under "Additional metered usage", which makes a setup fee look
+usage-based. Polar recurring products support one static price plus metered
+prices, and one-time products do not support metered prices, so a true one-time
+setup fee cannot currently be displayed as a clean line item inside the same
+hosted Polar checkout product.
 
 The current hosted pricing model is:
 
@@ -40,7 +45,7 @@ The current hosted pricing model is:
   - overages after the included pool is consumed
 - `AI SMS add-on`
   - `$5/month`
-  - `$19` one-time setup
+  - `$19` one-time setup, pending a Polar-compatible collection flow
   - `$0.03` per AI SMS segment
 
 ## Metered events
@@ -66,8 +71,11 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_WEBHOOK_SECRET`
 - `POLAR_PRO_PRODUCT_ID`
 - `POLAR_AI_SMS_ADDON_PRODUCT_ID`
-- `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 - `SITE_URL`
+
+`POLAR_AI_SMS_SETUP_PRODUCT_ID` is optional and only exists to recognize legacy
+orders from the older two-product setup flow. New AI SMS checkout sessions use
+only `POLAR_AI_SMS_ADDON_PRODUCT_ID`.
 
 For hosted Alert SMS, also configure:
 

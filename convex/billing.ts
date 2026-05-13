@@ -47,8 +47,8 @@ import {
   canPurchaseAiSmsAddon,
   deriveActiveAddonsFromProductIds,
   deriveCloudPlanFromProductIds,
+  getAiSmsAddonProductId,
   getAiSmsAddonPricing,
-  getAiSmsAddonProductIds,
   getBillingAccount,
   getBillingKey,
   getBillingSnapshot,
@@ -726,8 +726,7 @@ function getTargetProductIds(target: CheckoutTarget): Array<string> {
     return [getProProductId()];
   }
 
-  const addonProducts = getAiSmsAddonProductIds();
-  return [addonProducts.recurringProductId, addonProducts.setupFeeProductId];
+  return [getAiSmsAddonProductId()];
 }
 
 function isDuplicatePolarCustomerEmailError(error: unknown): boolean {
@@ -1662,7 +1661,6 @@ export const refreshCheckoutStatus = action({
       lastWebhookEventType: "checkout.success.reconcile",
       lastSyncedAt: new Date().toISOString(),
     });
-
     return {
       synced: true,
       subscriptionId: subscription.id,
