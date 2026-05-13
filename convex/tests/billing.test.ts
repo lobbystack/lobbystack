@@ -1,8 +1,29 @@
 import { convexTest, type TestConvex } from "convex-test";
+import { register as registerPolarComponent } from "@convex-dev/polar/test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { polarEventsIngestMock } = vi.hoisted(() => ({
+const {
+  polarCheckoutsCreateMock,
+  polarCheckoutsGetMock,
+  polarCustomerSessionsCreateMock,
+  polarCustomerPortalSubscriptionsListMock,
+  polarCustomersCreateMock,
+  polarCustomersListMock,
+  polarCustomersUpdateMock,
+  polarEventsIngestMock,
+  polarSubscriptionsGetMock,
+  polarSubscriptionsListMock,
+} = vi.hoisted(() => ({
+  polarCheckoutsCreateMock: vi.fn(),
+  polarCheckoutsGetMock: vi.fn(),
+  polarCustomerSessionsCreateMock: vi.fn(),
+  polarCustomerPortalSubscriptionsListMock: vi.fn(),
+  polarCustomersCreateMock: vi.fn(),
+  polarCustomersListMock: vi.fn(),
+  polarCustomersUpdateMock: vi.fn(),
   polarEventsIngestMock: vi.fn(),
+  polarSubscriptionsGetMock: vi.fn(),
+  polarSubscriptionsListMock: vi.fn(),
 }));
 
 const {
@@ -17,19 +38,31 @@ vi.mock("@polar-sh/sdk", () => ({
   Polar: vi.fn(function MockPolar() {
     return {
       checkouts: {
-        create: vi.fn(),
+        create: polarCheckoutsCreateMock,
+        get: polarCheckoutsGetMock,
       },
       customerSessions: {
-        create: vi.fn(),
+        create: polarCustomerSessionsCreateMock,
+      },
+      customerPortal: {
+        subscriptions: {
+          list: polarCustomerPortalSubscriptionsListMock,
+        },
       },
       customers: {
-        create: vi.fn(),
+        create: polarCustomersCreateMock,
+        list: polarCustomersListMock,
+        update: polarCustomersUpdateMock,
       },
       events: {
         ingest: polarEventsIngestMock,
       },
       orders: {
         invoice: vi.fn(),
+      },
+      subscriptions: {
+        get: polarSubscriptionsGetMock,
+        list: polarSubscriptionsListMock,
       },
     };
   }),
@@ -63,6 +96,14 @@ const originalSiteUrl = process.env.SITE_URL;
 type ConvexHarness = TestConvex<typeof schema>;
 type TestRunFunction = Parameters<ConvexHarness["run"]>[0];
 type TestContext = Parameters<TestRunFunction>[0];
+
+async function* polarListPages<T>(
+  pages: Array<Array<T>>,
+): AsyncGenerator<{ result: { items: Array<T> } }> {
+  for (const items of pages) {
+    yield { result: { items } };
+  }
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -882,6 +923,63 @@ describe("billing", () => {
       contact: null,
       call: null,
     });
+  });
+
+  it("allows a duplicate active voice start after the initial free cloud reservation", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-free-voice-start-idempotent",
+      deploymentMode: "cloud",
+    });
+
+    const initialStart = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-free-cloud-active-duplicate",
+      from: "+14165550123",
+      to: "+14165550999",
+      startedAt: "2026-04-12T14:00:00.000Z",
+    });
+    const duplicateStart = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-free-cloud-active-duplicate",
+      gatewaySessionId: "gateway-session-after-reservation",
+      from: "+14165550123",
+      to: "+14165550999",
+      startedAt: "2026-04-12T14:00:01.000Z",
+    });
+
+    const persistedState = await t.run(async (ctx: TestContext) => {
+      const call = await ctx.db.get(initialStart.callId);
+      const usageMonth = await ctx.db
+        .query("billing_usage_months")
+        .withIndex("by_business_id_and_period_key", (q) =>
+          q.eq("businessId", businessId).eq("periodKey", "2026-04"),
+        )
+        .unique();
+      const usageEvents = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", businessId).eq("sourceKey", `voice:${String(initialStart.callId)}`),
+        )
+        .collect();
+      return { call, usageMonth, usageEvents };
+    });
+
+    expect(duplicateStart).toEqual({
+      callId: initialStart.callId,
+      conversationId: initialStart.conversationId,
+      blocked: false,
+      contactId: initialStart.contactId,
+    });
+    expect(persistedState.call).toMatchObject({
+      status: "in_progress",
+      gatewaySessionId: "gateway-session-after-reservation",
+    });
+    expect(persistedState.usageMonth).toMatchObject({
+      voiceSecondsUsed: 600,
+      voiceBlocked: true,
+    });
+    expect(persistedState.usageEvents).toHaveLength(1);
   });
 
   it("treats duplicate voice start reservations for the same call as idempotent", async () => {
@@ -2128,6 +2226,547 @@ describe("billing", () => {
         }),
       }),
     );
+  });
+
+  it("reuses an existing Polar customer when checkout email already exists", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-existing",
+      deploymentMode: "cloud",
+    });
+    const billingKey = getBillingKey(businessId);
+    const duplicateEmailError = Object.assign(
+      new Error("A customer with this email address already exists."),
+      {
+        detail: [
+          {
+            loc: ["body", "email"],
+            msg: "A customer with this email address already exists.",
+            type: "value_error",
+            input: "billing-existing@example.com",
+          },
+        ],
+      },
+    );
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.SITE_URL = "https://app.example.com";
+
+    polarCustomersCreateMock.mockRejectedValueOnce(duplicateEmailError);
+    polarCustomersListMock.mockResolvedValueOnce({
+      result: {
+        items: [
+          {
+            id: "cus_existing",
+            externalId: null,
+            email: "billing-existing@example.com",
+            type: "team",
+            name: "Existing Customer",
+          },
+        ],
+      },
+    });
+    polarCustomersUpdateMock.mockResolvedValueOnce({
+      id: "cus_existing",
+      externalId: billingKey,
+      email: "billing-existing@example.com",
+      type: "team",
+      name: "Billing Owner",
+    });
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_existing",
+      url: "https://polar.sh/checkout/existing",
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+    });
+
+    expect(result.url).toBe("https://polar.sh/checkout/existing");
+    expect(polarCustomersListMock).toHaveBeenCalledWith({
+      email: "billing-existing@example.com",
+      limit: 1,
+    });
+    expect(polarCustomersUpdateMock).toHaveBeenCalledWith({
+      id: "cus_existing",
+      customerUpdate: {
+        externalId: billingKey,
+        type: "team",
+        name: "Billing Owner",
+      },
+    });
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: "cus_existing",
+        products: ["prod_pro"],
+        successUrl:
+          "https://app.example.com/settings/plan?checkout=success&checkout_target=pro",
+        returnUrl: "https://app.example.com/settings/plan",
+        embedOrigin: "https://app.example.com",
+        metadata: expect.objectContaining({
+          billingKey,
+          businessId: String(businessId),
+          checkoutTarget: "pro",
+        }),
+      }),
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.polarCustomerId).toBe("cus_existing");
+    expect(account?.polarCustomerExternalId).toBe(billingKey);
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.hasCustomerPortalAccess).toBe(false);
+    await expect(
+      authed.action(api.billing.openPortal, {
+        businessId,
+      }),
+    ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
+  });
+
+  it("rejects duplicate-email Polar customers linked to another billing key", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-customer-linked-elsewhere",
+      deploymentMode: "cloud",
+    });
+    const staleBillingKey = "business:stale_business";
+    const duplicateEmailError = Object.assign(
+      new Error("A customer with this email address already exists."),
+      {
+        detail: [
+          {
+            loc: ["body", "email"],
+            msg: "A customer with this email address already exists.",
+            type: "value_error",
+            input: "billing-customer-linked-elsewhere@example.com",
+          },
+        ],
+      },
+    );
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.SITE_URL = "https://app.example.com";
+
+    polarCustomersCreateMock.mockRejectedValueOnce(duplicateEmailError);
+    polarCustomersListMock.mockResolvedValueOnce({
+      result: {
+        items: [
+          {
+            id: "cus_existing",
+            externalId: staleBillingKey,
+            email: "billing-customer-linked-elsewhere@example.com",
+            type: "team",
+            name: "Existing Customer",
+          },
+        ],
+      },
+    });
+
+    await expect(
+      authed.action(api.billing.startCheckout, {
+        businessId,
+        target: "pro",
+      }),
+    ).rejects.toThrow("A customer with this email address already exists.");
+    expect(polarCustomersUpdateMock).not.toHaveBeenCalled();
+    expect(polarCheckoutsCreateMock).not.toHaveBeenCalled();
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account).toBeNull();
+  });
+
+  it("does not sync customer-session subscriptions for a different Polar customer", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-session-token-mismatch",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_expected",
+      });
+    });
+
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_other",
+            customerId: "cus_other",
+            productId: "prod_pro",
+            prices: [{ id: "price_pro" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_other",
+            customer: {
+              externalId: "business:other_business",
+              email: "other@example.com",
+              name: "Other Customer",
+            },
+            metadata: {},
+          },
+        ],
+      ]),
+    );
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_wrong_customer",
+    });
+
+    expect(result).toEqual({
+      synced: false,
+      subscriptionId: null,
+    });
+    expect(polarCustomerPortalSubscriptionsListMock).toHaveBeenCalledWith(
+      { customerSession: "polar_cst_wrong_customer" },
+      {
+        active: true,
+        productId: "prod_pro",
+        limit: 10,
+      },
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("free_cloud");
+    expect(account?.proSubscriptionId).toBeUndefined();
+  });
+
+  it("prefers Polar customer external ID over stale subscription metadata", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-stale-subscription-metadata",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_expected",
+      });
+    });
+
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_stale_metadata",
+            customerId: "cus_expected",
+            productId: "prod_pro",
+            prices: [{ id: "price_pro" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_stale_metadata",
+            customer: {
+              externalId: "business:canonical_customer_business",
+              email: "canonical@example.com",
+              name: "Canonical Customer",
+            },
+            metadata: {
+              billingKey: getBillingKey(businessId),
+              businessId: String(businessId),
+            },
+          },
+        ],
+      ]),
+    );
+
+    await expect(
+      authed.action(api.billing.refreshCheckoutStatus, {
+        businessId,
+        customerSessionToken: "polar_cst_stale_metadata",
+      }),
+    ).rejects.toThrow("Polar subscription belongs to a different business.");
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("free_cloud");
+    expect(account?.proSubscriptionId).toBeUndefined();
+  });
+
+  it("uses customer-session subscriptions instead of stale checkout subscription ids", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-stale-checkout-return",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_expected",
+      });
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account.");
+      }
+      await ctx.db.patch(account._id, {
+        checkoutId: "checkout_old",
+      });
+    });
+
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_new",
+            customerId: "cus_expected",
+            productId: "prod_pro",
+            prices: [{ id: "price_pro" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_new",
+            customer: {
+              externalId: getBillingKey(businessId),
+              email: "billing-stale-checkout-return@example.com",
+              name: "Billing Owner",
+            },
+            metadata: {},
+          },
+        ],
+      ]),
+    );
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_active_return",
+      target: "pro",
+    });
+
+    expect(result).toEqual({
+      synced: true,
+      subscriptionId: "sub_new",
+    });
+    expect(polarCheckoutsGetMock).not.toHaveBeenCalled();
+    expect(polarSubscriptionsGetMock).not.toHaveBeenCalled();
+    expect(polarCustomerPortalSubscriptionsListMock).toHaveBeenCalledWith(
+      { customerSession: "polar_cst_active_return" },
+      {
+        active: true,
+        productId: "prod_pro",
+        limit: 10,
+      },
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.proSubscriptionId).toBe("sub_new");
+    expect(account?.checkoutId).toBe("checkout_new");
+  });
+
+  it("does not sync an unscoped customer-session token into a fresh workspace", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-unscoped-session-token",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_unscoped",
+    });
+
+    expect(result).toEqual({
+      synced: false,
+      subscriptionId: null,
+    });
+    expect(polarCustomerPortalSubscriptionsListMock).not.toHaveBeenCalled();
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account).toBeNull();
+  });
+
+  it("uses checkout target metadata when reconciling AI SMS customer-session subscriptions", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-session-token",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_expected",
+      });
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+      if (!account) {
+        throw new Error("Expected billing account.");
+      }
+      await ctx.db.patch(account._id, {
+        checkoutId: "checkout_ai_sms",
+      });
+    });
+
+    polarCheckoutsGetMock.mockResolvedValueOnce({
+      id: "checkout_ai_sms",
+      customerId: "cus_expected",
+      subscriptionId: null,
+      metadata: {
+        checkoutTarget: "ai_sms",
+        businessId: String(businessId),
+        billingKey: getBillingKey(businessId),
+      },
+    });
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_ai_sms",
+            customerId: "cus_expected",
+            productId: "prod_ai_sms",
+            prices: [{ id: "price_ai_sms" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_ai_sms",
+            customer: {
+              externalId: getBillingKey(businessId),
+              email: "billing-ai-sms-session-token@example.com",
+              name: "Billing Owner",
+            },
+            metadata: {},
+          },
+        ],
+      ]),
+    );
+
+    const result = await authed.action(api.billing.refreshCheckoutStatus, {
+      businessId,
+      customerSessionToken: "polar_cst_ai_sms",
+    });
+
+    expect(result).toEqual({
+      synced: true,
+      subscriptionId: "sub_ai_sms",
+    });
+    expect(polarCustomerPortalSubscriptionsListMock).toHaveBeenCalledWith(
+      { customerSession: "polar_cst_ai_sms" },
+      {
+        active: true,
+        productId: "prod_ai_sms",
+        limit: 10,
+      },
+    );
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.aiSmsSubscriptionId).toBe("sub_ai_sms");
+    expect(account?.proSubscriptionId).toBeUndefined();
+  });
+
+  it("preserves portal access for legacy paid Polar accounts without subscription ids", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-legacy-paid-portal",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_legacy",
+      });
+    });
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.hasCustomerPortalAccess).toBe(true);
+
+    polarCustomerSessionsCreateMock.mockResolvedValueOnce({
+      customerPortalUrl: "https://polar.sh/customer-portal/session",
+    });
+
+    const portal = await authed.action(api.billing.openPortal, { businessId });
+    expect(portal.url).toBe("https://polar.sh/customer-portal/session");
+    expect(polarCustomerSessionsCreateMock).toHaveBeenCalledWith({
+      customerId: "cus_legacy",
+      returnUrl: "https://app.example.com/settings/plan",
+    });
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {

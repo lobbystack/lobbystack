@@ -1,0 +1,24 @@
+# Production Fly.io app for the managed LobbyStack voice gateway.
+# Deploy with:
+#   fly deploy -c fly.voice-gateway.production.toml -a lobbystack-voice-prod
+app = "lobbystack-voice-prod"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.voice-gateway"
+
+[env]
+  DEPLOYMENT_MODE = "cloud"
+  PORT = "3001"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  min_machines_running = 1
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getFunctionName } from "convex/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -19,6 +19,7 @@ import {
 const {
   locationAssignMock,
   openPortalMock,
+  refreshCheckoutStatusMock,
   refreshStatusMock,
   resumeRegistrationMock,
   saveComplianceFormMock,
@@ -31,6 +32,7 @@ const {
 } = vi.hoisted(() => ({
   locationAssignMock: vi.fn(),
   openPortalMock: vi.fn(),
+  refreshCheckoutStatusMock: vi.fn(),
   refreshStatusMock: vi.fn(),
   resumeRegistrationMock: vi.fn(),
   saveComplianceFormMock: vi.fn(),
@@ -43,6 +45,11 @@ const {
 }));
 
 const rememberedQueryMock = vi.mocked(useRememberedConvexQuery);
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="current-location">{location.pathname}{location.search}</output>;
+}
 
 vi.mock("convex/react", () => ({
   useAction: (...args: unknown[]) => useActionMock(...args),
@@ -338,12 +345,17 @@ function renderBillingPage(input: {
   status: BillingStatus;
   compliance?: SmsComplianceState;
   campaignOptions?: SmsComplianceCampaignOption[];
+  initialEntries?: string[];
 }) {
   mockQueries(input);
+  const routerProps = input.initialEntries
+    ? { initialEntries: input.initialEntries }
+    : {};
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter {...routerProps}>
       <TooltipProvider>
+        <LocationProbe />
         <SettingsBillingPage businessId={businessId} />
       </TooltipProvider>
     </MemoryRouter>,
@@ -370,6 +382,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
   beforeEach(() => {
     startCheckoutMock.mockReset();
     openPortalMock.mockReset();
+    refreshCheckoutStatusMock.mockReset();
     saveComplianceFormMock.mockReset();
     startRegistrationMock.mockReset();
     resumeRegistrationMock.mockReset();
@@ -406,6 +419,9 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       }
       if (functionName === "billing:openPortal") {
         return openPortalMock;
+      }
+      if (functionName === "billing:refreshCheckoutStatus") {
+        return refreshCheckoutStatusMock;
       }
       if (functionName === "smsCompliance:startRegistration") {
         return startRegistrationMock;
@@ -496,6 +512,82 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(window.location.assign).toHaveBeenCalledWith("https://example.com/checkout");
   });
 
+  it("refreshes billing status after returning from a successful checkout", async () => {
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: true,
+      subscriptionId: "sub_pro",
+    });
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_test",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_test",
+        target: "pro",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe("/settings/plan");
+    });
+  });
+
+  it("keeps checkout success params when checkout refresh is not synced", async () => {
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: false,
+      subscriptionId: null,
+    });
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_retry",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_retry",
+        target: "pro",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/settings/plan?checkout=success&checkout_target=pro",
+      );
+    });
+  });
+
+  it("keeps checkout success params when checkout refresh fails", async () => {
+    refreshCheckoutStatusMock.mockRejectedValue(new Error("Polar is not ready yet."));
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_error",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_error",
+        target: "pro",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/settings/plan?checkout=success&checkout_target=pro",
+      );
+    });
+  });
+
   it("renders the add-on as active once AI SMS is enabled", () => {
     renderBillingPage({
       status: buildStatus({
@@ -571,17 +663,21 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("$15")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.paygMonthlySuffix")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.includedTitle")).toBeTruthy();
+    expect(screen.getByText("80 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
+    expect(screen.getByText("20 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
+    expect(screen.getByText("50 billing.currentPlan.includedSmsLabel")).toBeTruthy();
+    expect(screen.getByText("2 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 
-  it("keeps portal access visible for free workspaces with a billing customer", () => {
+  it("hides portal access for free workspaces without a subscription", () => {
     renderBillingPage({
       status: buildStatus({
-        hasCustomerPortalAccess: true,
+        hasCustomerPortalAccess: false,
       }),
     });
 
-    expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "billing.actions.manageSubscription" })).toBeNull();
   });
 
   it("keeps usage off the billing overview page", () => {

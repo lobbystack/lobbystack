@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -56,6 +56,18 @@ import {
 import { toast } from "sonner";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
+import {
+  CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  clearStoredCheckoutSessionToken,
+  deleteCheckoutSessionTokenParam,
+  takeCheckoutSessionToken,
+} from "@/lib/checkout-session-token";
+
+type CheckoutReturnTarget = "pro" | "ai_sms";
+
+function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
+  return value === "pro" || value === "ai_sms" ? value : null;
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -385,7 +397,7 @@ function formatIncludedUsageLine({
     return fallbackText ?? `${label}: Unlimited`;
   }
 
-  return `${value}${unit ? ` ${unit}` : ""} ${label.toLowerCase()}`;
+  return `${value}${unit ? ` ${unit}` : ""} ${label}`;
 }
 
 function getPlanLabel(
@@ -652,19 +664,16 @@ function PlanSection({
         planConfig.voiceSecondsIncluded !== null
           ? voiceSecondsToMinutes(planConfig.voiceSecondsIncluded)
           : null,
-      unit: "min",
       fallbackText: t("billing.currentPlan.includedVoiceUnlimited"),
     }),
     formatIncludedUsageLine({
       label: t("billing.currentPlan.includedOutboundLabel"),
       value: planConfig.outboundCallAttemptsIncluded,
-      unit: "calls",
       fallbackText: t("billing.currentPlan.includedOutboundUnlimited"),
     }),
     formatIncludedUsageLine({
       label: t("billing.currentPlan.includedSmsLabel"),
       value: planConfig.alertSmsSegmentsIncluded,
-      unit: "SMS",
       fallbackText: t("billing.currentPlan.includedSmsUnlimited"),
     }),
     formatIncludedUsageLine({
@@ -2545,6 +2554,61 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { i18n, t } = useTranslation("settings");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
+  const checkoutRefreshKeyRef = useRef<string | null>(null);
+  const checkoutStatus = searchParams.get("checkout");
+  const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
+  const hasCheckoutSessionTokenParam = searchParams.has(
+    CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  );
+
+  useEffect(() => {
+    if (checkoutStatus !== "success") {
+      return;
+    }
+
+    const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
+    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
+    if (checkoutRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    checkoutRefreshKeyRef.current = refreshKey;
+
+    if (hasCheckoutSessionTokenParam) {
+      setSearchParams(deleteCheckoutSessionTokenParam(searchParams), { replace: true });
+    }
+
+    void refreshCheckoutStatus({
+      businessId: props.businessId,
+      ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+      ...(checkoutTarget ? { target: checkoutTarget } : {}),
+    })
+      .then((result) => {
+        if (!result.synced) {
+          checkoutRefreshKeyRef.current = null;
+          return;
+        }
+
+        clearStoredCheckoutSessionToken();
+        const nextSearchParams = new URLSearchParams(searchParams);
+        nextSearchParams.delete("checkout");
+        nextSearchParams.delete("checkout_target");
+        nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
+        setSearchParams(nextSearchParams, { replace: true });
+      })
+      .catch(() => {
+        checkoutRefreshKeyRef.current = null;
+      });
+  }, [
+    checkoutStatus,
+    checkoutTarget,
+    hasCheckoutSessionTokenParam,
+    props.businessId,
+    refreshCheckoutStatus,
+    searchParams,
+    setSearchParams,
+  ]);
 
   if (isLoadingStatus || !status) {
     return <BillingOverviewSkeleton t={t} />;

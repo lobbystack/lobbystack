@@ -1,9 +1,9 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { useQuery } from "convex/react";
 import { ArrowRight, Check, LoaderCircle, Minus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -12,8 +12,20 @@ import { FieldError } from "@/components/ui/field";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import {
+  CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  clearStoredCheckoutSessionToken,
+  deleteCheckoutSessionTokenParam,
+  takeCheckoutSessionToken,
+} from "@/lib/checkout-session-token";
 import { cn } from "@/lib/utils";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+
+type CheckoutReturnTarget = "pro" | "ai_sms";
+
+function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
+  return value === "pro" || value === "ai_sms" ? value : null;
+}
 
 type OnboardingPlanPageProps = {
   businessId: Id<"businesses">;
@@ -371,16 +383,71 @@ export function OnboardingPlanPage({
 }: OnboardingPlanPageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const status = useQuery(api.billing.getStatus, { businessId });
   const startCheckout = useObservedAction(api.billing.startCheckout);
+  const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
   const selectOnboardingPlan = useObservedMutation(api.onboarding.plan.selectOnboardingPlan);
 
   const [submittingPlan, setSubmittingPlan] = useState<PlanSlug | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const checkoutRefreshKeyRef = useRef<string | null>(null);
+  const checkoutStatus = searchParams.get("checkout");
+  const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
+  const hasCheckoutSessionTokenParam = searchParams.has(
+    CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  );
 
   const proAvailable = status?.availableCheckoutPlans
     ? status.availableCheckoutPlans.includes("pro")
     : true;
+
+  useEffect(() => {
+    if (checkoutStatus !== "success") {
+      return;
+    }
+
+    const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
+    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
+    if (checkoutRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    checkoutRefreshKeyRef.current = refreshKey;
+
+    if (hasCheckoutSessionTokenParam) {
+      setSearchParams(deleteCheckoutSessionTokenParam(searchParams), { replace: true });
+    }
+
+    void refreshCheckoutStatus({
+      businessId,
+      ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+      ...(checkoutTarget ? { target: checkoutTarget } : {}),
+    })
+      .then((result) => {
+        if (!result.synced) {
+          checkoutRefreshKeyRef.current = null;
+          return;
+        }
+
+        clearStoredCheckoutSessionToken();
+        const nextSearchParams = new URLSearchParams(searchParams);
+        nextSearchParams.delete("checkout");
+        nextSearchParams.delete("checkout_target");
+        nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
+        setSearchParams(nextSearchParams, { replace: true });
+      })
+      .catch(() => {
+        checkoutRefreshKeyRef.current = null;
+      });
+  }, [
+    businessId,
+    checkoutStatus,
+    checkoutTarget,
+    hasCheckoutSessionTokenParam,
+    refreshCheckoutStatus,
+    searchParams,
+    setSearchParams,
+  ]);
 
   async function handlePlanAction(plan: PlanSlug): Promise<void> {
     if (submittingPlan) return;
@@ -403,7 +470,11 @@ export function OnboardingPlanPage({
           businessId: String(businessId),
           plan: "pro",
         });
-        const result = await startCheckout({ businessId, target: "pro" });
+        const result = await startCheckout({
+          businessId,
+          target: "pro",
+          source: "onboarding",
+        });
         if (result.url) {
           window.location.assign(result.url);
         }
