@@ -777,7 +777,10 @@ async function recoverExistingPolarCustomer(
     return existingCustomer;
   }
   if (externalId) {
-    return existingCustomer;
+    console.warn("Refusing to reuse Polar customer linked to another billing key.", {
+      polarCustomerId: existingCustomer.id,
+    });
+    return null;
   }
 
   try {
@@ -793,7 +796,7 @@ async function recoverExistingPolarCustomer(
     console.warn("Failed to attach billing key to existing Polar customer.", {
       error: getErrorMessage(error),
     });
-    return existingCustomer;
+    return null;
   }
 }
 
@@ -864,7 +867,9 @@ async function findPolarSubscriptionForCheckoutSuccess(
     let firstSubscription: PolarBillingSubscription | null = null;
     for await (const page of subscriptions) {
       const pageSubscriptions = page.result.items;
-      firstSubscription ??= pageSubscriptions[0] ?? null;
+      if (!expectedCustomerId) {
+        firstSubscription ??= pageSubscriptions[0] ?? null;
+      }
       const matchingSubscription = selectMatchingPolarSubscription(pageSubscriptions, {
         proProductId,
         expectedCustomerId,
@@ -876,6 +881,10 @@ async function findPolarSubscriptionForCheckoutSuccess(
             matchingSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
         };
       }
+    }
+
+    if (expectedCustomerId) {
+      return null;
     }
 
     return firstSubscription
