@@ -227,10 +227,7 @@ export function getConfiguredCheckoutPlans(): Array<HostedCheckoutPlanSlug> {
 }
 
 export function isAiSmsAddonCheckoutConfigured(): boolean {
-  return Boolean(
-    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim() &&
-      process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim(),
-  );
+  return Boolean(process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim());
 }
 
 export function getProProductId(): string {
@@ -241,24 +238,12 @@ export function getProProductId(): string {
   return productId;
 }
 
-export function getAiSmsAddonProductIds(): {
-  recurringProductId: string;
-  setupFeeProductId: string;
-} {
-  const recurringProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
-  const setupFeeProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim();
-
-  if (!recurringProductId) {
+export function getAiSmsAddonProductId(): string {
+  const productId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+  if (!productId) {
     throw new Error("POLAR_AI_SMS_ADDON_PRODUCT_ID is required.");
   }
-  if (!setupFeeProductId) {
-    throw new Error("POLAR_AI_SMS_SETUP_PRODUCT_ID is required.");
-  }
-
-  return {
-    recurringProductId,
-    setupFeeProductId,
-  };
+  return productId;
 }
 
 export function canPurchaseAiSmsAddon(input: {
