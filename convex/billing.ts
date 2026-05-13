@@ -289,6 +289,13 @@ function resolvePolarBillingKey(input: {
   customerExternalId?: string | null;
   metadata: Record<string, string | number | boolean>;
 }): string | null {
+  const customerBillingKey = parseBusinessIdFromBillingKey(input.customerExternalId)
+    ? input.customerExternalId
+    : null;
+  if (customerBillingKey) {
+    return customerBillingKey;
+  }
+
   const metadataBillingKey = getMetadataString(input.metadata, "billingKey");
   if (parseBusinessIdFromBillingKey(metadataBillingKey)) {
     return metadataBillingKey;
@@ -299,10 +306,7 @@ function resolvePolarBillingKey(input: {
     return getBillingKey(metadataBusinessId as Id<"businesses">);
   }
 
-  const customerBillingKey = parseBusinessIdFromBillingKey(input.customerExternalId)
-    ? input.customerExternalId
-    : null;
-  return customerBillingKey ?? null;
+  return null;
 }
 
 function getUsageQuantityField(
@@ -1509,6 +1513,7 @@ export const startCheckout = action({
   args: {
     businessId: v.id("businesses"),
     target: v.union(v.literal("pro"), v.literal("ai_sms")),
+    source: v.optional(v.union(v.literal("settings"), v.literal("onboarding"))),
   },
   returns: v.object({
     url: v.string(),
@@ -1535,6 +1540,8 @@ export const startCheckout = action({
       checkoutContext,
     });
     const siteUrl = getBillingSiteUrl();
+    const checkoutReturnPath =
+      args.source === "onboarding" ? "/onboarding/plan" : "/settings/plan";
     const checkout = await createPolarClient().checkouts.create({
       customerId: customer.id,
       ...(checkoutContext.billingContactEmail
@@ -1544,8 +1551,8 @@ export const startCheckout = action({
         ? { customerName: checkoutContext.billingContactName }
         : {}),
       products: getTargetProductIds(args.target),
-      successUrl: new URL("/settings/plan?checkout=success", siteUrl).toString(),
-      returnUrl: new URL("/settings/plan", siteUrl).toString(),
+      successUrl: new URL(`${checkoutReturnPath}?checkout=success`, siteUrl).toString(),
+      returnUrl: new URL(checkoutReturnPath, siteUrl).toString(),
       embedOrigin: siteUrl.origin,
       customerMetadata: {
         billingKey: checkoutContext.billingKey,

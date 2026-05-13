@@ -1,0 +1,134 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { getFunctionName } from "convex/server";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Id } from "../../../../../convex/_generated/dataModel";
+
+import { OnboardingPlanPage } from "./OnboardingPlanPage";
+
+const {
+  locationAssignMock,
+  refreshCheckoutStatusMock,
+  selectOnboardingPlanMock,
+  startCheckoutMock,
+  useObservedActionMock,
+} = vi.hoisted(() => ({
+  locationAssignMock: vi.fn(),
+  refreshCheckoutStatusMock: vi.fn(),
+  selectOnboardingPlanMock: vi.fn(),
+  startCheckoutMock: vi.fn(),
+  useObservedActionMock: vi.fn(),
+}));
+
+vi.mock("convex/react", () => ({
+  useQuery: () => ({
+    availableCheckoutPlans: ["pro"],
+  }),
+}));
+
+vi.mock("@/lib/observed-convex", () => ({
+  useObservedAction: (...args: unknown[]) => useObservedActionMock(...args),
+  useObservedMutation: () => selectOnboardingPlanMock,
+}));
+
+vi.mock("@/lib/analytics", () => ({
+  captureAnalyticsEvent: vi.fn(),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock("@/features/onboarding/components/OnboardingShell", () => ({
+  OnboardingShell: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode;
+    title: string;
+  }) => (
+    <main>
+      <h1>{title}</h1>
+      {children}
+    </main>
+  ),
+}));
+
+function renderPlanPage(initialEntry = "/onboarding/plan") {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <OnboardingPlanPage
+        businessId={"business_123" as Id<"businesses">}
+        onSignOut={() => {}}
+      />
+    </MemoryRouter>,
+  );
+}
+
+describe("OnboardingPlanPage", () => {
+  beforeEach(() => {
+    locationAssignMock.mockReset();
+    refreshCheckoutStatusMock.mockReset();
+    selectOnboardingPlanMock.mockReset();
+    startCheckoutMock.mockReset();
+    useObservedActionMock.mockReset();
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: true,
+      subscriptionId: "sub_pro",
+    });
+    startCheckoutMock.mockResolvedValue({
+      url: "https://polar.sh/checkout/pro",
+    });
+    useObservedActionMock.mockImplementation((reference: unknown) => {
+      const functionName = getFunctionName(reference as never);
+      if (functionName === "billing:startCheckout") {
+        return startCheckoutMock;
+      }
+      if (functionName === "billing:refreshCheckoutStatus") {
+        return refreshCheckoutStatusMock;
+      }
+      throw new Error(`Unexpected action reference: ${functionName}`);
+    });
+
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: {
+        ...window.location,
+        assign: locationAssignMock,
+      },
+    });
+  });
+
+  it("reconciles successful Pro checkout returns during onboarding", async () => {
+    renderPlanPage(
+      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_test",
+    );
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId: "business_123",
+        customerSessionToken: "polar_cst_test",
+      });
+    });
+  });
+
+  it("marks Pro checkout starts as onboarding checkouts", async () => {
+    const user = userEvent.setup();
+    renderPlanPage();
+
+    await user.click(screen.getByRole("button", { name: /plan\.tiers\.pro\.cta/ }));
+
+    await waitFor(() => {
+      expect(startCheckoutMock).toHaveBeenCalledWith({
+        businessId: "business_123",
+        target: "pro",
+        source: "onboarding",
+      });
+    });
+    expect(locationAssignMock).toHaveBeenCalledWith("https://polar.sh/checkout/pro");
+  });
+});

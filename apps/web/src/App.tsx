@@ -318,6 +318,13 @@ function WorkspaceShell() {
     : null;
   const shouldShowSetupPending =
     !isBootstrapLoading && Boolean(activeBusiness && onboardingTarget && !canManageTenant);
+  const shouldBridgeOnboardingCheckoutSuccess =
+    !isBootstrapLoading &&
+    activeBusiness &&
+    canManageTenant &&
+    onboardingTarget === "/onboarding/plan" &&
+    location.pathname === "/settings/plan" &&
+    new URLSearchParams(location.search).get("checkout") === "success";
 
   async function handleSignOut(): Promise<void> {
     resetAnalyticsIdentity();
@@ -382,6 +389,18 @@ function WorkspaceShell() {
   // Honour the server-side onboarding stage. If the active business hasn't
   // completed onboarding, redirect to the right step.
   if (!isBootstrapLoading && activeBusiness && onboardingTarget && canManageTenant) {
+    if (shouldBridgeOnboardingCheckoutSuccess) {
+      return (
+        <Navigate
+          replace
+          to={{
+            pathname: onboardingTarget,
+            search: location.search,
+          }}
+        />
+      );
+    }
+
     const isNumberClaimPlanBridge =
       location.pathname === "/onboarding/plan" &&
       hasJustClaimedPhoneNumberState(location.state) &&

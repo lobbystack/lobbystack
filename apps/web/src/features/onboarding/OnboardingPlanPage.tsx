@@ -1,9 +1,9 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 import { useQuery } from "convex/react";
 import { ArrowRight, Check, LoaderCircle, Minus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -371,16 +371,50 @@ export function OnboardingPlanPage({
 }: OnboardingPlanPageProps) {
   const { t } = useTranslation("onboarding");
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const status = useQuery(api.billing.getStatus, { businessId });
   const startCheckout = useObservedAction(api.billing.startCheckout);
+  const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
   const selectOnboardingPlan = useObservedMutation(api.onboarding.plan.selectOnboardingPlan);
 
   const [submittingPlan, setSubmittingPlan] = useState<PlanSlug | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const checkoutRefreshKeyRef = useRef<string | null>(null);
+  const checkoutStatus = searchParams.get("checkout");
+  const checkoutSessionToken = searchParams.get("customer_session_token");
 
   const proAvailable = status?.availableCheckoutPlans
     ? status.availableCheckoutPlans.includes("pro")
     : true;
+
+  useEffect(() => {
+    if (checkoutStatus !== "success") {
+      return;
+    }
+
+    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}`;
+    if (checkoutRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    checkoutRefreshKeyRef.current = refreshKey;
+
+    void refreshCheckoutStatus({
+      businessId,
+      ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+    }).finally(() => {
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.delete("checkout");
+      nextSearchParams.delete("customer_session_token");
+      setSearchParams(nextSearchParams, { replace: true });
+    });
+  }, [
+    businessId,
+    checkoutSessionToken,
+    checkoutStatus,
+    refreshCheckoutStatus,
+    searchParams,
+    setSearchParams,
+  ]);
 
   async function handlePlanAction(plan: PlanSlug): Promise<void> {
     if (submittingPlan) return;
@@ -403,7 +437,11 @@ export function OnboardingPlanPage({
           businessId: String(businessId),
           plan: "pro",
         });
-        const result = await startCheckout({ businessId, target: "pro" });
+        const result = await startCheckout({
+          businessId,
+          target: "pro",
+          source: "onboarding",
+        });
         if (result.url) {
           window.location.assign(result.url);
         }

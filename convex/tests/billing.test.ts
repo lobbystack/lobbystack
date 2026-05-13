@@ -2461,6 +2461,69 @@ describe("billing", () => {
     expect(account?.proSubscriptionId).toBeUndefined();
   });
 
+  it("prefers Polar customer external ID over stale subscription metadata", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-stale-subscription-metadata",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "free_cloud",
+        polarCustomerId: "cus_expected",
+      });
+    });
+
+    polarCustomerPortalSubscriptionsListMock.mockReturnValueOnce(
+      polarListPages([
+        [
+          {
+            id: "sub_stale_metadata",
+            customerId: "cus_expected",
+            productId: "prod_pro",
+            prices: [{ id: "price_pro" }],
+            status: "active",
+            currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            checkoutId: "checkout_stale_metadata",
+            customer: {
+              externalId: "business:canonical_customer_business",
+              email: "canonical@example.com",
+              name: "Canonical Customer",
+            },
+            metadata: {
+              billingKey: getBillingKey(businessId),
+              businessId: String(businessId),
+            },
+          },
+        ],
+      ]),
+    );
+
+    await expect(
+      authed.action(api.billing.refreshCheckoutStatus, {
+        businessId,
+        customerSessionToken: "polar_cst_stale_metadata",
+      }),
+    ).rejects.toThrow("Polar subscription belongs to a different business.");
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("free_cloud");
+    expect(account?.proSubscriptionId).toBeUndefined();
+  });
+
   it("does not sync an unscoped customer-session token into a fresh workspace", async () => {
     const t = convexTest(schema, convexModules);
     registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
