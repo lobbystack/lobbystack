@@ -47,8 +47,8 @@ import {
   canPurchaseAiSmsAddon,
   deriveActiveAddonsFromProductIds,
   deriveCloudPlanFromProductIds,
-  getAiSmsAddonProductId,
   getAiSmsAddonPricing,
+  getAiSmsSetupProductId,
   getBillingAccount,
   getBillingKey,
   getBillingSnapshot,
@@ -58,6 +58,7 @@ import {
   getNormalizedAddons,
   getPlanEntitlements,
   getPlanForBusiness,
+  getProAiSmsProductId,
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
@@ -726,7 +727,7 @@ function getTargetProductIds(target: CheckoutTarget): Array<string> {
     return [getProProductId()];
   }
 
-  return [getAiSmsAddonProductId()];
+  return [getAiSmsSetupProductId()];
 }
 
 function isDuplicatePolarCustomerEmailError(error: unknown): boolean {
@@ -830,7 +831,10 @@ function getCheckoutTargetFromMetadata(
 
 function getPolarProductIdForCheckoutTarget(target: CheckoutTarget | null): string | undefined {
   if (target === "ai_sms") {
-    return process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+    return (
+      process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim() ||
+      process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim()
+    );
   }
   return process.env.POLAR_PRO_PRODUCT_ID?.trim();
 }
@@ -1072,6 +1076,63 @@ function shouldRecordAiSmsOrderAsSetupFee(args: {
   return Boolean(setupFeeProductId && args.orderProductIds.includes(setupFeeProductId));
 }
 
+async function updateProSubscriptionForAiSmsSetupPayment(
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
+  args: {
+    businessId: Id<"businesses">;
+  },
+): Promise<boolean> {
+  const upgradeContext = await ctx.runQuery(internal.billing.getAiSmsSubscriptionUpgradeContext, {
+    businessId: args.businessId,
+  });
+  if (
+    upgradeContext.currentPlan !== "pro" ||
+    upgradeContext.activeAddons.includes("ai_sms") ||
+    !upgradeContext.proSubscriptionId ||
+    !upgradeContext.polarCustomerId
+  ) {
+    return false;
+  }
+
+  const subscription = await createPolarClient().subscriptions.update({
+    id: upgradeContext.proSubscriptionId,
+    subscriptionUpdate: {
+      productId: getProAiSmsProductId(),
+    },
+  });
+
+  const subscriptionPriceId = getPolarSubscriptionPriceId(subscription);
+  await ctx.runMutation(internal.billing.syncSubscriptionFromWebhook, {
+    businessId: args.businessId,
+    billingKey: upgradeContext.billingKey,
+    polarCustomerId: subscription.customerId,
+    polarCustomerExternalId: upgradeContext.billingKey,
+    ...(subscription.customer?.email ? { billingContactEmail: subscription.customer.email } : {}),
+    ...(subscription.customer?.name ? { billingContactName: subscription.customer.name } : {}),
+    subscriptionId: subscription.id,
+    subscriptionProductId: subscription.productId,
+    ...(subscriptionPriceId ? { subscriptionPriceId } : {}),
+    subscriptionState: subscription.status,
+    currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+    currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    ...(subscription.checkoutId ? { checkoutId: subscription.checkoutId } : {}),
+    lastWebhookEventType: "order.paid.ai_sms_setup_upgrade",
+    lastSyncedAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+export const upgradeAiSmsSubscriptionAfterSetupPayment = internalAction({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    return await updateProSubscriptionForAiSmsSetupPayment(ctx, args);
+  },
+});
+
 export function registerBillingRoutes(http: HttpRouter): void {
   billingPolar.registerRoutes(http as never, {
     events: {
@@ -1163,7 +1224,7 @@ async function syncSubscriptionFromWebhookEvent(
 }
 
 async function syncOrderTransactionFromWebhookEvent(
-  ctx: Pick<MutationCtx, "runMutation">,
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
   event: Extract<
     PolarWebhookEvent,
     {
@@ -1179,6 +1240,9 @@ async function syncOrderTransactionFromWebhookEvent(
   if (!businessId) {
     return;
   }
+  const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
+    orderProductIds: event.data.productId ? [event.data.productId] : [],
+  });
 
   let invoiceUrl: string | undefined;
   if (event.data.isInvoiceGenerated) {
@@ -1202,14 +1266,16 @@ async function syncOrderTransactionFromWebhookEvent(
     ...(event.data.subscriptionId ? { subscriptionId: event.data.subscriptionId } : {}),
     ...(event.data.customerId ? { polarCustomerId: event.data.customerId } : {}),
     orderId: event.data.id,
-    ...(shouldRecordAiSmsOrderAsSetupFee({
-      orderProductIds: event.data.productId ? [event.data.productId] : [],
-    })
-      ? { aiSmsSetupOrderId: event.data.id }
-      : {}),
+    ...(isAiSmsSetupOrder ? { aiSmsSetupOrderId: event.data.id } : {}),
     occurredAt: event.data.createdAt.toISOString(),
     lastSyncedAt: event.timestamp.toISOString(),
   });
+
+  if (event.type === "order.paid" && isAiSmsSetupOrder) {
+    await updateProSubscriptionForAiSmsSetupPayment(ctx, {
+      businessId,
+    });
+  }
 }
 
 async function syncRefundTransactionFromWebhookEvent(
@@ -1331,8 +1397,11 @@ export const syncSubscriptionFromWebhook = internalMutation({
       account: existingAccount,
     });
     const existingAddons = getNormalizedAddons(existingAccount?.activeAddons);
-    const isProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
-    const isAiSmsProduct =
+    const isBaseProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
+    const isProAiSmsProduct =
+      args.subscriptionProductId === process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
+    const isProProduct = isBaseProProduct || isProAiSmsProduct;
+    const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
 
@@ -1342,9 +1411,16 @@ export const syncSubscriptionFromWebhook = internalMutation({
         : isProProduct && existingPlan !== "enterprise"
           ? "free_cloud"
           : existingPlan;
-    const nextActiveAddons = isAiSmsProduct
-      ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
-      : existingAddons;
+    const shouldRemoveAiSmsFromUpdatedProSubscription =
+      isBaseProProduct &&
+      existingAccount?.proSubscriptionId === args.subscriptionId &&
+      existingAccount.proSubscriptionProductId === process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
+    const nextActiveAddons =
+      isProAiSmsProduct || isLegacyAiSmsProduct
+        ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
+        : shouldRemoveAiSmsFromUpdatedProSubscription
+          ? mergeActiveAddon(existingAddons, "ai_sms", false)
+          : existingAddons;
 
     const patch = {
       businessId: args.businessId,
@@ -1361,9 +1437,9 @@ export const syncSubscriptionFromWebhook = internalMutation({
       ...(isProProduct && args.subscriptionPriceId
         ? { proSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
-      ...(isAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
-      ...(isAiSmsProduct ? { aiSmsSubscriptionProductId: args.subscriptionProductId } : {}),
-      ...(isAiSmsProduct && args.subscriptionPriceId
+      ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
+      ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionProductId: args.subscriptionProductId } : {}),
+      ...(isLegacyAiSmsProduct && args.subscriptionPriceId
         ? { aiSmsSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
       currentPeriodStart: args.currentPeriodStart,
@@ -1494,6 +1570,38 @@ export const getCheckoutContext = internalQuery({
       polarCustomerId: account?.polarCustomerId ?? null,
       polarCustomerExternalId: account?.polarCustomerExternalId ?? null,
       checkoutId: account?.checkoutId ?? null,
+    };
+  },
+});
+
+export const getAiSmsSubscriptionUpgradeContext = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    billingKey: v.string(),
+    currentPlan: v.union(
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+      v.literal("self_host"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    polarCustomerId: v.union(v.string(), v.null()),
+    proSubscriptionId: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    const account = await getBillingAccount(ctx, args.businessId);
+    return {
+      billingKey: getBillingKey(args.businessId),
+      currentPlan: getPlanForBusiness({
+        business,
+        account,
+      }),
+      activeAddons: getNormalizedAddons(account?.activeAddons),
+      polarCustomerId: account?.polarCustomerId ?? null,
+      proSubscriptionId: account?.proSubscriptionId ?? null,
     };
   },
 });
