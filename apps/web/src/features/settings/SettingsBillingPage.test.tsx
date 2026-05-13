@@ -602,6 +602,10 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("$15")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.paygMonthlySuffix")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.includedTitle")).toBeTruthy();
+    expect(screen.getByText("80 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
+    expect(screen.getByText("20 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
+    expect(screen.getByText("50 billing.currentPlan.includedSmsLabel")).toBeTruthy();
+    expect(screen.getByText("2 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 

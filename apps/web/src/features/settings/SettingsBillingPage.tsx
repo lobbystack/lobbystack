@@ -385,7 +385,7 @@ function formatIncludedUsageLine({
     return fallbackText ?? `${label}: Unlimited`;
   }
 
-  return `${value}${unit ? ` ${unit}` : ""} ${label.toLowerCase()}`;
+  return `${value}${unit ? ` ${unit}` : ""} ${label}`;
 }
 
 function getPlanLabel(
@@ -652,19 +652,16 @@ function PlanSection({
         planConfig.voiceSecondsIncluded !== null
           ? voiceSecondsToMinutes(planConfig.voiceSecondsIncluded)
           : null,
-      unit: "min",
       fallbackText: t("billing.currentPlan.includedVoiceUnlimited"),
     }),
     formatIncludedUsageLine({
       label: t("billing.currentPlan.includedOutboundLabel"),
       value: planConfig.outboundCallAttemptsIncluded,
-      unit: "calls",
       fallbackText: t("billing.currentPlan.includedOutboundUnlimited"),
     }),
     formatIncludedUsageLine({
       label: t("billing.currentPlan.includedSmsLabel"),
       value: planConfig.alertSmsSegmentsIncluded,
-      unit: "SMS",
       fallbackText: t("billing.currentPlan.includedSmsUnlimited"),
     }),
     formatIncludedUsageLine({
