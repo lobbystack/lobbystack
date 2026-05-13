@@ -143,7 +143,7 @@ describe("OnboardingPlanPage", () => {
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/onboarding/plan?checkout=success&customer_session_token=polar_cst_retry",
+        "/onboarding/plan?checkout=success",
       );
     });
   });
@@ -163,7 +163,7 @@ describe("OnboardingPlanPage", () => {
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/onboarding/plan?checkout=success&customer_session_token=polar_cst_error",
+        "/onboarding/plan?checkout=success",
       );
     });
   });

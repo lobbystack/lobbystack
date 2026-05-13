@@ -36,6 +36,8 @@ function resolvePostHogHost(rawHost?: string): string | undefined {
 
 const POSTHOG_HOST = resolvePostHogHost(import.meta.env.VITE_POSTHOG_HOST);
 const POSTHOG_UI_HOST = import.meta.env.VITE_POSTHOG_UI_HOST ?? "https://us.posthog.com";
+const SENSITIVE_URL_PARAMS = new Set(["customer_session_token"]);
+const REDACTED_VALUE = "[redacted]";
 
 let hasInitialized = false;
 let lastPageEventKey: string | null = null;
@@ -54,6 +56,65 @@ export function isAnalyticsEnabled(): boolean {
   return Boolean(POSTHOG_KEY && POSTHOG_HOST);
 }
 
+function isAbsoluteUrl(value: string): boolean {
+  return /^[a-z][a-z\d+\-.]*:/i.test(value);
+}
+
+function redactSensitiveUrlParams(value: string): string {
+  if (![...SENSITIVE_URL_PARAMS].some((param) => value.includes(param))) {
+    return value;
+  }
+
+  try {
+    const absolute = isAbsoluteUrl(value);
+    const url = new URL(value, absolute ? undefined : "https://lobbystack.local");
+    for (const param of SENSITIVE_URL_PARAMS) {
+      url.searchParams.delete(param);
+    }
+    return absolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    let redacted = value;
+    for (const param of SENSITIVE_URL_PARAMS) {
+      redacted = redacted.replace(
+        new RegExp(`([?&])${param}=[^&#]*`, "g"),
+        `$1${param}=${REDACTED_VALUE}`,
+      );
+    }
+    return redacted;
+  }
+}
+
+function redactSensitiveAnalyticsValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return redactSensitiveUrlParams(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      typeof item === "string" ? redactSensitiveUrlParams(item) : item,
+    );
+  }
+
+  return value;
+}
+
+function redactSensitiveAnalyticsProperties<T extends Record<string, unknown>>(
+  properties: T | undefined,
+): T | undefined {
+  if (!properties) {
+    return properties;
+  }
+
+  const nextProperties: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    nextProperties[key] = SENSITIVE_URL_PARAMS.has(key)
+      ? REDACTED_VALUE
+      : redactSensitiveAnalyticsValue(value);
+  }
+
+  return nextProperties as T;
+}
+
 export function initializeAnalytics(): void {
   if (!isAnalyticsEnabled() || hasInitialized) {
     return;
@@ -70,6 +131,28 @@ export function initializeAnalytics(): void {
     capture_pageleave: "if_capture_pageview",
     capture_exceptions: true,
     disable_session_recording: false,
+    before_send: (event) => {
+      if (!event) {
+        return event;
+      }
+      const nextEvent = {
+        ...event,
+        properties: redactSensitiveAnalyticsProperties(event.properties) ?? event.properties,
+      };
+      const redactedSet = redactSensitiveAnalyticsProperties(event.$set);
+      const redactedSetOnce = redactSensitiveAnalyticsProperties(event.$set_once);
+      if (redactedSet) {
+        nextEvent.$set = redactedSet;
+      } else {
+        delete nextEvent.$set;
+      }
+      if (redactedSetOnce) {
+        nextEvent.$set_once = redactedSetOnce;
+      } else {
+        delete nextEvent.$set_once;
+      }
+      return nextEvent;
+    },
     persistence: "localStorage+cookie",
     person_profiles: "identified_only",
     session_recording: {

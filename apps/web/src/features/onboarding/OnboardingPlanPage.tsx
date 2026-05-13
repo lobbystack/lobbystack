@@ -12,6 +12,12 @@ import { FieldError } from "@/components/ui/field";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import {
+  CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  clearStoredCheckoutSessionToken,
+  deleteCheckoutSessionTokenParam,
+  takeCheckoutSessionToken,
+} from "@/lib/checkout-session-token";
 import { cn } from "@/lib/utils";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
@@ -381,7 +387,9 @@ export function OnboardingPlanPage({
   const [error, setError] = useState<string | null>(null);
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
-  const checkoutSessionToken = searchParams.get("customer_session_token");
+  const hasCheckoutSessionTokenParam = searchParams.has(
+    CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  );
 
   const proAvailable = status?.availableCheckoutPlans
     ? status.availableCheckoutPlans.includes("pro")
@@ -392,11 +400,16 @@ export function OnboardingPlanPage({
       return;
     }
 
+    const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
     const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
     checkoutRefreshKeyRef.current = refreshKey;
+
+    if (hasCheckoutSessionTokenParam) {
+      setSearchParams(deleteCheckoutSessionTokenParam(searchParams), { replace: true });
+    }
 
     void refreshCheckoutStatus({
       businessId,
@@ -408,9 +421,10 @@ export function OnboardingPlanPage({
           return;
         }
 
+        clearStoredCheckoutSessionToken();
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
-        nextSearchParams.delete("customer_session_token");
+        nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
       .catch(() => {
@@ -418,8 +432,8 @@ export function OnboardingPlanPage({
       });
   }, [
     businessId,
-    checkoutSessionToken,
     checkoutStatus,
+    hasCheckoutSessionTokenParam,
     refreshCheckoutStatus,
     searchParams,
     setSearchParams,

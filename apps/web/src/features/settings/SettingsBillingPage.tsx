@@ -56,6 +56,12 @@ import {
 import { toast } from "sonner";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
+import {
+  CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  clearStoredCheckoutSessionToken,
+  deleteCheckoutSessionTokenParam,
+  takeCheckoutSessionToken,
+} from "@/lib/checkout-session-token";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -2546,18 +2552,25 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
-  const checkoutSessionToken = searchParams.get("customer_session_token");
+  const hasCheckoutSessionTokenParam = searchParams.has(
+    CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
+  );
 
   useEffect(() => {
     if (checkoutStatus !== "success") {
       return;
     }
 
+    const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
     const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
     checkoutRefreshKeyRef.current = refreshKey;
+
+    if (hasCheckoutSessionTokenParam) {
+      setSearchParams(deleteCheckoutSessionTokenParam(searchParams), { replace: true });
+    }
 
     void refreshCheckoutStatus({
       businessId: props.businessId,
@@ -2569,17 +2582,18 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
           return;
         }
 
+        clearStoredCheckoutSessionToken();
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
-        nextSearchParams.delete("customer_session_token");
+        nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
       .catch(() => {
         checkoutRefreshKeyRef.current = null;
       });
   }, [
-    checkoutSessionToken,
     checkoutStatus,
+    hasCheckoutSessionTokenParam,
     props.businessId,
     refreshCheckoutStatus,
     searchParams,

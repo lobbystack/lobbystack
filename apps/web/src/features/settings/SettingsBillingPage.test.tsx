@@ -557,7 +557,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/settings/plan?checkout=success&customer_session_token=polar_cst_retry",
+        "/settings/plan?checkout=success",
       );
     });
   });
@@ -580,7 +580,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/settings/plan?checkout=success&customer_session_token=polar_cst_error",
+        "/settings/plan?checkout=success",
       );
     });
   });
