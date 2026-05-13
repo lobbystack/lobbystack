@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getFunctionName } from "convex/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -58,9 +58,15 @@ vi.mock("@/features/onboarding/components/OnboardingShell", () => ({
   ),
 }));
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="current-location">{location.pathname}{location.search}</output>;
+}
+
 function renderPlanPage(initialEntry = "/onboarding/plan") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
+      <LocationProbe />
       <OnboardingPlanPage
         businessId={"business_123" as Id<"businesses">}
         onSignOut={() => {}}
@@ -113,6 +119,52 @@ describe("OnboardingPlanPage", () => {
         businessId: "business_123",
         customerSessionToken: "polar_cst_test",
       });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe("/onboarding/plan");
+    });
+  });
+
+  it("keeps successful checkout params when onboarding checkout reconciliation is not synced", async () => {
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: false,
+      subscriptionId: null,
+    });
+
+    renderPlanPage(
+      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_retry",
+    );
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId: "business_123",
+        customerSessionToken: "polar_cst_retry",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/onboarding/plan?checkout=success&customer_session_token=polar_cst_retry",
+      );
+    });
+  });
+
+  it("keeps successful checkout params when onboarding checkout reconciliation fails", async () => {
+    refreshCheckoutStatusMock.mockRejectedValue(new Error("Polar is not ready yet."));
+
+    renderPlanPage(
+      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_error",
+    );
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId: "business_123",
+        customerSessionToken: "polar_cst_error",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/onboarding/plan?checkout=success&customer_session_token=polar_cst_error",
+      );
     });
   });
 

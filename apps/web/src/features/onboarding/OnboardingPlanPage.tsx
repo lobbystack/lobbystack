@@ -401,12 +401,21 @@ export function OnboardingPlanPage({
     void refreshCheckoutStatus({
       businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
-    }).finally(() => {
-      const nextSearchParams = new URLSearchParams(searchParams);
-      nextSearchParams.delete("checkout");
-      nextSearchParams.delete("customer_session_token");
-      setSearchParams(nextSearchParams, { replace: true });
-    });
+    })
+      .then((result) => {
+        if (!result.synced) {
+          checkoutRefreshKeyRef.current = null;
+          return;
+        }
+
+        const nextSearchParams = new URLSearchParams(searchParams);
+        nextSearchParams.delete("checkout");
+        nextSearchParams.delete("customer_session_token");
+        setSearchParams(nextSearchParams, { replace: true });
+      })
+      .catch(() => {
+        checkoutRefreshKeyRef.current = null;
+      });
   }, [
     businessId,
     checkoutSessionToken,

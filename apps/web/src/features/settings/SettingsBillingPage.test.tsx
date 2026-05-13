@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getFunctionName } from "convex/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../../../../../convex/_generated/api";
@@ -45,6 +45,11 @@ const {
 }));
 
 const rememberedQueryMock = vi.mocked(useRememberedConvexQuery);
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="current-location">{location.pathname}{location.search}</output>;
+}
 
 vi.mock("convex/react", () => ({
   useAction: (...args: unknown[]) => useActionMock(...args),
@@ -350,6 +355,7 @@ function renderBillingPage(input: {
   return render(
     <MemoryRouter {...routerProps}>
       <TooltipProvider>
+        <LocationProbe />
         <SettingsBillingPage businessId={businessId} />
       </TooltipProvider>
     </MemoryRouter>,
@@ -524,6 +530,58 @@ describe("SettingsBillingPage AI SMS add-on", () => {
         businessId,
         customerSessionToken: "polar_cst_test",
       });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe("/settings/plan");
+    });
+  });
+
+  it("keeps checkout success params when checkout refresh is not synced", async () => {
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: false,
+      subscriptionId: null,
+    });
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&customer_session_token=polar_cst_retry",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_retry",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/settings/plan?checkout=success&customer_session_token=polar_cst_retry",
+      );
+    });
+  });
+
+  it("keeps checkout success params when checkout refresh fails", async () => {
+    refreshCheckoutStatusMock.mockRejectedValue(new Error("Polar is not ready yet."));
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&customer_session_token=polar_cst_error",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_error",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location").textContent).toBe(
+        "/settings/plan?checkout=success&customer_session_token=polar_cst_error",
+      );
     });
   });
 
