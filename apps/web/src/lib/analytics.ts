@@ -64,6 +64,7 @@ export function initializeAnalytics(): void {
   posthog.init(POSTHOG_KEY!, {
     api_host: posthogHost,
     ...(POSTHOG_UI_HOST ? { ui_host: POSTHOG_UI_HOST } : {}),
+    defaults: "2026-01-30",
     autocapture: false,
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
@@ -87,7 +88,12 @@ export function initializeAnalytics(): void {
   });
 
   if (!posthog.sessionRecordingStarted()) {
-    posthog.startSessionRecording();
+    posthog.startSessionRecording({
+      sampling: true,
+      linked_flag: true,
+      url_trigger: true,
+      event_trigger: true,
+    });
   }
 }
 
