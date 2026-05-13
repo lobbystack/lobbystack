@@ -149,6 +149,8 @@
       "carrierSetupFees": "Frais d'examen et de configuration du fournisseur",
       "oneTimeFeeValue": "{{amount}} une fois",
       "monthlyFee": "Frais mensuels d'abonnement",
+      "subscriptionAfterSetup": "Abonnement après configuration",
+      "subscriptionAfterSetupValue": "{{currentAmount}} → {{upgradedAmount}} / mois",
       "messagingRate": "Tarif des messages",
       "perSegmentFeeValue": "{{amount}}/segment"
     },
