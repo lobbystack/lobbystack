@@ -106,10 +106,31 @@ type CheckoutContext = {
   billingContactName: string | null;
   polarCustomerId: string | null;
   polarCustomerExternalId: string | null;
+  checkoutId: string | null;
 };
 
 type PolarClient = ReturnType<typeof createPolarClient>;
+type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
+type PolarSubscription = Awaited<ReturnType<PolarClient["subscriptions"]["get"]>>;
+
+type PolarBillingSubscription = {
+  id: string;
+  customerId: string;
+  productId: string;
+  prices: Array<{ id?: string }>;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  checkoutId: string | null;
+  metadata?: Record<string, string | number | boolean>;
+  customer?: {
+    externalId?: string | null | undefined;
+    email?: string | null | undefined;
+    name?: string | null | undefined;
+  };
+};
 
 type UsageSyncPayload = {
   businessId: Id<"businesses">;
@@ -268,20 +289,20 @@ function resolvePolarBillingKey(input: {
   customerExternalId?: string | null;
   metadata: Record<string, string | number | boolean>;
 }): string | null {
-  const customerBillingKey = parseBusinessIdFromBillingKey(input.customerExternalId)
-    ? input.customerExternalId
-    : null;
-  if (customerBillingKey) {
-    return customerBillingKey;
-  }
-
   const metadataBillingKey = getMetadataString(input.metadata, "billingKey");
   if (parseBusinessIdFromBillingKey(metadataBillingKey)) {
     return metadataBillingKey;
   }
 
   const metadataBusinessId = getMetadataString(input.metadata, "businessId");
-  return metadataBusinessId ? getBillingKey(metadataBusinessId as Id<"businesses">) : null;
+  if (metadataBusinessId) {
+    return getBillingKey(metadataBusinessId as Id<"businesses">);
+  }
+
+  const customerBillingKey = parseBusinessIdFromBillingKey(input.customerExternalId)
+    ? input.customerExternalId
+    : null;
+  return customerBillingKey ?? null;
 }
 
 function getUsageQuantityField(
@@ -776,6 +797,129 @@ async function recoverExistingPolarCustomer(
   }
 }
 
+type PolarSubscriptionLookupResult = {
+  subscription: PolarBillingSubscription;
+  checkoutId: string | null;
+};
+
+function getPolarSubscriptionPriceId(subscription: PolarBillingSubscription): string | undefined {
+  return subscription.prices[0]?.id;
+}
+
+function selectMatchingPolarSubscription(
+  subscriptions: Array<PolarBillingSubscription>,
+  input: {
+    proProductId: string | undefined;
+    expectedCustomerId: string | null;
+  },
+): PolarBillingSubscription | null {
+  const scopedSubscriptions = input.expectedCustomerId
+    ? subscriptions.filter((subscription) => subscription.customerId === input.expectedCustomerId)
+    : subscriptions;
+  return (
+    scopedSubscriptions.find(
+      (subscription) => subscription.productId === input.proProductId,
+    ) ??
+    scopedSubscriptions[0] ??
+    null
+  );
+}
+
+async function findPolarSubscriptionForCheckoutSuccess(
+  client: PolarClient,
+  checkoutContext: CheckoutContext,
+  customerSessionToken?: string | null,
+): Promise<PolarSubscriptionLookupResult | null> {
+  let checkout: PolarCheckout | null = null;
+  if (checkoutContext.checkoutId) {
+    checkout = await client.checkouts.get({ id: checkoutContext.checkoutId });
+    if (checkout.subscriptionId) {
+      try {
+        const subscription = await client.subscriptions.get({
+          id: checkout.subscriptionId,
+        });
+        return {
+          subscription,
+          checkoutId: checkout.id,
+        };
+      } catch (error) {
+        if (!customerSessionToken) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  const proProductId = process.env.POLAR_PRO_PRODUCT_ID?.trim();
+  const expectedCustomerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
+  if (customerSessionToken) {
+    const subscriptions = await client.customerPortal.subscriptions.list(
+      { customerSession: customerSessionToken },
+      {
+        active: true,
+        ...(proProductId ? { productId: proProductId } : {}),
+        limit: 10,
+      },
+    );
+    let firstSubscription: PolarBillingSubscription | null = null;
+    for await (const page of subscriptions) {
+      const pageSubscriptions = page.result.items;
+      firstSubscription ??= pageSubscriptions[0] ?? null;
+      const matchingSubscription = selectMatchingPolarSubscription(pageSubscriptions, {
+        proProductId,
+        expectedCustomerId,
+      });
+      if (matchingSubscription) {
+        return {
+          subscription: matchingSubscription,
+          checkoutId:
+            matchingSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
+        };
+      }
+    }
+
+    return firstSubscription
+      ? {
+          subscription: firstSubscription,
+          checkoutId: firstSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
+        }
+      : null;
+  }
+
+  const customerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
+  if (!customerId) {
+    return null;
+  }
+
+  const subscriptions = await client.subscriptions.list({
+    customerId,
+    active: true,
+    limit: 10,
+  });
+  let firstSubscription: PolarSubscription | null = null;
+  for await (const page of subscriptions) {
+    const pageSubscriptions = page.result.items;
+    firstSubscription ??= pageSubscriptions[0] ?? null;
+    const matchingSubscription = selectMatchingPolarSubscription(pageSubscriptions, {
+      proProductId,
+      expectedCustomerId: customerId,
+    });
+    if (matchingSubscription) {
+      return {
+        subscription: matchingSubscription,
+        checkoutId: matchingSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
+      };
+    }
+  }
+
+  return firstSubscription
+    ? {
+        subscription: firstSubscription,
+        checkoutId: firstSubscription.checkoutId ?? checkout?.id ?? checkoutContext.checkoutId,
+      }
+    : null;
+}
+
 async function ensurePolarCustomer(
   ctx: ActionCtx,
   args: {
@@ -828,8 +972,7 @@ async function ensurePolarCustomer(
     businessId: args.businessId,
     billingKey: args.checkoutContext.billingKey,
     polarCustomerId: customer.id,
-    polarCustomerExternalId:
-      getPolarCustomerExternalId(customer) ?? args.checkoutContext.billingKey,
+    polarCustomerExternalId: args.checkoutContext.billingKey,
     ...(args.checkoutContext.billingContactEmail
       ? { billingContactEmail: args.checkoutContext.billingContactEmail }
       : {}),
@@ -853,7 +996,7 @@ async function ensurePolarCustomer(
 
   return {
     id: customer.id,
-    externalId: getPolarCustomerExternalId(customer) ?? args.checkoutContext.billingKey,
+    externalId: args.checkoutContext.billingKey,
   };
 }
 
@@ -1280,6 +1423,7 @@ export const getCheckoutContext = internalQuery({
     billingContactName: v.union(v.string(), v.null()),
     polarCustomerId: v.union(v.string(), v.null()),
     polarCustomerExternalId: v.union(v.string(), v.null()),
+    checkoutId: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args): Promise<CheckoutContext> => {
     const currentUser = await requireCurrentUser(ctx);
@@ -1298,6 +1442,7 @@ export const getCheckoutContext = internalQuery({
       billingContactName: contact.name,
       polarCustomerId: account?.polarCustomerId ?? null,
       polarCustomerExternalId: account?.polarCustomerExternalId ?? null,
+      checkoutId: account?.checkoutId ?? null,
     };
   },
 });
@@ -1384,6 +1529,80 @@ export const startCheckout = action({
     });
 
     return { url: checkout.url };
+  },
+});
+
+export const refreshCheckoutStatus = action({
+  args: {
+    businessId: v.id("businesses"),
+    customerSessionToken: v.optional(v.string()),
+  },
+  returns: v.object({
+    synced: v.boolean(),
+    subscriptionId: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const checkoutContext: CheckoutContext = await ctx.runQuery(
+      internal.billing.getCheckoutContext,
+      {
+        businessId: args.businessId,
+      },
+    );
+    const lookup = await findPolarSubscriptionForCheckoutSuccess(
+      createPolarClient(),
+      checkoutContext,
+      args.customerSessionToken,
+    );
+    if (!lookup) {
+      return {
+        synced: false,
+        subscriptionId: null,
+      };
+    }
+
+    const { subscription, checkoutId } = lookup;
+    const subscriptionPriceId = getPolarSubscriptionPriceId(subscription);
+    const billingKey =
+      resolvePolarBillingKey({
+        customerExternalId: subscription.customer?.externalId ?? null,
+        metadata: subscription.metadata ?? {},
+      }) ?? checkoutContext.billingKey;
+    const businessId = parseBusinessIdFromBillingKey(billingKey) ?? args.businessId;
+    if (businessId !== args.businessId) {
+      throw new Error("Polar subscription belongs to a different business.");
+    }
+
+    await ctx.runMutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey,
+      polarCustomerId: subscription.customerId,
+      polarCustomerExternalId: billingKey,
+      ...(subscription.customer?.email
+        ? { billingContactEmail: subscription.customer.email }
+        : checkoutContext.billingContactEmail
+          ? { billingContactEmail: checkoutContext.billingContactEmail }
+          : {}),
+      ...(subscription.customer?.name
+        ? { billingContactName: subscription.customer.name }
+        : checkoutContext.billingContactName
+          ? { billingContactName: checkoutContext.billingContactName }
+          : {}),
+      subscriptionId: subscription.id,
+      subscriptionProductId: subscription.productId,
+      ...(subscriptionPriceId ? { subscriptionPriceId } : {}),
+      subscriptionState: subscription.status,
+      currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+      currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      ...(checkoutId ? { checkoutId } : {}),
+      lastWebhookEventType: "checkout.success.reconcile",
+      lastSyncedAt: new Date().toISOString(),
+    });
+
+    return {
+      synced: true,
+      subscriptionId: subscription.id,
+    };
   },
 });
 

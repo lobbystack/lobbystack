@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -2545,6 +2545,40 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const { i18n, t } = useTranslation("settings");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
+  const checkoutRefreshKeyRef = useRef<string | null>(null);
+  const checkoutStatus = searchParams.get("checkout");
+  const checkoutSessionToken = searchParams.get("customer_session_token");
+
+  useEffect(() => {
+    if (checkoutStatus !== "success") {
+      return;
+    }
+
+    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}`;
+    if (checkoutRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    checkoutRefreshKeyRef.current = refreshKey;
+
+    void refreshCheckoutStatus({
+      businessId: props.businessId,
+      ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+    }).finally(() => {
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.delete("checkout");
+      nextSearchParams.delete("customer_session_token");
+      setSearchParams(nextSearchParams, { replace: true });
+    });
+  }, [
+    checkoutSessionToken,
+    checkoutStatus,
+    props.businessId,
+    refreshCheckoutStatus,
+    searchParams,
+    setSearchParams,
+  ]);
 
   if (isLoadingStatus || !status) {
     return <BillingOverviewSkeleton t={t} />;

@@ -19,6 +19,7 @@ import {
 const {
   locationAssignMock,
   openPortalMock,
+  refreshCheckoutStatusMock,
   refreshStatusMock,
   resumeRegistrationMock,
   saveComplianceFormMock,
@@ -31,6 +32,7 @@ const {
 } = vi.hoisted(() => ({
   locationAssignMock: vi.fn(),
   openPortalMock: vi.fn(),
+  refreshCheckoutStatusMock: vi.fn(),
   refreshStatusMock: vi.fn(),
   resumeRegistrationMock: vi.fn(),
   saveComplianceFormMock: vi.fn(),
@@ -338,11 +340,15 @@ function renderBillingPage(input: {
   status: BillingStatus;
   compliance?: SmsComplianceState;
   campaignOptions?: SmsComplianceCampaignOption[];
+  initialEntries?: string[];
 }) {
   mockQueries(input);
+  const routerProps = input.initialEntries
+    ? { initialEntries: input.initialEntries }
+    : {};
 
   return render(
-    <MemoryRouter>
+    <MemoryRouter {...routerProps}>
       <TooltipProvider>
         <SettingsBillingPage businessId={businessId} />
       </TooltipProvider>
@@ -370,6 +376,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
   beforeEach(() => {
     startCheckoutMock.mockReset();
     openPortalMock.mockReset();
+    refreshCheckoutStatusMock.mockReset();
     saveComplianceFormMock.mockReset();
     startRegistrationMock.mockReset();
     resumeRegistrationMock.mockReset();
@@ -406,6 +413,9 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       }
       if (functionName === "billing:openPortal") {
         return openPortalMock;
+      }
+      if (functionName === "billing:refreshCheckoutStatus") {
+        return refreshCheckoutStatusMock;
       }
       if (functionName === "smsCompliance:startRegistration") {
         return startRegistrationMock;
@@ -494,6 +504,27 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       target: "ai_sms",
     });
     expect(window.location.assign).toHaveBeenCalledWith("https://example.com/checkout");
+  });
+
+  it("refreshes billing status after returning from a successful checkout", async () => {
+    refreshCheckoutStatusMock.mockResolvedValue({
+      synced: true,
+      subscriptionId: "sub_pro",
+    });
+
+    renderBillingPage({
+      status: buildStatus(),
+      initialEntries: [
+        "/settings/plan?checkout=success&customer_session_token=polar_cst_test",
+      ],
+    });
+
+    await waitFor(() => {
+      expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
+        businessId,
+        customerSessionToken: "polar_cst_test",
+      });
+    });
   });
 
   it("renders the add-on as active once AI SMS is enabled", () => {
