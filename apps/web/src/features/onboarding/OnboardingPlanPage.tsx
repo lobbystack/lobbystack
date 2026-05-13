@@ -21,6 +21,12 @@ import {
 import { cn } from "@/lib/utils";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
 
+type CheckoutReturnTarget = "pro" | "ai_sms";
+
+function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
+  return value === "pro" || value === "ai_sms" ? value : null;
+}
+
 type OnboardingPlanPageProps = {
   businessId: Id<"businesses">;
   onSignOut: () => void;
@@ -387,6 +393,7 @@ export function OnboardingPlanPage({
   const [error, setError] = useState<string | null>(null);
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
+  const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
   const hasCheckoutSessionTokenParam = searchParams.has(
     CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   );
@@ -401,7 +408,7 @@ export function OnboardingPlanPage({
     }
 
     const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
-    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}`;
+    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -414,6 +421,7 @@ export function OnboardingPlanPage({
     void refreshCheckoutStatus({
       businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+      ...(checkoutTarget ? { target: checkoutTarget } : {}),
     })
       .then((result) => {
         if (!result.synced) {
@@ -424,6 +432,7 @@ export function OnboardingPlanPage({
         clearStoredCheckoutSessionToken();
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
+        nextSearchParams.delete("checkout_target");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
@@ -433,6 +442,7 @@ export function OnboardingPlanPage({
   }, [
     businessId,
     checkoutStatus,
+    checkoutTarget,
     hasCheckoutSessionTokenParam,
     refreshCheckoutStatus,
     searchParams,

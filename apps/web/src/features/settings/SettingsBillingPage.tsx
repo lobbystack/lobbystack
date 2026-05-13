@@ -63,6 +63,12 @@ import {
   takeCheckoutSessionToken,
 } from "@/lib/checkout-session-token";
 
+type CheckoutReturnTarget = "pro" | "ai_sms";
+
+function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
+  return value === "pro" || value === "ai_sms" ? value : null;
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -2552,6 +2558,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const refreshCheckoutStatus = useObservedAction(api.billing.refreshCheckoutStatus);
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
+  const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
   const hasCheckoutSessionTokenParam = searchParams.has(
     CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   );
@@ -2562,7 +2569,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
     }
 
     const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
-    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}`;
+    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -2575,6 +2582,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
     void refreshCheckoutStatus({
       businessId: props.businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
+      ...(checkoutTarget ? { target: checkoutTarget } : {}),
     })
       .then((result) => {
         if (!result.synced) {
@@ -2585,6 +2593,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
         clearStoredCheckoutSessionToken();
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
+        nextSearchParams.delete("checkout_target");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
@@ -2593,6 +2602,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
       });
   }, [
     checkoutStatus,
+    checkoutTarget,
     hasCheckoutSessionTokenParam,
     props.businessId,
     refreshCheckoutStatus,

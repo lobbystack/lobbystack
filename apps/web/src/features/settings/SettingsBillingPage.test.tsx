@@ -521,7 +521,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     renderBillingPage({
       status: buildStatus(),
       initialEntries: [
-        "/settings/plan?checkout=success&customer_session_token=polar_cst_test",
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_test",
       ],
     });
 
@@ -529,6 +529,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId,
         customerSessionToken: "polar_cst_test",
+        target: "pro",
       });
     });
     await waitFor(() => {
@@ -545,7 +546,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     renderBillingPage({
       status: buildStatus(),
       initialEntries: [
-        "/settings/plan?checkout=success&customer_session_token=polar_cst_retry",
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_retry",
       ],
     });
 
@@ -553,11 +554,12 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId,
         customerSessionToken: "polar_cst_retry",
+        target: "pro",
       });
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/settings/plan?checkout=success",
+        "/settings/plan?checkout=success&checkout_target=pro",
       );
     });
   });
@@ -568,7 +570,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     renderBillingPage({
       status: buildStatus(),
       initialEntries: [
-        "/settings/plan?checkout=success&customer_session_token=polar_cst_error",
+        "/settings/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_error",
       ],
     });
 
@@ -576,11 +578,12 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId,
         customerSessionToken: "polar_cst_error",
+        target: "pro",
       });
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/settings/plan?checkout=success",
+        "/settings/plan?checkout=success&checkout_target=pro",
       );
     });
   });

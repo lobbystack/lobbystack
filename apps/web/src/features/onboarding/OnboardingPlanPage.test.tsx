@@ -111,13 +111,14 @@ describe("OnboardingPlanPage", () => {
 
   it("reconciles successful Pro checkout returns during onboarding", async () => {
     renderPlanPage(
-      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_test",
+      "/onboarding/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_test",
     );
 
     await waitFor(() => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId: "business_123",
         customerSessionToken: "polar_cst_test",
+        target: "pro",
       });
     });
     await waitFor(() => {
@@ -132,18 +133,19 @@ describe("OnboardingPlanPage", () => {
     });
 
     renderPlanPage(
-      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_retry",
+      "/onboarding/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_retry",
     );
 
     await waitFor(() => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId: "business_123",
         customerSessionToken: "polar_cst_retry",
+        target: "pro",
       });
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/onboarding/plan?checkout=success",
+        "/onboarding/plan?checkout=success&checkout_target=pro",
       );
     });
   });
@@ -152,18 +154,19 @@ describe("OnboardingPlanPage", () => {
     refreshCheckoutStatusMock.mockRejectedValue(new Error("Polar is not ready yet."));
 
     renderPlanPage(
-      "/onboarding/plan?checkout=success&customer_session_token=polar_cst_error",
+      "/onboarding/plan?checkout=success&checkout_target=pro&customer_session_token=polar_cst_error",
     );
 
     await waitFor(() => {
       expect(refreshCheckoutStatusMock).toHaveBeenCalledWith({
         businessId: "business_123",
         customerSessionToken: "polar_cst_error",
+        target: "pro",
       });
     });
     await waitFor(() => {
       expect(screen.getByTestId("current-location").textContent).toBe(
-        "/onboarding/plan?checkout=success",
+        "/onboarding/plan?checkout=success&checkout_target=pro",
       );
     });
   });

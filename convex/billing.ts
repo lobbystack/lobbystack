@@ -402,8 +402,16 @@ async function resolveBillingContact(
 }
 
 function hasPolarCustomerPortalAccess(account: Doc<"billing_accounts"> | null): boolean {
+  if (!account?.polarCustomerId) {
+    return false;
+  }
+
   return Boolean(
-    account?.polarCustomerId && (account.proSubscriptionId || account.aiSmsSubscriptionId),
+    account.proSubscriptionId ||
+      account.aiSmsSubscriptionId ||
+      account.currentPlan === "pro" ||
+      getNormalizedAddons(account.activeAddons).length > 0 ||
+      isActiveSubscriptionStatus(account.subscriptionState),
   );
 }
 
@@ -865,11 +873,12 @@ async function findPolarSubscriptionForCheckoutSuccess(
   client: PolarClient,
   checkoutContext: CheckoutContext,
   customerSessionToken?: string | null,
+  activeCheckoutTarget?: CheckoutTarget | null,
 ): Promise<PolarSubscriptionLookupResult | null> {
   let checkout: PolarCheckout | null = null;
-  if (checkoutContext.checkoutId) {
+  if (checkoutContext.checkoutId && (!customerSessionToken || !activeCheckoutTarget)) {
     checkout = await client.checkouts.get({ id: checkoutContext.checkoutId });
-    if (checkout.subscriptionId) {
+    if (checkout.subscriptionId && !customerSessionToken) {
       try {
         const subscription = await client.subscriptions.get({
           id: checkout.subscriptionId,
@@ -886,12 +895,15 @@ async function findPolarSubscriptionForCheckoutSuccess(
     }
   }
 
-  const checkoutTarget = getCheckoutTargetFromMetadata(checkout?.metadata);
+  const checkoutTarget =
+    activeCheckoutTarget ?? getCheckoutTargetFromMetadata(checkout?.metadata);
   const expectedProductId = getPolarProductIdForCheckoutTarget(checkoutTarget);
   const expectedCustomerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
-  const expectedCheckoutId = checkout?.id ?? checkoutContext.checkoutId;
+  const expectedCheckoutId = customerSessionToken
+    ? null
+    : (checkout?.id ?? checkoutContext.checkoutId);
   if (customerSessionToken) {
-    if (!expectedCustomerId && !expectedCheckoutId) {
+    if (!expectedCustomerId) {
       return null;
     }
     const subscriptions = await client.customerPortal.subscriptions.list(
@@ -1542,6 +1554,10 @@ export const startCheckout = action({
     const siteUrl = getBillingSiteUrl();
     const checkoutReturnPath =
       args.source === "onboarding" ? "/onboarding/plan" : "/settings/plan";
+    const checkoutSearchParams = new URLSearchParams({
+      checkout: "success",
+      checkout_target: args.target,
+    });
     const checkout = await createPolarClient().checkouts.create({
       customerId: customer.id,
       ...(checkoutContext.billingContactEmail
@@ -1551,7 +1567,10 @@ export const startCheckout = action({
         ? { customerName: checkoutContext.billingContactName }
         : {}),
       products: getTargetProductIds(args.target),
-      successUrl: new URL(`${checkoutReturnPath}?checkout=success`, siteUrl).toString(),
+      successUrl: new URL(
+        `${checkoutReturnPath}?${checkoutSearchParams.toString()}`,
+        siteUrl,
+      ).toString(),
       returnUrl: new URL(checkoutReturnPath, siteUrl).toString(),
       embedOrigin: siteUrl.origin,
       customerMetadata: {
@@ -1579,6 +1598,7 @@ export const refreshCheckoutStatus = action({
   args: {
     businessId: v.id("businesses"),
     customerSessionToken: v.optional(v.string()),
+    target: v.optional(v.union(v.literal("pro"), v.literal("ai_sms"))),
   },
   returns: v.object({
     synced: v.boolean(),
@@ -1595,6 +1615,7 @@ export const refreshCheckoutStatus = action({
       createPolarClient(),
       checkoutContext,
       args.customerSessionToken,
+      args.target ?? null,
     );
     if (!lookup) {
       return {
