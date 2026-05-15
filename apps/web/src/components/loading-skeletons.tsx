@@ -25,8 +25,10 @@ export function PageHeaderSkeleton({
 }
 
 export function MetricCardGridSkeleton({ count = 4 }: { count?: number }) {
+  const columnClass = count === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
+
   return (
-    <Surface className="grid sm:grid-cols-2 md:grid-cols-4">
+    <Surface className={`grid sm:grid-cols-2 ${columnClass}`}>
       {Array.from({ length: count }).map((_, index) => (
         <div
           className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"

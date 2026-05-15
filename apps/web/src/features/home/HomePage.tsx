@@ -245,11 +245,15 @@ export function HomePage({ businessId }: HomePageProps) {
           value: summary.kpis.calls.total.toLocaleString(i18n.language),
           description: formatDelta(summary.kpis.calls.deltaPercent),
         },
-        {
-          key: "messages",
-          value: summary.kpis.messages.total.toLocaleString(i18n.language),
-          description: formatDelta(summary.kpis.messages.deltaPercent),
-        },
+        ...(AI_SMS_DASHBOARD_ENABLED
+          ? [
+              {
+                key: "messages" as const,
+                value: summary.kpis.messages.total.toLocaleString(i18n.language),
+                description: formatDelta(summary.kpis.messages.deltaPercent),
+              },
+            ]
+          : []),
         {
           key: "appointments",
           value: summary.kpis.appointments.total.toLocaleString(i18n.language),
@@ -268,9 +272,13 @@ export function HomePage({ businessId }: HomePageProps) {
       <PageHeader title={t("home.title")} />
       <div className="space-y-6">
         {isLoadingSummary ? (
-          <MetricCardGridSkeleton />
+          <MetricCardGridSkeleton count={AI_SMS_DASHBOARD_ENABLED ? 4 : 3} />
         ) : (
-          <Surface className="grid sm:grid-cols-2 md:grid-cols-4">
+          <Surface
+            className={`grid sm:grid-cols-2 ${
+              AI_SMS_DASHBOARD_ENABLED ? "md:grid-cols-4" : "md:grid-cols-3"
+            }`}
+          >
             {metricCards.map((card) => {
               return (
                 <section
