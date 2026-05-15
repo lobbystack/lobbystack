@@ -48,7 +48,7 @@ import {
   deriveActiveAddonsFromProductIds,
   deriveCloudPlanFromProductIds,
   getAiSmsAddonPricing,
-  getAiSmsAddonProductIds,
+  getAiSmsSetupProductId,
   getBillingAccount,
   getBillingKey,
   getBillingSnapshot,
@@ -58,6 +58,7 @@ import {
   getNormalizedAddons,
   getPlanEntitlements,
   getPlanForBusiness,
+  getProAiSmsProductId,
   getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
@@ -131,6 +132,193 @@ type PolarBillingSubscription = {
     name?: string | null | undefined;
   };
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getStringField(
+  record: Record<string, unknown>,
+  camelKey: string,
+  snakeKey: string,
+): string | null {
+  const camelValue = record[camelKey];
+  if (typeof camelValue === "string") {
+    return camelValue;
+  }
+  const snakeValue = record[snakeKey];
+  if (typeof snakeValue === "string") {
+    return snakeValue;
+  }
+  return null;
+}
+
+function getRequiredStringField(
+  record: Record<string, unknown>,
+  camelKey: string,
+  snakeKey: string,
+): string {
+  const value = getStringField(record, camelKey, snakeKey);
+  if (!value) {
+    throw new Error(`Polar subscription response is missing ${snakeKey}.`);
+  }
+  return value;
+}
+
+function getRequiredBooleanField(
+  record: Record<string, unknown>,
+  camelKey: string,
+  snakeKey: string,
+): boolean {
+  const camelValue = record[camelKey];
+  if (typeof camelValue === "boolean") {
+    return camelValue;
+  }
+  const snakeValue = record[snakeKey];
+  if (typeof snakeValue === "boolean") {
+    return snakeValue;
+  }
+  throw new Error(`Polar subscription response is missing ${snakeKey}.`);
+}
+
+function getRequiredDateField(
+  record: Record<string, unknown>,
+  camelKey: string,
+  snakeKey: string,
+): Date {
+  const value = record[camelKey] ?? record[snakeKey];
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    const date = new Date(value);
+    if (Number.isFinite(date.getTime())) {
+      return date;
+    }
+  }
+  throw new Error(`Polar subscription response has an invalid ${snakeKey}.`);
+}
+
+function normalizePolarSubscriptionResponse(rawValue: unknown): PolarBillingSubscription {
+  if (!isRecord(rawValue)) {
+    throw new Error("Polar subscription response is not an object.");
+  }
+
+  const rawPrices = rawValue.prices;
+  const prices = Array.isArray(rawPrices)
+    ? rawPrices.map((price) =>
+        isRecord(price) && typeof price.id === "string" ? { id: price.id } : {},
+      )
+    : [];
+
+  const rawCustomer = rawValue.customer;
+  const customer = isRecord(rawCustomer)
+    ? {
+        externalId: getStringField(rawCustomer, "externalId", "external_id"),
+        email: getStringField(rawCustomer, "email", "email"),
+        name: getStringField(rawCustomer, "name", "name"),
+      }
+    : undefined;
+
+  const rawMetadata = rawValue.metadata;
+  const metadata = isRecord(rawMetadata)
+    ? Object.fromEntries(
+        Object.entries(rawMetadata).filter(
+          (entry): entry is [string, string | number | boolean] => {
+            const value = entry[1];
+            return (
+              typeof value === "string" ||
+              typeof value === "number" ||
+              typeof value === "boolean"
+            );
+          },
+        ),
+      )
+    : undefined;
+
+  return {
+    id: getRequiredStringField(rawValue, "id", "id"),
+    customerId: getRequiredStringField(rawValue, "customerId", "customer_id"),
+    productId: getRequiredStringField(rawValue, "productId", "product_id"),
+    prices,
+    status: getRequiredStringField(rawValue, "status", "status"),
+    currentPeriodStart: getRequiredDateField(
+      rawValue,
+      "currentPeriodStart",
+      "current_period_start",
+    ),
+    currentPeriodEnd: getRequiredDateField(
+      rawValue,
+      "currentPeriodEnd",
+      "current_period_end",
+    ),
+    cancelAtPeriodEnd: getRequiredBooleanField(
+      rawValue,
+      "cancelAtPeriodEnd",
+      "cancel_at_period_end",
+    ),
+    checkoutId: getStringField(rawValue, "checkoutId", "checkout_id"),
+    ...(metadata ? { metadata } : {}),
+    ...(customer ? { customer } : {}),
+  };
+}
+
+function getPolarResponseValidationRawValue(error: unknown): unknown | null {
+  if (!isRecord(error) || error.name !== "ResponseValidationError") {
+    return null;
+  }
+  if (error.statusCode !== 200) {
+    return null;
+  }
+  return "rawValue" in error ? error.rawValue : null;
+}
+
+function getPolarResponseValidationStatusMessage(error: unknown): string | null {
+  if (!isRecord(error) || error.name !== "ResponseValidationError") {
+    return null;
+  }
+  const statusCode = typeof error.statusCode === "number" ? error.statusCode : null;
+  const body = typeof error.body === "string" ? error.body : null;
+  if (statusCode === null) {
+    return body;
+  }
+  return body ? `Polar API returned ${statusCode}: ${body}` : `Polar API returned ${statusCode}.`;
+}
+
+async function updatePolarSubscriptionProduct(
+  subscriptionId: string,
+  productId: string,
+): Promise<PolarBillingSubscription> {
+  try {
+    return await createPolarClient().subscriptions.update({
+      id: subscriptionId,
+      subscriptionUpdate: {
+        productId,
+        prorationBehavior: "prorate",
+      },
+    });
+  } catch (error) {
+    const rawValue = getPolarResponseValidationRawValue(error);
+    if (rawValue === null) {
+      const statusMessage = getPolarResponseValidationStatusMessage(error);
+      if (statusMessage) {
+        throw new Error(statusMessage);
+      }
+      throw error;
+    }
+
+    console.warn(
+      "Polar subscription update succeeded but SDK response validation failed; using raw response.",
+      {
+        error:
+          isRecord(error) && typeof error.pretty === "function"
+            ? error.pretty()
+            : getErrorMessage(error),
+      },
+    );
+    return normalizePolarSubscriptionResponse(rawValue);
+  }
+}
 
 type UsageSyncPayload = {
   businessId: Id<"businesses">;
@@ -726,8 +914,7 @@ function getTargetProductIds(target: CheckoutTarget): Array<string> {
     return [getProProductId()];
   }
 
-  const addonProducts = getAiSmsAddonProductIds();
-  return [addonProducts.recurringProductId, addonProducts.setupFeeProductId];
+  return [getAiSmsSetupProductId()];
 }
 
 function isDuplicatePolarCustomerEmailError(error: unknown): boolean {
@@ -831,7 +1018,10 @@ function getCheckoutTargetFromMetadata(
 
 function getPolarProductIdForCheckoutTarget(target: CheckoutTarget | null): string | undefined {
   if (target === "ai_sms") {
-    return process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+    return (
+      process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim() ||
+      process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim()
+    );
   }
   return process.env.POLAR_PRO_PRODUCT_ID?.trim();
 }
@@ -1073,6 +1263,61 @@ function shouldRecordAiSmsOrderAsSetupFee(args: {
   return Boolean(setupFeeProductId && args.orderProductIds.includes(setupFeeProductId));
 }
 
+async function updateProSubscriptionForAiSmsSetupPayment(
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
+  args: {
+    businessId: Id<"businesses">;
+  },
+): Promise<boolean> {
+  const upgradeContext = await ctx.runQuery(internal.billing.getAiSmsSubscriptionUpgradeContext, {
+    businessId: args.businessId,
+  });
+  if (
+    upgradeContext.currentPlan !== "pro" ||
+    upgradeContext.activeAddons.includes("ai_sms") ||
+    !upgradeContext.proSubscriptionId ||
+    !upgradeContext.polarCustomerId
+  ) {
+    return false;
+  }
+
+  const subscription = await updatePolarSubscriptionProduct(
+    upgradeContext.proSubscriptionId,
+    getProAiSmsProductId(),
+  );
+
+  const subscriptionPriceId = getPolarSubscriptionPriceId(subscription);
+  await ctx.runMutation(internal.billing.syncSubscriptionFromWebhook, {
+    businessId: args.businessId,
+    billingKey: upgradeContext.billingKey,
+    polarCustomerId: subscription.customerId,
+    polarCustomerExternalId: upgradeContext.billingKey,
+    ...(subscription.customer?.email ? { billingContactEmail: subscription.customer.email } : {}),
+    ...(subscription.customer?.name ? { billingContactName: subscription.customer.name } : {}),
+    subscriptionId: subscription.id,
+    subscriptionProductId: subscription.productId,
+    ...(subscriptionPriceId ? { subscriptionPriceId } : {}),
+    subscriptionState: subscription.status,
+    currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+    currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    ...(subscription.checkoutId ? { checkoutId: subscription.checkoutId } : {}),
+    lastWebhookEventType: "order.paid.ai_sms_setup_upgrade",
+    lastSyncedAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+export const upgradeAiSmsSubscriptionAfterSetupPayment = internalAction({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    return await updateProSubscriptionForAiSmsSetupPayment(ctx, args);
+  },
+});
+
 export function registerBillingRoutes(http: HttpRouter): void {
   billingPolar.registerRoutes(http as never, {
     events: {
@@ -1164,7 +1409,7 @@ async function syncSubscriptionFromWebhookEvent(
 }
 
 async function syncOrderTransactionFromWebhookEvent(
-  ctx: Pick<MutationCtx, "runMutation">,
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
   event: Extract<
     PolarWebhookEvent,
     {
@@ -1180,6 +1425,9 @@ async function syncOrderTransactionFromWebhookEvent(
   if (!businessId) {
     return;
   }
+  const isAiSmsSetupOrder = shouldRecordAiSmsOrderAsSetupFee({
+    orderProductIds: event.data.productId ? [event.data.productId] : [],
+  });
 
   let invoiceUrl: string | undefined;
   if (event.data.isInvoiceGenerated) {
@@ -1203,14 +1451,16 @@ async function syncOrderTransactionFromWebhookEvent(
     ...(event.data.subscriptionId ? { subscriptionId: event.data.subscriptionId } : {}),
     ...(event.data.customerId ? { polarCustomerId: event.data.customerId } : {}),
     orderId: event.data.id,
-    ...(shouldRecordAiSmsOrderAsSetupFee({
-      orderProductIds: event.data.productId ? [event.data.productId] : [],
-    })
-      ? { aiSmsSetupOrderId: event.data.id }
-      : {}),
+    ...(isAiSmsSetupOrder ? { aiSmsSetupOrderId: event.data.id } : {}),
     occurredAt: event.data.createdAt.toISOString(),
     lastSyncedAt: event.timestamp.toISOString(),
   });
+
+  if (event.type === "order.paid" && isAiSmsSetupOrder) {
+    await updateProSubscriptionForAiSmsSetupPayment(ctx, {
+      businessId,
+    });
+  }
 }
 
 async function syncRefundTransactionFromWebhookEvent(
@@ -1332,8 +1582,11 @@ export const syncSubscriptionFromWebhook = internalMutation({
       account: existingAccount,
     });
     const existingAddons = getNormalizedAddons(existingAccount?.activeAddons);
-    const isProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
-    const isAiSmsProduct =
+    const isBaseProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
+    const isProAiSmsProduct =
+      args.subscriptionProductId === process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
+    const isProProduct = isBaseProProduct || isProAiSmsProduct;
+    const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
 
@@ -1343,9 +1596,16 @@ export const syncSubscriptionFromWebhook = internalMutation({
         : isProProduct && existingPlan !== "enterprise"
           ? "free_cloud"
           : existingPlan;
-    const nextActiveAddons = isAiSmsProduct
-      ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
-      : existingAddons;
+    const shouldRemoveAiSmsFromUpdatedProSubscription =
+      isBaseProProduct &&
+      existingAccount?.proSubscriptionId === args.subscriptionId &&
+      existingAccount.proSubscriptionProductId === process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
+    const nextActiveAddons =
+      isProAiSmsProduct || isLegacyAiSmsProduct
+        ? mergeActiveAddon(existingAddons, "ai_sms", subscriptionActive)
+        : shouldRemoveAiSmsFromUpdatedProSubscription
+          ? mergeActiveAddon(existingAddons, "ai_sms", false)
+          : existingAddons;
 
     const patch = {
       businessId: args.businessId,
@@ -1362,9 +1622,9 @@ export const syncSubscriptionFromWebhook = internalMutation({
       ...(isProProduct && args.subscriptionPriceId
         ? { proSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
-      ...(isAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
-      ...(isAiSmsProduct ? { aiSmsSubscriptionProductId: args.subscriptionProductId } : {}),
-      ...(isAiSmsProduct && args.subscriptionPriceId
+      ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
+      ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionProductId: args.subscriptionProductId } : {}),
+      ...(isLegacyAiSmsProduct && args.subscriptionPriceId
         ? { aiSmsSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
       currentPeriodStart: args.currentPeriodStart,
@@ -1495,6 +1755,38 @@ export const getCheckoutContext = internalQuery({
       polarCustomerId: account?.polarCustomerId ?? null,
       polarCustomerExternalId: account?.polarCustomerExternalId ?? null,
       checkoutId: account?.checkoutId ?? null,
+    };
+  },
+});
+
+export const getAiSmsSubscriptionUpgradeContext = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  returns: v.object({
+    billingKey: v.string(),
+    currentPlan: v.union(
+      v.literal("free_cloud"),
+      v.literal("pro"),
+      v.literal("enterprise"),
+      v.literal("self_host"),
+    ),
+    activeAddons: v.array(v.union(v.literal("ai_sms"))),
+    polarCustomerId: v.union(v.string(), v.null()),
+    proSubscriptionId: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const business = await ctx.db.get(args.businessId);
+    const account = await getBillingAccount(ctx, args.businessId);
+    return {
+      billingKey: getBillingKey(args.businessId),
+      currentPlan: getPlanForBusiness({
+        business,
+        account,
+      }),
+      activeAddons: getNormalizedAddons(account?.activeAddons),
+      polarCustomerId: account?.polarCustomerId ?? null,
+      proSubscriptionId: account?.proSubscriptionId ?? null,
     };
   },
 });
@@ -1662,7 +1954,6 @@ export const refreshCheckoutStatus = action({
       lastWebhookEventType: "checkout.success.reconcile",
       lastSyncedAt: new Date().toISOString(),
     });
-
     return {
       synced: true,
       subscriptionId: subscription.id,

@@ -228,8 +228,8 @@ export function getConfiguredCheckoutPlans(): Array<HostedCheckoutPlanSlug> {
 
 export function isAiSmsAddonCheckoutConfigured(): boolean {
   return Boolean(
-    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim() &&
-      process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim(),
+    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim() &&
+      process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim(),
   );
 }
 
@@ -241,24 +241,28 @@ export function getProProductId(): string {
   return productId;
 }
 
-export function getAiSmsAddonProductIds(): {
-  recurringProductId: string;
-  setupFeeProductId: string;
-} {
-  const recurringProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
-  const setupFeeProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim();
-
-  if (!recurringProductId) {
+export function getAiSmsAddonProductId(): string {
+  const productId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
+  if (!productId) {
     throw new Error("POLAR_AI_SMS_ADDON_PRODUCT_ID is required.");
   }
-  if (!setupFeeProductId) {
+  return productId;
+}
+
+export function getAiSmsSetupProductId(): string {
+  const productId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim();
+  if (!productId) {
     throw new Error("POLAR_AI_SMS_SETUP_PRODUCT_ID is required.");
   }
+  return productId;
+}
 
-  return {
-    recurringProductId,
-    setupFeeProductId,
-  };
+export function getProAiSmsProductId(): string {
+  const productId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
+  if (!productId) {
+    throw new Error("POLAR_PRO_AI_SMS_PRODUCT_ID is required.");
+  }
+  return productId;
 }
 
 export function canPurchaseAiSmsAddon(input: {
@@ -276,8 +280,11 @@ export function deriveCloudPlanFromProductIds(input: {
     return "enterprise";
   }
 
-  const proProductId = process.env.POLAR_PRO_PRODUCT_ID?.trim();
-  if (proProductId && input.subscriptionProductIds.includes(proProductId)) {
+  const proProductIds = [
+    process.env.POLAR_PRO_PRODUCT_ID?.trim(),
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim(),
+  ].filter((productId): productId is string => Boolean(productId));
+  if (proProductIds.some((productId) => input.subscriptionProductIds.includes(productId))) {
     return "pro";
   }
 
@@ -287,8 +294,11 @@ export function deriveCloudPlanFromProductIds(input: {
 export function deriveActiveAddonsFromProductIds(
   subscriptionProductIds: Array<string>,
 ): Array<BillingAddonSlug> {
-  const recurringAiSmsProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
-  if (recurringAiSmsProductId && subscriptionProductIds.includes(recurringAiSmsProductId)) {
+  const aiSmsProductIds = [
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim(),
+    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim(),
+  ].filter((productId): productId is string => Boolean(productId));
+  if (aiSmsProductIds.some((productId) => subscriptionProductIds.includes(productId))) {
     return ["ai_sms"];
   }
   return [];

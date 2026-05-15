@@ -13,6 +13,7 @@ const {
   polarEventsIngestMock,
   polarSubscriptionsGetMock,
   polarSubscriptionsListMock,
+  polarSubscriptionsUpdateMock,
 } = vi.hoisted(() => ({
   polarCheckoutsCreateMock: vi.fn(),
   polarCheckoutsGetMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   polarEventsIngestMock: vi.fn(),
   polarSubscriptionsGetMock: vi.fn(),
   polarSubscriptionsListMock: vi.fn(),
+  polarSubscriptionsUpdateMock: vi.fn(),
 }));
 
 const {
@@ -63,6 +65,7 @@ vi.mock("@polar-sh/sdk", () => ({
       subscriptions: {
         get: polarSubscriptionsGetMock,
         list: polarSubscriptionsListMock,
+        update: polarSubscriptionsUpdateMock,
       },
     };
   }),
@@ -89,6 +92,7 @@ import { modules } from "../test.setup";
 const convexModules = modules;
 const originalProProductId = process.env.POLAR_PRO_PRODUCT_ID;
 const originalAiSmsAddonProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
+const originalProAiSmsProductId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID;
 const originalAiSmsSetupProductId = process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID;
 const originalPolarOrganizationToken = process.env.POLAR_ORGANIZATION_TOKEN;
 const originalSiteUrl = process.env.SITE_URL;
@@ -121,6 +125,12 @@ afterEach(() => {
     delete process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
   } else {
     process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = originalAiSmsAddonProductId;
+  }
+
+  if (originalProAiSmsProductId === undefined) {
+    delete process.env.POLAR_PRO_AI_SMS_PRODUCT_ID;
+  } else {
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = originalProAiSmsProductId;
   }
 
   if (originalAiSmsSetupProductId === undefined) {
@@ -191,6 +201,8 @@ async function seedBillingAccount(
     currentPlan: "free_cloud" | "pro" | "enterprise";
     activeAddons?: Array<"ai_sms">;
     polarCustomerId?: string;
+    proSubscriptionId?: string;
+    proSubscriptionProductId?: string;
   },
 ): Promise<void> {
   await ctx.db.insert("billing_accounts", {
@@ -202,6 +214,10 @@ async function seedBillingAccount(
     billingContactEmail: "owner@example.com",
     billingContactName: "Billing Owner",
     ...(input.polarCustomerId ? { polarCustomerId: input.polarCustomerId } : {}),
+    ...(input.proSubscriptionId ? { proSubscriptionId: input.proSubscriptionId } : {}),
+    ...(input.proSubscriptionProductId
+      ? { proSubscriptionProductId: input.proSubscriptionProductId }
+      : {}),
     lastSyncedAt: "2026-04-12T12:00:00.000Z",
   });
 }
@@ -448,8 +464,8 @@ describe("billing", () => {
 
   it("enables the AI SMS add-on only for eligible Pro workspaces", async () => {
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
-    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
     process.env.SITE_URL = "https://example.com";
 
     const t = convexTest(schema, convexModules);
@@ -2332,6 +2348,53 @@ describe("billing", () => {
     ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
   });
 
+  it("starts AI SMS checkout with the one-time setup product", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-checkout-bundle",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_ai_sms",
+      });
+    });
+
+    polarCheckoutsCreateMock.mockResolvedValueOnce({
+      id: "checkout_ai_sms",
+      url: "https://polar.sh/checkout/ai-sms",
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "ai_sms",
+    });
+
+    expect(result.url).toBe("https://polar.sh/checkout/ai-sms");
+    expect(polarCheckoutsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: "cus_ai_sms",
+        products: ["prod_ai_sms_setup"],
+        successUrl:
+          "https://app.example.com/settings/plan?checkout=success&checkout_target=ai_sms",
+        returnUrl: "https://app.example.com/settings/plan",
+        embedOrigin: "https://app.example.com",
+        metadata: expect.objectContaining({
+          businessId: String(businessId),
+          checkoutTarget: "ai_sms",
+        }),
+      }),
+    );
+  });
+
   it("rejects duplicate-email Polar customers linked to another billing key", async () => {
     const t = convexTest(schema, convexModules);
     registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
@@ -2641,7 +2704,7 @@ describe("billing", () => {
     expect(account).toBeNull();
   });
 
-  it("uses checkout target metadata when reconciling AI SMS customer-session subscriptions", async () => {
+  it("uses checkout target metadata when reconciling upgraded AI SMS subscriptions", async () => {
     const t = convexTest(schema, convexModules);
     registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
     const { authed, businessId } = await seedWorkspace(t, {
@@ -2651,13 +2714,14 @@ describe("billing", () => {
 
     process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
-    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
 
     await t.run(async (ctx: TestContext) => {
       await seedBillingAccount(ctx, {
         businessId,
         currentPlan: "pro",
         polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_pro",
       });
       const account = await ctx.db
         .query("billing_accounts")
@@ -2687,7 +2751,7 @@ describe("billing", () => {
           {
             id: "sub_ai_sms",
             customerId: "cus_expected",
-            productId: "prod_ai_sms",
+            productId: "prod_pro_ai_sms",
             prices: [{ id: "price_ai_sms" }],
             status: "active",
             currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
@@ -2718,7 +2782,7 @@ describe("billing", () => {
       { customerSession: "polar_cst_ai_sms" },
       {
         active: true,
-        productId: "prod_ai_sms",
+        productId: "prod_pro_ai_sms",
         limit: 10,
       },
     );
@@ -2731,8 +2795,144 @@ describe("billing", () => {
     });
     expect(account?.currentPlan).toBe("pro");
     expect(account?.activeAddons).toEqual(["ai_sms"]);
-    expect(account?.aiSmsSubscriptionId).toBe("sub_ai_sms");
-    expect(account?.proSubscriptionId).toBeUndefined();
+    expect(account?.proSubscriptionId).toBe("sub_ai_sms");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_ai_sms");
+    expect(account?.aiSmsSubscriptionId).toBeUndefined();
+  });
+
+  it("updates the existing Pro subscription after the AI SMS setup payment is confirmed", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-setup-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_pro",
+        proSubscriptionProductId: "prod_pro",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockResolvedValueOnce({
+      id: "sub_pro",
+      customerId: "cus_expected",
+      productId: "prod_pro_ai_sms",
+      prices: [{ id: "price_pro_ai_sms" }],
+      status: "active",
+      currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+      currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      checkoutId: null,
+      customer: {
+        externalId: getBillingKey(businessId),
+        email: "billing-ai-sms-setup-upgrade@example.com",
+        name: "Billing Owner",
+      },
+      metadata: {},
+    });
+
+    const upgraded = await t.action(
+      internal.billing.upgradeAiSmsSubscriptionAfterSetupPayment,
+      { businessId },
+    );
+
+    expect(upgraded).toBe(true);
+    expect(polarSubscriptionsUpdateMock).toHaveBeenCalledWith({
+      id: "sub_pro",
+      subscriptionUpdate: {
+        productId: "prod_pro_ai_sms",
+        prorationBehavior: "prorate",
+      },
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_pro");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_ai_sms");
+    expect(account?.aiSmsSubscriptionId).toBeUndefined();
+  });
+
+  it("syncs the AI SMS upgrade when the Polar SDK rejects a successful update response", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-ai-sms-setup-response-validation",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_pro",
+        proSubscriptionProductId: "prod_pro",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockRejectedValueOnce({
+      name: "ResponseValidationError",
+      message: "Response validation failed",
+      statusCode: 200,
+      pretty: () => "Response validation failed",
+      rawValue: {
+        id: "sub_pro",
+        customer_id: "cus_expected",
+        product_id: "prod_pro_ai_sms",
+        prices: [{ id: "price_pro_ai_sms" }],
+        status: "active",
+        current_period_start: "2026-04-15T00:00:00.000Z",
+        current_period_end: "2026-05-15T00:00:00.000Z",
+        cancel_at_period_end: false,
+        checkout_id: null,
+        customer: {
+          external_id: getBillingKey(businessId),
+          email: "billing-ai-sms-setup-response-validation@example.com",
+          name: "Billing Owner",
+        },
+        metadata: {},
+      },
+    });
+
+    const upgraded = await t.action(
+      internal.billing.upgradeAiSmsSubscriptionAfterSetupPayment,
+      { businessId },
+    );
+
+    expect(upgraded).toBe(true);
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_pro");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_ai_sms");
+    expect(account?.aiSmsSubscriptionId).toBeUndefined();
   });
 
   it("preserves portal access for legacy paid Polar accounts without subscription ids", async () => {
@@ -2778,8 +2978,8 @@ describe("billing", () => {
     });
 
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
-    process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID = "prod_ai_sms";
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
+    process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
     process.env.SITE_URL = "https://example.com";
 
     await t.run(async (ctx: TestContext) => {
