@@ -91,6 +91,10 @@ vi.mock("@/lib/remembered-convex-query", () => ({
   useRememberedConvexQuery: vi.fn(),
 }));
 
+vi.mock("@/lib/release-flags", () => ({
+  AI_SMS_DASHBOARD_ENABLED: true,
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccessMock(...args),

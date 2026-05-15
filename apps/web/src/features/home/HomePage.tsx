@@ -48,6 +48,7 @@ import {
 } from "@/lib/follow-up-task";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 
 type HomePageProps = {
@@ -350,7 +351,7 @@ export function HomePage({ businessId }: HomePageProps) {
                                 ? {
                                     pathname: `/calls/${encodeURIComponent(String(item.callId))}`,
                                   }
-                                : item.conversationId
+                                : AI_SMS_DASHBOARD_ENABLED && item.conversationId
                                   ? {
                                       pathname: "/messages",
                                       search: `?conversationId=${encodeURIComponent(String(item.conversationId))}`,
