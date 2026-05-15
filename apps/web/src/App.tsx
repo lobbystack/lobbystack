@@ -63,6 +63,7 @@ import {
   trackPageView,
 } from "@/lib/analytics";
 import { useResetAuthScopedClientStateOnSignOut } from "@/lib/auth-scoped-client-state";
+import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 
 type ActiveBusiness = {
   _id: Id<"businesses">;
@@ -410,7 +411,7 @@ function WorkspaceShell() {
     }
   }
 
-  const usesFixedMain = location.pathname === "/messages";
+  const usesFixedMain = AI_SMS_DASHBOARD_ENABLED && location.pathname === "/messages";
 
   return (
     <AuthenticatedLayout
@@ -442,10 +443,12 @@ function WorkspaceShell() {
               element={<CallDetailPage {...(businessId ? { businessId } : {})} />}
               path="/calls/:callId"
             />
-            <Route
-              element={<MessagesPage {...(businessId ? { businessId } : {})} />}
-              path="/messages"
-            />
+            {AI_SMS_DASHBOARD_ENABLED && (
+              <Route
+                element={<MessagesPage {...(businessId ? { businessId } : {})} />}
+                path="/messages"
+              />
+            )}
             <Route
               element={<AnalyticsPage {...(businessId ? { businessId } : {})} />}
               path="/analytics"
@@ -581,16 +584,18 @@ function WorkspaceShell() {
                 }
                 path="plan"
               />
-              <Route
-                element={
-                  businessId ? (
-                    <SettingsBillingCompliancePage businessId={businessId} />
-                  ) : (
-                    <Navigate replace to="/settings" />
-                  )
-                }
-                path="plan/ai-sms-compliance"
-              />
+              {AI_SMS_DASHBOARD_ENABLED && (
+                <Route
+                  element={
+                    businessId ? (
+                      <SettingsBillingCompliancePage businessId={businessId} />
+                    ) : (
+                      <Navigate replace to="/settings" />
+                    )
+                  }
+                  path="plan/ai-sms-compliance"
+                />
+              )}
               <Route
                 element={
                   businessId ? (

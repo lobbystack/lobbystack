@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
+import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 import { cn } from "@/lib/utils";
 import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
@@ -107,7 +108,9 @@ export function AppSidebar({
           items: [
             { title: t("nav:items.home"), url: "/", icon: AnimatedHomeIcon },
             { title: t("nav:items.calls"), url: "/calls", icon: AnimatedCallsIcon },
-            { title: t("nav:items.messages"), url: "/messages", icon: AnimatedMessagesIcon },
+            ...(AI_SMS_DASHBOARD_ENABLED
+              ? [{ title: t("nav:items.messages"), url: "/messages", icon: AnimatedMessagesIcon }]
+              : []),
             { title: t("nav:items.contacts"), url: "/contacts", icon: AnimatedContactsIcon },
           ],
         },

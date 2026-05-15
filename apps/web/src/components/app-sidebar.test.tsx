@@ -103,6 +103,7 @@ describe("AppSidebar", () => {
     expect(screen.getByRole("link", { name: "Knowledge" }).getAttribute("href")).toBe("/agent/knowledge");
     expect(screen.getByRole("link", { name: "Services" }).getAttribute("href")).toBe("/agent/services");
     expect(screen.getByRole("link", { name: "Rules" }).getAttribute("href")).toBe("/agent/rules");
+    expect(screen.queryByRole("link", { name: "Messages" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Agent" })).toBeNull();
   });
 

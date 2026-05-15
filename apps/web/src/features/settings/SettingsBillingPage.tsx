@@ -62,6 +62,7 @@ import {
   deleteCheckoutSessionTokenParam,
   takeCheckoutSessionToken,
 } from "@/lib/checkout-session-token";
+import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 
 type CheckoutReturnTarget = "pro" | "ai_sms";
 
@@ -914,7 +915,7 @@ function UsageSection({
         </BorderedItem>
       </BillingSection>
 
-      {(catalog.overagesBillable || status.aiSmsEnabled) && (
+      {(catalog.overagesBillable || (AI_SMS_DASHBOARD_ENABLED && status.aiSmsEnabled)) && (
         <BillingSection
           title={t("billing.usage.paygTitle")}
           description={
@@ -979,21 +980,21 @@ function UsageSection({
               </>
             )}
 
-            {status.aiSmsEnabled && (
+            {AI_SMS_DASHBOARD_ENABLED && status.aiSmsEnabled && (
               <div className="px-6 py-5 border-b border-border last:border-b-0">
                 <UsageMeterRow
-                label={t("billing.usage.aiSmsTitle")}
-                locale={locale}
-                t={t}
-                used={usage.aiSmsSegmentsUsed}
-                included={null}
-                unit={segmentsUnit}
-                blocked={false}
-                overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
-                overageBillable
-                metered
-                mode="payg"
-              />
+                  label={t("billing.usage.aiSmsTitle")}
+                  locale={locale}
+                  t={t}
+                  used={usage.aiSmsSegmentsUsed}
+                  included={null}
+                  unit={segmentsUnit}
+                  blocked={false}
+                  overageRateCents={billingAddonCatalog.ai_sms.usageRatePerSegmentCents}
+                  overageBillable
+                  metered
+                  mode="payg"
+                />
               </div>
             )}
           </BorderedItem>
@@ -2527,7 +2528,7 @@ function BillingOverviewSkeleton({
   return (
     <div className="flex w-full flex-col gap-10">
       <PlanSectionSkeleton t={t} />
-      <AddonsSectionSkeleton t={t} />
+      {AI_SMS_DASHBOARD_ENABLED && <AddonsSectionSkeleton t={t} />}
       <SpendingCapSectionSkeleton t={t} />
       <TransactionsSectionSkeleton t={t} />
     </div>
@@ -2635,12 +2636,14 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
         locale={locale}
         t={t}
       />
-      <AddonsSection
-        status={status}
-        businessId={props.businessId}
-        locale={locale}
-        t={t}
-      />
+      {AI_SMS_DASHBOARD_ENABLED && (
+        <AddonsSection
+          status={status}
+          businessId={props.businessId}
+          locale={locale}
+          t={t}
+        />
+      )}
       <SpendingCapSection status={status} t={t} />
       <TransactionsSection status={status} locale={locale} t={t} />
     </div>
@@ -2650,8 +2653,10 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
 export function SettingsBillingCompliancePage(props: SettingsBillingPageProps) {
   const { t } = useTranslation("settings");
   const { data: status, isInitialLoading: isLoadingStatus } = useBillingStatus(props.businessId);
+
   const shouldFetchCompliance = Boolean(
-    status &&
+    AI_SMS_DASHBOARD_ENABLED &&
+      status &&
       status.hasBillingManagementAccess &&
       status.plan !== "self_host" &&
       status.aiSmsEnabled,
@@ -2660,6 +2665,10 @@ export function SettingsBillingCompliancePage(props: SettingsBillingPageProps) {
     data: compliance,
     isInitialLoading: isLoadingCompliance,
   } = useSmsComplianceStatus(props.businessId, shouldFetchCompliance);
+
+  if (!AI_SMS_DASHBOARD_ENABLED) {
+    return <Navigate replace to="/settings/plan" />;
+  }
 
   if (isLoadingStatus || !status || (shouldFetchCompliance && isLoadingCompliance)) {
     return <AiSmsComplianceSectionSkeleton t={t} />;
