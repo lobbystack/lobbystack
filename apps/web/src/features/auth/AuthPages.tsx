@@ -288,6 +288,29 @@ export function SignupPage() {
 
   return (
     <OnboardingShell
+      legalFooter={
+        <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
+          {t("signup.legal.prefix")} {" "}
+          <a
+            className="underline underline-offset-4 hover:text-foreground"
+            href="/terms"
+            rel="noreferrer"
+            target="_blank"
+          >
+            {t("signup.legal.terms")}
+          </a>{" "}
+          {t("signup.legal.and")} {" "}
+          <a
+            className="underline underline-offset-4 hover:text-foreground"
+            href="/privacy"
+            rel="noreferrer"
+            target="_blank"
+          >
+            {t("signup.legal.privacy")}
+          </a>
+          {t("signup.legal.suffix")}
+        </p>
+      }
       progress={{ current: 1, total: 10 }}
       title={t("signup.title")}
       width="sm"
