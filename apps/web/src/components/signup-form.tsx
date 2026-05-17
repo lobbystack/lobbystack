@@ -10,12 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Turnstile, type TurnstileHandle } from "@/components/turnstile";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+
+type PasswordCriterion = {
+  label: string;
+  isMet: boolean;
+};
 
 type SignupFormProps = {
   className?: string;
@@ -51,6 +55,15 @@ export function SignupForm({
   const { t } = useTranslation("auth");
   const [shouldReserveTurnstileSpace, setShouldReserveTurnstileSpace] =
     useState(false);
+  const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
+  const passwordCriteria: PasswordCriterion[] = [
+    { label: t("signup.passwordCriteria.minimumLength"), isMet: password.length >= 8 },
+    { label: t("signup.passwordCriteria.number"), isMet: /\d/.test(password) },
+    {
+      label: t("signup.passwordCriteria.specialCharacter"),
+      isMet: /[^A-Za-z0-9\s]/.test(password),
+    },
+  ];
 
   return (
     <div className={cn("flex w-full flex-col gap-6", className)}>
@@ -77,12 +90,30 @@ export function SignupForm({
               autoComplete="new-password"
               className="h-11"
               onChange={(event) => onPasswordChange(event.target.value)}
+              onFocus={() => setHasFocusedPassword(true)}
               placeholder={t("signup.passwordPlaceholder")}
               required
               type="password"
               value={password}
             />
-            <FieldDescription>{t("signup.passwordHint")}</FieldDescription>
+            {hasFocusedPassword ? (
+              <ul className="flex flex-col gap-1 pt-0.5 text-sm font-medium" aria-live="polite">
+                {passwordCriteria.map((criterion) => (
+                  <li
+                    key={criterion.label}
+                    className={cn(
+                      "flex items-center gap-2",
+                      criterion.isMet ? "text-emerald-700" : "text-muted-foreground",
+                    )}
+                  >
+                    <span className="w-3 text-center" aria-hidden="true">
+                      {criterion.isMet ? "✓" : "×"}
+                    </span>
+                    <span>{criterion.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </Field>
 
           {turnstileSiteKey ? (

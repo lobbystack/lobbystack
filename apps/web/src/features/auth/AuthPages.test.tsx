@@ -180,11 +180,40 @@ describe("SignupPage", () => {
     turnstileTokenMock.mockReturnValue("turnstile-token");
   });
 
-  it("shows password guidance when signup fails through the Turnstile provider password policy", async () => {
-    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
-    signInMock.mockRejectedValueOnce(
-      new Error("PasswordWithTurnstile authorize failed: Invalid password"),
+  it("shows password criteria only after the password field is focused", async () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
     );
+
+    expect(screen.queryByText("signup.passwordCriteria.minimumLength")).toBeNull();
+    expect(screen.queryByText("signup.passwordCriteria.number")).toBeNull();
+    expect(screen.queryByText("signup.passwordCriteria.specialCharacter")).toBeNull();
+
+    const user = userEvent.setup();
+    const passwordInput = screen.getByLabelText("signup.password");
+    await user.click(passwordInput);
+
+    expect(screen.getByText("signup.passwordCriteria.minimumLength")).toBeTruthy();
+    expect(screen.getByText("signup.passwordCriteria.number")).toBeTruthy();
+    expect(screen.getByText("signup.passwordCriteria.specialCharacter")).toBeTruthy();
+
+    await user.type(passwordInput, "abcde1!f");
+
+    expect(screen.getByText("signup.passwordCriteria.minimumLength").closest("li")?.className).toContain(
+      "text-emerald-700",
+    );
+    expect(screen.getByText("signup.passwordCriteria.number").closest("li")?.className).toContain(
+      "text-emerald-700",
+    );
+    expect(screen.getByText("signup.passwordCriteria.specialCharacter").closest("li")?.className).toContain(
+      "text-emerald-700",
+    );
+  });
+
+  it("shows password guidance without submitting invalid signup passwords", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
 
     render(
       <MemoryRouter>
@@ -194,11 +223,13 @@ describe("SignupPage", () => {
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
-    await user.type(screen.getByLabelText("signup.password"), "123456789012");
+    await user.type(screen.getByLabelText("signup.password"), "12345678");
     await user.click(screen.getByRole("button", { name: "signup.submit" }));
 
     expect(await screen.findByText("errors.invalidPassword")).toBeTruthy();
     expect(screen.queryByText("errors.turnstileFailed")).toBeNull();
+    expect(turnstileExecuteMock).not.toHaveBeenCalled();
+    expect(signInMock).not.toHaveBeenCalled();
   });
 
   it("shows account-exists guidance when signup uses an existing email", async () => {
@@ -215,7 +246,7 @@ describe("SignupPage", () => {
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
-    await user.type(screen.getByLabelText("signup.password"), "123456789012");
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!f");
     await user.click(screen.getByRole("button", { name: "signup.submit" }));
 
     expect(await screen.findByText("errors.accountExists")).toBeTruthy();
@@ -236,14 +267,14 @@ describe("SignupPage", () => {
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
-    await user.type(screen.getByLabelText("signup.password"), "12345678901");
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!");
 
     await new Promise((resolve) => window.setTimeout(resolve, 800));
 
     expect(screen.queryByTestId("turnstile")).toBeNull();
     expect(turnstileExecuteMock).not.toHaveBeenCalled();
 
-    await user.type(screen.getByLabelText("signup.password"), "2");
+    await user.type(screen.getByLabelText("signup.password"), "f");
 
     await waitFor(() => expect(screen.getByTestId("turnstile")).toBeTruthy());
     await waitFor(() => expect(turnstileExecuteMock).toHaveBeenCalledOnce(), {
@@ -264,7 +295,7 @@ describe("SignupPage", () => {
 
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
-    await user.type(screen.getByLabelText("signup.password"), "123456789012");
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!f");
     await user.click(screen.getByRole("button", { name: "signup.submit" }));
 
     expect(await screen.findByText("errors.turnstileRequired")).toBeTruthy();

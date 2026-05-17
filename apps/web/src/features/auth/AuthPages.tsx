@@ -81,6 +81,10 @@ function isResetRequestLookupError(error: unknown): boolean {
   return message.includes("InvalidAccountId");
 }
 
+function meetsPasswordPreflight(password: string): boolean {
+  return password.length >= 8 && /\d/.test(password) && /[^A-Za-z0-9\s]/.test(password);
+}
+
 export function LoginPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
@@ -158,7 +162,7 @@ export function SignupPage() {
   const turnstilePreflightKeyRef = useRef<string | null>(null);
   const normalizedEmail = email.trim().toLowerCase();
   const hasPlausibleSignupCredentials =
-    normalizedEmail.includes("@") && password.length >= 12;
+    normalizedEmail.includes("@") && meetsPasswordPreflight(password);
   const shouldPrepareTurnstile = Boolean(
     turnstileSiteKey && hasPlausibleSignupCredentials,
   );
@@ -257,6 +261,14 @@ export function SignupPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!meetsPasswordPreflight(password)) {
+      pendingTurnstileSubmitRef.current = false;
+      turnstilePreflightKeyRef.current = null;
+      setTurnstileToken(null);
+      setErrorMessage(t("errors.invalidPassword"));
+      return;
+    }
 
     if (turnstileSiteKey && hasPlausibleSignupCredentials && !turnstileToken) {
       setIsSubmitting(true);
