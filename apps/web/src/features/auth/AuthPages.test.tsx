@@ -79,9 +79,29 @@ describe("LoginPage", () => {
     expect(emailInput.getAttribute("aria-invalid")).toBe("true");
 
     await user.clear(emailInput);
+    await user.type(emailInput, "o");
+
+    expect(screen.queryByText("login.emailInvalid")).toBeNull();
+
+    await user.tab();
+
+    expect(screen.getByText("login.emailInvalid")).toBeTruthy();
+
+    await user.clear(emailInput);
     await user.type(emailInput, "owner@example.com");
 
     expect(screen.queryByText("login.emailInvalid")).toBeNull();
+  });
+
+  it("keeps the default legal footer on login", () => {
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("shell.terms")).toBeTruthy();
+    expect(screen.getByText("shell.privacy")).toBeTruthy();
   });
 });
 
@@ -229,9 +249,36 @@ describe("SignupPage", () => {
     expect(emailInput.getAttribute("aria-invalid")).toBe("true");
 
     await user.clear(emailInput);
+    await user.type(emailInput, "o");
+
+    expect(screen.queryByText("signup.emailInvalid")).toBeNull();
+
+    await user.tab();
+
+    expect(screen.getByText("signup.emailInvalid")).toBeTruthy();
+
+    await user.clear(emailInput);
     await user.type(emailInput, "owner@example.com");
 
     expect(screen.queryByText("signup.emailInvalid")).toBeNull();
+  });
+
+  it("uses the signup-specific legal footer", () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/signup\.legal\.prefix/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "signup.legal.terms" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+    expect(screen.getByRole("link", { name: "signup.legal.privacy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(screen.queryByText("shell.terms")).toBeNull();
+    expect(screen.queryByText("shell.privacy")).toBeNull();
   });
 
   it("shows password criteria only after the password field is focused", async () => {

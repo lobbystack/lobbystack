@@ -59,7 +59,10 @@ export function LoginForm({
                   "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
               )}
               onBlur={() => setHasBlurredEmail(true)}
-              onChange={(event) => onEmailChange(event.target.value)}
+              onChange={(event) => {
+                setHasBlurredEmail(false);
+                onEmailChange(event.target.value);
+              }}
               placeholder={t("login.emailPlaceholder")}
               required
               type="email"

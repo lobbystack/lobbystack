@@ -24,6 +24,8 @@ type OnboardingShellProps = {
   children: ReactNode;
   /** Optional links/CTAs rendered below the progress indicator. */
   footer?: ReactNode;
+  /** Optional legal footer override. Defaults to Terms / Privacy links. */
+  legalFooter?: ReactNode;
 };
 
 const widthMap: Record<NonNullable<OnboardingShellProps["width"]>, string> = {
@@ -64,6 +66,7 @@ export function OnboardingShell({
   width = "md",
   children,
   footer,
+  legalFooter,
   onSignOut,
 }: OnboardingShellProps) {
   const { t } = useTranslation("onboarding");
@@ -116,15 +119,17 @@ export function OnboardingShell({
             total={progress.total}
           />
         ) : null}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <a className="hover:text-foreground" href="/terms" rel="noreferrer" target="_blank">
-            {t("shell.terms")}
-          </a>
-          <span aria-hidden="true">·</span>
-          <a className="hover:text-foreground" href="/privacy" rel="noreferrer" target="_blank">
-            {t("shell.privacy")}
-          </a>
-        </div>
+        {legalFooter ?? (
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <a className="hover:text-foreground" href="/terms" rel="noreferrer" target="_blank">
+              {t("shell.terms")}
+            </a>
+            <span aria-hidden="true">·</span>
+            <a className="hover:text-foreground" href="/privacy" rel="noreferrer" target="_blank">
+              {t("shell.privacy")}
+            </a>
+          </div>
+        )}
       </footer>
     </div>
   );
