@@ -14,6 +14,7 @@ import type { TurnstileHandle } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
+import { isValidEmailAddress, meetsSignupPasswordRequirements } from "@/lib/auth-validation";
 import { useObservedAction } from "@/lib/observed-convex";
 
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
@@ -79,10 +80,6 @@ function getAuthErrorMessage(
 function isResetRequestLookupError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : "";
   return message.includes("InvalidAccountId");
-}
-
-function meetsPasswordPreflight(password: string): boolean {
-  return password.length >= 8 && /\d/.test(password) && /[^A-Za-z0-9\s]/.test(password);
 }
 
 export function LoginPage() {
@@ -161,8 +158,9 @@ export function SignupPage() {
   const pendingTurnstileSubmitRef = useRef(false);
   const turnstilePreflightKeyRef = useRef<string | null>(null);
   const normalizedEmail = email.trim().toLowerCase();
+  const isSignupReady = isValidEmailAddress(email) && meetsSignupPasswordRequirements(password);
   const hasPlausibleSignupCredentials =
-    normalizedEmail.includes("@") && meetsPasswordPreflight(password);
+    normalizedEmail.includes("@") && meetsSignupPasswordRequirements(password);
   const shouldPrepareTurnstile = Boolean(
     turnstileSiteKey && hasPlausibleSignupCredentials,
   );
@@ -262,11 +260,13 @@ export function SignupPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!meetsPasswordPreflight(password)) {
+    if (!isValidEmailAddress(email) || !meetsSignupPasswordRequirements(password)) {
       pendingTurnstileSubmitRef.current = false;
       turnstilePreflightKeyRef.current = null;
       setTurnstileToken(null);
-      setErrorMessage(t("errors.invalidPassword"));
+      setErrorMessage(
+        isValidEmailAddress(email) ? t("errors.invalidPassword") : t("signup.emailInvalid"),
+      );
       return;
     }
 
@@ -295,6 +295,7 @@ export function SignupPage() {
       <SignupForm
         email={email}
         errorMessage={errorMessage}
+        isSubmitDisabled={!isSignupReady}
         isSubmitting={isSubmitting}
         onEmailChange={setEmail}
         onPasswordChange={setPassword}

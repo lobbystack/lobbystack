@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ForgotPasswordPage, SignupPage } from "./AuthPages";
+import { ForgotPasswordPage, LoginPage, SignupPage } from "./AuthPages";
 
 const { signInMock, turnstileExecuteMock, turnstileTokenMock } = vi.hoisted(() => ({
   signInMock: vi.fn(),
@@ -52,6 +52,37 @@ vi.mock("@/components/turnstile", async () => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
+});
+
+describe("LoginPage", () => {
+  beforeEach(() => {
+    signInMock.mockReset();
+    turnstileExecuteMock.mockReset();
+    turnstileTokenMock.mockReset();
+  });
+
+  it("shows an invalid email error after a typed email field is blurred", async () => {
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("login.emailInvalid")).toBeNull();
+
+    const user = userEvent.setup();
+    const emailInput = screen.getByLabelText("login.email");
+    await user.type(emailInput, "rewfwe");
+    await user.tab();
+
+    expect(screen.getByText("login.emailInvalid")).toBeTruthy();
+    expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+
+    await user.clear(emailInput);
+    await user.type(emailInput, "owner@example.com");
+
+    expect(screen.queryByText("login.emailInvalid")).toBeNull();
+  });
 });
 
 describe("ForgotPasswordPage", () => {
@@ -180,6 +211,29 @@ describe("SignupPage", () => {
     turnstileTokenMock.mockReturnValue("turnstile-token");
   });
 
+  it("shows an invalid email error after a typed email field is blurred", async () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("signup.emailInvalid")).toBeNull();
+
+    const user = userEvent.setup();
+    const emailInput = screen.getByLabelText("signup.email");
+    await user.type(emailInput, "rewfwe");
+    await user.tab();
+
+    expect(screen.getByText("signup.emailInvalid")).toBeTruthy();
+    expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+
+    await user.clear(emailInput);
+    await user.type(emailInput, "owner@example.com");
+
+    expect(screen.queryByText("signup.emailInvalid")).toBeNull();
+  });
+
   it("shows password criteria only after the password field is focused", async () => {
     render(
       <MemoryRouter>
@@ -212,7 +266,30 @@ describe("SignupPage", () => {
     );
   });
 
-  it("shows password guidance without submitting invalid signup passwords", async () => {
+  it("keeps create account disabled until signup criteria are met", async () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    const submitButton = screen.getByRole("button", {
+      name: "signup.submit",
+    }) as HTMLButtonElement;
+    expect(submitButton.disabled).toBe(true);
+
+    await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
+    expect(submitButton.disabled).toBe(true);
+
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!");
+    expect(submitButton.disabled).toBe(true);
+
+    await user.type(screen.getByLabelText("signup.password"), "f");
+    expect(submitButton.disabled).toBe(false);
+  });
+
+  it("does not submit invalid signup passwords", async () => {
     vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
 
     render(
@@ -224,9 +301,13 @@ describe("SignupPage", () => {
     const user = userEvent.setup();
     await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
     await user.type(screen.getByLabelText("signup.password"), "12345678");
+
+    expect(
+      (screen.getByRole("button", { name: "signup.submit" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
     await user.click(screen.getByRole("button", { name: "signup.submit" }));
 
-    expect(await screen.findByText("errors.invalidPassword")).toBeTruthy();
+    expect(screen.queryByText("errors.invalidPassword")).toBeNull();
     expect(screen.queryByText("errors.turnstileFailed")).toBeNull();
     expect(turnstileExecuteMock).not.toHaveBeenCalled();
     expect(signInMock).not.toHaveBeenCalled();

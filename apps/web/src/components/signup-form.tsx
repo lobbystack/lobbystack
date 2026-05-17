@@ -3,11 +3,12 @@
 import { useState, type FormEvent, type Ref } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Turnstile, type TurnstileHandle } from "@/components/turnstile";
+import { isValidEmailAddress } from "@/lib/auth-validation";
 import {
   Field,
   FieldError,
@@ -26,6 +27,7 @@ type SignupFormProps = {
   email: string;
   password: string;
   isSubmitting: boolean;
+  isSubmitDisabled?: boolean;
   errorMessage: string | null;
   turnstileResetKey?: number;
   turnstileSiteKey?: string;
@@ -42,6 +44,7 @@ export function SignupForm({
   email,
   password,
   isSubmitting,
+  isSubmitDisabled = false,
   errorMessage,
   turnstileResetKey = 0,
   turnstileSiteKey,
@@ -55,7 +58,10 @@ export function SignupForm({
   const { t } = useTranslation("auth");
   const [shouldReserveTurnstileSpace, setShouldReserveTurnstileSpace] =
     useState(false);
+  const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
+  const isEmailInvalid =
+    hasBlurredEmail && email.trim().length > 0 && !isValidEmailAddress(email);
   const passwordCriteria: PasswordCriterion[] = [
     { label: t("signup.passwordCriteria.minimumLength"), isMet: password.length >= 8 },
     { label: t("signup.passwordCriteria.number"), isMet: /\d/.test(password) },
@@ -69,18 +75,31 @@ export function SignupForm({
     <div className={cn("flex w-full flex-col gap-6", className)}>
       <form className="relative" onSubmit={onSubmit}>
         <FieldGroup className="gap-4">
-          <Field>
+          <Field data-invalid={isEmailInvalid ? true : undefined}>
             <FieldLabel htmlFor="signup-email">{t("signup.email")}</FieldLabel>
             <Input
+              aria-describedby={isEmailInvalid ? "signup-email-error" : undefined}
+              aria-invalid={isEmailInvalid}
               id="signup-email"
               autoComplete="email"
-              className="h-11"
+              className={cn(
+                "h-11",
+                isEmailInvalid &&
+                  "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+              )}
+              onBlur={() => setHasBlurredEmail(true)}
               onChange={(event) => onEmailChange(event.target.value)}
               placeholder={t("signup.emailPlaceholder")}
               required
               type="email"
               value={email}
             />
+            {isEmailInvalid ? (
+              <FieldError className="flex items-center gap-2 font-medium" id="signup-email-error">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+                <span>{t("signup.emailInvalid")}</span>
+              </FieldError>
+            ) : null}
           </Field>
 
           <Field>
@@ -141,7 +160,7 @@ export function SignupForm({
             </div>
           ) : null}
 
-          <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
+          <Button className="mt-2 h-11 w-full" disabled={isSubmitting || isSubmitDisabled} type="submit">
             {isSubmitting ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />

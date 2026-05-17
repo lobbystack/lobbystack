@@ -1,11 +1,12 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isValidEmailAddress } from "@/lib/auth-validation";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -37,23 +38,39 @@ export function LoginForm({
   onSubmit,
 }: LoginFormProps) {
   const { t } = useTranslation("auth");
+  const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
+  const isEmailInvalid =
+    hasBlurredEmail && email.trim().length > 0 && !isValidEmailAddress(email);
 
   return (
     <div className={cn("flex w-full flex-col gap-6", className)}>
       <form onSubmit={onSubmit}>
         <FieldGroup className="gap-4">
-          <Field>
+          <Field data-invalid={isEmailInvalid ? true : undefined}>
             <FieldLabel htmlFor="login-email">{t("login.email")}</FieldLabel>
             <Input
+              aria-describedby={isEmailInvalid ? "login-email-error" : undefined}
+              aria-invalid={isEmailInvalid}
               id="login-email"
               autoComplete="email"
-              className="h-11"
+              className={cn(
+                "h-11",
+                isEmailInvalid &&
+                  "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+              )}
+              onBlur={() => setHasBlurredEmail(true)}
               onChange={(event) => onEmailChange(event.target.value)}
               placeholder={t("login.emailPlaceholder")}
               required
               type="email"
               value={email}
             />
+            {isEmailInvalid ? (
+              <FieldError className="flex items-center gap-2 font-medium" id="login-email-error">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+                <span>{t("login.emailInvalid")}</span>
+              </FieldError>
+            ) : null}
           </Field>
 
           <Field>
