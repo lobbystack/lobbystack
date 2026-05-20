@@ -37,6 +37,26 @@ vi.mock("../convex/runtimeClient", () => ({
 
 import { executeVoiceTool } from "./toolExecutor";
 
+describe("executeVoiceTool waitForUser", () => {
+  it("returns a silent wait result for background audio turns", async () => {
+    const result = await executeVoiceTool({
+      toolName: "waitForUser",
+      rawArguments: "{}",
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result).toEqual({
+      result: {
+        ok: true,
+        action: "wait_for_user",
+      },
+      suppressResponse: true,
+    });
+  });
+});
+
 describe("executeVoiceTool searchKnowledge", () => {
   beforeEach(() => {
     vi.clearAllMocks();

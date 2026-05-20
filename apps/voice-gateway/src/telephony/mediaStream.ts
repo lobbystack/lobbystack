@@ -214,6 +214,7 @@ type ActiveVoiceSession = {
   openingGreetingResponseDone: boolean;
   openingGreetingPlaybackDone: boolean;
   openingGreetingPlaybackMarkName: string | null;
+  openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
 };
 
 type RealtimeUsageMetrics = {
@@ -251,6 +252,10 @@ function isTransferQuotaError(error: unknown): boolean {
 const TRANSFER_QUOTA_REACHED_MESSAGE =
   "This business has reached its transfer limit for this billing period. Please try again later.";
 const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
+const REALTIME_VAD_THRESHOLD = 0.65;
+const REALTIME_VAD_PREFIX_PADDING_MS = 300;
+const REALTIME_VAD_SILENCE_DURATION_MS = 700;
+const POST_GREETING_INPUT_GRACE_MS = 1_500;
 
 function asUnknownRecord(
   value: unknown,
@@ -643,6 +648,17 @@ function createRealtimeToolDefinitions() {
   return [
     {
       type: "function",
+      name: "waitForUser",
+      description:
+        "Use when the latest audio is silence, background noise, echo of the assistant's own audio, hold music, TV audio, side conversation, or speech not addressed to the assistant. This keeps listening without a spoken reply.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
       name: "getBusinessHours",
       description: "Get the authoritative business hours and closure information.",
       parameters: {
@@ -951,6 +967,9 @@ export function createRealtimeTurnDetectionConfig(
 ): Record<string, unknown> {
   return {
     type: "server_vad",
+    threshold: REALTIME_VAD_THRESHOLD,
+    prefix_padding_ms: REALTIME_VAD_PREFIX_PADDING_MS,
+    silence_duration_ms: REALTIME_VAD_SILENCE_DURATION_MS,
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
     idle_timeout_ms: idleTimeoutMs,
@@ -971,7 +990,7 @@ function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): vo
   });
 }
 
-function finishOpeningGreeting(
+function enableCallerTurnDetectionAfterOpeningGreeting(
   server: FastifyInstance,
   openAiSocket: WebSocket,
   twilioSocket: WebSocket,
@@ -982,6 +1001,10 @@ function finishOpeningGreeting(
     return;
   }
 
+  if (session.openingGreetingTurnDetectionTimer !== null) {
+    clearTimeout(session.openingGreetingTurnDetectionTimer);
+    session.openingGreetingTurnDetectionTimer = null;
+  }
   session.openingGreetingActive = false;
   session.openingGreetingResponseDone = true;
   session.openingGreetingPlaybackDone = true;
@@ -1001,6 +1024,50 @@ function finishOpeningGreeting(
       reason,
     },
     "Enabled caller turn detection after opening greeting",
+  );
+}
+
+function finishOpeningGreeting(
+  server: FastifyInstance,
+  openAiSocket: WebSocket,
+  twilioSocket: WebSocket,
+  session: ActiveVoiceSession,
+  reason: string,
+): void {
+  if (
+    !session.openingGreetingActive ||
+    session.finalized ||
+    session.openingGreetingTurnDetectionTimer !== null
+  ) {
+    return;
+  }
+
+  session.openingGreetingResponseDone = true;
+  session.openingGreetingPlaybackDone = true;
+  session.openingGreetingPlaybackMarkName = null;
+  session.pendingInboundAudio = [];
+
+  postRealtimeEvent(openAiSocket, { type: "input_audio_buffer.clear" });
+  session.openingGreetingTurnDetectionTimer = setTimeout(() => {
+    session.openingGreetingTurnDetectionTimer = null;
+    enableCallerTurnDetectionAfterOpeningGreeting(
+      server,
+      openAiSocket,
+      twilioSocket,
+      session,
+      reason,
+    );
+  }, POST_GREETING_INPUT_GRACE_MS);
+
+  server.log.info(
+    {
+      callId: session.callId,
+      callSid: session.callSid,
+      streamSid: session.streamSid,
+      reason,
+      graceMs: POST_GREETING_INPUT_GRACE_MS,
+    },
+    "Waiting briefly before enabling caller turn detection after opening greeting",
   );
 }
 
@@ -1619,6 +1686,10 @@ async function finalizeCall(
   await applyPendingImplicitEndCallBeforeFinalize(server, session);
   session.finalized = true;
   clearInactivityTimer(session);
+  if (session.openingGreetingTurnDetectionTimer !== null) {
+    clearTimeout(session.openingGreetingTurnDetectionTimer);
+    session.openingGreetingTurnDetectionTimer = null;
+  }
   if (session.activeCallCounted) {
     session.activeCallCounted = false;
   }
@@ -2124,6 +2195,7 @@ async function configureOpenAiSession(
         "You are speaking on a live phone call.",
         "Start in the language implied by the configured greeting.",
         "Use the configured greeting only once at the start of the call. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
+        "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
         "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
         "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
@@ -2159,6 +2231,7 @@ async function configureOpenAiSession(
       audio: {
         input: {
           format: { type: "audio/pcmu" },
+          noise_reduction: { type: "near_field" },
           transcription: {
             model: runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
           },
@@ -2336,6 +2409,13 @@ async function handleToolCall(
         output: JSON.stringify(toolOutput),
       },
     });
+
+    if (result.suppressResponse) {
+      session.pendingInboundAudio = [];
+      postRealtimeEvent(openAiSocket, { type: "input_audio_buffer.clear" });
+      scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
+      return;
+    }
 
     if (result.endCall) {
       if (shouldUseAssistantFinalMessageForToolEndCall(result.endCall)) {
@@ -3230,6 +3310,7 @@ export async function handleMediaStreamConnection(
     openingGreetingResponseDone: false,
     openingGreetingPlaybackDone: false,
     openingGreetingPlaybackMarkName: null,
+    openingGreetingTurnDetectionTimer: null,
   };
 
   const runtimeConfig = server.runtimeConfig;

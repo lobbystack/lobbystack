@@ -144,14 +144,24 @@ export const webVoiceAbuseRateLimiter = new RateLimiter(components.rateLimiter, 
     rate: 30,
     period: 10 * MINUTE,
   },
-  webVoiceStartPerIpPerTenMinutes: {
+  webVoiceStartPerIpPerHour: {
     kind: "fixed window",
     rate: 5,
-    period: 10 * MINUTE,
+    period: HOUR,
   },
-  webVoiceStartPerVisitorPerTenMinutes: {
+  webVoiceStartPerIpPerDay: {
+    kind: "fixed window",
+    rate: 10,
+    period: DAY,
+  },
+  webVoiceStartPerVisitorPerHour: {
     kind: "fixed window",
     rate: 5,
-    period: 10 * MINUTE,
+    period: HOUR,
+  },
+  webVoiceStartPerVisitorPerDay: {
+    kind: "fixed window",
+    rate: 10,
+    period: DAY,
   },
 });

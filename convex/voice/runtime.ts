@@ -117,8 +117,10 @@ async function consumeWebVoiceStartLimit(
       | "webVoiceStartPerBusinessPerHour"
       | "webVoiceStartPerBusinessPerDay"
       | "webVoiceStartPerOriginPerTenMinutes"
-      | "webVoiceStartPerIpPerTenMinutes"
-      | "webVoiceStartPerVisitorPerTenMinutes";
+      | "webVoiceStartPerIpPerHour"
+      | "webVoiceStartPerIpPerDay"
+      | "webVoiceStartPerVisitorPerHour"
+      | "webVoiceStartPerVisitorPerDay";
     key: string;
     reason: string;
     businessId: Id<"businesses">;
@@ -640,18 +642,30 @@ export const assertWebVoiceStartAllowed = internalMutation({
 
     if (args.ipHash !== undefined) {
       await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerIpPerTenMinutes",
+        limiterName: "webVoiceStartPerIpPerHour",
         key: `${businessKey}:ip:${args.ipHash}`,
-        reason: "rate_limit_ip",
+        reason: "rate_limit_ip_hour",
+        ...logContext,
+      });
+      await consumeWebVoiceStartLimit(ctx, {
+        limiterName: "webVoiceStartPerIpPerDay",
+        key: `${businessKey}:ip:${args.ipHash}`,
+        reason: "rate_limit_ip_day",
         ...logContext,
       });
     }
 
     if (args.visitorId !== undefined) {
       await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerVisitorPerTenMinutes",
+        limiterName: "webVoiceStartPerVisitorPerHour",
         key: `${businessKey}:visitor:${args.visitorId}`,
-        reason: "rate_limit_visitor",
+        reason: "rate_limit_visitor_hour",
+        ...logContext,
+      });
+      await consumeWebVoiceStartLimit(ctx, {
+        limiterName: "webVoiceStartPerVisitorPerDay",
+        key: `${businessKey}:visitor:${args.visitorId}`,
+        reason: "rate_limit_visitor_day",
         ...logContext,
       });
     }

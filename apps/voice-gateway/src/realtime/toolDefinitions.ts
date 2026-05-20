@@ -2,6 +2,17 @@ export function createWebRealtimeToolDefinitions() {
   return [
     {
       type: "function",
+      name: "waitForUser",
+      description:
+        "Use when the latest audio is silence, background noise, echo of the assistant's own audio, hold music, TV audio, side conversation, or speech not addressed to the assistant. This keeps listening without a spoken reply.",
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    {
+      type: "function",
       name: "getBusinessHours",
       description: "Get the authoritative business hours and closure information.",
       parameters: {

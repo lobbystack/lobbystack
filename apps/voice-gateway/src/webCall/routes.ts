@@ -72,11 +72,18 @@ type ActiveWebCall = {
   startedAtMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
+  maxDurationTimer: ReturnType<typeof setTimeout> | null;
+  finalized: boolean;
   openingGreetingActive: boolean;
+  openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
 };
 
 const activeWebCalls = new Map<string, ActiveWebCall>();
 const originStartAttempts = new Map<string, Array<number>>();
+const WEB_REALTIME_VAD_THRESHOLD = 0.65;
+const WEB_REALTIME_VAD_PREFIX_PADDING_MS = 300;
+const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
+const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
 
 function getAllowedOrigins(raw: string): Set<string> {
   return new Set(
@@ -133,6 +140,9 @@ export function createWebRealtimeTurnDetectionConfig(options: {
 } = {}): Record<string, unknown> {
   return {
     type: "server_vad",
+    threshold: WEB_REALTIME_VAD_THRESHOLD,
+    prefix_padding_ms: WEB_REALTIME_VAD_PREFIX_PADDING_MS,
+    silence_duration_ms: WEB_REALTIME_VAD_SILENCE_DURATION_MS,
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
   };
@@ -144,10 +154,14 @@ function enableWebRealtimeTurnDetection(
   session: ActiveWebCall,
   reason: string,
 ): void {
-  if (!session.openingGreetingActive) {
+  if (!session.openingGreetingActive || session.finalized) {
     return;
   }
 
+  if (session.openingGreetingTurnDetectionTimer !== null) {
+    clearTimeout(session.openingGreetingTurnDetectionTimer);
+    session.openingGreetingTurnDetectionTimer = null;
+  }
   session.openingGreetingActive = false;
   postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
   postRealtimeEvent(socket, {
@@ -169,6 +183,51 @@ function enableWebRealtimeTurnDetection(
     },
     "Enabled web voice turn detection after opening greeting",
   );
+}
+
+function scheduleWebRealtimeTurnDetectionEnable(
+  server: FastifyInstance,
+  socket: WebSocket,
+  session: ActiveWebCall,
+  reason: string,
+): void {
+  if (
+    !session.openingGreetingActive ||
+    session.finalized ||
+    session.openingGreetingTurnDetectionTimer !== null
+  ) {
+    return;
+  }
+
+  postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
+  session.openingGreetingTurnDetectionTimer = setTimeout(() => {
+    session.openingGreetingTurnDetectionTimer = null;
+    enableWebRealtimeTurnDetection(server, socket, session, reason);
+  }, WEB_POST_GREETING_INPUT_GRACE_MS);
+
+  server.log.info(
+    {
+      callId: session.callId,
+      providerCallId: session.providerCallId,
+      reason,
+      graceMs: WEB_POST_GREETING_INPUT_GRACE_MS,
+    },
+    "Waiting briefly before enabling web voice turn detection after opening greeting",
+  );
+}
+
+function clearWebOpeningGreetingTimer(session: ActiveWebCall): void {
+  if (session.openingGreetingTurnDetectionTimer !== null) {
+    clearTimeout(session.openingGreetingTurnDetectionTimer);
+    session.openingGreetingTurnDetectionTimer = null;
+  }
+}
+
+function clearWebMaxDurationTimer(session: ActiveWebCall): void {
+  if (session.maxDurationTimer !== null) {
+    clearTimeout(session.maxDurationTimer);
+    session.maxDurationTimer = null;
+  }
 }
 
 function normalizeOptionalAbuseKey(value: string | undefined): string | undefined {
@@ -203,22 +262,114 @@ function replyWithRuntimeRequestError(
   return { error: error.message };
 }
 
+async function hangupOpenAiRealtimeCall(
+  server: FastifyInstance,
+  session: ActiveWebCall,
+  reason: string,
+): Promise<void> {
+  if (session.providerCallId.startsWith("webcall_")) {
+    server.log.warn(
+      {
+        callId: session.callId,
+        providerCallId: session.providerCallId,
+        reason,
+      },
+      "Skipping OpenAI Realtime hangup because no provider call ID was returned",
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.openai.com/v1/realtime/calls/${encodeURIComponent(
+        session.providerCallId,
+      )}/hangup`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${server.runtimeConfig.OPENAI_API_KEY}`,
+        },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      server.log.warn(
+        {
+          callId: session.callId,
+          providerCallId: session.providerCallId,
+          reason,
+          status: response.status,
+          body: body.slice(0, 500),
+        },
+        "OpenAI Realtime web call hangup failed",
+      );
+    }
+  } catch (error) {
+    server.log.error(
+      {
+        err: error,
+        callId: session.callId,
+        providerCallId: session.providerCallId,
+        reason,
+      },
+      "Failed to hang up OpenAI Realtime web call",
+    );
+  }
+}
+
 async function finishWebCallSession(
+  server: FastifyInstance,
   session: ActiveWebCall,
   disposition: string,
 ): Promise<void> {
-  await completeVoiceCall({
-    callId: session.callId,
-    status: "completed",
-    disposition,
-    endedAt: new Date().toISOString(),
-    providerDurationSeconds: Math.max(
-      0,
-      Math.ceil((Date.now() - session.startedAtMs) / 1000),
-    ),
-  });
-  session.sidebandSocket?.close(1000, "web call ended");
-  activeWebCalls.delete(session.gatewaySessionId);
+  if (session.finalized) {
+    return;
+  }
+
+  session.finalized = true;
+  clearWebOpeningGreetingTimer(session);
+  clearWebMaxDurationTimer(session);
+  await hangupOpenAiRealtimeCall(server, session, disposition);
+
+  try {
+    await completeVoiceCall({
+      callId: session.callId,
+      status: "completed",
+      disposition,
+      endedAt: new Date().toISOString(),
+      providerDurationSeconds: Math.max(
+        0,
+        Math.ceil((Date.now() - session.startedAtMs) / 1000),
+      ),
+    });
+  } finally {
+    session.sidebandSocket?.close(1000, "web call ended");
+    activeWebCalls.delete(session.gatewaySessionId);
+  }
+}
+
+function scheduleWebMaxDurationTimer(
+  server: FastifyInstance,
+  session: ActiveWebCall,
+): void {
+  clearWebMaxDurationTimer(session);
+  session.maxDurationTimer = setTimeout(() => {
+    session.maxDurationTimer = null;
+    void finishWebCallSession(server, session, "duration_limit").catch(
+      (error: unknown) => {
+        server.log.error(
+          {
+            err: error,
+            callId: session.callId,
+            providerCallId: session.providerCallId,
+          },
+          "Failed to enforce web voice max duration",
+        );
+      },
+    );
+  }, server.runtimeConfig.WEB_CALL_MAX_DURATION_MS);
 }
 
 function parseProviderCallId(response: Response, gatewaySessionId: string): string {
@@ -349,6 +500,7 @@ function createSidebandSocket(input: {
           "You are speaking through a website voice widget, not a phone call.",
           "Represent LobbyStack and answer questions about the business from the supplied snapshot and tools.",
           "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
+          "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
           "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
           "Do not attempt phone transfer from the website widget.",
           "End the session with endCall when the visitor is clearly finished, abusive, spammy, or repeatedly silent.",
@@ -356,6 +508,7 @@ function createSidebandSocket(input: {
         output_modalities: ["audio"],
         audio: {
           input: {
+            noise_reduction: { type: "far_field" },
             transcription: {
               model: input.server.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
             },
@@ -402,7 +555,21 @@ function createSidebandSocket(input: {
   });
 
   socket.on("close", () => {
-    activeWebCalls.delete(input.session.gatewaySessionId);
+    clearWebOpeningGreetingTimer(input.session);
+    void finishWebCallSession(
+      input.server,
+      input.session,
+      "provider_socket_closed",
+    ).catch((error: unknown) => {
+      input.server.log.error(
+        {
+          err: error,
+          callId: input.session.callId,
+          providerCallId: input.session.providerCallId,
+        },
+        "Failed to finalize web voice session after sideband close",
+      );
+    });
   });
 
   return socket;
@@ -464,7 +631,7 @@ async function handleSidebandMessage(
     }
 
     if (session.openingGreetingActive) {
-      enableWebRealtimeTurnDetection(server, socket, session, "response_done");
+      scheduleWebRealtimeTurnDetectionEnable(server, socket, session, "response_done");
     }
     return;
   }
@@ -529,8 +696,13 @@ async function handleToolCall(
     },
   });
 
+  if (executed.suppressResponse) {
+    postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
+    return;
+  }
+
   if (executed.endCall) {
-    await finishWebCallSession(session, executed.endCall.reason);
+    await finishWebCallSession(server, session, executed.endCall.reason);
     return;
   }
 
@@ -632,7 +804,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       startedAtMs: Date.parse(startedAt),
       handledToolCallIds: new Set(),
       sidebandSocket: null,
+      maxDurationTimer: null,
+      finalized: false,
       openingGreetingActive: true,
+      openingGreetingTurnDetectionTimer: null,
     };
     const sidebandSocket = createSidebandSocket({
       server,
@@ -641,6 +816,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     });
     session.sidebandSocket = sidebandSocket;
     activeWebCalls.set(gatewaySessionId, session);
+    scheduleWebMaxDurationTimer(server, session);
 
     return {
       sessionId: gatewaySessionId,
@@ -664,7 +840,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       return null;
     }
 
-    await finishWebCallSession(session, "caller_finished");
+    await finishWebCallSession(server, session, "caller_finished");
     reply.code(204);
     return null;
   });

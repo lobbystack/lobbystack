@@ -96,6 +96,7 @@ const voiceGatewayEnvSchema = z.object({
   WEB_CALL_ALLOWED_ORIGINS: z
     .string()
     .default("https://lobbystack.com,http://localhost:4321,http://127.0.0.1:4321"),
+  WEB_CALL_MAX_DURATION_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),

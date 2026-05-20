@@ -1,27 +1,75 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
-const { fetchWebVoiceContextMock, runtimeRequestErrorClass, startWebVoiceCallMock } = vi.hoisted(
-  () => ({
-    fetchWebVoiceContextMock: vi.fn(),
-    runtimeRequestErrorClass: class RuntimeRequestError extends Error {
-      status: number;
-      code?: string;
+const {
+  completeVoiceCallMock,
+  fetchWebVoiceContextMock,
+  runtimeRequestErrorClass,
+  startWebVoiceCallMock,
+  webSocketInstances,
+} = vi.hoisted(() => ({
+  completeVoiceCallMock: vi.fn(),
+  fetchWebVoiceContextMock: vi.fn(),
+  runtimeRequestErrorClass: class RuntimeRequestError extends Error {
+    status: number;
+    code?: string;
 
-      constructor(input: { message: string; status: number; code?: string }) {
-        super(input.message);
-        this.name = "RuntimeRequestError";
-        this.status = input.status;
-        if (input.code !== undefined) {
-          this.code = input.code;
-        }
+    constructor(input: { message: string; status: number; code?: string }) {
+      super(input.message);
+      this.name = "RuntimeRequestError";
+      this.status = input.status;
+      if (input.code !== undefined) {
+        this.code = input.code;
       }
-    },
-    startWebVoiceCallMock: vi.fn(),
-  }),
-);
+    }
+  },
+  startWebVoiceCallMock: vi.fn(),
+  webSocketInstances: [] as Array<{
+    close: ReturnType<typeof vi.fn>;
+    send: ReturnType<typeof vi.fn>;
+  }>,
+}));
+
+vi.mock("ws", () => {
+  class MockWebSocket {
+    static OPEN = 1;
+    static CLOSED = 3;
+
+    readyState = MockWebSocket.OPEN;
+    close = vi.fn(() => {
+      this.readyState = MockWebSocket.CLOSED;
+      this.handlers.close?.forEach((handler) => handler());
+    });
+    send = vi.fn();
+    private handlers: Record<string, Array<(...args: Array<unknown>) => void>> = {};
+
+    constructor() {
+      webSocketInstances.push(this);
+    }
+
+    on(event: string, handler: (...args: Array<unknown>) => void) {
+      this.handlers[event] = [...(this.handlers[event] ?? []), handler];
+      return this;
+    }
+  }
+
+  class MockWebSocketServer {
+    handleUpgrade = vi.fn(
+      (
+        _request: unknown,
+        _socket: unknown,
+        _head: unknown,
+        callback: (socket: MockWebSocket) => void,
+      ) => {
+        callback(new MockWebSocket());
+      },
+    );
+  }
+
+  return { default: MockWebSocket, WebSocketServer: MockWebSocketServer };
+});
 
 vi.mock("../convex/runtimeClient", () => ({
-  completeVoiceCall: vi.fn(),
+  completeVoiceCall: completeVoiceCallMock,
   fetchWebVoiceContext: fetchWebVoiceContextMock,
   recordVoiceAiCost: vi.fn(),
   RuntimeRequestError: runtimeRequestErrorClass,
@@ -40,6 +88,8 @@ vi.mock("../convex/runtimeClient", () => ({
   verifyVoiceAppointmentForChange: vi.fn(),
 }));
 
+import { demoSnapshot } from "@lobbystack/shared";
+
 import { createServer } from "../http/server";
 import { createWebRealtimeTurnDetectionConfig } from "./routes";
 
@@ -52,6 +102,9 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
       }),
     ).toEqual({
       type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
       create_response: false,
       interrupt_response: false,
     });
@@ -60,6 +113,9 @@ describe("createWebRealtimeTurnDetectionConfig", () => {
   it("defaults to normal web caller turn handling after the greeting", () => {
     expect(createWebRealtimeTurnDetectionConfig()).toEqual({
       type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
       create_response: true,
       interrupt_response: true,
     });
@@ -78,9 +134,13 @@ describe("web call routes", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
+    webSocketInstances.length = 0;
     delete process.env.OPENAI_API_KEY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
+    delete process.env.WEB_CALL_MAX_DURATION_MS;
   });
 
   it("rejects untrusted origins before starting a web call", async () => {
@@ -199,5 +259,68 @@ describe("web call routes", () => {
     });
 
     expect(response.statusCode).toBe(204);
+  });
+
+  it("hangs up OpenAI and completes the call after the max web call duration", async () => {
+    process.env.WEB_CALL_MAX_DURATION_MS = "1";
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-landing",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    await vi.waitFor(() => {
+      expect(completeVoiceCallMock).toHaveBeenCalled();
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.openai.com/v1/realtime/calls/rtc_test/hangup",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-openai-key",
+        },
+      }),
+    );
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        status: "completed",
+        disposition: "duration_limit",
+        providerDurationSeconds: expect.any(Number),
+      }),
+    );
+    expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(1000, "web call ended");
   });
 });

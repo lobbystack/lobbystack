@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, it } from "vitest";
 
 import { internal } from "../_generated/api";
+import { webVoiceAbuseRateLimiter } from "../lib/components";
 import schema from "../schema";
 import { modules } from "../test.setup";
 
@@ -76,7 +77,7 @@ describe("web voice calls", () => {
     });
   });
 
-  it("rate limits repeated web voice starts for the same IP hash", async () => {
+  it("rate limits repeated web voice starts for the same IP hash per hour", async () => {
     const { t, businessId } = await seedBusiness();
 
     for (let index = 0; index < 5; index += 1) {
@@ -95,6 +96,69 @@ describe("web voice calls", () => {
         origin: "https://lobbystack.com",
         ipHash: "client-ip-hash",
         visitorId: "visitor-over-limit",
+        widgetId: "lobbystack-landing",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("rate limits repeated web voice starts for the same IP hash per day", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-ip-day");
+    const ipKey = `${String(businessId)}:ip:client-ip-hash`;
+
+    for (let index = 0; index < 10; index += 1) {
+      if (index > 0 && index % 5 === 0) {
+        await t.run(async (ctx) => {
+          await webVoiceAbuseRateLimiter.reset(ctx, "webVoiceStartPerIpPerHour", {
+            key: ipKey,
+          });
+        });
+      }
+
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash",
+        visitorId: `visitor-${index}`,
+        widgetId: "lobbystack-landing",
+      });
+    }
+
+    await t.run(async (ctx) => {
+      await webVoiceAbuseRateLimiter.reset(ctx, "webVoiceStartPerIpPerHour", {
+        key: ipKey,
+      });
+    });
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash",
+        visitorId: "visitor-over-limit",
+        widgetId: "lobbystack-landing",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("rate limits repeated web voice starts for the same visitor per hour", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-visitor-hour");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: `client-ip-hash-${index}`,
+        visitorId: "visitor-123",
+        widgetId: "lobbystack-landing",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash-over-limit",
+        visitorId: "visitor-123",
         widgetId: "lobbystack-landing",
       }),
     ).rejects.toThrow("web_voice_rate_limited");

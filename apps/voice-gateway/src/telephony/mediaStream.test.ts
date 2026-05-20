@@ -32,6 +32,9 @@ describe("createRealtimeTurnDetectionConfig", () => {
       }),
     ).toEqual({
       type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
       create_response: false,
       interrupt_response: false,
       idle_timeout_ms: 30_000,
@@ -41,6 +44,9 @@ describe("createRealtimeTurnDetectionConfig", () => {
   it("defaults to normal caller turn handling after the greeting", () => {
     expect(createRealtimeTurnDetectionConfig(30_000)).toEqual({
       type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
       create_response: true,
       interrupt_response: true,
       idle_timeout_ms: 30_000,
