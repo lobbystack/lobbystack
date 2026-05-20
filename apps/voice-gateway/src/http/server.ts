@@ -7,6 +7,7 @@ import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
+import { registerWebCallRoutes } from "../webCall/routes";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import {
   capturePostHogException,
@@ -93,6 +94,7 @@ export function createServer(): ReturnType<typeof Fastify> {
   });
 
   registerVoiceRoutes(server);
+  registerWebCallRoutes(server);
   return server;
 }
 

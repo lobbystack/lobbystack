@@ -1,0 +1,126 @@
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
+import { convexTest } from "convex-test";
+import { describe, expect, it } from "vitest";
+
+import { internal } from "../_generated/api";
+import schema from "../schema";
+import { modules } from "../test.setup";
+
+async function seedBusiness(slug = "lobbystack") {
+  const t = convexTest(schema, modules);
+  registerRateLimiter(t as unknown as Parameters<typeof registerRateLimiter>[0]);
+  const businessId = await t.run(async (ctx) => {
+    return await ctx.db.insert("businesses", {
+      slug,
+      name: "LobbyStack",
+      timezone: "America/Toronto",
+      businessType: "software",
+      defaultLocale: "en",
+      deploymentMode: "cloud",
+      status: "active",
+    });
+  });
+
+  return { t, businessId };
+}
+
+describe("web voice calls", () => {
+  it("starts provider-neutral web calls without a contact or Twilio SID", async () => {
+    const { t, businessId } = await seedBusiness();
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "lobbystack",
+      providerCallId: "call_openai_web_123",
+      gatewaySessionId: "gateway-session-123",
+      originUrl: "https://lobbystack.com/",
+      userAgent: "vitest",
+      widgetId: "lobbystack-landing",
+      startedAt: "2026-05-19T18:00:00.000Z",
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(result.callId);
+      const conversation = await ctx.db.get(result.conversationId);
+      const session = await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_call_id", (q) => q.eq("callId", result.callId))
+        .unique();
+
+      expect(result.businessId).toBe(businessId);
+      expect(call).toMatchObject({
+        businessId,
+        conversationId: result.conversationId,
+        provider: "openai",
+        providerCallId: "call_openai_web_123",
+        transport: "webrtc",
+        originUrl: "https://lobbystack.com/",
+        userAgent: "vitest",
+        widgetId: "lobbystack-landing",
+        status: "in_progress",
+      });
+      expect(call?.twilioCallSid).toBeUndefined();
+      expect(call?.contactId).toBeUndefined();
+      expect(conversation).toMatchObject({
+        businessId,
+        channel: "web_voice",
+        status: "open",
+      });
+      expect(conversation?.contactId).toBeUndefined();
+      expect(session).toMatchObject({
+        businessId,
+        conversationId: result.conversationId,
+        callId: result.callId,
+        channel: "web_voice",
+        status: "active",
+      });
+    });
+  });
+
+  it("rate limits repeated web voice starts for the same IP hash", async () => {
+    const { t, businessId } = await seedBusiness();
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash",
+        visitorId: `visitor-${index}`,
+        widgetId: "lobbystack-landing",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash",
+        visitorId: "visitor-over-limit",
+        widgetId: "lobbystack-landing",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+  });
+
+  it("keeps Twilio starts compatible while adding provider metadata", async () => {
+    const { t, businessId } = await seedBusiness("twilio-compatible");
+
+    const result = await t.mutation(internal.voice.runtime.startCall, {
+      businessId,
+      twilioCallSid: "CA-web-voice-compatible",
+      from: "+14165550123",
+      to: "+14165550999",
+      startedAt: "2026-05-19T18:05:00.000Z",
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(result.callId);
+
+      expect(call).toMatchObject({
+        twilioCallSid: "CA-web-voice-compatible",
+        provider: "twilio",
+        providerCallId: "CA-web-voice-compatible",
+        transport: "twilio_media_stream",
+        status: "in_progress",
+      });
+    });
+  });
+});

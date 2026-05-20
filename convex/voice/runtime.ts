@@ -30,6 +30,7 @@ import { getOpenConversationForContact } from "../lib/indexedQueries";
 import { buildCallRecordingDownloadUrl } from "../lib/messageAttachmentUrls";
 import { ATTACHMENT_DOWNLOAD_TOKEN_TTL_MS } from "../lib/messageAttachments";
 import { getServiceNameCandidates } from "../lib/serviceNames";
+import { webVoiceAbuseRateLimiter } from "../lib/components";
 import { normalizeRuntimeLocale, type RuntimeLocale } from "../lib/runtimeLocale";
 import {
   CONTACT_BLOCKED_CALL_DISPOSITION,
@@ -75,6 +76,99 @@ type StartCallResult = {
   conversationId?: Id<"conversations">;
   contactId: Id<"contacts">;
 };
+type StartWebCallArgs = {
+  businessSlug: string;
+  providerCallId: string;
+  gatewaySessionId?: string;
+  originUrl?: string;
+  userAgent?: string;
+  widgetId?: string;
+  startedAt: string;
+};
+type StartWebCallResult = {
+  businessId: Id<"businesses">;
+  callId: Id<"calls">;
+  conversationId: Id<"conversations">;
+};
+
+export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
+
+function logWebVoiceRateLimitBlocked(input: {
+  limiter: string;
+  reason: string;
+  businessId: Id<"businesses">;
+  origin?: string;
+  widgetId?: string;
+}) {
+  console.warn(
+    JSON.stringify({
+      scope: "web_voice_abuse_control",
+      decision: "blocked",
+      ...input,
+    }),
+  );
+}
+
+async function consumeWebVoiceStartLimit(
+  ctx: MutationCtx,
+  input: {
+    limiterName:
+      | "webVoiceStartGlobalPerMinute"
+      | "webVoiceStartPerBusinessPerHour"
+      | "webVoiceStartPerBusinessPerDay"
+      | "webVoiceStartPerOriginPerTenMinutes"
+      | "webVoiceStartPerIpPerTenMinutes"
+      | "webVoiceStartPerVisitorPerTenMinutes";
+    key: string;
+    reason: string;
+    businessId: Id<"businesses">;
+    origin?: string;
+    widgetId?: string;
+  },
+): Promise<void> {
+  const result = await webVoiceAbuseRateLimiter.limit(ctx, input.limiterName, {
+    key: input.key,
+  });
+
+  if (!result.ok) {
+    logWebVoiceRateLimitBlocked({
+      limiter: input.limiterName,
+      reason: input.reason,
+      businessId: input.businessId,
+      ...(input.origin !== undefined ? { origin: input.origin } : {}),
+      ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
+    });
+    throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+  }
+}
+
+async function resolveActiveBusinessByPublicSlug(
+  ctx: Pick<QueryCtx | MutationCtx, "db">,
+  businessSlug: string,
+): Promise<Doc<"businesses"> | null> {
+  const business = await ctx.db
+    .query("businesses")
+    .withIndex("by_slug", (q) => q.eq("slug", businessSlug))
+    .unique();
+
+  if (business?.status === "active") {
+    return business;
+  }
+
+  if (businessSlug !== "lobbystack") {
+    return null;
+  }
+
+  const lobbystackBusinesses = await ctx.db
+    .query("businesses")
+    .filter((q) => q.eq(q.field("name"), "LobbyStack"))
+    .collect();
+  return (
+    lobbystackBusinesses
+      .filter((candidate) => candidate.status === "active")
+      .sort((a, b) => b._creationTime - a._creationTime)[0] ?? null
+  );
+}
 type AppendTranscriptArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
@@ -494,6 +588,78 @@ export const getBusinessDefaultLocale = internalQuery({
   },
 });
 
+export const getActiveBusinessBySlug = internalQuery({
+  args: {
+    businessSlug: v.string(),
+  },
+  handler: async (ctx: QueryCtx, args) => {
+    return await resolveActiveBusinessByPublicSlug(ctx, args.businessSlug);
+  },
+});
+
+export const assertWebVoiceStartAllowed = internalMutation({
+  args: {
+    businessId: v.id("businesses"),
+    origin: v.string(),
+    ipHash: v.optional(v.string()),
+    visitorId: v.optional(v.string()),
+    widgetId: v.optional(v.string()),
+  },
+  handler: async (ctx: MutationCtx, args): Promise<null> => {
+    const businessKey = String(args.businessId);
+    const logContext = {
+      businessId: args.businessId,
+      origin: args.origin,
+      ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+    };
+
+    await consumeWebVoiceStartLimit(ctx, {
+      limiterName: "webVoiceStartGlobalPerMinute",
+      key: "global",
+      reason: "rate_limit_global",
+      ...logContext,
+    });
+    await consumeWebVoiceStartLimit(ctx, {
+      limiterName: "webVoiceStartPerBusinessPerHour",
+      key: businessKey,
+      reason: "rate_limit_business_hour",
+      ...logContext,
+    });
+    await consumeWebVoiceStartLimit(ctx, {
+      limiterName: "webVoiceStartPerBusinessPerDay",
+      key: businessKey,
+      reason: "rate_limit_business_day",
+      ...logContext,
+    });
+    await consumeWebVoiceStartLimit(ctx, {
+      limiterName: "webVoiceStartPerOriginPerTenMinutes",
+      key: args.origin,
+      reason: "rate_limit_origin",
+      ...logContext,
+    });
+
+    if (args.ipHash !== undefined) {
+      await consumeWebVoiceStartLimit(ctx, {
+        limiterName: "webVoiceStartPerIpPerTenMinutes",
+        key: `${businessKey}:ip:${args.ipHash}`,
+        reason: "rate_limit_ip",
+        ...logContext,
+      });
+    }
+
+    if (args.visitorId !== undefined) {
+      await consumeWebVoiceStartLimit(ctx, {
+        limiterName: "webVoiceStartPerVisitorPerTenMinutes",
+        key: `${businessKey}:visitor:${args.visitorId}`,
+        reason: "rate_limit_visitor",
+        ...logContext,
+      });
+    }
+
+    return null;
+  },
+});
+
 export const getActiveStaffAssignmentsForService = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -619,6 +785,9 @@ export const startCall = internalMutation({
           businessId: args.businessId,
           contactId: contact._id,
           twilioCallSid: args.twilioCallSid,
+          provider: "twilio",
+          providerCallId: args.twilioCallSid,
+          transport: "twilio_media_stream",
           ...(args.gatewaySessionId !== undefined
             ? { gatewaySessionId: args.gatewaySessionId }
             : {}),
@@ -684,6 +853,9 @@ export const startCall = internalMutation({
         conversationId,
         contactId: contact._id,
         twilioCallSid: args.twilioCallSid,
+        provider: "twilio",
+        providerCallId: args.twilioCallSid,
+        transport: "twilio_media_stream",
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
@@ -744,6 +916,147 @@ export const startCall = internalMutation({
       conversationId,
       blocked: false,
       contactId: contact._id,
+    };
+  },
+});
+
+export const startWebCall = internalMutation({
+  args: {
+    businessSlug: v.string(),
+    providerCallId: v.string(),
+    gatewaySessionId: v.optional(v.string()),
+    originUrl: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    widgetId: v.optional(v.string()),
+    startedAt: v.string(),
+  },
+  handler: async (
+    ctx: MutationCtx,
+    args: StartWebCallArgs,
+  ): Promise<StartWebCallResult> => {
+    const business = await resolveActiveBusinessByPublicSlug(ctx, args.businessSlug);
+
+    if (!business) {
+      throw new Error("Web voice business not found.");
+    }
+
+    const existingCall: Doc<"calls"> | null = await ctx.db
+      .query("calls")
+      .withIndex("by_provider_and_provider_call_id", (q) =>
+        q.eq("provider", "openai").eq("providerCallId", args.providerCallId),
+      )
+      .unique();
+
+    if (existingCall?.conversationId) {
+      return {
+        businessId: business._id,
+        callId: existingCall._id,
+        conversationId: existingCall.conversationId,
+      };
+    }
+
+    const voicePolicy: {
+      allowed: boolean;
+      errorCode: BillingErrorCode | null;
+    } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+      businessId: business._id,
+    });
+    if (!voicePolicy.allowed) {
+      throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
+    }
+
+    const conversationId = await ctx.db.insert("conversations", {
+      businessId: business._id,
+      channel: "web_voice",
+      status: "open",
+    });
+
+    const callId =
+      existingCall?._id ??
+      (await ctx.db.insert("calls", {
+        businessId: business._id,
+        conversationId,
+        provider: "openai",
+        providerCallId: args.providerCallId,
+        transport: "webrtc",
+        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
+        ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+        ...(args.gatewaySessionId !== undefined
+          ? { gatewaySessionId: args.gatewaySessionId }
+          : {}),
+        status: "in_progress",
+        startedAt: args.startedAt,
+      }));
+
+    if (existingCall) {
+      await ctx.db.patch(existingCall._id, {
+        conversationId,
+        status: "in_progress",
+        ...(args.originUrl !== undefined ? { originUrl: args.originUrl } : {}),
+        ...(args.userAgent !== undefined ? { userAgent: args.userAgent } : {}),
+        ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
+        ...(args.gatewaySessionId !== undefined
+          ? { gatewaySessionId: args.gatewaySessionId }
+          : {}),
+      });
+    }
+
+    const reservation = await ctx.runMutation(internal.billing.reserveVoiceUsageAtCallStart, {
+      businessId: business._id,
+      callId,
+      recordedAt: args.startedAt,
+    });
+    if (!reservation.allowed) {
+      await ctx.db.patch(callId, {
+        status: "completed",
+        endedAt: args.startedAt,
+        disposition: reservation.errorCode ?? billingErrorCodes.voiceLimitReached,
+      });
+      await ctx.db.patch(conversationId, {
+        status: "closed",
+      });
+      throw new Error(reservation.errorCode ?? billingErrorCodes.voiceLimitReached);
+    }
+    if (reservation.syncNeeded && reservation.usageEventId) {
+      await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+        usageEventId: reservation.usageEventId,
+      });
+    }
+
+    await ensureVoiceSessionForCall(ctx, {
+      businessId: business._id,
+      conversationId,
+      callId,
+      startedAt: Date.parse(args.startedAt),
+      channel: "web_voice",
+    });
+
+    await enqueuePostHogOutboxRecord(
+      ctx,
+      serializePostHogEvent({
+        eventName: "voice.call_started",
+        businessId: business._id,
+        distinctId: getPostHogDistinctIdForBusinessSystem(String(business._id)),
+        groupKey: getPostHogBusinessGroupKey(String(business._id)),
+        conversationId: String(conversationId),
+        callId: String(callId),
+        channel: "web_voice",
+        provider: "openai",
+        properties: {
+          status: "in_progress",
+          transport: "webrtc",
+          gatewaySessionId: args.gatewaySessionId,
+          originUrl: args.originUrl,
+          widgetId: args.widgetId,
+        },
+      }),
+    );
+
+    return {
+      businessId: business._id,
+      callId,
+      conversationId,
     };
   },
 });
@@ -1182,11 +1495,12 @@ export const completeCall = internalMutation({
         groupKey: getPostHogBusinessGroupKey(String(call.businessId)),
         ...(call.conversationId ? { conversationId: String(call.conversationId) } : {}),
         callId: String(args.callId),
-        channel: "voice",
-        provider: "twilio",
+        channel: call.transport === "webrtc" ? "web_voice" : "voice",
+        provider: call.provider ?? (call.twilioCallSid ? "twilio" : "openai"),
         properties: {
           status: args.status,
           disposition,
+          ...(call.transport !== undefined ? { transport: call.transport } : {}),
         },
       }),
     );
@@ -1367,6 +1681,10 @@ export const reconcileTwilioCallStatus = internalMutation({
     if (!call) {
       return { ignored: true, reason: "unknown_call" } as const;
     }
+    if (!call.twilioCallSid) {
+      return { ignored: true, reason: "unknown_call" } as const;
+    }
+    const twilioCallSid = call.twilioCallSid;
 
     if (
       call.providerCallStatusSequence !== undefined &&
@@ -1458,7 +1776,7 @@ export const reconcileTwilioCallStatus = internalMutation({
         businessId: call.businessId,
         ...(call.conversationId ? { conversationId: call.conversationId } : {}),
         callId: call._id,
-        twilioCallSid: call.twilioCallSid,
+        twilioCallSid,
         providerCostUsd: estimatedProviderCostUsd,
         providerUpdatedAt: args.providerUpdatedAt,
         providerPriceUnit: "usd",
@@ -1488,7 +1806,7 @@ export const reconcileTwilioCallStatus = internalMutation({
           0,
           internal.integrations.twilioVoice.syncCallPriceFromProvider,
           {
-            twilioCallSid: call.twilioCallSid,
+            twilioCallSid,
             providerCallStatus: args.callStatus,
           },
         );

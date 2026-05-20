@@ -40,12 +40,30 @@ const voiceContextSchema = z.object({
   channel: z.enum(["voice", "sms"]).optional(),
 });
 
+const voiceContextBySlugSchema = z.object({
+  businessSlug: z.string().min(1),
+  origin: z.string().min(1).optional(),
+  ipHash: z.string().min(1).optional(),
+  visitorId: z.string().min(1).optional(),
+  widgetId: z.string().min(1).optional(),
+});
+
 const startCallSchema = z.object({
   businessId: z.string().min(1),
   twilioCallSid: z.string().min(1),
   gatewaySessionId: z.string().min(1).optional(),
   from: z.string().min(1),
   to: z.string().min(1),
+  startedAt: z.string().min(1),
+});
+
+const startWebCallSchema = z.object({
+  businessSlug: z.string().min(1),
+  providerCallId: z.string().min(1),
+  gatewaySessionId: z.string().min(1).optional(),
+  originUrl: z.string().min(1).optional(),
+  userAgent: z.string().min(1).optional(),
+  widgetId: z.string().min(1).optional(),
   startedAt: z.string().min(1),
 });
 
@@ -718,6 +736,69 @@ http.route({
 });
 
 http.route({
+  path: "/voice/context/by-slug",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, voiceContextBySlugSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const business = await ctx.runQuery(internal.voice.runtime.getActiveBusinessBySlug, {
+      businessSlug: body.data.businessSlug,
+    });
+
+    if (!business) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    if (body.data.origin !== undefined) {
+      try {
+        await ctx.runMutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+          businessId: business._id,
+          origin: body.data.origin,
+          ...(body.data.ipHash !== undefined ? { ipHash: body.data.ipHash } : {}),
+          ...(body.data.visitorId !== undefined ? { visitorId: body.data.visitorId } : {}),
+          ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
+        });
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "web_voice_rate_limited"
+        ) {
+          return Response.json(
+            {
+              code: "web_voice_rate_limited",
+              message: "Too many web voice starts. Please try again shortly.",
+            },
+            { status: 429 },
+          );
+        }
+        throw error;
+      }
+    }
+
+    const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
+      businessId: business._id,
+    });
+
+    if (!snapshot) {
+      return new Response("Snapshot not ready", { status: 404 });
+    }
+
+    return Response.json({
+      businessId: business._id,
+      snapshot,
+    });
+  }),
+});
+
+http.route({
   path: "/voice/call/start",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
@@ -741,6 +822,53 @@ http.route({
           : {}),
         from: body.data.from,
         to: body.data.to,
+        startedAt: body.data.startedAt,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === billingErrorCodes.voiceLimitReached
+      ) {
+        return Response.json(
+          {
+            code: billingErrorCodes.voiceLimitReached,
+            message: "Voice quota reached for this billing period.",
+          },
+          { status: 402 },
+        );
+      }
+      throw error;
+    }
+
+    return Response.json(result);
+  }),
+});
+
+http.route({
+  path: "/voice/call/start-web",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, startWebCallSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    let result;
+    try {
+      result = await ctx.runMutation(internal.voice.runtime.startWebCall, {
+        businessSlug: body.data.businessSlug,
+        providerCallId: body.data.providerCallId,
+        ...(body.data.gatewaySessionId !== undefined
+          ? { gatewaySessionId: body.data.gatewaySessionId }
+          : {}),
+        ...(body.data.originUrl !== undefined ? { originUrl: body.data.originUrl } : {}),
+        ...(body.data.userAgent !== undefined ? { userAgent: body.data.userAgent } : {}),
+        ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
         startedAt: body.data.startedAt,
       });
     } catch (error) {

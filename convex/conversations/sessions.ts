@@ -526,6 +526,7 @@ export async function ensureVoiceSessionForCall(
     conversationId: Id<"conversations">;
     callId: Id<"calls">;
     startedAt: number;
+    channel?: string;
   },
 ): Promise<Id<"conversation_sessions">> {
   const existing = await ctx.db
@@ -541,7 +542,7 @@ export async function ensureVoiceSessionForCall(
   return await ctx.db.insert("conversation_sessions", {
     businessId: input.businessId,
     conversationId: input.conversationId,
-    channel: "voice",
+    channel: input.channel ?? "voice",
     callId: input.callId,
     status: "active",
     startedAt,

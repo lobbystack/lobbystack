@@ -3,6 +3,7 @@ import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import {
   recordRecordingUploadFailure,
 } from "../observability/posthog";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 export class RuntimeRequestError extends Error {
   status: number;
@@ -23,6 +24,17 @@ type StartCallResponse = {
   blocked: boolean;
   conversationId?: string;
   contactId: string;
+};
+
+type WebVoiceContextResponse = {
+  businessId: string;
+  snapshot: BusinessContextSnapshot;
+};
+
+type StartWebCallResponse = {
+  businessId: string;
+  callId: string;
+  conversationId: string;
 };
 
 type CheckAvailabilityResponse = {
@@ -182,6 +194,28 @@ export async function startVoiceCall(input: {
   startedAt: string;
 }): Promise<StartCallResponse> {
   return await postJson<StartCallResponse>("/voice/call/start", input);
+}
+
+export async function fetchWebVoiceContext(input: {
+  businessSlug: string;
+  origin?: string;
+  ipHash?: string;
+  visitorId?: string;
+  widgetId?: string;
+}): Promise<WebVoiceContextResponse> {
+  return await postJson<WebVoiceContextResponse>("/voice/context/by-slug", input);
+}
+
+export async function startWebVoiceCall(input: {
+  businessSlug: string;
+  providerCallId: string;
+  gatewaySessionId?: string;
+  originUrl?: string;
+  userAgent?: string;
+  widgetId?: string;
+  startedAt: string;
+}): Promise<StartWebCallResponse> {
+  return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
 }
 
 export async function appendVoiceTranscript(input: {
