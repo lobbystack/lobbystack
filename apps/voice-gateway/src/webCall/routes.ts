@@ -104,6 +104,7 @@ const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
 const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
 const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
 const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
+const WEB_RECORDING_BYTES_PER_SECOND_LIMIT = 64 * 1024;
 
 function getAllowedOrigins(raw: string): Set<string> {
   return new Set(
@@ -133,7 +134,15 @@ function isAllowedOrigin(server: FastifyInstance, origin: string | null): boolea
     return false;
   }
   const allowedOrigins = getAllowedOrigins(server.runtimeConfig.WEB_CALL_ALLOWED_ORIGINS);
-  return allowedOrigins.has(origin) || isLocalhostOrigin(origin);
+  return (
+    allowedOrigins.has(origin) ||
+    (server.runtimeConfig.DEPLOYMENT_MODE === "development" && isLocalhostOrigin(origin))
+  );
+}
+
+function getWebRecordingBodyLimit(maxDurationMs: number): number {
+  const maxDurationSeconds = Math.ceil(maxDurationMs / 1_000);
+  return Math.max(5 * 1024 * 1024, maxDurationSeconds * WEB_RECORDING_BYTES_PER_SECOND_LIMIT);
 }
 
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
@@ -1001,6 +1010,10 @@ async function handleToolCall(
 }
 
 export function registerWebCallRoutes(server: FastifyInstance): void {
+  const webRecordingBodyLimit = getWebRecordingBodyLimit(
+    server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+  );
+
   server.addContentTypeParser(
     /^audio\/.*/,
     { parseAs: "buffer" },
@@ -1167,43 +1180,47 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
   server.post<{
     Params: { sessionId: string };
     Querystring: { durationMs?: string };
-  }>("/web-call/sessions/:sessionId/recording", async (request, reply) => {
-    const origin = getRequestOrigin(request);
-    if (!isAllowedOrigin(server, origin)) {
-      reply.code(403);
-      return "Forbidden";
-    }
-    addCorsHeaders(reply, origin!);
+  }>(
+    "/web-call/sessions/:sessionId/recording",
+    { bodyLimit: webRecordingBodyLimit },
+    async (request, reply) => {
+      const origin = getRequestOrigin(request);
+      if (!isAllowedOrigin(server, origin)) {
+        reply.code(403);
+        return "Forbidden";
+      }
+      addCorsHeaders(reply, origin!);
 
-    const webCall = getWebCallForRecording(request.params.sessionId);
-    if (!webCall) {
-      reply.code(404);
-      return { error: "Unknown web voice session." };
-    }
+      const webCall = getWebCallForRecording(request.params.sessionId);
+      if (!webCall) {
+        reply.code(404);
+        return { error: "Unknown web voice session." };
+      }
 
-    const audio = await readRequestBodyBuffer(request);
-    if (audio.length === 0) {
-      reply.code(400);
-      return { error: "Missing recording audio." };
-    }
+      const audio = await readRequestBodyBuffer(request);
+      if (audio.length === 0) {
+        reply.code(400);
+        return { error: "Missing recording audio." };
+      }
 
-    const parsedDurationMs = Number(request.query.durationMs);
-    const durationMs = Number.isFinite(parsedDurationMs) && parsedDurationMs > 0
-      ? parsedDurationMs
-      : Math.max(0, Date.now() - webCall.startedAtMs);
-    const contentTypeHeader = request.headers["content-type"];
-    const contentType = Array.isArray(contentTypeHeader)
-      ? contentTypeHeader[0]
-      : contentTypeHeader;
+      const parsedDurationMs = Number(request.query.durationMs);
+      const durationMs = Number.isFinite(parsedDurationMs) && parsedDurationMs > 0
+        ? parsedDurationMs
+        : Math.max(0, Date.now() - webCall.startedAtMs);
+      const contentTypeHeader = request.headers["content-type"];
+      const contentType = Array.isArray(contentTypeHeader)
+        ? contentTypeHeader[0]
+        : contentTypeHeader;
 
-    await uploadVoiceRecording({
-      callId: webCall.callId,
-      durationMs,
-      audio,
-      ...(contentType ? { contentType } : {}),
-    });
+      await uploadVoiceRecording({
+        callId: webCall.callId,
+        durationMs,
+        audio,
+        ...(contentType ? { contentType } : {}),
+      });
 
-    reply.code(204);
-    return null;
-  });
+      reply.code(204);
+      return null;
+    },
+  );
 }

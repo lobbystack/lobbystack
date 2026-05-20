@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { demoSnapshot } from "@lobbystack/shared";
 
 const {
+  bookVoiceAppointmentMock,
   cancelVoiceAppointmentMock,
   lookupVoiceAppointmentForChangeMock,
   rescheduleVoiceAppointmentMock,
@@ -11,6 +12,7 @@ const {
   verifyVoiceAppointmentChangeOtpMock,
   verifyVoiceAppointmentForChangeMock,
 } = vi.hoisted(() => ({
+  bookVoiceAppointmentMock: vi.fn(),
   cancelVoiceAppointmentMock: vi.fn(),
   lookupVoiceAppointmentForChangeMock: vi.fn(),
   rescheduleVoiceAppointmentMock: vi.fn(),
@@ -21,7 +23,7 @@ const {
 }));
 
 vi.mock("../convex/runtimeClient", () => ({
-  bookVoiceAppointment: vi.fn(),
+  bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: cancelVoiceAppointmentMock,
   checkVoiceAvailability: vi.fn(),
   findVoiceAvailability: vi.fn(),
@@ -416,6 +418,57 @@ describe("executeVoiceTool appointment changes", () => {
       verificationId: "verification_123",
       code: "123456",
     });
+  });
+});
+
+describe("executeVoiceTool bookings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requires an explicit contact phone for website bookings", async () => {
+    const result = await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+      callerPhone: "web",
+    });
+
+    expect(result.result).toEqual({
+      ok: false,
+      reason: "A contact phone number is required for website voice bookings.",
+    });
+    expect(bookVoiceAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("uses a provided contact phone for website bookings", async () => {
+    bookVoiceAppointmentMock.mockResolvedValue({ ok: true, appointmentId: "appointment_123" });
+
+    const result = await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+        contactPhone: " +14165550123 ",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "web",
+    });
+
+    expect(bookVoiceAppointmentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "business_123",
+        contactPhone: "+14165550123",
+      }),
+    );
+    expect(result.result).toEqual({ ok: true, appointmentId: "appointment_123" });
   });
 });
 

@@ -378,6 +378,15 @@ export async function executeVoiceTool(input: {
       }
       case "bookAppointment": {
         const parsed = bookAppointmentSchema.parse(JSON.parse(input.rawArguments || "{}"));
+        const contactPhone = parsed.contactPhone?.trim() || undefined;
+        if ((!contactPhone || contactPhone.toLowerCase() === "web") && input.callerPhone === "web") {
+          return {
+            result: {
+              ok: false,
+              reason: "A contact phone number is required for website voice bookings.",
+            },
+          };
+        }
         const result = await bookVoiceAppointment({
           businessId: input.businessId,
           serviceName: parsed.serviceName,
@@ -390,7 +399,7 @@ export async function executeVoiceTool(input: {
             ? { conversationId: input.conversationId }
             : {}),
           ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
-          contactPhone: parsed.contactPhone ?? input.callerPhone,
+          contactPhone: contactPhone ?? input.callerPhone,
         });
         return {
           result,

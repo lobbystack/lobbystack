@@ -175,6 +175,39 @@ describe("web call routes", () => {
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
+  it("rejects implicit localhost origins in cloud mode", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com";
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "OPTIONS",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "http://localhost:4321",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("allows localhost origins in cloud mode only when explicitly configured", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,http://localhost:4321";
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "OPTIONS",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "http://localhost:4321",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:4321");
+  });
+
   it("rejects unknown public widget business slugs", async () => {
     const server = createServer();
 
@@ -385,6 +418,60 @@ describe("web call routes", () => {
       audio: Buffer.from("webm-recording"),
       contentType: "audio/webm",
     });
+  });
+
+  it("accepts browser recordings over Fastify's default body limit", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    uploadVoiceRecordingMock.mockResolvedValueOnce(null);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+    const { sessionId } = createResponse.json() as { sessionId: string };
+    const recording = Buffer.alloc(1024 * 1024 + 1, 1);
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/recording?durationMs=1234`,
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: recording,
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(uploadVoiceRecordingMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        audio: expect.any(Buffer),
+      }),
+    );
+    expect(uploadVoiceRecordingMock.mock.calls[0]?.[0].audio).toHaveLength(recording.length);
   });
 
   it("orders delayed caller transcripts before the matching assistant reply", async () => {
