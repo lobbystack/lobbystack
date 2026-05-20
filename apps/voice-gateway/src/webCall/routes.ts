@@ -72,6 +72,7 @@ type ActiveWebCall = {
   startedAtMs: number;
   handledToolCallIds: Set<string>;
   sidebandSocket: WebSocket | null;
+  openingGreetingActive: boolean;
 };
 
 const activeWebCalls = new Map<string, ActiveWebCall>();
@@ -124,6 +125,50 @@ function isRateLimited(origin: string, nowMs = Date.now()): boolean {
   recent.push(nowMs);
   originStartAttempts.set(origin, recent);
   return recent.length > maxStarts;
+}
+
+export function createWebRealtimeTurnDetectionConfig(options: {
+  createResponse?: boolean;
+  interruptResponse?: boolean;
+} = {}): Record<string, unknown> {
+  return {
+    type: "server_vad",
+    create_response: options.createResponse ?? true,
+    interrupt_response: options.interruptResponse ?? true,
+  };
+}
+
+function enableWebRealtimeTurnDetection(
+  server: FastifyInstance,
+  socket: WebSocket,
+  session: ActiveWebCall,
+  reason: string,
+): void {
+  if (!session.openingGreetingActive) {
+    return;
+  }
+
+  session.openingGreetingActive = false;
+  postRealtimeEvent(socket, { type: "input_audio_buffer.clear" });
+  postRealtimeEvent(socket, {
+    type: "session.update",
+    session: {
+      type: "realtime",
+      audio: {
+        input: {
+          turn_detection: createWebRealtimeTurnDetectionConfig(),
+        },
+      },
+    },
+  });
+  server.log.info(
+    {
+      callId: session.callId,
+      providerCallId: session.providerCallId,
+      reason,
+    },
+    "Enabled web voice turn detection after opening greeting",
+  );
 }
 
 function normalizeOptionalAbuseKey(value: string | undefined): string | undefined {
@@ -303,6 +348,7 @@ function createSidebandSocket(input: {
           buildVoiceSystemPrompt(input.snapshot),
           "You are speaking through a website voice widget, not a phone call.",
           "Represent LobbyStack and answer questions about the business from the supplied snapshot and tools.",
+          "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
           "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
           "Do not attempt phone transfer from the website widget.",
           "End the session with endCall when the visitor is clearly finished, abusive, spammy, or repeatedly silent.",
@@ -313,6 +359,10 @@ function createSidebandSocket(input: {
             transcription: {
               model: input.server.runtimeConfig.OPENAI_TRANSCRIPTION_MODEL,
             },
+            turn_detection: createWebRealtimeTurnDetectionConfig({
+              createResponse: false,
+              interruptResponse: false,
+            }),
           },
           output: {
             voice: input.server.runtimeConfig.OPENAI_REALTIME_VOICE,
@@ -329,6 +379,7 @@ function createSidebandSocket(input: {
         instructions: [
           `Begin by greeting the visitor with this exact greeting: "${input.snapshot.greeting}"`,
           "Then stop speaking and wait for the visitor.",
+          "Do not repeat this greeting later in the session.",
         ].join(" "),
       },
     });
@@ -394,22 +445,41 @@ async function handleSidebandMessage(
     return;
   }
 
-  if (payload.type === "response.done" && payload.response?.usage) {
-    const costUsd = priceUsage(server, payload.response.usage);
-    if (costUsd === null) {
+  if (payload.type === "response.done") {
+    if (payload.response?.usage) {
+      const costUsd = priceUsage(server, payload.response.usage);
+      if (costUsd !== null) {
+        await recordVoiceAiCost({
+          businessId: session.businessId,
+          callId: session.callId,
+          conversationId: session.conversationId,
+          occurredAt: new Date().toISOString(),
+          eventKey: `web_voice_ai:response:${session.callId}:${payload.response.id ?? payload.event_id ?? crypto.randomUUID()}`,
+          costUsd,
+          provider: "openai",
+          model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+          operation: "web_voice.response_generation",
+        });
+      }
+    }
+
+    if (session.openingGreetingActive) {
+      enableWebRealtimeTurnDetection(server, socket, session, "response_done");
+    }
+    return;
+  }
+
+  if (payload.type === "input_audio_buffer.speech_started") {
+    if (session.openingGreetingActive) {
+      server.log.info(
+        {
+          callId: session.callId,
+          providerCallId: session.providerCallId,
+        },
+        "Ignored web voice speech detection during opening greeting",
+      );
       return;
     }
-    await recordVoiceAiCost({
-      businessId: session.businessId,
-      callId: session.callId,
-      conversationId: session.conversationId,
-      occurredAt: new Date().toISOString(),
-      eventKey: `web_voice_ai:response:${session.callId}:${payload.response.id ?? payload.event_id ?? crypto.randomUUID()}`,
-      costUsd,
-      provider: "openai",
-      model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
-      operation: "web_voice.response_generation",
-    });
     return;
   }
 
@@ -562,6 +632,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       startedAtMs: Date.parse(startedAt),
       handledToolCallIds: new Set(),
       sidebandSocket: null,
+      openingGreetingActive: true,
     };
     const sidebandSocket = createSidebandSocket({
       server,

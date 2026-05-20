@@ -41,6 +41,30 @@ vi.mock("../convex/runtimeClient", () => ({
 }));
 
 import { createServer } from "../http/server";
+import { createWebRealtimeTurnDetectionConfig } from "./routes";
+
+describe("createWebRealtimeTurnDetectionConfig", () => {
+  it("can disable auto responses and interruptions during the opening greeting", () => {
+    expect(
+      createWebRealtimeTurnDetectionConfig({
+        createResponse: false,
+        interruptResponse: false,
+      }),
+    ).toEqual({
+      type: "server_vad",
+      create_response: false,
+      interrupt_response: false,
+    });
+  });
+
+  it("defaults to normal web caller turn handling after the greeting", () => {
+    expect(createWebRealtimeTurnDetectionConfig()).toEqual({
+      type: "server_vad",
+      create_response: true,
+      interrupt_response: true,
+    });
+  });
+});
 
 describe("web call routes", () => {
   beforeEach(() => {
