@@ -323,6 +323,24 @@ function categorizeCallOutcome(call: Doc<"calls">): "completed" | "live" | "miss
   return "missed";
 }
 
+export const WEBRTC_LIVE_CALL_GRACE_MS = 30 * 60 * 1000;
+
+export function isCallLiveForDashboard(
+  call: Pick<Doc<"calls">, "status" | "transport" | "startedAt">,
+  nowMs = Date.now(),
+): boolean {
+  if (call.status !== "in_progress" && call.status !== "open") {
+    return false;
+  }
+
+  if (call.transport !== "webrtc") {
+    return true;
+  }
+
+  const startedAtMs = Date.parse(call.startedAt);
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs <= WEBRTC_LIVE_CALL_GRACE_MS;
+}
+
 function categorizeConversationChannel(channel: string): "voice" | "sms" | "other" {
   const normalized = channel.toLowerCase();
   if (normalized.includes("voice") || normalized.includes("call")) {
@@ -514,9 +532,8 @@ export const getHomeSummary = query({
         }),
     );
 
-    const liveCalls = calls.filter(
-      (call) => call.status === "in_progress" || call.status === "open",
-    ).length;
+    const nowMs = now.getTime();
+    const liveCalls = calls.filter((call) => isCallLiveForDashboard(call, nowMs)).length;
 
     const actionRequiredFromVoice = dedupeVoiceFollowUpItems(
       openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),

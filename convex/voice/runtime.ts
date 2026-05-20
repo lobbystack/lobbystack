@@ -92,6 +92,7 @@ type StartWebCallResult = {
 };
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
+const WEB_CALL_STALE_TIMEOUT_MS = 30 * 60 * 1000;
 
 function logWebVoiceRateLimitBlocked(input: {
   limiter: string;
@@ -1046,6 +1047,14 @@ export const startWebCall = internalMutation({
       channel: "web_voice",
     });
 
+    await ctx.scheduler.runAfter(
+      WEB_CALL_STALE_TIMEOUT_MS,
+      internal.voice.runtime.expireStaleWebCall,
+      {
+        callId,
+      },
+    );
+
     await enqueuePostHogOutboxRecord(
       ctx,
       serializePostHogEvent({
@@ -1072,6 +1081,50 @@ export const startWebCall = internalMutation({
       callId,
       conversationId,
     };
+  },
+});
+
+export const expireStaleWebCall = internalMutation({
+  args: {
+    callId: v.id("calls"),
+  },
+  handler: async (ctx, args) => {
+    const call = await ctx.db.get(args.callId);
+    if (!call || call.transport !== "webrtc") {
+      return null;
+    }
+
+    if (call.status !== "in_progress" && call.status !== "open") {
+      return null;
+    }
+
+    const startedAtMs = Date.parse(call.startedAt);
+    if (
+      !Number.isFinite(startedAtMs) ||
+      Date.now() - startedAtMs < WEB_CALL_STALE_TIMEOUT_MS
+    ) {
+      return null;
+    }
+
+    const endedAt = new Date().toISOString();
+    await ctx.db.patch(call._id, {
+      status: "completed",
+      endedAt,
+      disposition: call.disposition ?? "web_call_stale_timeout",
+    });
+
+    if (call.conversationId) {
+      await ctx.db.patch(call.conversationId, {
+        status: "closed",
+      });
+    }
+
+    await finalizeVoiceSessionForCall(ctx, {
+      callId: call._id,
+      endedAt: Date.parse(endedAt),
+    });
+
+    return null;
   },
 });
 

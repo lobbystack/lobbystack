@@ -1,6 +1,6 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { internal } from "../_generated/api";
 import { webVoiceAbuseRateLimiter } from "../lib/components";
@@ -26,6 +26,10 @@ async function seedBusiness(slug = "lobbystack") {
 }
 
 describe("web voice calls", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("starts provider-neutral web calls without a contact or Twilio SID", async () => {
     const { t, businessId } = await seedBusiness();
 
@@ -73,6 +77,43 @@ describe("web voice calls", () => {
         callId: result.callId,
         channel: "web_voice",
         status: "active",
+      });
+    });
+  });
+
+  it("expires stale web calls that missed normal browser cleanup", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-20T13:00:00.000Z"));
+    const { t } = await seedBusiness("stale-web-call-cleanup");
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "stale-web-call-cleanup",
+      providerCallId: "call_openai_stale_web",
+      gatewaySessionId: "gateway-session-stale",
+      startedAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    await t.mutation(internal.voice.runtime.expireStaleWebCall, {
+      callId: result.callId,
+    });
+
+    await t.run(async (ctx) => {
+      const call = await ctx.db.get(result.callId);
+      const conversation = await ctx.db.get(result.conversationId);
+      const session = await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_call_id", (q) => q.eq("callId", result.callId))
+        .unique();
+
+      expect(call).toMatchObject({
+        status: "completed",
+        disposition: "web_call_stale_timeout",
+        endedAt: "2026-05-20T13:00:00.000Z",
+      });
+      expect(conversation?.status).toBe("closed");
+      expect(session).toMatchObject({
+        status: "closed",
+        closedAt: Date.parse("2026-05-20T13:00:00.000Z"),
       });
     });
   });

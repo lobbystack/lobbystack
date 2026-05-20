@@ -1,12 +1,15 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
 const {
+  appendVoiceTranscriptMock,
   completeVoiceCallMock,
   fetchWebVoiceContextMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
+  uploadVoiceRecordingMock,
   webSocketInstances,
 } = vi.hoisted(() => ({
+  appendVoiceTranscriptMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
   runtimeRequestErrorClass: class RuntimeRequestError extends Error {
@@ -23,8 +26,10 @@ const {
     }
   },
   startWebVoiceCallMock: vi.fn(),
+  uploadVoiceRecordingMock: vi.fn(),
   webSocketInstances: [] as Array<{
     close: ReturnType<typeof vi.fn>;
+    emit: (event: string, ...args: Array<unknown>) => void;
     send: ReturnType<typeof vi.fn>;
   }>,
 }));
@@ -50,6 +55,10 @@ vi.mock("ws", () => {
       this.handlers[event] = [...(this.handlers[event] ?? []), handler];
       return this;
     }
+
+    emit(event: string, ...args: Array<unknown>) {
+      this.handlers[event]?.forEach((handler) => handler(...args));
+    }
   }
 
   class MockWebSocketServer {
@@ -69,11 +78,13 @@ vi.mock("ws", () => {
 });
 
 vi.mock("../convex/runtimeClient", () => ({
+  appendVoiceTranscript: appendVoiceTranscriptMock,
   completeVoiceCall: completeVoiceCallMock,
   fetchWebVoiceContext: fetchWebVoiceContextMock,
   recordVoiceAiCost: vi.fn(),
   RuntimeRequestError: runtimeRequestErrorClass,
   startWebVoiceCall: startWebVoiceCallMock,
+  uploadVoiceRecording: uploadVoiceRecordingMock,
   bookVoiceAppointment: vi.fn(),
   cancelVoiceAppointment: vi.fn(),
   checkVoiceAvailability: vi.fn(),
@@ -322,5 +333,219 @@ describe("web call routes", () => {
       }),
     );
     expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(1000, "web call ended");
+  });
+
+  it("uploads browser web call recordings for active sessions", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    uploadVoiceRecordingMock.mockResolvedValueOnce(null);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+    const { sessionId } = createResponse.json() as { sessionId: string };
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/recording?durationMs=1234`,
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: Buffer.from("webm-recording"),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(uploadVoiceRecordingMock).toHaveBeenCalledWith({
+      callId: "call_123",
+      durationMs: 1234,
+      audio: Buffer.from("webm-recording"),
+      contentType: "audio/webm",
+    });
+  });
+
+  it("orders delayed caller transcripts before the matching assistant reply", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    appendVoiceTranscriptMock.mockResolvedValue(null);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.output_audio_transcript.done",
+          item_id: "greeting-item-1",
+          content_index: 0,
+          transcript: "Thanks for calling LobbyStack QA. How can I help?",
+        }),
+      ),
+    );
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(JSON.stringify({ type: "response.done", response: { id: "greeting" } })),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 2_050));
+
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.output_audio_transcript.done",
+          item_id: "assistant-item-1",
+          content_index: 0,
+          transcript: "I can help with that.",
+        }),
+      ),
+    );
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "conversation.item.input_audio_transcription.completed",
+          item_id: "caller-item-1",
+          content_index: 0,
+          transcript: "I need help booking an appointment.",
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      expect(appendVoiceTranscriptMock).toHaveBeenCalledTimes(3);
+    });
+    expect(appendVoiceTranscriptMock).toHaveBeenNthCalledWith(1, {
+      businessId: "business_123",
+      callId: "call_123",
+      sequence: 1,
+      speaker: "assistant",
+      text: "Thanks for calling LobbyStack QA. How can I help?",
+      final: true,
+    });
+    expect(appendVoiceTranscriptMock).toHaveBeenNthCalledWith(2, {
+      businessId: "business_123",
+      callId: "call_123",
+      sequence: 2,
+      speaker: "caller",
+      text: "I need help booking an appointment.",
+      final: true,
+    });
+    expect(appendVoiceTranscriptMock).toHaveBeenNthCalledWith(3, {
+      businessId: "business_123",
+      callId: "call_123",
+      sequence: 3,
+      speaker: "assistant",
+      text: "I can help with that.",
+      final: true,
+    });
+  });
+
+  it("allows recording upload shortly after the web session ends", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    uploadVoiceRecordingMock.mockResolvedValueOnce(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+    const { sessionId } = createResponse.json() as { sessionId: string };
+
+    await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/end`,
+      headers: { origin: "https://lobbystack.com" },
+    });
+
+    const response = await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/recording?durationMs=1234`,
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: Buffer.from("webm-recording"),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(uploadVoiceRecordingMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        durationMs: 1234,
+      }),
+    );
   });
 });

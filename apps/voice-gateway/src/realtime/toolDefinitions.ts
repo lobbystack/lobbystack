@@ -119,7 +119,7 @@ export function createWebRealtimeToolDefinitions() {
           urgency: { type: "string" },
           callbackWindow: { type: "string" },
         },
-        required: ["message"],
+        required: ["message", "callbackPhone"],
         additionalProperties: false,
       },
     },

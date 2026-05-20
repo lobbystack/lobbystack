@@ -313,6 +313,7 @@ export async function uploadVoiceRecording(input: {
   callId: string;
   durationMs: number;
   audio: Buffer;
+  contentType?: string;
 }): Promise<void> {
   const env = loadVoiceGatewayEnv(process.env);
   const url = new URL("/voice/call/recording", env.CONVEX_SITE_URL);
@@ -320,14 +321,15 @@ export async function uploadVoiceRecording(input: {
   url.searchParams.set("durationMs", String(input.durationMs));
   const bytes = Uint8Array.from(input.audio);
   const arrayBuffer = bytes.buffer as ArrayBuffer;
+  const contentType = input.contentType ?? "audio/wav";
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "audio/wav",
+      "Content-Type": contentType,
       "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
     },
-    body: new Blob([arrayBuffer], { type: "audio/wav" }),
+    body: new Blob([arrayBuffer], { type: contentType }),
   });
 
   if (!response.ok) {

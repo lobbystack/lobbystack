@@ -590,6 +590,16 @@ export async function executeVoiceTool(input: {
           throw new Error("Call has not been initialized yet.");
         }
 
+        const callbackPhone = parsed.callbackPhone?.trim() || undefined;
+        if (!callbackPhone && input.callerPhone === "web") {
+          return {
+            result: {
+              ok: false,
+              reason: "A callback phone number is required for website voice messages.",
+            },
+          };
+        }
+
         const result = await takeVoiceMessage({
           businessId: input.businessId,
           callId: input.callId,
@@ -597,7 +607,7 @@ export async function executeVoiceTool(input: {
             ? { conversationId: input.conversationId }
             : {}),
           ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
-          callbackPhone: parsed.callbackPhone ?? input.callerPhone,
+          callbackPhone: callbackPhone ?? input.callerPhone,
           message: parsed.message,
           ...(parsed.urgency !== undefined ? { urgency: parsed.urgency } : {}),
           ...(parsed.callbackWindow !== undefined

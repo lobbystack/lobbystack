@@ -5,11 +5,13 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import WebSocket from "ws";
 
 import {
+  appendVoiceTranscript,
   completeVoiceCall,
   fetchWebVoiceContext,
   recordVoiceAiCost,
   RuntimeRequestError,
   startWebVoiceCall,
+  uploadVoiceRecording,
 } from "../convex/runtimeClient";
 import { capturePostHogException } from "../observability/posthog";
 import { executeVoiceTool } from "../realtime/toolExecutor";
@@ -35,6 +37,8 @@ type OpenAiRealtimeMessage = {
     call_id?: string;
     arguments?: string;
   };
+  item_id?: string;
+  content_index?: number;
   transcript?: string;
   response?: {
     id?: string;
@@ -76,14 +80,30 @@ type ActiveWebCall = {
   finalized: boolean;
   openingGreetingActive: boolean;
   openingGreetingTurnDetectionTimer: ReturnType<typeof setTimeout> | null;
+  seenTranscriptKeys: Set<string>;
+  transcriptSequence: number;
+  pendingAssistantTranscriptFlushTimer: ReturnType<typeof setTimeout> | null;
+  pendingAssistantTranscripts: Array<{
+    dedupeKey: string;
+    text: string | undefined;
+  }>;
+};
+
+type CompletedWebCall = {
+  callId: string;
+  startedAtMs: number;
+  completedAtMs: number;
 };
 
 const activeWebCalls = new Map<string, ActiveWebCall>();
+const completedWebCalls = new Map<string, CompletedWebCall>();
 const originStartAttempts = new Map<string, Array<number>>();
 const WEB_REALTIME_VAD_THRESHOLD = 0.65;
 const WEB_REALTIME_VAD_PREFIX_PADDING_MS = 300;
 const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
 const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
+const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
+const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
 
 function getAllowedOrigins(raw: string): Set<string> {
   return new Set(
@@ -121,6 +141,148 @@ function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
   reply.header("Access-Control-Allow-Headers", "Content-Type");
   reply.header("Vary", "Origin");
+}
+
+async function readRequestBodyBuffer(request: FastifyRequest): Promise<Buffer> {
+  if (Buffer.isBuffer(request.body)) {
+    return request.body;
+  }
+  if (request.body instanceof ArrayBuffer) {
+    return Buffer.from(request.body);
+  }
+  if (typeof request.body === "string") {
+    return Buffer.from(request.body);
+  }
+
+  const chunks: Array<Buffer> = [];
+  for await (const chunk of request.raw) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+function rememberCompletedWebCall(session: ActiveWebCall): void {
+  completedWebCalls.set(session.gatewaySessionId, {
+    callId: session.callId,
+    startedAtMs: session.startedAtMs,
+    completedAtMs: Date.now(),
+  });
+  setTimeout(() => {
+    const completed = completedWebCalls.get(session.gatewaySessionId);
+    if (completed?.callId === session.callId) {
+      completedWebCalls.delete(session.gatewaySessionId);
+    }
+  }, WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS).unref();
+}
+
+function getWebCallForRecording(sessionId: string): CompletedWebCall | null {
+  const active = activeWebCalls.get(sessionId);
+  if (active) {
+    return {
+      callId: active.callId,
+      startedAtMs: active.startedAtMs,
+      completedAtMs: Date.now(),
+    };
+  }
+
+  const completed = completedWebCalls.get(sessionId);
+  if (!completed) {
+    return null;
+  }
+
+  if (Date.now() - completed.completedAtMs > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) {
+    completedWebCalls.delete(sessionId);
+    return null;
+  }
+
+  return completed;
+}
+
+async function persistWebTranscriptIfNew(
+  server: FastifyInstance,
+  session: ActiveWebCall,
+  dedupeKey: string,
+  input: {
+    speaker: string;
+    text: string | undefined;
+  },
+): Promise<void> {
+  const text = input.text?.trim();
+  if (!text || session.seenTranscriptKeys.has(dedupeKey)) {
+    return;
+  }
+
+  session.seenTranscriptKeys.add(dedupeKey);
+  const sequence = session.transcriptSequence;
+  session.transcriptSequence += 1;
+
+  await appendVoiceTranscript({
+    businessId: session.businessId,
+    callId: session.callId,
+    sequence,
+    speaker: input.speaker,
+    text,
+    final: true,
+  }).catch((error: unknown) => {
+    server.log.error(
+      {
+        err: error,
+        businessId: session.businessId,
+        callId: session.callId,
+        sequence,
+        speaker: input.speaker,
+      },
+      "Failed to persist web voice transcript segment",
+    );
+  });
+}
+
+async function flushPendingWebAssistantTranscripts(
+  server: FastifyInstance,
+  session: ActiveWebCall,
+): Promise<void> {
+  if (session.pendingAssistantTranscriptFlushTimer !== null) {
+    clearTimeout(session.pendingAssistantTranscriptFlushTimer);
+    session.pendingAssistantTranscriptFlushTimer = null;
+  }
+
+  const pending = session.pendingAssistantTranscripts.splice(0);
+  for (const transcript of pending) {
+    await persistWebTranscriptIfNew(server, session, transcript.dedupeKey, {
+      speaker: "assistant",
+      text: transcript.text,
+    });
+  }
+}
+
+function queueWebAssistantTranscript(
+  server: FastifyInstance,
+  session: ActiveWebCall,
+  dedupeKey: string,
+  text: string | undefined,
+): void {
+  if (!text?.trim() || session.seenTranscriptKeys.has(dedupeKey)) {
+    return;
+  }
+
+  session.pendingAssistantTranscripts.push({ dedupeKey, text });
+  if (session.pendingAssistantTranscriptFlushTimer !== null) {
+    return;
+  }
+
+  session.pendingAssistantTranscriptFlushTimer = setTimeout(() => {
+    session.pendingAssistantTranscriptFlushTimer = null;
+    void flushPendingWebAssistantTranscripts(server, session).catch((error: unknown) => {
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          providerCallId: session.providerCallId,
+        },
+        "Failed to flush pending web voice assistant transcripts",
+      );
+    });
+  }, WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS);
 }
 
 function isRateLimited(origin: string, nowMs = Date.now()): boolean {
@@ -267,12 +429,27 @@ async function hangupOpenAiRealtimeCall(
   session: ActiveWebCall,
   reason: string,
 ): Promise<void> {
-  if (session.providerCallId.startsWith("webcall_")) {
+  await hangupOpenAiRealtimeProviderCall(server, {
+    callId: session.callId,
+    providerCallId: session.providerCallId,
+    reason,
+  });
+}
+
+async function hangupOpenAiRealtimeProviderCall(
+  server: FastifyInstance,
+  input: {
+    callId?: string;
+    providerCallId: string;
+    reason: string;
+  },
+): Promise<void> {
+  if (input.providerCallId.startsWith("webcall_")) {
     server.log.warn(
       {
-        callId: session.callId,
-        providerCallId: session.providerCallId,
-        reason,
+        callId: input.callId,
+        providerCallId: input.providerCallId,
+        reason: input.reason,
       },
       "Skipping OpenAI Realtime hangup because no provider call ID was returned",
     );
@@ -282,7 +459,7 @@ async function hangupOpenAiRealtimeCall(
   try {
     const response = await fetch(
       `https://api.openai.com/v1/realtime/calls/${encodeURIComponent(
-        session.providerCallId,
+        input.providerCallId,
       )}/hangup`,
       {
         method: "POST",
@@ -297,9 +474,9 @@ async function hangupOpenAiRealtimeCall(
       const body = await response.text().catch(() => "");
       server.log.warn(
         {
-          callId: session.callId,
-          providerCallId: session.providerCallId,
-          reason,
+          callId: input.callId,
+          providerCallId: input.providerCallId,
+          reason: input.reason,
           status: response.status,
           body: body.slice(0, 500),
         },
@@ -310,9 +487,9 @@ async function hangupOpenAiRealtimeCall(
     server.log.error(
       {
         err: error,
-        callId: session.callId,
-        providerCallId: session.providerCallId,
-        reason,
+        callId: input.callId,
+        providerCallId: input.providerCallId,
+        reason: input.reason,
       },
       "Failed to hang up OpenAI Realtime web call",
     );
@@ -331,6 +508,7 @@ async function finishWebCallSession(
   session.finalized = true;
   clearWebOpeningGreetingTimer(session);
   clearWebMaxDurationTimer(session);
+  await flushPendingWebAssistantTranscripts(server, session);
   await hangupOpenAiRealtimeCall(server, session, disposition);
 
   try {
@@ -345,6 +523,7 @@ async function finishWebCallSession(
       ),
     });
   } finally {
+    rememberCompletedWebCall(session);
     session.sidebandSocket?.close(1000, "web call ended");
     activeWebCalls.delete(session.gatewaySessionId);
   }
@@ -408,40 +587,52 @@ function priceUsage(
     return null;
   }
 
-  const textInputTokens = usage.input_token_details?.text_tokens ?? 0;
-  const audioInputTokens = usage.input_token_details?.audio_tokens ?? 0;
-  const cachedInputTokens = usage.input_token_details?.cached_tokens ?? 0;
-  const textOutputTokens = usage.output_token_details?.text_tokens ?? 0;
-  const audioOutputTokens = usage.output_token_details?.audio_tokens ?? 0;
-
   const fallbackInputPrice = server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD;
   const fallbackOutputPrice = server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD;
+  const textInputTokens = usage.input_token_details?.text_tokens;
+  const audioInputTokens = usage.input_token_details?.audio_tokens;
+  const cachedInputTokens = usage.input_token_details?.cached_tokens ?? 0;
+  const textOutputTokens = usage.output_token_details?.text_tokens;
+  const audioOutputTokens = usage.output_token_details?.audio_tokens;
   const textInputPrice =
     server.runtimeConfig.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD ?? fallbackInputPrice;
-  const audioInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD ?? fallbackInputPrice;
+  const audioInputPrice = server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD;
   const textOutputPrice =
     server.runtimeConfig.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD ?? fallbackOutputPrice;
-  const audioOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD ?? fallbackOutputPrice;
-  const cachedInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD ?? textInputPrice;
+  const audioOutputPrice = server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD;
+  const cachedInputPrice = server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD;
 
-  const pricedBuckets = [
-    [textInputTokens, textInputPrice],
-    [audioInputTokens, audioInputPrice],
-    [cachedInputTokens, cachedInputPrice],
-    [textOutputTokens, textOutputPrice],
-    [audioOutputTokens, audioOutputPrice],
-  ] as const;
+  const hasDetailedInput = textInputTokens !== undefined || audioInputTokens !== undefined;
+  if (hasDetailedInput && cachedInputTokens > 0) {
+    return null;
+  }
 
-  const hasAnyPrice = pricedBuckets.some(([, price]) => price !== undefined);
-  if (!hasAnyPrice) {
+  const inputTokens = usage.input_tokens;
+  const outputTokens = usage.output_tokens;
+  const uncachedInputTokens =
+    inputTokens !== undefined ? Math.max(0, inputTokens - cachedInputTokens) : undefined;
+  const pricedBuckets: Array<readonly [number | undefined, number | undefined]> = hasDetailedInput
+    ? [
+        [textInputTokens, textInputPrice],
+        [audioInputTokens, audioInputPrice],
+        [textOutputTokens, textOutputPrice],
+        [audioOutputTokens, audioOutputPrice],
+      ]
+    : [
+        [uncachedInputTokens, fallbackInputPrice],
+        [cachedInputTokens || undefined, cachedInputPrice],
+        [outputTokens, fallbackOutputPrice],
+      ];
+
+  const hasAnyPricedTokens = pricedBuckets.some(
+    ([tokens, price]) => tokens !== undefined && price !== undefined,
+  );
+  if (!hasAnyPricedTokens) {
     return null;
   }
 
   return pricedBuckets.reduce(
-    (total, [tokens, price]) => total + tokens * (price ?? 0),
+    (total, [tokens, price]) => total + (tokens ?? 0) * (price ?? 0),
     0,
   );
 }
@@ -539,7 +730,27 @@ function createSidebandSocket(input: {
   });
 
   socket.on("message", (rawMessage) => {
-    void handleSidebandMessage(input.server, socket, input.session, rawMessage);
+    void handleSidebandMessage(input.server, socket, input.session, rawMessage).catch(
+      (error: unknown) => {
+        input.server.log.error(
+          {
+            err: error,
+            callId: input.session.callId,
+            providerCallId: input.session.providerCallId,
+          },
+          "Failed to handle OpenAI Realtime web call sideband message",
+        );
+        capturePostHogException(error, {
+          businessId: input.session.businessId,
+          properties: {
+            operation: "web_call_sideband_message",
+            channel: "web_voice",
+            provider: "openai",
+            callId: input.session.callId,
+          },
+        });
+      },
+    );
   });
 
   socket.on("error", (error) => {
@@ -626,6 +837,15 @@ async function handleSidebandMessage(
           provider: "openai",
           model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
           operation: "web_voice.response_generation",
+        }).catch((error: unknown) => {
+          server.log.error(
+            {
+              err: error,
+              businessId: session.businessId,
+              callId: session.callId,
+            },
+            "Failed to persist web voice response AI cost",
+          );
         });
       }
     }
@@ -633,6 +853,51 @@ async function handleSidebandMessage(
     if (session.openingGreetingActive) {
       scheduleWebRealtimeTurnDetectionEnable(server, socket, session, "response_done");
     }
+    return;
+  }
+
+  if (payload.type === "conversation.item.input_audio_transcription.completed") {
+    await persistWebTranscriptIfNew(
+      server,
+      session,
+      `caller-completed:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.transcript ?? ""}`,
+      {
+        speaker: "caller",
+        text: payload.transcript,
+      },
+    );
+    await flushPendingWebAssistantTranscripts(server, session);
+    return;
+  }
+
+  if (
+    payload.type === "response.audio_transcript.done" ||
+    payload.type === "response.output_audio_transcript.done"
+  ) {
+    const dedupeKey = `assistant-output-transcript:${payload.item_id ?? "unknown"}:${payload.content_index ?? 0}:${payload.transcript ?? ""}`;
+    if (session.openingGreetingActive) {
+      await persistWebTranscriptIfNew(server, session, dedupeKey, {
+        speaker: "assistant",
+        text: payload.transcript,
+      });
+      return;
+    }
+
+    queueWebAssistantTranscript(server, session, dedupeKey, payload.transcript);
+    return;
+  }
+
+  if (payload.type === "conversation.item.input_audio_transcription.failed") {
+    server.log.warn(
+      {
+        callId: session.callId,
+        providerCallId: session.providerCallId,
+        itemId: payload.item_id,
+        code: payload.error?.code,
+        message: payload.error?.message,
+      },
+      "OpenAI Realtime web call input audio transcription failed",
+    );
     return;
   }
 
@@ -674,18 +939,44 @@ async function handleToolCall(
   }
   session.handledToolCallIds.add(toolCall.callId);
 
-  const context = await fetchWebVoiceContext({
-    businessSlug: session.businessSlug,
-  });
-  const executed = await executeVoiceTool({
-    toolName: toolCall.name,
-    rawArguments: toolCall.arguments,
-    snapshot: context.snapshot,
-    businessId: session.businessId,
-    callId: session.callId,
-    conversationId: session.conversationId,
-    callerPhone: "web",
-  });
+  let executed: Awaited<ReturnType<typeof executeVoiceTool>>;
+  try {
+    const context = await fetchWebVoiceContext({
+      businessSlug: session.businessSlug,
+    });
+    executed = await executeVoiceTool({
+      toolName: toolCall.name,
+      rawArguments: toolCall.arguments,
+      snapshot: context.snapshot,
+      businessId: session.businessId,
+      callId: session.callId,
+      conversationId: session.conversationId,
+      callerPhone: "web",
+    });
+  } catch (error) {
+    server.log.error(
+      {
+        err: error,
+        callId: session.callId,
+        providerCallId: session.providerCallId,
+        toolName: toolCall.name,
+      },
+      "Failed to execute web voice tool call",
+    );
+    postRealtimeEvent(socket, {
+      type: "conversation.item.create",
+      item: {
+        type: "function_call_output",
+        call_id: toolCall.callId,
+        output: JSON.stringify({
+          ok: false,
+          error: error instanceof Error ? error.message : "Unknown tool error",
+        }),
+      },
+    });
+    postRealtimeEvent(socket, { type: "response.create" });
+    return;
+  }
 
   postRealtimeEvent(socket, {
     type: "conversation.item.create",
@@ -710,6 +1001,17 @@ async function handleToolCall(
 }
 
 export function registerWebCallRoutes(server: FastifyInstance): void {
+  server.addContentTypeParser(
+    /^audio\/.*/,
+    { parseAs: "buffer" },
+    (_request, body, done) => done(null, body),
+  );
+  server.addContentTypeParser(
+    "application/octet-stream",
+    { parseAs: "buffer" },
+    (_request, body, done) => done(null, body),
+  );
+
   const handleCorsPreflight = async (request: FastifyRequest, reply: FastifyReply) => {
     const origin = getRequestOrigin(request);
     if (!isAllowedOrigin(server, origin)) {
@@ -722,6 +1024,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
   server.options("/web-call/sessions", handleCorsPreflight);
   server.options("/web-call/sessions/:sessionId/end", handleCorsPreflight);
+  server.options("/web-call/sessions/:sessionId/recording", handleCorsPreflight);
 
   server.post("/web-call/sessions", async (request, reply) => {
     const origin = getRequestOrigin(request);
@@ -782,17 +1085,29 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         : exchange.providerCallId;
 
     const startedAt = new Date().toISOString();
-    const call = await startWebVoiceCall({
-      businessSlug,
-      providerCallId,
-      gatewaySessionId,
-      ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
-      ...(typeof request.headers["user-agent"] === "string"
-        ? { userAgent: request.headers["user-agent"] }
-        : {}),
-      ...(widgetId !== undefined ? { widgetId } : {}),
-      startedAt,
-    });
+    let call: Awaited<ReturnType<typeof startWebVoiceCall>>;
+    try {
+      call = await startWebVoiceCall({
+        businessSlug,
+        providerCallId,
+        gatewaySessionId,
+        ...(body.pageUrl !== undefined ? { originUrl: body.pageUrl } : {}),
+        ...(typeof request.headers["user-agent"] === "string"
+          ? { userAgent: request.headers["user-agent"] }
+          : {}),
+        ...(widgetId !== undefined ? { widgetId } : {}),
+        startedAt,
+      });
+    } catch (error) {
+      await hangupOpenAiRealtimeProviderCall(server, {
+        providerCallId,
+        reason: "convex_start_failed",
+      });
+      if (error instanceof RuntimeRequestError) {
+        return replyWithRuntimeRequestError(error, reply);
+      }
+      throw error;
+    }
 
     const session: ActiveWebCall = {
       gatewaySessionId,
@@ -808,6 +1123,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       finalized: false,
       openingGreetingActive: true,
       openingGreetingTurnDetectionTimer: null,
+      seenTranscriptKeys: new Set(),
+      transcriptSequence: 1,
+      pendingAssistantTranscriptFlushTimer: null,
+      pendingAssistantTranscripts: [],
     };
     const sidebandSocket = createSidebandSocket({
       server,
@@ -841,6 +1160,49 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     }
 
     await finishWebCallSession(server, session, "caller_finished");
+    reply.code(204);
+    return null;
+  });
+
+  server.post<{
+    Params: { sessionId: string };
+    Querystring: { durationMs?: string };
+  }>("/web-call/sessions/:sessionId/recording", async (request, reply) => {
+    const origin = getRequestOrigin(request);
+    if (!isAllowedOrigin(server, origin)) {
+      reply.code(403);
+      return "Forbidden";
+    }
+    addCorsHeaders(reply, origin!);
+
+    const webCall = getWebCallForRecording(request.params.sessionId);
+    if (!webCall) {
+      reply.code(404);
+      return { error: "Unknown web voice session." };
+    }
+
+    const audio = await readRequestBodyBuffer(request);
+    if (audio.length === 0) {
+      reply.code(400);
+      return { error: "Missing recording audio." };
+    }
+
+    const parsedDurationMs = Number(request.query.durationMs);
+    const durationMs = Number.isFinite(parsedDurationMs) && parsedDurationMs > 0
+      ? parsedDurationMs
+      : Math.max(0, Date.now() - webCall.startedAtMs);
+    const contentTypeHeader = request.headers["content-type"];
+    const contentType = Array.isArray(contentTypeHeader)
+      ? contentTypeHeader[0]
+      : contentTypeHeader;
+
+    await uploadVoiceRecording({
+      callId: webCall.callId,
+      durationMs,
+      audio,
+      ...(contentType ? { contentType } : {}),
+    });
+
     reply.code(204);
     return null;
   });
