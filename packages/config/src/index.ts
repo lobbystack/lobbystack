@@ -93,9 +93,7 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  WEB_CALL_ALLOWED_ORIGINS: z
-    .string()
-    .default("https://lobbystack.com,http://localhost:4321,http://127.0.0.1:4321"),
+  WEB_CALL_ALLOWED_ORIGINS: z.string().default("https://lobbystack.com"),
   WEB_CALL_MAX_DURATION_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

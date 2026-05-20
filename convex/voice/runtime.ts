@@ -1106,11 +1106,16 @@ export const expireStaleWebCall = internalMutation({
       return null;
     }
 
-    const endedAt = new Date().toISOString();
+    const endedAtMs = Date.now();
+    const endedAt = new Date(endedAtMs).toISOString();
+    const providerDurationSeconds = Math.ceil((endedAtMs - startedAtMs) / 1000);
     await ctx.db.patch(call._id, {
       status: "completed",
       endedAt,
       disposition: call.disposition ?? "web_call_stale_timeout",
+      ...(call.providerCallDurationSeconds === undefined
+        ? { providerCallDurationSeconds: providerDurationSeconds }
+        : {}),
     });
 
     if (call.conversationId) {
@@ -1121,8 +1126,23 @@ export const expireStaleWebCall = internalMutation({
 
     await finalizeVoiceSessionForCall(ctx, {
       callId: call._id,
-      endedAt: Date.parse(endedAt),
+      endedAt: endedAtMs,
     });
+
+    if (call.providerCallDurationSeconds === undefined) {
+      const usageResult = await ctx.runMutation(internal.billing.recordVoiceUsage, {
+        businessId: call.businessId,
+        callId: call._id,
+        quantity: providerDurationSeconds,
+        recordedAt: endedAt,
+      });
+
+      if (usageResult.syncNeeded) {
+        await ctx.scheduler.runAfter(0, internal.billing.syncUsageEventToPolar, {
+          usageEventId: usageResult.usageEventId,
+        });
+      }
+    }
 
     return null;
   },

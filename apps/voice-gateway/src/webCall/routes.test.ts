@@ -191,6 +191,22 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(403);
   });
 
+  it("rejects localhost origins in cloud mode when allowed origins are unset", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+    delete process.env.WEB_CALL_ALLOWED_ORIGINS;
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "OPTIONS",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "http://localhost:4321",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
   it("allows localhost origins in cloud mode only when explicitly configured", async () => {
     process.env.DEPLOYMENT_MODE = "cloud";
     process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,http://localhost:4321";

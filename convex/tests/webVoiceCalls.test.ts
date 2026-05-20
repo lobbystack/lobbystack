@@ -104,16 +104,27 @@ describe("web voice calls", () => {
         .query("conversation_sessions")
         .withIndex("by_call_id", (q) => q.eq("callId", result.callId))
         .unique();
+      const usageEvent = await ctx.db
+        .query("billing_usage_events")
+        .withIndex("by_business_id_and_source_key", (q) =>
+          q.eq("businessId", result.businessId).eq("sourceKey", `voice:${String(result.callId)}`),
+        )
+        .unique();
 
       expect(call).toMatchObject({
         status: "completed",
         disposition: "web_call_stale_timeout",
         endedAt: "2026-05-20T13:00:00.000Z",
+        providerCallDurationSeconds: 3600,
       });
       expect(conversation?.status).toBe("closed");
       expect(session).toMatchObject({
         status: "closed",
         closedAt: Date.parse("2026-05-20T13:00:00.000Z"),
+      });
+      expect(usageEvent).toMatchObject({
+        quantity: 3600,
+        recordedAt: "2026-05-20T13:00:00.000Z",
       });
     });
   });

@@ -28,4 +28,15 @@ describe("loadVoiceGatewayEnv", () => {
       }).DEPLOYMENT_MODE,
     ).toBe("development");
   });
+
+  it("defaults web call allowed origins to production-safe origins", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      DEPLOYMENT_MODE: "cloud",
+    });
+
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe("https://lobbystack.com");
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("localhost");
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("127.0.0.1");
+  });
 });
