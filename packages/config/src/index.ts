@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import type { DeploymentMode } from "@lobbystack/shared";
 
+const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
+const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
+
 const deploymentModeSchema = z.enum([
   "cloud",
   "self_hosted_standard",
@@ -94,7 +97,12 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   WEB_CALL_ALLOWED_ORIGINS: z.string().default("https://lobbystack.com"),
-  WEB_CALL_MAX_DURATION_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
+  WEB_CALL_MAX_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(MAX_WEB_CALL_MAX_DURATION_MS)
+    .default(DEFAULT_WEB_CALL_MAX_DURATION_MS),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),

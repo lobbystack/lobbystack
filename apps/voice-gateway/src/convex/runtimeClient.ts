@@ -37,6 +37,13 @@ type StartWebCallResponse = {
   conversationId: string;
 };
 
+type WebCallRecordingTargetResponse = {
+  callId: string;
+  startedAt: string;
+  endedAt?: string;
+  status: string;
+};
+
 type CheckAvailabilityResponse = {
   serviceId: string;
   serviceName: string;
@@ -213,9 +220,26 @@ export async function startWebVoiceCall(input: {
   originUrl?: string;
   userAgent?: string;
   widgetId?: string;
+  maxDurationMs?: number;
   startedAt: string;
 }): Promise<StartWebCallResponse> {
   return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
+}
+
+export async function fetchWebCallRecordingTarget(input: {
+  gatewaySessionId: string;
+}): Promise<WebCallRecordingTargetResponse | null> {
+  try {
+    return await postJson<WebCallRecordingTargetResponse>(
+      "/voice/call/web-recording-target",
+      input,
+    );
+  } catch (error) {
+    if (error instanceof RuntimeRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function appendVoiceTranscript(input: {

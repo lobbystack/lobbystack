@@ -1,4 +1,8 @@
 import { v } from "convex/values";
+import {
+  DEFAULT_WEB_CALL_MAX_DURATION_MS,
+  WEB_CALL_STALE_GRACE_MS,
+} from "../../packages/shared/src/index";
 
 import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -323,10 +327,10 @@ function categorizeCallOutcome(call: Doc<"calls">): "completed" | "live" | "miss
   return "missed";
 }
 
-export const WEBRTC_LIVE_CALL_GRACE_MS = 30 * 60 * 1000;
+export const WEBRTC_LIVE_CALL_GRACE_MS = DEFAULT_WEB_CALL_MAX_DURATION_MS + WEB_CALL_STALE_GRACE_MS;
 
 export function isCallLiveForDashboard(
-  call: Pick<Doc<"calls">, "status" | "transport" | "startedAt">,
+  call: Pick<Doc<"calls">, "status" | "transport" | "startedAt" | "webCallMaxDurationMs">,
   nowMs = Date.now(),
 ): boolean {
   if (call.status !== "in_progress" && call.status !== "open") {
@@ -338,7 +342,9 @@ export function isCallLiveForDashboard(
   }
 
   const startedAtMs = Date.parse(call.startedAt);
-  return Number.isFinite(startedAtMs) && nowMs - startedAtMs <= WEBRTC_LIVE_CALL_GRACE_MS;
+  const liveGraceMs = (call.webCallMaxDurationMs ?? DEFAULT_WEB_CALL_MAX_DURATION_MS) +
+    WEB_CALL_STALE_GRACE_MS;
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs <= liveGraceMs;
 }
 
 function categorizeConversationChannel(channel: string): "voice" | "sms" | "other" {

@@ -39,4 +39,13 @@ describe("loadVoiceGatewayEnv", () => {
     expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("localhost");
     expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("127.0.0.1");
   });
+
+  it("rejects web call max durations above the Convex stale timeout window", () => {
+    expect(() =>
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        WEB_CALL_MAX_DURATION_MS: String(31 * 60 * 1000),
+      }),
+    ).toThrow();
+  });
 });

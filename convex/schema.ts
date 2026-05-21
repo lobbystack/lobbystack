@@ -721,6 +721,7 @@ export default defineSchema({
     userAgent: v.optional(v.string()),
     widgetId: v.optional(v.string()),
     gatewaySessionId: v.optional(v.string()),
+    webCallMaxDurationMs: v.optional(v.number()),
     status: v.string(),
     transferState: v.optional(v.string()),
     disposition: v.optional(v.string()),
@@ -743,6 +744,7 @@ export default defineSchema({
   })
     .index("by_twilio_call_sid", ["twilioCallSid"])
     .index("by_provider_and_provider_call_id", ["provider", "providerCallId"])
+    .index("by_gateway_session_id", ["gatewaySessionId"])
     .index("by_business_id_and_started_at", ["businessId", "startedAt"])
     .index("by_conversation_id", ["conversationId"])
     .index("by_recording_retention_status_and_recording_expires_at", [

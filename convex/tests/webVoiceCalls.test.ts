@@ -115,7 +115,7 @@ describe("web voice calls", () => {
         status: "completed",
         disposition: "web_call_stale_timeout",
         endedAt: "2026-05-20T13:00:00.000Z",
-        providerCallDurationSeconds: 3600,
+        providerCallDurationSeconds: 300,
       });
       expect(conversation?.status).toBe("closed");
       expect(session).toMatchObject({
@@ -123,9 +123,61 @@ describe("web voice calls", () => {
         closedAt: Date.parse("2026-05-20T13:00:00.000Z"),
       });
       expect(usageEvent).toMatchObject({
-        quantity: 3600,
+        quantity: 300,
         recordedAt: "2026-05-20T13:00:00.000Z",
       });
+    });
+  });
+
+  it("rejects idempotent web-call starts when provider call IDs cross businesses", async () => {
+    const { t } = await seedBusiness("web-voice-business-a");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("businesses", {
+        slug: "web-voice-business-b",
+        name: "Business B",
+        timezone: "America/Toronto",
+        businessType: "clinic",
+        defaultLocale: "en",
+        deploymentMode: "cloud",
+        status: "active",
+      });
+    });
+
+    await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "web-voice-business-a",
+      providerCallId: "call_openai_cross_business",
+      gatewaySessionId: "gateway-session-a",
+      startedAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    await expect(
+      t.mutation(internal.voice.runtime.startWebCall, {
+        businessSlug: "web-voice-business-b",
+        providerCallId: "call_openai_cross_business",
+        gatewaySessionId: "gateway-session-b",
+        startedAt: "2026-05-20T12:01:00.000Z",
+      }),
+    ).rejects.toThrow("different business");
+  });
+
+  it("resolves web recording targets by durable gateway session ID", async () => {
+    const { t } = await seedBusiness("web-voice-recording-target");
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "web-voice-recording-target",
+      providerCallId: "call_openai_recording_target",
+      gatewaySessionId: "gateway-session-recording-target",
+      startedAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    const target = await t.query(internal.voice.runtime.getWebCallRecordingTarget, {
+      gatewaySessionId: "gateway-session-recording-target",
+    });
+
+    expect(target).toEqual({
+      callId: result.callId,
+      startedAt: "2026-05-20T12:00:00.000Z",
+      status: "in_progress",
     });
   });
 

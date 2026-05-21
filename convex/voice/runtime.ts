@@ -6,6 +6,11 @@ import { observedInternalMutation as internalMutation, observedMutation as mutat
 import type { BillingErrorCode } from "../../packages/shared/src/billing";
 import { billingErrorCodes } from "../../packages/shared/src/billing";
 import {
+  DEFAULT_WEB_CALL_MAX_DURATION_MS,
+  MAX_WEB_CALL_MAX_DURATION_MS,
+  WEB_CALL_STALE_GRACE_MS,
+} from "../../packages/shared/src/index";
+import {
   getPostHogBusinessGroupKey,
   getPostHogDistinctIdForBusinessSystem,
   } from "../telemetry/shared";
@@ -83,6 +88,7 @@ type StartWebCallArgs = {
   originUrl?: string;
   userAgent?: string;
   widgetId?: string;
+  maxDurationMs?: number;
   startedAt: string;
 };
 type StartWebCallResult = {
@@ -90,9 +96,25 @@ type StartWebCallResult = {
   callId: Id<"calls">;
   conversationId: Id<"conversations">;
 };
+type WebCallRecordingTarget = {
+  callId: Id<"calls">;
+  startedAt: string;
+  endedAt?: string;
+  status: string;
+};
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
-const WEB_CALL_STALE_TIMEOUT_MS = 30 * 60 * 1000;
+
+function getWebCallMaxDurationMs(maxDurationMs: number | undefined): number {
+  if (maxDurationMs === undefined || !Number.isFinite(maxDurationMs) || maxDurationMs <= 0) {
+    return DEFAULT_WEB_CALL_MAX_DURATION_MS;
+  }
+  return Math.min(maxDurationMs, MAX_WEB_CALL_MAX_DURATION_MS);
+}
+
+function getWebCallStaleTimeoutMs(maxDurationMs: number | undefined): number {
+  return getWebCallMaxDurationMs(maxDurationMs) + WEB_CALL_STALE_GRACE_MS;
+}
 
 function logWebVoiceRateLimitBlocked(input: {
   limiter: string;
@@ -149,28 +171,12 @@ async function resolveActiveBusinessByPublicSlug(
   ctx: Pick<QueryCtx | MutationCtx, "db">,
   businessSlug: string,
 ): Promise<Doc<"businesses"> | null> {
-  const business = await ctx.db
+  const businesses = await ctx.db
     .query("businesses")
     .withIndex("by_slug", (q) => q.eq("slug", businessSlug))
-    .unique();
+    .take(10);
 
-  if (business?.status === "active") {
-    return business;
-  }
-
-  if (businessSlug !== "lobbystack") {
-    return null;
-  }
-
-  const lobbystackBusinesses = await ctx.db
-    .query("businesses")
-    .filter((q) => q.eq(q.field("name"), "LobbyStack"))
-    .collect();
-  return (
-    lobbystackBusinesses
-      .filter((candidate) => candidate.status === "active")
-      .sort((a, b) => b._creationTime - a._creationTime)[0] ?? null
-  );
+  return businesses.find((business) => business.status === "active") ?? null;
 }
 type AppendTranscriptArgs = {
   businessId: Id<"businesses">;
@@ -676,6 +682,28 @@ export const assertWebVoiceStartAllowed = internalMutation({
   },
 });
 
+export const getWebCallRecordingTarget = internalQuery({
+  args: {
+    gatewaySessionId: v.string(),
+  },
+  handler: async (ctx: QueryCtx, args): Promise<WebCallRecordingTarget | null> => {
+    const call = await ctx.db
+      .query("calls")
+      .withIndex("by_gateway_session_id", (q) => q.eq("gatewaySessionId", args.gatewaySessionId))
+      .unique();
+    if (!call || call.transport !== "webrtc") {
+      return null;
+    }
+
+    return {
+      callId: call._id,
+      startedAt: call.startedAt,
+      ...(call.endedAt !== undefined ? { endedAt: call.endedAt } : {}),
+      status: call.status,
+    };
+  },
+});
+
 export const getActiveStaffAssignmentsForService = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -944,6 +972,7 @@ export const startWebCall = internalMutation({
     originUrl: v.optional(v.string()),
     userAgent: v.optional(v.string()),
     widgetId: v.optional(v.string()),
+    maxDurationMs: v.optional(v.number()),
     startedAt: v.string(),
   },
   handler: async (
@@ -964,11 +993,18 @@ export const startWebCall = internalMutation({
       .unique();
 
     if (existingCall?.conversationId) {
+      if (existingCall.businessId !== business._id) {
+        throw new Error("Web voice provider call belongs to a different business.");
+      }
       return {
-        businessId: business._id,
+        businessId: existingCall.businessId,
         callId: existingCall._id,
         conversationId: existingCall.conversationId,
       };
+    }
+
+    if (existingCall && existingCall.businessId !== business._id) {
+      throw new Error("Web voice provider call belongs to a different business.");
     }
 
     const voicePolicy: {
@@ -1001,6 +1037,7 @@ export const startWebCall = internalMutation({
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
         status: "in_progress",
         startedAt: args.startedAt,
       }));
@@ -1015,6 +1052,7 @@ export const startWebCall = internalMutation({
         ...(args.gatewaySessionId !== undefined
           ? { gatewaySessionId: args.gatewaySessionId }
           : {}),
+        webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
       });
     }
 
@@ -1049,7 +1087,7 @@ export const startWebCall = internalMutation({
     });
 
     await ctx.scheduler.runAfter(
-      WEB_CALL_STALE_TIMEOUT_MS,
+      getWebCallStaleTimeoutMs(args.maxDurationMs),
       internal.voice.runtime.expireStaleWebCall,
       {
         callId,
@@ -1071,6 +1109,7 @@ export const startWebCall = internalMutation({
           status: "in_progress",
           transport: "webrtc",
           gatewaySessionId: args.gatewaySessionId,
+          webCallMaxDurationMs: getWebCallMaxDurationMs(args.maxDurationMs),
           originUrl: args.originUrl,
           widgetId: args.widgetId,
         },
@@ -1100,16 +1139,19 @@ export const expireStaleWebCall = internalMutation({
     }
 
     const startedAtMs = Date.parse(call.startedAt);
+    const maxDurationMs = getWebCallMaxDurationMs(call.webCallMaxDurationMs);
     if (
       !Number.isFinite(startedAtMs) ||
-      Date.now() - startedAtMs < WEB_CALL_STALE_TIMEOUT_MS
+      Date.now() - startedAtMs < getWebCallStaleTimeoutMs(maxDurationMs)
     ) {
       return null;
     }
 
     const endedAtMs = Date.now();
     const endedAt = new Date(endedAtMs).toISOString();
-    const providerDurationSeconds = Math.ceil((endedAtMs - startedAtMs) / 1000);
+    const providerDurationSeconds = Math.ceil(
+      Math.min(endedAtMs - startedAtMs, maxDurationMs) / 1000,
+    );
     await ctx.db.patch(call._id, {
       status: "completed",
       endedAt,

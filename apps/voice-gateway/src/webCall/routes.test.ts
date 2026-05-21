@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 const {
   appendVoiceTranscriptMock,
   completeVoiceCallMock,
+  fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
@@ -12,6 +13,7 @@ const {
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
+  fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
   runtimeRequestErrorClass: class RuntimeRequestError extends Error {
     status: number;
@@ -82,6 +84,7 @@ vi.mock("ws", () => {
 vi.mock("../convex/runtimeClient", () => ({
   appendVoiceTranscript: appendVoiceTranscriptMock,
   completeVoiceCall: completeVoiceCallMock,
+  fetchWebCallRecordingTarget: fetchWebCallRecordingTargetMock,
   fetchWebVoiceContext: fetchWebVoiceContextMock,
   recordVoiceAiCost: vi.fn(),
   RuntimeRequestError: runtimeRequestErrorClass,
@@ -104,7 +107,7 @@ vi.mock("../convex/runtimeClient", () => ({
 import { demoSnapshot } from "@lobbystack/shared";
 
 import { createServer } from "../http/server";
-import { createWebRealtimeTurnDetectionConfig } from "./routes";
+import { createWebRealtimeTurnDetectionConfig, resetWebCallRouteStateForTests } from "./routes";
 
 describe("createWebRealtimeTurnDetectionConfig", () => {
   it("can disable auto responses and interruptions during the opening greeting", () => {
@@ -147,6 +150,7 @@ describe("web call routes", () => {
   });
 
   afterEach(() => {
+    resetWebCallRouteStateForTests();
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.clearAllMocks();
@@ -226,7 +230,13 @@ describe("web call routes", () => {
     expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:4321");
   });
 
-  it("rejects unknown public widget business slugs", async () => {
+  it("returns Convex lookup failures for unknown public widget business slugs", async () => {
+    fetchWebVoiceContextMock.mockRejectedValueOnce(
+      new runtimeRequestErrorClass({
+        message: "Not found",
+        status: 404,
+      }),
+    );
     const server = createServer();
 
     const response = await server.inject({
@@ -242,8 +252,10 @@ describe("web call routes", () => {
       },
     });
 
-    expect(response.statusCode).toBe(403);
-    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(404);
+    expect(fetchWebVoiceContextMock).toHaveBeenCalledWith(
+      expect.objectContaining({ businessSlug: "other-business" }),
+    );
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
@@ -265,6 +277,55 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(400);
     expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("does not rate limit syntactically invalid start attempts", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    for (let index = 0; index < 13; index += 1) {
+      const invalidResponse = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+        },
+        payload: {
+          businessSlug: "lobbystack",
+        },
+      });
+      expect(invalidResponse.statusCode).toBe(400);
+    }
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
   });
 
   it("returns durable Convex rate limits before starting an OpenAI web call", async () => {
@@ -650,6 +711,39 @@ describe("web call routes", () => {
       expect.objectContaining({
         callId: "call_123",
         durationMs: 1234,
+      }),
+    );
+  });
+
+  it("resolves recording uploads through Convex when the gateway session is not local", async () => {
+    const endedAtMs = Date.now();
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_123",
+      startedAt: new Date(endedAtMs - 5 * 60 * 1000).toISOString(),
+      endedAt: new Date(endedAtMs).toISOString(),
+      status: "completed",
+    });
+    uploadVoiceRecordingMock.mockResolvedValueOnce(null);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/gateway-session-durable/recording",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: Buffer.from("webm-recording"),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(fetchWebCallRecordingTargetMock).toHaveBeenCalledWith({
+      gatewaySessionId: "gateway-session-durable",
+    });
+    expect(uploadVoiceRecordingMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_durable_123",
+        durationMs: 5 * 60 * 1000,
       }),
     );
   });

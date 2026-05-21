@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { z } from "zod";
 import { billingErrorCodes } from "../packages/shared/src/billing";
+import { MAX_WEB_CALL_MAX_DURATION_MS } from "../packages/shared/src/index";
 import {
   normalizeTwilioFormFields,
 } from "./lib/twilioSecurity";
@@ -48,6 +49,10 @@ const voiceContextBySlugSchema = z.object({
   widgetId: z.string().min(1).optional(),
 });
 
+const webCallRecordingTargetSchema = z.object({
+  gatewaySessionId: z.string().min(1),
+});
+
 const startCallSchema = z.object({
   businessId: z.string().min(1),
   twilioCallSid: z.string().min(1),
@@ -64,6 +69,7 @@ const startWebCallSchema = z.object({
   originUrl: z.string().min(1).optional(),
   userAgent: z.string().min(1).optional(),
   widgetId: z.string().min(1).optional(),
+  maxDurationMs: z.number().positive().max(MAX_WEB_CALL_MAX_DURATION_MS).optional(),
   startedAt: z.string().min(1),
 });
 
@@ -800,6 +806,32 @@ http.route({
 });
 
 http.route({
+  path: "/voice/call/web-recording-target",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const unauthorized = requireServiceToken(request);
+    if (unauthorized) {
+      return unauthorized;
+    }
+
+    const body = await parseJsonBody(request, webCallRecordingTargetSchema);
+    if (!body.ok) {
+      return body.response;
+    }
+
+    const target = await ctx.runQuery(internal.voice.runtime.getWebCallRecordingTarget, {
+      gatewaySessionId: body.data.gatewaySessionId,
+    });
+
+    if (!target) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    return Response.json(target);
+  }),
+});
+
+http.route({
   path: "/voice/call/start",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
@@ -870,6 +902,9 @@ http.route({
         ...(body.data.originUrl !== undefined ? { originUrl: body.data.originUrl } : {}),
         ...(body.data.userAgent !== undefined ? { userAgent: body.data.userAgent } : {}),
         ...(body.data.widgetId !== undefined ? { widgetId: body.data.widgetId } : {}),
+        ...(body.data.maxDurationMs !== undefined
+          ? { maxDurationMs: body.data.maxDurationMs }
+          : {}),
         startedAt: body.data.startedAt,
       });
     } catch (error) {

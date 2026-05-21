@@ -7,6 +7,7 @@ import WebSocket from "ws";
 import {
   appendVoiceTranscript,
   completeVoiceCall,
+  fetchWebCallRecordingTarget,
   fetchWebVoiceContext,
   recordVoiceAiCost,
   RuntimeRequestError,
@@ -96,12 +97,11 @@ type ActiveWebCall = {
 type CompletedWebCall = {
   callId: string;
   startedAtMs: number;
-  completedAtMs: number;
+  completedAtMs?: number;
 };
 
 const activeWebCalls = new Map<string, ActiveWebCall>();
 const completedWebCalls = new Map<string, CompletedWebCall>();
-const originStartAttempts = new Map<string, Array<number>>();
 const WEB_REALTIME_VAD_THRESHOLD = 0.65;
 const WEB_REALTIME_VAD_PREFIX_PADDING_MS = 300;
 const WEB_REALTIME_VAD_SILENCE_DURATION_MS = 700;
@@ -111,6 +111,19 @@ const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
 const WEB_RECORDING_BYTES_PER_SECOND_LIMIT = 64 * 1024;
 const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
+
+export function resetWebCallRouteStateForTests(): void {
+  for (const session of activeWebCalls.values()) {
+    clearWebOpeningGreetingTimer(session);
+    clearWebMaxDurationTimer(session);
+    clearWebEndCallFallbackTimer(session);
+    if (session.pendingAssistantTranscriptFlushTimer !== null) {
+      clearTimeout(session.pendingAssistantTranscriptFlushTimer);
+    }
+  }
+  activeWebCalls.clear();
+  completedWebCalls.clear();
+}
 
 function getAllowedOrigins(raw: string): Set<string> {
   return new Set(
@@ -155,6 +168,7 @@ function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Origin", origin);
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
   reply.header("Access-Control-Allow-Headers", "Content-Type");
+  reply.header("Access-Control-Max-Age", "600");
   reply.header("Vary", "Origin");
 }
 
@@ -196,7 +210,6 @@ function getWebCallForRecording(sessionId: string): CompletedWebCall | null {
     return {
       callId: active.callId,
       startedAtMs: active.startedAtMs,
-      completedAtMs: Date.now(),
     };
   }
 
@@ -205,12 +218,50 @@ function getWebCallForRecording(sessionId: string): CompletedWebCall | null {
     return null;
   }
 
-  if (Date.now() - completed.completedAtMs > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) {
+  if (
+    completed.completedAtMs !== undefined &&
+    Date.now() - completed.completedAtMs > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS
+  ) {
     completedWebCalls.delete(sessionId);
     return null;
   }
 
   return completed;
+}
+
+async function resolveWebCallForRecording(sessionId: string): Promise<CompletedWebCall | null> {
+  const local = getWebCallForRecording(sessionId);
+  if (local) {
+    return local;
+  }
+
+  const durable = await fetchWebCallRecordingTarget({ gatewaySessionId: sessionId });
+  if (!durable) {
+    return null;
+  }
+
+  const startedAtMs = Date.parse(durable.startedAt);
+  if (!Number.isFinite(startedAtMs)) {
+    return null;
+  }
+
+  const completedAtMs = durable.endedAt !== undefined ? Date.parse(durable.endedAt) : undefined;
+  if (completedAtMs !== undefined) {
+    if (!Number.isFinite(completedAtMs)) {
+      return null;
+    }
+    if (Date.now() - completedAtMs > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) {
+      return null;
+    }
+  } else if (durable.status !== "in_progress" && durable.status !== "open") {
+    return null;
+  }
+
+  return {
+    callId: durable.callId,
+    startedAtMs,
+    ...(completedAtMs !== undefined ? { completedAtMs } : {}),
+  };
 }
 
 async function persistWebTranscriptIfNew(
@@ -298,17 +349,6 @@ function queueWebAssistantTranscript(
       );
     });
   }, WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS);
-}
-
-function isRateLimited(origin: string, nowMs = Date.now()): boolean {
-  const windowMs = 60_000;
-  const maxStarts = 12;
-  const recent = (originStartAttempts.get(origin) ?? []).filter(
-    (timestamp) => nowMs - timestamp < windowMs,
-  );
-  recent.push(nowMs);
-  originStartAttempts.set(origin, recent);
-  return recent.length > maxStarts;
 }
 
 export function createWebRealtimeTurnDetectionConfig(options: {
@@ -531,10 +571,9 @@ async function finishWebCallSession(
   clearWebOpeningGreetingTimer(session);
   clearWebMaxDurationTimer(session);
   clearWebEndCallFallbackTimer(session);
-  await flushPendingWebAssistantTranscripts(server, session);
-  await hangupOpenAiRealtimeCall(server, session, disposition);
-
   try {
+    await flushPendingWebAssistantTranscripts(server, session);
+    await hangupOpenAiRealtimeCall(server, session, disposition);
     await completeVoiceCall({
       callId: session.callId,
       status: "completed",
@@ -545,11 +584,14 @@ async function finishWebCallSession(
         Math.ceil((Date.now() - session.startedAtMs) / 1000),
       ),
     });
-  } finally {
-    rememberCompletedWebCall(session);
-    session.sidebandSocket?.close(1000, "web call ended");
-    activeWebCalls.delete(session.gatewaySessionId);
+  } catch (error) {
+    session.finalized = false;
+    throw error;
   }
+
+  rememberCompletedWebCall(session);
+  session.sidebandSocket?.close(1000, "web call ended");
+  activeWebCalls.delete(session.gatewaySessionId);
 }
 
 function requestWebFinalMessageBeforeHangup(
@@ -1115,11 +1157,6 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     }
     addCorsHeaders(reply, origin!);
 
-    if (isRateLimited(origin!)) {
-      reply.code(429);
-      return { error: "Too many web call starts. Please try again shortly." };
-    }
-
     if (!server.runtimeConfig.OPENAI_API_KEY) {
       reply.code(503);
       return { error: "Web voice is not configured." };
@@ -1127,9 +1164,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
     const body = (request.body ?? {}) as WebCallSessionRequest;
     const businessSlug = body.businessSlug?.trim() || "";
-    if (businessSlug !== "lobbystack") {
-      reply.code(403);
-      return { error: "Unknown web voice widget." };
+    if (!businessSlug) {
+      reply.code(400);
+      return { error: "Missing business slug." };
     }
     if (!body.sdp?.trim()) {
       reply.code(400);
@@ -1150,7 +1187,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         ...(widgetId !== undefined ? { widgetId } : {}),
       });
     } catch (error) {
-      if (error instanceof RuntimeRequestError && error.status === 429) {
+      if (error instanceof RuntimeRequestError) {
         return replyWithRuntimeRequestError(error, reply);
       }
       throw error;
@@ -1177,6 +1214,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
           ? { userAgent: request.headers["user-agent"] }
           : {}),
         ...(widgetId !== undefined ? { widgetId } : {}),
+        maxDurationMs: server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
         startedAt,
       });
     } catch (error) {
@@ -1261,7 +1299,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       }
       addCorsHeaders(reply, origin!);
 
-      const webCall = getWebCallForRecording(request.params.sessionId);
+      const webCall = await resolveWebCallForRecording(request.params.sessionId);
       if (!webCall) {
         reply.code(404);
         return { error: "Unknown web voice session." };
@@ -1276,7 +1314,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       const parsedDurationMs = Number(request.query.durationMs);
       const durationMs = Number.isFinite(parsedDurationMs) && parsedDurationMs > 0
         ? parsedDurationMs
-        : Math.max(0, Date.now() - webCall.startedAtMs);
+        : Math.max(0, (webCall.completedAtMs ?? Date.now()) - webCall.startedAtMs);
       const contentTypeHeader = request.headers["content-type"];
       const contentType = Array.isArray(contentTypeHeader)
         ? contentTypeHeader[0]
