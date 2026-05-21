@@ -40,6 +40,16 @@ describe("loadVoiceGatewayEnv", () => {
     expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("127.0.0.1");
   });
 
+  it("does not trust proxy headers unless explicitly enabled", () => {
+    expect(loadVoiceGatewayEnv(baseVoiceGatewayEnv).VOICE_GATEWAY_TRUST_PROXY).toBe(false);
+    expect(
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        VOICE_GATEWAY_TRUST_PROXY: "true",
+      }).VOICE_GATEWAY_TRUST_PROXY,
+    ).toBe(true);
+  });
+
   it("rejects web call max durations above the Convex stale timeout window", () => {
     expect(() =>
       loadVoiceGatewayEnv({

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 
 const {
   appendVoiceTranscriptMock,
+  bookVoiceAppointmentMock,
   completeVoiceCallMock,
   fetchWebCallRecordingTargetMock,
   fetchWebVoiceContextMock,
@@ -12,6 +13,7 @@ const {
   webSocketInstances,
 } = vi.hoisted(() => ({
   appendVoiceTranscriptMock: vi.fn(),
+  bookVoiceAppointmentMock: vi.fn(),
   completeVoiceCallMock: vi.fn(),
   fetchWebCallRecordingTargetMock: vi.fn(),
   fetchWebVoiceContextMock: vi.fn(),
@@ -90,7 +92,7 @@ vi.mock("../convex/runtimeClient", () => ({
   RuntimeRequestError: runtimeRequestErrorClass,
   startWebVoiceCall: startWebVoiceCallMock,
   uploadVoiceRecording: uploadVoiceRecordingMock,
-  bookVoiceAppointment: vi.fn(),
+  bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: vi.fn(),
   checkVoiceAvailability: vi.fn(),
   findVoiceAvailability: vi.fn(),
@@ -156,6 +158,7 @@ describe("web call routes", () => {
     vi.clearAllMocks();
     webSocketInstances.length = 0;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.VOICE_GATEWAY_TRUST_PROXY;
     delete process.env.WEB_CALL_ALLOWED_ORIGINS;
     delete process.env.WEB_CALL_MAX_DURATION_MS;
   });
@@ -368,6 +371,122 @@ describe("web call routes", () => {
     );
     expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toHaveLength(64);
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("does not trust spoofed forwarded IP headers by default", async () => {
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+      })
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_456",
+        conversationId: "conversation_456",
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_1" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_2" },
+          }),
+        ),
+    );
+    const server = createServer();
+
+    for (const forwardedFor of ["203.0.113.10", "198.51.100.77"]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+          "x-forwarded-for": forwardedFor,
+        },
+        payload: {
+          businessSlug: "lobbystack",
+          sdp: "v=0",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toBe(
+      fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash,
+    );
+  });
+
+  it("uses trusted forwarded IP headers when proxy trust is enabled", async () => {
+    process.env.VOICE_GATEWAY_TRUST_PROXY = "true";
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+      })
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_456",
+        conversationId: "conversation_456",
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_1" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_2" },
+          }),
+        ),
+    );
+    const server = createServer();
+
+    for (const forwardedFor of ["203.0.113.10", "198.51.100.77"]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+          "x-forwarded-for": forwardedFor,
+        },
+        payload: {
+          businessSlug: "lobbystack",
+          sdp: "v=0",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toHaveLength(64);
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).not.toBe(
+      fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash,
+    );
   });
 
   it("treats an unknown session end as idempotent", async () => {
@@ -895,6 +1014,73 @@ describe("web call routes", () => {
       expect(takeVoiceMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           callId: "call_123",
+          conversationId: "conversation_123",
+          channel: "web_voice",
+        }),
+      );
+    });
+  });
+
+  it("passes web_voice when a website visitor books an appointment", async () => {
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    bookVoiceAppointmentMock.mockResolvedValueOnce({
+      appointmentId: "appointment_123",
+      contactId: "contact_123",
+      serviceId: "service_123",
+      serviceName: "Consultation",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.function_call_arguments.done",
+          name: "bookAppointment",
+          call_id: "tool-call-1",
+          arguments: JSON.stringify({
+            serviceName: "Consultation",
+            startsAt: "2030-05-15T14:00:00.000Z",
+            contactPhone: "+14165550123",
+          }),
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      expect(bookVoiceAppointmentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          businessId: "business_123",
           conversationId: "conversation_123",
           channel: "web_voice",
         }),

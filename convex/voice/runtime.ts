@@ -350,6 +350,7 @@ type BookAppointmentForVoiceArgs = {
   serviceName: string;
   startsAt: string;
   timezone: string;
+  channel?: "voice" | "web_voice";
   preferredStaffId?: Id<"staff">;
   conversationId?: Id<"conversations">;
   contactName?: string;
@@ -2116,6 +2117,7 @@ export const bookAppointmentForVoice = internalAction({
     serviceName: v.string(),
     startsAt: v.string(),
     timezone: v.string(),
+    channel: v.optional(v.union(v.literal("voice"), v.literal("web_voice"))),
     preferredStaffId: v.optional(v.id("staff")),
     conversationId: v.optional(v.id("conversations")),
     contactName: v.optional(v.string()),
@@ -2151,7 +2153,7 @@ export const bookAppointmentForVoice = internalAction({
           : {}),
         ...(args.contactName !== undefined ? { contactName: args.contactName } : {}),
         contactPhone: args.contactPhone,
-        sourceChannel: "voice",
+        sourceChannel: args.channel ?? "voice",
       },
     );
 

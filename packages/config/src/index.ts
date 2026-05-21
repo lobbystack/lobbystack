@@ -80,6 +80,7 @@ const voiceGatewayEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
+  VOICE_GATEWAY_TRUST_PROXY: booleanEnvSchema.default("false"),
   VOICE_GATEWAY_BASE_URL: z.string().url(),
   CONVEX_SITE_URL: z.string().url(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),

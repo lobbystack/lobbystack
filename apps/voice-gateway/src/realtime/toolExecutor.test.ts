@@ -470,6 +470,29 @@ describe("executeVoiceTool bookings", () => {
     );
     expect(result.result).toEqual({ ok: true, appointmentId: "appointment_123" });
   });
+
+  it("passes the web voice channel when booking from a website call", async () => {
+    bookVoiceAppointmentMock.mockResolvedValue({ ok: true, appointmentId: "appointment_123" });
+
+    await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+        contactPhone: "+14165550123",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "web",
+      channel: "web_voice",
+    });
+
+    expect(bookVoiceAppointmentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "web_voice",
+      }),
+    );
+  });
 });
 
 describe("executeVoiceTool call control", () => {

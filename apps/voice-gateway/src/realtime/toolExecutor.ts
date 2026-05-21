@@ -393,6 +393,7 @@ export async function executeVoiceTool(input: {
           serviceName: parsed.serviceName,
           startsAt: parsed.startsAt,
           timezone: parsed.timezone ?? input.snapshot.timezone,
+          ...(input.channel !== undefined ? { channel: input.channel } : {}),
           ...(parsed.preferredStaffId !== undefined
             ? { preferredStaffId: parsed.preferredStaffId }
             : {}),

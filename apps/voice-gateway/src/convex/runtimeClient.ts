@@ -392,6 +392,7 @@ export async function bookVoiceAppointment(input: {
   serviceName: string;
   startsAt: string;
   timezone: string;
+  channel?: "voice" | "web_voice";
   preferredStaffId?: string;
   conversationId?: string;
   contactName?: string;

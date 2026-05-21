@@ -8,6 +8,7 @@ primary_region = "iad"
 
 [env]
   PORT = "3001"
+  VOICE_GATEWAY_TRUST_PROXY = "true"
 
 [http_service]
   internal_port = 3001

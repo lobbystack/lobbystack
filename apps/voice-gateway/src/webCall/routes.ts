@@ -463,10 +463,7 @@ function normalizeOptionalAbuseKey(value: string | undefined): string | undefine
 }
 
 function getClientIp(request: FastifyRequest): string | undefined {
-  const forwardedFor = request.headers["x-forwarded-for"];
-  const forwardedValue = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
-  const forwardedIp = forwardedValue?.split(",")[0]?.trim();
-  return forwardedIp || request.ip;
+  return request.ip;
 }
 
 function hashAbuseKey(server: FastifyInstance, value: string | undefined): string | undefined {
