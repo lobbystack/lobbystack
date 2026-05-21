@@ -47,7 +47,13 @@ describe("loadVoiceGatewayEnv", () => {
         ...baseVoiceGatewayEnv,
         VOICE_GATEWAY_TRUST_PROXY: "true",
       }).VOICE_GATEWAY_TRUST_PROXY,
-    ).toBe(true);
+    ).toEqual(["loopback", "linklocal", "uniquelocal"]);
+    expect(
+      loadVoiceGatewayEnv({
+        ...baseVoiceGatewayEnv,
+        VOICE_GATEWAY_TRUST_PROXY: "10.0.0.0/8, 192.168.0.0/16",
+      }).VOICE_GATEWAY_TRUST_PROXY,
+    ).toEqual(["10.0.0.0/8", "192.168.0.0/16"]);
   });
 
   it("rejects web call max durations above the Convex stale timeout window", () => {

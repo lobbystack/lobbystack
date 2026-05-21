@@ -16,6 +16,25 @@ const booleanEnvSchema = z
   .default("true")
   .transform((value) => value === "true");
 
+const trustProxyEnvSchema = z
+  .string()
+  .default("false")
+  .transform((value) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "false" || normalized === "") {
+      return false;
+    }
+
+    if (normalized === "true") {
+      return ["loopback", "linklocal", "uniquelocal"];
+    }
+
+    return value
+      .split(",")
+      .map((proxy) => proxy.trim())
+      .filter(Boolean);
+  });
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
@@ -80,7 +99,7 @@ const voiceGatewayEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
-  VOICE_GATEWAY_TRUST_PROXY: booleanEnvSchema.default("false"),
+  VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
   CONVEX_SITE_URL: z.string().url(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),

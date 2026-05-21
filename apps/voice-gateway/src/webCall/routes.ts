@@ -228,6 +228,23 @@ function getWebRecordingBodyLimit(maxDurationMs: number): number {
   return Math.max(5 * 1024 * 1024, maxDurationSeconds * WEB_RECORDING_BYTES_PER_SECOND_LIMIT);
 }
 
+function getWebRecordingDurationMs(
+  webCall: CompletedWebCall,
+  reportedDurationMs: unknown,
+  maxDurationMs: number,
+): number {
+  const elapsedDurationMs = Math.max(
+    0,
+    Math.min((webCall.completedAtMs ?? Date.now()) - webCall.startedAtMs, maxDurationMs),
+  );
+  const parsedDurationMs = Number(reportedDurationMs);
+  if (!Number.isFinite(parsedDurationMs) || parsedDurationMs <= 0) {
+    return elapsedDurationMs;
+  }
+
+  return Math.min(parsedDurationMs, elapsedDurationMs);
+}
+
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Origin", origin);
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -1425,10 +1442,11 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
         return { error: "Missing recording audio." };
       }
 
-      const parsedDurationMs = Number(request.query.durationMs);
-      const durationMs = Number.isFinite(parsedDurationMs) && parsedDurationMs > 0
-        ? parsedDurationMs
-        : Math.max(0, (webCall.completedAtMs ?? Date.now()) - webCall.startedAtMs);
+      const durationMs = getWebRecordingDurationMs(
+        webCall,
+        request.query.durationMs,
+        server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+      );
       const contentTypeHeader = request.headers["content-type"];
       const contentType = Array.isArray(contentTypeHeader)
         ? contentTypeHeader[0]

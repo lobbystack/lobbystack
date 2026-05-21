@@ -543,6 +543,65 @@ describe("web call routes", () => {
     );
   });
 
+  it("ignores spoofed forwarded IP headers from untrusted direct clients", async () => {
+    process.env.VOICE_GATEWAY_TRUST_PROXY = "true";
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_123",
+        conversationId: "conversation_123",
+      })
+      .mockResolvedValueOnce({
+        businessId: "business_123",
+        callId: "call_456",
+        conversationId: "conversation_456",
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_1" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response("answer-sdp", {
+            status: 200,
+            headers: { location: "/v1/realtime/calls/rtc_test_2" },
+          }),
+        ),
+    );
+    const server = createServer();
+
+    for (const forwardedFor of ["203.0.113.10", "198.51.100.77"]) {
+      const response = await server.inject({
+        method: "POST",
+        url: "/web-call/sessions",
+        remoteAddress: "198.51.100.10",
+        headers: {
+          origin: "https://lobbystack.com",
+          "content-type": "application/json",
+          "x-forwarded-for": forwardedFor,
+        },
+        payload: {
+          businessSlug: "lobbystack",
+          sdp: "v=0",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toBe(
+      fetchWebVoiceContextMock.mock.calls[1]?.[0].ipHash,
+    );
+  });
+
   it("treats an unknown session end as idempotent", async () => {
     const server = createServer();
 
@@ -620,7 +679,7 @@ describe("web call routes", () => {
     expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(1000, "web call ended");
   });
 
-  it("uploads browser web call recordings for active sessions", async () => {
+  it("uploads browser web call recordings for completed sessions", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({
       businessId: "business_123",
@@ -653,6 +712,12 @@ describe("web call routes", () => {
     });
     const { sessionId } = createResponse.json() as { sessionId: string };
 
+    await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/end`,
+      headers: { origin: "https://lobbystack.com" },
+    });
+
     const response = await server.inject({
       method: "POST",
       url: `/web-call/sessions/${sessionId}/recording?durationMs=1234`,
@@ -666,7 +731,7 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(204);
     expect(uploadVoiceRecordingMock).toHaveBeenCalledWith({
       callId: "call_123",
-      durationMs: 1234,
+      durationMs: expect.any(Number),
       audio: Buffer.from("webm-recording"),
       contentType: "audio/webm",
     });
@@ -705,6 +770,12 @@ describe("web call routes", () => {
     });
     const { sessionId } = createResponse.json() as { sessionId: string };
     const recording = Buffer.alloc(1024 * 1024 + 1, 1);
+
+    await server.inject({
+      method: "POST",
+      url: `/web-call/sessions/${sessionId}/end`,
+      headers: { origin: "https://lobbystack.com" },
+    });
 
     const response = await server.inject({
       method: "POST",
@@ -883,7 +954,37 @@ describe("web call routes", () => {
     expect(uploadVoiceRecordingMock).toHaveBeenCalledWith(
       expect.objectContaining({
         callId: "call_123",
-        durationMs: 1234,
+        durationMs: expect.any(Number),
+      }),
+    );
+  });
+
+  it("clamps reported recording duration to the actual web call window", async () => {
+    const endedAtMs = Date.now();
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_clamped",
+      startedAt: new Date(endedAtMs - 2_000).toISOString(),
+      endedAt: new Date(endedAtMs).toISOString(),
+      status: "completed",
+    });
+    uploadVoiceRecordingMock.mockResolvedValueOnce(null);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/gateway-session-durable-clamped/recording?durationMs=999999",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: Buffer.from("webm-recording"),
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(uploadVoiceRecordingMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_durable_clamped",
+        durationMs: 2_000,
       }),
     );
   });
