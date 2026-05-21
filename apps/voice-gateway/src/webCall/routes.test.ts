@@ -921,6 +921,30 @@ describe("web call routes", () => {
     );
   });
 
+  it("rejects stale durable web recording targets", async () => {
+    const startedAtMs = Date.now() - 7 * 60 * 1000;
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_stale",
+      startedAt: new Date(startedAtMs).toISOString(),
+      status: "in_progress",
+      webCallMaxDurationMs: 5 * 60 * 1000,
+    });
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/gateway-session-stale/recording",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "audio/webm",
+      },
+      payload: Buffer.from("webm-recording"),
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(uploadVoiceRecordingMock).not.toHaveBeenCalled();
+  });
+
   it("requests a final assistant message before ending an AI-directed web call", async () => {
     fetchWebVoiceContextMock
       .mockResolvedValueOnce({ snapshot: demoSnapshot })
@@ -957,6 +981,7 @@ describe("web call routes", () => {
     });
 
     expect(createResponse.statusCode).toBe(200);
+    vi.useFakeTimers();
     webSocketInstances[0]?.emit(
       "message",
       Buffer.from(
@@ -972,22 +997,21 @@ describe("web call routes", () => {
       ),
     );
 
-    await vi.waitFor(() => {
-      const sentMessages = webSocketInstances[0]?.send.mock.calls.map((call) =>
-        JSON.parse(String(call[0])),
-      );
-      expect(sentMessages).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: "response.create",
-            response: expect.objectContaining({
-              metadata: { lobbystack_purpose: "web_final_message" },
-              tool_choice: "none",
-            }),
+    await vi.advanceTimersByTimeAsync(0);
+    const sentMessages = webSocketInstances[0]?.send.mock.calls.map((call) =>
+      JSON.parse(String(call[0])),
+    );
+    expect(sentMessages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "response.create",
+          response: expect.objectContaining({
+            metadata: { lobbystack_purpose: "web_final_message" },
+            tool_choice: "none",
           }),
-        ]),
-      );
-    });
+        }),
+      ]),
+    );
     expect(completeVoiceCallMock).not.toHaveBeenCalled();
 
     webSocketInstances[0]?.emit(
@@ -1004,14 +1028,16 @@ describe("web call routes", () => {
       ),
     );
 
-    await vi.waitFor(() => {
-      expect(completeVoiceCallMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          callId: "call_123",
-          disposition: "caller_finished",
-        }),
-      );
-    });
+    await vi.advanceTimersByTimeAsync(1_599);
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_123",
+        disposition: "caller_finished",
+      }),
+    );
   });
 
   it("passes web_voice when a website visitor leaves a message", async () => {

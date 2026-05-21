@@ -93,6 +93,14 @@ describe("Dashboard home summary", () => {
     });
 
     expect(summary.liveCalls).toBe(2);
+
+    const analytics = await authed.query(api.dashboard.overview.getAnalyticsSummary, {
+      businessId,
+      rangeStartMs: nowMs - 60 * 60 * 1000,
+      rangeEndMs: nowMs + 60 * 60 * 1000,
+    });
+    expect(analytics.outcomes.find((outcome) => outcome.key === "live")?.value).toBe(2);
+    expect(analytics.outcomes.find((outcome) => outcome.key === "missed")?.value).toBe(1);
   });
 
   it("includes average call duration in the KPI summary", async () => {

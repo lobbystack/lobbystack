@@ -42,6 +42,7 @@ type WebCallRecordingTargetResponse = {
   startedAt: string;
   endedAt?: string;
   status: string;
+  webCallMaxDurationMs?: number;
 };
 
 type CheckAvailabilityResponse = {

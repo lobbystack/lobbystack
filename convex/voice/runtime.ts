@@ -101,6 +101,7 @@ type WebCallRecordingTarget = {
   startedAt: string;
   endedAt?: string;
   status: string;
+  webCallMaxDurationMs?: number;
 };
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
@@ -769,6 +770,9 @@ export const getWebCallRecordingTarget = internalQuery({
       startedAt: call.startedAt,
       ...(call.endedAt !== undefined ? { endedAt: call.endedAt } : {}),
       status: call.status,
+      ...(call.webCallMaxDurationMs !== undefined
+        ? { webCallMaxDurationMs: call.webCallMaxDurationMs }
+        : {}),
     };
   },
 });

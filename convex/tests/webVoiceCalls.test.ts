@@ -178,6 +178,7 @@ describe("web voice calls", () => {
       callId: result.callId,
       startedAt: "2026-05-20T12:00:00.000Z",
       status: "in_progress",
+      webCallMaxDurationMs: 300000,
     });
   });
 

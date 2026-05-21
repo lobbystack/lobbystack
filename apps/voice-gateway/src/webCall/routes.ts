@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { buildVoiceSystemPrompt } from "@lobbystack/ai";
+import { WEB_CALL_STALE_GRACE_MS } from "@lobbystack/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import WebSocket from "ws";
 
@@ -110,6 +111,8 @@ const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
 const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
 const WEB_RECORDING_BYTES_PER_SECOND_LIMIT = 64 * 1024;
 const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
+const WEB_FINAL_MESSAGE_MIN_PLAYBACK_GRACE_MS = 1_500;
+const WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS = 8_000;
 const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
 
 export function resetWebCallRouteStateForTests(): void {
@@ -265,9 +268,34 @@ function rememberCompletedWebCall(session: ActiveWebCall): void {
   }, WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS).unref();
 }
 
-function getWebCallForRecording(sessionId: string): CompletedWebCall | null {
+function isActiveWebRecordingUploadAllowed(
+  startedAtMs: number,
+  maxDurationMs: number,
+): boolean {
+  return (
+    Number.isFinite(startedAtMs) &&
+    Date.now() - startedAtMs <= maxDurationMs + WEB_CALL_STALE_GRACE_MS
+  );
+}
+
+function getWebFinalMessagePlaybackGraceMs(message: string): number {
+  const wordCount = message.trim().split(/\s+/u).filter(Boolean).length;
+  const estimatedSpeechMs = Math.ceil((wordCount / 2.5) * 1_000);
+  return Math.min(
+    WEB_FINAL_MESSAGE_MAX_PLAYBACK_GRACE_MS,
+    Math.max(WEB_FINAL_MESSAGE_MIN_PLAYBACK_GRACE_MS, estimatedSpeechMs),
+  );
+}
+
+function getWebCallForRecording(
+  sessionId: string,
+  maxDurationMs: number,
+): CompletedWebCall | null {
   const active = activeWebCalls.get(sessionId);
   if (active) {
+    if (!isActiveWebRecordingUploadAllowed(active.startedAtMs, maxDurationMs)) {
+      return null;
+    }
     return {
       callId: active.callId,
       startedAtMs: active.startedAtMs,
@@ -290,8 +318,11 @@ function getWebCallForRecording(sessionId: string): CompletedWebCall | null {
   return completed;
 }
 
-async function resolveWebCallForRecording(sessionId: string): Promise<CompletedWebCall | null> {
-  const local = getWebCallForRecording(sessionId);
+async function resolveWebCallForRecording(
+  sessionId: string,
+  maxDurationMs: number,
+): Promise<CompletedWebCall | null> {
+  const local = getWebCallForRecording(sessionId, maxDurationMs);
   if (local) {
     return local;
   }
@@ -314,8 +345,18 @@ async function resolveWebCallForRecording(sessionId: string): Promise<CompletedW
     if (Date.now() - completedAtMs > WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS) {
       return null;
     }
-  } else if (durable.status !== "in_progress" && durable.status !== "open") {
-    return null;
+  } else {
+    if (durable.status !== "in_progress" && durable.status !== "open") {
+      return null;
+    }
+    if (
+      !isActiveWebRecordingUploadAllowed(
+        startedAtMs,
+        durable.webCallMaxDurationMs ?? maxDurationMs,
+      )
+    ) {
+      return null;
+    }
   }
 
   return {
@@ -1021,8 +1062,23 @@ async function handleSidebandMessage(
       payload.response?.metadata?.lobbystack_purpose === WEB_FINAL_MESSAGE_METADATA_PURPOSE
     ) {
       const endCall = session.pendingEndCall;
-      session.pendingEndCall = null;
-      await finishWebCallSession(server, session, endCall.reason);
+      clearWebEndCallFallbackTimer(session);
+      session.pendingEndCallFallbackTimer = setTimeout(() => {
+        session.pendingEndCall = null;
+        session.pendingEndCallFallbackTimer = null;
+        void finishWebCallSession(server, session, endCall.reason).catch((error: unknown) => {
+          server.log.error(
+            {
+              err: error,
+              callId: session.callId,
+              providerCallId: session.providerCallId,
+              reason: endCall.reason,
+            },
+            "Failed to finalize web voice session after final-message playback grace",
+          );
+        });
+      }, getWebFinalMessagePlaybackGraceMs(endCall.message));
+      session.pendingEndCallFallbackTimer.unref?.();
       return;
     }
 
@@ -1354,7 +1410,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       }
       addCorsHeaders(reply, origin!);
 
-      const webCall = await resolveWebCallForRecording(request.params.sessionId);
+      const webCall = await resolveWebCallForRecording(
+        request.params.sessionId,
+        server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+      );
       if (!webCall) {
         reply.code(404);
         return { error: "Unknown web voice session." };

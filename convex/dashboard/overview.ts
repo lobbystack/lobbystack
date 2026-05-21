@@ -293,12 +293,15 @@ function incrementCount(map: Map<string, number>, key: string): void {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-function categorizeCallOutcome(call: Doc<"calls">): "completed" | "live" | "missed" | "transferred" {
+function categorizeCallOutcome(
+  call: Doc<"calls">,
+  nowMs = Date.now(),
+): "completed" | "live" | "missed" | "transferred" {
   if (call.transferState && call.transferState !== "idle") {
     return "transferred";
   }
 
-  if (call.status === "open" || call.status === "in_progress") {
+  if (isCallLiveForDashboard(call, nowMs)) {
     return "live";
   }
 
@@ -841,8 +844,9 @@ export const getAnalyticsSummary = query({
       missed: 0,
       transferred: 0,
     };
+    const nowMs = now.getTime();
     for (const call of currentWeekCalls) {
-      outcomes[categorizeCallOutcome(call)] += 1;
+      outcomes[categorizeCallOutcome(call, nowMs)] += 1;
     }
 
     const conversationChannels = new Map(
