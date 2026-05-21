@@ -459,6 +459,7 @@ export async function takeVoiceMessage(input: {
   businessId: string;
   callId: string;
   conversationId?: string;
+  channel?: "voice" | "web_voice";
   callerName?: string;
   callbackPhone?: string;
   message: string;

@@ -236,6 +236,7 @@ export async function executeVoiceTool(input: {
   callId?: string;
   conversationId?: string;
   callerPhone: string;
+  channel?: "voice" | "web_voice";
   holdBudget?: {
     remainingHoldSeconds: number;
   };
@@ -615,6 +616,7 @@ export async function executeVoiceTool(input: {
           ...(input.conversationId !== undefined
             ? { conversationId: input.conversationId }
             : {}),
+          ...(input.channel !== undefined ? { channel: input.channel } : {}),
           ...(parsed.callerName !== undefined ? { callerName: parsed.callerName } : {}),
           callbackPhone: callbackPhone ?? input.callerPhone,
           message: parsed.message,

@@ -14,6 +14,7 @@ import {
   uploadVoiceRecording,
 } from "../convex/runtimeClient";
 import { capturePostHogException } from "../observability/posthog";
+import type { EndCallRequest } from "../realtime/callControl";
 import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 
@@ -43,6 +44,7 @@ type OpenAiRealtimeMessage = {
   response?: {
     id?: string;
     status?: string;
+    metadata?: Record<string, string | number | boolean | null> | null;
     usage?: {
       total_tokens?: number;
       input_tokens?: number;
@@ -87,6 +89,8 @@ type ActiveWebCall = {
     dedupeKey: string;
     text: string | undefined;
   }>;
+  pendingEndCall: EndCallRequest | null;
+  pendingEndCallFallbackTimer: ReturnType<typeof setTimeout> | null;
 };
 
 type CompletedWebCall = {
@@ -105,6 +109,8 @@ const WEB_POST_GREETING_INPUT_GRACE_MS = 2_000;
 const WEB_COMPLETED_SESSION_UPLOAD_GRACE_MS = 10 * 60_000;
 const WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS = 1_500;
 const WEB_RECORDING_BYTES_PER_SECOND_LIMIT = 64 * 1024;
+const WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS = 8_000;
+const WEB_FINAL_MESSAGE_METADATA_PURPOSE = "web_final_message";
 
 function getAllowedOrigins(raw: string): Set<string> {
   return new Set(
@@ -401,6 +407,13 @@ function clearWebMaxDurationTimer(session: ActiveWebCall): void {
   }
 }
 
+function clearWebEndCallFallbackTimer(session: ActiveWebCall): void {
+  if (session.pendingEndCallFallbackTimer !== null) {
+    clearTimeout(session.pendingEndCallFallbackTimer);
+    session.pendingEndCallFallbackTimer = null;
+  }
+}
+
 function normalizeOptionalAbuseKey(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   if (!normalized) {
@@ -517,6 +530,7 @@ async function finishWebCallSession(
   session.finalized = true;
   clearWebOpeningGreetingTimer(session);
   clearWebMaxDurationTimer(session);
+  clearWebEndCallFallbackTimer(session);
   await flushPendingWebAssistantTranscripts(server, session);
   await hangupOpenAiRealtimeCall(server, session, disposition);
 
@@ -536,6 +550,49 @@ async function finishWebCallSession(
     session.sidebandSocket?.close(1000, "web call ended");
     activeWebCalls.delete(session.gatewaySessionId);
   }
+}
+
+function requestWebFinalMessageBeforeHangup(
+  server: FastifyInstance,
+  socket: WebSocket,
+  session: ActiveWebCall,
+  endCall: EndCallRequest,
+): void {
+  if (session.finalized || session.pendingEndCall !== null) {
+    return;
+  }
+
+  session.pendingEndCall = endCall;
+  postRealtimeEvent(socket, {
+    type: "response.create",
+    response: {
+      metadata: {
+        lobbystack_purpose: WEB_FINAL_MESSAGE_METADATA_PURPOSE,
+      },
+      instructions: [
+        `Say this exact final message: ${JSON.stringify(endCall.message)}.`,
+        "Then stop speaking. The session will end automatically after your audio finishes.",
+        "Do not call any tools and do not add anything else.",
+      ].join(" "),
+      tool_choice: "none",
+    },
+  });
+
+  session.pendingEndCallFallbackTimer = setTimeout(() => {
+    session.pendingEndCallFallbackTimer = null;
+    void finishWebCallSession(server, session, endCall.reason).catch((error: unknown) => {
+      server.log.error(
+        {
+          err: error,
+          callId: session.callId,
+          providerCallId: session.providerCallId,
+          reason: endCall.reason,
+        },
+        "Failed to finalize web voice session after final-message fallback",
+      );
+    });
+  }, WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS);
+  session.pendingEndCallFallbackTimer.unref?.();
 }
 
 function scheduleWebMaxDurationTimer(
@@ -859,6 +916,16 @@ async function handleSidebandMessage(
       }
     }
 
+    if (
+      session.pendingEndCall &&
+      payload.response?.metadata?.lobbystack_purpose === WEB_FINAL_MESSAGE_METADATA_PURPOSE
+    ) {
+      const endCall = session.pendingEndCall;
+      session.pendingEndCall = null;
+      await finishWebCallSession(server, session, endCall.reason);
+      return;
+    }
+
     if (session.openingGreetingActive) {
       scheduleWebRealtimeTurnDetectionEnable(server, socket, session, "response_done");
     }
@@ -961,6 +1028,7 @@ async function handleToolCall(
       callId: session.callId,
       conversationId: session.conversationId,
       callerPhone: "web",
+      channel: "web_voice",
     });
   } catch (error) {
     server.log.error(
@@ -1002,7 +1070,7 @@ async function handleToolCall(
   }
 
   if (executed.endCall) {
-    await finishWebCallSession(server, session, executed.endCall.reason);
+    requestWebFinalMessageBeforeHangup(server, socket, session, executed.endCall);
     return;
   }
 
@@ -1140,6 +1208,8 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       transcriptSequence: 1,
       pendingAssistantTranscriptFlushTimer: null,
       pendingAssistantTranscripts: [],
+      pendingEndCall: null,
+      pendingEndCallFallbackTimer: null,
     };
     const sidebandSocket = createSidebandSocket({
       server,

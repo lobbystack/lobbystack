@@ -207,6 +207,7 @@ const takeMessageSchema = z.object({
   businessId: z.string().min(1),
   callId: z.string().min(1),
   conversationId: z.string().min(1).optional(),
+  channel: z.enum(["voice", "web_voice"]).optional(),
   callerName: z.string().min(1).optional(),
   callbackPhone: z.string().min(1).optional(),
   message: z.string().min(1),
@@ -1504,6 +1505,7 @@ http.route({
       ...(body.data.conversationId !== undefined
         ? { conversationId: asId("conversations", body.data.conversationId) }
         : {}),
+      ...(body.data.channel !== undefined ? { channel: body.data.channel } : {}),
       ...(body.data.callerName !== undefined ? { callerName: body.data.callerName } : {}),
       ...(body.data.callbackPhone !== undefined
         ? { callbackPhone: body.data.callbackPhone }

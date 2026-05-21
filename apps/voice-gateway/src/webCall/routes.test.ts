@@ -6,6 +6,7 @@ const {
   fetchWebVoiceContextMock,
   runtimeRequestErrorClass,
   startWebVoiceCallMock,
+  takeVoiceMessageMock,
   uploadVoiceRecordingMock,
   webSocketInstances,
 } = vi.hoisted(() => ({
@@ -26,6 +27,7 @@ const {
     }
   },
   startWebVoiceCallMock: vi.fn(),
+  takeVoiceMessageMock: vi.fn(),
   uploadVoiceRecordingMock: vi.fn(),
   webSocketInstances: [] as Array<{
     close: ReturnType<typeof vi.fn>;
@@ -93,7 +95,7 @@ vi.mock("../convex/runtimeClient", () => ({
   rescheduleVoiceAppointment: vi.fn(),
   searchVoiceKnowledge: vi.fn(),
   sendVoiceAppointmentChangeOtp: vi.fn(),
-  takeVoiceMessage: vi.fn(),
+  takeVoiceMessage: takeVoiceMessageMock,
   updateVoiceTransferState: vi.fn(),
   verifyVoiceAppointmentChangeOtp: vi.fn(),
   verifyVoiceAppointmentForChange: vi.fn(),
@@ -650,5 +652,159 @@ describe("web call routes", () => {
         durationMs: 1234,
       }),
     );
+  });
+
+  it("requests a final assistant message before ending an AI-directed web call", async () => {
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.function_call_arguments.done",
+          name: "endCall",
+          call_id: "tool-call-1",
+          arguments: JSON.stringify({
+            reason: "caller_finished",
+            message: "Thanks for visiting. Goodbye.",
+          }),
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      const sentMessages = webSocketInstances[0]?.send.mock.calls.map((call) =>
+        JSON.parse(String(call[0])),
+      );
+      expect(sentMessages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "response.create",
+            response: expect.objectContaining({
+              metadata: { lobbystack_purpose: "web_final_message" },
+              tool_choice: "none",
+            }),
+          }),
+        ]),
+      );
+    });
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.done",
+          response: {
+            id: "final-response-1",
+            status: "completed",
+            metadata: { lobbystack_purpose: "web_final_message" },
+          },
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      expect(completeVoiceCallMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          callId: "call_123",
+          disposition: "caller_finished",
+        }),
+      );
+    });
+  });
+
+  it("passes web_voice when a website visitor leaves a message", async () => {
+    fetchWebVoiceContextMock
+      .mockResolvedValueOnce({ snapshot: demoSnapshot })
+      .mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    takeVoiceMessageMock.mockResolvedValueOnce({ inboxItemId: "inbox_123" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    webSocketInstances[0]?.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.function_call_arguments.done",
+          name: "takeMessage",
+          call_id: "tool-call-1",
+          arguments: JSON.stringify({
+            callbackPhone: "+14165550123",
+            message: "Please call me tomorrow.",
+          }),
+        }),
+      ),
+    );
+
+    await vi.waitFor(() => {
+      expect(takeVoiceMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          callId: "call_123",
+          conversationId: "conversation_123",
+          channel: "web_voice",
+        }),
+      );
+    });
   });
 });

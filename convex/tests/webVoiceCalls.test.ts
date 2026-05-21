@@ -216,6 +216,58 @@ describe("web voice calls", () => {
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
+  it("stores web voice callback messages on the web voice call session", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-20T12:00:00.000Z"));
+    const { t } = await seedBusiness("web-voice-message");
+
+    const result = await t.mutation(internal.voice.runtime.startWebCall, {
+      businessSlug: "web-voice-message",
+      providerCallId: "call_openai_web_message",
+      gatewaySessionId: "gateway-session-message",
+      startedAt: "2026-05-20T12:00:00.000Z",
+    });
+
+    await t.mutation(internal.voice.runtime.takeMessageForVoice, {
+      businessId: result.businessId,
+      callId: result.callId,
+      conversationId: result.conversationId,
+      channel: "web_voice",
+      callbackPhone: "+14165550123",
+      message: "Please call me tomorrow about pricing.",
+    });
+    await t.mutation(internal.voice.runtime.completeCall, {
+      callId: result.callId,
+      status: "completed",
+      endedAt: "2026-05-20T12:05:00.000Z",
+      disposition: "caller_finished",
+      providerDurationSeconds: 300,
+    });
+
+    await t.run(async (ctx) => {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation_id", (q) => q.eq("conversationId", result.conversationId))
+        .collect();
+      const session = await ctx.db
+        .query("conversation_sessions")
+        .withIndex("by_call_id", (q) => q.eq("callId", result.callId))
+        .unique();
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatchObject({
+        channel: "web_voice",
+        body: "Please call me tomorrow about pricing.",
+      });
+      expect(messages[0]?.conversationSessionId).toBe(session?._id);
+      expect(session).toMatchObject({
+        channel: "web_voice",
+        status: "closed",
+        summaryKind: "message_taking",
+      });
+    });
+  });
+
   it("keeps Twilio starts compatible while adding provider metadata", async () => {
     const { t, businessId } = await seedBusiness("twilio-compatible");
 

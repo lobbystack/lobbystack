@@ -199,6 +199,7 @@ type TakeMessageForVoiceArgs = {
   businessId: Id<"businesses">;
   callId: Id<"calls">;
   conversationId?: Id<"conversations">;
+  channel?: "voice" | "web_voice";
   callerName?: string;
   callbackPhone?: string;
   message: string;
@@ -1366,6 +1367,7 @@ export const takeMessageForVoice = internalMutation({
     businessId: v.id("businesses"),
     callId: v.id("calls"),
     conversationId: v.optional(v.id("conversations")),
+    channel: v.optional(v.union(v.literal("voice"), v.literal("web_voice"))),
     callerName: v.optional(v.string()),
     callbackPhone: v.optional(v.string()),
     message: v.string(),
@@ -1389,6 +1391,7 @@ export const takeMessageForVoice = internalMutation({
       .filter((line): line is string => Boolean(line))
       .join("\n");
     const contentExpiresAt = getMessageContentExpiresAt();
+    const channel = args.channel ?? "voice";
 
     const inboxItemId = await ctx.db.insert("inbox_items", {
       businessId: args.businessId,
@@ -1407,7 +1410,7 @@ export const takeMessageForVoice = internalMutation({
         businessId: args.businessId,
         conversationId: args.conversationId,
         direction: "inbound",
-        channel: "voice",
+        channel,
         body: args.message,
         status: "captured",
         aiGenerated: false,
@@ -1418,7 +1421,7 @@ export const takeMessageForVoice = internalMutation({
       await ensureSessionForStoredMessage(ctx, {
         businessId: args.businessId,
         conversationId: args.conversationId,
-        channel: "voice",
+        channel,
         messageId,
         callId: args.callId,
       });
