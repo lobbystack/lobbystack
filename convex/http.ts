@@ -791,6 +791,26 @@ http.route({
       }
     }
 
+    try {
+      await ctx.runQuery(internal.voice.runtime.assertWebVoiceBillingCanStart, {
+        businessId: business._id,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === billingErrorCodes.voiceLimitReached
+      ) {
+        return Response.json(
+          {
+            code: billingErrorCodes.voiceLimitReached,
+            message: "Voice quota reached for this billing period.",
+          },
+          { status: 402 },
+        );
+      }
+      throw error;
+    }
+
     const snapshot = await ctx.runQuery(internal.ai.context.snapshots.getByBusinessId, {
       businessId: business._id,
     });

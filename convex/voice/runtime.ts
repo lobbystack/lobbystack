@@ -105,6 +105,25 @@ type WebCallRecordingTarget = {
 
 export const WEB_VOICE_RATE_LIMIT_ERROR = "web_voice_rate_limited";
 
+type WebVoiceStartLimiterName =
+  | "webVoiceStartGlobalPerMinute"
+  | "webVoiceStartPerBusinessPerHour"
+  | "webVoiceStartPerBusinessPerDay"
+  | "webVoiceStartPerOriginPerTenMinutes"
+  | "webVoiceStartPerIpPerHour"
+  | "webVoiceStartPerIpPerDay"
+  | "webVoiceStartPerVisitorPerHour"
+  | "webVoiceStartPerVisitorPerDay";
+
+type WebVoiceStartLimit = {
+  limiterName: WebVoiceStartLimiterName;
+  key: string;
+  reason: string;
+  businessId: Id<"businesses">;
+  origin?: string;
+  widgetId?: string;
+};
+
 function getWebCallMaxDurationMs(maxDurationMs: number | undefined): number {
   if (maxDurationMs === undefined || !Number.isFinite(maxDurationMs) || maxDurationMs <= 0) {
     return DEFAULT_WEB_CALL_MAX_DURATION_MS;
@@ -134,22 +153,7 @@ function logWebVoiceRateLimitBlocked(input: {
 
 async function consumeWebVoiceStartLimit(
   ctx: MutationCtx,
-  input: {
-    limiterName:
-      | "webVoiceStartGlobalPerMinute"
-      | "webVoiceStartPerBusinessPerHour"
-      | "webVoiceStartPerBusinessPerDay"
-      | "webVoiceStartPerOriginPerTenMinutes"
-      | "webVoiceStartPerIpPerHour"
-      | "webVoiceStartPerIpPerDay"
-      | "webVoiceStartPerVisitorPerHour"
-      | "webVoiceStartPerVisitorPerDay";
-    key: string;
-    reason: string;
-    businessId: Id<"businesses">;
-    origin?: string;
-    widgetId?: string;
-  },
+  input: WebVoiceStartLimit,
 ): Promise<void> {
   const result = await webVoiceAbuseRateLimiter.limit(ctx, input.limiterName, {
     key: input.key,
@@ -164,6 +168,106 @@ async function consumeWebVoiceStartLimit(
       ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
     });
     throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+  }
+}
+
+function buildWebVoiceStartLimits(input: {
+  businessId: Id<"businesses">;
+  origin: string;
+  ipHash?: string;
+  visitorId?: string;
+  widgetId?: string;
+}): Array<WebVoiceStartLimit> {
+  const businessKey = String(input.businessId);
+  const logContext = {
+    businessId: input.businessId,
+    origin: input.origin,
+    ...(input.widgetId !== undefined ? { widgetId: input.widgetId } : {}),
+  };
+  const limits: Array<WebVoiceStartLimit> = [];
+
+  if (input.ipHash !== undefined) {
+    limits.push(
+      {
+        limiterName: "webVoiceStartPerIpPerHour",
+        key: `${businessKey}:ip:${input.ipHash}`,
+        reason: "rate_limit_ip_hour",
+        ...logContext,
+      },
+      {
+        limiterName: "webVoiceStartPerIpPerDay",
+        key: `${businessKey}:ip:${input.ipHash}`,
+        reason: "rate_limit_ip_day",
+        ...logContext,
+      },
+    );
+  }
+
+  if (input.visitorId !== undefined) {
+    limits.push(
+      {
+        limiterName: "webVoiceStartPerVisitorPerHour",
+        key: `${businessKey}:visitor:${input.visitorId}`,
+        reason: "rate_limit_visitor_hour",
+        ...logContext,
+      },
+      {
+        limiterName: "webVoiceStartPerVisitorPerDay",
+        key: `${businessKey}:visitor:${input.visitorId}`,
+        reason: "rate_limit_visitor_day",
+        ...logContext,
+      },
+    );
+  }
+
+  limits.push(
+    {
+      limiterName: "webVoiceStartPerOriginPerTenMinutes",
+      key: input.origin,
+      reason: "rate_limit_origin",
+      ...logContext,
+    },
+    {
+      limiterName: "webVoiceStartPerBusinessPerHour",
+      key: businessKey,
+      reason: "rate_limit_business_hour",
+      ...logContext,
+    },
+    {
+      limiterName: "webVoiceStartPerBusinessPerDay",
+      key: businessKey,
+      reason: "rate_limit_business_day",
+      ...logContext,
+    },
+    {
+      limiterName: "webVoiceStartGlobalPerMinute",
+      key: "global",
+      reason: "rate_limit_global",
+      ...logContext,
+    },
+  );
+
+  return limits;
+}
+
+async function assertWebVoiceStartLimitsAvailable(
+  ctx: MutationCtx,
+  limits: Array<WebVoiceStartLimit>,
+): Promise<void> {
+  for (const limit of limits) {
+    const result = await webVoiceAbuseRateLimiter.check(ctx, limit.limiterName, {
+      key: limit.key,
+    });
+    if (!result.ok) {
+      logWebVoiceRateLimitBlocked({
+        limiter: limit.limiterName,
+        reason: limit.reason,
+        businessId: limit.businessId,
+        ...(limit.origin !== undefined ? { origin: limit.origin } : {}),
+        ...(limit.widgetId !== undefined ? { widgetId: limit.widgetId } : {}),
+      });
+      throw new Error(WEB_VOICE_RATE_LIMIT_ERROR);
+    }
   }
 }
 
@@ -617,66 +721,30 @@ export const assertWebVoiceStartAllowed = internalMutation({
     widgetId: v.optional(v.string()),
   },
   handler: async (ctx: MutationCtx, args): Promise<null> => {
-    const businessKey = String(args.businessId);
-    const logContext = {
-      businessId: args.businessId,
-      origin: args.origin,
-      ...(args.widgetId !== undefined ? { widgetId: args.widgetId } : {}),
-    };
+    const limits = buildWebVoiceStartLimits(args);
 
-    await consumeWebVoiceStartLimit(ctx, {
-      limiterName: "webVoiceStartGlobalPerMinute",
-      key: "global",
-      reason: "rate_limit_global",
-      ...logContext,
-    });
-    await consumeWebVoiceStartLimit(ctx, {
-      limiterName: "webVoiceStartPerBusinessPerHour",
-      key: businessKey,
-      reason: "rate_limit_business_hour",
-      ...logContext,
-    });
-    await consumeWebVoiceStartLimit(ctx, {
-      limiterName: "webVoiceStartPerBusinessPerDay",
-      key: businessKey,
-      reason: "rate_limit_business_day",
-      ...logContext,
-    });
-    await consumeWebVoiceStartLimit(ctx, {
-      limiterName: "webVoiceStartPerOriginPerTenMinutes",
-      key: args.origin,
-      reason: "rate_limit_origin",
-      ...logContext,
-    });
-
-    if (args.ipHash !== undefined) {
-      await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerIpPerHour",
-        key: `${businessKey}:ip:${args.ipHash}`,
-        reason: "rate_limit_ip_hour",
-        ...logContext,
-      });
-      await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerIpPerDay",
-        key: `${businessKey}:ip:${args.ipHash}`,
-        reason: "rate_limit_ip_day",
-        ...logContext,
-      });
+    await assertWebVoiceStartLimitsAvailable(ctx, limits);
+    for (const limit of limits) {
+      await consumeWebVoiceStartLimit(ctx, limit);
     }
 
-    if (args.visitorId !== undefined) {
-      await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerVisitorPerHour",
-        key: `${businessKey}:visitor:${args.visitorId}`,
-        reason: "rate_limit_visitor_hour",
-        ...logContext,
-      });
-      await consumeWebVoiceStartLimit(ctx, {
-        limiterName: "webVoiceStartPerVisitorPerDay",
-        key: `${businessKey}:visitor:${args.visitorId}`,
-        reason: "rate_limit_visitor_day",
-        ...logContext,
-      });
+    return null;
+  },
+});
+
+export const assertWebVoiceBillingCanStart = internalQuery({
+  args: {
+    businessId: v.id("businesses"),
+  },
+  handler: async (ctx: QueryCtx, args): Promise<null> => {
+    const voicePolicy: {
+      allowed: boolean;
+      errorCode: BillingErrorCode | null;
+    } = await ctx.runQuery(internal.billing.assertVoiceCanStart, {
+      businessId: args.businessId,
+    });
+    if (!voicePolicy.allowed) {
+      throw new Error(voicePolicy.errorCode ?? billingErrorCodes.voiceLimitReached);
     }
 
     return null;

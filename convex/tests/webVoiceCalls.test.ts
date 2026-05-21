@@ -205,6 +205,40 @@ describe("web voice calls", () => {
     ).rejects.toThrow("web_voice_rate_limited");
   });
 
+  it("does not consume shared buckets when a specific web voice limiter rejects", async () => {
+    const { t, businessId } = await seedBusiness("web-voice-no-partial-consume");
+
+    for (let index = 0; index < 5; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://lobbystack.com",
+        ipHash: "client-ip-hash",
+        visitorId: `visitor-${index}`,
+        widgetId: "lobbystack-landing",
+      });
+    }
+
+    await expect(
+      t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://alternate.example",
+        ipHash: "client-ip-hash",
+        visitorId: "visitor-over-limit",
+        widgetId: "lobbystack-landing",
+      }),
+    ).rejects.toThrow("web_voice_rate_limited");
+
+    for (let index = 0; index < 30; index += 1) {
+      await t.mutation(internal.voice.runtime.assertWebVoiceStartAllowed, {
+        businessId,
+        origin: "https://alternate.example",
+        ipHash: `alternate-ip-${index}`,
+        visitorId: `alternate-visitor-${index}`,
+        widgetId: "lobbystack-landing",
+      });
+    }
+  });
+
   it("rate limits repeated web voice starts for the same IP hash per day", async () => {
     const { t, businessId } = await seedBusiness("web-voice-ip-day");
     const ipKey = `${String(businessId)}:ip:client-ip-hash`;

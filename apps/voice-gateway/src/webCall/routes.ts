@@ -20,9 +20,9 @@ import { executeVoiceTool } from "../realtime/toolExecutor";
 import { createWebRealtimeToolDefinitions } from "../realtime/toolDefinitions";
 
 type WebCallSessionRequest = {
-  businessSlug?: string;
+  businessSlug: string;
   widgetId?: string;
-  sdp?: string;
+  sdp: string;
   pageUrl?: string;
   visitorId?: string;
 };
@@ -137,6 +137,67 @@ function getAllowedOrigins(raw: string): Set<string> {
 function getRequestOrigin(request: FastifyRequest): string | null {
   const origin = request.headers.origin;
   return typeof origin === "string" && origin ? origin : null;
+}
+
+function getStringProperty(
+  body: Record<string, unknown>,
+  key: string,
+): string | undefined | null {
+  const value = body[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  return typeof value === "string" ? value : null;
+}
+
+function parseWebCallSessionRequest(body: unknown):
+  | { ok: true; data: WebCallSessionRequest }
+  | { ok: false; message: string } {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false, message: "Invalid web call request." };
+  }
+
+  const input = body as Record<string, unknown>;
+  const rawBusinessSlug = getStringProperty(input, "businessSlug");
+  const rawSdp = getStringProperty(input, "sdp");
+  const rawPageUrl = getStringProperty(input, "pageUrl");
+  const rawVisitorId = getStringProperty(input, "visitorId");
+  const rawWidgetId = getStringProperty(input, "widgetId");
+
+  if (rawBusinessSlug === null) {
+    return { ok: false, message: "Invalid business slug." };
+  }
+  if (rawSdp === null) {
+    return { ok: false, message: "Invalid SDP offer." };
+  }
+  if (rawPageUrl === null || rawVisitorId === null || rawWidgetId === null) {
+    return { ok: false, message: "Invalid web call request." };
+  }
+
+  const businessSlug = rawBusinessSlug?.trim() ?? "";
+  if (!businessSlug) {
+    return { ok: false, message: "Missing business slug." };
+  }
+
+  const sdp = rawSdp?.trim() ?? "";
+  if (!sdp) {
+    return { ok: false, message: "Missing SDP offer." };
+  }
+
+  const pageUrl = rawPageUrl?.trim();
+  const visitorId = rawVisitorId?.trim();
+  const widgetId = rawWidgetId?.trim();
+
+  return {
+    ok: true,
+    data: {
+      businessSlug,
+      sdp,
+      ...(pageUrl ? { pageUrl } : {}),
+      ...(visitorId ? { visitorId } : {}),
+      ...(widgetId ? { widgetId } : {}),
+    },
+  };
 }
 
 function isLocalhostOrigin(origin: string): boolean {
@@ -1159,16 +1220,13 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       return { error: "Web voice is not configured." };
     }
 
-    const body = (request.body ?? {}) as WebCallSessionRequest;
-    const businessSlug = body.businessSlug?.trim() || "";
-    if (!businessSlug) {
+    const parsedBody = parseWebCallSessionRequest(request.body ?? {});
+    if (!parsedBody.ok) {
       reply.code(400);
-      return { error: "Missing business slug." };
+      return { error: parsedBody.message };
     }
-    if (!body.sdp?.trim()) {
-      reply.code(400);
-      return { error: "Missing SDP offer." };
-    }
+    const body = parsedBody.data;
+    const businessSlug = body.businessSlug;
 
     const gatewaySessionId = crypto.randomUUID();
     const widgetId = normalizeOptionalAbuseKey(body.widgetId);

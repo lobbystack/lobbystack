@@ -282,6 +282,27 @@ describe("web call routes", () => {
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
+  it("rejects malformed web call session fields before runtime requests", async () => {
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: 123,
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(fetchWebVoiceContextMock).not.toHaveBeenCalled();
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
   it("does not rate limit syntactically invalid start attempts", async () => {
     fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
     startWebVoiceCallMock.mockResolvedValueOnce({
@@ -370,6 +391,39 @@ describe("web call routes", () => {
       }),
     );
     expect(fetchWebVoiceContextMock.mock.calls[0]?.[0].ipHash).toHaveLength(64);
+    expect(startWebVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("returns billing preflight failures before starting an OpenAI web call", async () => {
+    fetchWebVoiceContextMock.mockRejectedValueOnce(
+      new runtimeRequestErrorClass({
+        message: "Voice quota reached for this billing period.",
+        status: 402,
+        code: "voice_limit_reached",
+      }),
+    );
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(402);
+    expect(response.json()).toEqual({
+      error: "Voice quota reached for this billing period.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(startWebVoiceCallMock).not.toHaveBeenCalled();
   });
 
