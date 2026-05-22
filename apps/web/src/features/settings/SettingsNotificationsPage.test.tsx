@@ -56,6 +56,10 @@ function buildPreferences(overrides: Record<string, unknown> = {}) {
     phoneVerified: true,
     canUseSms: true,
     smsUnavailableReason: null,
+    smsConsentGranted: false,
+    smsConsentDisclosureVersion: "operator-alerts-2026-05-22",
+    smsConsentDisclosureText:
+      "I agree to receive SMS alerts from LobbyStack about missed calls, new messages, appointment activity, and workspace notifications at my verified phone number. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. SMS alerts are optional.",
     ...overrides,
   };
 }
@@ -181,5 +185,31 @@ describe("SettingsNotificationsPage", () => {
 
     expect(screen.queryByText("settings:notifications.actions.testEmail")).toBeNull();
     expect(screen.queryByText("settings:notifications.actions.testSms")).toBeNull();
+  });
+
+  it("requires consent before enabling SMS alerts", async () => {
+    const user = userEvent.setup();
+    renderNotificationsPage();
+
+    await user.click(
+      await screen.findByRole("switch", {
+        name: "settings:notifications.sources.sms.title",
+      }),
+    );
+
+    expect(await screen.findByText("settings:notifications.smsConsent.title")).toBeTruthy();
+    expect(updateNotificationPreferencesMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByText("settings:notifications.smsConsent.accept"));
+
+    await waitFor(() => {
+      expect(updateNotificationPreferencesMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          businessId,
+          smsEnabled: true,
+          smsConsentAccepted: true,
+        }),
+      );
+    });
   });
 });

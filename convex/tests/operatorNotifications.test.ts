@@ -165,6 +165,40 @@ describe("operator notification preferences", () => {
     ).rejects.toThrow(/verified phone number/i);
   });
 
+  it("rejects enabling SMS alerts without operator consent", async () => {
+    const t = createConvexHarness();
+    const seeded = await seedMember(t, {
+      subject: "operator-sms-consent-required",
+      email: "operator@example.com",
+      phone: "+15145550123",
+      phoneVerificationTime: Date.now(),
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("platform_sms_senders", {
+        role: "platform_alert",
+        label: "Test alert sender",
+        e164: "+15145550100",
+        status: "active",
+        smsEnabled: true,
+      });
+    });
+    const current = await seeded.authed.query(
+      api.users.preferences.getNotificationPreferences,
+      { businessId: seeded.businessId },
+    );
+
+    await expect(
+      seeded.authed.mutation(api.users.preferences.updateNotificationPreferences, {
+        businessId: seeded.businessId,
+        emailEnabled: true,
+        smsEnabled: true,
+        eventPreferences: current.eventPreferences,
+        dailySummaryEnabled: true,
+        dailySummarySendTime: "08:00",
+      }),
+    ).rejects.toThrow(/consent/i);
+  });
+
   it("marks SMS unavailable and rejects test SMS when no alert sender is configured", async () => {
     const originalTwilioAlertSmsFrom = process.env.TWILIO_ALERT_SMS_FROM;
     process.env.TWILIO_ALERT_SMS_FROM = "";
@@ -226,6 +260,20 @@ describe("operator notification preferences", () => {
           status: "active",
           smsEnabled: true,
         });
+      });
+
+      const current = await seeded.authed.query(
+        api.users.preferences.getNotificationPreferences,
+        { businessId: seeded.businessId },
+      );
+      await seeded.authed.mutation(api.users.preferences.updateNotificationPreferences, {
+        businessId: seeded.businessId,
+        emailEnabled: true,
+        smsEnabled: true,
+        eventPreferences: current.eventPreferences,
+        dailySummaryEnabled: true,
+        dailySummarySendTime: "08:00",
+        smsConsentAccepted: true,
       });
 
       for (let index = 0; index < 5; index += 1) {
@@ -315,6 +363,7 @@ describe("operator notification preferences", () => {
       eventPreferences: current.eventPreferences,
       dailySummaryEnabled: true,
       dailySummarySendTime: "08:00",
+      smsConsentAccepted: true,
     });
     await t.action(internal.operatorNotifications.dispatchEvent, {
       businessId: seeded.businessId,
@@ -432,6 +481,7 @@ describe("operator notification preferences", () => {
       },
       dailySummaryEnabled: true,
       dailySummarySendTime: "08:00",
+      smsConsentAccepted: true,
     });
 
     await t.action(internal.operatorNotifications.dispatchEvent, {

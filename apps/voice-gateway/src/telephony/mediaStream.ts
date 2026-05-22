@@ -746,8 +746,13 @@ function createRealtimeToolDefinitions() {
           preferredStaffId: { type: "string" },
           contactName: { type: "string" },
           contactPhone: { type: "string" },
+          smsConsentGranted: {
+            type: "boolean",
+            description:
+              "Whether the caller explicitly agreed to receive appointment confirmation and reminder SMS after the required disclosure.",
+          },
         },
-        required: ["serviceName", "startsAt"],
+        required: ["serviceName", "startsAt", "smsConsentGranted"],
         additionalProperties: false,
       },
     },
@@ -2220,6 +2225,7 @@ async function configureOpenAiSession(
         "If the caller gives a day/date or a rough time like '4' or 'afternoon', use findAvailability before trying to book.",
         "Offer one or a few specific candidate slots from findAvailability and wait for the caller to confirm one exact slot.",
         "Only call bookAppointment after the caller confirms a specific offered time.",
+        "Before calling bookAppointment, ask exactly: Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help. Pass smsConsentGranted true only if the caller says yes. If the caller says no, still book the appointment and pass smsConsentGranted false.",
         "For cancellation or rescheduling requests, use lookupAppointmentForChange first. If appointments exist, ask the caller for the name on the appointment and either the existing appointment time or service; do not claim to know those facts from lookup.",
         "Before cancelling or rescheduling, use verifyAppointmentForChange with the caller's name and an appointment fact they provided, such as the existing time or service.",
         "If verifyAppointmentForChange says OTP is required, send the code and verify it before attempting the change.",

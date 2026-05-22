@@ -399,6 +399,7 @@ export async function bookVoiceAppointment(input: {
   conversationId?: string;
   contactName?: string;
   contactPhone: string;
+  smsConsentGranted: boolean;
 }): Promise<BookAppointmentResponse> {
   return await postJson<BookAppointmentResponse>("/voice/tool/book-appointment", input);
 }

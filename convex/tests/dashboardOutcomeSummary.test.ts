@@ -310,6 +310,7 @@ describe("Dashboard outcome summaries", () => {
       timezone: "America/Toronto",
       contactName: "Taylor Customer",
       contactPhone: "+14165550199",
+      smsConsentGranted: true,
     });
 
     const calls = await authed.query(api.voice.runtime.listRecentCalls, {

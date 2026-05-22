@@ -461,6 +461,7 @@ type BookAppointmentForVoiceArgs = {
   conversationId?: Id<"conversations">;
   contactName?: string;
   contactPhone: string;
+  smsConsentGranted: boolean;
 };
 type BookAppointmentForVoiceResult = {
   appointmentId: Id<"appointments">;
@@ -2196,6 +2197,7 @@ export const bookAppointmentForVoice = internalAction({
     conversationId: v.optional(v.id("conversations")),
     contactName: v.optional(v.string()),
     contactPhone: v.string(),
+    smsConsentGranted: v.boolean(),
   },
   handler: async (
     ctx: ActionCtx,
@@ -2228,6 +2230,7 @@ export const bookAppointmentForVoice = internalAction({
         ...(args.contactName !== undefined ? { contactName: args.contactName } : {}),
         contactPhone: args.contactPhone,
         sourceChannel: args.channel ?? "voice",
+        smsConsentGranted: args.smsConsentGranted,
       },
     );
 
