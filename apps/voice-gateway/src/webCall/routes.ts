@@ -101,6 +101,18 @@ type CompletedWebCall = {
   completedAtMs?: number;
 };
 
+class OpenAiWebRtcSetupError extends Error {
+  status: number;
+  responseBody: string;
+
+  constructor(input: { status: number; responseBody: string }) {
+    super(`OpenAI Realtime WebRTC setup failed with ${input.status}.`);
+    this.name = "OpenAiWebRtcSetupError";
+    this.status = input.status;
+    this.responseBody = input.responseBody;
+  }
+}
+
 const activeWebCalls = new Map<string, ActiveWebCall>();
 const completedWebCalls = new Map<string, CompletedWebCall>();
 const WEB_REALTIME_VAD_THRESHOLD = 0.65;
@@ -929,7 +941,10 @@ async function exchangeWebRtcOffer(input: {
   );
 
   if (!response.ok) {
-    throw new Error(`OpenAI Realtime WebRTC setup failed with ${response.status}.`);
+    throw new OpenAiWebRtcSetupError({
+      status: response.status,
+      responseBody: await response.text().catch(() => ""),
+    });
   }
 
   return {
@@ -944,9 +959,9 @@ function createSidebandSocket(input: {
   snapshot: Awaited<ReturnType<typeof fetchWebVoiceContext>>["snapshot"];
 }): WebSocket {
   const socket = new WebSocket(
-    `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(
-      input.server.runtimeConfig.OPENAI_REALTIME_MODEL,
-    )}&call_id=${encodeURIComponent(input.session.providerCallId)}`,
+    `wss://api.openai.com/v1/realtime?call_id=${encodeURIComponent(
+      input.session.providerCallId,
+    )}`,
     {
       headers: {
         Authorization: `Bearer ${input.server.runtimeConfig.OPENAI_API_KEY}`,
@@ -1038,7 +1053,16 @@ function createSidebandSocket(input: {
     });
   });
 
-  socket.on("close", () => {
+  socket.on("close", (code, reason) => {
+    input.server.log.info(
+      {
+        callId: input.session.callId,
+        providerCallId: input.session.providerCallId,
+        code,
+        reason: Buffer.isBuffer(reason) ? reason.toString() : String(reason ?? ""),
+      },
+      "OpenAI Realtime web call sideband websocket closed",
+    );
     clearWebOpeningGreetingTimer(input.session);
     void finishWebCallSession(
       input.server,
@@ -1369,11 +1393,27 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       }
       throw error;
     }
-    const exchange = await exchangeWebRtcOffer({
-      apiKey: server.runtimeConfig.OPENAI_API_KEY,
-      model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
-      sdp: body.sdp,
-    });
+    let exchange: Awaited<ReturnType<typeof exchangeWebRtcOffer>>;
+    try {
+      exchange = await exchangeWebRtcOffer({
+        apiKey: server.runtimeConfig.OPENAI_API_KEY,
+        model: server.runtimeConfig.OPENAI_REALTIME_MODEL,
+        sdp: body.sdp,
+      });
+    } catch (error) {
+      if (error instanceof OpenAiWebRtcSetupError) {
+        server.log.error(
+          {
+            err: error,
+            status: error.status,
+            responseBody: error.responseBody.slice(0, 1_000),
+            businessSlug,
+          },
+          "OpenAI Realtime WebRTC setup failed for web call",
+        );
+      }
+      throw error;
+    }
     const providerCallId =
       exchange.providerCallId.startsWith("webcall_")
         ? `webcall_${gatewaySessionId}`
