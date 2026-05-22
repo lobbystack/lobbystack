@@ -112,10 +112,18 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           throw new Error("Missing `password` param for `signIn` flow");
         }
 
-        const retrieved = await retrieveAccount(ctx, {
-          provider,
-          account: { id: email, secret },
-        });
+        let retrieved;
+        try {
+          retrieved = await retrieveAccount(ctx, {
+            provider,
+            account: { id: email, secret },
+          });
+        } catch (error) {
+          if (isMissingAccountError(error)) {
+            throw new Error("Invalid credentials");
+          }
+          throw error;
+        }
         if (retrieved === null) {
           throw new Error("Invalid credentials");
         }
@@ -125,10 +133,18 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           throw new Error(`Password reset is not enabled for ${provider}`);
         }
 
-        const retrieved = await retrieveAccount(ctx, {
-          provider,
-          account: { id: email },
-        });
+        let retrieved;
+        try {
+          retrieved = await retrieveAccount(ctx, {
+            provider,
+            account: { id: email },
+          });
+        } catch (error) {
+          if (isMissingAccountError(error)) {
+            return null;
+          }
+          throw error;
+        }
         if (retrieved === null) {
           return null;
         }
@@ -147,10 +163,18 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           throw new Error("Missing `newPassword` param for `reset-verification` flow");
         }
 
-        const retrieved = await retrieveAccount(ctx, {
-          provider,
-          account: { id: email },
-        });
+        let retrieved;
+        try {
+          retrieved = await retrieveAccount(ctx, {
+            provider,
+            account: { id: email },
+          });
+        } catch (error) {
+          if (isMissingAccountError(error)) {
+            throw new Error("Invalid code");
+          }
+          throw error;
+        }
         if (retrieved === null) {
           throw new Error("Invalid code");
         }
@@ -176,10 +200,18 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           throw new Error(`Email verification is not enabled for ${provider}`);
         }
 
-        const retrieved = await retrieveAccount(ctx, {
-          provider,
-          account: { id: email },
-        });
+        let retrieved;
+        try {
+          retrieved = await retrieveAccount(ctx, {
+            provider,
+            account: { id: email },
+          });
+        } catch (error) {
+          if (isMissingAccountError(error)) {
+            return null;
+          }
+          throw error;
+        }
         if (retrieved === null) {
           return null;
         }

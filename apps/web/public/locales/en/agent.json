@@ -103,6 +103,7 @@
       "documentBadge": "Document",
       "textBadge": "Text",
       "emptyState": "No services added yet.",
+      "durationValue": "{{count}} min appointment",
       "previewPending": "This document is being processed.",
       "previewError": "This document couldn't be processed.",
       "status": {
@@ -135,6 +136,15 @@
           "label": "Content",
           "placeholder": "A 30-minute consultation to understand the caller's needs and recommend the right next step.",
           "hint": "Describe the service so the receptionist can explain it clearly."
+        },
+        "duration": {
+          "label": "Duration",
+          "placeholder": "30",
+          "hint": "Appointment length in minutes for availability checks."
+        },
+        "active": {
+          "label": "Bookable",
+          "hint": "Only bookable services are offered during calls."
         },
         "tags": {
           "label": "Tags (optional)",
