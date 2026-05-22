@@ -2,6 +2,9 @@ import { z } from "zod";
 
 import type { DeploymentMode } from "@lobbystack/shared";
 
+const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
+const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
+
 const deploymentModeSchema = z.enum([
   "cloud",
   "self_hosted_standard",
@@ -12,6 +15,25 @@ const booleanEnvSchema = z
   .enum(["true", "false"])
   .default("true")
   .transform((value) => value === "true");
+
+const trustProxyEnvSchema = z
+  .string()
+  .default("false")
+  .transform((value) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "false" || normalized === "") {
+      return false;
+    }
+
+    if (normalized === "true") {
+      return ["loopback", "linklocal", "uniquelocal"];
+    }
+
+    return value
+      .split(",")
+      .map((proxy) => proxy.trim())
+      .filter(Boolean);
+  });
 
 const serverEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
@@ -77,6 +99,7 @@ const voiceGatewayEnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   DEPLOYMENT_MODE: deploymentModeSchema.default("development"),
   PORT: z.coerce.number().default(3001),
+  VOICE_GATEWAY_TRUST_PROXY: trustProxyEnvSchema,
   VOICE_GATEWAY_BASE_URL: z.string().url(),
   CONVEX_SITE_URL: z.string().url(),
   INTERNAL_SERVICE_TOKEN: z.string().min(1),
@@ -93,6 +116,13 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
+  WEB_CALL_ALLOWED_ORIGINS: z.string().default("https://lobbystack.com"),
+  WEB_CALL_MAX_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(MAX_WEB_CALL_MAX_DURATION_MS)
+    .default(DEFAULT_WEB_CALL_MAX_DURATION_MS),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   POSTHOG_KEY: z.string().optional(),

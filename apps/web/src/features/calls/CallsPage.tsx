@@ -113,6 +113,7 @@ export function getCallRecordingAvailability(call: {
   recordingStorageId?: unknown;
   recordingRetentionStatus?: string;
   disposition?: string;
+  transport?: string;
 }): "ready" | "pending" | "unavailable" {
   if (call.recordingUrl) {
     return "ready";
@@ -124,6 +125,10 @@ export function getCallRecordingAvailability(call: {
 
   if (call.recordingStorageId) {
     return "pending";
+  }
+
+  if (call.transport === "webrtc") {
+    return "unavailable";
   }
 
   const disposition = call.disposition?.trim().toLowerCase() ?? "";

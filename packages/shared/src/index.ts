@@ -6,6 +6,10 @@ export const deploymentModes = [
   "development",
 ] as const satisfies ReadonlyArray<DeploymentMode>;
 
+export const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
+export const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
+export const WEB_CALL_STALE_GRACE_MS = 60 * 1000;
+
 export type BusinessType =
   | "clinic"
   | "repair_shop"

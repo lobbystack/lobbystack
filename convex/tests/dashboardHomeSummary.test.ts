@@ -55,6 +55,54 @@ async function insertContact(
 }
 
 describe("Dashboard home summary", () => {
+  it("does not count stale WebRTC calls as live", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-stale-webrtc");
+    const nowMs = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("calls", {
+        businessId,
+        provider: "openai",
+        providerCallId: "call_stale_webrtc",
+        transport: "webrtc",
+        status: "in_progress",
+        startedAt: new Date(nowMs - 31 * 60 * 1000).toISOString(),
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        provider: "openai",
+        providerCallId: "call_fresh_webrtc",
+        transport: "webrtc",
+        status: "in_progress",
+        startedAt: new Date(nowMs - 5 * 60 * 1000).toISOString(),
+      });
+      await ctx.db.insert("calls", {
+        businessId,
+        provider: "twilio",
+        providerCallId: "CA-live-twilio",
+        transport: "twilio_media_stream",
+        status: "in_progress",
+        startedAt: new Date(nowMs - 31 * 60 * 1000).toISOString(),
+      });
+    });
+
+    const summary = await authed.query(api.dashboard.overview.getHomeSummary, {
+      businessId,
+      locale: HOME_SUMMARY_LOCALE,
+    });
+
+    expect(summary.liveCalls).toBe(2);
+
+    const analytics = await authed.query(api.dashboard.overview.getAnalyticsSummary, {
+      businessId,
+      rangeStartMs: nowMs - 60 * 60 * 1000,
+      rangeEndMs: nowMs + 60 * 60 * 1000,
+    });
+    expect(analytics.outcomes.find((outcome) => outcome.key === "live")?.value).toBe(2);
+    expect(analytics.outcomes.find((outcome) => outcome.key === "missed")?.value).toBe(1);
+  });
+
   it("includes average call duration in the KPI summary", async () => {
     const t = convexTest(schema, convexModules);
     const { businessId, authed } = await seedBusinessMember(t, "dashboard-home-average-duration");

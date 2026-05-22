@@ -38,6 +38,7 @@ fly apps create <your-app-name>
 ```bash
 fly secrets set -a <your-app-name> \
   DEPLOYMENT_MODE=development \
+  VOICE_GATEWAY_TRUST_PROXY=true \
   VOICE_GATEWAY_BASE_URL=https://<your-app-name>.fly.dev \
   CONVEX_SITE_URL=<your-convex-site-url> \
   INTERNAL_SERVICE_TOKEN=<your-internal-service-token> \
@@ -89,6 +90,7 @@ POST https://<your-app-name>.fly.dev/twilio/voice/inbound
 ## Notes
 
 - `DEPLOYMENT_MODE=development` is intentional for the first validation pass. It keeps the current development-only fallbacks while we finish provider validation.
+- `VOICE_GATEWAY_TRUST_PROXY=true` trusts only loopback/link-local/private proxy ranges for client IP derivation. Use an explicit comma-separated CIDR list if your ingress proxy uses public source ranges.
 - If PostHog does not auto-price your configured `OPENAI_REALTIME_MODEL`, set the optional `OPENAI_REALTIME_*_TOKEN_PRICE_USD` secrets so the gateway can emit `$ai_total_cost_usd` from token usage.
 - For voice calls, prefer the explicit text/audio token price secrets over the legacy generic input/output ones so the gateway can price Realtime audio and text buckets accurately.
 - If `input_audio_transcription` is enabled, set the optional `OPENAI_TRANSCRIPTION_*_TOKEN_PRICE_USD` secrets too so the gateway can include separate transcription usage in the per-call OpenAI cost.

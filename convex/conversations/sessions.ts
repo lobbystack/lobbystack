@@ -339,7 +339,7 @@ async function buildSessionSummary(
   }
 
   const normalizedConversationSummary = normalizeSummary(conversation.summary);
-  if (session.channel === "voice" && conversation.currentIntent === "message_taking") {
+  if (session.channel.includes("voice") && conversation.currentIntent === "message_taking") {
     return {
       kind: "message_taking",
       ...(normalizedConversationSummary ? { summary: normalizedConversationSummary } : {}),
@@ -353,7 +353,7 @@ async function buildSessionSummary(
     };
   }
 
-  if (normalizedConversationSummary && session.channel === "voice") {
+  if (normalizedConversationSummary && session.channel.includes("voice")) {
     return {
       kind: "summary",
       summary: normalizedConversationSummary,
@@ -428,7 +428,7 @@ export async function ensureSessionForStoredMessage(
 
   const messageTimestamp = message._creationTime;
 
-  if (input.channel === "voice") {
+  if (input.channel.includes("voice")) {
     if (!input.callId) {
       throw new Error("Voice messages must belong to a call session.");
     }
@@ -526,6 +526,7 @@ export async function ensureVoiceSessionForCall(
     conversationId: Id<"conversations">;
     callId: Id<"calls">;
     startedAt: number;
+    channel?: string;
   },
 ): Promise<Id<"conversation_sessions">> {
   const existing = await ctx.db
@@ -541,7 +542,7 @@ export async function ensureVoiceSessionForCall(
   return await ctx.db.insert("conversation_sessions", {
     businessId: input.businessId,
     conversationId: input.conversationId,
-    channel: "voice",
+    channel: input.channel ?? "voice",
     callId: input.callId,
     status: "active",
     startedAt,

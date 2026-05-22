@@ -122,3 +122,46 @@ export const dashboardAbuseRateLimiter = new RateLimiter(components.rateLimiter,
     period: HOUR,
   },
 });
+
+export const webVoiceAbuseRateLimiter = new RateLimiter(components.rateLimiter, {
+  webVoiceStartGlobalPerMinute: {
+    kind: "fixed window",
+    rate: 120,
+    period: MINUTE,
+  },
+  webVoiceStartPerBusinessPerHour: {
+    kind: "fixed window",
+    rate: 60,
+    period: HOUR,
+  },
+  webVoiceStartPerBusinessPerDay: {
+    kind: "fixed window",
+    rate: 300,
+    period: DAY,
+  },
+  webVoiceStartPerOriginPerTenMinutes: {
+    kind: "fixed window",
+    rate: 30,
+    period: 10 * MINUTE,
+  },
+  webVoiceStartPerIpPerHour: {
+    kind: "fixed window",
+    rate: 5,
+    period: HOUR,
+  },
+  webVoiceStartPerIpPerDay: {
+    kind: "fixed window",
+    rate: 10,
+    period: DAY,
+  },
+  webVoiceStartPerVisitorPerHour: {
+    kind: "fixed window",
+    rate: 5,
+    period: HOUR,
+  },
+  webVoiceStartPerVisitorPerDay: {
+    kind: "fixed window",
+    rate: 10,
+    period: DAY,
+  },
+});

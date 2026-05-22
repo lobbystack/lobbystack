@@ -7,6 +7,7 @@ import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
+import { registerWebCallRoutes } from "../webCall/routes";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import {
   capturePostHogException,
@@ -15,11 +16,12 @@ import {
 import { createSnapshotCache } from "../sessions/snapshotCache";
 
 export function createServer(): ReturnType<typeof Fastify> {
+  const env = loadVoiceGatewayEnv(process.env);
   const server = Fastify({
     logger: true,
+    trustProxy: env.VOICE_GATEWAY_TRUST_PROXY,
   });
 
-  const env = loadVoiceGatewayEnv(process.env);
   const cache = createSnapshotCache();
 
   server.decorate("snapshotCache", cache);
@@ -93,6 +95,7 @@ export function createServer(): ReturnType<typeof Fastify> {
   });
 
   registerVoiceRoutes(server);
+  registerWebCallRoutes(server);
   return server;
 }
 

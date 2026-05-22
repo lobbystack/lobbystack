@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { demoSnapshot } from "@lobbystack/shared";
 
 const {
+  bookVoiceAppointmentMock,
   cancelVoiceAppointmentMock,
   lookupVoiceAppointmentForChangeMock,
   rescheduleVoiceAppointmentMock,
@@ -11,6 +12,7 @@ const {
   verifyVoiceAppointmentChangeOtpMock,
   verifyVoiceAppointmentForChangeMock,
 } = vi.hoisted(() => ({
+  bookVoiceAppointmentMock: vi.fn(),
   cancelVoiceAppointmentMock: vi.fn(),
   lookupVoiceAppointmentForChangeMock: vi.fn(),
   rescheduleVoiceAppointmentMock: vi.fn(),
@@ -21,7 +23,7 @@ const {
 }));
 
 vi.mock("../convex/runtimeClient", () => ({
-  bookVoiceAppointment: vi.fn(),
+  bookVoiceAppointment: bookVoiceAppointmentMock,
   cancelVoiceAppointment: cancelVoiceAppointmentMock,
   checkVoiceAvailability: vi.fn(),
   findVoiceAvailability: vi.fn(),
@@ -36,6 +38,26 @@ vi.mock("../convex/runtimeClient", () => ({
 }));
 
 import { executeVoiceTool } from "./toolExecutor";
+
+describe("executeVoiceTool waitForUser", () => {
+  it("returns a silent wait result for background audio turns", async () => {
+    const result = await executeVoiceTool({
+      toolName: "waitForUser",
+      rawArguments: "{}",
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "+14165550000",
+    });
+
+    expect(result).toEqual({
+      result: {
+        ok: true,
+        action: "wait_for_user",
+      },
+      suppressResponse: true,
+    });
+  });
+});
 
 describe("executeVoiceTool searchKnowledge", () => {
   beforeEach(() => {
@@ -396,6 +418,80 @@ describe("executeVoiceTool appointment changes", () => {
       verificationId: "verification_123",
       code: "123456",
     });
+  });
+});
+
+describe("executeVoiceTool bookings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requires an explicit contact phone for website bookings", async () => {
+    const result = await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+      callerPhone: "web",
+    });
+
+    expect(result.result).toEqual({
+      ok: false,
+      reason: "A contact phone number is required for website voice bookings.",
+    });
+    expect(bookVoiceAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("uses a provided contact phone for website bookings", async () => {
+    bookVoiceAppointmentMock.mockResolvedValue({ ok: true, appointmentId: "appointment_123" });
+
+    const result = await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+        contactPhone: " +14165550123 ",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "web",
+    });
+
+    expect(bookVoiceAppointmentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessId: "business_123",
+        contactPhone: "+14165550123",
+      }),
+    );
+    expect(result.result).toEqual({ ok: true, appointmentId: "appointment_123" });
+  });
+
+  it("passes the web voice channel when booking from a website call", async () => {
+    bookVoiceAppointmentMock.mockResolvedValue({ ok: true, appointmentId: "appointment_123" });
+
+    await executeVoiceTool({
+      toolName: "bookAppointment",
+      rawArguments: JSON.stringify({
+        serviceName: "Consultation",
+        startsAt: "2030-05-15T14:00:00.000Z",
+        contactPhone: "+14165550123",
+      }),
+      snapshot: demoSnapshot,
+      businessId: "business_123",
+      callerPhone: "web",
+      channel: "web_voice",
+    });
+
+    expect(bookVoiceAppointmentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "web_voice",
+      }),
+    );
   });
 });
 

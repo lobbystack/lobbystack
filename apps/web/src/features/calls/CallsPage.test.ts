@@ -44,6 +44,16 @@ describe("getCallRecordingAvailability", () => {
     ).toBe("pending");
   });
 
+  it("does not show web calls without uploaded recordings as pending", () => {
+    expect(
+      getCallRecordingAvailability({
+        recordingUrl: null,
+        disposition: "caller_finished",
+        transport: "webrtc",
+      }),
+    ).toBe("unavailable");
+  });
+
   it("marks expired retained recordings as unavailable", () => {
     expect(
       getCallRecordingAvailability({

@@ -10,6 +10,7 @@ primary_region = "iad"
 [env]
   DEPLOYMENT_MODE = "cloud"
   PORT = "3001"
+  VOICE_GATEWAY_TRUST_PROXY = "true"
 
 [http_service]
   internal_port = 3001

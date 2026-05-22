@@ -3,6 +3,7 @@ import { loadVoiceGatewayEnv } from "@lobbystack/config";
 import {
   recordRecordingUploadFailure,
 } from "../observability/posthog";
+import type { BusinessContextSnapshot } from "@lobbystack/shared";
 
 export class RuntimeRequestError extends Error {
   status: number;
@@ -23,6 +24,26 @@ type StartCallResponse = {
   blocked: boolean;
   conversationId?: string;
   contactId: string;
+};
+
+type WebVoiceContextResponse = {
+  businessId: string;
+  snapshot: BusinessContextSnapshot;
+};
+
+type StartWebCallResponse = {
+  businessId: string;
+  callId: string;
+  conversationId: string;
+};
+
+type WebCallRecordingTargetResponse = {
+  callId: string;
+  providerCallId?: string;
+  startedAt: string;
+  endedAt?: string;
+  status: string;
+  webCallMaxDurationMs?: number;
 };
 
 type CheckAvailabilityResponse = {
@@ -184,6 +205,45 @@ export async function startVoiceCall(input: {
   return await postJson<StartCallResponse>("/voice/call/start", input);
 }
 
+export async function fetchWebVoiceContext(input: {
+  businessSlug: string;
+  origin?: string;
+  ipHash?: string;
+  visitorId?: string;
+  widgetId?: string;
+}): Promise<WebVoiceContextResponse> {
+  return await postJson<WebVoiceContextResponse>("/voice/context/by-slug", input);
+}
+
+export async function startWebVoiceCall(input: {
+  businessSlug: string;
+  providerCallId: string;
+  gatewaySessionId?: string;
+  originUrl?: string;
+  userAgent?: string;
+  widgetId?: string;
+  maxDurationMs?: number;
+  startedAt: string;
+}): Promise<StartWebCallResponse> {
+  return await postJson<StartWebCallResponse>("/voice/call/start-web", input);
+}
+
+export async function fetchWebCallRecordingTarget(input: {
+  gatewaySessionId: string;
+}): Promise<WebCallRecordingTargetResponse | null> {
+  try {
+    return await postJson<WebCallRecordingTargetResponse>(
+      "/voice/call/web-recording-target",
+      input,
+    );
+  } catch (error) {
+    if (error instanceof RuntimeRequestError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function appendVoiceTranscript(input: {
   businessId: string;
   callId: string;
@@ -279,6 +339,7 @@ export async function uploadVoiceRecording(input: {
   callId: string;
   durationMs: number;
   audio: Buffer;
+  contentType?: string;
 }): Promise<void> {
   const env = loadVoiceGatewayEnv(process.env);
   const url = new URL("/voice/call/recording", env.CONVEX_SITE_URL);
@@ -286,14 +347,15 @@ export async function uploadVoiceRecording(input: {
   url.searchParams.set("durationMs", String(input.durationMs));
   const bytes = Uint8Array.from(input.audio);
   const arrayBuffer = bytes.buffer as ArrayBuffer;
+  const contentType = input.contentType ?? "audio/wav";
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "audio/wav",
+      "Content-Type": contentType,
       "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
     },
-    body: new Blob([arrayBuffer], { type: "audio/wav" }),
+    body: new Blob([arrayBuffer], { type: contentType }),
   });
 
   if (!response.ok) {
@@ -332,6 +394,7 @@ export async function bookVoiceAppointment(input: {
   serviceName: string;
   startsAt: string;
   timezone: string;
+  channel?: "voice" | "web_voice";
   preferredStaffId?: string;
   conversationId?: string;
   contactName?: string;
@@ -423,6 +486,7 @@ export async function takeVoiceMessage(input: {
   businessId: string;
   callId: string;
   conversationId?: string;
+  channel?: "voice" | "web_voice";
   callerName?: string;
   callbackPhone?: string;
   message: string;

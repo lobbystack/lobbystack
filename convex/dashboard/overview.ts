@@ -1,4 +1,8 @@
 import { v } from "convex/values";
+import {
+  DEFAULT_WEB_CALL_MAX_DURATION_MS,
+  WEB_CALL_STALE_GRACE_MS,
+} from "../../packages/shared/src/index";
 
 import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -289,12 +293,15 @@ function incrementCount(map: Map<string, number>, key: string): void {
   map.set(key, (map.get(key) ?? 0) + 1);
 }
 
-function categorizeCallOutcome(call: Doc<"calls">): "completed" | "live" | "missed" | "transferred" {
+function categorizeCallOutcome(
+  call: Doc<"calls">,
+  nowMs = Date.now(),
+): "completed" | "live" | "missed" | "transferred" {
   if (call.transferState && call.transferState !== "idle") {
     return "transferred";
   }
 
-  if (call.status === "open" || call.status === "in_progress") {
+  if (isCallLiveForDashboard(call, nowMs)) {
     return "live";
   }
 
@@ -321,6 +328,26 @@ function categorizeCallOutcome(call: Doc<"calls">): "completed" | "live" | "miss
   }
 
   return "missed";
+}
+
+export const WEBRTC_LIVE_CALL_GRACE_MS = DEFAULT_WEB_CALL_MAX_DURATION_MS + WEB_CALL_STALE_GRACE_MS;
+
+export function isCallLiveForDashboard(
+  call: Pick<Doc<"calls">, "status" | "transport" | "startedAt" | "webCallMaxDurationMs">,
+  nowMs = Date.now(),
+): boolean {
+  if (call.status !== "in_progress" && call.status !== "open") {
+    return false;
+  }
+
+  if (call.transport !== "webrtc") {
+    return true;
+  }
+
+  const startedAtMs = Date.parse(call.startedAt);
+  const liveGraceMs = (call.webCallMaxDurationMs ?? DEFAULT_WEB_CALL_MAX_DURATION_MS) +
+    WEB_CALL_STALE_GRACE_MS;
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs <= liveGraceMs;
 }
 
 function categorizeConversationChannel(channel: string): "voice" | "sms" | "other" {
@@ -514,9 +541,8 @@ export const getHomeSummary = query({
         }),
     );
 
-    const liveCalls = calls.filter(
-      (call) => call.status === "in_progress" || call.status === "open",
-    ).length;
+    const nowMs = now.getTime();
+    const liveCalls = calls.filter((call) => isCallLiveForDashboard(call, nowMs)).length;
 
     const actionRequiredFromVoice = dedupeVoiceFollowUpItems(
       openVoiceFollowUpItems.slice().sort((left, right) => right._creationTime - left._creationTime),
@@ -818,8 +844,9 @@ export const getAnalyticsSummary = query({
       missed: 0,
       transferred: 0,
     };
+    const nowMs = now.getTime();
     for (const call of currentWeekCalls) {
-      outcomes[categorizeCallOutcome(call)] += 1;
+      outcomes[categorizeCallOutcome(call, nowMs)] += 1;
     }
 
     const conversationChannels = new Map(

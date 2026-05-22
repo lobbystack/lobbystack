@@ -12,6 +12,7 @@ import {
   shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
+  createRealtimeTurnDetectionConfig,
   estimateRealtimeTotalCostUsd,
   getImplicitEndCallForAssistantTranscript,
   getRealtimeGenerationOutcome,
@@ -21,6 +22,37 @@ import {
   shouldSkipImplicitEndCallResponseDone,
   shouldUseAssistantFinalMessageForToolEndCall,
 } from "./mediaStream";
+
+describe("createRealtimeTurnDetectionConfig", () => {
+  it("can disable auto responses and interruptions during the opening greeting", () => {
+    expect(
+      createRealtimeTurnDetectionConfig(30_000, {
+        createResponse: false,
+        interruptResponse: false,
+      }),
+    ).toEqual({
+      type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
+      create_response: false,
+      interrupt_response: false,
+      idle_timeout_ms: 30_000,
+    });
+  });
+
+  it("defaults to normal caller turn handling after the greeting", () => {
+    expect(createRealtimeTurnDetectionConfig(30_000)).toEqual({
+      type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
+      create_response: true,
+      interrupt_response: true,
+      idle_timeout_ms: 30_000,
+    });
+  });
+});
 
 describe("estimateRealtimeTotalCostUsd", () => {
   it("prefers provider-reported total cost when available", () => {

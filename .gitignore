@@ -6,6 +6,7 @@
 coverage
 dist
 node_modules
+.pnpm-store/
 *.log
 .env
 .env.*
