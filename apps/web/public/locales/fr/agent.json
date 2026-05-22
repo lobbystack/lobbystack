@@ -103,6 +103,7 @@
       "documentBadge": "Document",
       "textBadge": "Texte",
       "emptyState": "Aucun service ajouté pour le moment.",
+      "durationValue": "Rendez-vous de {{count}} min",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
@@ -135,6 +136,15 @@
           "label": "Contenu",
           "placeholder": "Une consultation de 30 minutes pour comprendre les besoins de l'appelant et recommander la bonne suite.",
           "hint": "Décrivez le service pour que le réceptionniste puisse l'expliquer clairement."
+        },
+        "duration": {
+          "label": "Durée",
+          "placeholder": "30",
+          "hint": "Durée du rendez-vous en minutes pour vérifier les disponibilités."
+        },
+        "active": {
+          "label": "Réservable",
+          "hint": "Seuls les services réservables sont proposés pendant les appels."
         },
         "tags": {
           "label": "Mots-clés (optionnel)",
