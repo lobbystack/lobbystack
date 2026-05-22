@@ -152,6 +152,7 @@ const bookAppointmentSchema = z.object({
   preferredStaffId: z.string().optional(),
   contactName: z.string().optional(),
   contactPhone: z.string().optional(),
+  smsConsentGranted: z.boolean(),
 });
 
 const verifyAppointmentForChangeSchema = z.object({
@@ -402,6 +403,7 @@ export async function executeVoiceTool(input: {
             : {}),
           ...(parsed.contactName !== undefined ? { contactName: parsed.contactName } : {}),
           contactPhone: contactPhone ?? input.callerPhone,
+          smsConsentGranted: parsed.smsConsentGranted,
         });
         return {
           result,

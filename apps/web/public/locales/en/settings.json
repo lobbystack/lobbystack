@@ -634,6 +634,12 @@
         "title": "Send time",
         "description": "The time of day your daily summary will be sent."
       }
+    },
+    "smsConsent": {
+      "title": "Enable SMS alerts",
+      "description": "Confirm that you want LobbyStack to send workspace alerts to your verified phone number.",
+      "cancel": "Cancel",
+      "accept": "I agree, enable SMS"
     }
   }
 }

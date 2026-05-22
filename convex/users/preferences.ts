@@ -18,6 +18,11 @@ import {
   type OperatorNotificationChannel,
   type OperatorNotificationEventPreferences,
 } from "../lib/operatorNotificationPreferences";
+import {
+  OPERATOR_SMS_DISCLOSURE_TEXT,
+  OPERATOR_SMS_DISCLOSURE_VERSION,
+} from "../lib/smsConsent";
+import { recordSmsConsentEvent } from "../lib/smsConsentState";
 
 import { observedAction as action } from "../telemetry/observedFunctions";
 const localeValidator = v.union(v.literal("en"), v.literal("fr"));
@@ -35,6 +40,9 @@ type NotificationPreferencesPayload = {
   phoneVerified: boolean;
   canUseSms: boolean;
   smsUnavailableReason: SmsUnavailableReason;
+  smsConsentGranted: boolean;
+  smsConsentDisclosureVersion: string;
+  smsConsentDisclosureText: string;
 };
 
 type NotificationActionContext = {
@@ -82,13 +90,21 @@ function resolveNotificationPreferencesPayload(input: {
 }): NotificationPreferencesPayload {
   const phoneVerified = Boolean(input.user.phone && input.user.phoneVerificationTime);
   const canUseSms = input.smsUnavailableReason === null;
+  const grantedAt = input.preferences?.smsConsentGrantedAt;
+  const revokedAt = input.preferences?.smsConsentRevokedAt;
+  const smsConsentGranted = Boolean(
+    grantedAt &&
+      input.preferences?.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION &&
+      (!revokedAt || revokedAt < grantedAt),
+  );
+  const canSendSms = canUseSms && smsConsentGranted;
   const eventPreferences =
     input.preferences?.eventPreferences ?? buildDefaultOperatorNotificationEventPreferences();
 
   return {
     emailEnabled: input.preferences?.emailEnabled ?? true,
-    smsEnabled: canUseSms ? (input.preferences?.smsEnabled ?? false) : false,
-    eventPreferences: canUseSms
+    smsEnabled: canSendSms ? (input.preferences?.smsEnabled ?? false) : false,
+    eventPreferences: canSendSms
       ? eventPreferences
       : {
           voiceMessage: { ...eventPreferences.voiceMessage, sms: false },
@@ -106,6 +122,9 @@ function resolveNotificationPreferencesPayload(input: {
     phoneVerified,
     canUseSms,
     smsUnavailableReason: input.smsUnavailableReason,
+    smsConsentGranted,
+    smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION,
+    smsConsentDisclosureText: OPERATOR_SMS_DISCLOSURE_TEXT,
   };
 }
 
@@ -113,12 +132,15 @@ function assertSmsPreferencesAllowed(input: {
   smsUnavailableReason: SmsUnavailableReason;
   smsEnabled: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
+  smsConsentGranted: boolean;
+  smsConsentAccepted?: boolean;
 }) {
-  if (
-    input.smsUnavailableReason !== null &&
-    (input.smsEnabled || hasEnabledSmsEventPreference(input.eventPreferences))
-  ) {
+  const requestedSms = input.smsEnabled || hasEnabledSmsEventPreference(input.eventPreferences);
+  if (input.smsUnavailableReason !== null && requestedSms) {
     throw new Error(getSmsPreferenceErrorMessage(input.smsUnavailableReason));
+  }
+  if (requestedSms && !input.smsConsentGranted && input.smsConsentAccepted !== true) {
+    throw new Error("SMS notification consent is required before enabling SMS alerts.");
   }
 }
 
@@ -224,6 +246,7 @@ export const updateNotificationPreferences = mutation({
     eventPreferences: operatorNotificationEventPreferencesValidator,
     dailySummaryEnabled: v.boolean(),
     dailySummarySendTime: v.string(),
+    smsConsentAccepted: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<NotificationPreferencesPayload> => {
     const user = await ensureCurrentUser(ctx);
@@ -240,25 +263,56 @@ export const updateNotificationPreferences = mutation({
       args.dailySummarySendTime,
     );
 
-    assertSmsPreferencesAllowed({
-      smsUnavailableReason,
-      smsEnabled: args.smsEnabled,
-      eventPreferences: args.eventPreferences,
-    });
-
     const existing = await ctx.db
       .query("operator_notification_preferences")
       .withIndex("by_business_id_and_user_id", (q) =>
         q.eq("businessId", args.businessId).eq("userId", user._id),
       )
       .unique();
+    const existingGrantedAt = existing?.smsConsentGrantedAt;
+    const existingRevokedAt = existing?.smsConsentRevokedAt;
+    const existingSmsConsentGranted = Boolean(
+      existingGrantedAt &&
+        existing?.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION &&
+        (!existingRevokedAt || existingRevokedAt < existingGrantedAt),
+    );
+
+    assertSmsPreferencesAllowed({
+      smsUnavailableReason,
+      smsEnabled: args.smsEnabled,
+      eventPreferences: args.eventPreferences,
+      smsConsentGranted: existingSmsConsentGranted,
+      ...(args.smsConsentAccepted !== undefined
+        ? { smsConsentAccepted: args.smsConsentAccepted }
+        : {}),
+    });
+    const now = new Date().toISOString();
+    const requestedSms = args.smsEnabled || hasEnabledSmsEventPreference(args.eventPreferences);
+    const consentGrantPatch =
+      requestedSms && args.smsConsentAccepted === true
+        ? {
+            smsConsentGrantedAt: now,
+            smsConsentSource: "operator_notification_settings",
+            smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION,
+          }
+        : {};
+    const consentRevokePatch =
+      existing?.smsEnabled === true && args.smsEnabled === false
+        ? {
+            smsConsentRevokedAt: now,
+            smsConsentSource: "operator_notification_settings",
+            smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION,
+          }
+        : {};
     const patch = {
       emailEnabled: args.emailEnabled,
       smsEnabled: args.smsEnabled,
       eventPreferences: args.eventPreferences,
       dailySummaryEnabled: args.dailySummaryEnabled,
       dailySummarySendTime,
-      updatedAt: new Date().toISOString(),
+      ...consentGrantPatch,
+      ...consentRevokePatch,
+      updatedAt: now,
     };
 
     if (existing) {
@@ -271,14 +325,44 @@ export const updateNotificationPreferences = mutation({
       });
     }
 
-    return {
-      ...patch,
-      email: user.email ?? null,
-      phone: user.phone ?? null,
-      phoneVerified: Boolean(user.phone && user.phoneVerificationTime),
-      canUseSms: smsUnavailableReason === null,
+    if (user.phone && requestedSms && args.smsConsentAccepted === true) {
+      await recordSmsConsentEvent(ctx, {
+        businessId: args.businessId,
+        userId: user._id,
+        recipientType: "operator",
+        phone: user.phone,
+        action: "granted",
+        source: "operator_notification_settings",
+        disclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION,
+        disclosureText: OPERATOR_SMS_DISCLOSURE_TEXT,
+        createdAt: now,
+      });
+    }
+    if (user.phone && existing?.smsEnabled === true && args.smsEnabled === false) {
+      await recordSmsConsentEvent(ctx, {
+        businessId: args.businessId,
+        userId: user._id,
+        recipientType: "operator",
+        phone: user.phone,
+        action: "revoked",
+        source: "operator_notification_settings",
+        disclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION,
+        disclosureText: OPERATOR_SMS_DISCLOSURE_TEXT,
+        createdAt: now,
+      });
+    }
+
+    return resolveNotificationPreferencesPayload({
+      user,
+      preferences: existing
+        ? ({ ...existing, ...patch } as Doc<"operator_notification_preferences">)
+        : ({
+            businessId: args.businessId,
+            userId: user._id,
+            ...patch,
+          } as Doc<"operator_notification_preferences">),
       smsUnavailableReason,
-    };
+    });
   },
 });
 

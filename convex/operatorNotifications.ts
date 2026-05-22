@@ -22,6 +22,11 @@ import {
   type OperatorNotificationEventPreferences,
 } from "./lib/operatorNotificationPreferences";
 import {
+  ALERT_SMS_COMPLIANCE_FOOTER,
+  OPERATOR_SMS_DISCLOSURE_VERSION,
+} from "./lib/smsConsent";
+import { isPlatformAlertSmsOptedOut } from "./lib/smsConsentState";
+import {
   getMessageContentExpiresAt,
   scheduleOperatorNotificationDeliveryContentExpiration,
 } from "./privacy/retention";
@@ -29,6 +34,7 @@ import {
 type EffectivePreferences = {
   emailEnabled: boolean;
   smsEnabled: boolean;
+  smsConsentGranted: boolean;
   eventPreferences: OperatorNotificationEventPreferences;
   dailySummaryEnabled: boolean;
   dailySummarySendTime: string;
@@ -76,6 +82,12 @@ function getEffectivePreferences(
   return {
     emailEnabled: preferences?.emailEnabled ?? true,
     smsEnabled: preferences?.smsEnabled ?? false,
+    smsConsentGranted: Boolean(
+      preferences?.smsConsentGrantedAt &&
+        preferences.smsConsentDisclosureVersion === OPERATOR_SMS_DISCLOSURE_VERSION &&
+        (!preferences.smsConsentRevokedAt ||
+          preferences.smsConsentRevokedAt < preferences.smsConsentGrantedAt),
+    ),
     eventPreferences:
       preferences?.eventPreferences ?? buildDefaultOperatorNotificationEventPreferences(),
     dailySummaryEnabled: preferences?.dailySummaryEnabled ?? true,
@@ -111,11 +123,13 @@ function buildOperatorSmsBody(input: {
   subject: string;
   body: string;
 }): string {
-  const body = `${input.subject}\n${input.body}`.trim();
+  const content = `${input.subject}\n${input.body}`.trim();
+  const body = `${content}\n${ALERT_SMS_COMPLIANCE_FOOTER}`.trim();
   if (body.length <= 600) {
     return body;
   }
-  return `${body.slice(0, 597)}...`;
+  const maxContentLength = Math.max(0, 600 - ALERT_SMS_COMPLIANCE_FOOTER.length - 4);
+  return `${content.slice(0, maxContentLength)}...\n${ALERT_SMS_COMPLIANCE_FOOTER}`;
 }
 
 function estimateSmsSegments(body: string): number {
@@ -219,6 +233,15 @@ function hasAlertSmsSender(input: {
   return Boolean(input.fromPhoneNumber || input.twilioMessagingServiceSid);
 }
 
+export const isPlatformAlertPhoneOptedOut = internalQuery({
+  args: {
+    phone: v.string(),
+  },
+  handler: async (ctx, args): Promise<boolean> => {
+    return await isPlatformAlertSmsOptedOut(ctx, args.phone);
+  },
+});
+
 export const listRecipientsForEvent = internalQuery({
   args: {
     businessId: v.id("businesses"),
@@ -267,6 +290,8 @@ export const listRecipientsForEvent = internalQuery({
       const smsEnabled =
         alertSmsSenderConfigured &&
         Boolean(user.phone && user.phoneVerificationTime) &&
+        effective.smsConsentGranted &&
+        !(user.phone ? await isPlatformAlertSmsOptedOut(ctx, user.phone) : false) &&
         isEventPreferenceEnabled(effective, args.eventKind, "sms");
 
       if (!emailEnabled && !smsEnabled) {
@@ -322,6 +347,22 @@ export const getDirectRecipient = internalQuery({
     }
     if (args.channel === "sms" && (!user.phone || !user.phoneVerificationTime)) {
       return null;
+    }
+    if (args.channel === "sms") {
+      const phone = user.phone;
+      if (!phone) {
+        return null;
+      }
+      const preference = await ctx.db
+        .query("operator_notification_preferences")
+        .withIndex("by_business_id_and_user_id", (q) =>
+          q.eq("businessId", args.businessId).eq("userId", args.userId),
+        )
+        .unique();
+      const effective = getEffectivePreferences(preference);
+      if (!effective.smsConsentGranted || await isPlatformAlertSmsOptedOut(ctx, phone)) {
+        return null;
+      }
     }
 
     return {
@@ -575,6 +616,13 @@ async function deliverSms(
   }
   if (!smsPolicy.fromPhoneNumber && !smsPolicy.twilioMessagingServiceSid) {
     throw new Error("No alert SMS sender is configured.");
+  }
+  const optedOut: boolean = await ctx.runQuery(
+    internal.operatorNotifications.isPlatformAlertPhoneOptedOut,
+    { phone: input.to },
+  );
+  if (optedOut) {
+    throw new Error("Recipient has opted out of SMS alerts.");
   }
 
   const body = buildOperatorSmsBody({ subject: input.subject, body: input.body });

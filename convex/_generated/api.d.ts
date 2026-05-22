@@ -76,6 +76,8 @@ import type * as lib_runtimeLocale from "../lib/runtimeLocale.js";
 import type * as lib_serviceNameGeneration from "../lib/serviceNameGeneration.js";
 import type * as lib_serviceNames from "../lib/serviceNames.js";
 import type * as lib_smsCompliance from "../lib/smsCompliance.js";
+import type * as lib_smsConsent from "../lib/smsConsent.js";
+import type * as lib_smsConsentState from "../lib/smsConsentState.js";
 import type * as lib_smsPhoneNumbers from "../lib/smsPhoneNumbers.js";
 import type * as lib_snapshot from "../lib/snapshot.js";
 import type * as lib_turnstile from "../lib/turnstile.js";
@@ -185,6 +187,8 @@ declare const fullApi: ApiFromModules<{
   "lib/serviceNameGeneration": typeof lib_serviceNameGeneration;
   "lib/serviceNames": typeof lib_serviceNames;
   "lib/smsCompliance": typeof lib_smsCompliance;
+  "lib/smsConsent": typeof lib_smsConsent;
+  "lib/smsConsentState": typeof lib_smsConsentState;
   "lib/smsPhoneNumbers": typeof lib_smsPhoneNumbers;
   "lib/snapshot": typeof lib_snapshot;
   "lib/turnstile": typeof lib_turnstile;

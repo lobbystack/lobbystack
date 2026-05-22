@@ -22,6 +22,11 @@ import {
 import { selectSmsSenderPhoneNumber } from "../lib/smsPhoneNumbers";
 import { mapTwilioStatusToMessageStatus } from "../lib/twilioMessageStatus";
 import { buildTwilioSmsStatusCallbackUrl } from "../lib/twilioUrls";
+import { PLATFORM_ALERT_SMS_SCOPE } from "../lib/smsConsent";
+import {
+  recordPlatformAlertSmsConsentState,
+  recordSmsConsentEvent,
+} from "../lib/smsConsentState";
 import {
   enqueuePostHogProviderExceptionBestEffort,
   enqueuePostHogOutboxRecord,
@@ -156,8 +161,8 @@ type HandleTwilioSmsInboundArgs = {
   media?: Array<MessageMediaAttachment>;
 };
 type HandleTwilioSmsInboundResult = {
-  businessId: Id<"businesses">;
-  conversationId: Id<"conversations">;
+  businessId?: Id<"businesses">;
+  conversationId?: Id<"conversations">;
   reply: string | null;
 };
 type SmsConsentUpdate = {
@@ -190,7 +195,7 @@ const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUI
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
 const SMS_HELP_KEYWORDS = new Set(["HELP"]);
 const SMS_HELP_REPLY =
-  "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.";
+  "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.";
 const SMS_START_REPLY =
   "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.";
 
@@ -364,6 +369,48 @@ export const getConversationById = internalQuery({
   },
   handler: async (ctx: QueryCtx, args: ConversationIdArgs) => {
     return await ctx.db.get(args.conversationId);
+  },
+});
+
+export const isPlatformAlertSmsSender = internalQuery({
+  args: {
+    e164: v.string(),
+  },
+  handler: async (ctx, args): Promise<boolean> => {
+    const sender = await ctx.db
+      .query("platform_sms_senders")
+      .withIndex("by_e164", (q) => q.eq("e164", args.e164))
+      .unique();
+    const envSender = process.env.TWILIO_ALERT_SMS_FROM?.trim();
+    return Boolean(
+      (sender && sender.role === PLATFORM_ALERT_SMS_SCOPE && sender.status === "active" && sender.smsEnabled) ||
+        (envSender && envSender === args.e164),
+    );
+  },
+});
+
+export const recordPlatformAlertKeywordConsent = internalMutation({
+  args: {
+    phone: v.string(),
+    action: v.union(v.literal("opted_out"), v.literal("resubscribed")),
+    source: v.string(),
+    createdAt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await recordSmsConsentEvent(ctx, {
+      recipientType: "platform_phone",
+      phone: args.phone,
+      action: args.action,
+      source: args.source,
+      createdAt: args.createdAt,
+    });
+    await recordPlatformAlertSmsConsentState(ctx, {
+      phone: args.phone,
+      status: args.action === "opted_out" ? "opted_out" : "subscribed",
+      source: args.source,
+      createdAt: args.createdAt,
+    });
+    return null;
   },
 });
 
@@ -1278,6 +1325,47 @@ export const handleTwilioSmsInbound = internalAction({
     ctx: ActionCtx,
     args: HandleTwilioSmsInboundArgs,
   ): Promise<HandleTwilioSmsInboundResult> => {
+    const isPlatformAlertSender: boolean = await ctx.runQuery(
+      internal.conversations.webhooks.isPlatformAlertSmsSender,
+      { e164: args.to },
+    );
+    if (isPlatformAlertSender) {
+      const consentUpdate = classifySmsConsentUpdate({
+        body: args.body,
+        ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+      });
+      if (consentUpdate) {
+        await ctx.runMutation(
+          internal.conversations.webhooks.recordPlatformAlertKeywordConsent,
+          {
+            phone: args.from,
+            action: consentUpdate.status === "opted_out" ? "opted_out" : "resubscribed",
+            source: consentUpdate.source,
+            createdAt: new Date().toISOString(),
+          },
+        );
+      }
+
+      const keywordReply = classifySmsKeywordReply({
+        body: args.body,
+        ...(args.optOutType !== undefined ? { optOutType: args.optOutType } : {}),
+      });
+      if (keywordReply && consentUpdate?.status !== "opted_out") {
+        const sent: { providerMessageSid: string; providerStatus: string } = await ctx.runAction(
+          internal.integrations.twilioSms.sendMessage,
+          {
+            to: args.from,
+            from: args.to,
+            body: keywordReply.body,
+            statusCallbackUrl: buildTwilioSmsStatusCallbackUrl(),
+          },
+        );
+        return { reply: sent.providerMessageSid };
+      }
+
+      return { reply: null };
+    }
+
     const phoneNumber: Doc<"phone_numbers"> | null = await ctx.runQuery(
       internal.businesses.catalog.resolveBusinessByPhoneNumber,
       { e164: args.to, channel: "sms" },

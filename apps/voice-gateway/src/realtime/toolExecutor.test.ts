@@ -432,6 +432,7 @@ describe("executeVoiceTool bookings", () => {
       rawArguments: JSON.stringify({
         serviceName: "Consultation",
         startsAt: "2030-05-15T14:00:00.000Z",
+        smsConsentGranted: false,
       }),
       snapshot: demoSnapshot,
       businessId: "business_123",
@@ -456,6 +457,7 @@ describe("executeVoiceTool bookings", () => {
         serviceName: "Consultation",
         startsAt: "2030-05-15T14:00:00.000Z",
         contactPhone: " +14165550123 ",
+        smsConsentGranted: true,
       }),
       snapshot: demoSnapshot,
       businessId: "business_123",
@@ -480,6 +482,7 @@ describe("executeVoiceTool bookings", () => {
         serviceName: "Consultation",
         startsAt: "2030-05-15T14:00:00.000Z",
         contactPhone: "+14165550123",
+        smsConsentGranted: true,
       }),
       snapshot: demoSnapshot,
       businessId: "business_123",

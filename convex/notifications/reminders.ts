@@ -21,6 +21,7 @@ import {
   inferRuntimeLocaleFromBusinessContext,
   normalizeRuntimeLocale,
 } from "../lib/runtimeLocale";
+import { isPlatformAlertSmsOptedOut } from "../lib/smsConsentState";
 
 type AppointmentNotificationKind = "appointment_reminder" | "booking_confirmation";
 
@@ -33,13 +34,14 @@ type NotificationDeliveryContext = {
   twilioMessagingServiceSid?: string;
   kind: AppointmentNotificationKind;
   serviceId: Id<"services">;
+  businessName: string;
   serviceName: string;
   startsAt: string;
   timezone: string;
   locale: "en" | "fr";
   senderRole: "platform_alert" | "business_ai";
 } | {
-  deliveryBlockedReason: "sms_opted_out";
+  deliveryBlockedReason: "sms_opted_out" | "sms_consent_missing";
   businessId: Id<"businesses">;
   notificationId: Id<"notifications">;
   appointmentId: Id<"appointments">;
@@ -53,7 +55,7 @@ type DeliverNotificationResult =
     }
   | {
       delivered: false;
-      reason: "sms_opted_out";
+      reason: "sms_opted_out" | "sms_consent_missing";
     };
 
 function isAppointmentNotificationKind(kind: string): kind is AppointmentNotificationKind {
@@ -180,9 +182,19 @@ export const getNotificationDeliveryContext = internalQuery({
     if (!isAppointmentNotificationKind(notification.kind)) {
       throw new Error("Unsupported notification kind.");
     }
-    if (contact.smsConsentStatus === "opted_out") {
+    const platformOptedOut = await isPlatformAlertSmsOptedOut(ctx, contact.phone);
+    if (contact.smsConsentStatus === "opted_out" || platformOptedOut) {
       return {
         deliveryBlockedReason: "sms_opted_out",
+        businessId: notification.businessId,
+        notificationId: notification._id,
+        appointmentId,
+        kind: notification.kind,
+      };
+    }
+    if (contact.smsConsentStatus !== "subscribed") {
+      return {
+        deliveryBlockedReason: "sms_consent_missing",
         businessId: notification.businessId,
         notificationId: notification._id,
         appointmentId,
@@ -223,6 +235,7 @@ export const getNotificationDeliveryContext = internalQuery({
         : {}),
       kind: notification.kind,
       serviceId: service._id,
+      businessName: business.name,
       serviceName: service.name,
       startsAt: appointment.startsAt,
       timezone: appointment.timezone,
@@ -373,6 +386,14 @@ export const createAppointmentNotifications = internalMutation({
     if (appointment.status !== "confirmed") {
       return null;
     }
+    const contact = await ctx.db.get(appointment.contactId);
+    if (
+      !contact ||
+      contact.smsConsentStatus !== "subscribed" ||
+      (await isPlatformAlertSmsOptedOut(ctx, contact.phone))
+    ) {
+      return null;
+    }
     const business = await ctx.db.get(appointment.businessId);
     const senderRole =
       business?.deploymentMode === "cloud" || business?.deploymentMode === "development"
@@ -422,6 +443,17 @@ export const ensureBookingConfirmationNotification = internalMutation({
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment) {
       throw new Error("Appointment not found.");
+    }
+    const contact = await ctx.db.get(appointment.contactId);
+    if (
+      !contact ||
+      contact.smsConsentStatus !== "subscribed" ||
+      (await isPlatformAlertSmsOptedOut(ctx, contact.phone))
+    ) {
+      return {
+        notificationId: null,
+        created: false,
+      };
     }
     const business = await ctx.db.get(appointment.businessId);
     const senderRole =
@@ -503,7 +535,10 @@ export const deliverNotification = internalAction({
       await ctx.runMutation(internal.notifications.reminders.markNotificationDeliverySkipped, {
         notificationId: args.notificationId,
         providerUpdatedAt: new Date().toISOString(),
-        providerStatus: "skipped_opted_out",
+        providerStatus:
+          deliveryContext.deliveryBlockedReason === "sms_opted_out"
+            ? "skipped_opted_out"
+            : "skipped_consent_missing",
       });
       return {
         delivered: false,
@@ -528,6 +563,7 @@ export const deliverNotification = internalAction({
       );
       const body = buildLocalizedAppointmentNotificationBody({
         kind: deliveryContext.kind,
+        businessName: deliveryContext.businessName,
         serviceName: localizedServiceName,
         startsAt: deliveryContext.startsAt,
         timezone: deliveryContext.timezone,
