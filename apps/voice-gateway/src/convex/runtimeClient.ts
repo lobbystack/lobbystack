@@ -39,6 +39,7 @@ type StartWebCallResponse = {
 
 type WebCallRecordingTargetResponse = {
   callId: string;
+  providerCallId?: string;
   startedAt: string;
   endedAt?: string;
   status: string;

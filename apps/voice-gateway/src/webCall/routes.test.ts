@@ -614,6 +614,42 @@ describe("web call routes", () => {
     });
 
     expect(response.statusCode).toBe(204);
+    expect(fetchWebCallRecordingTargetMock).toHaveBeenCalledWith({
+      gatewaySessionId: "session-missing",
+    });
+    expect(completeVoiceCallMock).not.toHaveBeenCalled();
+  });
+
+  it("finalizes durable web calls when the in-memory session is missing", async () => {
+    const startedAtMs = Date.now();
+    fetchWebCallRecordingTargetMock.mockResolvedValueOnce({
+      callId: "call_durable_end",
+      startedAt: new Date(startedAtMs).toISOString(),
+      status: "open",
+    });
+    completeVoiceCallMock.mockResolvedValueOnce(null);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions/session-durable/end",
+      headers: {
+        origin: "https://lobbystack.com",
+      },
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(fetchWebCallRecordingTargetMock).toHaveBeenCalledWith({
+      gatewaySessionId: "session-durable",
+    });
+    expect(completeVoiceCallMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: "call_durable_end",
+        status: "completed",
+        disposition: "caller_finished",
+        providerDurationSeconds: expect.any(Number),
+      }),
+    );
   });
 
   it("hangs up OpenAI and completes the call after the max web call duration", async () => {

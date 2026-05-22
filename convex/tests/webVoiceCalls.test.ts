@@ -176,6 +176,7 @@ describe("web voice calls", () => {
 
     expect(target).toEqual({
       callId: result.callId,
+      providerCallId: "call_openai_recording_target",
       startedAt: "2026-05-20T12:00:00.000Z",
       status: "in_progress",
       webCallMaxDurationMs: 300000,

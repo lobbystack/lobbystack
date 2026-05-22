@@ -245,6 +245,14 @@ function getWebRecordingDurationMs(
   return Math.min(parsedDurationMs, elapsedDurationMs);
 }
 
+function getWebCallDurationSeconds(
+  startedAtMs: number,
+  endedAtMs: number,
+  maxDurationMs: number,
+): number {
+  return Math.max(0, Math.ceil(Math.min(endedAtMs - startedAtMs, maxDurationMs) / 1_000));
+}
+
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
   reply.header("Access-Control-Allow-Origin", origin);
   reply.header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -381,6 +389,47 @@ async function resolveWebCallForRecording(
     startedAtMs,
     ...(completedAtMs !== undefined ? { completedAtMs } : {}),
   };
+}
+
+async function finishDurableWebCallSession(
+  server: FastifyInstance,
+  sessionId: string,
+  disposition: string,
+): Promise<void> {
+  const durable = await fetchWebCallRecordingTarget({ gatewaySessionId: sessionId });
+  if (!durable || durable.endedAt !== undefined) {
+    return;
+  }
+
+  if (durable.status !== "in_progress" && durable.status !== "open") {
+    return;
+  }
+
+  const startedAtMs = Date.parse(durable.startedAt);
+  if (!Number.isFinite(startedAtMs)) {
+    return;
+  }
+
+  const endedAtMs = Date.now();
+  if (durable.providerCallId !== undefined) {
+    await hangupOpenAiRealtimeProviderCall(server, {
+      callId: durable.callId,
+      providerCallId: durable.providerCallId,
+      reason: disposition,
+    });
+  }
+
+  await completeVoiceCall({
+    callId: durable.callId,
+    status: "completed",
+    disposition,
+    endedAt: new Date(endedAtMs).toISOString(),
+    providerDurationSeconds: getWebCallDurationSeconds(
+      startedAtMs,
+      endedAtMs,
+      durable.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+    ),
+  });
 }
 
 async function persistWebTranscriptIfNew(
@@ -1404,6 +1453,7 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
     const session = activeWebCalls.get(request.params.sessionId);
     if (!session) {
+      await finishDurableWebCallSession(server, request.params.sessionId, "caller_finished");
       reply.code(204);
       return null;
     }

@@ -98,6 +98,7 @@ type StartWebCallResult = {
 };
 type WebCallRecordingTarget = {
   callId: Id<"calls">;
+  providerCallId?: string;
   startedAt: string;
   endedAt?: string;
   status: string;
@@ -767,6 +768,7 @@ export const getWebCallRecordingTarget = internalQuery({
 
     return {
       callId: call._id,
+      ...(call.providerCallId !== undefined ? { providerCallId: call.providerCallId } : {}),
       startedAt: call.startedAt,
       ...(call.endedAt !== undefined ? { endedAt: call.endedAt } : {}),
       status: call.status,
