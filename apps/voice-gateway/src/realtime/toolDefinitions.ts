@@ -100,8 +100,13 @@ export function createWebRealtimeToolDefinitions() {
           preferredStaffId: { type: "string" },
           contactName: { type: "string" },
           contactPhone: { type: "string" },
+          smsConsentGranted: {
+            type: "boolean",
+            description:
+              "Whether the caller explicitly agreed to receive appointment confirmation and reminder SMS after the required disclosure.",
+          },
         },
-        required: ["serviceName", "startsAt", "contactPhone"],
+        required: ["serviceName", "startsAt", "contactPhone", "smsConsentGranted"],
         additionalProperties: false,
       },
     },

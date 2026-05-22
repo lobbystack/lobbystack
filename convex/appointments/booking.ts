@@ -15,6 +15,14 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { ensureCurrentUser, requireMembership } from "../lib/auth";
 import { workflowManager } from "../lib/components";
+import {
+  CUSTOMER_APPOINTMENT_SMS_DISCLOSURE_TEXT,
+  CUSTOMER_APPOINTMENT_SMS_DISCLOSURE_VERSION,
+} from "../lib/smsConsent";
+import {
+  isPlatformAlertSmsOptedOut,
+  recordSmsConsentEvent,
+} from "../lib/smsConsentState";
 import { selectDefaultStaffForBusiness } from "../lib/defaultStaff";
 import { computeAvailability } from "../lib/availability";
 import {
@@ -226,6 +234,7 @@ async function bookAppointmentWithSource(
     contactName?: string;
     contactPhone: string;
     sourceChannel: string;
+    smsConsentGranted?: boolean;
   },
 ): Promise<{ appointmentId: Id<"appointments">; contactId: Id<"contacts"> }> {
   try {
@@ -268,6 +277,38 @@ async function bookAppointmentWithSource(
 
     if (!contact) {
       throw new Error("Failed to create contact.");
+    }
+
+    if (args.smsConsentGranted !== undefined) {
+      const now = new Date().toISOString();
+      const source =
+        args.sourceChannel === "web_voice" ? "web_voice_booking" : "voice_booking";
+      const globallyOptedOut = await isPlatformAlertSmsOptedOut(ctx, contact.phone);
+      const hardOptedOut = globallyOptedOut || contact.smsConsentStatus === "opted_out";
+      await recordSmsConsentEvent(ctx, {
+        businessId: args.businessId,
+        contactId: contact._id,
+        recipientType: "contact",
+        phone: contact.phone,
+        action: args.smsConsentGranted ? "granted" : "declined",
+        source,
+        disclosureVersion: CUSTOMER_APPOINTMENT_SMS_DISCLOSURE_VERSION,
+        disclosureText: CUSTOMER_APPOINTMENT_SMS_DISCLOSURE_TEXT,
+        createdAt: now,
+      });
+      await ctx.db.patch(contact._id, {
+        smsConsentStatus: args.smsConsentGranted && !hardOptedOut
+          ? "subscribed"
+          : args.smsConsentGranted
+            ? "opted_out"
+            : "declined",
+        smsConsentUpdatedAt: now,
+        smsConsentSource: hardOptedOut && args.smsConsentGranted
+          ? contact.smsConsentStatus === "opted_out"
+            ? contact.smsConsentSource ?? "contact_opt_out"
+            : "platform_alert_opt_out"
+          : source,
+      });
     }
 
     const selected = availability[0];
@@ -542,6 +583,7 @@ export const bookAppointmentForBusiness = internalMutation({
     contactName: v.optional(v.string()),
     contactPhone: v.string(),
     sourceChannel: v.string(),
+    smsConsentGranted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     return await bookAppointmentWithSource(ctx, args);

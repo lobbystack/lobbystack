@@ -22,6 +22,12 @@ import {
   operatorNotificationEventKindValidator,
   operatorNotificationEventPreferencesValidator,
 } from "./lib/operatorNotificationPreferences";
+import {
+  smsConsentActionValidator,
+  smsConsentRecipientTypeValidator,
+  smsConsentStateScopeValidator,
+  smsConsentStateStatusValidator,
+} from "./lib/smsConsent";
 
 const serviceSummaryValidator = v.object({
   id: v.string(),
@@ -508,6 +514,32 @@ export default defineSchema({
     .index("by_business_id_and_phone", ["businessId", "phone"])
     .index("by_business_id_and_email", ["businessId", "email"]),
 
+  sms_consent_events: defineTable({
+    businessId: v.optional(v.id("businesses")),
+    contactId: v.optional(v.id("contacts")),
+    userId: v.optional(v.id("users")),
+    appointmentId: v.optional(v.id("appointments")),
+    recipientType: smsConsentRecipientTypeValidator,
+    phone: v.string(),
+    action: smsConsentActionValidator,
+    source: v.string(),
+    disclosureVersion: v.optional(v.string()),
+    disclosureText: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_phone_and_created_at", ["phone", "createdAt"])
+    .index("by_business_id_and_created_at", ["businessId", "createdAt"])
+    .index("by_contact_id_and_created_at", ["contactId", "createdAt"])
+    .index("by_user_id_and_created_at", ["userId", "createdAt"]),
+
+  sms_consent_states: defineTable({
+    scope: smsConsentStateScopeValidator,
+    phone: v.string(),
+    status: smsConsentStateStatusValidator,
+    source: v.string(),
+    updatedAt: v.string(),
+  }).index("by_scope_and_phone", ["scope", "phone"]),
+
   conversations: defineTable({
     businessId: v.id("businesses"),
     contactId: v.optional(v.id("contacts")),
@@ -892,6 +924,10 @@ export default defineSchema({
     eventPreferences: operatorNotificationEventPreferencesValidator,
     dailySummaryEnabled: v.boolean(),
     dailySummarySendTime: v.string(),
+    smsConsentGrantedAt: v.optional(v.string()),
+    smsConsentRevokedAt: v.optional(v.string()),
+    smsConsentSource: v.optional(v.string()),
+    smsConsentDisclosureVersion: v.optional(v.string()),
     updatedAt: v.string(),
   })
     .index("by_business_id_and_user_id", ["businessId", "userId"])

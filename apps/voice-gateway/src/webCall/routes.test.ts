@@ -1332,6 +1332,7 @@ describe("web call routes", () => {
             serviceName: "Consultation",
             startsAt: "2030-05-15T14:00:00.000Z",
             contactPhone: "+14165550123",
+            smsConsentGranted: true,
           }),
         }),
       ),

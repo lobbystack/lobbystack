@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { ALERT_SMS_COMPLIANCE_FOOTER } from "./smsConsent";
 
 export type RuntimeLocale = "en" | "fr";
 export type RuntimeLocaleDetection = RuntimeLocale | "unknown";
@@ -405,6 +406,7 @@ export function formatRuntimeTimeList(times: Array<string>, locale: RuntimeLocal
 
 export function buildLocalizedAppointmentNotificationBody(input: {
   kind: "appointment_reminder" | "booking_confirmation";
+  businessName?: string;
   serviceName: string;
   startsAt: string;
   timezone: string;
@@ -415,14 +417,17 @@ export function buildLocalizedAppointmentNotificationBody(input: {
     input.timezone,
     input.locale,
   );
+  const prefix = input.businessName ? `${input.businessName}: ` : "";
 
   if (input.locale === "fr") {
-    return input.kind === "appointment_reminder"
-      ? `Rappel : votre rendez-vous pour ${input.serviceName} est prévu ${formattedTime}. Répondez à ce message si vous devez le reporter.`
-      : `Votre rendez-vous pour ${input.serviceName} est confirmé pour ${formattedTime}. Répondez à ce message si vous devez le reporter.`;
+    const body = input.kind === "appointment_reminder"
+      ? `${prefix}Rappel : votre rendez-vous pour ${input.serviceName} est prévu ${formattedTime}.`
+      : `${prefix}Votre rendez-vous pour ${input.serviceName} est confirmé pour ${formattedTime}.`;
+    return `${body} ${ALERT_SMS_COMPLIANCE_FOOTER}`;
   }
 
-  return input.kind === "appointment_reminder"
-    ? `Reminder: your ${input.serviceName} appointment is ${formattedTime}. Reply if you need to reschedule.`
-    : `Your ${input.serviceName} appointment is booked for ${formattedTime}. Reply if you need to reschedule.`;
+  const body = input.kind === "appointment_reminder"
+    ? `${prefix}Reminder: your ${input.serviceName} appointment is ${formattedTime}.`
+    : `${prefix}Your ${input.serviceName} appointment is confirmed for ${formattedTime}.`;
+  return `${body} ${ALERT_SMS_COMPLIANCE_FOOTER}`;
 }

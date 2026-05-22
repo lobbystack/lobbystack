@@ -5,7 +5,16 @@ import { toast } from "sonner";
 
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Item,
   ItemActions,
@@ -55,6 +64,9 @@ type NotificationPreferencesState = {
   eventPreferences: NotificationEventPreferences;
   dailySummaryEnabled: boolean;
   dailySummarySendTime: string;
+  smsConsentGranted: boolean;
+  smsConsentDisclosureVersion: string;
+  smsConsentDisclosureText: string;
 };
 
 type SmsUnavailableReason = "phone_unverified" | "sender_missing" | null;
@@ -78,6 +90,9 @@ function toPreferenceState(input: NotificationPreferencesState): NotificationPre
     eventPreferences: input.eventPreferences,
     dailySummaryEnabled: input.dailySummaryEnabled,
     dailySummarySendTime: input.dailySummarySendTime,
+    smsConsentGranted: input.smsConsentGranted,
+    smsConsentDisclosureVersion: input.smsConsentDisclosureVersion,
+    smsConsentDisclosureText: input.smsConsentDisclosureText,
   };
 }
 
@@ -94,6 +109,8 @@ export function SettingsNotificationsPage({
   );
   const saveVersionRef = useRef(0);
   const [draft, setDraft] = useState<NotificationPreferencesState | null>(null);
+  const [pendingSmsConsent, setPendingSmsConsent] =
+    useState<NotificationPreferencesState | null>(null);
 
   useEffect(() => {
     if (remotePreferences) {
@@ -116,7 +133,10 @@ export function SettingsNotificationsPage({
     );
   }
 
-  function persistPreferences(next: NotificationPreferencesState): void {
+  function persistPreferences(
+    next: NotificationPreferencesState,
+    options: { smsConsentAccepted?: boolean } = {},
+  ): void {
     const previous = draft;
     if (!previous) {
       return;
@@ -130,10 +150,19 @@ export function SettingsNotificationsPage({
     setDraft(next);
     const saveVersion = saveVersionRef.current + 1;
     saveVersionRef.current = saveVersion;
+    const {
+      smsConsentGranted: _smsConsentGranted,
+      smsConsentDisclosureText: _smsConsentDisclosureText,
+      smsConsentDisclosureVersion: _smsConsentDisclosureVersion,
+      ...persistedPreferences
+    } = next;
 
     void updateNotificationPreferences({
       businessId,
-      ...next,
+      ...persistedPreferences,
+      ...(options.smsConsentAccepted !== undefined
+        ? { smsConsentAccepted: options.smsConsentAccepted }
+        : {}),
     }).catch((error) => {
       if (saveVersionRef.current === saveVersion) {
         setDraft(previous);
@@ -153,10 +182,31 @@ export function SettingsNotificationsPage({
       return;
     }
 
-    persistPreferences({
+    const next = {
       ...draft,
       [channel === "email" ? "emailEnabled" : "smsEnabled"]: checked,
-    });
+    };
+
+    if (channel === "sms" && checked && !draft.smsConsentGranted) {
+      setPendingSmsConsent(next);
+      return;
+    }
+
+    persistPreferences(next);
+  }
+
+  function acceptSmsConsent(): void {
+    if (!pendingSmsConsent) {
+      return;
+    }
+    persistPreferences(
+      {
+        ...pendingSmsConsent,
+        smsConsentGranted: true,
+      },
+      { smsConsentAccepted: true },
+    );
+    setPendingSmsConsent(null);
   }
 
   function handlePrefChange(
@@ -210,7 +260,7 @@ export function SettingsNotificationsPage({
     descriptionKey: string,
   ) => {
     return (
-      <TableRow className="border-b border-border last:border-b-0 hover:bg-transparent">
+      <TableRow key={eventKey} className="border-b border-border last:border-b-0 hover:bg-transparent">
         <TableCell className="whitespace-normal px-6 py-5">
           <div className="flex flex-col gap-1 pr-4">
             <span className="text-sm font-medium text-foreground">{t(titleKey)}</span>
@@ -291,6 +341,7 @@ export function SettingsNotificationsPage({
   }
 
   return (
+    <>
     <div className="w-full overflow-y-auto pb-12">
       <div className="flex w-full flex-col gap-12">
         <div className="flex flex-col gap-4">
@@ -429,5 +480,34 @@ export function SettingsNotificationsPage({
         </div>
       </div>
     </div>
+    <Dialog
+      open={pendingSmsConsent !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setPendingSmsConsent(null);
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("settings:notifications.smsConsent.title")}</DialogTitle>
+          <DialogDescription>
+            {t("settings:notifications.smsConsent.description")}
+          </DialogDescription>
+        </DialogHeader>
+        <p className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-foreground">
+          {draft.smsConsentDisclosureText}
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setPendingSmsConsent(null)}>
+            {t("settings:notifications.smsConsent.cancel")}
+          </Button>
+          <Button onClick={acceptSmsConsent}>
+            {t("settings:notifications.smsConsent.accept")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

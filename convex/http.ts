@@ -166,6 +166,7 @@ const bookAppointmentSchema = z.object({
   conversationId: z.string().min(1).optional(),
   contactName: z.string().min(1).optional(),
   contactPhone: z.string().min(1),
+  smsConsentGranted: z.boolean(),
 });
 
 const lookupAppointmentForChangeSchema = z.object({
@@ -1305,6 +1306,7 @@ http.route({
         : {}),
       ...(body.data.contactName !== undefined ? { contactName: body.data.contactName } : {}),
       contactPhone: body.data.contactPhone,
+      smsConsentGranted: body.data.smsConsentGranted,
     });
 
     return Response.json(result);

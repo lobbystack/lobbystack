@@ -1,58 +1,73 @@
 ---
-title: "SMS, AI replies, and compliance"
-description: "Understand the difference between SMS alerts, AI SMS, manual replies, attachments, opt-out handling, and 10DLC setup."
+title: "SMS alerts and consent"
+description: "How LobbyStack collects consent for outbound appointment and workspace alert SMS."
 ---
 
-LobbyStack has two SMS-related concepts:
+LobbyStack uses one toll-free SMS number for outbound, non-marketing account notifications.
 
-- **Alert SMS**: system-sent SMS notifications, such as appointment confirmations or reminders, subject to the hosted alert SMS usage pool.
-- **AI SMS**: two-way AI-assisted SMS conversations with callers, available as a Pro add-on after setup and compliance approval.
+This number sends:
 
-<Note>
-  Hosted AI SMS is available on Pro with the AI SMS add-on and approved SMS compliance setup.
-</Note>
+- Appointment confirmations and reminders to customers.
+- Workspace alerts to verified operators.
 
-## Manual SMS conversations
+This number does not send marketing, promotions, age-gated content, AI SMS replies, or manual SMS conversations.
 
-The **Messages** page shows SMS conversations linked to contacts. Operators can reply manually to SMS conversations and can attach supported files.
+## Consent model
 
-Messages support:
+LobbyStack collects SMS consent before sending alerts.
 
-- Inbound and outbound SMS history.
-- Manual operator replies.
-- Attachments, including images and documents.
-- Delivery status.
-- Pausing or resuming AI automation for a conversation.
+Appointment customers and operators use the same toll-free number, but they consent in different places.
 
-## AI SMS add-on
+### Appointment customers
 
-AI SMS lets the receptionist respond to inbound text conversations using the same business context used for calls. The add-on is available on Pro and includes a compliance setup step before hosted business-number sending is ready.
+When a customer books by phone, the AI receptionist asks for verbal SMS consent before sending an appointment confirmation or reminder.
 
-Current catalog pricing in the app:
+The disclosure is:
 
-| Item | Price |
-| --- | --- |
-| AI SMS monthly add-on | $5/month |
-| AI SMS setup fee | $19 one time |
-| AI SMS usage | $0.03 per segment |
+> Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.
 
-## SMS compliance
+If the caller says yes, LobbyStack records the opt-in and sends appointment SMS for that phone number.
 
-Hosted AI SMS uses A2P 10DLC compliance setup. In **Settings** > **Billing**, the SMS compliance section collects business identity, contact, address, campaign, sample message, and opt-in information.
+If the caller says no, the appointment is still booked and no appointment SMS is sent.
 
-After compliance approval, LobbyStack can use your hosted business sender for AI SMS conversations.
+### Operators
 
-## Opt-out handling
+Operators are verified workspace users.
 
-LobbyStack tracks SMS consent. STOP-style keywords mark a contact as opted out, and START-style keywords can mark them subscribed again. You can review SMS consent on the contact detail page.
+Before operator workspace alerts are sent by SMS, the operator must enable SMS alerts in **Settings** > **Notifications** and accept the SMS disclosure in the dashboard.
 
-## Related pages
+The operator disclosure is:
 
-<CardGroup cols={2}>
-  <Card title="Messages" icon="message" href="/dashboard/messages">
-    Review SMS conversations, send manual replies, and pause or resume AI handling.
-  </Card>
-  <Card title="Plans and usage" icon="credit-card" href="/billing/usage">
-    See usage pools and metered segment behavior.
-  </Card>
-</CardGroup>
+> I agree to receive SMS alerts from LobbyStack about missed calls, new messages, appointment activity, and workspace notifications at my verified phone number. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help. SMS alerts are optional.
+
+Operators can disable SMS alerts later in notification settings.
+
+## Example messages
+
+Appointment confirmation:
+
+> Example Business: Your haircut appointment is confirmed for May 24 at 2:00 PM. Msg & data rates may apply. Reply STOP to opt out or HELP for help.
+
+Operator alert:
+
+> LobbyStack: New voice message for Example Business. Open your dashboard to review. Msg & data rates may apply. Reply STOP to opt out or HELP for help.
+
+## Opt-out and help
+
+Recipients can reply `STOP` to opt out of future SMS from the toll-free alert number.
+
+Recipients can reply `START` or `SUBSCRIBE` to resubscribe where supported.
+
+Recipients can reply `HELP` for support information.
+
+For help, contact [hello@lobbystack.com](mailto:hello@lobbystack.com) or visit [https://lobbystack.com](https://lobbystack.com).
+
+Message and data rates may apply.
+
+## SMS is optional
+
+SMS alerts are optional.
+
+Customers can book appointments without receiving SMS confirmations or reminders.
+
+Operators can use the dashboard without enabling SMS alerts.

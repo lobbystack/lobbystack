@@ -499,7 +499,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenCalledWith({
       to: "+14165550195",
       from: smsNumber,
-      body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+      body: "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.",
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
 
@@ -522,7 +522,7 @@ describe("Twilio SMS delivery flow", () => {
       expect(contact?.smsConsentStatus).toBeUndefined();
       expect(messages.map((message) => message.direction)).toEqual(["inbound", "outbound"]);
       expect(outbound).toMatchObject({
-        body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+        body: "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.",
         aiGenerated: false,
         providerMessageSid: "SM-outbound-help-reply",
       });
@@ -578,7 +578,7 @@ describe("Twilio SMS delivery flow", () => {
         from: "+14165550196",
         body: "HELP",
         expected:
-          "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+          "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.",
       },
       {
         sid: "SM-inbound-start-no-ai",
@@ -659,7 +659,7 @@ describe("Twilio SMS delivery flow", () => {
     expect(sendTwilioMessageMock).toHaveBeenLastCalledWith({
       to: "+14165550197",
       from: smsNumber,
-      body: "LobbyStack: For help, contact support@lobbystack.com. Reply STOP to opt out.",
+      body: "LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.",
       statusCallback: "https://example.convex.site/twilio/sms/status",
     });
 
@@ -1757,6 +1757,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550155",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -1988,7 +1990,7 @@ describe("Twilio SMS delivery flow", () => {
     const notificationId = await t.run(async (ctx) => {
       const businessId = await ctx.db.insert("businesses", {
         slug: "twilio-notification-gsm-boundary",
-        name: "Twilio Notification GSM Boundary",
+        name: "T",
         timezone: "America/Toronto",
         businessType: "service_company",
         defaultLocale: "en",
@@ -2020,6 +2022,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550158",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -2085,19 +2089,20 @@ describe("Twilio SMS delivery flow", () => {
     const serviceName = "Style AAAAAAAAAAAAAAAAA \ud83e\uddf4";
     const expectedBody = buildLocalizedAppointmentNotificationBody({
       kind: "appointment_reminder",
+      businessName: "T",
       serviceName,
       startsAt: "2026-06-15T15:00:00.000Z",
       timezone: "America/Toronto",
       locale: "en",
     });
 
-    expect(Array.from(expectedBody)).toHaveLength(134);
-    expect(expectedBody.length).toBe(135);
+    expect(Array.from(expectedBody)).toHaveLength(172);
+    expect(expectedBody.length).toBe(173);
 
     const notificationId = await t.run(async (ctx) => {
       const businessId = await ctx.db.insert("businesses", {
         slug: "twilio-notification-unicode-boundary",
-        name: "Twilio Notification Unicode Boundary",
+        name: "T",
         timezone: "America/Toronto",
         businessType: "service_company",
         defaultLocale: "en",
@@ -2129,6 +2134,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550159",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -2197,6 +2204,8 @@ describe("Twilio SMS delivery flow", () => {
         name: "Taylor Customer",
         phone: "+14165550156",
         preferredLocale: "fr",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -2250,7 +2259,7 @@ describe("Twilio SMS delivery flow", () => {
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
+        body: expect.stringContaining("Reply STOP to opt out or HELP for help."),
       }),
     );
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -2289,6 +2298,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550157",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -2342,7 +2353,7 @@ describe("Twilio SMS delivery flow", () => {
     });
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.stringContaining("Répondez à ce message si vous devez le reporter."),
+        body: expect.stringContaining("Reply STOP to opt out or HELP for help."),
       }),
     );
     expect(sendTwilioMessageMock).toHaveBeenCalledWith(
@@ -2371,6 +2382,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550154",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const staffId = await ctx.db.insert("staff", {
         businessId,
@@ -2456,6 +2469,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550153",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const conversationId = await ctx.db.insert("conversations", {
         businessId,
@@ -2554,6 +2569,8 @@ describe("Twilio SMS delivery flow", () => {
         businessId,
         name: "Taylor Customer",
         phone: "+14165550152",
+        smsConsentStatus: "subscribed",
+        smsConsentSource: "voice_booking",
       });
       const conversationId = await ctx.db.insert("conversations", {
         businessId,

@@ -633,6 +633,12 @@
         "title": "Heure d'envoi",
         "description": "L'heure à laquelle votre résumé quotidien sera envoyé."
       }
+    },
+    "smsConsent": {
+      "title": "Activer les alertes SMS",
+      "description": "Confirmez que vous voulez que LobbyStack envoie des alertes de l'espace de travail à votre numéro de téléphone vérifié.",
+      "cancel": "Annuler",
+      "accept": "J'accepte, activer les SMS"
     }
   }
 }
