@@ -36,7 +36,9 @@ const {
   webSocketInstances: [] as Array<{
     close: ReturnType<typeof vi.fn>;
     emit: (event: string, ...args: Array<unknown>) => void;
+    options: unknown;
     send: ReturnType<typeof vi.fn>;
+    url: string | URL;
   }>,
 }));
 
@@ -50,10 +52,14 @@ vi.mock("ws", () => {
       this.readyState = MockWebSocket.CLOSED;
       this.handlers.close?.forEach((handler) => handler());
     });
+    options: unknown;
     send = vi.fn();
+    url: string | URL;
     private handlers: Record<string, Array<(...args: Array<unknown>) => void>> = {};
 
-    constructor() {
+    constructor(url: string | URL, options?: unknown) {
+      this.url = url;
+      this.options = options;
       webSocketInstances.push(this);
     }
 
@@ -75,7 +81,7 @@ vi.mock("ws", () => {
         _head: unknown,
         callback: (socket: MockWebSocket) => void,
       ) => {
-        callback(new MockWebSocket());
+        callback(new MockWebSocket("ws://localhost"));
       },
     );
   }
@@ -350,6 +356,43 @@ describe("web call routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
+  });
+
+  it("connects the web sideband websocket to the returned OpenAI call ID", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(webSocketInstances[0]?.url).toBe(
+      "wss://api.openai.com/v1/realtime?call_id=rtc_test",
+    );
   });
 
   it("returns durable Convex rate limits before starting an OpenAI web call", async () => {
