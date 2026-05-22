@@ -234,14 +234,15 @@ function ServiceDialog({
 
     setIsSaving(true);
     try {
+      const localizedNames =
+        mode === "edit" && service && service.name === name
+          ? service.localizedNames
+          : undefined;
       await upsertService({
         businessId,
         ...(mode === "edit" && service ? { serviceId: service._id } : {}),
         name,
-        localizedNames: {
-          en: service?.localizedNames?.en ?? name,
-          fr: service?.localizedNames?.fr ?? name,
-        },
+        ...(localizedNames !== undefined ? { localizedNames } : {}),
         slug: service?.slug ?? buildServiceSlug(name),
         description: form.description.trim(),
         durationMinutes,
