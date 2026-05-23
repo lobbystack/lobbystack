@@ -35,6 +35,10 @@ vi.mock("@/components/turnstile", async () => {
       props: TurnstileMockProps,
       ref,
     ) {
+      React.useEffect(() => {
+        props.onTokenChange(turnstileTokenMock());
+      }, [props.onTokenChange]);
+
       React.useImperativeHandle(ref, () => ({
         execute: () => {
           const result = turnstileExecuteMock();
@@ -381,9 +385,19 @@ describe("SignupPage", () => {
     expect(screen.queryByText("errors.signupFailed")).toBeNull();
   });
 
-  it("preflights Turnstile after the user fills plausible credentials", async () => {
+  it("renders Turnstile as soon as the signup page loads", async () => {
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("turnstile")).toBeTruthy();
+    expect(turnstileExecuteMock).not.toHaveBeenCalled();
+  });
+
+  it("uses an explicit Turnstile site key when one is configured", async () => {
     vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
-    turnstileExecuteMock.mockReturnValue(true);
 
     render(
       <MemoryRouter>
@@ -391,23 +405,7 @@ describe("SignupPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByTestId("turnstile")).toBeNull();
-
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("signup.email"), "owner@example.com");
-    await user.type(screen.getByLabelText("signup.password"), "abcde1!");
-
-    await new Promise((resolve) => window.setTimeout(resolve, 800));
-
-    expect(screen.queryByTestId("turnstile")).toBeNull();
-    expect(turnstileExecuteMock).not.toHaveBeenCalled();
-
-    await user.type(screen.getByLabelText("signup.password"), "f");
-
-    await waitFor(() => expect(screen.getByTestId("turnstile")).toBeTruthy());
-    await waitFor(() => expect(turnstileExecuteMock).toHaveBeenCalledOnce(), {
-      timeout: 1000,
-    });
+    expect(screen.getByTestId("turnstile")).toBeTruthy();
   });
 
   it("unblocks signup when Turnstile returns without a token during submit", async () => {

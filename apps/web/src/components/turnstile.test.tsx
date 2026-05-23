@@ -1,4 +1,4 @@
-import { act, createRef } from "react";
+import { createRef } from "react";
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -30,31 +30,30 @@ describe("Turnstile", () => {
     delete window.turnstile;
   });
 
-  it("does not reserve widget space before a challenge is needed", async () => {
+  it("keeps widget space reserved while the challenge is mounted", async () => {
     const turnstile = installTurnstileMock();
     const rendered = render(
       <Turnstile onTokenChange={() => {}} siteKey="site-key" />,
     );
     const wrapper = rendered.container.firstElementChild as HTMLElement;
 
-    expect(wrapper.className).toContain("h-0");
-    expect(wrapper.className).toContain("overflow-hidden");
+    expect(wrapper.className).toContain("min-h-[80px]");
 
     await waitFor(() => expect(turnstile.render).toHaveBeenCalledOnce());
 
     expect(turnstile.getRenderOptions()).toMatchObject({
-      appearance: "interaction-only",
-      execution: "execute",
+      appearance: "always",
+      execution: "render",
       "response-field": false,
-      tabindex: -1,
+      size: "flexible",
+      tabindex: 0,
       theme: "auto",
     });
-    expect(wrapper.className).toContain("h-0");
-    expect(wrapper.className).toContain("overflow-hidden");
-    expect(wrapper.hasAttribute("inert")).toBe(true);
+    expect(wrapper.className).toContain("min-h-[80px]");
+    expect(wrapper.hasAttribute("inert")).toBe(false);
   });
 
-  it("reserves widget space only when Turnstile enters interactive mode", async () => {
+  it("executes the rendered widget without hiding the challenge container", async () => {
     const turnstile = installTurnstileMock();
     const turnstileRef = createRef<TurnstileHandle>();
     const rendered = render(
@@ -70,25 +69,7 @@ describe("Turnstile", () => {
     await waitFor(() => {
       expect(turnstile.execute).toHaveBeenCalledWith(widgetContainer);
     });
-    expect(wrapper.className).toContain("h-0");
-    expect(wrapper.className).toContain("overflow-hidden");
-    expect(wrapper.hasAttribute("inert")).toBe(true);
-
-    act(() => {
-      turnstile.getRenderOptions()?.["before-interactive-callback"]?.();
-    });
-
-    await waitFor(() => {
-      expect(wrapper.className).toContain("min-h-[65px]");
-    });
+    expect(wrapper.className).toContain("min-h-[80px]");
     expect(wrapper.hasAttribute("inert")).toBe(false);
-
-    act(() => {
-      turnstile.getRenderOptions()?.["after-interactive-callback"]?.();
-    });
-
-    expect(wrapper.className).toContain("h-0");
-    expect(wrapper.className).toContain("overflow-hidden");
-    expect(wrapper.hasAttribute("inert")).toBe(true);
   });
 });

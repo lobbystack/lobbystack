@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -10,7 +10,6 @@ import { api } from "../../../../../convex/_generated/api";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { LoginForm } from "@/components/login-form";
 import { SignupForm } from "@/components/signup-form";
-import type { TurnstileHandle } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { captureAnalyticsEvent, resetAnalyticsIdentity } from "@/lib/analytics";
@@ -18,6 +17,8 @@ import { isValidEmailAddress, meetsSignupPasswordRequirements } from "@/lib/auth
 import { useObservedAction } from "@/lib/observed-convex";
 
 type AuthErrorFlow = "signIn" | "signUp" | "resetRequest" | "resetVerification";
+
+const DEV_TURNSTILE_SITE_KEY = "0x4AAAAAADKUjCqHD6BIFbWo";
 
 function capturePublicAuthEvent(name: "web.auth.login_succeeded" | "web.auth.signup_succeeded") {
   resetAnalyticsIdentity();
@@ -147,27 +148,20 @@ export function LoginPage() {
 export function SignupPage() {
   const { t } = useTranslation("auth");
   const { signIn } = useAuthActions();
-  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
+  const configuredTurnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
+  const turnstileSiteKey =
+    configuredTurnstileSiteKey || (import.meta.env.DEV ? DEV_TURNSTILE_SITE_KEY : undefined);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle | null>(null);
   const pendingTurnstileSubmitRef = useRef(false);
-  const turnstilePreflightKeyRef = useRef<string | null>(null);
-  const normalizedEmail = email.trim().toLowerCase();
   const isSignupReady = isValidEmailAddress(email) && meetsSignupPasswordRequirements(password);
-  const hasPlausibleSignupCredentials =
-    normalizedEmail.includes("@") && meetsSignupPasswordRequirements(password);
-  const shouldPrepareTurnstile = Boolean(
-    turnstileSiteKey && hasPlausibleSignupCredentials,
-  );
 
   const handleTurnstileError = useCallback(() => {
     pendingTurnstileSubmitRef.current = false;
-    turnstilePreflightKeyRef.current = null;
     setTurnstileToken(null);
     setIsSubmitting(false);
     setErrorMessage(t("errors.turnstileFailed"));
@@ -202,7 +196,6 @@ export function SignupPage() {
       keepSubmitting = true;
       capturePublicAuthEvent("web.auth.signup_succeeded");
     } catch (error) {
-      turnstilePreflightKeyRef.current = null;
       setTurnstileToken(null);
       setTurnstileResetKey((current) => current + 1);
       setErrorMessage(getAuthErrorMessage(error, "signUp", t));
@@ -217,7 +210,6 @@ export function SignupPage() {
     (token: string | null) => {
       setTurnstileToken(token);
       if (!token) {
-        turnstilePreflightKeyRef.current = null;
         if (pendingTurnstileSubmitRef.current) {
           pendingTurnstileSubmitRef.current = false;
           setIsSubmitting(false);
@@ -234,35 +226,11 @@ export function SignupPage() {
     [submitSignUp, t],
   );
 
-  useEffect(() => {
-    if (!shouldPrepareTurnstile || turnstileToken || isSubmitting) {
-      return;
-    }
-
-    const preflightKey = `${normalizedEmail}\n${password}`;
-    if (turnstilePreflightKeyRef.current === preflightKey) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      turnstilePreflightKeyRef.current = preflightKey;
-      const started = turnstileRef.current?.execute() ?? false;
-      if (!started) {
-        turnstilePreflightKeyRef.current = null;
-      }
-    }, 700);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isSubmitting, normalizedEmail, password, shouldPrepareTurnstile, turnstileToken]);
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!isValidEmailAddress(email) || !meetsSignupPasswordRequirements(password)) {
       pendingTurnstileSubmitRef.current = false;
-      turnstilePreflightKeyRef.current = null;
       setTurnstileToken(null);
       setErrorMessage(
         isValidEmailAddress(email) ? t("errors.invalidPassword") : t("signup.emailInvalid"),
@@ -270,16 +238,10 @@ export function SignupPage() {
       return;
     }
 
-    if (turnstileSiteKey && hasPlausibleSignupCredentials && !turnstileToken) {
-      setIsSubmitting(true);
+    if (turnstileSiteKey && !turnstileToken) {
       setErrorMessage(null);
       pendingTurnstileSubmitRef.current = true;
-      const started = turnstileRef.current?.execute() ?? false;
-      if (!started) {
-        pendingTurnstileSubmitRef.current = false;
-        setIsSubmitting(false);
-        setErrorMessage(t("errors.turnstileRequired"));
-      }
+      setErrorMessage(t("errors.turnstileRequired"));
       return;
     }
 
@@ -327,8 +289,7 @@ export function SignupPage() {
         onTurnstileTokenChange={handleTurnstileTokenChange}
         password={password}
         turnstileResetKey={turnstileResetKey}
-        turnstileRef={turnstileRef}
-        turnstileSiteKey={shouldPrepareTurnstile ? turnstileSiteKey : undefined}
+        turnstileSiteKey={turnstileSiteKey || undefined}
       />
     </OnboardingShell>
   );

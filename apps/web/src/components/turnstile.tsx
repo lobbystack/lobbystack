@@ -109,7 +109,6 @@ type TurnstileProps = {
   siteKey: string;
   onTokenChange: (token: string | null) => void;
   onError?: (errorCode?: string) => void;
-  onReserveSpaceChange?: (shouldReserveSpace: boolean) => void;
 };
 
 export type TurnstileHandle = {
@@ -117,7 +116,7 @@ export type TurnstileHandle = {
 };
 
 export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Turnstile(
-  { siteKey, onTokenChange, onError, onReserveSpaceChange },
+  { siteKey, onTokenChange, onError },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -126,7 +125,6 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   const executeTimerRef = useRef<number | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
   const onErrorRef = useRef(onError);
-  const [isActive, setIsActive] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
   onTokenChangeRef.current = onTokenChange;
@@ -134,7 +132,6 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
 
   function handleLoadError(error?: unknown): void {
     onTokenChangeRef.current(null);
-    setIsActive(false);
     setErrorCode(error instanceof Error ? error.message : "script-load-failed");
     onErrorRef.current?.();
   }
@@ -150,34 +147,24 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
 
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
-      appearance: "interaction-only",
-      execution: "execute",
+      appearance: "always",
+      execution: "render",
       "response-field": false,
       size: "flexible",
-      tabindex: -1,
+      tabindex: 0,
       theme: "auto",
       callback: (token) => {
-        setIsActive(false);
         onTokenChangeRef.current(token);
       },
       "expired-callback": () => {
-        setIsActive(false);
         onTokenChangeRef.current(null);
       },
       "timeout-callback": () => {
-        setIsActive(true);
         onTokenChangeRef.current(null);
-      },
-      "before-interactive-callback": () => {
-        setIsActive(true);
-      },
-      "after-interactive-callback": () => {
-        setIsActive(false);
       },
       "error-callback": (errorCode) => {
         console.warn("Turnstile challenge failed to render.", { errorCode });
         onTokenChangeRef.current(null);
-        setIsActive(false);
         setErrorCode(errorCode ?? "unknown");
         onErrorRef.current?.(errorCode);
         return true;
@@ -208,7 +195,6 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   }
 
   function executeChallenge(): boolean {
-    setIsActive(false);
     setErrorCode(null);
 
     if (!renderWidget()) {
@@ -246,7 +232,6 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
   useEffect(() => {
     let isMounted = true;
 
-    setIsActive(false);
     setErrorCode(null);
     onTokenChangeRef.current(null);
 
@@ -287,32 +272,9 @@ export const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Tu
     };
   }, [siteKey]);
 
-  const shouldShowDevError = Boolean(errorCode && import.meta.env.DEV);
-  const shouldReserveSpace = isActive || shouldShowDevError;
-
-  useEffect(() => {
-    onReserveSpaceChange?.(shouldReserveSpace);
-  }, [onReserveSpaceChange, shouldReserveSpace]);
-
-  useEffect(() => {
-    return () => {
-      onReserveSpaceChange?.(false);
-    };
-  }, [onReserveSpaceChange]);
-
   return (
-    <div
-      inert={shouldReserveSpace ? undefined : true}
-      className={
-        shouldReserveSpace
-          ? "flex min-h-[65px] w-full flex-col items-start justify-center gap-2"
-          : "pointer-events-none h-0 w-full overflow-hidden"
-      }
-    >
-      <div className="h-[65px] w-full min-w-[300px]" ref={containerRef} />
-      {shouldShowDevError ? (
-        <p className="text-sm text-destructive">Turnstile error: {errorCode}</p>
-      ) : null}
+    <div className="flex min-h-[80px] w-full flex-col items-start justify-center gap-2">
+      <div className="min-h-[80px] w-full" ref={containerRef} />
     </div>
   );
 });
