@@ -194,8 +194,8 @@ function parseWebCallSessionRequest(body: unknown):
     return { ok: false, message: "Missing business slug." };
   }
 
-  const sdp = rawSdp?.trim() ?? "";
-  if (!sdp) {
+  const sdp = rawSdp ?? "";
+  if (!sdp.trim()) {
     return { ok: false, message: "Missing SDP offer." };
   }
 
@@ -927,18 +927,28 @@ async function exchangeWebRtcOffer(input: {
   model: string;
   sdp: string;
 }): Promise<{ answerSdp: string; providerCallId: string }> {
-  const response = await fetch(
-    `https://api.openai.com/v1/realtime/calls?model=${encodeURIComponent(input.model)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${input.apiKey}`,
-        "Content-Type": "application/sdp",
-        Accept: "application/sdp",
+  const formData = new FormData();
+  formData.set("sdp", input.sdp);
+  formData.set(
+    "session",
+    JSON.stringify({
+      type: "realtime",
+      model: input.model,
+      audio: {
+        output: {
+          voice: "marin",
+        },
       },
-      body: input.sdp,
-    },
+    }),
   );
+
+  const response = await fetch("https://api.openai.com/v1/realtime/calls", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${input.apiKey}`,
+    },
+    body: formData,
+  });
 
   if (!response.ok) {
     throw new OpenAiWebRtcSetupError({
