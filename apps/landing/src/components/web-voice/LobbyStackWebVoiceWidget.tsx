@@ -6,6 +6,7 @@ const DEFAULT_WEB_CALL_ENDPOINT =
 const DEV_WEB_CALL_ENDPOINT =
   "https://voice-dev.lobbystack.com/web-call/sessions"
 const DEFAULT_BUSINESS_SLUG = "lobbystack-mp35s9y1"
+const DEV_BUSINESS_SLUG = "lobbystack-qa-motd3txq"
 
 function capturePosthog(eventName: string, properties?: Record<string, unknown>) {
   void import("@/lib/posthog").then(({ posthog }) => {
@@ -28,6 +29,10 @@ function getEndpoint() {
 function getBusinessSlug() {
   if (import.meta.env.PUBLIC_WEB_CALL_BUSINESS_SLUG) {
     return import.meta.env.PUBLIC_WEB_CALL_BUSINESS_SLUG
+  }
+
+  if (import.meta.env.DEV) {
+    return DEV_BUSINESS_SLUG
   }
 
   return DEFAULT_BUSINESS_SLUG
