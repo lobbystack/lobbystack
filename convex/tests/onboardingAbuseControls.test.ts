@@ -1,6 +1,6 @@
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../_generated/api";
 import { onboardingRateLimiter } from "../lib/components";
@@ -13,6 +13,8 @@ import { modules } from "../test.setup";
 const { workflowStartMock } = vi.hoisted(() => ({
   workflowStartMock: vi.fn(async () => null),
 }));
+
+const originalDeploymentMode = process.env.DEPLOYMENT_MODE;
 
 vi.mock("../lib/components", async () => {
   const actual = await vi.importActual<typeof import("../lib/components")>("../lib/components");
@@ -36,6 +38,10 @@ beforeEach(() => {
   workflowStartMock.mockClear();
 });
 
+afterEach(() => {
+  process.env.DEPLOYMENT_MODE = originalDeploymentMode;
+});
+
 async function seedBootstrapUser(subject: string) {
   const t = createConvexHarness();
   const userId = await t.run(async (ctx) => {
@@ -49,6 +55,26 @@ async function seedBootstrapUser(subject: string) {
 }
 
 describe("onboarding abuse controls", () => {
+  it("uses the configured deployment mode for bootstrapped businesses", async () => {
+    process.env.DEPLOYMENT_MODE = "cloud";
+
+    const subject = "bootstrap-cloud-deployment-mode";
+    const { t } = await seedBootstrapUser(subject);
+    const authed = t.withIdentity({ subject });
+
+    const result = await authed.mutation(api.businesses.admin.bootstrapBusiness, {
+      name: "Cloud Business",
+      slug: "cloud-business",
+      timezone: "America/Toronto",
+      businessType: "general",
+    });
+
+    await t.run(async (ctx) => {
+      const business = await ctx.db.get(result.businessId);
+      expect(business?.deploymentMode).toBe("cloud");
+    });
+  });
+
   it("reuses an existing same-name bootstrap business for duplicate submissions", async () => {
     const subject = "bootstrap-idempotent";
     const { t, userId } = await seedBootstrapUser(subject);
