@@ -1135,12 +1135,19 @@ export const processGoogleCalendarDisconnectBatch = internalAction({
 
     for (const appointmentId of page.appointmentIds) {
       if (args.phase === "delete") {
-        await ctx.runAction(
-          internal.integrations.googleCalendar.deleteAppointmentEventForDisconnect,
-          {
-            appointmentId,
-          },
-        );
+        try {
+          await ctx.runAction(
+            internal.integrations.googleCalendar.deleteAppointmentEventForDisconnect,
+            {
+              appointmentId,
+            },
+          );
+        } catch (error) {
+          console.warn("Failed to delete Google Calendar event during disconnect.", {
+            appointmentId: String(appointmentId),
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
         continue;
       }
 
