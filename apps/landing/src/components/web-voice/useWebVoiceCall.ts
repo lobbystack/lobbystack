@@ -31,10 +31,6 @@ type WebVoiceRecordingUpload = {
   durationMs: number
 }
 
-type WebVoiceWidgetProof = {
-  widgetProof: string
-}
-
 export const webVoiceStatusLabel: Record<WebVoiceWidgetStatus, string> = {
   idle: "Ready when you are",
   requesting_microphone: "Asking for microphone access",
@@ -85,14 +81,6 @@ function getRecordingMimeType(): string | undefined {
 function getAudioContextConstructor(): typeof AudioContext | null {
   const win = window as Window & { webkitAudioContext?: typeof AudioContext }
   return window.AudioContext ?? win.webkitAudioContext ?? null
-}
-
-function getWidgetProofEndpoint(endpoint: string): string {
-  return endpoint.replace(/\/sessions\/?$/, "/widget-proof")
-}
-
-function usesWidgetProof(endpoint: string): boolean {
-  return endpoint.includes("ai-receptionist-voice-dev-raphael.fly.dev")
 }
 
 function getVisitorId(): string | undefined {
@@ -331,40 +319,6 @@ export function useWebVoiceCall({
     })
   }
 
-  const fetchWidgetProof = async () => {
-    const response = await fetchWithTimeout(getWidgetProofEndpoint(endpoint), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        businessSlug,
-        widgetId,
-      }),
-    })
-
-    if (!response.ok) {
-      const detail = await response
-        .json()
-        .then((body: unknown) =>
-          typeof body === "object" &&
-          body !== null &&
-          "error" in body &&
-          typeof body.error === "string"
-            ? body.error
-            : null
-        )
-        .catch(() => null)
-      throw new Error(
-        detail ?? "The AI receptionist could not verify this website."
-      )
-    }
-
-    const payload = (await response.json()) as WebVoiceWidgetProof
-    if (!payload.widgetProof) {
-      throw new Error("The AI receptionist could not verify this website.")
-    }
-    return payload.widgetProof
-  }
-
   const endRemoteSession = async (
     options: { uploadRecording?: boolean } = {}
   ) => {
@@ -447,9 +401,6 @@ export function useWebVoiceCall({
       })
       localStreamRef.current = localStream
       setStatus("connecting")
-      const widgetProof = usesWidgetProof(endpoint)
-        ? await fetchWidgetProof()
-        : undefined
       const visitorId = getVisitorId()
 
       const peerConnection = new RTCPeerConnection()
@@ -504,7 +455,6 @@ export function useWebVoiceCall({
         body: JSON.stringify({
           businessSlug,
           widgetId,
-          ...(widgetProof ? { widgetProof } : {}),
           visitorId,
           sdp: offer.sdp,
           pageUrl: window.location.href,
