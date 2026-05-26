@@ -22,10 +22,13 @@ describe("buildVoiceSystemPrompt", () => {
       "When a caller asks for a callback or needs a human follow-up that cannot be transferred live, collect the key details and take a callback message for staff.",
     );
     expect(prompt).toContain(
-      "For detailed questions about business policies, pricing, billing, usage, uploaded documents, or long-form knowledge, use the searchKnowledge tool instead of relying only on the summary.",
+      "Use searchKnowledge silently before answering factual questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, uploaded documents, or long-form knowledge unless the exact answer is already in the current conversation or structured snapshot.",
     );
     expect(prompt).toContain(
-      "If knowledge results conflict with a general pricing assumption, follow the knowledge result and say you are not sure rather than inventing details.",
+      "Do not announce that you are searching, checking, or looking something up. Call the tool silently, then answer naturally from the result.",
+    );
+    expect(prompt).toContain(
+      "If retrieved knowledge conflicts with a general assumption, follow the retrieved knowledge. If retrieval finds no answer, say you are not sure rather than inventing details.",
     );
     expect(prompt).toContain("Knowledge digest:");
     expect(prompt).not.toContain("Default conversation language:");
