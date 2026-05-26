@@ -395,6 +395,60 @@ describe("web call routes", () => {
     );
   });
 
+  it("creates OpenAI web calls with multipart SDP and session config", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response("answer-sdp", {
+        status: 200,
+        headers: { location: "/v1/realtime/calls/rtc_test" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0\r\n",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.openai.com/v1/realtime/calls",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Authorization: "Bearer test-openai-key",
+        },
+      }),
+    );
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(requestInit?.body).toBeInstanceOf(FormData);
+    const formData = requestInit?.body as FormData;
+    expect(formData.get("sdp")).toBe("v=0\r\n");
+    expect(JSON.parse(String(formData.get("session")))).toEqual({
+      type: "realtime",
+      model: "gpt-realtime",
+      audio: {
+        output: {
+          voice: "marin",
+        },
+      },
+    });
+  });
+
   it("returns durable Convex rate limits before starting an OpenAI web call", async () => {
     fetchWebVoiceContextMock.mockRejectedValueOnce(
       new runtimeRequestErrorClass({

@@ -7,6 +7,15 @@ type TurnstileSiteverifyResponse = {
   "error-codes"?: Array<string>;
 };
 
+function getVerificationFailureMessage(outcome?: TurnstileSiteverifyResponse): string {
+  const errorCodes = outcome?.["error-codes"];
+  if (!errorCodes || errorCodes.length === 0) {
+    return "Turnstile verification failed.";
+  }
+
+  return `Turnstile verification failed: ${errorCodes.join(", ")}`;
+}
+
 function getStringParam(
   params: Partial<Record<string, Value | undefined>>,
   key: string,
@@ -15,12 +24,20 @@ function getStringParam(
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+function isLocalConvexSiteUrl(): boolean {
+  const siteUrl = process.env.CONVEX_SITE_URL?.trim();
+  return Boolean(
+    siteUrl?.startsWith("http://127.0.0.1:") ||
+      siteUrl?.startsWith("http://localhost:"),
+  );
+}
+
 export async function verifyTurnstileForSignUp(
   params: Partial<Record<string, Value | undefined>>,
 ): Promise<void> {
   const secret = process.env.TURNSTILE_SECRET_KEY?.trim();
   if (!secret) {
-    if (process.env.DEPLOYMENT_MODE === "development" && process.env.NODE_ENV !== "production") {
+    if (isLocalConvexSiteUrl()) {
       return;
     }
 
@@ -34,15 +51,17 @@ export async function verifyTurnstileForSignUp(
     throw new Error("Turnstile verification required.");
   }
 
+  const body = new URLSearchParams({
+    secret,
+    response: token,
+  });
+
   const response = await fetch(TURNSTILE_SITEVERIFY_URL, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify({
-      secret,
-      response: token,
-    }),
+    body,
   });
 
   if (!response.ok) {
@@ -51,6 +70,6 @@ export async function verifyTurnstileForSignUp(
 
   const outcome = (await response.json()) as TurnstileSiteverifyResponse;
   if (outcome.success !== true) {
-    throw new Error("Turnstile verification failed.");
+    throw new Error(getVerificationFailureMessage(outcome));
   }
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, type FormEvent, type Ref } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Turnstile, type TurnstileHandle } from "@/components/turnstile";
+import { Turnstile } from "@/components/turnstile";
 import { isValidEmailAddress } from "@/lib/auth-validation";
 import {
   Field,
@@ -31,7 +31,6 @@ type SignupFormProps = {
   errorMessage: string | null;
   turnstileResetKey?: number;
   turnstileSiteKey?: string;
-  turnstileRef?: Ref<TurnstileHandle>;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -48,7 +47,6 @@ export function SignupForm({
   errorMessage,
   turnstileResetKey = 0,
   turnstileSiteKey,
-  turnstileRef,
   onEmailChange,
   onPasswordChange,
   onSubmit,
@@ -56,8 +54,6 @@ export function SignupForm({
   onTurnstileTokenChange,
 }: SignupFormProps) {
   const { t } = useTranslation("auth");
-  const [shouldReserveTurnstileSpace, setShouldReserveTurnstileSpace] =
-    useState(false);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
   const isEmailInvalid =
@@ -138,25 +134,6 @@ export function SignupForm({
             ) : null}
           </Field>
 
-          {turnstileSiteKey ? (
-            <div
-              className={
-                shouldReserveTurnstileSpace
-                  ? "-mt-1"
-                  : "pointer-events-none absolute left-0 top-0 h-0 w-full overflow-hidden"
-              }
-            >
-              <Turnstile
-                key={turnstileResetKey}
-                ref={turnstileRef}
-                onReserveSpaceChange={setShouldReserveTurnstileSpace}
-                onTokenChange={onTurnstileTokenChange ?? (() => {})}
-                siteKey={turnstileSiteKey}
-                {...(onTurnstileError ? { onError: onTurnstileError } : {})}
-              />
-            </div>
-          ) : null}
-
           {errorMessage ? (
             <div className="flex flex-col gap-2 -mt-1">
               <FieldError>{errorMessage}</FieldError>
@@ -175,6 +152,15 @@ export function SignupForm({
           </Button>
         </FieldGroup>
       </form>
+
+      {turnstileSiteKey ? (
+        <Turnstile
+          key={turnstileResetKey}
+          onTokenChange={onTurnstileTokenChange ?? (() => {})}
+          siteKey={turnstileSiteKey}
+          {...(onTurnstileError ? { onError: onTurnstileError } : {})}
+        />
+      ) : null}
 
       <p className="text-center text-sm text-muted-foreground">
         {t("signup.haveAccount")}{" "}
