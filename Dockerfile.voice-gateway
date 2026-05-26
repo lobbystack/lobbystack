@@ -16,10 +16,15 @@ RUN pnpm deploy --filter @lobbystack/voice-gateway --prod --legacy /prod/voice-g
 FROM node:20-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
+ENV DEPLOYMENT_MODE=self_hosted_standard
+ENV PORT=3001
 WORKDIR /app
 
 COPY --from=build /prod/voice-gateway/ ./
 
 EXPOSE 3001
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=12 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["./node_modules/.bin/tsx", "src/index.ts"]

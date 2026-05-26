@@ -1,0 +1,128 @@
+---
+title: "Docker Compose"
+description: "Run the single-host LobbyStack self-hosted baseline with Convex, the web dashboard, voice gateway, and Caddy."
+---
+
+The Docker Compose path is the official single-host self-hosted baseline. It runs:
+
+- Convex backend and Convex dashboard
+- LobbyStack web dashboard
+- LobbyStack voice gateway
+- Caddy for public HTTPS ingress
+
+<Note>
+  This baseline is production-like for one host, but it is not a high-availability deployment. Postgres, S3/object storage, backups, and multi-node hardening are separate operational steps.
+</Note>
+
+## 1. Prepare the environment
+
+Copy the template and generate local secrets:
+
+```bash
+cp .env.self-hosted.example .env.self-hosted
+pnpm self-hosted:secrets -- --write .env.self-hosted
+```
+
+Edit `.env.self-hosted` and set:
+
+- `APP_HOSTNAME`, `VOICE_HOSTNAME`, `CONVEX_HOSTNAME`, and `CONVEX_SITE_HOSTNAME`
+- `APP_BASE_URL`, `SITE_URL`, `VOICE_GATEWAY_BASE_URL`, `CONVEX_URL`, and `CONVEX_SITE_URL`
+- Twilio and OpenAI credentials for live phone calls
+- Optional provider credentials for Google Calendar, Firecrawl, Gemini, Resend, PostHog, and billing
+
+The web app reads `CONVEX_URL`, `CONVEX_SITE_URL`, and `VITE_*` at build time. Rebuild the web image after changing those values.
+
+## 2. Start Convex
+
+Start the backend and dashboard:
+
+```bash
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d convex-backend convex-dashboard
+```
+
+Generate a Convex admin key:
+
+```bash
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted exec convex-backend ./generate_admin_key.sh
+```
+
+Paste the generated key into `CONVEX_SELF_HOSTED_ADMIN_KEY` in `.env.self-hosted`.
+
+The Convex dashboard is bound to `127.0.0.1:${CONVEX_DASHBOARD_PORT}` by default. Open `http://127.0.0.1:6791` and use the admin key to inspect the deployment.
+
+## 3. Sync Convex environment and deploy functions
+
+Push the app/provider environment into the self-hosted Convex deployment:
+
+```bash
+pnpm self-hosted:convex:env
+```
+
+Deploy LobbyStack Convex functions and components:
+
+```bash
+pnpm self-hosted:convex:deploy
+```
+
+These commands use `CONVEX_SELF_HOSTED_URL` and `CONVEX_SELF_HOSTED_ADMIN_KEY` from `.env.self-hosted`.
+
+## 4. Start the full stack
+
+Build and start the remaining services:
+
+```bash
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build
+```
+
+Verify the local direct-access ports:
+
+```bash
+pnpm self-hosted:verify
+```
+
+The verifier checks:
+
+- web `/healthz`
+- SPA route fallback
+- voice gateway `/health`
+- Convex `/version`
+- Convex dashboard reachability
+- Convex `/voice/context` HTTP action reachability
+
+## Public URLs and webhooks
+
+Point DNS for the four hostnames at the host running Compose. Caddy terminates HTTPS and routes:
+
+| Hostname variable | Service |
+| --- | --- |
+| `APP_HOSTNAME` | LobbyStack web dashboard |
+| `VOICE_HOSTNAME` | Voice gateway |
+| `CONVEX_HOSTNAME` | Convex client/backend URL |
+| `CONVEX_SITE_HOSTNAME` | Convex HTTP actions |
+
+Configure Twilio voice on the business number:
+
+```text
+POST https://<VOICE_HOSTNAME>/twilio/voice/inbound
+```
+
+Configure Twilio SMS callbacks to Convex:
+
+```text
+POST https://<CONVEX_SITE_HOSTNAME>/twilio/sms/inbound
+POST https://<CONVEX_SITE_HOSTNAME>/twilio/sms/status
+```
+
+Google Calendar OAuth should redirect to:
+
+```text
+https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
+```
+
+## Troubleshooting
+
+- If the web app cannot connect to Convex, confirm the built image used the final public `CONVEX_URL` and `CONVEX_SITE_URL`.
+- If voice calls fail before audio starts, check `VOICE_GATEWAY_BASE_URL`, `TWILIO_AUTH_TOKEN`, and the Twilio webhook signature logs.
+- If `/voice/context` returns `401`, `INTERNAL_SERVICE_TOKEN` differs between the voice gateway and Convex env.
+- If `/voice/context` returns `404`, the route is reachable but no matching business phone number or snapshot exists yet.
+- If Convex functions cannot read provider secrets, rerun `pnpm self-hosted:convex:env`.

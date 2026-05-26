@@ -12,6 +12,8 @@ node_modules
 *.log
 .env
 .env.local
+.env.self-hosted
+.env.self-hosted.local
 .env.development.local
 .env.test.local
 apps/web/dist

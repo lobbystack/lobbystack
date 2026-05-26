@@ -132,7 +132,7 @@ mintlify/          public documentation source
 docs/              architecture notes, ADRs, provider docs, and validation notes
 ```
 
-Read the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview) for the provider map and deployment expectations.
+Read the [self-hosting overview](https://docs.lobbystack.com/self-hosting/overview) for the provider map and deployment expectations, or use the [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) for the official single-host baseline.
 
 ## Getting Started
 
@@ -157,6 +157,22 @@ pnpm seed:demo
 ```
 
 Mock providers are part of the default development path, so contributors can exercise flows without live Twilio, OpenAI, calendar, or email credentials. Provider setup notes live in the [docs](https://docs.lobbystack.com/self-hosting/providers).
+
+### Self-Hosted Docker Compose
+
+```bash
+cp .env.self-hosted.example .env.self-hosted
+pnpm self-hosted:secrets -- --write .env.self-hosted
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d convex-backend convex-dashboard
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted exec convex-backend ./generate_admin_key.sh
+# Paste the generated key into CONVEX_SELF_HOSTED_ADMIN_KEY before continuing.
+pnpm self-hosted:convex:env
+pnpm self-hosted:convex:deploy
+docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build
+pnpm self-hosted:verify
+```
+
+See the [Docker Compose self-hosting guide](https://docs.lobbystack.com/self-hosting/docker-compose) before using this path with public DNS and provider credentials.
 
 ## Contributing
 

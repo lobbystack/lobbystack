@@ -3,7 +3,7 @@ title: "Environment variables"
 description: "Key environment variables used by the LobbyStack web app, Convex backend, voice gateway, and optional providers."
 ---
 
-Use the repository's `.env.example` as the source of truth for local setup. This page summarizes the variables operators most often need to understand.
+Use the repository's `.env.example` as the source of truth for local development and `.env.self-hosted.example` as the source of truth for Docker Compose self-hosting. This page summarizes the variables operators most often need to understand.
 
 <Note>
   Secrets such as provider API keys, auth tokens, signing keys, and encryption keys must be configured only in backend or deployment secret stores. Do not expose them through `VITE_` variables.
@@ -21,6 +21,8 @@ Use the repository's `.env.example` as the source of truth for local setup. This
 | `INTERNAL_SERVICE_TOKEN` | Convex, voice gateway | Shared secret for internal HTTP calls between the voice gateway and Convex. |
 | `SESSION_ENCRYPTION_KEY` | Convex | Required for encrypted Google Calendar token storage. |
 | `DEPLOYMENT_MODE` | Convex, voice gateway | Deployment mode label used by runtime and telemetry. |
+
+For Compose self-hosting, use `DEPLOYMENT_MODE=self_hosted_standard` and mirror it into `VITE_DEPLOYMENT_MODE` before rebuilding the web image.
 
 ## Web dashboard build variables
 

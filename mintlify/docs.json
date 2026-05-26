@@ -101,6 +101,7 @@
         "group": "Self-hosting",
         "pages": [
           "self-hosting/overview",
+          "self-hosting/docker-compose",
           "self-hosting/environment-variables",
           "self-hosting/providers"
         ]

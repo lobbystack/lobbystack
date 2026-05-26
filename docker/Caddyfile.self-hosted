@@ -1,0 +1,19 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_HOSTNAME} {
+	reverse_proxy web:8080
+}
+
+{$VOICE_HOSTNAME} {
+	reverse_proxy voice-gateway:3001
+}
+
+{$CONVEX_HOSTNAME} {
+	reverse_proxy convex-backend:3210
+}
+
+{$CONVEX_SITE_HOSTNAME} {
+	reverse_proxy convex-backend:3211
+}
