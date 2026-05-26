@@ -1,0 +1,431 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { FaqAccordion } from "@/components/FaqAccordion"
+import type { SeoLandingPage } from "@/lib/seo-landing-pages"
+import { buttonVariants } from "@/components/ui/button"
+import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { cn } from "@/lib/utils"
+import { ArrowRight, Check } from "lucide-react"
+import { LightModeDashboardMockup } from "@/components/solutions/LightModeDashboardMockup"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+
+interface Props {
+  page: SeoLandingPage
+}
+
+const { page } = Astro.props
+
+const tradeSlugs = [
+  "ai-receptionist-for-plumbers",
+  "ai-receptionist-for-hvac",
+  "ai-receptionist-for-electricians",
+  "ai-receptionist-for-garage-door-repair",
+  "ai-receptionist-for-appliance-repair",
+  "ai-receptionist-for-restoration-companies",
+  "ai-receptionist-for-locksmiths",
+  "after-hours-answering-service-for-contractors",
+]
+const isTradePage = tradeSlugs.includes(page.slug)
+
+const faqJsonLd =
+  page.faqs.length > 0
+    ? faqPageJsonLd({ path: page.path, faqs: page.faqs })
+    : undefined
+---
+
+<Layout
+  seo={{
+    title: page.title,
+    description: page.description,
+    canonicalPath: page.path,
+    image: page.image,
+    imageAlt: page.imageAlt,
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: page.eyebrow, path: page.path },
+      ]),
+      ...(faqJsonLd ? [faqJsonLd] : []),
+    ],
+  }}
+>
+  <Navbar />
+  <main id="main-content" class="min-h-screen bg-background text-foreground">
+    <!-- Hero Section -->
+    <section class="mx-auto max-w-7xl px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
+      <div
+        class={cn(
+          "grid gap-12 lg:items-center",
+          isTradePage
+            ? "mx-auto max-w-3xl text-center"
+            : "lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"
+        )}
+      >
+        <div>
+          <p class="eyebrow-label mb-5">
+            {page.eyebrow}
+          </p>
+          <h1 class="display-heading">
+            {page.h1}
+          </h1>
+          <p class={cn("body-copy mt-6 max-w-[65ch] md:text-lg", isTradePage && "mx-auto")}>
+            {page.intro}
+          </p>
+
+          <div
+            class={cn(
+              "mt-8 flex flex-wrap items-center gap-4",
+              isTradePage && "justify-center"
+            )}
+          >
+            <a
+              href={APP_SIGNUP_URL}
+              class={cn(
+                buttonVariants({ size: "lg" }),
+                "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
+              )}
+            >
+              Try for free
+              <ArrowRight className="ml-1 size-4" />
+            </a>
+            <a
+              href="/pricing/"
+              class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
+            >
+              See pricing
+            </a>
+          </div>
+          <p class="mt-4 text-xs text-muted-foreground">
+            No credit card required. Works with your existing business number.
+          </p>
+        </div>
+
+        {
+          !isTradePage && (
+            <div
+              class={cn(
+                "min-h-[300px] w-full sm:min-h-[380px] lg:min-h-[440px]",
+                page.group === "solution" ? "lg:translate-y-10" : undefined
+              )}
+            >
+              {page.group === "solution" &&
+              [
+                "after-hours-answering-service",
+                "ai-receptionist-for-dental-offices",
+                "ai-receptionist-for-salons-and-spas",
+                "self-hosted-ai-receptionist",
+              ].includes(page.slug) ? (
+                <LightModeDashboardMockup slug={page.slug} />
+              ) : (
+                <div class="h-full w-full overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                  <img
+                    src={page.image}
+                    alt={page.imageAlt}
+                    width="1200"
+                    height="800"
+                    class="aspect-[4/3] h-full w-full object-cover lg:aspect-[1.15/1]"
+                    decoding="async"
+                    fetchpriority="high"
+                  />
+                </div>
+              )}
+            </div>
+          )
+        }
+      </div>
+
+    <!-- Proof Points / Benefits -->
+    <div
+      class="mt-16 grid gap-6 py-12 sm:grid-cols-3"
+    >
+      {
+        page.proofPoints.map((point) => (
+          <div class="flex items-start gap-3.5">
+            <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+              <Check
+                className="size-3.5 text-foreground/80"
+                strokeWidth={2.5}
+              />
+            </div>
+            <p class="text-sm leading-relaxed font-medium text-muted-foreground">
+              {point}
+            </p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- At-a-Glance Comparison Table for Comparison Pages -->
+  {
+    page.group === "comparison" && (
+      <section class="border-t border-border/40 bg-background py-16 md:py-20">
+        <div class="mx-auto max-w-4xl px-6">
+          <h2 class="section-heading mb-10 text-center">
+            At-a-glance comparison
+          </h2>
+          <div class="overflow-x-auto rounded-xl border border-border/70 shadow-[0_10px_30px_rgba(0,0,0,0.01)]">
+            {page.slug === "ai-receptionist-vs-virtual-receptionist" ? (
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-muted/30">
+                    <th class="p-4 font-semibold text-foreground">Operational Factor</th>
+                    <th class="p-4 font-semibold text-foreground">AI Receptionist (LobbyStack)</th>
+                    <th class="p-4 font-semibold text-foreground">Virtual Answering Service</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Pricing & Budgeting</td>
+                    <td class="p-4 text-muted-foreground">Predictable monthly flat rate with large included minute packages</td>
+                    <td class="p-4 text-muted-foreground">Per-minute or tiered fees that can create volatile monthly budgets</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Line Concurrency</td>
+                    <td class="p-4 text-muted-foreground">Unlimited simultaneous calls handled instantly with no hold times</td>
+                    <td class="p-4 text-muted-foreground">One call per agent, resulting in holding queues during call spikes</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Direct CRM Scheduling</td>
+                    <td class="p-4 text-muted-foreground">Seamless live booking following complex calendar constraints</td>
+                    <td class="p-4 text-muted-foreground">Basic message taking or manual entry requiring later confirmation</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Response Speed</td>
+                    <td class="p-4 text-muted-foreground">Instant greeting (under 1 sec) on the first ring, 24/7/365</td>
+                    <td class="p-4 text-muted-foreground">Variable call center answering delays and busy hour queues</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Robocall Screening</td>
+                    <td class="p-4 text-muted-foreground">Automated robocall screening blocks spam before using voice minutes</td>
+                    <td class="p-4 text-muted-foreground">Answering staff manually handle spam, often billed as active time</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Escalations & Handoffs</td>
+                    <td class="p-4 text-muted-foreground">Warm transfer to your phone with live SMS/email summaries & transcript</td>
+                    <td class="p-4 text-muted-foreground">Static email message delivery or blind, contextless call routing</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Setup & Deployment</td>
+                    <td class="p-4 text-muted-foreground">Fast self-serve setup with business rules, knowledge, and calendar context</td>
+                    <td class="p-4 text-muted-foreground">1 to 2 weeks for custom script setup and agent training</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-border bg-muted/30">
+                    <th class="p-4 font-semibold text-foreground">Answering Characteristic</th>
+                    <th class="p-4 font-semibold text-foreground">AI Receptionist (LobbyStack)</th>
+                    <th class="p-4 font-semibold text-foreground">Standard Business Voicemail</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Caller Experience</td>
+                    <td class="p-4 text-muted-foreground">Interactive natural dialogue: asks questions and resolves issues</td>
+                    <td class="p-4 text-muted-foreground">Passive 'record-and-wait' beep: forces callers into phone tag</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Lead Drop-Off Rate</td>
+                    <td class="p-4 text-muted-foreground">Keeps callers actively engaged and committed during the conversation</td>
+                    <td class="p-4 text-muted-foreground">Many cold prospects hang up without leaving useful audio</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Intake & Qualification</td>
+                    <td class="p-4 text-muted-foreground">Collects location, urgency, symptoms, and verified contact info</td>
+                    <td class="p-4 text-muted-foreground">Unstructured messages, often missing critical contact or job details</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Direct Appointment Booking</td>
+                    <td class="p-4 text-muted-foreground">Secures firm bookings on your live calendar immediately on-call</td>
+                    <td class="p-4 text-muted-foreground">Impossible; requires multiple manual callback attempts to schedule</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Emergency Screening</td>
+                    <td class="p-4 text-muted-foreground">Identifies critical issues and initiates immediate warm transfers</td>
+                    <td class="p-4 text-muted-foreground">Sits quietly in an inbox until someone manually checks it hours later</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Spam & Answering Filtering</td>
+                    <td class="p-4 text-muted-foreground">Blocks robocalls, dialer spam, and persistent unsolicited telemarketers</td>
+                    <td class="p-4 text-muted-foreground">Fills your inbox with automated telemarketer or dialer recordings</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4 font-medium text-foreground">Operational Cost</td>
+                    <td class="p-4 text-muted-foreground">Starts at $0/mo (free plan); premium plans pay for themselves with 1 saved job</td>
+                    <td class="p-4 text-muted-foreground">Free, but has a massive hidden cost in lost ready-to-book opportunities</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- Alternating Solution Tour Sections -->
+    <section class="border-t border-border/40 bg-muted/15 py-20 md:py-28">
+      <div class="mx-auto max-w-7xl space-y-20 px-6 md:space-y-32">
+        {
+          page.sections.map((section, index) => {
+            const isEven = index % 2 === 0
+            return (
+              <div class="grid gap-12 lg:grid-cols-12 lg:items-center">
+                <div
+                  class={cn(
+                    "space-y-5 lg:col-span-6",
+                    isEven ? "lg:order-first" : "lg:order-last"
+                  )}
+                >
+                  <h2 class="section-heading text-left leading-[1.1]">
+                    {section.title}
+                  </h2>
+                  <p class="body-copy max-w-[55ch] text-base md:text-lg">
+                    {section.body}
+                  </p>
+                </div>
+                <div class="lg:col-span-6">
+                  <div class="rounded-2xl border border-border/60 bg-background p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)] md:p-10">
+                    <ul class="space-y-4">
+                      {section.points.map((point) => (
+                        <li class="flex items-start gap-3.5">
+                          <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+                            <Check
+                              className="size-3.5 text-foreground/80"
+                              strokeWidth={2.5}
+                            />
+                          </div>
+                          <span class="text-sm font-medium text-muted-foreground md:text-base">
+                            {point}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        }
+      </div>
+    </section>
+
+    <!-- Testimonial Section -->
+    {
+      page.testimonial && (
+        <section class="relative mx-auto max-w-3xl px-6 py-20 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40 md:py-24">
+          <blockquote class="text-center">
+            <p class="text-lg leading-relaxed font-medium text-foreground md:text-xl">
+              &ldquo;{page.testimonial.quote}&rdquo;
+            </p>
+            <footer class="mt-6 flex flex-col items-center gap-1">
+              <cite class="text-sm font-semibold text-foreground not-italic">
+                {page.testimonial.author}
+              </cite>
+              <span class="text-xs text-muted-foreground">
+                {page.testimonial.role}
+              </span>
+              {page.testimonial.trustBadge && (
+                <span class="mt-2 rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
+                  {page.testimonial.trustBadge}
+                </span>
+              )}
+            </footer>
+          </blockquote>
+        </section>
+      )
+    }
+
+    <!-- FAQ Section -->
+    {
+      page.faqs.length > 0 && (
+        <section
+          class="relative mx-auto max-w-4xl px-6 py-20 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40 md:py-28"
+          id="faq"
+        >
+          <h2 class="section-heading mb-12 text-center">
+            {page.faqHeading ?? "Common questions"}
+          </h2>
+          <FaqAccordion faqs={page.faqs} />
+        </section>
+      )
+    }
+
+    <!-- Final CTA Section -->
+    <section class="border-t border-border/40 bg-muted/10 py-20 md:py-28">
+      <div class="mx-auto max-w-3xl space-y-6 px-6 text-center">
+        <h2 class="section-heading mx-auto max-w-[24ch]">
+          {
+            page.ctaHeading ??
+              "Start answering every call without front-desk overload"
+          }
+        </h2>
+        <p class="section-intro mx-auto max-w-lg">
+          {
+            page.ctaBody ??
+              "Try LobbyStack with included voice minutes, configure your custom trade and call rules, and see how much revenue you can recover."
+          }
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a
+            href={page.ctaPrimaryHref ?? APP_SIGNUP_URL}
+            class={cn(
+              buttonVariants({ size: "lg" }),
+              "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
+            )}
+          >
+            {page.ctaPrimaryLabel ?? "Try for free"}
+            <ArrowRight className="ml-1 size-4" />
+          </a>
+          <a
+            href={page.ctaSecondaryHref ?? "/pricing/"}
+            class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
+          >
+            {page.ctaSecondaryLabel ?? "View pricing"}
+          </a>
+        </div>
+        <p class="text-xs text-muted-foreground">
+          No credit card required. Cancel anytime.
+        </p>
+      </div>
+    </section>
+
+    <!-- Related Resources Footer -->
+    <section
+      class="relative mx-auto max-w-7xl px-6 py-12 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40"
+    >
+      <div
+        class="flex flex-col justify-between gap-6 md:flex-row md:items-center"
+      >
+        <h3 class="text-xs font-semibold tracking-wider text-muted-foreground">
+          Related resources
+        </h3>
+        <div class="flex flex-wrap gap-3">
+          {
+            page.relatedLinks.map((link) => (
+              <a
+                href={link.href}
+                class="inline-flex h-9 items-center rounded-full border border-border/70 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                {link.label}
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>

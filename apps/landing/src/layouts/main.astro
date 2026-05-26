@@ -1,0 +1,187 @@
+---
+import "@/styles/global.css"
+import { Font } from "astro:assets"
+import Seo from "@jdevalk/astro-seo-graph/Seo.astro"
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_TITLE,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_WIDTH,
+  SITE_NAME,
+  absoluteUrl,
+  imageObjectJsonLd,
+  ogImagePath,
+  schemaGraph,
+  webPageJsonLd,
+  type PageSeo,
+} from "@/lib/seo"
+import {
+  AGENT_LINK_HEADER,
+  CONTENT_SIGNAL,
+  markdownAlternatePath,
+} from "@/lib/agent-discovery"
+import {
+  DEFAULT_LOCALE,
+  alternateLocaleLinks,
+  localeFromPath,
+  localeMeta,
+  type Locale,
+} from "@/lib/i18n"
+
+interface Props {
+  seo?: PageSeo
+}
+
+const { seo } = Astro.props
+
+const title = seo?.title ?? DEFAULT_TITLE
+const description = seo?.description ?? DEFAULT_DESCRIPTION
+const pageType = seo?.type ?? "website"
+const pagePath = seo?.canonicalPath ?? Astro.url.pathname
+const canonicalPath = seo?.noindex ? undefined : pagePath
+const locale = (seo?.locale ??
+  Astro.currentLocale ??
+  localeFromPath(pagePath)) as Locale
+const htmlDir = localeMeta[locale]?.dir ?? localeMeta[DEFAULT_LOCALE].dir
+const skipLabel =
+  locale === "fr" ? "Aller au contenu principal" : "Skip to main content"
+const canonicalUrl = canonicalPath ? absoluteUrl(canonicalPath) : undefined
+const generatedOgImage = ogImagePath(pagePath)
+const pageImage =
+  seo?.image ?? (seo?.noindex ? DEFAULT_OG_IMAGE : generatedOgImage)
+const imageUrl = absoluteUrl(pageImage)
+const imageAlt = seo?.imageAlt ?? title
+const markdownPath = seo?.noindex ? undefined : markdownAlternatePath(pagePath)
+const markdownUrl = markdownPath ? absoluteUrl(markdownPath) : undefined
+const localeAlternates = seo?.noindex ? [] : alternateLocaleLinks(pagePath)
+const graphItems = [
+  webPageJsonLd({
+    title,
+    description,
+    path: pagePath,
+    image: pageImage,
+    type:
+      pagePath === "/blog/" || pagePath === "/solutions/"
+        ? "CollectionPage"
+        : "WebPage",
+  }),
+  imageObjectJsonLd({
+    path: pagePath,
+    image: pageImage,
+    alt: imageAlt,
+  }),
+  ...(seo?.jsonLd ?? []),
+]
+
+const linkHeader = markdownPath
+  ? `${AGENT_LINK_HEADER}, <${markdownPath}>; rel="alternate"; type="text/markdown"`
+  : AGENT_LINK_HEADER
+const extraMeta = [
+  import.meta.env.GOOGLE_SITE_VERIFICATION
+    ? {
+        name: "google-site-verification",
+        content: import.meta.env.GOOGLE_SITE_VERIFICATION,
+      }
+    : undefined,
+  import.meta.env.BING_SITE_VERIFICATION
+    ? {
+        name: "msvalidate.01",
+        content: import.meta.env.BING_SITE_VERIFICATION,
+      }
+    : undefined,
+].filter(Boolean) as Array<Record<string, string>>
+
+Astro.response.headers.set("Link", linkHeader)
+Astro.response.headers.set("Vary", "Accept")
+Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
+---
+
+<html lang={locale} dir={htmlDir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <Font cssVariable="--font-geist" preload />
+    <Font cssVariable="--font-geist-mono" preload />
+    <script>
+      const loadPosthog = () => import("@/lib/posthog")
+      const win = window as Window & {
+        requestIdleCallback?: (
+          callback: () => void,
+          options?: { timeout: number }
+        ) => number
+      }
+
+      const interactionEvents = ["pointerdown", "keydown", "touchstart"]
+      let posthogRequested = false
+      const loadOnce = () => {
+        if (posthogRequested) return
+
+        posthogRequested = true
+        interactionEvents.forEach((eventName) => {
+          window.removeEventListener(eventName, loadOnce)
+        })
+        loadPosthog()
+      }
+
+      interactionEvents.forEach((eventName) => {
+        window.addEventListener(eventName, loadOnce, { once: true, passive: true })
+      })
+
+      if (typeof win.requestIdleCallback === "function") {
+        win.requestIdleCallback(loadOnce, { timeout: 8000 })
+      } else {
+        setTimeout(loadOnce, 8000)
+      }
+    </script>
+
+    <Seo
+      title={title}
+      description={description}
+      canonical={canonicalUrl}
+      noindex={seo?.noindex}
+      ogType={pageType}
+      ogImage={imageUrl}
+      ogImageAlt={imageAlt}
+      ogImageWidth={OG_IMAGE_WIDTH}
+      ogImageHeight={OG_IMAGE_HEIGHT}
+      siteName={SITE_NAME}
+      twitter={{ card: "summary_large_image" }}
+      author={seo?.author}
+      article={pageType === "article"
+        ? {
+            publishedTime: seo?.publishedTime,
+            modifiedTime: seo?.modifiedTime,
+            authors: seo?.author ? [seo.author] : undefined,
+          }
+        : undefined}
+      graph={schemaGraph(graphItems)}
+      extraLinks={[
+        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+        { rel: "sitemap", href: "/sitemap-index.xml" },
+        {
+          rel: "alternate",
+          type: "application/rss+xml",
+          href: "/feed.xml",
+          title: "LobbyStack RSS feed",
+        },
+        ...(markdownUrl
+          ? [{ rel: "alternate", type: "text/markdown", href: markdownUrl }]
+          : []),
+        { rel: "nlweb", href: "/.well-known/api-catalog" },
+      ]}
+      extraMeta={extraMeta}
+    />
+    {
+      localeAlternates.map((link) => (
+        <link rel="alternate" hreflang={link.hrefLang} href={link.href} />
+      ))
+    }
+  </head>
+  <body class="antialiased">
+    <a href="#main-content" class="skip-link">{skipLabel}</a>
+    <slot />
+    <script is:inline src="/webmcp.js" defer></script>
+  </body>
+</html>

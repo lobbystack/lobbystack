@@ -1,0 +1,85 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  Hero,
+  Problem,
+  Solution,
+  UseCases,
+  HowItWorks,
+  Comparison,
+} from "@/components/solutions/ai-phone-answering/SectionsPart1"
+import {
+  BusinessFit,
+  Capabilities,
+  RevenueTieIn,
+  OpenSource,
+} from "@/components/solutions/ai-phone-answering/SectionsPart2"
+import { SolutionCta } from "@/components/solutions/ai-phone-answering/SectionsPart3"
+import { SolutionFaq } from "@/components/solutions/ai-phone-answering/SolutionFaq"
+import { aiPhoneAnsweringFaqs } from "@/lib/solution-faqs"
+
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  absoluteUrl,
+} from "@/lib/seo"
+
+const title = "AI Phone Answering Service for Small Businesses | LobbyStack"
+const description =
+  "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team."
+const canonicalPath = "/solutions/ai-phone-answering/"
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath,
+    image: "/illustrations/call-capture.webp",
+    imageAlt: "LobbyStack AI phone answering service capturing caller details",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Solutions", path: "/solutions/" },
+        { name: "AI Phone Answering", path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: title,
+        url: absoluteUrl(canonicalPath),
+        description,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs: aiPhoneAnsweringFaqs }),
+    ],
+  }}
+>
+  <Navbar />
+
+  <main>
+    <Hero />
+    <Problem />
+    <Solution />
+    <UseCases />
+    <HowItWorks />
+    <Comparison />
+    <BusinessFit />
+    <Capabilities />
+    <RevenueTieIn />
+    <OpenSource />
+    <SolutionFaq />
+    <SolutionCta />
+  </main>
+
+  <Footer />
+</Layout>

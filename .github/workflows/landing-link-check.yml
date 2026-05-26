@@ -1,0 +1,32 @@
+name: Landing link check
+
+on:
+  push:
+    paths:
+      - "apps/landing/src/**"
+      - "apps/landing/public/**"
+      - "apps/landing/astro.config.mjs"
+      - ".github/workflows/landing-link-check.yml"
+  schedule:
+    - cron: "17 10 * * 1"
+  workflow_dispatch:
+
+jobs:
+  lychee:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose
+            --no-progress
+            --exclude '^https://app\.lobbystack\.com/'
+            --exclude '^https://voice\.lobbystack\.com/web-call/'
+            --exclude '^https://.*\.fly\.dev/web-call/'
+            --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
+            './apps/landing/src/**/*.astro'
+            './apps/landing/src/**/*.tsx'
+            './apps/landing/src/content/**/*.md'
+            './apps/landing/public/llms.txt'
+          fail: true

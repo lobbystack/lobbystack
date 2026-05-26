@@ -1,0 +1,438 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
+---
+
+<Layout
+  seo={{
+    title: "Terms of Service - LobbyStack",
+    description:
+      "Terms of Service for LobbyStack, the business AI receptionist platform for calls, SMS, booking, routing, and follow-up workflows.",
+    canonicalPath: "/terms/",
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Terms of Service", path: "/terms/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/terms/#webpage"),
+        name: "Terms of Service - LobbyStack",
+        url: absoluteUrl("/terms/"),
+        description:
+          "Terms of Service for LobbyStack, the business AI receptionist platform for calls, SMS, booking, routing, and follow-up workflows.",
+      },
+    ],
+  }}
+>
+  <Navbar />
+  <main class="bg-background text-foreground">
+    <section class="border-b border-border/60">
+      <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+        <p class="text-sm font-medium text-muted-foreground">
+          Last updated: May 11, 2026
+        </p>
+        <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+          Terms of Service
+        </h1>
+        <p
+          class="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+        >
+          These Terms of Service govern access to and use of LobbyStack's hosted
+          services, websites, paid plans, support, managed infrastructure, and
+          related business AI receptionist workflows. Please read them carefully
+          before using LobbyStack.
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          These Terms are written in plain English for operational clarity, but
+          they are not a substitute for independent legal advice. If you are
+          unsure about your legal obligations, including telecommunications,
+          privacy, anti-spam, or professional obligations, you should speak with
+          qualified counsel.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+    >
+      <aside class="hidden md:block">
+        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          <a class="block hover:text-foreground" href="#agreement">Agreement</a>
+          <a class="block hover:text-foreground" href="#service">Service</a>
+          <a class="block hover:text-foreground" href="#accounts">Accounts</a>
+          <a class="block hover:text-foreground" href="#communications"
+            >SMS and calls</a
+          >
+          <a class="block hover:text-foreground" href="#ai">AI limitations</a>
+          <a class="block hover:text-foreground" href="#billing">Billing</a>
+          <a class="block hover:text-foreground" href="#data">Data and IP</a>
+          <a class="block hover:text-foreground" href="#risk">Risk allocation</a
+          >
+          <a class="block hover:text-foreground" href="#law">Governing law</a>
+          <a class="block hover:text-foreground" href="#contact">Contact</a>
+        </nav>
+      </aside>
+
+      <article class="legal-copy max-w-none">
+        <section id="agreement">
+          <h2>1. Agreement to these Terms</h2>
+          <p>
+            These Terms are a legal agreement between you and Lobbystack Inc.
+            ("Lobbystack," "LobbyStack," "we," "our," or "us"). By accessing our
+            website, creating an account, using the hosted LobbyStack service,
+            purchasing a plan, enabling an add-on, or otherwise using the
+            service, you agree to these Terms.
+          </p>
+          <p>
+            If you use LobbyStack on behalf of a company, organization, or other
+            legal entity, you represent that you have authority to bind that
+            entity. In that case, "you" and "Customer" refer to that entity and
+            its authorized users.
+          </p>
+          <p>
+            Hosted LobbyStack accounts are intended for business and commercial
+            use. They are not intended for personal, household, or consumer use.
+          </p>
+        </section>
+
+        <section id="service">
+          <h2>2. The LobbyStack service</h2>
+          <p>
+            LobbyStack is a business AI receptionist platform for calls, SMS,
+            appointment booking, routing, summaries, contact capture, knowledge
+            base responses, follow-up workflows, and related communications. The
+            service may include hosted software, dashboards, phone numbers,
+            voice and messaging features, integrations, automation tools,
+            analytics, documentation, support, and related services.
+          </p>
+          <p>
+            We may improve, modify, suspend, or discontinue parts of the service
+            from time to time. Some features may be in beta, subject to provider
+            approvals, limited by usage caps, or unavailable in some regions.
+            Telecommunications features, including voice, SMS, phone numbers,
+            A2P/10DLC registration, caller ID, carrier routing, and message
+            deliverability, depend on third-party networks and providers.
+          </p>
+        </section>
+
+        <section id="open-source">
+          <h2>3. Open-source and self-hosted use</h2>
+          <p>
+            LobbyStack includes open-source software. Use, copying,
+            modification, distribution, and self-hosting of the source code are
+            governed by the applicable repository license, currently
+            AGPL-3.0-only, and not by these hosted-service Terms except where
+            these Terms expressly say otherwise.
+          </p>
+          <p>
+            These Terms do govern LobbyStack Cloud, managed infrastructure,
+            hosted accounts, paid plans, billing, support, trademarks, hosted
+            documentation, websites, and any services we provide to you outside
+            the open-source license. The LobbyStack name, logos, branding, and
+            goodwill are not licensed for unrestricted use by the open-source
+            license.
+          </p>
+          <p>
+            If you self-host LobbyStack, you are responsible for your own
+            infrastructure, security, provider accounts, telecommunications
+            registrations, compliance, backups, billing setup, and end-user
+            notices.
+          </p>
+        </section>
+
+        <section id="accounts">
+          <h2>4. Accounts, users, and customer responsibilities</h2>
+          <p>
+            You are responsible for keeping account credentials secure, managing
+            your authorized users, maintaining accurate account and billing
+            information, and promptly notifying us of unauthorized access. You
+            are responsible for all activity under your account.
+          </p>
+          <p>
+            You are responsible for configuring LobbyStack for your business,
+            including business facts, services, prices, hours, locations,
+            scripts, escalation rules, calendar connections, knowledge base
+            content, transfer numbers, messaging instructions, and any human
+            fallback procedures.
+          </p>
+          <p>
+            You must not use LobbyStack to mislead callers or message
+            recipients, impersonate another person or business, submit false
+            registration information, violate third-party rights, or process
+            information that you are not legally permitted to process.
+          </p>
+        </section>
+
+        <section id="acceptable-use">
+          <h2>5. Acceptable use</h2>
+          <p>You must not use LobbyStack to:</p>
+          <ul>
+            <li>
+              Send spam, phishing, fraudulent, deceptive, or unlawful messages.
+            </li>
+            <li>Send content involving illegal goods or services.</li>
+            <li>Harass, threaten, abuse, or discriminate against anyone.</li>
+            <li>Transmit malware or attempt to compromise the service.</li>
+            <li>
+              Bypass security, usage limits, billing, registration, or provider
+              rules.
+            </li>
+            <li>
+              Use the service for emergency dispatch or life-safety response.
+            </li>
+            <li>
+              Make regulated professional decisions without qualified human
+              review.
+            </li>
+            <li>
+              Use the service in a way that could harm telecommunications
+              networks, carriers, providers, LobbyStack, or other users.
+            </li>
+          </ul>
+          <p>
+            We may suspend or limit the service if we believe your use violates
+            these Terms, provider requirements, law, or creates risk for
+            LobbyStack, providers, carriers, users, or third parties.
+          </p>
+        </section>
+
+        <section id="communications">
+          <h2>6. Voice, SMS, and telecommunications compliance</h2>
+          <p>
+            LobbyStack can support voice calls and SMS notifications. These
+            features are subject to carrier rules,
+            telecommunications laws, anti-spam laws, provider terms, campaign
+            registration requirements, message filtering, number availability,
+            and usage restrictions.
+          </p>
+          <h3>LobbyStack SMS program</h3>
+          <p>
+            Program name: LobbyStack. LobbyStack messages are non-marketing
+            operational and conversational messages related to business
+            communications, customer inquiries, appointments, missed-call
+            follow-up, service updates, support requests, routing,
+            confirmations, reminders, and related workflows. Message frequency
+            varies based on your interactions with a business using LobbyStack.
+            Message and data rates may apply. Messages may include links for
+            booking, support, intake, business information, appointment
+            management, or related service workflows.
+          </p>
+          <p>
+            For help with LobbyStack SMS, reply <strong>HELP</strong> where supported
+            or contact
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+            To stop receiving SMS messages from a LobbyStack-powered sender,
+            reply <strong>STOP</strong>. After you opt out, you may receive a
+            confirmation message, and no further SMS messages will be sent
+            unless you opt in again where permitted. Carriers are not liable for
+            delayed or undelivered messages.
+          </p>
+          <h3>Your compliance responsibilities</h3>
+          <p>
+            You are responsible for obtaining and documenting all required
+            consents before sending calls or messages through LobbyStack,
+            including consents required by CASL, TCPA, CTIA guidelines,
+            A2P/10DLC rules, carrier rules, anti-spam laws, privacy laws, and
+            any laws that apply to your business, your location, or your
+            recipients. You must honor opt-out requests, keep consent records,
+            provide truthful business and campaign information, and avoid
+            prohibited or restricted message content.
+          </p>
+          <p>
+            You must not use LobbyStack to send marketing, promotional,
+            political, lending, age-gated, regulated, or sensitive messages
+            unless the feature is enabled for that use case, all provider
+            approvals are complete, and you have all required consents and legal
+            authority.
+          </p>
+        </section>
+
+        <section id="ai">
+          <h2>7. AI limitations and human review</h2>
+          <p>
+            LobbyStack uses artificial intelligence and automation. AI outputs
+            may be incomplete, inaccurate, delayed, unsafe for a particular use,
+            or inconsistent with your expectations. You are responsible for
+            reviewing, testing, and configuring the service before using it in
+            production and for monitoring conversations that matter to your
+            business.
+          </p>
+          <p>
+            LobbyStack is not a substitute for emergency services, professional
+            medical, legal, financial, or safety advice, or human judgment in
+            sensitive situations. You must configure appropriate escalation and
+            human fallback rules for urgent, sensitive, regulated, high-value,
+            or complex conversations.
+          </p>
+        </section>
+
+        <section id="billing">
+          <h2>8. Plans, billing, taxes, and refunds</h2>
+          <p>
+            Paid plans, add-ons, setup fees, usage fees, metered charges, and
+            taxes are described at checkout, in the app, or in an applicable
+            order. Subscription plans renew automatically unless cancelled.
+            Usage may be billed based on voice minutes, outbound call attempts,
+            SMS segments, storage, phone numbers, or other metered units.
+          </p>
+          <p>
+            You authorize us and our payment processor, currently Polar, to
+            charge your payment method for recurring fees, usage fees, add-ons,
+            setup fees, taxes, and other amounts due. If payment fails, we may
+            suspend, limit, or terminate access. Unless required by law or
+            expressly stated in a written agreement, fees are non-refundable.
+            Cancellations take effect at the end of the current billing period,
+            and usage fees already incurred remain payable.
+          </p>
+          <p>
+            Prices may change. We will provide notice where required by law or
+            where the change materially affects an active paid plan.
+          </p>
+        </section>
+
+        <section id="data">
+          <h2>9. Customer content, data, and privacy</h2>
+          <p>
+            You retain ownership of your business content, customer data,
+            recordings, transcripts, messages, knowledge base materials,
+            appointments, and other content you submit to the service ("Customer
+            Content"). You grant LobbyStack the rights needed to host, process,
+            transmit, display, analyze, secure, and use Customer Content to
+            provide, maintain, protect, troubleshoot, and improve the service.
+          </p>
+          <p>
+            Our handling of personal information is described in our
+            <a href="/privacy/">Privacy Policy</a>. You are responsible for
+            providing your own notices to your customers and end users where
+            required and for ensuring that you have the rights and consents
+            needed for LobbyStack to process Customer Content.
+          </p>
+          <p>
+            We may use de-identified, aggregated, or statistical information to
+            operate, improve, secure, and analyze the service, provided it does
+            not identify you, your users, or your end customers.
+          </p>
+        </section>
+
+        <section id="third-party">
+          <h2>10. Third-party services and integrations</h2>
+          <p>
+            LobbyStack relies on third-party services, including telephony and
+            SMS providers, AI model providers, hosting and database providers,
+            Polar or other payment processors, email and support tools,
+            analytics providers, calendar providers, and other integrations.
+            Your use of those features may be subject to third-party terms,
+            limits, outages, filtering, approvals, and fees.
+          </p>
+          <p>
+            We are not responsible for third-party services we do not control.
+            We may change providers or integrations as needed to operate and
+            improve LobbyStack.
+          </p>
+        </section>
+
+        <section id="ip">
+          <h2>11. Intellectual property</h2>
+          <p>
+            Except for Customer Content and open-source code governed by its
+            applicable license, LobbyStack and its licensors own all rights,
+            title, and interest in the hosted service, websites, designs,
+            documentation, trademarks, logos, software, workflows, templates,
+            and related materials. These Terms do not grant you ownership of
+            LobbyStack or its branding.
+          </p>
+          <p>
+            Feedback you provide may be used without restriction or compensation
+            to you, but we will not identify you publicly as the source of
+            feedback without your permission.
+          </p>
+        </section>
+
+        <section id="termination">
+          <h2>12. Suspension and termination</h2>
+          <p>
+            You may stop using LobbyStack at any time and may cancel paid plans
+            through the app or by contacting support. We may suspend or
+            terminate access if you violate these Terms, fail to pay, create
+            legal or security risk, misuse telecommunications features, or if a
+            provider or carrier requires us to do so.
+          </p>
+          <p>
+            After termination, your right to use the hosted service ends. We may
+            retain or delete data according to our Privacy Policy, backup
+            practices, legal obligations, and any applicable written agreement.
+          </p>
+        </section>
+
+        <section id="risk">
+          <h2>13. Disclaimers, liability limits, and indemnity</h2>
+          <p>
+            To the maximum extent permitted by law, LobbyStack is provided "as
+            is" and "as available." We do not guarantee uninterrupted service,
+            error-free AI outputs, message delivery, call quality, carrier
+            approval, number availability, business results, revenue, or that
+            every caller or message recipient will be handled correctly.
+          </p>
+          <p>
+            To the maximum extent permitted by law, Lobbystack Inc. and its
+            affiliates, officers, directors, employees, contractors, and
+            suppliers will not be liable for indirect, incidental, special,
+            consequential, exemplary, or punitive damages, or for lost profits,
+            lost revenue, lost data, loss of goodwill, business interruption, or
+            replacement services.
+          </p>
+          <p>
+            To the maximum extent permitted by law, our aggregate liability for
+            all claims relating to the service is limited to the greater of CAD
+            $100 or the amounts you paid to LobbyStack for the service in the
+            three months before the event giving rise to the claim.
+          </p>
+          <p>
+            You will defend, indemnify, and hold harmless Lobbystack Inc. from
+            claims, damages, fines, costs, and expenses arising from your
+            Customer Content, your use of the service, your end-user
+            communications, your violation of law or provider requirements, your
+            failure to obtain consent, or your breach of these Terms.
+          </p>
+        </section>
+
+        <section id="law">
+          <h2>14. Governing law and disputes</h2>
+          <p>
+            These Terms are governed by the laws of Quebec and the applicable
+            federal laws of Canada, without regard to conflict of law rules.
+            Subject to any rights that cannot be waived, the courts located in
+            Quebec, Canada will have exclusive jurisdiction over disputes
+            relating to these Terms or the service.
+          </p>
+        </section>
+
+        <section id="changes">
+          <h2>15. Changes to these Terms</h2>
+          <p>
+            We may update these Terms from time to time. If changes are
+            material, we will provide reasonable notice, such as by posting a
+            notice, updating the date above, emailing account contacts, or
+            notifying users in the service. Continued use after changes become
+            effective means you accept the updated Terms.
+          </p>
+        </section>
+
+        <section id="contact">
+          <h2>16. Contact</h2>
+          <p>
+            Questions about these Terms can be sent to Lobbystack Inc. at
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+          </p>
+        </section>
+      </article>
+    </section>
+  </main>
+  <Footer />
+</Layout>

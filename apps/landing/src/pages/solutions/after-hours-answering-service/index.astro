@@ -1,0 +1,12 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
+
+const page = seoLandingPageByPath("/solutions/after-hours-answering-service/")
+
+if (!page) {
+  throw new Error("Missing after-hours answering service landing page data")
+}
+---
+
+<SeoLandingPage page={page} />

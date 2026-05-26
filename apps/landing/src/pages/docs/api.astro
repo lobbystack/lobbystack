@@ -1,0 +1,210 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+---
+
+<Layout
+  seo={{
+    title: "LobbyStack Public API Documentation",
+    description:
+      "Machine-readable discovery resources for agents and integrators visiting LobbyStack.",
+    canonicalPath: "/docs/api/",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "API documentation", path: "/docs/api/" },
+      ]),
+    ],
+  }}
+>
+  <Navbar />
+  <main class="bg-background text-foreground">
+    <section class="mx-auto max-w-5xl px-6 py-20 sm:py-24">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">
+          Public API documentation
+        </h1>
+        <p class="mt-5 text-lg leading-8 text-muted-foreground">
+          LobbyStack exposes a small public discovery surface so agents can find
+          documentation, status, OpenAPI metadata, skills, and machine-readable
+          usage preferences without scraping the site.
+        </p>
+        <p class="mt-4 leading-7 text-muted-foreground">
+          These public discovery endpoints do not require authentication. OAuth
+          metadata will be published on the app host when protected APIs expose
+          real authorization endpoints.
+        </p>
+      </div>
+
+      <div class="mt-12 grid gap-6 md:grid-cols-3">
+        <a
+          href="/.well-known/api-catalog"
+          class="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+        >
+          <h2 class="text-base font-semibold">API catalog</h2>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">
+            RFC 9727 linkset for public API and discovery resources.
+          </p>
+        </a>
+        <a
+          href="/openapi.json"
+          class="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+        >
+          <h2 class="text-base font-semibold">OpenAPI</h2>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">
+            JSON description of the public discovery endpoints.
+          </p>
+        </a>
+        <a
+          href="/api/status"
+          class="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+        >
+          <h2 class="text-base font-semibold">Status</h2>
+          <p class="mt-2 text-sm leading-6 text-muted-foreground">
+            Lightweight public health signal for automated clients.
+          </p>
+        </a>
+      </div>
+
+      <section class="mt-16">
+        <h2 class="text-2xl font-semibold">Discovery endpoints</h2>
+        <div class="mt-6 overflow-x-auto rounded-lg border">
+          <table class="w-full border-collapse text-left text-sm">
+            <thead class="bg-muted/70 text-muted-foreground">
+              <tr>
+                <th class="px-4 py-3 font-medium">Endpoint</th>
+                <th class="px-4 py-3 font-medium">Content type</th>
+                <th class="px-4 py-3 font-medium">Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs"
+                  >/.well-known/api-catalog</td
+                >
+                <td class="px-4 py-3 font-mono text-xs"
+                  >application/linkset+json</td
+                >
+                <td class="px-4 py-3 text-muted-foreground"
+                  >API catalog linkset.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/openapi.json</td>
+                <td class="px-4 py-3 font-mono text-xs"
+                  >application/vnd.oai.openapi+json</td
+                >
+                <td class="px-4 py-3 text-muted-foreground"
+                  >OpenAPI service description.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/llms.txt</td>
+                <td class="px-4 py-3 font-mono text-xs">text/plain</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Compact product, feature, pricing, and discovery context for
+                  LLMs.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/feed.xml</td>
+                <td class="px-4 py-3 font-mono text-xs">application/rss+xml</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Full-content RSS feed for blog discovery.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/schemamap.xml</td>
+                <td class="px-4 py-3 font-mono text-xs">application/xml</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Structured-data endpoint discovery map.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/schema/page.json</td>
+                <td class="px-4 py-3 font-mono text-xs">application/ld+json</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >JSON-LD graph for public pages.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/schema/post.json</td>
+                <td class="px-4 py-3 font-mono text-xs">application/ld+json</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >JSON-LD graph for blog posts.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/index.md</td>
+                <td class="px-4 py-3 font-mono text-xs">text/markdown</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Homepage summary in markdown.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/features.md</td>
+                <td class="px-4 py-3 font-mono text-xs">text/markdown</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Feature summary in markdown.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs">/pricing.md</td>
+                <td class="px-4 py-3 font-mono text-xs">text/markdown</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Pricing, included usage, usage rules, and overage rates in
+                  markdown.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs"
+                  >/.well-known/agent-skills/index.json</td
+                >
+                <td class="px-4 py-3 font-mono text-xs">application/json</td>
+                <td class="px-4 py-3 text-muted-foreground"
+                  >Agent skills discovery index.</td
+                >
+              </tr>
+              <tr>
+                <td class="px-4 py-3 font-mono text-xs"
+                  >/.well-known/mcp/server-card.json</td
+                >
+                <td class="px-4 py-3 font-mono text-xs">application/json</td>
+                <td class="px-4 py-3 text-muted-foreground">MCP server card.</td
+                >
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mt-16">
+        <h2 class="text-2xl font-semibold">Request examples</h2>
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+          <div class="rounded-lg border bg-card p-5">
+            <h3 class="text-base font-semibold">Markdown negotiation</h3>
+            <pre
+              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl("/")} \
+  -H "Accept: text/markdown"</code></pre>
+          </div>
+          <div class="rounded-lg border bg-card p-5">
+            <h3 class="text-base font-semibold">API catalog</h3>
+            <pre
+              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl("/.well-known/api-catalog")} \
+  -H "Accept: application/linkset+json"</code></pre>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+  <Footer />
+</Layout>

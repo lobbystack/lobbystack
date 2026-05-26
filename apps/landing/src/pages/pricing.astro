@@ -1,0 +1,58 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { PricingSection } from "@/components/PricingSection"
+import { PricingFaqSection } from "@/components/pricing/PricingFaqSection"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import { pricingFaqs } from "@/lib/pricing-faqs"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  absoluteUrl,
+  webSiteJsonLd,
+} from "@/lib/seo"
+
+const title = "AI Receptionist Pricing for Small Businesses"
+const description =
+  "Compare LobbyStack AI receptionist pricing for Free, Pro, and Enterprise plans, including voice minutes, outbound calls, SMS alerts, and overage rates."
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath: "/pricing/",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      softwareApplicationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Pricing", path: "/pricing/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/pricing/#webpage"),
+        name: title,
+        url: absoluteUrl("/pricing/"),
+        description,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: "/pricing/", faqs: pricingFaqs }),
+    ],
+  }}
+>
+  <Navbar />
+  <main>
+    <PricingSection />
+    <PricingFaqSection />
+    <CtaSection />
+  </main>
+  <Footer />
+</Layout>
