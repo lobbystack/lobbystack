@@ -150,7 +150,9 @@ services:
       start_period: 10s
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: docker/caddy/Dockerfile
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -162,7 +164,6 @@ services:
       CONVEX_HOSTNAME: ${CONVEX_HOSTNAME:-convex.localhost}
       CONVEX_SITE_HOSTNAME: ${CONVEX_SITE_HOSTNAME:-convex-site.localhost}
     volumes:
-      - ./docker/Caddyfile.self-hosted:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
