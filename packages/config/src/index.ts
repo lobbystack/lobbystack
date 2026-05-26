@@ -116,7 +116,9 @@ const voiceGatewayEnvSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
   OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: z.coerce.number().optional(),
-  WEB_CALL_ALLOWED_ORIGINS: z.string().default("https://lobbystack.com"),
+  WEB_CALL_ALLOWED_ORIGINS: z
+    .string()
+    .default("https://lobbystack.com,https://www.lobbystack.com"),
   WEB_CALL_MAX_DURATION_MS: z.coerce
     .number()
     .int()
