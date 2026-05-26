@@ -13,6 +13,10 @@ function randomSecret() {
   return randomBytes(32).toString("base64url");
 }
 
+function randomHexSecret() {
+  return randomBytes(32).toString("hex");
+}
+
 function envQuote(value) {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\n")}"`;
 }
@@ -50,7 +54,7 @@ function generateSecrets() {
   return {
     SESSION_ENCRYPTION_KEY: randomSecret(),
     INTERNAL_SERVICE_TOKEN: randomSecret(),
-    INSTANCE_SECRET: randomSecret(),
+    INSTANCE_SECRET: randomHexSecret(),
     JWT_PRIVATE_KEY: jwt.privateKey,
     JWKS: jwt.jwks,
   };

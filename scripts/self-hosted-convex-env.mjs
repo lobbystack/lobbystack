@@ -27,7 +27,6 @@ const CONVEX_ENV_KEYS = [
   "SITE_URL",
   "VOICE_GATEWAY_BASE_URL",
   "CONVEX_URL",
-  "CONVEX_SITE_URL",
   "INTERNAL_SERVICE_TOKEN",
   "SESSION_ENCRYPTION_KEY",
   "JWT_PRIVATE_KEY",
@@ -96,7 +95,7 @@ function runConvexEnvSet({ key, value, env, dryRun }) {
   const pnpm = getPnpmInvocation();
   const result = spawnSync(
     pnpm.command,
-    [...pnpm.args, "exec", "convex", "env", "set", key, value],
+    [...pnpm.args, "exec", "convex", "env", "set", key, "--", value],
     {
       env: {
         ...process.env,
