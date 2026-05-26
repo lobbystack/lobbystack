@@ -1,0 +1,14 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
+
+const page = seoLandingPageByPath(
+  "/solutions/ai-receptionist-for-dental-offices/"
+)
+
+if (!page) {
+  throw new Error("Missing dental offices landing page data")
+}
+---
+
+<SeoLandingPage page={page} />

@@ -1,0 +1,167 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { getCollection } from "astro:content"
+import {
+  blogJsonLd,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+
+const allPosts = await getCollection("blog")
+allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+
+const featuredPost = allPosts.find((p) => p.data.featured) || allPosts[0]
+const regularPosts = featuredPost
+  ? allPosts.filter((p) => p.id !== featuredPost.id)
+  : allPosts
+const title = "AI Receptionist Blog and Product Updates"
+const description =
+  "Read LobbyStack product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation."
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath: "/blog/",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      blogJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Blog", path: "/blog/" },
+      ]),
+    ],
+  }}
+>
+  <Navbar />
+
+  <main
+    id="main-content"
+    class="min-h-screen bg-background pb-24 text-foreground"
+  >
+    {/* Header */}
+    <header class="px-6 pt-24 pb-16 text-center">
+      <div class="mx-auto max-w-7xl">
+        <span class="eyebrow-label mb-4 block"> Latest news </span>
+        <h1 class="display-heading">
+          AI receptionist blog and product updates
+        </h1>
+        <p class="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
+          Product updates and practical notes on AI phone answering, missed-call
+          recovery, appointment scheduling, call routing, lead follow-up, and
+          open-source receptionist infrastructure.
+        </p>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-7xl px-6">
+      {/* Featured Post */}
+      {
+        featuredPost && (
+          <section class="mb-16">
+            <a href={`/blog/${featuredPost.id}/`} class="group block">
+              <div class="flex flex-col gap-8 rounded-2xl border border-border/50 bg-card p-4 md:p-6 lg:flex-row lg:gap-12 lg:p-8">
+                {/* Content Side */}
+                <div class="order-2 flex flex-1 flex-col py-4 lg:order-1 lg:py-8">
+                  <time
+                    class="mb-4 block text-xs font-medium text-muted-foreground"
+                    datetime={featuredPost.data.pubDate.toISOString()}
+                  >
+                    {featuredPost.data.pubDate.toLocaleDateString("en-US", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </time>
+                  <h2 class="section-heading mb-4 transition-colors group-hover:text-primary">
+                    {featuredPost.data.title}
+                  </h2>
+                  <p class="body-copy mb-8 flex-1 md:text-lg">
+                    {featuredPost.data.description}
+                  </p>
+                </div>
+
+                {/* Image Side */}
+                <div class="relative order-1 aspect-[16/9] w-full overflow-hidden rounded-xl border border-border/30 bg-muted shadow-sm lg:order-2 lg:aspect-auto lg:w-[60%]">
+                  {featuredPost.data.coverImage && (
+                    <img
+                      src={featuredPost.data.coverImage}
+                      alt={featuredPost.data.title}
+                      width="1672"
+                      height="941"
+                      class="h-full w-full object-cover"
+                      decoding="async"
+                      fetchpriority="high"
+                    />
+                  )}
+                  {/* Featured Badge */}
+                  <div class="absolute top-4 right-4 rounded-full border border-border bg-background/95 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
+                    Featured
+                  </div>
+                </div>
+              </div>
+            </a>
+          </section>
+        )
+      }
+
+      {/* Grid Posts */}
+      <section>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {
+            regularPosts.map((post) => (
+              <a href={`/blog/${post.id}/`} class="group block">
+                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card">
+                  {/* Image */}
+                  <div class="aspect-[16/9] w-full overflow-hidden border-b border-border/30 bg-muted shadow-sm">
+                    {post.data.coverImage ? (
+                      <img
+                        src={post.data.coverImage}
+                        alt={post.data.title}
+                        width="1672"
+                        height="941"
+                        class="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div class="flex h-full w-full items-center justify-center bg-muted">
+                        <span class="font-heading text-4xl text-muted-foreground/30">
+                          LobbyStack
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div class="flex flex-1 flex-col p-6">
+                    <time
+                      class="mb-3 block text-xs font-medium text-muted-foreground"
+                      datetime={post.data.pubDate.toISOString()}
+                    >
+                      {post.data.pubDate.toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </time>
+                    <h3 class="mb-4 font-heading text-xl leading-tight font-medium tracking-[-0.03em] transition-colors group-hover:text-primary">
+                      {post.data.title}
+                    </h3>
+                  </div>
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

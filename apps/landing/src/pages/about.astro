@@ -1,0 +1,9 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
+
+const page = seoLandingPageByPath("/about/")
+if (!page) throw new Error("Missing /about/ SEO landing page")
+---
+
+<SeoLandingPage page={page} />

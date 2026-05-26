@@ -1,0 +1,85 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  Hero,
+  Problem,
+  Solution,
+  UseCases,
+  HowItWorks,
+  Comparison,
+} from "@/components/solutions/ai-appointment-scheduler/SectionsPart1"
+import {
+  BusinessFit,
+  Capabilities,
+  RevenueTieIn,
+  OpenSource,
+} from "@/components/solutions/ai-appointment-scheduler/SectionsPart2"
+import { SolutionCta } from "@/components/solutions/ai-appointment-scheduler/SectionsPart3"
+import { SolutionFaq } from "@/components/solutions/ai-appointment-scheduler/SolutionFaq"
+import { appointmentSchedulerFaqs } from "@/lib/appointment-scheduler-faqs"
+
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  absoluteUrl,
+} from "@/lib/seo"
+
+const title = "AI Appointment Scheduler for Small Businesses | LobbyStack"
+const description =
+  "LobbyStack schedules appointments from phone calls, captures caller details, sends confirmations, and routes urgent requests to your team."
+const canonicalPath = "/solutions/ai-appointment-scheduler/"
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath,
+    image: "/illustrations/booking-flow.webp",
+    imageAlt: "LobbyStack AI appointment scheduler booking a caller",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Solutions", path: "/solutions/" },
+        { name: "AI Appointment Scheduler", path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: title,
+        url: absoluteUrl(canonicalPath),
+        description,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs: appointmentSchedulerFaqs }),
+    ],
+  }}
+>
+  <Navbar />
+
+  <main>
+    <Hero />
+    <Problem />
+    <Solution />
+    <UseCases />
+    <HowItWorks />
+    <Comparison />
+    <BusinessFit />
+    <Capabilities />
+    <RevenueTieIn />
+    <OpenSource />
+    <SolutionFaq />
+    <SolutionCta />
+  </main>
+
+  <Footer />
+</Layout>

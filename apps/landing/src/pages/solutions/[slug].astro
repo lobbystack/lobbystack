@@ -1,0 +1,38 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPages } from "@/lib/seo-landing-pages"
+
+export function getStaticPaths() {
+  // Existing routes with their own .astro files that must not collide.
+  const existingSlugs = new Set([
+    "after-hours-answering-service",
+    "ai-appointment-scheduler",
+    "ai-phone-answering",
+    "ai-receptionist-for-dental-offices",
+    "ai-receptionist-for-home-services",
+    "ai-receptionist-for-salons-and-spas",
+    "self-hosted-ai-receptionist",
+    "index",
+  ])
+
+  const dynamicSolutionPages = seoLandingPages.filter(
+    (p) =>
+      p.group === "solution" &&
+      !existingSlugs.has(p.slug) &&
+      p.path.startsWith("/solutions/")
+  )
+
+  return dynamicSolutionPages.map((page) => ({
+    params: { slug: page.slug },
+    props: { page },
+  }))
+}
+
+const { page } = Astro.props
+
+if (!page) {
+  throw new Error(`Missing solution page data for slug: ${Astro.params.slug}`)
+}
+---
+
+<SeoLandingPage page={page} />

@@ -1,0 +1,385 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
+---
+
+<Layout
+  seo={{
+    title: "Privacy Policy - LobbyStack",
+    description:
+      "Privacy Policy for LobbyStack, including call, SMS, consent, appointment, account, billing, analytics, and support data.",
+    canonicalPath: "/privacy/",
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Privacy Policy", path: "/privacy/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/privacy/#webpage"),
+        name: "Privacy Policy - LobbyStack",
+        url: absoluteUrl("/privacy/"),
+        description:
+          "Privacy Policy for LobbyStack, including call, SMS, consent, appointment, account, billing, analytics, and support data.",
+      },
+    ],
+  }}
+>
+  <Navbar />
+  <main class="bg-background text-foreground">
+    <section class="border-b border-border/60">
+      <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+        <p class="text-sm font-medium text-muted-foreground">
+          Last updated: May 11, 2026
+        </p>
+        <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+          Privacy Policy
+        </h1>
+        <p
+          class="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+        >
+          This Privacy Policy explains how Lobbystack Inc. ("Lobbystack,"
+          "LobbyStack," "we," "our," or "us") collects, uses, discloses, and
+          protects personal information when you visit our website, use
+          LobbyStack Cloud, communicate through LobbyStack-powered calls or SMS,
+          contact support, or interact with our services.
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          This Policy is intended to support transparency for business
+          customers, callers, message recipients, website visitors, and
+          open-source/self-hosted users. If your business uses LobbyStack to
+          communicate with its customers, you are responsible for providing any
+          additional notices required for your own use of the service.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+    >
+      <aside class="hidden md:block">
+        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          <a class="block hover:text-foreground" href="#scope">Scope</a>
+          <a class="block hover:text-foreground" href="#collect">Information</a>
+          <a class="block hover:text-foreground" href="#sms">SMS consent</a>
+          <a class="block hover:text-foreground" href="#use">Use</a>
+          <a class="block hover:text-foreground" href="#share">Sharing</a>
+          <a class="block hover:text-foreground" href="#retention">Retention</a>
+          <a class="block hover:text-foreground" href="#rights">Rights</a>
+          <a class="block hover:text-foreground" href="#contact">Contact</a>
+        </nav>
+      </aside>
+
+      <article class="legal-copy max-w-none">
+        <section id="scope">
+          <h2>1. Scope and our role</h2>
+          <p>
+            LobbyStack provides a business AI receptionist platform for calls,
+            SMS, appointment booking, routing, summaries, customer intake,
+            knowledge-based answers, and related workflows. We may process
+            personal information as a business/controller for our own website,
+            accounts, billing, security, support, and marketing operations. We
+            may also process personal information on behalf of business
+            customers that use LobbyStack to communicate with their callers,
+            customers, leads, patients, clients, or other end users.
+          </p>
+          <p>
+            When a business uses LobbyStack to communicate with you, that
+            business is responsible for deciding how and why your information is
+            used. Please contact that business directly for questions about its
+            own privacy practices.
+          </p>
+        </section>
+
+        <section id="collect">
+          <h2>2. Information we collect</h2>
+          <h3>Account and business information</h3>
+          <p>
+            We collect information such as names, email addresses, phone
+            numbers, business names, business addresses, roles, login details,
+            account settings, authorized users, support preferences, compliance
+            information, and billing contacts.
+          </p>
+          <h3>Call, SMS, and contact information</h3>
+          <p>
+            LobbyStack may process phone numbers, caller IDs, call metadata,
+            call recordings, transcripts, summaries, voicemails, SMS message
+            content, message metadata, opt-in and opt-out status, consent
+            records, contact profiles, notes, conversation history, appointment
+            details, requested services, routing decisions, escalation outcomes,
+            and related operational records.
+          </p>
+          <h3>Business content and knowledge data</h3>
+          <p>
+            Customers may upload or connect business information, FAQs, service
+            descriptions, prices, hours, locations, policies, calendars,
+            documents, website content, scripts, rules, and other materials used
+            to configure the AI receptionist.
+          </p>
+          <h3>Billing, payment, and tax information</h3>
+          <p>
+            We and our payment processor, currently Polar, may collect billing
+            details, payment method information, transaction history, plan
+            details, metered usage, invoices, tax information, and payment
+            status. We do not store full payment card numbers unless a payment
+            processor provides that service on our behalf.
+          </p>
+          <h3>Website, device, analytics, and support information</h3>
+          <p>
+            We may collect IP addresses, device and browser information, pages
+            viewed, referring pages, interactions, approximate location, cookies
+            or similar identifiers, product telemetry, logs, diagnostic
+            information, crash reports, support tickets, emails, and other
+            communications with us.
+          </p>
+        </section>
+
+        <section id="sms">
+          <h2>3. SMS consent and messaging privacy</h2>
+          <p>
+            LobbyStack supports non-marketing operational and conversational SMS
+            messages, such as customer inquiry replies, appointment
+            confirmations, missed-call follow-up, service updates, support
+            messages, reminders, routing, intake, and related business
+            workflows. Message frequency varies. Message and data rates may
+            apply. Message recipients can reply <strong>STOP</strong> to opt out and
+            <strong>HELP</strong> for help where supported, or contact
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+          </p>
+          <p>
+            We may process SMS consent records, opt-in sources, opt-out status,
+            message content, timestamps, phone numbers, carrier metadata, and
+            delivery information to provide and operate messaging features,
+            comply with carrier and A2P/10DLC requirements, prevent abuse, and
+            honor opt-out requests.
+          </p>
+          <p>
+            <strong>
+              We do not sell, rent, or share SMS opt-in data or consent
+              information with third parties or affiliates for their marketing
+              or promotional purposes.
+            </strong>
+          </p>
+        </section>
+
+        <section id="use">
+          <h2>4. How we use information</h2>
+          <p>We use personal information to:</p>
+          <ul>
+            <li>Provide, operate, secure, maintain, and improve LobbyStack.</li>
+            <li>
+              Answer calls, process SMS, generate summaries, route requests, and
+              support appointment workflows.
+            </li>
+            <li>
+              Configure AI responses using customer-provided business
+              information and instructions.
+            </li>
+            <li>
+              Manage accounts, authentication, billing, taxes, plans, usage, and
+              support.
+            </li>
+            <li>
+              Process opt-ins, opt-outs, consent records, and telecommunications
+              compliance requirements.
+            </li>
+            <li>
+              Detect, prevent, and investigate spam, abuse, fraud, security
+              incidents, and misuse.
+            </li>
+            <li>
+              Communicate about service updates, security, billing, support, and
+              administrative matters.
+            </li>
+            <li>
+              Analyze service performance, reliability, errors, and feature
+              usage.
+            </li>
+            <li>
+              Comply with legal, regulatory, contractual, provider, carrier, and
+              accounting obligations.
+            </li>
+          </ul>
+          <p>
+            We may use de-identified, aggregated, or statistical information to
+            analyze and improve the service where it does not identify a person,
+            business customer, or end user.
+          </p>
+        </section>
+
+        <section id="ai-processing">
+          <h2>5. AI and automated processing</h2>
+          <p>
+            LobbyStack may send prompts, business context, call audio,
+            transcripts, SMS content, customer instructions, and related
+            workflow data to AI model providers or AI infrastructure providers
+            to generate responses, summaries, classifications, routing
+            decisions, or other automated outputs. AI outputs can be inaccurate
+            or incomplete, and business customers are responsible for
+            configuring appropriate human review and fallback procedures.
+          </p>
+        </section>
+
+        <section id="share">
+          <h2>6. How we disclose information</h2>
+          <p>
+            We disclose information only as needed for the purposes described in
+            this Policy, including to:
+          </p>
+          <ul>
+            <li>Telephony, SMS, carrier, and number providers.</li>
+            <li>AI model and speech processing providers.</li>
+            <li>
+              Hosting, database, storage, infrastructure, monitoring, and
+              security providers.
+            </li>
+            <li>
+              Polar or other payment processors, billing systems, tax tools, and
+              accounting providers.
+            </li>
+            <li>
+              Email, support, customer communication, and notification
+              providers.
+            </li>
+            <li>Analytics and product telemetry providers.</li>
+            <li>
+              Calendar, document, website import, and other integration
+              providers you connect.
+            </li>
+            <li>
+              Professional advisers, auditors, insurers, and legal or regulatory
+              authorities where required.
+            </li>
+            <li>
+              Successors or participants in a merger, financing, acquisition,
+              reorganization, or sale of assets.
+            </li>
+          </ul>
+          <p>
+            We do not sell personal information in the ordinary sense of that
+            word. We do not share SMS opt-in data or consent information with
+            third parties or affiliates for their marketing or promotional
+            purposes.
+          </p>
+        </section>
+
+        <section id="cookies">
+          <h2>7. Cookies and analytics</h2>
+          <p>
+            We may use cookies, local storage, pixels, analytics tools, and
+            similar technologies to operate the website and app, remember
+            preferences, understand product usage, improve performance, detect
+            abuse, and measure marketing effectiveness. You can control some
+            cookies through your browser settings, but disabling cookies may
+            affect service functionality.
+          </p>
+        </section>
+
+        <section id="retention">
+          <h2>8. Retention</h2>
+          <p>
+            We retain personal information for as long as needed to provide the
+            service, maintain accounts, support billing and tax records, comply
+            with legal and provider obligations, resolve disputes, enforce
+            agreements, prevent abuse, and maintain security. Retention periods
+            may vary based on the type of data, account settings, customer
+            configuration, backup cycles, legal obligations, and operational
+            needs.
+          </p>
+          <p>
+            Business customers may be able to delete or export certain account
+            data from the service. Some records may remain in backups, logs,
+            compliance records, invoices, or audit trails for a limited period
+            or where retention is legally required.
+          </p>
+        </section>
+
+        <section id="security">
+          <h2>9. Security</h2>
+          <p>
+            We use administrative, technical, and organizational safeguards
+            designed to protect personal information. No method of transmission
+            or storage is completely secure, and we cannot guarantee absolute
+            security. You are responsible for protecting your credentials,
+            managing authorized users, configuring access controls, and using
+            the service appropriately.
+          </p>
+        </section>
+
+        <section id="transfers">
+          <h2>10. Cross-border processing</h2>
+          <p>
+            LobbyStack is operated from Canada, and personal information may be
+            processed in Canada, the United States, and other jurisdictions
+            where we or our service providers operate. Those jurisdictions may
+            have privacy laws different from the laws where you live. Where
+            required, we use contractual, technical, and organizational measures
+            intended to protect personal information transferred across borders.
+          </p>
+        </section>
+
+        <section id="rights">
+          <h2>11. Privacy rights and requests</h2>
+          <p>
+            Depending on where you live and your relationship with LobbyStack,
+            you may have rights to access, correct, delete, export, restrict, or
+            object to certain processing of your personal information. You may
+            also have rights to withdraw consent where processing is based on
+            consent, subject to legal or contractual limits.
+          </p>
+          <p>
+            To make a privacy request, contact
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+            We may need to verify your identity and, if your information is
+            controlled by a business customer, refer your request to that
+            customer or process it according to that customer's instructions.
+          </p>
+        </section>
+
+        <section id="children">
+          <h2>12. Children</h2>
+          <p>
+            LobbyStack is a business service and is not directed to children. We
+            do not knowingly collect personal information from children through
+            our own website or hosted account signup. If you believe a child has
+            provided personal information to us, contact us so we can review the
+            request.
+          </p>
+        </section>
+
+        <section id="changes">
+          <h2>13. Changes to this Policy</h2>
+          <p>
+            We may update this Privacy Policy from time to time. If changes are
+            material, we will provide reasonable notice, such as by posting an
+            updated Policy, updating the date above, emailing account contacts,
+            or notifying users in the service.
+          </p>
+        </section>
+
+        <section id="terms">
+          <h2>14. Terms of Service</h2>
+          <p>
+            Your use of LobbyStack is also governed by our
+            <a href="/terms/">Terms of Service</a>.
+          </p>
+        </section>
+
+        <section id="contact">
+          <h2>15. Contact</h2>
+          <p>
+            Questions or requests about this Privacy Policy can be sent to
+            Lobbystack Inc. at
+            <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+          </p>
+        </section>
+      </article>
+    </section>
+  </main>
+  <Footer />
+</Layout>

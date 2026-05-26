@@ -1,0 +1,47 @@
+---
+import Layout from "@/layouts/main.astro"
+import Search from "astro-pagefind/components/Search.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/lib/seo"
+---
+
+<Layout
+  seo={{
+    title: "Search - LobbyStack",
+    description:
+      "Search LobbyStack pages, blog posts, product resources, pricing details, and public agent-discovery documentation.",
+    canonicalPath: "/search/",
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Search", path: "/search/" },
+      ]),
+    ],
+  }}
+>
+  <Navbar />
+  <main class="min-h-screen bg-background text-foreground" data-pagefind-ignore>
+    <section class="mx-auto max-w-4xl px-6 py-20 sm:py-24">
+      <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">
+        Search LobbyStack
+      </h1>
+      <div class="mt-8">
+        <Search
+          className="lobbystack-search"
+          configOptions={{
+            "excerpt-length": 24,
+          }}
+          searchboxOptions={{
+            placeholder: "Search product pages, pricing, and posts",
+            "show-sub-results": true,
+          }}
+        />
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>

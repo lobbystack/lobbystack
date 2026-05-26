@@ -1,0 +1,86 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  Hero,
+  Problem,
+  Solution,
+  UseCases,
+  HowItWorks,
+  Comparison,
+} from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart1"
+import {
+  BusinessFit,
+  Capabilities,
+  RevenueTieIn,
+  OpenSource,
+} from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart2"
+import { SolutionCta } from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart3"
+import { SolutionFaq } from "@/components/solutions/ai-receptionist-for-home-services/SolutionFaq"
+import { homeServicesFaqs } from "@/lib/home-services-faqs"
+
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  absoluteUrl,
+} from "@/lib/seo"
+
+const title = "AI Receptionist for Home Services | LobbyStack"
+const description =
+  "LobbyStack answers calls for HVAC, plumbing, electrical, roofing, landscaping, and other home services teams while crews are on the job."
+const canonicalPath = "/solutions/ai-receptionist-for-home-services/"
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath,
+    image: "/illustrations/industry-bookings.webp",
+    imageAlt:
+      "LobbyStack AI receptionist booking home services jobs from phone calls",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Solutions", path: "/solutions/" },
+        { name: "AI Receptionist for Home Services", path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: title,
+        url: absoluteUrl(canonicalPath),
+        description,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs: homeServicesFaqs }),
+    ],
+  }}
+>
+  <Navbar />
+
+  <main>
+    <Hero />
+    <Problem />
+    <Solution />
+    <UseCases />
+    <HowItWorks />
+    <Comparison />
+    <BusinessFit />
+    <Capabilities />
+    <RevenueTieIn />
+    <OpenSource />
+    <SolutionFaq />
+    <SolutionCta />
+  </main>
+
+  <Footer />
+</Layout>

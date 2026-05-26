@@ -1,0 +1,23 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPages } from "@/lib/seo-landing-pages"
+
+export function getStaticPaths() {
+  const comparisonPages = seoLandingPages.filter(
+    (p) => p.group === "comparison" && p.path.startsWith("/compare/")
+  )
+
+  return comparisonPages.map((page) => ({
+    params: { slug: page.slug },
+    props: { page },
+  }))
+}
+
+const { page } = Astro.props
+
+if (!page) {
+  throw new Error(`Missing comparison page data for slug: ${Astro.params.slug}`)
+}
+---
+
+<SeoLandingPage page={page} />

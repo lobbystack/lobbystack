@@ -1,0 +1,110 @@
+/
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card", </index.md>; rel="alternate"; type="text/markdown"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/features/
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card", </features.md>; rel="alternate"; type="text/markdown"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/pricing/
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card", </pricing.md>; rel="alternate"; type="text/markdown"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/blog/
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card", </blog.md>; rel="alternate"; type="text/markdown"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/docs/api/
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card", </docs/api.md>; rel="alternate"; type="text/markdown"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/search/
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")
+
+/privacy/
+  X-Robots-Tag: noindex, follow
+
+/terms/
+  X-Robots-Tag: noindex, follow
+
+/index.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/*.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/*/*.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/*/*/*.md
+  Content-Type: text/markdown; charset=utf-8
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/.well-known/api-catalog
+  Content-Type: application/linkset+json; charset=utf-8; profile="https://www.rfc-editor.org/info/rfc9727"
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/schema/*
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/schemamap.xml
+  X-Robots-Tag: noindex, follow
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/api/status
+  Content-Type: application/json; charset=utf-8
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/og/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/screenshots/*
+  Cache-Control: public, max-age=604800
+
+/illustrations/*
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  Cache-Control: public, max-age=604800
+
+/webmcp.js
+  Cache-Control: public, max-age=3600
+
+/*
+  Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </docs/api/>; rel="service-doc"; type="text/html", </llms.txt>; rel="describedby"; type="text/plain", </feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed", </schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map", </schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph", </schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph", </.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index", </.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card"
+  Vary: Accept
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes
+  No-Vary-Search: key-order, params=("utm_source" "utm_medium" "utm_campaign" "utm_content" "utm_term")

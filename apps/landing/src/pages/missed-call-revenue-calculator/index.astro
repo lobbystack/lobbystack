@@ -1,0 +1,339 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { MissedCallCalculator } from "@/components/calculator/MissedCallCalculator"
+import { CalculatorFaq } from "@/components/calculator/CalculatorFaq"
+import { calculatorFaqs } from "@/lib/calculator-faqs"
+import { MissedRevenueCards } from "@/components/calculator/MissedRevenueCards"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  absoluteUrl,
+} from "@/lib/seo"
+
+const faqJsonLd = faqPageJsonLd({
+  path: "/missed-call-revenue-calculator/",
+  faqs: calculatorFaqs.map((faq) => ({
+    question: faq.q,
+    answer: faq.a,
+  })),
+})
+
+const measurementItems = [
+  {
+    term: "Missed calls per week",
+    description:
+      "Use the calls your team could not answer live. Include calls missed during jobs, while driving, at lunch, after hours, and on weekends.",
+  },
+  {
+    term: "Average job value",
+    description:
+      "Use completed revenue divided by completed jobs. If your work ranges from small service calls to big installs, start with the blended average.",
+  },
+  {
+    term: "% of calls that are real jobs",
+    description:
+      "Not every missed call is a buyer. This input removes spam, vendors, wrong numbers, and existing customers who did not need a new job booked.",
+  },
+  {
+    term: "Booking rate if answered",
+    description:
+      "Use the percentage of qualified phone leads that usually turn into an appointment, estimate, dispatch, or paid job when someone answers promptly.",
+  },
+]
+
+const inputTips = [
+  "Pull missed-call counts from your phone system instead of guessing from memory.",
+  "Use the last 30 to 90 days for average job value, especially if your work is seasonal.",
+  "Keep the opportunity rate conservative if your phone gets a lot of sales calls or repeat customer questions.",
+  "If you do not know your booking rate, start lower than you think and rerun the calculator with a best-case version.",
+]
+
+const tradeNotes = [
+  {
+    trade: "Plumbing",
+    note: "Emergency calls often go to the first company that answers. A single missed burst-pipe call can be worth more than a full day of small service work.",
+  },
+  {
+    trade: "HVAC",
+    note: "Heat waves and cold snaps compress demand into short windows. During peak season, even a few unanswered calls can turn into booked jobs for competitors.",
+  },
+  {
+    trade: "Roofing",
+    note: "Roofing leads are usually high-value, but shoppers rarely wait long. If a storm just passed through, speed to answer matters as much as ad spend.",
+  },
+  {
+    trade: "Electrical",
+    note: "Troubleshooting calls, panel issues, and urgent repairs are hard to price from voicemail. A live answer helps collect details before the caller moves on.",
+  },
+  {
+    trade: "Landscaping",
+    note: "One missed inquiry can become a recurring maintenance account. Use a realistic average that includes the lifetime value of repeat work when it applies.",
+  },
+]
+---
+
+<Layout
+  seo={{
+    title: "Missed Call Revenue Calculator | LobbyStack",
+    description:
+      "Estimate weekly, monthly, and annual revenue at risk from missed contractor calls. Calculate how much you could recover with a 24/7 receptionist.",
+    canonicalPath: "/missed-call-revenue-calculator/",
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        {
+          name: "Missed Call Revenue Calculator",
+          path: "/missed-call-revenue-calculator/",
+        },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/missed-call-revenue-calculator/#webpage"),
+        name: "Missed Call Revenue Calculator | LobbyStack",
+        url: absoluteUrl("/missed-call-revenue-calculator/"),
+        description:
+          "Estimate weekly, monthly, and annual revenue at risk from missed contractor calls. Calculate how much you could recover with a 24/7 receptionist.",
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqJsonLd,
+    ],
+  }}
+>
+  <Navbar />
+
+  <main id="main-content">
+    <section class="mx-auto max-w-7xl px-4 pt-24 pb-8 sm:pt-32 sm:pb-12">
+      <div class="max-w-3xl">
+        <h1
+          class="mb-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl"
+        >
+          Missed Call Revenue Calculator for Contractors
+        </h1>
+        <p class="text-xl leading-relaxed text-muted-foreground">
+          Estimate exactly how much revenue is slipping through the cracks when
+          you can't answer the phone.
+        </p>
+        <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          This missed call revenue calculator is built for contractors and home
+          service businesses that book work by phone. Use it to put a dollar
+          figure on unanswered calls from homeowners, property managers, and
+          repeat customers before those jobs go to another company.
+        </p>
+      </div>
+
+      <MissedCallCalculator client:load />
+    </section>
+
+    <section class="pt-12 pb-16 sm:pt-16 sm:pb-24" id="how-it-works">
+      <div class="mx-auto max-w-4xl px-4">
+        <div class="flex flex-col gap-16">
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              What this missed call calculator measures
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              The calculator estimates booked revenue at risk, not total call
+              volume. It filters your missed calls down to the ones that were
+              likely real job opportunities, then applies your booking rate and
+              average job value.
+            </p>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                measurementItems.map((item) => (
+                  <article class="rounded-2xl border border-border/70 bg-background p-6">
+                    <h3 class="text-base font-semibold text-foreground">
+                      {item.term}
+                    </h3>
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </article>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2
+              id="how-the-math-works"
+              class="text-3xl font-semibold tracking-tight text-foreground"
+            >
+              How the math works
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              We use a straightforward, conservative formula to calculate your
+              revenue at risk. It's based on real metrics that drive contracting
+              businesses:
+            </p>
+            <div
+              class="overflow-x-auto rounded-2xl border border-border/70 bg-background p-6 font-mono text-sm sm:text-base"
+            >
+              monthly revenue at risk = missed calls per week × 4.3 ×
+              opportunity rate × booking rate × average job value
+            </div>
+            <p class="leading-relaxed text-muted-foreground">
+              We multiply your weekly missed calls by 4.3 (the average weeks in
+              a month) to get monthly calls. Then, we reduce that number to only
+              the calls that are real jobs (opportunity rate) and the percentage
+              of those you would typically win (booking rate). Finally, we
+              multiply those lost jobs by your average job value.
+            </p>
+            <p class="leading-relaxed text-muted-foreground">
+              For example, say you miss 10 calls per week. If half of those
+              calls are real job opportunities, 40% would have booked, and your
+              average job is worth $500, the calculator estimates about $4,300
+              in monthly revenue at risk. Change one input at a time to see
+              which number has the biggest impact on your business.
+            </p>
+          </div>
+
+          <MissedRevenueCards />
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              Why missed calls turn into lost jobs
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              Most homeowners do not treat voicemail like a waiting room. If a
+              pipe is leaking, an AC unit is out, or a roof needs attention,
+              they keep calling until someone answers. That means a missed call
+              can become a booked job for the next contractor in the search
+              results.
+            </p>
+            <p class="leading-relaxed text-muted-foreground">
+              The loss is not just the call. It is the ad click, referral, truck
+              roll, estimate, repair, installation, or recurring account that
+              could have started with that first conversation. That is why this
+              calculator focuses on revenue at risk instead of call volume alone.
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              How to choose realistic inputs
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              The best missed call cost estimate comes from your own numbers.
+              If you do not have perfect reporting yet, use conservative inputs
+              first. You can always rerun the calculator with higher or lower
+              assumptions.
+            </p>
+            <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                inputTips.map((tip) => (
+                  <li class="rounded-2xl border border-border/70 bg-background p-5 text-sm leading-relaxed text-muted-foreground">
+                    {tip}
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              Missed call revenue by trade
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              The same formula works across home services, but the risk looks
+              different by trade. Use these notes to pick inputs that match the
+              way your customers buy.
+            </p>
+            <div class="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background">
+              {
+                tradeNotes.map((item) => (
+                  <article class="grid gap-3 p-6 sm:grid-cols-[9rem_1fr] sm:gap-6">
+                    <h3 class="font-semibold text-foreground">{item.trade}</h3>
+                    <p class="text-sm leading-relaxed text-muted-foreground">
+                      {item.note}
+                    </p>
+                  </article>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-6 pt-8">
+            <h2
+              id="what-to-do-next"
+              class="text-3xl font-semibold tracking-tight text-foreground"
+            >
+              What to do next
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              Stop letting new leads go to voicemail, because they rarely leave
+              one. <a
+                href="/features/"
+                class="text-foreground underline decoration-2 underline-offset-4 hover:text-foreground/80"
+                >LobbyStack's AI receptionist</a
+              > works 24/7 to plug your revenue leak:
+            </p>
+            <p class="leading-relaxed text-muted-foreground">
+              If the calculator shows meaningful revenue at risk, the next step
+              is to answer more calls without pulling technicians off the work
+              they are already doing. LobbyStack combines <a
+                href="/solutions/ai-phone-answering/"
+                class="text-foreground underline decoration-2 underline-offset-4 hover:text-foreground/80"
+                >AI phone answering</a
+              >, <a
+                href="/solutions/after-hours-answering-service/"
+                class="text-foreground underline decoration-2 underline-offset-4 hover:text-foreground/80"
+                >after-hours answering</a
+              >, and <a
+                href="/solutions/ai-appointment-scheduler/"
+                class="text-foreground underline decoration-2 underline-offset-4 hover:text-foreground/80"
+                >AI appointment scheduling</a
+              > so new leads can be captured when your team is busy.
+            </p>
+            <ul class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                [
+                  "Answers every call instantly",
+                  "Captures follow-up details automatically",
+                  "Books appointments directly to your calendar",
+                  "Takes detailed job notes and summaries",
+                  "Transfers emergencies to your personal cell",
+                  "Costs a fraction of a human answering service",
+                ].map((item) => (
+                  <li class="flex items-start gap-3">
+                    <div class="mt-2 size-2 shrink-0 rounded-full bg-primary" />
+                    <span class="text-muted-foreground">{item}</span>
+                  </li>
+                ))
+              }
+            </ul>
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+              <a
+                href="https://app.lobbystack.com/signup?source=calculator"
+                class="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+              >
+                Try for free
+              </a>
+              <a
+                href="/pricing/"
+                class="inline-flex h-12 items-center justify-center rounded-full border border-border px-8 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                See pricing
+              </a>
+            </div>
+          </div>
+
+          <CalculatorFaq />
+        </div>
+      </div>
+    </section>
+
+    <CtaSection />
+  </main>
+
+  <Footer />
+</Layout>

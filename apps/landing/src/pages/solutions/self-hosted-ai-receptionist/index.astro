@@ -1,0 +1,12 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
+
+const page = seoLandingPageByPath("/solutions/self-hosted-ai-receptionist/")
+
+if (!page) {
+  throw new Error("Missing self-hosted AI receptionist landing page data")
+}
+---
+
+<SeoLandingPage page={page} />
