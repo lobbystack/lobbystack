@@ -9,7 +9,8 @@ primary_region = "iad"
 [env]
   PORT = "3001"
   VOICE_GATEWAY_TRUST_PROXY = "true"
-  WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,https://www.lobbystack.com,http://localhost:4321,http://127.0.0.1:4321"
+  # Internet-facing deploy: public site origins only. Local dev uses .env (see .env.example).
+  WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,https://www.lobbystack.com"
 
 [http_service]
   internal_port = 3001
