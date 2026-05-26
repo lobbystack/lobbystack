@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync } from "node:fs";
+import { join } from "node:path";
 
 export function parseArgs(argv) {
   const args = {
@@ -129,6 +130,45 @@ export function redactValue(key, value) {
   }
 
   return "<redacted>";
+}
+
+const ENV_LOCAL_BACKUP_SUFFIX = ".self-hosted-bak";
+
+/** Env for Convex CLI against a self-hosted backend (not Convex Cloud). */
+export function selfHostedCliEnv(selfHostedEnv) {
+  const {
+    CONVEX_DEPLOYMENT: _deployment,
+    CONVEX_DEPLOY_KEY: _deployKey,
+    ...rest
+  } = process.env;
+
+  return {
+    ...rest,
+    CONVEX_SELF_HOSTED_URL: selfHostedEnv.CONVEX_SELF_HOSTED_URL,
+    CONVEX_SELF_HOSTED_ADMIN_KEY: selfHostedEnv.CONVEX_SELF_HOSTED_ADMIN_KEY,
+  };
+}
+
+/**
+ * Convex CLI auto-loads `.env.local`, which sets CONVEX_DEPLOYMENT for cloud dev.
+ * Hide it while targeting a self-hosted backend.
+ */
+export function isolateSelfHostedConvexCli(selfHostedEnv, run) {
+  const envLocalPath = join(process.cwd(), ".env.local");
+  const backupPath = `${envLocalPath}${ENV_LOCAL_BACKUP_SUFFIX}`;
+  const hadEnvLocal = existsSync(envLocalPath);
+
+  if (hadEnvLocal) {
+    renameSync(envLocalPath, backupPath);
+  }
+
+  try {
+    return run(selfHostedCliEnv(selfHostedEnv));
+  } finally {
+    if (hadEnvLocal && existsSync(backupPath)) {
+      renameSync(backupPath, envLocalPath);
+    }
+  }
 }
 
 export function getPnpmInvocation() {

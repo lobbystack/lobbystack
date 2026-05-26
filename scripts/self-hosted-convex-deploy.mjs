@@ -6,6 +6,7 @@ import {
   readEnvFile,
   requireEnv,
   resolveEnvFile,
+  isolateSelfHostedConvexCli,
 } from "./lib/self-hosted-env.mjs";
 
 const args = parseArgs(process.argv.slice(2));
@@ -22,14 +23,12 @@ if (args.dryRun) {
 }
 
 const pnpm = getPnpmInvocation();
-const result = spawnSync(pnpm.command, [...pnpm.args, ...command], {
-  env: {
-    ...process.env,
-    CONVEX_SELF_HOSTED_URL: env.CONVEX_SELF_HOSTED_URL,
-    CONVEX_SELF_HOSTED_ADMIN_KEY: env.CONVEX_SELF_HOSTED_ADMIN_KEY,
-  },
-  stdio: "inherit",
-});
+const result = isolateSelfHostedConvexCli(env, (cliEnv) =>
+  spawnSync(pnpm.command, [...pnpm.args, ...command], {
+    env: cliEnv,
+    stdio: "inherit",
+  }),
+);
 
 if (result.error) {
   throw result.error;

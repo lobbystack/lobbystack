@@ -7,6 +7,7 @@ import {
   redactValue,
   requireEnv,
   resolveEnvFile,
+  isolateSelfHostedConvexCli,
 } from "./lib/self-hosted-env.mjs";
 
 const REQUIRED_ENV_KEYS = [
@@ -93,17 +94,15 @@ function runConvexEnvSet({ key, value, env, dryRun }) {
   }
 
   const pnpm = getPnpmInvocation();
-  const result = spawnSync(
-    pnpm.command,
-    [...pnpm.args, "exec", "convex", "env", "set", key, "--", value],
-    {
-      env: {
-        ...process.env,
-        CONVEX_SELF_HOSTED_URL: env.CONVEX_SELF_HOSTED_URL,
-        CONVEX_SELF_HOSTED_ADMIN_KEY: env.CONVEX_SELF_HOSTED_ADMIN_KEY,
+  const result = isolateSelfHostedConvexCli(env, (cliEnv) =>
+    spawnSync(
+      pnpm.command,
+      [...pnpm.args, "exec", "convex", "env", "set", key, "--", value],
+      {
+        env: cliEnv,
+        stdio: "inherit",
       },
-      stdio: "inherit",
-    },
+    ),
   );
 
   if (result.error) {
