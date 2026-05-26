@@ -54,6 +54,7 @@ const originalSessionEncryptionKey = process.env.SESSION_ENCRYPTION_KEY;
 
 let googleEventCounter = 0;
 let failGoogleEventWrites = false;
+let failGoogleEventDeletes = false;
 let forceInvalidGoogleSyncToken = false;
 let forceGoogleRefreshTokenRevoked = false;
 let googleEventsByCalendar: Record<string, Record<string, MockGoogleEvent>> = {};
@@ -61,6 +62,7 @@ let googleEventsByCalendar: Record<string, Record<string, MockGoogleEvent>> = {}
 function resetGoogleMockState(): void {
   googleEventCounter = 0;
   failGoogleEventWrites = false;
+  failGoogleEventDeletes = false;
   forceInvalidGoogleSyncToken = false;
   forceGoogleRefreshTokenRevoked = false;
   googleEventsByCalendar = {
@@ -198,6 +200,13 @@ function installGoogleFetchMock(): void {
         }
 
         if (method === "DELETE" && eventId) {
+          if (failGoogleEventDeletes) {
+            return new Response(JSON.stringify({ error: { message: "Google delete failed." } }), {
+              status: 500,
+              headers: { "content-type": "application/json" },
+            });
+          }
+
           delete googleEventsByCalendar[calendarId][eventId];
           return new Response(null, { status: 204 });
         }
@@ -707,6 +716,52 @@ describe("calendar reconciliation backend", () => {
     });
 
     expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(0);
+  });
+
+  it("disconnects locally when mirrored Google event cleanup fails", async () => {
+    const t = convexTest(schema, convexModules);
+    const { businessId, serviceId, staffId } = await t.run(async (ctx) => {
+      return await seedBookableBusiness(ctx, {
+        slug: "disconnect-calendar-delete-failure-business",
+        name: "Disconnect Calendar Delete Failure Business",
+      });
+    });
+    const connectionId = await connectGoogleCalendar(t, { businessId, staffId });
+    const appointmentId = await bookAppointment(t, { businessId, serviceId });
+
+    const syncResult = await t.action(
+      internal.integrations.calendar.syncAppointmentToExternalCalendars,
+      {
+        appointmentId,
+      },
+    );
+
+    expect(syncResult).toMatchObject({
+      ok: true,
+      status: "synced",
+    });
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(1);
+
+    failGoogleEventDeletes = true;
+
+    const authed = t.withIdentity({
+      subject: `calendar-owner:${String(businessId)}:${String(staffId)}`,
+    });
+    await authed.action(api.integrations.calendar.disconnectGoogleCalendar, {
+      businessId,
+    });
+
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.get(connectionId);
+      const appointment = await ctx.db.get(appointmentId);
+
+      expect(connection).toBeNull();
+      expect(appointment?.calendarSyncState).toBe("not_required");
+      expect(appointment?.calendarExternalEventId).toBeUndefined();
+      expect(appointment?.calendarLastSyncError).toBeUndefined();
+      expect(appointment?.calendarReconcileAfter).toBeUndefined();
+    });
+    expect(Object.keys(googleEventsByCalendar["primary-calendar"] ?? {})).toHaveLength(1);
   });
 
   it("records sync failures and schedules reconciliation", async () => {
