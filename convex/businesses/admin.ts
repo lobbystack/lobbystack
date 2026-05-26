@@ -27,8 +27,21 @@ import { ONBOARDING_STAGE_INDEX, normalizeOnboardingStage } from "../lib/onboard
 
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 
+const businessDeploymentModes = new Set([
+  "cloud",
+  "self_hosted_standard",
+  "development",
+]);
+
 function normalizeBootstrapBusinessName(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function getBusinessDeploymentMode(): string {
+  const deploymentMode = process.env.DEPLOYMENT_MODE;
+  return deploymentMode && businessDeploymentModes.has(deploymentMode)
+    ? deploymentMode
+    : "development";
 }
 
 async function findExistingBootstrapBusiness(
@@ -114,7 +127,7 @@ export const bootstrapBusiness = mutation({
       // the user has supplied a website, knowledge, and greeting.
       onboardingStage: "website",
       businessType: args.businessType,
-      deploymentMode: "development",
+      deploymentMode: getBusinessDeploymentMode(),
       status: "active",
     });
 
