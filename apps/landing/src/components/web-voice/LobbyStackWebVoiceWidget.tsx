@@ -3,6 +3,8 @@ import { LobbyStackAuraVoiceDemo } from "@/components/web-voice/LobbyStackAuraVo
 
 const DEFAULT_WEB_CALL_ENDPOINT =
   "https://voice.lobbystack.com/web-call/sessions"
+const DEV_WEB_CALL_ENDPOINT =
+  "https://voice-dev.lobbystack.com/web-call/sessions"
 const DEFAULT_BUSINESS_SLUG = "lobbystack-mp35s9y1"
 
 function capturePosthog(eventName: string, properties?: Record<string, unknown>) {
@@ -14,6 +16,10 @@ function capturePosthog(eventName: string, properties?: Record<string, unknown>)
 function getEndpoint() {
   if (import.meta.env.PUBLIC_WEB_CALL_ENDPOINT) {
     return import.meta.env.PUBLIC_WEB_CALL_ENDPOINT
+  }
+
+  if (import.meta.env.DEV) {
+    return DEV_WEB_CALL_ENDPOINT
   }
 
   return DEFAULT_WEB_CALL_ENDPOINT
