@@ -14,7 +14,8 @@ export function createWebRealtimeToolDefinitions() {
     {
       type: "function",
       name: "getBusinessHours",
-      description: "Get the authoritative business hours and closure information.",
+      description:
+        "Get the authoritative business hours and closure information.",
       parameters: {
         type: "object",
         properties: {},
@@ -36,7 +37,7 @@ export function createWebRealtimeToolDefinitions() {
       type: "function",
       name: "searchKnowledge",
       description:
-        "Search indexed business knowledge and uploaded documents for a specific question.",
+        "Search indexed business knowledge and uploaded documents for a specific question, including pricing, billing, usage, spam-call handling, and plan policy questions.",
       parameters: {
         type: "object",
         properties: {
@@ -106,7 +107,12 @@ export function createWebRealtimeToolDefinitions() {
               "Whether the caller explicitly agreed to receive appointment confirmation and reminder SMS after the required disclosure.",
           },
         },
-        required: ["serviceName", "startsAt", "contactPhone", "smsConsentGranted"],
+        required: [
+          "serviceName",
+          "startsAt",
+          "contactPhone",
+          "smsConsentGranted",
+        ],
         additionalProperties: false,
       },
     },

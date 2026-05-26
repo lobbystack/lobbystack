@@ -55,7 +55,8 @@ vi.mock("ws", () => {
     options: unknown;
     send = vi.fn();
     url: string | URL;
-    private handlers: Record<string, Array<(...args: Array<unknown>) => void>> = {};
+    private handlers: Record<string, Array<(...args: Array<unknown>) => void>> =
+      {};
 
     constructor(url: string | URL, options?: unknown) {
       this.url = url;
@@ -115,7 +116,10 @@ vi.mock("../convex/runtimeClient", () => ({
 import { demoSnapshot } from "@lobbystack/shared";
 
 import { createServer } from "../http/server";
-import { createWebRealtimeTurnDetectionConfig, resetWebCallRouteStateForTests } from "./routes";
+import {
+  createWebRealtimeTurnDetectionConfig,
+  resetWebCallRouteStateForTests,
+} from "./routes";
 
 describe("createWebRealtimeTurnDetectionConfig", () => {
   it("can disable auto responses and interruptions during the opening greeting", () => {
@@ -224,7 +228,8 @@ describe("web call routes", () => {
 
   it("allows localhost origins in cloud mode only when explicitly configured", async () => {
     process.env.DEPLOYMENT_MODE = "cloud";
-    process.env.WEB_CALL_ALLOWED_ORIGINS = "https://lobbystack.com,http://localhost:4321";
+    process.env.WEB_CALL_ALLOWED_ORIGINS =
+      "https://lobbystack.com,http://localhost:4321";
     const server = createServer();
 
     const response = await server.inject({
@@ -236,7 +241,9 @@ describe("web call routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:4321");
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "http://localhost:4321",
+    );
   });
 
   it("returns Convex lookup failures for unknown public widget business slugs", async () => {
@@ -392,6 +399,63 @@ describe("web call routes", () => {
     expect(response.statusCode).toBe(200);
     expect(webSocketInstances[0]?.url).toBe(
       "wss://api.openai.com/v1/realtime?call_id=rtc_test",
+    );
+  });
+
+  it("instructs the web sideband to retrieve pricing and usage policy before answering", async () => {
+    fetchWebVoiceContextMock.mockResolvedValueOnce({ snapshot: demoSnapshot });
+    startWebVoiceCallMock.mockResolvedValueOnce({
+      businessId: "business_123",
+      callId: "call_123",
+      conversationId: "conversation_123",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("answer-sdp", {
+          status: 200,
+          headers: { location: "/v1/realtime/calls/rtc_test" },
+        }),
+      ),
+    );
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "POST",
+      url: "/web-call/sessions",
+      headers: {
+        origin: "https://lobbystack.com",
+        "content-type": "application/json",
+      },
+      payload: {
+        businessSlug: "lobbystack",
+        sdp: "v=0",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    webSocketInstances[0]?.emit("open");
+
+    const sentMessages = webSocketInstances[0]?.send.mock.calls.map(
+      (call) => JSON.parse(String(call[0])) as Record<string, unknown>,
+    );
+    const sessionUpdate = sentMessages?.find(
+      (message) => message.type === "session.update",
+    ) as {
+      session?: {
+        instructions?: string;
+        tools?: Array<{ name?: string; description?: string }>;
+      };
+    };
+    const searchKnowledge = sessionUpdate.session?.tools?.find(
+      (tool) => tool.name === "searchKnowledge",
+    );
+
+    expect(sessionUpdate.session?.instructions).toContain(
+      "pricing, usage, billing, spam-call handling",
+    );
+    expect(searchKnowledge?.description).toContain(
+      "pricing, billing, usage, spam-call handling",
     );
   });
 
@@ -809,7 +873,10 @@ describe("web call routes", () => {
         providerDurationSeconds: expect.any(Number),
       }),
     );
-    expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(1000, "web call ended");
+    expect(webSocketInstances[0]?.close).toHaveBeenCalledWith(
+      1000,
+      "web call ended",
+    );
   });
 
   it("uploads browser web call recordings for completed sessions", async () => {
@@ -927,7 +994,9 @@ describe("web call routes", () => {
         audio: expect.any(Buffer),
       }),
     );
-    expect(uploadVoiceRecordingMock.mock.calls[0]?.[0].audio).toHaveLength(recording.length);
+    expect(uploadVoiceRecordingMock.mock.calls[0]?.[0].audio).toHaveLength(
+      recording.length,
+    );
   });
 
   it("orders delayed caller transcripts before the matching assistant reply", async () => {
@@ -976,7 +1045,9 @@ describe("web call routes", () => {
     );
     webSocketInstances[0]?.emit(
       "message",
-      Buffer.from(JSON.stringify({ type: "response.done", response: { id: "greeting" } })),
+      Buffer.from(
+        JSON.stringify({ type: "response.done", response: { id: "greeting" } }),
+      ),
     );
     await new Promise((resolve) => setTimeout(resolve, 2_050));
 

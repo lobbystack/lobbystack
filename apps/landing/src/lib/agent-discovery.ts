@@ -40,7 +40,11 @@ export const markdownAlternatePath = (pathname: string) => {
 
   if (alternates[normalized]) return alternates[normalized]
   const seoLandingPage = seoLandingPageByPath(normalized)
-  if (seoLandingPage?.group === "company" || seoLandingPage?.group === "solution" || seoLandingPage?.group === "comparison")
+  if (
+    seoLandingPage?.group === "company" ||
+    seoLandingPage?.group === "solution" ||
+    seoLandingPage?.group === "comparison"
+  )
     return `${normalized.slice(0, -1)}.md`
   if (normalized.startsWith("/blog/")) return `${normalized.slice(0, -1)}.md`
 
@@ -535,6 +539,7 @@ ${DEFAULT_DESCRIPTION}
 - Free: $0/month with 10 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge storage.
 - Pro: $15/month with 80 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge storage.
 - Pro overage: $0.18 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
+- Spam calls and calls under 10 seconds are excluded from usage, so they do not count against included voice minutes or Pro overages.
 - Enterprise: custom pricing for higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.
 `
 
@@ -589,6 +594,7 @@ LobbyStack has a Free plan, a Pro plan, and Enterprise options. Plans scale by u
 - Pro voice overage: $0.18 per voice minute.
 - Pro outbound call attempts: $0.02 per attempt after the included amount.
 - Pro alert SMS segments: $0.02 per segment after the included amount.
+- Spam calls and calls under 10 seconds are excluded from usage and do not count against included voice minutes or Pro overages.
 
 ## Common Answers
 
@@ -599,6 +605,14 @@ Yes. Free includes 10 voice minutes, 2 outbound call attempts, and 10 alert SMS 
 ### How does Pro pricing work?
 
 Pro is $15/month and includes 80 voice minutes, 20 outbound call attempts, and 50 alert SMS segments. After that, usage is pay-as-you-go at $0.18 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
+
+### Do spam calls count toward usage?
+
+No. LobbyStack excludes spam calls from usage, so wrong numbers, robocalls, and spam calls do not count against included voice minutes or Pro overages.
+
+### Are calls under 10 seconds charged?
+
+No. Calls under 10 seconds are excluded from usage and do not count against included voice minutes or Pro overages.
 `
 
 export const calculatorMarkdown = `---

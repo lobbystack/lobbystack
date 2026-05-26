@@ -96,6 +96,10 @@
       execute: async () => ({
         source: urls.pricing,
         markdown: urls.pricingMarkdown,
+        usageExclusions: [
+          "Spam calls do not count against included voice minutes or Pro overages.",
+          "Calls under 10 seconds do not count against included voice minutes or Pro overages.",
+        ],
         plans: [
           {
             name: "Free",

@@ -68,7 +68,9 @@ type OpenAiRealtimeMessage = {
   };
 };
 
-type RealtimeUsageMetrics = NonNullable<OpenAiRealtimeMessage["response"]>["usage"];
+type RealtimeUsageMetrics = NonNullable<
+  OpenAiRealtimeMessage["response"]
+>["usage"];
 
 type ActiveWebCall = {
   gatewaySessionId: string;
@@ -165,9 +167,9 @@ function getStringProperty(
   return typeof value === "string" ? value : null;
 }
 
-function parseWebCallSessionRequest(body: unknown):
-  | { ok: true; data: WebCallSessionRequest }
-  | { ok: false; message: string } {
+function parseWebCallSessionRequest(
+  body: unknown,
+): { ok: true; data: WebCallSessionRequest } | { ok: false; message: string } {
   if (body === null || typeof body !== "object" || Array.isArray(body)) {
     return { ok: false, message: "Invalid web call request." };
   }
@@ -224,20 +226,29 @@ function isLocalhostOrigin(origin: string): boolean {
   }
 }
 
-function isAllowedOrigin(server: FastifyInstance, origin: string | null): boolean {
+function isAllowedOrigin(
+  server: FastifyInstance,
+  origin: string | null,
+): boolean {
   if (!origin) {
     return false;
   }
-  const allowedOrigins = getAllowedOrigins(server.runtimeConfig.WEB_CALL_ALLOWED_ORIGINS);
+  const allowedOrigins = getAllowedOrigins(
+    server.runtimeConfig.WEB_CALL_ALLOWED_ORIGINS,
+  );
   return (
     allowedOrigins.has(origin) ||
-    (server.runtimeConfig.DEPLOYMENT_MODE === "development" && isLocalhostOrigin(origin))
+    (server.runtimeConfig.DEPLOYMENT_MODE === "development" &&
+      isLocalhostOrigin(origin))
   );
 }
 
 function getWebRecordingBodyLimit(maxDurationMs: number): number {
   const maxDurationSeconds = Math.ceil(maxDurationMs / 1_000);
-  return Math.max(5 * 1024 * 1024, maxDurationSeconds * WEB_RECORDING_BYTES_PER_SECOND_LIMIT);
+  return Math.max(
+    5 * 1024 * 1024,
+    maxDurationSeconds * WEB_RECORDING_BYTES_PER_SECOND_LIMIT,
+  );
 }
 
 function getWebRecordingDurationMs(
@@ -247,7 +258,10 @@ function getWebRecordingDurationMs(
 ): number {
   const elapsedDurationMs = Math.max(
     0,
-    Math.min((webCall.completedAtMs ?? Date.now()) - webCall.startedAtMs, maxDurationMs),
+    Math.min(
+      (webCall.completedAtMs ?? Date.now()) - webCall.startedAtMs,
+      maxDurationMs,
+    ),
   );
   const parsedDurationMs = Number(reportedDurationMs);
   if (!Number.isFinite(parsedDurationMs) || parsedDurationMs <= 0) {
@@ -262,7 +276,10 @@ function getWebCallDurationSeconds(
   endedAtMs: number,
   maxDurationMs: number,
 ): number {
-  return Math.max(0, Math.ceil(Math.min(endedAtMs - startedAtMs, maxDurationMs) / 1_000));
+  return Math.max(
+    0,
+    Math.ceil(Math.min(endedAtMs - startedAtMs, maxDurationMs) / 1_000),
+  );
 }
 
 function addCorsHeaders(reply: FastifyReply, origin: string): void {
@@ -364,7 +381,9 @@ async function resolveWebCallForRecording(
     return local;
   }
 
-  const durable = await fetchWebCallRecordingTarget({ gatewaySessionId: sessionId });
+  const durable = await fetchWebCallRecordingTarget({
+    gatewaySessionId: sessionId,
+  });
   if (!durable) {
     return null;
   }
@@ -374,7 +393,8 @@ async function resolveWebCallForRecording(
     return null;
   }
 
-  const completedAtMs = durable.endedAt !== undefined ? Date.parse(durable.endedAt) : undefined;
+  const completedAtMs =
+    durable.endedAt !== undefined ? Date.parse(durable.endedAt) : undefined;
   if (completedAtMs !== undefined) {
     if (!Number.isFinite(completedAtMs)) {
       return null;
@@ -408,7 +428,9 @@ async function finishDurableWebCallSession(
   sessionId: string,
   disposition: string,
 ): Promise<void> {
-  const durable = await fetchWebCallRecordingTarget({ gatewaySessionId: sessionId });
+  const durable = await fetchWebCallRecordingTarget({
+    gatewaySessionId: sessionId,
+  });
   if (!durable || durable.endedAt !== undefined) {
     return;
   }
@@ -439,7 +461,8 @@ async function finishDurableWebCallSession(
     providerDurationSeconds: getWebCallDurationSeconds(
       startedAtMs,
       endedAtMs,
-      durable.webCallMaxDurationMs ?? server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
+      durable.webCallMaxDurationMs ??
+        server.runtimeConfig.WEB_CALL_MAX_DURATION_MS,
     ),
   });
 }
@@ -518,23 +541,27 @@ function queueWebAssistantTranscript(
 
   session.pendingAssistantTranscriptFlushTimer = setTimeout(() => {
     session.pendingAssistantTranscriptFlushTimer = null;
-    void flushPendingWebAssistantTranscripts(server, session).catch((error: unknown) => {
-      server.log.error(
-        {
-          err: error,
-          callId: session.callId,
-          providerCallId: session.providerCallId,
-        },
-        "Failed to flush pending web voice assistant transcripts",
-      );
-    });
+    void flushPendingWebAssistantTranscripts(server, session).catch(
+      (error: unknown) => {
+        server.log.error(
+          {
+            err: error,
+            callId: session.callId,
+            providerCallId: session.providerCallId,
+          },
+          "Failed to flush pending web voice assistant transcripts",
+        );
+      },
+    );
   }, WEB_ASSISTANT_TRANSCRIPT_REORDER_GRACE_MS);
 }
 
-export function createWebRealtimeTurnDetectionConfig(options: {
-  createResponse?: boolean;
-  interruptResponse?: boolean;
-} = {}): Record<string, unknown> {
+export function createWebRealtimeTurnDetectionConfig(
+  options: {
+    createResponse?: boolean;
+    interruptResponse?: boolean;
+  } = {},
+): Record<string, unknown> {
   return {
     type: "server_vad",
     threshold: WEB_REALTIME_VAD_THRESHOLD,
@@ -634,7 +661,9 @@ function clearWebEndCallFallbackTimer(session: ActiveWebCall): void {
   }
 }
 
-function normalizeOptionalAbuseKey(value: string | undefined): string | undefined {
+function normalizeOptionalAbuseKey(
+  value: string | undefined,
+): string | undefined {
   const normalized = value?.trim();
   if (!normalized) {
     return undefined;
@@ -646,7 +675,10 @@ function getClientIp(request: FastifyRequest): string | undefined {
   return request.ip;
 }
 
-function hashAbuseKey(server: FastifyInstance, value: string | undefined): string | undefined {
+function hashAbuseKey(
+  server: FastifyInstance,
+  value: string | undefined,
+): string | undefined {
   if (!value) {
     return undefined;
   }
@@ -799,17 +831,19 @@ function requestWebFinalMessageBeforeHangup(
 
   session.pendingEndCallFallbackTimer = setTimeout(() => {
     session.pendingEndCallFallbackTimer = null;
-    void finishWebCallSession(server, session, endCall.reason).catch((error: unknown) => {
-      server.log.error(
-        {
-          err: error,
-          callId: session.callId,
-          providerCallId: session.providerCallId,
-          reason: endCall.reason,
-        },
-        "Failed to finalize web voice session after final-message fallback",
-      );
-    });
+    void finishWebCallSession(server, session, endCall.reason).catch(
+      (error: unknown) => {
+        server.log.error(
+          {
+            err: error,
+            callId: session.callId,
+            providerCallId: session.providerCallId,
+            reason: endCall.reason,
+          },
+          "Failed to finalize web voice session after final-message fallback",
+        );
+      },
+    );
   }, WEB_FINAL_MESSAGE_HANGUP_FALLBACK_MS);
   session.pendingEndCallFallbackTimer.unref?.();
 }
@@ -836,7 +870,10 @@ function scheduleWebMaxDurationTimer(
   }, server.runtimeConfig.WEB_CALL_MAX_DURATION_MS);
 }
 
-function parseProviderCallId(response: Response, gatewaySessionId: string): string {
+function parseProviderCallId(
+  response: Response,
+  gatewaySessionId: string,
+): string {
   const headerCandidates = [
     response.headers.get("openai-call-id"),
     response.headers.get("openai-realtime-call-id"),
@@ -858,7 +895,10 @@ function parseProviderCallId(response: Response, gatewaySessionId: string): stri
   return `webcall_${gatewaySessionId}`;
 }
 
-function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>): void {
+function postRealtimeEvent(
+  socket: WebSocket,
+  payload: Record<string, unknown>,
+): void {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
@@ -872,22 +912,30 @@ function priceUsage(
     return null;
   }
 
-  const fallbackInputPrice = server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD;
-  const fallbackOutputPrice = server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD;
+  const fallbackInputPrice =
+    server.runtimeConfig.OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD;
+  const fallbackOutputPrice =
+    server.runtimeConfig.OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD;
   const textInputTokens = usage.input_token_details?.text_tokens;
   const audioInputTokens = usage.input_token_details?.audio_tokens;
   const cachedInputTokens = usage.input_token_details?.cached_tokens ?? 0;
   const textOutputTokens = usage.output_token_details?.text_tokens;
   const audioOutputTokens = usage.output_token_details?.audio_tokens;
   const textInputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD ?? fallbackInputPrice;
-  const audioInputPrice = server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD ??
+    fallbackInputPrice;
+  const audioInputPrice =
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD;
   const textOutputPrice =
-    server.runtimeConfig.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD ?? fallbackOutputPrice;
-  const audioOutputPrice = server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD;
-  const cachedInputPrice = server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD;
+    server.runtimeConfig.OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD ??
+    fallbackOutputPrice;
+  const audioOutputPrice =
+    server.runtimeConfig.OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD;
+  const cachedInputPrice =
+    server.runtimeConfig.OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD;
 
-  const hasDetailedInput = textInputTokens !== undefined || audioInputTokens !== undefined;
+  const hasDetailedInput =
+    textInputTokens !== undefined || audioInputTokens !== undefined;
   if (hasDetailedInput && cachedInputTokens > 0) {
     return null;
   }
@@ -895,8 +943,12 @@ function priceUsage(
   const inputTokens = usage.input_tokens;
   const outputTokens = usage.output_tokens;
   const uncachedInputTokens =
-    inputTokens !== undefined ? Math.max(0, inputTokens - cachedInputTokens) : undefined;
-  const pricedBuckets: Array<readonly [number | undefined, number | undefined]> = hasDetailedInput
+    inputTokens !== undefined
+      ? Math.max(0, inputTokens - cachedInputTokens)
+      : undefined;
+  const pricedBuckets: Array<
+    readonly [number | undefined, number | undefined]
+  > = hasDetailedInput
     ? [
         [textInputTokens, textInputPrice],
         [audioInputTokens, audioInputPrice],
@@ -988,6 +1040,7 @@ function createSidebandSocket(input: {
           buildVoiceSystemPrompt(input.snapshot),
           "You are speaking through a website voice widget, not a phone call.",
           "Represent LobbyStack and answer questions about the business from the supplied snapshot and tools.",
+          "For LobbyStack pricing, usage, billing, spam-call handling, and plan policy questions, call searchKnowledge before answering unless the exact answer is already present in the current turn's tool result.",
           "Use the configured greeting only once at the start of the session. Never repeat it after the opening greeting, even after interruptions, silence, or filler speech.",
           "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
           "Ask for a phone number before booking an appointment, taking a callback message, or discussing existing appointments.",
@@ -1028,27 +1081,30 @@ function createSidebandSocket(input: {
   });
 
   socket.on("message", (rawMessage) => {
-    void handleSidebandMessage(input.server, socket, input.session, rawMessage).catch(
-      (error: unknown) => {
-        input.server.log.error(
-          {
-            err: error,
-            callId: input.session.callId,
-            providerCallId: input.session.providerCallId,
-          },
-          "Failed to handle OpenAI Realtime web call sideband message",
-        );
-        capturePostHogException(error, {
-          businessId: input.session.businessId,
-          properties: {
-            operation: "web_call_sideband_message",
-            channel: "web_voice",
-            provider: "openai",
-            callId: input.session.callId,
-          },
-        });
-      },
-    );
+    void handleSidebandMessage(
+      input.server,
+      socket,
+      input.session,
+      rawMessage,
+    ).catch((error: unknown) => {
+      input.server.log.error(
+        {
+          err: error,
+          callId: input.session.callId,
+          providerCallId: input.session.providerCallId,
+        },
+        "Failed to handle OpenAI Realtime web call sideband message",
+      );
+      capturePostHogException(error, {
+        businessId: input.session.businessId,
+        properties: {
+          operation: "web_call_sideband_message",
+          channel: "web_voice",
+          provider: "openai",
+          callId: input.session.callId,
+        },
+      });
+    });
   });
 
   socket.on("error", (error) => {
@@ -1069,7 +1125,9 @@ function createSidebandSocket(input: {
         callId: input.session.callId,
         providerCallId: input.session.providerCallId,
         code,
-        reason: Buffer.isBuffer(reason) ? reason.toString() : String(reason ?? ""),
+        reason: Buffer.isBuffer(reason)
+          ? reason.toString()
+          : String(reason ?? ""),
       },
       "OpenAI Realtime web call sideband websocket closed",
     );
@@ -1159,36 +1217,46 @@ async function handleSidebandMessage(
 
     if (
       session.pendingEndCall &&
-      payload.response?.metadata?.lobbystack_purpose === WEB_FINAL_MESSAGE_METADATA_PURPOSE
+      payload.response?.metadata?.lobbystack_purpose ===
+        WEB_FINAL_MESSAGE_METADATA_PURPOSE
     ) {
       const endCall = session.pendingEndCall;
       clearWebEndCallFallbackTimer(session);
       session.pendingEndCallFallbackTimer = setTimeout(() => {
         session.pendingEndCall = null;
         session.pendingEndCallFallbackTimer = null;
-        void finishWebCallSession(server, session, endCall.reason).catch((error: unknown) => {
-          server.log.error(
-            {
-              err: error,
-              callId: session.callId,
-              providerCallId: session.providerCallId,
-              reason: endCall.reason,
-            },
-            "Failed to finalize web voice session after final-message playback grace",
-          );
-        });
+        void finishWebCallSession(server, session, endCall.reason).catch(
+          (error: unknown) => {
+            server.log.error(
+              {
+                err: error,
+                callId: session.callId,
+                providerCallId: session.providerCallId,
+                reason: endCall.reason,
+              },
+              "Failed to finalize web voice session after final-message playback grace",
+            );
+          },
+        );
       }, getWebFinalMessagePlaybackGraceMs(endCall.message));
       session.pendingEndCallFallbackTimer.unref?.();
       return;
     }
 
     if (session.openingGreetingActive) {
-      scheduleWebRealtimeTurnDetectionEnable(server, socket, session, "response_done");
+      scheduleWebRealtimeTurnDetectionEnable(
+        server,
+        socket,
+        session,
+        "response_done",
+      );
     }
     return;
   }
 
-  if (payload.type === "conversation.item.input_audio_transcription.completed") {
+  if (
+    payload.type === "conversation.item.input_audio_transcription.completed"
+  ) {
     await persistWebTranscriptIfNew(
       server,
       session,
@@ -1326,7 +1394,12 @@ async function handleToolCall(
   }
 
   if (executed.endCall) {
-    requestWebFinalMessageBeforeHangup(server, socket, session, executed.endCall);
+    requestWebFinalMessageBeforeHangup(
+      server,
+      socket,
+      session,
+      executed.endCall,
+    );
     return;
   }
 
@@ -1349,7 +1422,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
     (_request, body, done) => done(null, body),
   );
 
-  const handleCorsPreflight = async (request: FastifyRequest, reply: FastifyReply) => {
+  const handleCorsPreflight = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
     const origin = getRequestOrigin(request);
     if (!isAllowedOrigin(server, origin)) {
       reply.code(403);
@@ -1361,7 +1437,10 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
   server.options("/web-call/sessions", handleCorsPreflight);
   server.options("/web-call/sessions/:sessionId/end", handleCorsPreflight);
-  server.options("/web-call/sessions/:sessionId/recording", handleCorsPreflight);
+  server.options(
+    "/web-call/sessions/:sessionId/recording",
+    handleCorsPreflight,
+  );
 
   server.post("/web-call/sessions", async (request, reply) => {
     const origin = getRequestOrigin(request);
@@ -1424,10 +1503,9 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
       }
       throw error;
     }
-    const providerCallId =
-      exchange.providerCallId.startsWith("webcall_")
-        ? `webcall_${gatewaySessionId}`
-        : exchange.providerCallId;
+    const providerCallId = exchange.providerCallId.startsWith("webcall_")
+      ? `webcall_${gatewaySessionId}`
+      : exchange.providerCallId;
 
     const startedAt = new Date().toISOString();
     let call: Awaited<ReturnType<typeof startWebVoiceCall>>;
@@ -1503,7 +1581,11 @@ export function registerWebCallRoutes(server: FastifyInstance): void {
 
     const session = activeWebCalls.get(request.params.sessionId);
     if (!session) {
-      await finishDurableWebCallSession(server, request.params.sessionId, "caller_finished");
+      await finishDurableWebCallSession(
+        server,
+        request.params.sessionId,
+        "caller_finished",
+      );
       reply.code(204);
       return null;
     }
