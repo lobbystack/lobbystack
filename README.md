@@ -161,8 +161,12 @@ Mock providers are part of the default development path, so contributors can exe
 ### Self-Hosted Docker Compose
 
 ```bash
+git clone https://github.com/lobbystack/lobbystack.git
+cd lobbystack
+pnpm install
 cp .env.self-hosted.example .env.self-hosted
 pnpm self-hosted:secrets -- --write .env.self-hosted
+# Edit .env.self-hosted for localhost smoke first; see the docs guide.
 docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d convex-backend convex-dashboard
 docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted exec convex-backend ./generate_admin_key.sh
 # Paste the generated key into CONVEX_SELF_HOSTED_ADMIN_KEY before continuing.
@@ -172,7 +176,7 @@ docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up 
 pnpm self-hosted:verify
 ```
 
-See the [Docker Compose self-hosting guide](https://docs.lobbystack.com/self-hosting/docker-compose) before using this path with public DNS and provider credentials.
+For prerequisites, local smoke vs production go-live, helper scripts, and troubleshooting, see the [Docker Compose self-hosting guide](https://docs.lobbystack.com/self-hosting/docker-compose).
 
 ## Contributing
 
