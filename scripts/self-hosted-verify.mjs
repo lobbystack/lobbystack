@@ -57,9 +57,21 @@ async function expectStatus(name, url, expected) {
   });
 }
 
+const PLACEHOLDER_SECRET_KEYS = ["INSTANCE_SECRET", "INTERNAL_SERVICE_TOKEN"];
+
 const args = parseArgs(process.argv.slice(2));
 const envFile = resolveEnvFile(args.envFile);
 const env = readEnvFile(envFile);
+
+const placeholderSecrets = PLACEHOLDER_SECRET_KEYS.filter(
+  (key) => !env[key] || isPlaceholderValue(env[key]),
+);
+if (placeholderSecrets.length > 0) {
+  console.error(
+    `FAIL secrets: Replace placeholder values for ${placeholderSecrets.join(", ")}. Run: pnpm self-hosted:secrets -- --write ${envFile}`,
+  );
+  process.exit(1);
+}
 
 const webBaseUrl =
   env.SELF_HOSTED_WEB_VERIFY_URL ?? `http://127.0.0.1:${env.WEB_PORT || "8080"}`;

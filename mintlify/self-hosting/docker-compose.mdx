@@ -52,6 +52,7 @@ Edit `.env.self-hosted` before starting containers.
 | `CONVEX_URL` | `http://127.0.0.1:3210` |
 | `CONVEX_SITE_URL` | `http://127.0.0.1:3211` |
 | `CONVEX_CLOUD_ORIGIN`, `CONVEX_SITE_ORIGIN` | Match the Convex URLs above |
+| `WEB_CALL_ALLOWED_ORIGINS` | `http://127.0.0.1:8080` (must match the web URL for in-browser web calls) |
 
 Provider credentials (Twilio, OpenAI, and others) are not required for the smoke test. Configure them before production traffic; see [Additional steps](#additional-steps).
 
