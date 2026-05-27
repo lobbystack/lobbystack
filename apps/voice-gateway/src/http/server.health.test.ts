@@ -33,6 +33,9 @@ describe("/health/convex", () => {
     const response = await server.inject({
       method: "GET",
       url: "/health/convex",
+      headers: {
+        "x-internal-service-token": "test-service-token",
+      },
     });
 
     expect(response.statusCode).toBe(200);
@@ -50,6 +53,22 @@ describe("/health/convex", () => {
       method: "GET",
       url: "/health/convex",
       remoteAddress: "203.0.113.10",
+      headers: {
+        "x-internal-service-token": "test-service-token",
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ ok: false });
+    expect(probeConvexSiteReachabilityMock).not.toHaveBeenCalled();
+  });
+
+  it("hides the route when the token is missing", async () => {
+    const server = createServer();
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/health/convex",
     });
 
     expect(response.statusCode).toBe(404);
@@ -68,6 +87,9 @@ describe("/health/convex", () => {
     const response = await server.inject({
       method: "GET",
       url: "/health/convex",
+      headers: {
+        "x-internal-service-token": "test-service-token",
+      },
     });
 
     expect(response.statusCode).toBe(503);

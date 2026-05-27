@@ -97,7 +97,19 @@ export function createServer(): ReturnType<typeof Fastify> {
   });
 
   server.get("/health/convex", async (request, reply) => {
-    if (!isPrivateNetworkAddress(request.ip)) {
+    const peerAddress = request.socket.remoteAddress;
+    if (!isPrivateNetworkAddress(peerAddress ?? request.ip)) {
+      return reply.status(404).send({ ok: false });
+    }
+
+    const internalTokenHeader = request.headers["x-internal-service-token"];
+    const internalToken =
+      typeof internalTokenHeader === "string"
+        ? internalTokenHeader
+        : Array.isArray(internalTokenHeader)
+          ? internalTokenHeader[0]
+          : undefined;
+    if (!internalToken || internalToken !== env.INTERNAL_SERVICE_TOKEN) {
       return reply.status(404).send({ ok: false });
     }
 

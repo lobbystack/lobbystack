@@ -119,11 +119,25 @@ const checks = [
     };
   }),
   expectStatus("voice health", urlJoin(voiceBaseUrl, "/health"), (response) => response.ok),
-  expectStatus(
-    "voice convex connectivity",
-    urlJoin(voiceBaseUrl, "/health/convex"),
-    (response) => response.ok,
-  ),
+  check("voice convex connectivity", async () => {
+    if (!env.INTERNAL_SERVICE_TOKEN || isPlaceholderValue(env.INTERNAL_SERVICE_TOKEN)) {
+      return {
+        skip: true,
+        message: "INTERNAL_SERVICE_TOKEN is not configured.",
+      };
+    }
+
+    const response = await fetchWithTimeout(urlJoin(voiceBaseUrl, "/health/convex"), {
+      headers: {
+        "x-internal-service-token": env.INTERNAL_SERVICE_TOKEN,
+      },
+    });
+
+    return {
+      ok: response.ok,
+      message: `${response.status} ${response.statusText}`,
+    };
+  }),
   expectStatus("convex backend version", urlJoin(convexBaseUrl, "/version"), (response) => response.ok),
   expectStatus("convex dashboard", dashboardBaseUrl, (response) => response.ok),
   check("convex voice context HTTP action", async () => {
