@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, renameSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+} from "node:fs";
 import { join } from "node:path";
 
 export function parseArgs(argv) {
@@ -25,6 +32,11 @@ export function parseArgs(argv) {
 
     if (value === "--include-empty") {
       args.includeEmpty = true;
+      continue;
+    }
+
+    if (value === "--force") {
+      args.force = true;
       continue;
     }
 
@@ -109,6 +121,18 @@ function referencesExampleComHost(value) {
   }
 }
 
+/** Detects user@example.com and user@sub.example.com email placeholders. */
+function referencesExampleComEmail(value) {
+  const trimmed = value.trim().toLowerCase();
+  const atIndex = trimmed.lastIndexOf("@");
+  if (atIndex <= 0 || atIndex === trimmed.length - 1) {
+    return false;
+  }
+
+  const domain = trimmed.slice(atIndex + 1);
+  return domain === "example.com" || domain.endsWith(".example.com");
+}
+
 export function isPlaceholderValue(value) {
   const normalized = value.trim().toLowerCase();
   return (
@@ -116,6 +140,7 @@ export function isPlaceholderValue(value) {
     normalized === "change-me" ||
     normalized.startsWith("change-me-") ||
     referencesExampleComHost(value) ||
+    referencesExampleComEmail(value) ||
     normalized.includes("your-") ||
     normalized.includes("<your")
   );
@@ -150,6 +175,48 @@ export function redactValue(key, value) {
 }
 
 const ENV_LOCAL_BACKUP_SUFFIX = ".self-hosted-bak";
+const ENV_LOCAL_LOCK_SUFFIX = ".self-hosted-lock";
+
+function acquireSelfHostedCliLock(rootDir) {
+  const lockPath = join(rootDir, `.env.local${ENV_LOCAL_LOCK_SUFFIX}`);
+  try {
+    const fd = openSync(lockPath, "wx");
+    return {
+      release() {
+        closeSync(fd);
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          // Ignore lock cleanup failures.
+        }
+      },
+    };
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "EEXIST") {
+      throw new Error(
+        `Another self-hosted Convex CLI command appears to be running (${lockPath} exists). ` +
+          "If no command is running, remove that lock file and retry.",
+      );
+    }
+    throw error;
+  }
+}
+
+function recoverStaleEnvLocalBackup(envLocalPath, backupPath) {
+  const hasEnvLocal = existsSync(envLocalPath);
+  const hasBackup = existsSync(backupPath);
+
+  if (!hasEnvLocal && hasBackup) {
+    renameSync(backupPath, envLocalPath);
+    return;
+  }
+
+  if (hasEnvLocal && hasBackup) {
+    throw new Error(
+      `Found both ${envLocalPath} and ${backupPath}. Remove ${backupPath} or restore it manually before running self-hosted Convex CLI commands.`,
+    );
+  }
+}
 
 /** Env for Convex CLI against a self-hosted backend (not Convex Cloud). */
 export function selfHostedCliEnv(selfHostedEnv) {
@@ -170,9 +237,14 @@ export function selfHostedCliEnv(selfHostedEnv) {
  * Convex CLI auto-loads `.env.local`, which sets CONVEX_DEPLOYMENT for cloud dev.
  * Hide it while targeting a self-hosted backend.
  */
-export function isolateSelfHostedConvexCli(selfHostedEnv, run) {
-  const envLocalPath = join(process.cwd(), ".env.local");
+export function isolateSelfHostedConvexCli(selfHostedEnv, run, options = {}) {
+  const rootDir = options.rootDir ?? process.cwd();
+  const envLocalPath = join(rootDir, ".env.local");
   const backupPath = `${envLocalPath}${ENV_LOCAL_BACKUP_SUFFIX}`;
+  const lock = acquireSelfHostedCliLock(rootDir);
+
+  recoverStaleEnvLocalBackup(envLocalPath, backupPath);
+
   const hadEnvLocal = existsSync(envLocalPath);
 
   if (hadEnvLocal) {
@@ -185,6 +257,7 @@ export function isolateSelfHostedConvexCli(selfHostedEnv, run) {
     if (hadEnvLocal && existsSync(backupPath)) {
       renameSync(backupPath, envLocalPath);
     }
+    lock.release();
   }
 }
 

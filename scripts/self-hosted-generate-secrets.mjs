@@ -1,6 +1,8 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
+import { isPlaceholderValue, parseArgs, readEnvFile } from "./lib/self-hosted-env.mjs";
+
 const SECRET_KEYS = [
   "SESSION_ENCRYPTION_KEY",
   "INTERNAL_SERVICE_TOKEN",
@@ -64,17 +66,13 @@ function formatEnv(secrets) {
   return SECRET_KEYS.map((key) => `${key}=${envQuote(secrets[key])}`).join("\n");
 }
 
-function parseWritePath(argv) {
-  const index = argv.indexOf("--write");
-  if (index === -1) {
-    return null;
+function getExistingSecretKeys(path) {
+  if (!existsSync(path)) {
+    return [];
   }
 
-  const value = argv[index + 1];
-  if (!value) {
-    throw new Error("--write requires a path, for example --write .env.self-hosted");
-  }
-  return value;
+  const env = readEnvFile(path);
+  return SECRET_KEYS.filter((key) => env[key] && !isPlaceholderValue(env[key]));
 }
 
 function writeSecrets(path, secrets) {
@@ -99,10 +97,27 @@ function writeSecrets(path, secrets) {
   writeFileSync(path, `${nextLines.join("\n").replace(/\n*$/, "")}\n`);
 }
 
+const args = parseArgs(process.argv.slice(2));
+const writePathIndex = process.argv.indexOf("--write");
+const writePath =
+  writePathIndex === -1 ? null : process.argv[writePathIndex + 1] ?? null;
+
+if (writePathIndex !== -1 && !writePath) {
+  throw new Error("--write requires a path, for example --write .env.self-hosted");
+}
+
 const secrets = generateSecrets();
-const writePath = parseWritePath(process.argv.slice(2));
 
 if (writePath) {
+  const existingSecretKeys = getExistingSecretKeys(writePath);
+  if (existingSecretKeys.length > 0 && !args.force) {
+    console.error(
+      `Refusing to overwrite existing secrets in ${writePath}: ${existingSecretKeys.join(", ")}.`,
+    );
+    console.error("Pass --force if you intend to rotate secrets and restart affected services.");
+    process.exit(1);
+  }
+
   writeSecrets(writePath, secrets);
   console.log(`Updated ${writePath} with generated self-hosted secrets.`);
 } else {

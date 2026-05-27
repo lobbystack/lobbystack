@@ -32,7 +32,7 @@ services:
       - DO_NOT_REQUIRE_SSL
       - HTTP_SERVER_TIMEOUT_SECONDS
       - INSTANCE_NAME=${INSTANCE_NAME:-lobbystack}
-      - INSTANCE_SECRET=${INSTANCE_SECRET:-change-me}
+      - INSTANCE_SECRET=${INSTANCE_SECRET:?Set INSTANCE_SECRET in .env.self-hosted (pnpm self-hosted:secrets -- --write .env.self-hosted)}
       - MYSQL_URL
       - POSTGRES_URL
       - REDACT_LOGS_TO_CLIENT
@@ -115,7 +115,7 @@ services:
       VOICE_GATEWAY_TRUST_PROXY: ${VOICE_GATEWAY_TRUST_PROXY:-true}
       VOICE_GATEWAY_BASE_URL: ${VOICE_GATEWAY_BASE_URL:-http://localhost:3001}
       CONVEX_SITE_URL: ${CONVEX_SITE_URL:-http://convex-backend:3211}
-      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Set INTERNAL_SERVICE_TOKEN in .env.self-hosted (pnpm self-hosted:secrets -- --write .env.self-hosted)}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_REALTIME_MODEL: ${OPENAI_REALTIME_MODEL:-gpt-realtime}
       OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD:-}

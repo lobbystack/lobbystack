@@ -12,6 +12,8 @@ node_modules
 .env.*
 !.env.example
 !.env.self-hosted.example
+.env.local.self-hosted-bak
+.env.local.self-hosted-lock
 .tmp/
 .firecrawl/
 apps/web/dist

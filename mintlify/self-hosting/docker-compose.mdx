@@ -53,6 +53,7 @@ Edit `.env.self-hosted` before starting containers.
 | `CONVEX_SITE_URL` | `http://127.0.0.1:3211` |
 | `CONVEX_CLOUD_ORIGIN`, `CONVEX_SITE_ORIGIN` | Match the Convex URLs above |
 | `WEB_CALL_ALLOWED_ORIGINS` | `http://127.0.0.1:8080` (must match the web URL for in-browser web calls) |
+| `APP_HOSTNAME`, `VOICE_HOSTNAME`, `CONVEX_HOSTNAME`, `CONVEX_SITE_HOSTNAME` | `localhost` for each (prevents Caddy from requesting certificates for `*.example.com` during smoke) |
 
 Provider credentials (Twilio, OpenAI, and others) are not required for the smoke test. Configure them before production traffic; see [Additional steps](#additional-steps).
 
@@ -128,6 +129,7 @@ For production, place a reverse proxy or use the included Caddy service with pub
 | Command | Description |
 | --- | --- |
 | `pnpm self-hosted:secrets -- --write .env.self-hosted` | Generate `SESSION_ENCRYPTION_KEY`, `INTERNAL_SERVICE_TOKEN`, `INSTANCE_SECRET`, and JWT material. |
+| `pnpm self-hosted:secrets -- --write .env.self-hosted --force` | Rotate secrets in an existing env file. Requires service restarts and `pnpm self-hosted:convex:env`. |
 | `pnpm self-hosted:convex:env` | Push variables from `.env.self-hosted` into the Convex deployment. |
 | `pnpm self-hosted:convex:deploy` | Deploy Convex functions and components. |
 | `pnpm self-hosted:verify` | Run HTTP smoke checks against localhost ports. |
@@ -188,7 +190,9 @@ https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
 
 **Web dashboard cannot reach Convex** — Rebuild the `web` service with the correct `CONVEX_URL` and `CONVEX_SITE_URL`.
 
-**`CONVEX_DEPLOYMENT must not be set`** — Use `pnpm self-hosted:convex:env` and `pnpm self-hosted:convex:deploy` instead of `pnpm exec convex` when `.env.local` targets Convex Cloud.
+**`CONVEX_DEPLOYMENT must not be set`** — Use `pnpm self-hosted:convex:env` and `pnpm self-hosted:convex:deploy` instead of `pnpm exec convex` when `.env.local` targets Convex Cloud. If a command was interrupted, restore `.env.local` from `.env.local.self-hosted-bak` or remove `.env.local.self-hosted-lock`.
+
+**Compose refuses to start without secrets** — Run `pnpm self-hosted:secrets -- --write .env.self-hosted` before `docker compose up`. Compose requires `INSTANCE_SECRET` and `INTERNAL_SERVICE_TOKEN` in `.env.self-hosted`.
 
 **Caddy fails to start** — Rebuild the service: `docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build caddy`.
 

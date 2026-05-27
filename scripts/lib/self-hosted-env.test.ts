@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { getRequiredConvexEnvKeysMissingFromSync } from "./self-hosted-convex-env-keys.mjs";
-import { isPlaceholderValue, readEnvFile } from "./self-hosted-env.mjs";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { isolateSelfHostedConvexCli, isPlaceholderValue, readEnvFile } from "./self-hosted-env.mjs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -18,6 +18,12 @@ describe("isPlaceholderValue", () => {
     expect(isPlaceholderValue("convex-site.example.com")).toBe(true);
     expect(isPlaceholderValue("https://voice.mycompany.com")).toBe(false);
     expect(isPlaceholderValue("not-a-url-with-example.com-in-path")).toBe(false);
+  });
+
+  it("flags example.com email placeholders", () => {
+    expect(isPlaceholderValue("admin@example.com")).toBe(true);
+    expect(isPlaceholderValue("noreply@mail.example.com")).toBe(true);
+    expect(isPlaceholderValue("ops@mycompany.com")).toBe(false);
   });
 });
 
@@ -38,5 +44,41 @@ describe("readEnvFile", () => {
       SESSION_ENCRYPTION_KEY: 'abc"def',
       INSTANCE_SECRET: "deadbeef",
     });
+  });
+});
+
+describe("isolateSelfHostedConvexCli", () => {
+  it("restores a stale backup when .env.local is missing", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "self-hosted-cli-"));
+    const envLocalPath = join(rootDir, ".env.local");
+    const backupPath = `${envLocalPath}.self-hosted-bak`;
+
+    writeFileSync(backupPath, "CONVEX_DEPLOYMENT=dev:backup\n");
+
+    const result = isolateSelfHostedConvexCli({}, () => "ok", { rootDir });
+
+    expect(result).toBe("ok");
+    expect(readFileSync(envLocalPath, "utf8")).toBe("CONVEX_DEPLOYMENT=dev:backup\n");
+    expect(existsSync(backupPath)).toBe(false);
+  });
+
+  it("hides .env.local during the run and restores it afterward", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "self-hosted-cli-"));
+    const envLocalPath = join(rootDir, ".env.local");
+    const backupPath = `${envLocalPath}.self-hosted-bak`;
+
+    writeFileSync(envLocalPath, "CONVEX_DEPLOYMENT=dev:cloud\n");
+
+    const seenDuringRun = isolateSelfHostedConvexCli({}, () => ({
+      hasEnvLocal: existsSync(envLocalPath),
+      hasBackup: existsSync(backupPath),
+    }), { rootDir });
+
+    expect(seenDuringRun).toEqual({
+      hasEnvLocal: false,
+      hasBackup: true,
+    });
+    expect(readFileSync(envLocalPath, "utf8")).toBe("CONVEX_DEPLOYMENT=dev:cloud\n");
+    expect(existsSync(backupPath)).toBe(false);
   });
 });
