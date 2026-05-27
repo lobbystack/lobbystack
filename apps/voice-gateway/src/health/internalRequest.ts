@@ -22,7 +22,15 @@ export function isPrivateNetworkAddress(address: string | undefined): boolean {
     return normalized === "::1";
   }
 
-  const [first, second] = normalized.split(".").map(Number);
+  const parts = normalized.split(".");
+  if (parts.length !== 4) {
+    return false;
+  }
+  const first = Number(parts[0]);
+  const second = Number(parts[1]);
+  if (!Number.isFinite(first) || !Number.isFinite(second)) {
+    return false;
+  }
   if (first === 10) {
     return true;
   }
