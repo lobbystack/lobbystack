@@ -38,7 +38,8 @@ function generateJwtKeys() {
   });
 
   return {
-    privateKey: privatePem.trimEnd(),
+    // Convex Auth expects a single-line private key value in env vars.
+    privateKey: privatePem.trimEnd().replace(/\n/g, " "),
     jwks: JSON.stringify({
       keys: [
         {
