@@ -92,13 +92,30 @@ export function readEnvFile(envFile) {
   return env;
 }
 
+/** Detects example.com / *.example.com as URL host (not arbitrary substrings). */
+function referencesExampleComHost(value) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  try {
+    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const { hostname } = new URL(withScheme);
+    const host = hostname.toLowerCase();
+    return host === "example.com" || host.endsWith(".example.com");
+  } catch {
+    return false;
+  }
+}
+
 export function isPlaceholderValue(value) {
   const normalized = value.trim().toLowerCase();
   return (
     normalized === "" ||
     normalized === "change-me" ||
     normalized.startsWith("change-me-") ||
-    normalized.includes("example.com") ||
+    referencesExampleComHost(value) ||
     normalized.includes("your-") ||
     normalized.includes("<your")
   );
