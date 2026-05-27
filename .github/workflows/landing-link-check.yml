@@ -23,6 +23,7 @@ jobs:
             --no-progress
             --exclude '^https://app\.lobbystack\.com/'
             --exclude '^https://voice\.lobbystack\.com/web-call/'
+            --exclude '^https://voice-dev\.lobbystack\.com/web-call/'
             --exclude '^https://.*\.fly\.dev/web-call/'
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
             './apps/landing/src/**/*.astro'

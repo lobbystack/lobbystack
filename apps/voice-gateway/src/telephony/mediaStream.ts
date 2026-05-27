@@ -682,7 +682,7 @@ function createRealtimeToolDefinitions() {
       type: "function",
       name: "searchKnowledge",
       description:
-        "Search indexed business knowledge and uploaded documents for a specific question. Falls back to snapshot summary knowledge when indexed retrieval has no matches or is unavailable.",
+        "Search indexed business knowledge and uploaded documents for a specific factual question. Use silently before answering questions about capabilities, workflows, policies, limits, pricing, billing, usage, integrations, product features, documents, FAQs, or plan rules. Falls back to snapshot summary knowledge when indexed retrieval has no matches or is unavailable.",
       parameters: {
         type: "object",
         properties: {
@@ -2203,6 +2203,8 @@ async function configureOpenAiSession(
         "If the latest audio is silence, background noise, echo of your own previous audio, hold music, TV audio, side conversation, or speech not addressed to you, call waitForUser and do not speak.",
         "After the greeting, adapt to the caller's language as soon as the caller clearly establishes one.",
         "Answer from the supplied business snapshot whenever possible.",
+        "For factual questions about capabilities, workflows, policies, limitations, pricing, usage, billing, integrations, documents, FAQs, or other knowledge-base facts, call searchKnowledge silently before answering unless the exact answer is already present in the current conversation or structured snapshot.",
+        "Do not tell the caller you are searching, checking, or looking something up. Use the tool silently and answer naturally from the result.",
         "Use tools for authoritative actions like booking, appointment changes, transfer, and message taking.",
         "Use setCallHold when the caller explicitly asks you to hold, says they need a moment, or clearly needs a short pause. Do not grant holds unless the caller indicates they need one.",
         "Use endCall only when the caller gives an explicit closing cue such as bye, that's all, thanks/no more questions, for severe abuse, for repeated abusive behavior after one warning, for clear spam/scam/robocall/irrelevant solicitation, or when directed by silence-timeout handling.",

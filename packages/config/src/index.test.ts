@@ -35,7 +35,13 @@ describe("loadVoiceGatewayEnv", () => {
       DEPLOYMENT_MODE: "cloud",
     });
 
-    expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe("https://lobbystack.com");
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toBe(
+      "https://lobbystack.com,https://www.lobbystack.com",
+    );
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain("https://lobbystack.com");
+    expect(env.WEB_CALL_ALLOWED_ORIGINS).toContain(
+      "https://www.lobbystack.com",
+    );
     expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("localhost");
     expect(env.WEB_CALL_ALLOWED_ORIGINS).not.toContain("127.0.0.1");
   });
