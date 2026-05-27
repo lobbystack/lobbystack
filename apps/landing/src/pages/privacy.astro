@@ -225,6 +225,70 @@ import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
           </p>
         </section>
 
+        <section id="google-oauth-calendar">
+          <h2>5.1 Google OAuth and Google Calendar integration</h2>
+          <p>
+            When you connect your Google account in LobbyStack (for example via
+            Settings → Integrations), we use Google OAuth to access your Google
+            account and to manage scheduling on the specific Google Calendar
+            you select.
+          </p>
+
+          <p>
+            We request Google permissions that allow us to:
+          </p>
+          <ul>
+            <li>
+              Read calendar availability by accessing events on your selected
+              calendar (scope: <strong>calendar.readonly</strong> /
+              <strong> calendar.events</strong>).
+            </li>
+            <li>
+              Create, update, and delete appointment events on your selected
+              calendar (scope: <strong>calendar.events</strong>) when
+              appointments are booked, rescheduled, or cancelled.
+            </li>
+          </ul>
+
+          <p>
+            <strong>Google user data we access.</strong> We access data related
+            to your connected Google account (such as your account identifier
+            and email, when available) and calendar event data needed to
+            calculate busy time and to synchronize appointment bookings.
+          </p>
+
+          <p>
+            <strong>How we use it.</strong> We use this data to list calendars
+            during setup (so you can choose which calendar should receive
+            bookings), keep availability up to date, and ensure our booking
+            records stay consistent with your selected calendar.
+          </p>
+
+          <p>
+            <strong>Storage and protection.</strong> To perform sync and booking
+            actions over time, we store the OAuth tokens required for the
+            integration in our backend. Tokens are encrypted at rest. If you
+            disconnect Google Calendar in LobbyStack, we delete the stored
+            calendar connection and remove the appointment events we created
+            as part of disconnect processing.
+          </p>
+
+          <p>
+            <strong>Disclosure / sharing.</strong> We disclose the minimum
+            necessary information to the Google Calendar API to complete the
+            requested integration features. We also share data with our hosting,
+            database, and security providers as needed to operate the service,
+            as described elsewhere in this Privacy Policy.
+          </p>
+
+          <p>
+            <strong>Data restrictions.</strong> We use Google user data only to
+            provide and improve the Google Calendar integration features. We do
+            not sell Google user data or use it for targeted advertising or
+            advertising personalization.
+          </p>
+        </section>
+
         <section id="share">
           <h2>6. How we disclose information</h2>
           <p>

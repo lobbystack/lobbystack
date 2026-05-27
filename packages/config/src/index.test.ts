@@ -70,4 +70,15 @@ describe("loadVoiceGatewayEnv", () => {
       }),
     ).toThrow();
   });
+
+  it("treats empty optional telemetry env vars as unset", () => {
+    const env = loadVoiceGatewayEnv({
+      ...baseVoiceGatewayEnv,
+      POSTHOG_KEY: "",
+      POSTHOG_HOST: "",
+    });
+
+    expect(env.POSTHOG_KEY).toBeUndefined();
+    expect(env.POSTHOG_HOST).toBeUndefined();
+  });
 });

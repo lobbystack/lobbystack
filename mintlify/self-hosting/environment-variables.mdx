@@ -3,7 +3,7 @@ title: "Environment variables"
 description: "Key environment variables used by the LobbyStack web app, Convex backend, voice gateway, and optional providers."
 ---
 
-Use the repository's `.env.example` as the source of truth for local setup. This page summarizes the variables operators most often need to understand.
+Use the repository's `.env.example` as the source of truth for local development and `.env.self-hosted.example` as the source of truth for Docker Compose self-hosting. This page summarizes the variables operators most often need to understand.
 
 <Note>
   Secrets such as provider API keys, auth tokens, signing keys, and encryption keys must be configured only in backend or deployment secret stores. Do not expose them through `VITE_` variables.
@@ -22,6 +22,66 @@ Use the repository's `.env.example` as the source of truth for local setup. This
 | `SESSION_ENCRYPTION_KEY` | Convex | Required for encrypted Google Calendar token storage. |
 | `DEPLOYMENT_MODE` | Convex, voice gateway | Deployment mode label used by runtime and telemetry. |
 
+For Compose self-hosting, use `DEPLOYMENT_MODE=self_hosted_standard` and mirror it into `VITE_DEPLOYMENT_MODE` before rebuilding the web image.
+
+## Docker Compose self-hosting
+
+These variables are defined in `.env.self-hosted.example` and used by [`docker-compose.self-hosted.yml`](https://github.com/lobbystack/lobbystack/blob/main/docker-compose.self-hosted.yml). See the [Docker Compose guide](/self-hosting/docker-compose) for bootstrap and go-live steps.
+
+### Convex CLI and backend container
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `CONVEX_SELF_HOSTED_URL` | Host CLI (`pnpm self-hosted:convex:*`) | URL the Convex CLI uses to reach your self-hosted backend, typically `http://127.0.0.1:3210` during local smoke. |
+| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Host CLI | Generated with `generate_admin_key.sh` inside the `convex-backend` container. |
+| `INSTANCE_SECRET` | Convex backend container | Hex secret for the open-source backend. Generate with `pnpm self-hosted:secrets`. Placeholder values break backend startup. |
+| `CONVEX_CLOUD_ORIGIN` | Convex backend container | Must exactly match `CONVEX_URL`. `pnpm self-hosted:convex:env` and `pnpm self-hosted:verify` reject mismatches. |
+| `CONVEX_SITE_ORIGIN` | Convex backend container | Must exactly match `CONVEX_SITE_URL`. |
+
+The voice gateway always uses the internal Docker URL `http://convex-backend:3211` for Convex HTTP actions. Keep `CONVEX_SITE_URL` in `.env.self-hosted` as the public or browser-facing URL; `pnpm self-hosted:convex:env` syncs that value into the Convex deployment for webhooks and auth.
+
+### Host ports and ingress
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `WEB_PORT` | `8080` | Local bind for web dashboard (`127.0.0.1`). |
+| `VOICE_GATEWAY_PORT` | `3001` | Local bind for voice gateway. |
+| `CONVEX_PORT` | `3210` | Local bind for Convex client API. |
+| `CONVEX_SITE_PROXY_PORT` | `3211` | Local bind for Convex HTTP actions proxy. |
+| `CONVEX_DASHBOARD_PORT` | `6791` | Local bind for Convex dashboard. |
+| `HTTP_PORT` | `80` | Caddy HTTP ingress on the host. |
+| `HTTPS_PORT` | `443` | Caddy HTTPS ingress on the host. |
+| `CADDY_BIND_ADDRESS` | `127.0.0.1` | Host bind address for Caddy ingress. Use `0.0.0.0` before exposing public HTTPS traffic. |
+| `COMPOSE_PROJECT_NAME` | `lobbystack` | Docker Compose project name; change to run multiple stacks on one host. |
+
+### Caddy hostnames
+
+| Variable | Notes |
+| --- | --- |
+| `APP_HOSTNAME` | Public hostname routed to the web dashboard. |
+| `VOICE_HOSTNAME` | Public hostname routed to the voice gateway. |
+| `CONVEX_HOSTNAME` | Public hostname routed to Convex client port `3210`. |
+| `CONVEX_SITE_HOSTNAME` | Public hostname routed to Convex HTTP actions port `3211`. |
+| `ACME_EMAIL` | Email for Let's Encrypt registration via Caddy. |
+
+Caddy routing is defined in [`docker/caddy/Caddyfile`](https://github.com/lobbystack/lobbystack/blob/main/docker/caddy/Caddyfile) and baked into the Caddy image at build time.
+
+### Smoke verification overrides
+
+Optional overrides for `pnpm self-hosted:verify` when using non-default ports:
+
+| Variable | Purpose |
+| --- | --- |
+| `SELF_HOSTED_WEB_VERIFY_URL` | Base URL for web checks (default `http://127.0.0.1:${WEB_PORT}`). |
+| `SELF_HOSTED_VOICE_VERIFY_URL` | Base URL for voice gateway checks. |
+| `SELF_HOSTED_CONVEX_VERIFY_URL` | Base URL for Convex `/version`. |
+| `SELF_HOSTED_CONVEX_SITE_VERIFY_URL` | Base URL for Convex HTTP action checks. |
+| `SELF_HOSTED_DASHBOARD_VERIFY_URL` | Base URL for dashboard reachability. |
+
+<Note>
+  After changing public URLs (`CONVEX_URL`, `CONVEX_SITE_URL`, `APP_BASE_URL`, hostnames), rebuild the web image and rerun `pnpm self-hosted:convex:env`. See [Docker Compose](/self-hosting/docker-compose#production-checklist).
+</Note>
+
 ## Web dashboard build variables
 
 | Variable | Notes |
@@ -35,6 +95,7 @@ Use the repository's `.env.example` as the source of truth for local setup. This
 | Variable | Notes |
 | --- | --- |
 | `PORT` | Port the voice gateway listens on. Defaults to `3001`. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start in-dashboard web calls. Must include the exact web URL operators use. |
 | `OPENAI_API_KEY` | Required for live OpenAI Realtime voice calls. |
 | `OPENAI_REALTIME_MODEL` | Defaults to `gpt-realtime`. |
 | `OPENAI_REALTIME_VOICE` | Defaults to `marin`. |
@@ -51,6 +112,7 @@ Optional OpenAI cost fallback variables exist in `.env.example` for telemetry wh
 | `TWILIO_VERIFY_SERVICE_SID` | Required for onboarding phone verification. |
 | `TWILIO_ALERT_SMS_FROM` | Shared hosted alert SMS sender or messaging service SID. |
 | `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_MESSAGING_SERVICE_SID` | Present in `.env.example` for Twilio features, but not required by every deployment path. |
+| `TWILIO_PRIMARY_CUSTOMER_PROFILE_SID`, `TWILIO_A2P_STATUS_EMAIL`, `TWILIO_A2P_TRUST_PRODUCT_POLICY_SID`, `TWILIO_A2P_REQUEST_DELAY_MS` | Optional A2P registration tuning for self-hosted Convex deployments. |
 
 ## Google Calendar
 

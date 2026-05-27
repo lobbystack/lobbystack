@@ -1,0 +1,187 @@
+services:
+  convex-backend:
+    image: ghcr.io/get-convex/convex-backend:${CONVEX_BACKEND_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:${CONVEX_PORT:-3210}:3210"
+      - "127.0.0.1:${CONVEX_SITE_PROXY_PORT:-3211}:3211"
+    volumes:
+      - convex_data:/convex/data
+    environment:
+      - ACTIONS_USER_TIMEOUT_SECS
+      - APPLICATION_MAX_CONCURRENT_MUTATIONS=${APPLICATION_MAX_CONCURRENT_MUTATIONS:-16}
+      - APPLICATION_MAX_CONCURRENT_NODE_ACTIONS=${APPLICATION_MAX_CONCURRENT_NODE_ACTIONS:-16}
+      - APPLICATION_MAX_CONCURRENT_QUERIES=${APPLICATION_MAX_CONCURRENT_QUERIES:-16}
+      - APPLICATION_MAX_CONCURRENT_V8_ACTIONS=${APPLICATION_MAX_CONCURRENT_V8_ACTIONS:-16}
+      - AWS_ACCESS_KEY_ID
+      - AWS_REGION
+      - AWS_S3_DISABLE_CHECKSUMS
+      - AWS_S3_DISABLE_SSE
+      - AWS_S3_FORCE_PATH_STYLE
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - CONVEX_CLOUD_ORIGIN=${CONVEX_CLOUD_ORIGIN:-http://localhost:3210}
+      - CONVEX_RELEASE_VERSION_DEV
+      - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN:-http://localhost:3211}
+      - DATABASE_URL
+      - DISABLE_BEACON
+      - DISABLE_METRICS_ENDPOINT=${DISABLE_METRICS_ENDPOINT:-true}
+      - DOCUMENT_RETENTION_DELAY=${DOCUMENT_RETENTION_DELAY:-172800}
+      - DO_NOT_REQUIRE_SSL
+      - HTTP_SERVER_TIMEOUT_SECONDS
+      - INSTANCE_NAME=${INSTANCE_NAME:-lobbystack}
+      - INSTANCE_SECRET=${INSTANCE_SECRET:?Set INSTANCE_SECRET in .env.self-hosted (pnpm self-hosted:secrets -- --write .env.self-hosted)}
+      - MYSQL_URL
+      - POSTGRES_URL
+      - REDACT_LOGS_TO_CLIENT
+      - RUST_BACKTRACE
+      - RUST_LOG=${RUST_LOG:-info}
+      - S3_ENDPOINT_URL
+      - S3_STORAGE_EXPORTS_BUCKET
+      - S3_STORAGE_FILES_BUCKET
+      - S3_STORAGE_MODULES_BUCKET
+      - S3_STORAGE_SEARCH_BUCKET
+      - S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3210/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  convex-dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:${CONVEX_DASHBOARD_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    stop_grace_period: 10s
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:${CONVEX_DASHBOARD_PORT:-6791}:6791"
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: ${CONVEX_DASHBOARD_DEPLOYMENT_URL:-http://127.0.0.1:3210}
+      NEXT_PUBLIC_LOAD_MONACO_INTERNALLY: ${NEXT_PUBLIC_LOAD_MONACO_INTERNALLY:-}
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:6791').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        CONVEX_URL: ${CONVEX_URL:-http://localhost:3210}
+        CONVEX_SITE_URL: ${CONVEX_SITE_URL:-http://localhost:3211}
+        VITE_APP_NAME: ${VITE_APP_NAME:-LobbyStack}
+        VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-self_hosted_standard}
+        VITE_POSTHOG_KEY: ${VITE_POSTHOG_KEY:-}
+        VITE_POSTHOG_HOST: ${VITE_POSTHOG_HOST:-}
+        VITE_POSTHOG_UI_HOST: ${VITE_POSTHOG_UI_HOST:-}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  voice-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.voice-gateway
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${VOICE_GATEWAY_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-self_hosted_standard}
+      PORT: 3001
+      VOICE_GATEWAY_TRUST_PROXY: ${VOICE_GATEWAY_TRUST_PROXY:-true}
+      VOICE_GATEWAY_BASE_URL: ${VOICE_GATEWAY_BASE_URL:-http://localhost:3001}
+      # Internal Docker URL for Convex HTTP actions. Public CONVEX_SITE_URL is synced into Convex only.
+      CONVEX_SITE_URL: http://convex-backend:3211
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?Set INTERNAL_SERVICE_TOKEN in .env.self-hosted (pnpm self-hosted:secrets -- --write .env.self-hosted)}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_REALTIME_MODEL: ${OPENAI_REALTIME_MODEL:-gpt-realtime}
+      OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_INPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_OUTPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_TEXT_INPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_AUDIO_INPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_TEXT_OUTPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_AUDIO_OUTPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD: ${OPENAI_REALTIME_CACHED_INPUT_TOKEN_PRICE_USD:-}
+      OPENAI_REALTIME_VOICE: ${OPENAI_REALTIME_VOICE:-marin}
+      OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-mini-transcribe}
+      OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD: ${OPENAI_TRANSCRIPTION_INPUT_TOKEN_PRICE_USD:-}
+      OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD: ${OPENAI_TRANSCRIPTION_OUTPUT_TOKEN_PRICE_USD:-}
+      WEB_CALL_ALLOWED_ORIGINS: ${WEB_CALL_ALLOWED_ORIGINS:-http://127.0.0.1:8080}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      POSTHOG_KEY: ${POSTHOG_KEY:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-}
+      POSTHOG_PRIVACY_MODE: ${POSTHOG_PRIVACY_MODE:-true}
+    depends_on:
+      convex-backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  caddy:
+    build:
+      context: .
+      dockerfile: docker/caddy/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-80}:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-443}:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+      APP_HOSTNAME: ${APP_HOSTNAME:-localhost}
+      VOICE_HOSTNAME: ${VOICE_HOSTNAME:-voice.localhost}
+      CONVEX_HOSTNAME: ${CONVEX_HOSTNAME:-convex.localhost}
+      CONVEX_SITE_HOSTNAME: ${CONVEX_SITE_HOSTNAME:-convex-site.localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      voice-gateway:
+        condition: service_healthy
+      convex-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:2019/config/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  caddy_config:
+  caddy_data:
+  convex_data:

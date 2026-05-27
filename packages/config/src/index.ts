@@ -144,18 +144,28 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
 export type VoiceGatewayEnv = z.infer<typeof voiceGatewayEnvSchema>;
 
+function normalizeEnvSource(
+  source: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  const normalized: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(source)) {
+    normalized[key] = value?.trim() === "" ? undefined : value;
+  }
+  return normalized;
+}
+
 export function loadServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  return serverEnvSchema.parse(source);
+  return serverEnvSchema.parse(normalizeEnvSource(source));
 }
 
 export function loadClientEnv(source: Record<string, string | undefined>): ClientEnv {
-  return clientEnvSchema.parse(source);
+  return clientEnvSchema.parse(normalizeEnvSource(source));
 }
 
 export function loadVoiceGatewayEnv(
   source: Record<string, string | undefined>,
 ): VoiceGatewayEnv {
-  return voiceGatewayEnvSchema.parse(source);
+  return voiceGatewayEnvSchema.parse(normalizeEnvSource(source));
 }
 
 export function isTelemetryExportEnabled(mode: DeploymentMode): boolean {

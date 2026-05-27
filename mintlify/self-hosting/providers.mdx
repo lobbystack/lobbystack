@@ -5,13 +5,21 @@ description: "What each external provider does in a self-hosted LobbyStack deplo
 
 Self-hosting means connecting your own provider accounts. The provider list below is based on the current codebase and `.env.example`.
 
+<Note>
+  The [Docker Compose baseline](/self-hosting/docker-compose) runs Convex, the voice gateway, and the web dashboard on **one host** with Caddy for public HTTPS. Split hosting (for example voice on Fly.io and web on static hosting) is optional and requires more manual URL and secret wiring.
+</Note>
+
 ## Required for live calls
 
 <AccordionGroup>
   <Accordion title="Convex - backend, database, auth, and HTTP endpoints" icon="database">
     Convex stores business data, call records, contacts, appointments, knowledge, billing state, and app settings. It also runs backend functions and HTTP endpoints used by Twilio, the voice gateway, calendar callbacks, and downloads.
 
-    Configure `CONVEX_URL` and `CONVEX_SITE_URL`; the web dashboard reads those same Convex URLs at build time.
+    **Docker Compose:** uses the open-source backend image `ghcr.io/get-convex/convex-backend` plus the Convex dashboard container. Configure `CONVEX_URL`, `CONVEX_SITE_URL`, and sync secrets into the deployment with `pnpm self-hosted:convex:env`.
+
+    **Convex Cloud dev:** contributors use `pnpm convex dev` with `CONVEX_DEPLOYMENT` in `.env.local`. That path is for development, not production self-hosting.
+
+    The web dashboard reads `CONVEX_URL` and `CONVEX_SITE_URL` at build time.
   </Accordion>
 
   <Accordion title="Twilio - phone numbers, voice, SMS, and verification" icon="phone">
@@ -29,7 +37,9 @@ Self-hosting means connecting your own provider accounts. The provider list belo
   <Accordion title="Voice gateway hosting" icon="server">
     The voice gateway is a Node.js service with a public HTTPS URL. Twilio must be able to reach it for inbound calls and media streams.
 
-    The existing deployment docs use Fly.io as one supported hosting option.
+    **Docker Compose (recommended):** the voice gateway runs as a Compose service. Caddy exposes `VOICE_HOSTNAME` with TLS. Set `VOICE_GATEWAY_BASE_URL` to the public voice URL and configure Twilio accordingly.
+
+    **Split deployment (advanced):** host the voice gateway separately—for example with [`fly.voice-gateway.toml`](https://github.com/lobbystack/lobbystack/blob/main/fly.voice-gateway.toml) on Fly.io—and point `VOICE_GATEWAY_BASE_URL` and Twilio webhooks at that URL.
   </Accordion>
 </AccordionGroup>
 

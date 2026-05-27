@@ -5,8 +5,8 @@
   "description": "Help Center and developer documentation for LobbyStack.",
   "colors": {
     "primary": "#0B0B0D",
-    "light": "#0B0B0D",
-    "dark": "#FFFFFF"
+    "light": "#FFFFFF",
+    "dark": "#0B0B0D"
   },
   "favicon": "/favicon.svg",
   "fonts": {
@@ -101,6 +101,7 @@
         "group": "Self-hosting",
         "pages": [
           "self-hosting/overview",
+          "self-hosting/docker-compose",
           "self-hosting/environment-variables",
           "self-hosting/providers"
         ]

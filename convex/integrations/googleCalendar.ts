@@ -21,7 +21,7 @@ const GOOGLE_CALENDAR_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
 ];
 
 type GoogleTokenResponse = {

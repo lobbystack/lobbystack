@@ -55,9 +55,14 @@
     "typecheck": "pnpm -r typecheck && pnpm typecheck:convex",
     "typecheck:convex": "tsc -p convex/tsconfig.json --noEmit",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test && pnpm test:convex",
+    "test": "pnpm -r test && pnpm test:convex && pnpm test:scripts",
     "test:convex": "vitest run --config convex/vitest.config.ts",
-    "seed:demo": "tsx scripts/seed-demo.ts"
+    "test:scripts": "vitest run --config scripts/vitest.config.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "self-hosted:secrets": "node scripts/self-hosted-generate-secrets.mjs",
+    "self-hosted:convex:env": "node scripts/self-hosted-convex-env.mjs",
+    "self-hosted:convex:deploy": "node scripts/self-hosted-convex-deploy.mjs",
+    "self-hosted:verify": "node scripts/self-hosted-verify.mjs"
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
