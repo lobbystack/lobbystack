@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { getRequiredConvexEnvKeysMissingFromSync } from "./self-hosted-convex-env-keys.mjs";
-import { isolateSelfHostedConvexCli, isPlaceholderValue, readEnvFile } from "./self-hosted-env.mjs";
+import {
+  isolateSelfHostedConvexCli,
+  isPlaceholderValue,
+  readEnvFile,
+  webCallOriginsIncludeWebUrl,
+} from "./self-hosted-env.mjs";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -44,6 +49,23 @@ describe("readEnvFile", () => {
       SESSION_ENCRYPTION_KEY: 'abc"def',
       INSTANCE_SECRET: "deadbeef",
     });
+  });
+});
+
+describe("webCallOriginsIncludeWebUrl", () => {
+  it("matches the configured web verify URL", () => {
+    expect(
+      webCallOriginsIncludeWebUrl(
+        "http://127.0.0.1:8080,https://app.example.com",
+        "http://127.0.0.1:8080/",
+      ),
+    ).toBe(true);
+    expect(
+      webCallOriginsIncludeWebUrl(
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+      ),
+    ).toBe(false);
   });
 });
 

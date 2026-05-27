@@ -3,11 +3,9 @@ import {
   parseArgs,
   readEnvFile,
   resolveEnvFile,
+  trimTrailingSlash,
+  webCallOriginsIncludeWebUrl,
 } from "./lib/self-hosted-env.mjs";
-
-function trimTrailingSlash(value) {
-  return value.replace(/\/+$/, "");
-}
 
 function urlJoin(base, path) {
   return `${trimTrailingSlash(base)}${path}`;
@@ -88,6 +86,8 @@ const convexSiteBaseUrl =
 const dashboardBaseUrl =
   env.SELF_HOSTED_DASHBOARD_VERIFY_URL ??
   `http://127.0.0.1:${env.CONVEX_DASHBOARD_PORT || "6791"}`;
+const configuredWebCallOrigins =
+  env.WEB_CALL_ALLOWED_ORIGINS ?? "http://127.0.0.1:8080";
 
 const checks = [
   expectStatus("web health", urlJoin(webBaseUrl, "/healthz"), (response) => response.ok),
@@ -95,7 +95,21 @@ const checks = [
     const contentType = response.headers.get("content-type") ?? "";
     return response.ok && contentType.includes("text/html");
   }),
+  check("web call allowed origins", async () => {
+    const includesWebUrl = webCallOriginsIncludeWebUrl(configuredWebCallOrigins, webBaseUrl);
+    return {
+      ok: includesWebUrl,
+      message: includesWebUrl
+        ? `WEB_CALL_ALLOWED_ORIGINS includes ${webBaseUrl}`
+        : `WEB_CALL_ALLOWED_ORIGINS (${configuredWebCallOrigins}) must include ${webBaseUrl} for in-browser web calls`,
+    };
+  }),
   expectStatus("voice health", urlJoin(voiceBaseUrl, "/health"), (response) => response.ok),
+  expectStatus(
+    "voice convex connectivity",
+    urlJoin(voiceBaseUrl, "/health/convex"),
+    (response) => response.ok,
+  ),
   expectStatus("convex backend version", urlJoin(convexBaseUrl, "/version"), (response) => response.ok),
   expectStatus("convex dashboard", dashboardBaseUrl, (response) => response.ok),
   check("convex voice context HTTP action", async () => {

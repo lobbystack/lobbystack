@@ -275,3 +275,22 @@ export function getPnpmInvocation() {
     args: [],
   };
 }
+
+export function trimTrailingSlash(value) {
+  return value.replace(/\/+$/, "");
+}
+
+export function parseCsvEnvValue(value) {
+  if (!value?.trim()) {
+    return [];
+  }
+
+  return value.split(",").map((entry) => entry.trim()).filter(Boolean);
+}
+
+export function webCallOriginsIncludeWebUrl(allowedOrigins, webBaseUrl) {
+  const normalizedWebUrl = trimTrailingSlash(webBaseUrl.trim());
+  return parseCsvEnvValue(allowedOrigins).some(
+    (origin) => trimTrailingSlash(origin) === normalizedWebUrl,
+  );
+}

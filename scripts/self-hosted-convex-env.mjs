@@ -43,6 +43,7 @@ function runConvexEnvSet({ key, value, cliEnv, dryRun }) {
 function syncConvexEnvFromFile({ env, cliEnv, dryRun, includeEmpty }) {
   let synced = 0;
   let skipped = 0;
+  const failures = [];
 
   for (const key of CONVEX_ENV_KEYS) {
     const value = env[key];
@@ -51,13 +52,27 @@ function syncConvexEnvFromFile({ env, cliEnv, dryRun, includeEmpty }) {
       continue;
     }
 
-    runConvexEnvSet({
-      key,
-      value: value ?? "",
-      cliEnv,
-      dryRun,
-    });
-    synced += 1;
+    try {
+      runConvexEnvSet({
+        key,
+        value: value ?? "",
+        cliEnv,
+        dryRun,
+      });
+      synced += 1;
+    } catch (error) {
+      failures.push({
+        key,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Failed to sync ${failures.length} Convex env value${failures.length === 1 ? "" : "s"}: ` +
+        `${failures.map((failure) => `${failure.key} (${failure.message})`).join("; ")}`,
+    );
   }
 
   return { synced, skipped };

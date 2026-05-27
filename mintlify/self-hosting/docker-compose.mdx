@@ -52,7 +52,7 @@ Edit `.env.self-hosted` before starting containers.
 | `CONVEX_URL` | `http://127.0.0.1:3210` |
 | `CONVEX_SITE_URL` | `http://127.0.0.1:3211` |
 | `CONVEX_CLOUD_ORIGIN`, `CONVEX_SITE_ORIGIN` | Match the Convex URLs above |
-| `WEB_CALL_ALLOWED_ORIGINS` | `http://127.0.0.1:8080` (must match the web URL for in-browser web calls) |
+| `WEB_CALL_ALLOWED_ORIGINS` | `http://127.0.0.1:8080` (must match the browser web URL) |
 | `APP_HOSTNAME`, `VOICE_HOSTNAME`, `CONVEX_HOSTNAME`, `CONVEX_SITE_HOSTNAME` | `localhost` for each (prevents Caddy from requesting certificates for `*.example.com` during smoke) |
 
 Provider credentials (Twilio, OpenAI, and others) are not required for the smoke test. Configure them before production traffic; see [Additional steps](#additional-steps).
@@ -60,6 +60,8 @@ Provider credentials (Twilio, OpenAI, and others) are not required for the smoke
 The web dashboard embeds `CONVEX_URL`, `CONVEX_SITE_URL`, and `VITE_*` at **build time**. Rebuild the `web` service after changing those values.
 
 Application secrets must be present in the **Convex deployment environment**. Use `pnpm self-hosted:convex:env` (step 4) to sync values from `.env.self-hosted`; setting variables only on Compose services is insufficient for Convex functions.
+
+The voice gateway reaches Convex over the internal Docker URL `http://convex-backend:3211`. Keep `CONVEX_SITE_URL` in `.env.self-hosted` as the public or browser-facing URL for Convex HTTP actions.
 
 Refer to [Environment variables](/self-hosting/environment-variables) for a full variable reference.
 
@@ -114,7 +116,7 @@ The first build may take several minutes. Caddy configuration is defined in `doc
 pnpm self-hosted:verify
 ```
 
-By default, services bind to localhost. The verifier checks health endpoints, SPA routing, Convex `/version`, dashboard reachability, and the `/voice/context` HTTP action. A `404` from `/voice/context` is expected until tenant data exists.
+By default, services bind to localhost. The verifier checks health endpoints, SPA routing, `WEB_CALL_ALLOWED_ORIGINS`, voice-gateway Convex connectivity (`/health/convex`), Convex `/version`, dashboard reachability, and the `/voice/context` HTTP action. A `404` from `/voice/context` is expected until tenant data exists.
 
 To confirm the web service manually:
 
@@ -177,12 +179,14 @@ https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
 ### Production checklist
 
 1. Configure DNS for all public hostnames.
-2. Set production `https://` URLs and origins in `.env.self-hosted`; rebuild `web` and `caddy` as needed.
-3. Run `pnpm self-hosted:convex:env` after any URL or secret change.
-4. Configure Twilio voice and SMS webhooks.
-5. Add provider API keys (Twilio, OpenAI, and optional integrations); run `pnpm self-hosted:convex:env` again.
-6. Validate signup, onboarding, and an inbound test call; confirm transcripts or recordings in the dashboard.
-7. Restrict access to the Convex dashboard (`127.0.0.1:6791`); do not expose it publicly without additional access controls.
+2. Pin `CONVEX_BACKEND_IMAGE_TAG` and `CONVEX_DASHBOARD_IMAGE_TAG` after your first successful deploy.
+3. Set production `https://` URLs and origins in `.env.self-hosted`; rebuild `web` and `caddy` as needed.
+4. Set `WEB_CALL_ALLOWED_ORIGINS` to your public app URL(s); keep them aligned with `APP_BASE_URL`.
+5. Run `pnpm self-hosted:convex:env` after any URL or secret change.
+6. Configure Twilio voice and SMS webhooks.
+7. Add provider API keys (Twilio, OpenAI, and optional integrations); run `pnpm self-hosted:convex:env` again.
+8. Validate signup, login, onboarding, and an inbound test call; confirm transcripts or recordings in the dashboard.
+9. Restrict access to the Convex dashboard (`127.0.0.1:6791`); do not expose it publicly without additional access controls.
 
 ## Troubleshooting
 
@@ -201,6 +205,10 @@ https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
 **Port conflict** — Change `*_PORT` in `.env.self-hosted` and update `SELF_HOSTED_*_VERIFY_URL` if you use custom verification URLs.
 
 **`/voice/context` returns 401** — Run `pnpm self-hosted:convex:env` so `INTERNAL_SERVICE_TOKEN` matches between Convex and the voice gateway.
+
+**`voice convex connectivity` fails in `pnpm self-hosted:verify`** — Confirm `convex-backend` is healthy, `pnpm self-hosted:convex:env` has run, and recreate the voice gateway: `docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build voice-gateway`.
+
+**In-browser web calls fail with origin errors** — Set `WEB_CALL_ALLOWED_ORIGINS` to the exact web URL you open in the browser, including `http://127.0.0.1:8080` for localhost smoke.
 
 **`/voice/context` returns 404** — The HTTP route is reachable; create tenant data or assign a matching business phone number.
 

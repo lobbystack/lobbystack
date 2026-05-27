@@ -38,6 +38,8 @@ These variables are defined in `.env.self-hosted.example` and used by [`docker-c
 | `CONVEX_CLOUD_ORIGIN` | Convex backend container | Must match the public or smoke-test Convex client URL. |
 | `CONVEX_SITE_ORIGIN` | Convex backend container | Must match the public or smoke-test Convex HTTP actions URL. |
 
+The voice gateway always uses the internal Docker URL `http://convex-backend:3211` for Convex HTTP actions. Keep `CONVEX_SITE_URL` in `.env.self-hosted` as the public or browser-facing URL; `pnpm self-hosted:convex:env` syncs that value into the Convex deployment for webhooks and auth.
+
 ### Host ports and ingress
 
 | Variable | Default | Notes |
@@ -76,7 +78,7 @@ Optional overrides for `pnpm self-hosted:verify` when using non-default ports:
 | `SELF_HOSTED_DASHBOARD_VERIFY_URL` | Base URL for dashboard reachability. |
 
 <Note>
-  After changing public URLs (`CONVEX_URL`, `CONVEX_SITE_URL`, `APP_BASE_URL`, hostnames), rebuild the web image and rerun `pnpm self-hosted:convex:env`. See [Docker Compose](/self-hosting/docker-compose#production-go-live-checklist).
+  After changing public URLs (`CONVEX_URL`, `CONVEX_SITE_URL`, `APP_BASE_URL`, hostnames), rebuild the web image and rerun `pnpm self-hosted:convex:env`. See [Docker Compose](/self-hosting/docker-compose#production-checklist).
 </Note>
 
 ## Web dashboard build variables
@@ -92,6 +94,7 @@ Optional overrides for `pnpm self-hosted:verify` when using non-default ports:
 | Variable | Notes |
 | --- | --- |
 | `PORT` | Port the voice gateway listens on. Defaults to `3001`. |
+| `WEB_CALL_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to start in-dashboard web calls. Must include the exact web URL operators use. |
 | `OPENAI_API_KEY` | Required for live OpenAI Realtime voice calls. |
 | `OPENAI_REALTIME_MODEL` | Defaults to `gpt-realtime`. |
 | `OPENAI_REALTIME_VOICE` | Defaults to `marin`. |
@@ -108,6 +111,7 @@ Optional OpenAI cost fallback variables exist in `.env.example` for telemetry wh
 | `TWILIO_VERIFY_SERVICE_SID` | Required for onboarding phone verification. |
 | `TWILIO_ALERT_SMS_FROM` | Shared hosted alert SMS sender or messaging service SID. |
 | `TWILIO_API_KEY`, `TWILIO_API_SECRET`, `TWILIO_MESSAGING_SERVICE_SID` | Present in `.env.example` for Twilio features, but not required by every deployment path. |
+| `TWILIO_PRIMARY_CUSTOMER_PROFILE_SID`, `TWILIO_A2P_STATUS_EMAIL`, `TWILIO_A2P_TRUST_PRODUCT_POLICY_SID`, `TWILIO_A2P_REQUEST_DELAY_MS` | Optional A2P registration tuning for self-hosted Convex deployments. |
 
 ## Google Calendar
 
