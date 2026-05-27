@@ -116,7 +116,7 @@ The first build may take several minutes. Caddy configuration is defined in `doc
 pnpm self-hosted:verify
 ```
 
-By default, services bind to localhost. The verifier checks health endpoints, SPA routing, `WEB_CALL_ALLOWED_ORIGINS`, voice-gateway Convex connectivity (`/health/convex`), Convex `/version`, dashboard reachability, and the `/voice/context` HTTP action. A `404` from `/voice/context` is expected until tenant data exists.
+By default, services bind to localhost. The verifier checks health endpoints, SPA routing, `WEB_CALL_ALLOWED_ORIGINS`, Convex backend origin alignment (`CONVEX_CLOUD_ORIGIN` / `CONVEX_SITE_ORIGIN`), voice-gateway Convex connectivity (`/health/convex`), Convex `/version`, dashboard reachability, and the `/voice/context` HTTP action. A `404` from `/voice/context` is expected until tenant data exists.
 
 To confirm the web service manually:
 
@@ -181,12 +181,13 @@ https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
 1. Configure DNS for all public hostnames.
 2. Pin `CONVEX_BACKEND_IMAGE_TAG` and `CONVEX_DASHBOARD_IMAGE_TAG` after your first successful deploy.
 3. Set production `https://` URLs and origins in `.env.self-hosted`; rebuild `web` and `caddy` as needed.
-4. Set `WEB_CALL_ALLOWED_ORIGINS` to your public app URL(s); keep them aligned with `APP_BASE_URL`.
-5. Run `pnpm self-hosted:convex:env` after any URL or secret change.
-6. Configure Twilio voice and SMS webhooks.
-7. Add provider API keys (Twilio, OpenAI, and optional integrations); run `pnpm self-hosted:convex:env` again.
-8. Validate signup, login, onboarding, and an inbound test call; confirm transcripts or recordings in the dashboard.
-9. Restrict access to the Convex dashboard (`127.0.0.1:6791`); do not expose it publicly without additional access controls.
+4. Set `CADDY_BIND_ADDRESS=0.0.0.0` so Caddy listens on public interfaces.
+5. Set `WEB_CALL_ALLOWED_ORIGINS` to your public app URL(s); keep them aligned with `APP_BASE_URL`.
+6. Run `pnpm self-hosted:convex:env` after any URL or secret change.
+7. Configure Twilio voice and SMS webhooks.
+8. Add provider API keys (Twilio, OpenAI, and optional integrations); run `pnpm self-hosted:convex:env` again.
+9. Validate signup, login, onboarding, and an inbound test call; confirm transcripts or recordings in the dashboard.
+10. Restrict access to the Convex dashboard (`127.0.0.1:6791`); do not expose it publicly without additional access controls.
 
 ## Troubleshooting
 
@@ -205,6 +206,8 @@ https://<CONVEX_SITE_HOSTNAME>/integrations/google/callback
 **Port conflict** — Change `*_PORT` in `.env.self-hosted` and update `SELF_HOSTED_*_VERIFY_URL` if you use custom verification URLs.
 
 **`/voice/context` returns 401** — Run `pnpm self-hosted:convex:env` so `INTERNAL_SERVICE_TOKEN` matches between Convex and the voice gateway.
+
+**`pnpm self-hosted:verify` fails on Convex backend origins** — Set `CONVEX_CLOUD_ORIGIN` to match `CONVEX_URL` and `CONVEX_SITE_ORIGIN` to match `CONVEX_SITE_URL`, then rerun `pnpm self-hosted:convex:env`.
 
 **`voice convex connectivity` fails in `pnpm self-hosted:verify`** — Confirm `convex-backend` is healthy, `pnpm self-hosted:convex:env` has run, and recreate the voice gateway: `docker compose -f docker-compose.self-hosted.yml --env-file .env.self-hosted up -d --build voice-gateway`.
 

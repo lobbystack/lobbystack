@@ -1,4 +1,6 @@
 import {
+  getSelfHostedOriginMismatches,
+  getSelfHostedWebUrlMismatches,
   isPlaceholderValue,
   parseArgs,
   readEnvFile,
@@ -88,6 +90,18 @@ const dashboardBaseUrl =
   `http://127.0.0.1:${env.CONVEX_DASHBOARD_PORT || "6791"}`;
 const configuredWebCallOrigins =
   env.WEB_CALL_ALLOWED_ORIGINS ?? "http://127.0.0.1:8080";
+
+const originMismatches = getSelfHostedOriginMismatches(env);
+if (originMismatches.length > 0) {
+  console.error(`FAIL convex backend origins:\n- ${originMismatches.join("\n- ")}`);
+  process.exit(1);
+}
+
+const webUrlMismatches = getSelfHostedWebUrlMismatches(env, webBaseUrl);
+if (webUrlMismatches.length > 0) {
+  console.error(`FAIL web URL alignment:\n- ${webUrlMismatches.join("\n- ")}`);
+  process.exit(1);
+}
 
 const checks = [
   expectStatus("web health", urlJoin(webBaseUrl, "/healthz"), (response) => response.ok),

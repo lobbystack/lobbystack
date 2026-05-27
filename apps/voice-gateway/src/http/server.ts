@@ -9,6 +9,7 @@ import { handleMediaStreamConnection } from "../telephony/mediaStream";
 import { registerVoiceRoutes } from "../telephony/routes";
 import { registerWebCallRoutes } from "../webCall/routes";
 import { probeConvexSiteReachability } from "../health/convexReachability";
+import { isPrivateNetworkAddress } from "../health/internalRequest";
 import { validateMediaStreamSignature } from "../telephony/twilioRequest";
 import {
   capturePostHogException,
@@ -95,7 +96,11 @@ export function createServer(): ReturnType<typeof Fastify> {
     return { ok: true };
   });
 
-  server.get("/health/convex", async (_request, reply) => {
+  server.get("/health/convex", async (request, reply) => {
+    if (!isPrivateNetworkAddress(request.ip)) {
+      return reply.status(404).send({ ok: false });
+    }
+
     const result = await probeConvexSiteReachability({
       convexSiteUrl: env.CONVEX_SITE_URL,
       internalServiceToken: env.INTERNAL_SERVICE_TOKEN,
@@ -104,7 +109,6 @@ export function createServer(): ReturnType<typeof Fastify> {
     if (!result.ok) {
       return reply.status(503).send({
         ok: false,
-        convexSiteUrl: env.CONVEX_SITE_URL,
         error: result.error,
         status: result.status,
       });
@@ -112,7 +116,6 @@ export function createServer(): ReturnType<typeof Fastify> {
 
     return {
       ok: true,
-      convexSiteUrl: env.CONVEX_SITE_URL,
       status: result.status,
     };
   });

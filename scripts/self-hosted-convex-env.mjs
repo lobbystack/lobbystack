@@ -11,6 +11,7 @@ import {
   readEnvFile,
   redactValue,
   requireEnv,
+  requireSelfHostedOriginAlignment,
   resolveEnvFile,
   selfHostedCliEnv,
 } from "./lib/self-hosted-env.mjs";
@@ -86,7 +87,10 @@ requireEnv(env, [
   "CONVEX_SELF_HOSTED_URL",
   "CONVEX_SELF_HOSTED_ADMIN_KEY",
   ...REQUIRED_CONVEX_DEPLOYMENT_ENV_KEYS,
+  "CONVEX_CLOUD_ORIGIN",
+  "CONVEX_SITE_ORIGIN",
 ]);
+requireSelfHostedOriginAlignment(env);
 
 const { synced, skipped } = args.dryRun
   ? syncConvexEnvFromFile({
@@ -95,7 +99,7 @@ const { synced, skipped } = args.dryRun
       dryRun: true,
       includeEmpty: args.includeEmpty,
     })
-  : isolateSelfHostedConvexCli(env, (cliEnv) =>
+  : await isolateSelfHostedConvexCli(env, (cliEnv) =>
       syncConvexEnvFromFile({
         env,
         cliEnv,

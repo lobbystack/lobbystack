@@ -35,8 +35,8 @@ These variables are defined in `.env.self-hosted.example` and used by [`docker-c
 | `CONVEX_SELF_HOSTED_URL` | Host CLI (`pnpm self-hosted:convex:*`) | URL the Convex CLI uses to reach your self-hosted backend, typically `http://127.0.0.1:3210` during local smoke. |
 | `CONVEX_SELF_HOSTED_ADMIN_KEY` | Host CLI | Generated with `generate_admin_key.sh` inside the `convex-backend` container. |
 | `INSTANCE_SECRET` | Convex backend container | Hex secret for the open-source backend. Generate with `pnpm self-hosted:secrets`. Placeholder values break backend startup. |
-| `CONVEX_CLOUD_ORIGIN` | Convex backend container | Must match the public or smoke-test Convex client URL. |
-| `CONVEX_SITE_ORIGIN` | Convex backend container | Must match the public or smoke-test Convex HTTP actions URL. |
+| `CONVEX_CLOUD_ORIGIN` | Convex backend container | Must exactly match `CONVEX_URL`. `pnpm self-hosted:convex:env` and `pnpm self-hosted:verify` reject mismatches. |
+| `CONVEX_SITE_ORIGIN` | Convex backend container | Must exactly match `CONVEX_SITE_URL`. |
 
 The voice gateway always uses the internal Docker URL `http://convex-backend:3211` for Convex HTTP actions. Keep `CONVEX_SITE_URL` in `.env.self-hosted` as the public or browser-facing URL; `pnpm self-hosted:convex:env` syncs that value into the Convex deployment for webhooks and auth.
 
@@ -51,6 +51,7 @@ The voice gateway always uses the internal Docker URL `http://convex-backend:321
 | `CONVEX_DASHBOARD_PORT` | `6791` | Local bind for Convex dashboard. |
 | `HTTP_PORT` | `80` | Caddy HTTP ingress on the host. |
 | `HTTPS_PORT` | `443` | Caddy HTTPS ingress on the host. |
+| `CADDY_BIND_ADDRESS` | `127.0.0.1` | Host bind address for Caddy ingress. Use `0.0.0.0` before exposing public HTTPS traffic. |
 | `COMPOSE_PROJECT_NAME` | `lobbystack` | Docker Compose project name; change to run multiple stacks on one host. |
 
 ### Caddy hostnames

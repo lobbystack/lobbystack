@@ -236,8 +236,10 @@ export function selfHostedCliEnv(selfHostedEnv) {
 /**
  * Convex CLI auto-loads `.env.local`, which sets CONVEX_DEPLOYMENT for cloud dev.
  * Hide it while targeting a self-hosted backend.
+ *
+ * The callback may return a Promise; restoration waits until it settles.
  */
-export function isolateSelfHostedConvexCli(selfHostedEnv, run, options = {}) {
+export async function isolateSelfHostedConvexCli(selfHostedEnv, run, options = {}) {
   const rootDir = options.rootDir ?? process.cwd();
   const envLocalPath = join(rootDir, ".env.local");
   const backupPath = `${envLocalPath}${ENV_LOCAL_BACKUP_SUFFIX}`;
@@ -252,7 +254,7 @@ export function isolateSelfHostedConvexCli(selfHostedEnv, run, options = {}) {
   }
 
   try {
-    return run(selfHostedCliEnv(selfHostedEnv));
+    return await run(selfHostedCliEnv(selfHostedEnv));
   } finally {
     if (hadEnvLocal && existsSync(backupPath)) {
       renameSync(backupPath, envLocalPath);
@@ -278,6 +280,98 @@ export function getPnpmInvocation() {
 
 export function trimTrailingSlash(value) {
   return value.replace(/\/+$/, "");
+}
+
+export function normalizeEnvUrl(value) {
+  return trimTrailingSlash(value.trim());
+}
+
+const CONVEX_BACKEND_ORIGIN_PAIRS = [
+  ["CONVEX_URL", "CONVEX_CLOUD_ORIGIN"],
+  ["CONVEX_SITE_URL", "CONVEX_SITE_ORIGIN"],
+];
+
+export function getSelfHostedOriginMismatches(env) {
+  const mismatches = [];
+
+  for (const [publicKey, originKey] of CONVEX_BACKEND_ORIGIN_PAIRS) {
+    const publicValue = env[publicKey];
+    const originValue = env[originKey];
+
+    if (!publicValue || isPlaceholderValue(publicValue)) {
+      continue;
+    }
+
+    if (!originValue || isPlaceholderValue(originValue)) {
+      mismatches.push(
+        `${originKey} is missing or still a placeholder; set it to match ${publicKey} (${publicValue}).`,
+      );
+      continue;
+    }
+
+    if (normalizeEnvUrl(publicValue) !== normalizeEnvUrl(originValue)) {
+      mismatches.push(
+        `${originKey} (${originValue}) must match ${publicKey} (${publicValue}).`,
+      );
+    }
+  }
+
+  return mismatches;
+}
+
+export function requireSelfHostedOriginAlignment(env) {
+  const mismatches = getSelfHostedOriginMismatches(env);
+  if (mismatches.length > 0) {
+    throw new Error(mismatches.join(" "));
+  }
+}
+
+export function getSelfHostedWebUrlMismatches(env, webBaseUrl) {
+  const mismatches = [];
+  const normalizedWebUrl = normalizeEnvUrl(webBaseUrl);
+  const appBaseUrl = env.APP_BASE_URL?.trim();
+  const siteUrl = env.SITE_URL?.trim();
+
+  if (appBaseUrl && !isPlaceholderValue(appBaseUrl)) {
+    if (normalizeEnvUrl(appBaseUrl) !== normalizedWebUrl) {
+      mismatches.push(
+        `APP_BASE_URL (${appBaseUrl}) must match the web verify URL (${webBaseUrl}) for in-browser web calls and auth redirects.`,
+      );
+    }
+  }
+
+  if (siteUrl && !isPlaceholderValue(siteUrl)) {
+    if (normalizeEnvUrl(siteUrl) !== normalizedWebUrl) {
+      mismatches.push(
+        `SITE_URL (${siteUrl}) must match the web verify URL (${webBaseUrl}) for auth redirects.`,
+      );
+    }
+  }
+
+  let verifyHostname;
+  try {
+    verifyHostname = new URL(normalizedWebUrl).hostname.toLowerCase();
+  } catch {
+    return mismatches;
+  }
+
+  for (const origin of parseCsvEnvValue(env.WEB_CALL_ALLOWED_ORIGINS ?? "")) {
+    try {
+      const originHostname = new URL(origin).hostname.toLowerCase();
+      const loopbackPair =
+        (verifyHostname === "127.0.0.1" && originHostname === "localhost") ||
+        (verifyHostname === "localhost" && originHostname === "127.0.0.1");
+      if (loopbackPair) {
+        mismatches.push(
+          `WEB_CALL_ALLOWED_ORIGINS includes ${origin}, but the web verify URL uses ${normalizedWebUrl}; localhost and 127.0.0.1 must match exactly.`,
+        );
+      }
+    } catch {
+      mismatches.push(`WEB_CALL_ALLOWED_ORIGINS contains an invalid origin: ${origin}`);
+    }
+  }
+
+  return mismatches;
 }
 
 export function parseCsvEnvValue(value) {

@@ -23,7 +23,7 @@ if (args.dryRun) {
 }
 
 const pnpm = getPnpmInvocation();
-const result = isolateSelfHostedConvexCli(env, (cliEnv) =>
+const result = await isolateSelfHostedConvexCli(env, (cliEnv) =>
   spawnSync(pnpm.command, [...pnpm.args, ...command], {
     env: cliEnv,
     stdio: "inherit",
