@@ -591,6 +591,18 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
                 </p>
               </div>
 
+              <p className="type-body-muted">
+                {t("integrations.google.privacyNoticeText")}{" "}
+                <a
+                  href="/privacy"
+                  className="underline underline-offset-4 decoration-2"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {t("integrations.google.privacyPolicyLinkText")}
+                </a>
+              </p>
+
               <Button
                 className="w-full sm:w-auto"
                 disabled={isConnecting}

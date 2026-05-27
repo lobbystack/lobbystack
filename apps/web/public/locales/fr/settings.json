@@ -302,6 +302,8 @@
       "sheetDescription": "Connectez les calendriers de l'équipe et choisissez celui qui reçoit les réservations.",
       "connectionSectionTitle": "Connexion",
       "connectionSectionDescription": "Choisissez un membre réservable et connectez ou reconnectez Google Calendar.",
+      "privacyNoticeText": "La connexion à Google Calendar permet à LobbyStack de lire la disponibilité de votre calendrier et de créer, mettre à jour ou supprimer des rendez-vous sur le calendrier que vous sélectionnez.",
+      "privacyPolicyLinkText": "Politique de confidentialité",
       "calendarSectionTitle": "Réglages du calendrier",
       "calendarSectionDescription": "Choisissez le calendrier à synchroniser et consultez l'état de synchronisation.",
       "staffLabel": "Membre de l'équipe",
