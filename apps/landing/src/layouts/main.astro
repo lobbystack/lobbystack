@@ -126,7 +126,10 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
       }
 
       interactionEvents.forEach((eventName) => {
-        window.addEventListener(eventName, loadOnce, { once: true, passive: true })
+        window.addEventListener(eventName, loadOnce, {
+          once: true,
+          passive: true,
+        })
       })
 
       if (typeof win.requestIdleCallback === "function") {
@@ -178,6 +181,112 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
         <link rel="alternate" hreflang={link.hrefLang} href={link.href} />
       ))
     }
+    <script is:inline>
+      ;(function (C, A, L) {
+        let p = function (a, ar) {
+          a.q.push(ar)
+        }
+        let d = C.document
+        C.Cal =
+          C.Cal ||
+          function () {
+            let cal = C.Cal
+            let ar = arguments
+            if (!cal.loaded) {
+              cal.ns = {}
+              cal.q = cal.q || []
+              d.head.appendChild(d.createElement("script")).src = A
+              cal.loaded = true
+            }
+            if (ar[0] === L) {
+              const api = function () {
+                p(api, arguments)
+              }
+              const namespace = ar[1]
+              api.q = api.q || []
+              if (typeof namespace === "string") {
+                cal.ns[namespace] = cal.ns[namespace] || api
+                p(cal.ns[namespace], ar)
+                p(cal, ["initNamespace", namespace])
+              } else p(cal, ar)
+              return
+            }
+            p(cal, ar)
+          }
+      })(window, "https://app.cal.com/embed/embed.js", "init")
+      Cal("init", "lobbystack", { origin: "https://app.cal.com" })
+      Cal.ns.lobbystack("floatingButton", {
+        buttonPosition: "bottom-right",
+        buttonText: "",
+        calLink: "raphaelm/lobbystack",
+        config: {
+          layout: "month_view",
+          theme: "light",
+          useSlotsViewOnSmallScreen: "true",
+        },
+      })
+      Cal.ns.lobbystack("ui", {
+        hideEventTypeDetails: false,
+        layout: "month_view",
+        theme: "light",
+      })
+
+      const makeCalFloatingButtonCircular = () => {
+        const floatingButton = document.querySelector("cal-floating-button")
+        const button = floatingButton?.shadowRoot?.querySelector("button")
+        const icon = floatingButton?.shadowRoot?.querySelector("#button-icon")
+        const label = floatingButton?.shadowRoot?.querySelector("#button")
+
+        if (!(button instanceof HTMLElement)) return
+
+        button.style.setProperty("width", "64px", "important")
+        button.style.setProperty("height", "64px", "important")
+        button.style.setProperty("padding", "0", "important")
+        button.style.setProperty("border-radius", "9999px", "important")
+        button.style.setProperty("justify-content", "center", "important")
+        button.style.setProperty("align-items", "center", "important")
+
+        if (icon instanceof HTMLElement) {
+          icon.style.setProperty("margin", "0", "important")
+        }
+
+        if (label instanceof HTMLElement) {
+          label.style.setProperty("display", "none", "important")
+        }
+      }
+
+      makeCalFloatingButtonCircular()
+      const calFloatingButtonInterval = window.setInterval(
+        makeCalFloatingButtonCircular,
+        250
+      )
+      window.setTimeout(() => {
+        window.clearInterval(calFloatingButtonInterval)
+      }, 5000)
+      const observeCalFloatingButton = () => {
+        if (!document.body) return
+
+        const calFloatingButtonObserver = new MutationObserver(
+          makeCalFloatingButtonCircular
+        )
+        calFloatingButtonObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+        })
+      }
+
+      if (document.body) {
+        observeCalFloatingButton()
+      } else {
+        document.addEventListener(
+          "DOMContentLoaded",
+          observeCalFloatingButton,
+          {
+            once: true,
+          }
+        )
+      }
+    </script>
   </head>
   <body class="antialiased">
     <a href="#main-content" class="skip-link">{skipLabel}</a>

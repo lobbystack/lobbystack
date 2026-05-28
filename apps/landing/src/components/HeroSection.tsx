@@ -1,8 +1,8 @@
 import { buttonVariants } from "@/components/ui/button"
 import { GithubIcon } from "@/components/GithubIcon"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { APP_SIGNUP_URL, CAL_DEMO_TRIGGER_ATTRIBUTES } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, CalendarDays } from "lucide-react"
 import type { ReactNode } from "react"
 
 export function HeroSection({ children }: { children?: ReactNode }) {
@@ -13,7 +13,7 @@ export function HeroSection({ children }: { children?: ReactNode }) {
     >
       <div className="mx-auto w-full max-w-7xl px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 lg:grid-cols-2 lg:gap-16">
-          <div className="min-w-0 max-w-3xl text-left">
+          <div className="max-w-3xl min-w-0 text-left">
             <a
               href="https://github.com/lobbystack/lobbystack"
               target="_blank"
@@ -29,19 +29,26 @@ export function HeroSection({ children }: { children?: ReactNode }) {
             </a>
 
             <h1 className="animate-fade-up display-heading delay-100">
-              Stop losing revenue to <span className="underline decoration-2 underline-offset-4">missed calls</span>.
+              Stop losing revenue to{" "}
+              <span className="underline decoration-2 underline-offset-4">
+                missed calls
+              </span>
+              .
             </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
-              An AI receptionist that answers all your calls, or only those you can't take when you're busy. Instantly qualify leads, answer caller questions, and book paying customers directly into your calendar.
+              An AI receptionist that answers all your calls, or only those you
+              can't take when you're busy. Instantly qualify leads, answer
+              caller questions, and book paying customers directly into your
+              calendar.
             </p>
 
-            <div className="animate-fade-up mt-8 flex items-center gap-4 delay-300">
+            <div className="animate-fade-up mt-8 flex flex-col items-stretch gap-3 delay-300 sm:flex-row sm:items-center">
               <a
                 href={APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "h-11 w-full max-w-80 rounded-full px-16 text-sm md:w-96 md:max-w-none"
+                  "h-11 w-full rounded-full px-7 text-sm sm:w-auto"
                 )}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="hero"
@@ -51,6 +58,20 @@ export function HeroSection({ children }: { children?: ReactNode }) {
                 Try for free
                 <ArrowRight className="ml-1 size-4" />
               </a>
+              <button
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "h-11 w-full cursor-pointer rounded-full px-7 text-sm sm:w-auto"
+                )}
+                data-ph-capture-attribute-section="hero"
+                data-ph-capture-attribute-action="book_demo"
+                data-ph-capture-attribute-destination="cal.com/raphaelm/lobbystack"
+                {...CAL_DEMO_TRIGGER_ATTRIBUTES}
+              >
+                <CalendarDays className="mr-1 size-4" />
+                Book a Demo
+              </button>
             </div>
 
             {/* Micro-copy */}
@@ -59,7 +80,7 @@ export function HeroSection({ children }: { children?: ReactNode }) {
             </p>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[22rem] min-w-0 animate-fade-up justify-center delay-500 md:max-w-[30rem] lg:max-w-none lg:justify-end">
+          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center delay-500 md:max-w-[30rem] lg:max-w-none lg:justify-end">
             {children}
           </div>
         </div>

@@ -180,8 +180,7 @@ const tradeLinks = (locale: Locale) =>
     : []
 
 const solutionColumns = (locale: Locale) =>
-  (
-    [
+  [
     {
       title: solutionLabelMap[locale].solutions,
       links: solutionLinks(locale),
@@ -197,7 +196,6 @@ const solutionColumns = (locale: Locale) =>
         }
       : undefined,
   ].filter(Boolean) as NavColumn[]
-  )
 
 const navLinks = (locale: Locale): NavLink[] => [
   {
@@ -372,8 +370,11 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             >
               {navLinks(locale).map((link) =>
                 link.type === "group" ? (
-                  <details key={link.label} className="group/mobile-submenu py-1">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                  <details
+                    key={link.label}
+                    className="group/mobile-submenu py-1"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                       <span>{link.label}</span>
                       <ChevronDown
                         className="size-4 shrink-0 transition-transform group-open/mobile-submenu:rotate-180"
@@ -403,7 +404,9 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                               data-ph-capture-attribute-destination={
                                 resourceLink.href
                               }
-                              data-ph-capture-attribute-label={resourceLink.label}
+                              data-ph-capture-attribute-label={
+                                resourceLink.label
+                              }
                               className="flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                             >
                               <span className="min-w-0 break-words">
@@ -429,7 +432,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                     data-ph-capture-attribute-action="navigate"
                     data-ph-capture-attribute-destination={link.href}
                     data-ph-capture-attribute-label={link.label}
-                    className="rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
+                    className="rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                   >
                     {link.label}
                   </a>
@@ -439,7 +442,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
               <a
                 href={APP_LOGIN_URL}
-                className="rounded-md px-3 py-2 text-center text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="rounded-md px-3 py-2 text-center text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 {copy.login}
               </a>
