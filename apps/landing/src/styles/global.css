@@ -101,42 +101,16 @@
   @apply fixed top-3 left-3 z-[100] -translate-y-16 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-transform focus-visible:translate-y-0 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none;
 }
 
-cal-modal-box.cal-element-embed-light {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483646 !important;
-  display: flex !important;
-  width: 100vw !important;
-  height: 100dvh !important;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: 24px;
-  background: rgb(0 0 0 / 48%);
+.cal-demo-inline {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
 }
 
-cal-modal-box.cal-element-embed-light > iframe.cal-embed {
-  width: calc(100vw - 48px) !important;
-  max-width: 1000px !important;
-  height: min(957px, calc(100dvh - 48px)) !important;
-  max-height: calc(100dvh - 48px) !important;
+.cal-demo-inline iframe {
+  width: 100%;
+  height: 100%;
   border: 0;
-  border-radius: 8px;
-  background: white;
-  box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
-}
-
-@media (max-width: 640px) {
-  cal-modal-box.cal-element-embed-light {
-    padding: 0;
-  }
-
-  cal-modal-box.cal-element-embed-light > iframe.cal-embed {
-    width: 100vw !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0;
-  }
 }
 
 /* Staggered reveal animations */
