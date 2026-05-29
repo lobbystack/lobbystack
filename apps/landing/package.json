@@ -19,6 +19,7 @@
     "@astrojs/rss": "^4.0.18",
     "@astrojs/sitemap": "^3.7.2",
     "@base-ui/react": "^1.3.0",
+    "@calcom/embed-react": "^1.5.3",
     "@jdevalk/astro-seo-graph": "^2.0.0",
     "@jdevalk/seo-graph-core": "^0.6.2",
     "@tailwindcss/vite": "^4.2.4",

@@ -1,6 +1,10 @@
 import { buttonVariants } from "@/components/ui/button"
 import { GithubIcon } from "@/components/GithubIcon"
-import { APP_SIGNUP_URL, CAL_DEMO_TRIGGER_ATTRIBUTES } from "@/lib/app-links"
+import {
+  APP_SIGNUP_URL,
+  CAL_DEMO_DESTINATION,
+  CAL_DEMO_TRIGGER_ATTRIBUTES,
+} from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { ArrowRight, CalendarDays } from "lucide-react"
 import type { ReactNode } from "react"
@@ -66,7 +70,7 @@ export function HeroSection({ children }: { children?: ReactNode }) {
                 )}
                 data-ph-capture-attribute-section="hero"
                 data-ph-capture-attribute-action="book_demo"
-                data-ph-capture-attribute-destination="cal.com/raphaelm/lobbystack"
+                data-ph-capture-attribute-destination={CAL_DEMO_DESTINATION}
                 {...CAL_DEMO_TRIGGER_ATTRIBUTES}
               >
                 <CalendarDays className="mr-1 size-4" />
