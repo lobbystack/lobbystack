@@ -29,6 +29,8 @@ export type PageSeo = {
   noindex?: boolean
   image?: string
   imageAlt?: string
+  imageWidth?: number
+  imageHeight?: number
   type?: "website" | "article"
   publishedTime?: string
   modifiedTime?: string

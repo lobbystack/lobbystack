@@ -52,6 +52,8 @@ const pageImage =
   seo?.image ?? (seo?.noindex ? DEFAULT_OG_IMAGE : generatedOgImage)
 const imageUrl = absoluteUrl(pageImage)
 const imageAlt = seo?.imageAlt ?? title
+const imageWidth = seo?.imageWidth ?? OG_IMAGE_WIDTH
+const imageHeight = seo?.imageHeight ?? OG_IMAGE_HEIGHT
 const markdownPath = seo?.noindex ? undefined : markdownAlternatePath(pagePath)
 const markdownUrl = markdownPath ? absoluteUrl(markdownPath) : undefined
 const localeAlternates = seo?.noindex ? [] : alternateLocaleLinks(pagePath)
@@ -70,6 +72,8 @@ const graphItems = [
     path: pagePath,
     image: pageImage,
     alt: imageAlt,
+    width: imageWidth,
+    height: imageHeight,
   }),
   ...(seo?.jsonLd ?? []),
 ]
@@ -147,8 +151,8 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
       ogType={pageType}
       ogImage={imageUrl}
       ogImageAlt={imageAlt}
-      ogImageWidth={OG_IMAGE_WIDTH}
-      ogImageHeight={OG_IMAGE_HEIGHT}
+      ogImageWidth={imageWidth}
+      ogImageHeight={imageHeight}
       siteName={SITE_NAME}
       twitter={{ card: "summary_large_image" }}
       author={seo?.author}
