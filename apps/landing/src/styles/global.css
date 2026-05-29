@@ -116,7 +116,8 @@ cal-modal-box.cal-element-embed-light {
 }
 
 cal-modal-box.cal-element-embed-light > iframe.cal-embed {
-  width: min(100%, 748px) !important;
+  width: calc(100vw - 48px) !important;
+  max-width: 1000px !important;
   height: min(957px, calc(100dvh - 48px)) !important;
   max-height: calc(100dvh - 48px) !important;
   border: 0;
