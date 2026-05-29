@@ -9,6 +9,13 @@ export const CAL_DEMO_CONFIG = {
   theme: "light",
   useSlotsViewOnSmallScreen: "true",
 } as const
+export const CAL_DEMO_EMBED_URL = `https://app.cal.com/${CAL_DEMO_LINK}/embed?${new URLSearchParams(
+  {
+    ...CAL_DEMO_CONFIG,
+    embedType: "inline",
+    embed: CAL_DEMO_NAMESPACE,
+  }
+).toString()}`
 
 export const CAL_DEMO_TRIGGER_ATTRIBUTES = {
   "data-cal-demo-trigger": "true",

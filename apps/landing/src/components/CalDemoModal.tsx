@@ -1,8 +1,6 @@
-import Cal, { getCalApi } from "@calcom/embed-react"
 import {
-  CAL_DEMO_CONFIG,
+  CAL_DEMO_EMBED_URL,
   CAL_DEMO_LINK,
-  CAL_DEMO_NAMESPACE,
 } from "@/lib/app-links"
 import { CalendarDays, X } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -26,20 +24,6 @@ export function CalDemoModal() {
     return () => {
       document.removeEventListener("click", openDemo)
     }
-  }, [])
-
-  useEffect(() => {
-    const configureCal = async () => {
-      const cal = await getCalApi({ namespace: CAL_DEMO_NAMESPACE })
-
-      cal("ui", {
-        hideEventTypeDetails: false,
-        layout: CAL_DEMO_CONFIG.layout,
-        theme: CAL_DEMO_CONFIG.theme,
-      })
-    }
-
-    configureCal()
   }, [])
 
   useEffect(() => {
@@ -96,11 +80,11 @@ export function CalDemoModal() {
                 <X className="size-5" aria-hidden="true" />
               </button>
             </div>
-            <Cal
-              namespace={CAL_DEMO_NAMESPACE}
-              calLink={CAL_DEMO_LINK}
+            <iframe
+              title="Book a Demo"
               className="cal-demo-inline"
-              config={CAL_DEMO_CONFIG}
+              src={CAL_DEMO_EMBED_URL}
+              allow="payment"
             />
           </div>
         </div>

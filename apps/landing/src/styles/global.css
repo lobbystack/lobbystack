@@ -104,13 +104,8 @@
 .cal-demo-inline {
   width: 100%;
   height: 100%;
-  overflow: auto;
-}
-
-.cal-demo-inline iframe {
-  width: 100%;
-  height: 100%;
   border: 0;
+  display: block;
 }
 
 /* Staggered reveal animations */
