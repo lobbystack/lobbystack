@@ -28,6 +28,11 @@ import {
   localeMeta,
   type Locale,
 } from "@/lib/i18n"
+import {
+  CAL_DEMO_CONFIG,
+  CAL_DEMO_LINK,
+  CAL_DEMO_NAMESPACE,
+} from "@/lib/app-links"
 
 interface Props {
   seo?: PageSeo
@@ -219,82 +224,67 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
           }
       })(window, "https://app.cal.com/embed/embed.js", "init")
       Cal("init", "lobbystack", { origin: "https://app.cal.com" })
-      Cal.ns.lobbystack("floatingButton", {
-        buttonPosition: "bottom-right",
-        buttonText: "",
-        calLink: "raphaelm/lobbystack",
-        config: {
-          layout: "month_view",
-          theme: "light",
-          useSlotsViewOnSmallScreen: "true",
-        },
-      })
       Cal.ns.lobbystack("ui", {
         hideEventTypeDetails: false,
         layout: "month_view",
         theme: "light",
       })
 
-      const makeCalFloatingButtonCircular = () => {
-        const floatingButton = document.querySelector("cal-floating-button")
-        const button = floatingButton?.shadowRoot?.querySelector("button")
-        const icon = floatingButton?.shadowRoot?.querySelector("#button-icon")
-        const label = floatingButton?.shadowRoot?.querySelector("#button")
-
+      const attachFloatingDemoButton = () => {
+        const button = document.getElementById("floating-demo-cta")
         if (!(button instanceof HTMLElement)) return
 
-        button.style.setProperty("width", "64px", "important")
-        button.style.setProperty("height", "64px", "important")
-        button.style.setProperty("padding", "0", "important")
-        button.style.setProperty("border-radius", "9999px", "important")
-        button.style.setProperty("justify-content", "center", "important")
-        button.style.setProperty("align-items", "center", "important")
-
-        if (icon instanceof HTMLElement) {
-          icon.style.setProperty("margin", "0", "important")
-        }
-
-        if (label instanceof HTMLElement) {
-          label.style.setProperty("display", "none", "important")
-        }
-      }
-
-      makeCalFloatingButtonCircular()
-      const calFloatingButtonInterval = window.setInterval(
-        makeCalFloatingButtonCircular,
-        250
-      )
-      window.setTimeout(() => {
-        window.clearInterval(calFloatingButtonInterval)
-      }, 5000)
-      const observeCalFloatingButton = () => {
-        if (!document.body) return
-
-        const calFloatingButtonObserver = new MutationObserver(
-          makeCalFloatingButtonCircular
-        )
-        calFloatingButtonObserver.observe(document.body, {
-          childList: true,
-          subtree: true,
+        button.addEventListener("click", () => {
+          const calLink = button.dataset.calLink
+          const config = JSON.parse(button.dataset.calConfig || "{}")
+          window.Cal?.ns?.lobbystack?.("modal", { calLink, config })
         })
       }
 
-      if (document.body) {
-        observeCalFloatingButton()
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", attachFloatingDemoButton, {
+          once: true,
+        })
       } else {
-        document.addEventListener(
-          "DOMContentLoaded",
-          observeCalFloatingButton,
-          {
-            once: true,
-          }
-        )
+        attachFloatingDemoButton()
       }
     </script>
   </head>
   <body class="antialiased">
     <a href="#main-content" class="skip-link">{skipLabel}</a>
     <slot />
+    <button
+      id="floating-demo-cta"
+      type="button"
+      class="fixed right-6 bottom-6 z-50 inline-flex size-16 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-black/20 transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95 md:right-9 md:bottom-8"
+      aria-label="Book a Demo"
+      data-ph-capture-attribute-section="floating_cta"
+      data-ph-capture-attribute-action="book_demo"
+      data-ph-capture-attribute-destination={`cal.com/${CAL_DEMO_LINK}`}
+      data-cal-link={CAL_DEMO_LINK}
+      data-cal-namespace={CAL_DEMO_NAMESPACE}
+      data-cal-config={CAL_DEMO_CONFIG}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="size-7"
+        aria-hidden="true"
+      >
+        <path d="M8 2v4"></path>
+        <path d="M16 2v4"></path>
+        <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+        <path d="M3 10h18"></path>
+      </svg>
+      <span class="sr-only">Book a Demo</span>
+    </button>
     <script is:inline src="/webmcp.js" defer></script>
   </body>
 </html>
