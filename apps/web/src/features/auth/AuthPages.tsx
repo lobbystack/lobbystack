@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { normalizeAuthEmail } from "@lobbystack/shared";
 import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -100,7 +101,7 @@ export function LoginPage() {
     try {
       const formData = new FormData();
       formData.set("flow", "signIn");
-      formData.set("email", email);
+      formData.set("email", normalizeAuthEmail(email));
       formData.set("password", password);
       const result = await signIn("password", formData);
 
@@ -175,7 +176,7 @@ export function SignupPage() {
     try {
       const formData = new FormData();
       formData.set("flow", "signUp");
-      formData.set("email", email);
+      formData.set("email", normalizeAuthEmail(email));
       formData.set("password", password);
       if (verifiedTurnstileToken) {
         formData.set("cf-turnstile-response", verifiedTurnstileToken);
@@ -303,24 +304,22 @@ export function ForgotPasswordPage() {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
       const formData = new FormData();
-      formData.set("email", email);
+      formData.set("email", normalizeAuthEmail(email));
 
       if (step === "request") {
         formData.set("flow", "reset");
         await signIn("password", formData);
         setStep("verify");
-        setStatusMessage(t("status.resetCodeSent"));
         return;
       }
 
@@ -330,20 +329,19 @@ export function ForgotPasswordPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingPasswordReset"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.passwordResetFinishing"));
+        keepSubmitting = true;
         return;
       }
 
-      setStatusMessage(t("status.passwordResetCompleted"));
+      keepSubmitting = true;
     } catch (error) {
       if (step === "request" && isResetRequestLookupError(error)) {
         setStep("verify");
-        setStatusMessage(t("status.resetCodeSent"));
         return;
       }
 
@@ -351,7 +349,9 @@ export function ForgotPasswordPage() {
         getAuthErrorMessage(error, step === "request" ? "resetRequest" : "resetVerification", t),
       );
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -359,7 +359,6 @@ export function ForgotPasswordPage() {
     setStep("request");
     setCode("");
     setNewPassword("");
-    setStatusMessage(null);
     setErrorMessage(null);
   }
 
@@ -382,7 +381,6 @@ export function ForgotPasswordPage() {
         onEmailChange={setEmail}
         onNewPasswordChange={setNewPassword}
         onSubmit={handleSubmit}
-        statusMessage={statusMessage}
         step={step}
       />
     </OnboardingShell>

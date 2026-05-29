@@ -237,3 +237,4 @@ export type {
   SmsMessageStatus,
 } from "./twilioMessageStatus";
 export * from "./billing";
+export { normalizeAuthEmail } from "./auth";
