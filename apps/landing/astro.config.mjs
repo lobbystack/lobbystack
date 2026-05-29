@@ -115,9 +115,6 @@ export default defineConfig({
           "https://us-assets.i.posthog.com",
         ],
       },
-      styleDirective: {
-        resources: ["'self'", "'unsafe-inline'"],
-      },
       directives: [
         "default-src 'self'",
         "connect-src 'self' https://app.cal.com https://voice.lobbystack.com https://voice-dev.lobbystack.com https://lobbystack-voice-prod.fly.dev https://ai-receptionist-voice-dev-raphael.fly.dev http://localhost:3001 http://127.0.0.1:3001 https://ts.lobbystack.com https://us.i.posthog.com https://us-assets.i.posthog.com",
