@@ -43,12 +43,12 @@ export function HeroSection({ children }: { children?: ReactNode }) {
               calendar.
             </p>
 
-            <div className="animate-fade-up mt-8 flex flex-col items-stretch gap-3 delay-300 sm:flex-row sm:items-center">
+            <div className="animate-fade-up mt-8 flex items-center gap-4 delay-300">
               <a
                 href={APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "h-11 w-full rounded-full px-7 text-sm sm:w-auto"
+                  "h-11 w-full max-w-80 rounded-full px-16 text-sm md:w-96 md:max-w-none"
                 )}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="hero"
