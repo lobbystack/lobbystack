@@ -1,11 +1,7 @@
 import { buttonVariants } from "@/components/ui/button"
-import {
-  APP_SIGNUP_URL,
-  CAL_DEMO_DESTINATION,
-  CAL_DEMO_TRIGGER_ATTRIBUTES,
-} from "@/lib/app-links"
+import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
-import { ArrowRight, CalendarDays } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
 export function CtaSection() {
   return (
@@ -36,20 +32,6 @@ export function CtaSection() {
             Try for free
             <ArrowRight className="ml-1 size-4" />
           </a>
-          <button
-            type="button"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "h-11 cursor-pointer rounded-full px-7 text-sm"
-            )}
-            data-ph-capture-attribute-section="final_cta"
-            data-ph-capture-attribute-action="book_demo"
-            data-ph-capture-attribute-destination={CAL_DEMO_DESTINATION}
-            {...CAL_DEMO_TRIGGER_ATTRIBUTES}
-          >
-            <CalendarDays className="mr-1 size-4" />
-            Book a Demo
-          </button>
         </div>
         <p className="fine-print mt-3">
           No credit card required · Cancel anytime

@@ -1,12 +1,8 @@
 import { buttonVariants } from "@/components/ui/button"
 import { GithubIcon } from "@/components/GithubIcon"
-import {
-  APP_SIGNUP_URL,
-  CAL_DEMO_DESTINATION,
-  CAL_DEMO_TRIGGER_ATTRIBUTES,
-} from "@/lib/app-links"
+import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
-import { ArrowRight, CalendarDays } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import type { ReactNode } from "react"
 
 export function HeroSection({ children }: { children?: ReactNode }) {
@@ -62,20 +58,6 @@ export function HeroSection({ children }: { children?: ReactNode }) {
                 Try for free
                 <ArrowRight className="ml-1 size-4" />
               </a>
-              <button
-                type="button"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "lg" }),
-                  "h-11 w-full cursor-pointer rounded-full px-7 text-sm sm:w-auto"
-                )}
-                data-ph-capture-attribute-section="hero"
-                data-ph-capture-attribute-action="book_demo"
-                data-ph-capture-attribute-destination={CAL_DEMO_DESTINATION}
-                {...CAL_DEMO_TRIGGER_ATTRIBUTES}
-              >
-                <CalendarDays className="mr-1 size-4" />
-                Book a Demo
-              </button>
             </div>
 
             {/* Micro-copy */}
