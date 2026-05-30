@@ -108,7 +108,7 @@ describe("LoginPage", () => {
     expect(screen.getByText("shell.privacy")).toBeTruthy();
   });
 
-  it("submits a normalized email for login", async () => {
+  it("submits the raw email for login", async () => {
     signInMock.mockResolvedValue({});
 
     render(
@@ -125,7 +125,7 @@ describe("LoginPage", () => {
     expect(signInMock).toHaveBeenCalledTimes(1);
     const [, formData] = signInMock.mock.calls[0] as [string, FormData];
 
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
   });
 });
 
@@ -155,7 +155,7 @@ describe("ForgotPasswordPage", () => {
 
     expect(provider).toBe("password");
     expect(formData.get("flow")).toBe("reset");
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
     expect(screen.getByText("forgotPassword.verifyTitle")).toBeTruthy();
     expect(screen.queryByText("forgotPassword.submitting")).toBeNull();
   });
@@ -176,7 +176,7 @@ describe("ForgotPasswordPage", () => {
     expect(screen.getByText("errors.passwordResetMissingSiteUrl")).toBeTruthy();
   });
 
-  it("submits reset verification with email, code, and new password", async () => {
+  it("submits reset verification with raw email, code, and new password", async () => {
     signInMock
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ signingIn: true });
@@ -188,7 +188,7 @@ describe("ForgotPasswordPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("forgotPassword.email"), " OWNER@Example.COM ");
     await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
     await user.type(screen.getByLabelText("forgotPassword.code"), "12345678");
     await user.type(screen.getByLabelText("forgotPassword.newPassword"), "a-secure-password");
@@ -199,7 +199,7 @@ describe("ForgotPasswordPage", () => {
 
     expect(provider).toBe("password");
     expect(formData.get("flow")).toBe("reset-verification");
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
     expect(formData.get("code")).toBe("12345678");
     expect(formData.get("newPassword")).toBe("a-secure-password");
     expect(screen.queryByText("status.passwordResetFinishing")).toBeNull();
@@ -409,7 +409,7 @@ describe("SignupPage", () => {
     expect(screen.queryByText("errors.signupFailed")).toBeNull();
   });
 
-  it("submits a normalized email for signup", async () => {
+  it("submits the raw email for signup", async () => {
     vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
     signInMock.mockResolvedValueOnce({});
 
@@ -427,7 +427,7 @@ describe("SignupPage", () => {
     expect(signInMock).toHaveBeenCalledTimes(1);
     const [, formData] = signInMock.mock.calls[0] as [string, FormData];
 
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
   });
 
   it("renders Turnstile as soon as the signup page loads", async () => {

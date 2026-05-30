@@ -86,6 +86,84 @@ describe("password auth email normalization", () => {
     });
   });
 
+  it("signs in to an exact mixed-case legacy account before normalized fallback", async () => {
+    const t = convexTest(schema, convexModules);
+    const legacyPassword = "LegacyPass123!";
+    const lowercasePassword = "LowercasePass123!";
+    const legacyUserId = await seedPasswordAccount(t, {
+      email: "Hello@lobbystack.com",
+      password: legacyPassword,
+    });
+    const lowercaseUserId = await seedPasswordAccount(t, {
+      email: "hello@lobbystack.com",
+      password: lowercasePassword,
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signIn",
+          email: "Hello@lobbystack.com",
+          password: legacyPassword,
+        },
+      }),
+    ).resolves.toMatchObject({ tokens: expect.any(Object) });
+
+    await t.run(async (ctx) => {
+      const legacySessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", legacyUserId))
+        .collect();
+      const lowercaseSessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", lowercaseUserId))
+        .collect();
+
+      expect(legacySessions).toHaveLength(1);
+      expect(lowercaseSessions).toHaveLength(0);
+    });
+  });
+
+  it("signs in to the lowercase account when both mixed-case and lowercase accounts exist", async () => {
+    const t = convexTest(schema, convexModules);
+    const legacyPassword = "LegacyPass123!";
+    const lowercasePassword = "LowercasePass123!";
+    const legacyUserId = await seedPasswordAccount(t, {
+      email: "Hello@lobbystack.com",
+      password: legacyPassword,
+    });
+    const lowercaseUserId = await seedPasswordAccount(t, {
+      email: "hello@lobbystack.com",
+      password: lowercasePassword,
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signIn",
+          email: "hello@lobbystack.com",
+          password: lowercasePassword,
+        },
+      }),
+    ).resolves.toMatchObject({ tokens: expect.any(Object) });
+
+    await t.run(async (ctx) => {
+      const legacySessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", legacyUserId))
+        .collect();
+      const lowercaseSessions = await ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", lowercaseUserId))
+        .collect();
+
+      expect(legacySessions).toHaveLength(0);
+      expect(lowercaseSessions).toHaveLength(1);
+    });
+  });
+
   it("stores signup email and password account id in lowercase", async () => {
     const t = convexTest(schema, convexModules);
 
@@ -172,6 +250,62 @@ describe("password auth email normalization", () => {
       expect(resetCode).not.toBeNull();
       expect(resetCode?.provider).toBe("email");
       expect(resetCode?.emailVerified).toBe("hello@lobbystack.com");
+    });
+    expect(sendTransactionalEmailMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        template: "password_reset",
+        to: "hello@lobbystack.com",
+      }),
+    );
+  });
+
+  it("creates a reset code for an exact mixed-case legacy account before normalized fallback", async () => {
+    const t = convexTest(schema, convexModules);
+    const legacyUserId = await seedPasswordAccount(t, {
+      email: "Hello@lobbystack.com",
+      password: "LegacyPass123!",
+    });
+    const lowercaseUserId = await seedPasswordAccount(t, {
+      email: "hello@lobbystack.com",
+      password: "LowercasePass123!",
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "reset",
+          email: "Hello@lobbystack.com",
+        },
+      }),
+    ).resolves.toEqual({ tokens: null });
+
+    await t.run(async (ctx) => {
+      const legacyAccount = await ctx.db
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) =>
+          q.eq("userId", legacyUserId).eq("provider", "password"),
+        )
+        .unique();
+      const lowercaseAccount = await ctx.db
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) =>
+          q.eq("userId", lowercaseUserId).eq("provider", "password"),
+        )
+        .unique();
+      const legacyResetCode = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", legacyAccount!._id))
+        .unique();
+      const lowercaseResetCode = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", lowercaseAccount!._id))
+        .unique();
+
+      expect(legacyResetCode).not.toBeNull();
+      expect(legacyResetCode?.emailVerified).toBe("hello@lobbystack.com");
+      expect(lowercaseResetCode).toBeNull();
     });
     expect(sendTransactionalEmailMock).toHaveBeenCalledWith(
       expect.anything(),

@@ -65,7 +65,7 @@ async function retrievePasswordAccount<DataModel extends GenericDataModel>(
 ): Promise<(Awaited<ReturnType<typeof retrieveAccount<DataModel>>> & { email: string }) | null> {
   const candidates =
     input.originalEmail && input.originalEmail !== input.email
-      ? [input.email, input.originalEmail]
+      ? [input.originalEmail, input.email]
       : [input.email];
   let lastMissingAccountError: unknown = null;
 
@@ -288,7 +288,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
       if (config.verify && !account.emailVerified) {
         return await signInViaProvider(ctx, config.verify, {
           accountId: account._id,
-          params,
+          params: normalizedParams,
         });
       }
 

@@ -1,7 +1,6 @@
 import type { FormEvent } from "react";
 import { useCallback, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { normalizeAuthEmail } from "@lobbystack/shared";
 import { useConvexAuth } from "convex/react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -101,7 +100,7 @@ export function LoginPage() {
     try {
       const formData = new FormData();
       formData.set("flow", "signIn");
-      formData.set("email", normalizeAuthEmail(email));
+      formData.set("email", email);
       formData.set("password", password);
       const result = await signIn("password", formData);
 
@@ -176,7 +175,7 @@ export function SignupPage() {
     try {
       const formData = new FormData();
       formData.set("flow", "signUp");
-      formData.set("email", normalizeAuthEmail(email));
+      formData.set("email", email);
       formData.set("password", password);
       if (verifiedTurnstileToken) {
         formData.set("cf-turnstile-response", verifiedTurnstileToken);
@@ -314,7 +313,7 @@ export function ForgotPasswordPage() {
 
     try {
       const formData = new FormData();
-      formData.set("email", normalizeAuthEmail(email));
+      formData.set("email", email);
 
       if (step === "request") {
         formData.set("flow", "reset");
