@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import type { Doc } from "../_generated/dataModel";
-import { internalMutation } from "../_generated/server";
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 
 type PasswordAccount = Doc<"authAccounts">;
