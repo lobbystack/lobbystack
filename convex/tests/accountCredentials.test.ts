@@ -402,6 +402,129 @@ describe("account credential settings", () => {
     });
   });
 
+  it("does not create a pending email change for a mixed-case legacy target", async () => {
+    const t = convexTest(schema, convexModules);
+    const currentPassword = "CurrentPass123!";
+    const currentSecret = await new Scrypt().hash(currentPassword);
+    const takenSecret = await new Scrypt().hash("AnotherPass123!");
+
+    const seeded = await t.run(async (ctx) => {
+      const ownerId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-owner",
+        email: "owner@example.com",
+      });
+      const otherId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-other",
+        email: "Taken@Example.com",
+      });
+
+      const ownerAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId: ownerId,
+        provider: "password",
+        providerAccountId: "owner@example.com",
+        secret: currentSecret,
+      });
+      const otherAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId: otherId,
+        provider: "password",
+        providerAccountId: "Taken@Example.com",
+        secret: takenSecret,
+      });
+      await ctx.db.insert("auth_email_claims", {
+        userId: otherId,
+        accountId: otherAccountId,
+        provider: "password",
+        normalizedEmail: "taken@example.com",
+      });
+      await ctx.db.insert("user_email_claims", {
+        userId: otherId,
+        normalizedEmail: "taken@example.com",
+      });
+
+      return { ownerAccountId };
+    });
+
+    const asOwner = t.withIdentity({ subject: "account-owner" });
+
+    await expect(
+      asOwner.action(api.businesses.catalog.changeEmail, {
+        currentPassword,
+        newEmail: "taken@example.com",
+      }),
+    ).resolves.toEqual({ email: "taken@example.com" });
+
+    await t.run(async (ctx) => {
+      const ownerPendingEmailChange = await ctx.db
+        .query("pending_email_changes")
+        .withIndex("by_account_id", (q) => q.eq("accountId", seeded.ownerAccountId))
+        .unique();
+
+      expect(ownerPendingEmailChange).toBeNull();
+    });
+  });
+
+  it("does not confirm an email change over a mixed-case legacy target", async () => {
+    const t = convexTest(schema, convexModules);
+    const confirmationCode = "confirm-email-change";
+
+    const seeded = await t.run(async (ctx) => {
+      const ownerId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-owner",
+        email: "owner@example.com",
+      });
+      const otherId: Id<"users"> = await ctx.db.insert("users", {
+        authSubject: "account-other",
+        email: "Taken@Example.com",
+      });
+
+      const ownerAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId: ownerId,
+        provider: "password",
+        providerAccountId: "owner@example.com",
+        secret: "hashed-secret",
+      });
+      const otherAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
+        userId: otherId,
+        provider: "password",
+        providerAccountId: "Taken@Example.com",
+        secret: "other-hashed-secret",
+      });
+      await ctx.db.insert("auth_email_claims", {
+        userId: otherId,
+        accountId: otherAccountId,
+        provider: "password",
+        normalizedEmail: "taken@example.com",
+      });
+      await ctx.db.insert("user_email_claims", {
+        userId: otherId,
+        normalizedEmail: "taken@example.com",
+      });
+      await ctx.db.insert("pending_email_changes", {
+        accountId: ownerAccountId,
+        codeHash: await hashCode(confirmationCode),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        email: "taken@example.com",
+      });
+
+      return { ownerId, ownerAccountId };
+    });
+
+    await expect(
+      t.action(api.businesses.catalog.confirmEmailChange, {
+        code: confirmationCode,
+        email: "taken@example.com",
+      }),
+    ).rejects.toThrow("An account with that email already exists.");
+
+    await t.run(async (ctx) => {
+      const owner = await ctx.db.get(seeded.ownerId);
+      const ownerAccount = await ctx.db.get(seeded.ownerAccountId);
+
+      expect(owner?.email).toBe("owner@example.com");
+      expect(ownerAccount?.providerAccountId).toBe("owner@example.com");
+    });
+  });
+
   it("clears existing pending email changes when masking a taken target email", async () => {
     const t = convexTest(schema, convexModules);
     const currentPassword = "CurrentPass123!";

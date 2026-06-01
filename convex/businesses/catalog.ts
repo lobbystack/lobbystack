@@ -1,13 +1,11 @@
-import {
-  v } from "convex/values";
-import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
+import { v } from "convex/values";
 import {
   getAuthSessionId,
   getAuthUserId,
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
-  } from "@convex-dev/auth/server";
+} from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import {
   internalQuery,
@@ -21,6 +19,12 @@ import {
   getPasswordAccountForUser,
   resolveUserForPasswordCredentials,
 } from "../lib/accountCredentials";
+import { normalizeAuthEmail } from "../../packages/shared/src/auth";
+import {
+  assertAuthEmailClaimAvailable,
+  replaceAuthEmailClaimsForAccount,
+  type AuthEmailClaimAvailability,
+} from "../lib/authEmailClaims";
 import {
   getCurrentUser,
   requireMembership,
@@ -54,7 +58,12 @@ import {
 } from "../lib/twilioUrls";
 import { scheduleSnapshotRefresh } from "./admin";
 
-import { observedAction as action } from "../telemetry/observedFunctions";
+import {
+  observedAction as action,
+  observedInternalAction as internalAction,
+  observedInternalMutation as internalMutation,
+  observedMutation as mutation,
+} from "../telemetry/observedFunctions";
 const phoneNumberSaveArgs = {
   businessId: v.id("businesses"),
   phoneNumberId: v.optional(v.id("phone_numbers")),
@@ -213,6 +222,27 @@ async function assertPasswordEmailAvailable(
   if (duplicateUser && duplicateUser._id !== input.userId) {
     throw new Error("An account with that email already exists.");
   }
+}
+
+async function hasNormalizedPasswordEmailCollision(
+  ctx: Pick<ActionCtx, "runQuery">,
+  input: {
+    newEmail: string;
+    userId: Id<"users">;
+    currentAccountId?: Id<"authAccounts">;
+  },
+): Promise<boolean> {
+  const availability: AuthEmailClaimAvailability = await ctx.runQuery(
+    internal.lib.authEmailClaims.getAvailability,
+    {
+      provider: "password",
+      normalizedEmail: normalizeAuthEmail(input.newEmail),
+      ...(input.currentAccountId ? { currentAccountId: input.currentAccountId } : {}),
+      currentUserId: input.userId,
+    },
+  );
+
+  return availability.authAccountClaimed || availability.userEmailClaimed;
 }
 
 async function hashVerificationCode(code: string): Promise<string> {
@@ -464,6 +494,49 @@ export const getCurrentUserForPasswordChange = internalQuery({
   },
 });
 
+export const getPendingEmailChangeAvailabilityTarget = internalQuery({
+  args: {
+    codeHash: v.string(),
+    email: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    accountId: Id<"authAccounts">;
+    userId: Id<"users">;
+  } | null> => {
+    const pendingEmailChange = await ctx.db
+      .query("pending_email_changes")
+      .withIndex("by_code_hash", (q) => q.eq("codeHash", args.codeHash))
+      .unique();
+
+    if (!pendingEmailChange || pendingEmailChange.expirationTime < Date.now()) {
+      return null;
+    }
+
+    const nextEmail = normalizeAuthEmail(pendingEmailChange.email);
+    if (!nextEmail || nextEmail !== args.email) {
+      return null;
+    }
+
+    const account = await ctx.db.get(pendingEmailChange.accountId);
+    if (!account || account.provider !== "password") {
+      return null;
+    }
+
+    const user = await ctx.db.get(account.userId);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      accountId: account._id,
+      userId: user._id,
+    };
+  },
+});
+
 export const assertPendingEmailChangeTarget = internalQuery({
   args: {
     newEmail: v.string(),
@@ -480,6 +553,12 @@ export const assertPendingEmailChangeTarget = internalQuery({
         newEmail: args.newEmail,
         userId: args.userId,
         currentAccountId: passwordAccount._id,
+      });
+      await assertAuthEmailClaimAvailable(ctx, {
+        provider: "password",
+        normalizedEmail: normalizeAuthEmail(args.newEmail),
+        currentAccountId: passwordAccount._id,
+        currentUserId: args.userId,
       });
       return true;
     } catch (error) {
@@ -553,6 +632,12 @@ export const confirmPendingEmailChange = internalMutation({
       userId: user._id,
       currentAccountId: account._id,
     });
+    await assertAuthEmailClaimAvailable(ctx, {
+      provider: "password",
+      normalizedEmail: nextEmail,
+      currentAccountId: account._id,
+      currentUserId: user._id,
+    });
 
     await clearVerificationCodesForAccount(ctx, account._id);
     await ctx.db.patch(account._id, {
@@ -562,6 +647,12 @@ export const confirmPendingEmailChange = internalMutation({
     await ctx.db.patch(user._id, {
       email: nextEmail,
       emailVerificationTime: Date.now(),
+    });
+    await replaceAuthEmailClaimsForAccount(ctx, {
+      provider: "password",
+      normalizedEmail: nextEmail,
+      accountId: account._id,
+      userId: user._id,
     });
     await ctx.db.delete(pendingEmailChange._id);
 
@@ -678,6 +769,25 @@ export const changeEmail = action({
       },
     });
 
+    if (
+      await hasNormalizedPasswordEmailCollision(ctx, {
+        newEmail: nextEmail,
+        userId: user.userId,
+        currentAccountId: user.passwordAccountId,
+      })
+    ) {
+      const clearPendingEmailChangesResult: null = await ctx.runMutation(
+        (internal as any).businesses.catalog.clearPendingEmailChanges,
+        {
+          accountId: user.passwordAccountId,
+        },
+      );
+      void clearPendingEmailChangesResult;
+      return {
+        email: nextEmail,
+      };
+    }
+
     const canSendConfirmation: boolean = await ctx.runQuery(
       internal.businesses.catalog.assertPendingEmailChangeTarget,
       {
@@ -745,8 +855,27 @@ export const confirmEmailChange = action({
       throw new Error("Invalid or expired email confirmation link.");
     }
 
+    const codeHash = await hashVerificationCode(code);
+    const target = await ctx.runQuery(
+      internal.businesses.catalog.getPendingEmailChangeAvailabilityTarget,
+      {
+        codeHash,
+        email,
+      },
+    );
+    if (
+      target &&
+      (await hasNormalizedPasswordEmailCollision(ctx, {
+        newEmail: email,
+        userId: target.userId,
+        currentAccountId: target.accountId,
+      }))
+    ) {
+      throw new Error("An account with that email already exists.");
+    }
+
     const result = await ctx.runMutation(internal.businesses.catalog.confirmPendingEmailChange, {
-      codeHash: await hashVerificationCode(code),
+      codeHash,
       email,
     });
     const authCtx = ctx as unknown as Parameters<typeof invalidateSessions>[0];

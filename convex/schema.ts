@@ -176,6 +176,28 @@ export default defineSchema({
     .index("by_account_id", ["accountId"])
     .index("by_code_hash", ["codeHash"]),
 
+  auth_email_claims: defineTable({
+    provider: v.string(),
+    normalizedEmail: v.string(),
+    accountId: v.id("authAccounts"),
+    userId: v.id("users"),
+  })
+    .index("by_provider_and_normalized_email", ["provider", "normalizedEmail"])
+    .index("by_account_id", ["accountId"])
+    .index("by_user_id", ["userId"]),
+
+  user_email_claims: defineTable({
+    normalizedEmail: v.string(),
+    userId: v.id("users"),
+  })
+    .index("by_normalized_email", ["normalizedEmail"])
+    .index("by_user_id", ["userId"]),
+
+  auth_email_claim_backfill_state: defineTable({
+    key: v.string(),
+    completedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   businesses: defineTable({
     slug: v.string(),
     name: v.string(),

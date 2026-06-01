@@ -1,5 +1,6 @@
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import type { PasswordConfig } from "@convex-dev/auth/providers/Password";
+import type { GenericActionCtxWithAuthConfig } from "@convex-dev/auth/server";
 import {
   createAccount,
   invalidateSessions,
@@ -11,7 +12,11 @@ import type { DocumentByName, GenericDataModel, WithoutSystemFields } from "conv
 import type { Value } from "convex/values";
 import { Scrypt } from "lucia";
 
+import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import { verifyTurnstileForSignUp } from "./turnstile";
+import type { AuthEmailClaimAvailability } from "./authEmailClaims";
 
 type PasswordProfile<DataModel extends GenericDataModel> =
   WithoutSystemFields<DocumentByName<DataModel, "users">> & {
@@ -29,7 +34,7 @@ function getStringParam(
 function defaultProfile<DataModel extends GenericDataModel>(
   params: Partial<Record<string, Value | undefined>>,
 ): PasswordProfile<DataModel> {
-  const email = getStringParam(params, "email")?.trim();
+  const email = normalizeOptionalAuthEmail(getStringParam(params, "email"));
   if (!email) {
     throw new Error("Missing `email` param");
   }
@@ -46,6 +51,80 @@ function validateDefaultPasswordRequirements(password: string | undefined) {
 function isMissingAccountError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : "";
   return message.includes("InvalidAccountId");
+}
+
+function normalizeOptionalAuthEmail(value: string | undefined): string | undefined {
+  return value === undefined ? undefined : normalizeAuthEmail(value);
+}
+
+async function retrievePasswordAccount<DataModel extends GenericDataModel>(
+  ctx: GenericActionCtxWithAuthConfig<DataModel>,
+  input: {
+    provider: string;
+    email: string;
+    originalEmail?: string | undefined;
+    secret?: string | undefined;
+  },
+): Promise<(Awaited<ReturnType<typeof retrieveAccount<DataModel>>> & { email: string }) | null> {
+  const candidates =
+    input.originalEmail && input.originalEmail !== input.email
+      ? [input.originalEmail, input.email]
+      : [input.email];
+  let lastMissingAccountError: unknown = null;
+
+  for (const candidate of candidates) {
+    try {
+      const retrieved = await retrieveAccount(ctx, {
+        provider: input.provider,
+        account: {
+          id: candidate,
+          ...(input.secret !== undefined ? { secret: input.secret } : {}),
+        },
+      });
+      return { ...retrieved, email: candidate };
+    } catch (error) {
+      if (!isMissingAccountError(error)) {
+        throw error;
+      }
+      lastMissingAccountError = error;
+    }
+  }
+
+  if (lastMissingAccountError) {
+    throw lastMissingAccountError;
+  }
+
+  return null;
+}
+
+async function hasPasswordAccountForNormalizedEmail<DataModel extends GenericDataModel>(
+  ctx: GenericActionCtxWithAuthConfig<DataModel>,
+  input: {
+    provider: string;
+    normalizedEmail: string;
+  },
+): Promise<boolean> {
+  const availability: AuthEmailClaimAvailability = await ctx.runQuery(
+    internal.lib.authEmailClaims.getAvailability,
+    {
+      provider: input.provider,
+      normalizedEmail: input.normalizedEmail,
+    },
+  );
+
+  return availability.authAccountClaimed || availability.userEmailClaimed;
+}
+
+async function replacePasswordAccountEmailClaim<DataModel extends GenericDataModel>(
+  ctx: GenericActionCtxWithAuthConfig<DataModel>,
+  input: {
+    provider: string;
+    normalizedEmail: string;
+    accountId: Id<"authAccounts">;
+    userId: Id<"users">;
+  },
+): Promise<void> {
+  await ctx.runMutation(internal.lib.authEmailClaims.replaceForAccount, input);
 }
 
 export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
@@ -74,8 +153,11 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
         }
       }
 
-      const profile = config.profile?.(params, ctx) ?? defaultProfile<DataModel>(params);
-      const { email } = profile;
+      const rawProfile = config.profile?.(params, ctx) ?? defaultProfile<DataModel>(params);
+      const email = normalizeAuthEmail(rawProfile.email);
+      const profile = { ...rawProfile, email } as PasswordProfile<DataModel>;
+      const originalEmail = getStringParam(params, "email")?.trim();
+      const normalizedParams = { ...params, email };
       const secret = getStringParam(params, "password");
       let account;
       let user;
@@ -88,15 +170,25 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
         await verifyTurnstileForSignUp(params);
 
         try {
-          await retrieveAccount(ctx, {
+          await retrievePasswordAccount(ctx, {
             provider,
-            account: { id: email },
+            email,
+            originalEmail,
           });
           throw new Error("Account already exists");
         } catch (error) {
           if (!isMissingAccountError(error)) {
             throw error;
           }
+        }
+
+        if (
+          await hasPasswordAccountForNormalizedEmail(ctx, {
+            provider,
+            normalizedEmail: email,
+          })
+        ) {
+          throw new Error("Account already exists");
         }
 
         const created = await createAccount(ctx, {
@@ -106,6 +198,12 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           shouldLinkViaEmail: config.verify !== undefined,
           shouldLinkViaPhone: false,
         });
+        await replacePasswordAccountEmailClaim(ctx, {
+          provider,
+          normalizedEmail: email,
+          accountId: created.account._id as Id<"authAccounts">,
+          userId: created.user._id as Id<"users">,
+        });
         ({ account, user } = created);
       } else if (flow === "signIn") {
         if (secret === undefined) {
@@ -114,9 +212,11 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         let retrieved;
         try {
-          retrieved = await retrieveAccount(ctx, {
+          retrieved = await retrievePasswordAccount(ctx, {
             provider,
-            account: { id: email, secret },
+            email,
+            originalEmail,
+            secret,
           });
         } catch (error) {
           if (isMissingAccountError(error)) {
@@ -135,9 +235,10 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         let retrieved;
         try {
-          retrieved = await retrieveAccount(ctx, {
+          retrieved = await retrievePasswordAccount(ctx, {
             provider,
-            account: { id: email },
+            email,
+            originalEmail,
           });
         } catch (error) {
           if (isMissingAccountError(error)) {
@@ -151,7 +252,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         return await signInViaProvider(ctx, config.reset, {
           accountId: retrieved.account._id,
-          params,
+          params: normalizedParams,
         });
       } else if (flow === "reset-verification") {
         if (!config.reset) {
@@ -165,9 +266,10 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         let retrieved;
         try {
-          retrieved = await retrieveAccount(ctx, {
+          retrieved = await retrievePasswordAccount(ctx, {
             provider,
-            account: { id: email },
+            email,
+            originalEmail,
           });
         } catch (error) {
           if (isMissingAccountError(error)) {
@@ -179,7 +281,9 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           throw new Error("Invalid code");
         }
 
-        const result = await signInViaProvider(ctx, config.reset, { params });
+        const result = await signInViaProvider(ctx, config.reset, {
+          params: { ...normalizedParams, email: retrieved.email },
+        });
         if (result === null) {
           throw new Error("Invalid code");
         }
@@ -191,7 +295,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         await modifyAccountCredentials(ctx, {
           provider,
-          account: { id: email, secret: newPassword },
+          account: { id: retrieved.email, secret: newPassword },
         });
         await invalidateSessions(ctx, { userId, except: [sessionId] });
         return { userId, sessionId };
@@ -202,9 +306,10 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         let retrieved;
         try {
-          retrieved = await retrieveAccount(ctx, {
+          retrieved = await retrievePasswordAccount(ctx, {
             provider,
-            account: { id: email },
+            email,
+            originalEmail,
           });
         } catch (error) {
           if (isMissingAccountError(error)) {
@@ -218,7 +323,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
 
         return await signInViaProvider(ctx, config.verify, {
           accountId: retrieved.account._id,
-          params,
+          params: normalizedParams,
         });
       } else {
         throw new Error(
@@ -231,7 +336,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
       if (config.verify && !account.emailVerified) {
         return await signInViaProvider(ctx, config.verify, {
           accountId: account._id,
-          params,
+          params: normalizedParams,
         });
       }
 

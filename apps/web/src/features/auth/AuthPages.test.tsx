@@ -107,6 +107,26 @@ describe("LoginPage", () => {
     expect(screen.getByText("shell.terms")).toBeTruthy();
     expect(screen.getByText("shell.privacy")).toBeTruthy();
   });
+
+  it("submits the raw email for login", async () => {
+    signInMock.mockResolvedValue({});
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("login.email"), " OWNER@Example.COM ");
+    await user.type(screen.getByLabelText("login.password"), "CurrentPass123!");
+    await user.click(screen.getByRole("button", { name: "login.submit" }));
+
+    expect(signInMock).toHaveBeenCalledTimes(1);
+    const [, formData] = signInMock.mock.calls[0] as [string, FormData];
+
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
+  });
 });
 
 describe("ForgotPasswordPage", () => {
@@ -127,7 +147,7 @@ describe("ForgotPasswordPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("forgotPassword.email"), " OWNER@Example.COM ");
     await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
 
     expect(signInMock).toHaveBeenCalledTimes(1);
@@ -135,8 +155,9 @@ describe("ForgotPasswordPage", () => {
 
     expect(provider).toBe("password");
     expect(formData.get("flow")).toBe("reset");
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
     expect(screen.getByText("forgotPassword.verifyTitle")).toBeTruthy();
+    expect(screen.queryByText("forgotPassword.submitting")).toBeNull();
   });
 
   it("renders a specific error when SITE_URL is missing on the Convex deployment", async () => {
@@ -149,13 +170,13 @@ describe("ForgotPasswordPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("forgotPassword.email"), " OWNER@Example.COM ");
     await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
 
     expect(screen.getByText("errors.passwordResetMissingSiteUrl")).toBeTruthy();
   });
 
-  it("submits reset verification with email, code, and new password", async () => {
+  it("submits reset verification with raw email, code, and new password", async () => {
     signInMock
       .mockResolvedValueOnce({})
       .mockResolvedValueOnce({ signingIn: true });
@@ -167,7 +188,7 @@ describe("ForgotPasswordPage", () => {
     );
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText("forgotPassword.email"), "owner@example.com");
+    await user.type(screen.getByLabelText("forgotPassword.email"), " OWNER@Example.COM ");
     await user.click(screen.getByRole("button", { name: "forgotPassword.submit" }));
     await user.type(screen.getByLabelText("forgotPassword.code"), "12345678");
     await user.type(screen.getByLabelText("forgotPassword.newPassword"), "a-secure-password");
@@ -178,10 +199,13 @@ describe("ForgotPasswordPage", () => {
 
     expect(provider).toBe("password");
     expect(formData.get("flow")).toBe("reset-verification");
-    expect(formData.get("email")).toBe("owner@example.com");
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
     expect(formData.get("code")).toBe("12345678");
     expect(formData.get("newPassword")).toBe("a-secure-password");
-    expect(screen.getByText("status.passwordResetFinishing")).toBeTruthy();
+    expect(screen.queryByText("status.passwordResetFinishing")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "forgotPassword.verifySubmitting" }),
+    ).toBeTruthy();
   });
 
   it("renders reset-specific errors from Convex Auth failures", async () => {
@@ -383,6 +407,27 @@ describe("SignupPage", () => {
 
     expect(await screen.findByText("errors.accountExists")).toBeTruthy();
     expect(screen.queryByText("errors.signupFailed")).toBeNull();
+  });
+
+  it("submits the raw email for signup", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "site-key");
+    signInMock.mockResolvedValueOnce({});
+
+    render(
+      <MemoryRouter>
+        <SignupPage />
+      </MemoryRouter>,
+    );
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("signup.email"), " OWNER@Example.COM ");
+    await user.type(screen.getByLabelText("signup.password"), "abcde1!f");
+    await user.click(screen.getByRole("button", { name: "signup.submit" }));
+
+    expect(signInMock).toHaveBeenCalledTimes(1);
+    const [, formData] = signInMock.mock.calls[0] as [string, FormData];
+
+    expect(formData.get("email")).toBe("OWNER@Example.COM");
   });
 
   it("renders Turnstile as soon as the signup page loads", async () => {

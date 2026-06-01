@@ -303,13 +303,12 @@ export function ForgotPasswordPage() {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    let keepSubmitting = false;
     setIsSubmitting(true);
-    setStatusMessage(null);
     setErrorMessage(null);
 
     try {
@@ -320,7 +319,6 @@ export function ForgotPasswordPage() {
         formData.set("flow", "reset");
         await signIn("password", formData);
         setStep("verify");
-        setStatusMessage(t("status.resetCodeSent"));
         return;
       }
 
@@ -330,20 +328,19 @@ export function ForgotPasswordPage() {
       const result = await signIn("password", formData);
 
       if (result.redirect) {
-        setStatusMessage(t("status.continuingPasswordReset"));
+        keepSubmitting = true;
         return;
       }
 
       if (result.signingIn) {
-        setStatusMessage(t("status.passwordResetFinishing"));
+        keepSubmitting = true;
         return;
       }
 
-      setStatusMessage(t("status.passwordResetCompleted"));
+      keepSubmitting = true;
     } catch (error) {
       if (step === "request" && isResetRequestLookupError(error)) {
         setStep("verify");
-        setStatusMessage(t("status.resetCodeSent"));
         return;
       }
 
@@ -351,7 +348,9 @@ export function ForgotPasswordPage() {
         getAuthErrorMessage(error, step === "request" ? "resetRequest" : "resetVerification", t),
       );
     } finally {
-      setIsSubmitting(false);
+      if (!keepSubmitting) {
+        setIsSubmitting(false);
+      }
     }
   }
 
@@ -359,7 +358,6 @@ export function ForgotPasswordPage() {
     setStep("request");
     setCode("");
     setNewPassword("");
-    setStatusMessage(null);
     setErrorMessage(null);
   }
 
@@ -382,7 +380,6 @@ export function ForgotPasswordPage() {
         onEmailChange={setEmail}
         onNewPasswordChange={setNewPassword}
         onSubmit={handleSubmit}
-        statusMessage={statusMessage}
         step={step}
       />
     </OnboardingShell>

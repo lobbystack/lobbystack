@@ -3,12 +3,12 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -23,7 +23,6 @@ type ForgotPasswordFormProps = {
   newPassword: string;
   isSubmitting: boolean;
   errorMessage: string | null;
-  statusMessage: string | null;
   onEmailChange: (value: string) => void;
   onCodeChange: (value: string) => void;
   onNewPasswordChange: (value: string) => void;
@@ -39,7 +38,6 @@ export function ForgotPasswordForm({
   newPassword,
   isSubmitting,
   errorMessage,
-  statusMessage,
   onEmailChange,
   onCodeChange,
   onNewPasswordChange,
@@ -102,22 +100,28 @@ export function ForgotPasswordForm({
             </Field>
           )}
 
-          {statusMessage || errorMessage ? (
+          {errorMessage ? (
             <div className="flex flex-col gap-2 -mt-1">
-              {statusMessage ? <FieldDescription>{statusMessage}</FieldDescription> : null}
-              {errorMessage ? <FieldError>{errorMessage}</FieldError> : null}
+              <FieldError>{errorMessage}</FieldError>
             </div>
           ) : null}
 
           <div className="mt-2 flex flex-col gap-3">
             <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
-              {isSubmitting
-                ? isVerifyStep
-                  ? t("forgotPassword.verifySubmitting")
-                  : t("forgotPassword.submitting")
-                : isVerifyStep
-                  ? t("forgotPassword.verifySubmit")
-                  : t("forgotPassword.submit")}
+              {isSubmitting ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  <span className="sr-only">
+                    {isVerifyStep
+                      ? t("forgotPassword.verifySubmitting")
+                      : t("forgotPassword.submitting")}
+                  </span>
+                </>
+              ) : isVerifyStep ? (
+                t("forgotPassword.verifySubmit")
+              ) : (
+                t("forgotPassword.submit")
+              )}
             </Button>
 
             {isVerifyStep ? (
