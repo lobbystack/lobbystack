@@ -1,5 +1,7 @@
 const MARKDOWN_TOKEN_COUNT = "120"
 const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
+const CANONICAL_HOST = "lobbystack.com"
+const WWW_HOST = "www.lobbystack.com"
 const POSTHOG_PROXY_HOST = "ts.lobbystack.com"
 const POSTHOG_API_HOST = "us.i.posthog.com"
 const POSTHOG_ASSET_HOST = "us-assets.i.posthog.com"
@@ -37,6 +39,7 @@ const ALLOWED_POSTHOG_PROXY_ORIGINS = new Set([
 ])
 
 const isPostHogProxyRequest = (url) => url.hostname === POSTHOG_PROXY_HOST
+const isWwwHost = (url) => url.hostname === WWW_HOST
 
 const normalizePath = (pathname) => {
   if (pathname === "") return "/"
@@ -92,6 +95,20 @@ const shouldRedirectToFrench = (request, url) => {
   return (
     TRANSLATED_PATHS.has(normalizedPath) && preferredLocale(request) === "fr"
   )
+}
+
+const redirectToCanonicalHost = (url) => {
+  const redirectUrl = new URL(url)
+  redirectUrl.hostname = CANONICAL_HOST
+  redirectUrl.protocol = "https:"
+
+  return new Response(null, {
+    status: 301,
+    headers: {
+      "Cache-Control": "public, max-age=3600",
+      Location: redirectUrl.toString(),
+    },
+  })
 }
 
 const redirectToFrench = (request, url) => {
@@ -250,6 +267,10 @@ const proxyPostHogRequest = async (context, url) => {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url)
+
+  if (isWwwHost(url)) {
+    return redirectToCanonicalHost(url)
+  }
 
   if (isPostHogProxyRequest(url)) {
     return proxyPostHogRequest(context, url)

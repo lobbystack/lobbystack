@@ -119,7 +119,7 @@ export default defineConfig({
         "default-src 'self'",
         "connect-src 'self' https://app.cal.com https://voice.lobbystack.com https://voice-dev.lobbystack.com https://lobbystack-voice-prod.fly.dev https://ai-receptionist-voice-dev-raphael.fly.dev http://localhost:3001 http://127.0.0.1:3001 https://ts.lobbystack.com https://us.i.posthog.com https://us-assets.i.posthog.com",
         "frame-src 'self' https://app.cal.com",
-        "img-src 'self' data: https://app.cal.com https://images.unsplash.com https://i.pravatar.cc https://media.theresanaiforthat.com https://ts.lobbystack.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+        "img-src 'self' data: https://app.cal.com https://images.unsplash.com https://i.pravatar.cc https://ts.lobbystack.com https://us.i.posthog.com https://us-assets.i.posthog.com",
       ],
     },
   },

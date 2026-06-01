@@ -80,11 +80,10 @@ const footerSections = (locale: Locale) => {
 }
 
 type FooterProps = {
-  showTaaftBadge?: boolean
   locale?: Locale
 }
 
-export function Footer({ showTaaftBadge = false, locale = "en" }: FooterProps) {
+export function Footer({ locale = "en" }: FooterProps) {
   const copy = footerCopy[locale]
 
   return (
@@ -145,23 +144,6 @@ export function Footer({ showTaaftBadge = false, locale = "en" }: FooterProps) {
               </ul>
             </div>
           ))}
-          {showTaaftBadge ? (
-            <div className="col-span-2 flex flex-col items-start md:col-span-1 md:items-end">
-              <a
-                href="https://theresanaiforthat.com/ai/lobbystack/?ref=featured&v=10669742"
-                target="_blank"
-                rel="nofollow noopener noreferrer"
-              >
-                <img
-                  width={300}
-                  src="https://media.theresanaiforthat.com/featured-on-taaft.png?width=600"
-                  alt="Featured on There's An AI For That"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </a>
-            </div>
-          ) : null}
         </div>
 
       </div>
