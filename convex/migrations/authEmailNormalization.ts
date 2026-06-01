@@ -4,6 +4,10 @@ import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
+import {
+  assertAuthEmailClaimAvailable,
+  replaceAuthEmailClaimsForAccount,
+} from "../lib/authEmailClaims";
 
 type PasswordAccount = Doc<"authAccounts">;
 
@@ -152,6 +156,12 @@ export const normalizeLegacyPasswordEmails = internalMutation({
       }
 
       if (!args.dryRun) {
+        await assertAuthEmailClaimAvailable(ctx, {
+          provider: "password",
+          normalizedEmail,
+          currentAccountId: account._id,
+          currentUserId: user._id,
+        });
         await ctx.db.patch(account._id, {
           providerAccountId: normalizedEmail,
           ...(account.emailVerified === account.providerAccountId
@@ -164,6 +174,12 @@ export const normalizeLegacyPasswordEmails = internalMutation({
           await ctx.db.patch(user._id, { email: normalizedEmail });
           migratedUsers += 1;
         }
+        await replaceAuthEmailClaimsForAccount(ctx, {
+          provider: "password",
+          normalizedEmail,
+          accountId: account._id,
+          userId: user._id,
+        });
 
         if (account.emailVerified === account.providerAccountId) {
           migratedEmailVerified += 1;
@@ -182,6 +198,71 @@ export const normalizeLegacyPasswordEmails = internalMutation({
       migratedAccounts,
       migratedUsers,
       migratedEmailVerified,
+    };
+  },
+});
+
+export const backfillAuthEmailClaimsPage = internalMutation({
+  args: {
+    cursor: v.union(v.string(), v.null()),
+    dryRun: v.boolean(),
+    numItems: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("authAccounts").paginate({
+      cursor: args.cursor,
+      numItems: getBatchSize(args.numItems),
+    });
+
+    let scannedAccounts = 0;
+    let passwordAccounts = 0;
+    let claimableAccounts = 0;
+    let backfilledClaims = 0;
+
+    for (const account of page.page) {
+      scannedAccounts += 1;
+      if (!isPasswordAccountWithEmail(account)) {
+        continue;
+      }
+
+      passwordAccounts += 1;
+      const normalizedEmail = normalizeAuthEmail(account.providerAccountId);
+      if (!normalizedEmail) {
+        continue;
+      }
+
+      const user = await ctx.db.get(account.userId);
+      if (!user) {
+        throw new Error("Linked user is missing; aborting claim backfill.");
+      }
+
+      claimableAccounts += 1;
+      await assertAuthEmailClaimAvailable(ctx, {
+        provider: "password",
+        normalizedEmail,
+        currentAccountId: account._id,
+        currentUserId: user._id,
+      });
+
+      if (!args.dryRun) {
+        await replaceAuthEmailClaimsForAccount(ctx, {
+          provider: "password",
+          normalizedEmail,
+          accountId: account._id,
+          userId: user._id,
+        });
+        backfilledClaims += 1;
+      }
+    }
+
+    return {
+      dryRun: args.dryRun,
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+      scannedAccounts,
+      passwordAccounts,
+      claimableAccounts,
+      backfilledClaims,
     };
   },
 });

@@ -43,6 +43,7 @@ import type * as integrations_twilioVoice from "../integrations/twilioVoice.js";
 import type * as lib_accountCredentials from "../lib/accountCredentials.js";
 import type * as lib_appointmentChangePolicy from "../lib/appointmentChangePolicy.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_authEmailClaims from "../lib/authEmailClaims.js";
 import type * as lib_availability from "../lib/availability.js";
 import type * as lib_billing from "../lib/billing.js";
 import type * as lib_billingAccess from "../lib/billingAccess.js";
@@ -155,6 +156,7 @@ declare const fullApi: ApiFromModules<{
   "lib/accountCredentials": typeof lib_accountCredentials;
   "lib/appointmentChangePolicy": typeof lib_appointmentChangePolicy;
   "lib/auth": typeof lib_auth;
+  "lib/authEmailClaims": typeof lib_authEmailClaims;
   "lib/availability": typeof lib_availability;
   "lib/billing": typeof lib_billing;
   "lib/billingAccess": typeof lib_billingAccess;

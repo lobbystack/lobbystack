@@ -21,6 +21,11 @@ import {
 } from "../lib/accountCredentials";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import {
+  assertAuthEmailClaimAvailable,
+  replaceAuthEmailClaimsForAccount,
+  type AuthEmailClaimAvailability,
+} from "../lib/authEmailClaims";
+import {
   getCurrentUser,
   requireMembership,
   requireTenantAdminAccess,
@@ -99,16 +104,6 @@ type PhoneNumberWebhookSyncInput = {
 };
 
 type CredentialsWriterCtx = Pick<MutationCtx, "db">;
-
-const NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE = 100;
-
-type NormalizedPasswordEmailCollisionPage = {
-  hasCollision: boolean;
-  accountsContinueCursor: string;
-  accountsIsDone: boolean;
-  usersContinueCursor: string;
-  usersIsDone: boolean;
-};
 
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
   return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
@@ -237,38 +232,17 @@ async function hasNormalizedPasswordEmailCollision(
     currentAccountId?: Id<"authAccounts">;
   },
 ): Promise<boolean> {
-  const normalizedEmail = normalizeAuthEmail(input.newEmail);
-  let accountsCursor: string | null = null;
-  let usersCursor: string | null = null;
-  let accountsIsDone = false;
-  let usersIsDone = false;
+  const availability: AuthEmailClaimAvailability = await ctx.runQuery(
+    internal.lib.authEmailClaims.getAvailability,
+    {
+      provider: "password",
+      normalizedEmail: normalizeAuthEmail(input.newEmail),
+      ...(input.currentAccountId ? { currentAccountId: input.currentAccountId } : {}),
+      currentUserId: input.userId,
+    },
+  );
 
-  while (!accountsIsDone || !usersIsDone) {
-    const page: NormalizedPasswordEmailCollisionPage = await ctx.runQuery(
-      internal.businesses.catalog.findNormalizedPasswordEmailCollisionPage,
-      {
-        normalizedEmail,
-        userId: input.userId,
-        ...(input.currentAccountId ? { currentAccountId: input.currentAccountId } : {}),
-        accountsCursor,
-        usersCursor,
-        scanAccounts: !accountsIsDone,
-        scanUsers: !usersIsDone,
-        numItems: NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE,
-      },
-    );
-
-    if (page.hasCollision) {
-      return true;
-    }
-
-    accountsCursor = page.accountsContinueCursor;
-    accountsIsDone = page.accountsIsDone;
-    usersCursor = page.usersContinueCursor;
-    usersIsDone = page.usersIsDone;
-  }
-
-  return false;
+  return availability.authAccountClaimed || availability.userEmailClaimed;
 }
 
 async function hashVerificationCode(code: string): Promise<string> {
@@ -520,65 +494,6 @@ export const getCurrentUserForPasswordChange = internalQuery({
   },
 });
 
-export const findNormalizedPasswordEmailCollisionPage = internalQuery({
-  args: {
-    normalizedEmail: v.string(),
-    userId: v.id("users"),
-    currentAccountId: v.optional(v.id("authAccounts")),
-    accountsCursor: v.union(v.string(), v.null()),
-    usersCursor: v.union(v.string(), v.null()),
-    scanAccounts: v.boolean(),
-    scanUsers: v.boolean(),
-    numItems: v.optional(v.number()),
-  },
-  handler: async (ctx, args): Promise<NormalizedPasswordEmailCollisionPage> => {
-    const numItems = args.numItems ?? NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE;
-    const [accountsPage, usersPage] = await Promise.all([
-      args.scanAccounts
-        ? ctx.db
-            .query("authAccounts")
-            .withIndex("providerAndAccountId", (q) => q.eq("provider", "password"))
-            .paginate({
-              cursor: args.accountsCursor,
-              numItems,
-            })
-        : Promise.resolve(null),
-      args.scanUsers
-        ? ctx.db.query("users").paginate({
-            cursor: args.usersCursor,
-            numItems,
-          })
-        : Promise.resolve(null),
-    ]);
-
-    const hasAccountCollision = Boolean(
-      accountsPage?.page.some(
-        (account) =>
-          typeof account.providerAccountId === "string" &&
-          normalizeAuthEmail(account.providerAccountId) === args.normalizedEmail &&
-          account._id !== args.currentAccountId,
-      ),
-    );
-    const hasUserCollision = Boolean(
-      usersPage?.page.some(
-        (user) =>
-          typeof user.email === "string" &&
-          normalizeAuthEmail(user.email) === args.normalizedEmail &&
-          user._id !== args.userId,
-      ),
-    );
-
-    return {
-      hasCollision: hasAccountCollision || hasUserCollision,
-      accountsContinueCursor:
-        accountsPage?.continueCursor ?? args.accountsCursor ?? "",
-      accountsIsDone: accountsPage?.isDone ?? true,
-      usersContinueCursor: usersPage?.continueCursor ?? args.usersCursor ?? "",
-      usersIsDone: usersPage?.isDone ?? true,
-    };
-  },
-});
-
 export const getPendingEmailChangeAvailabilityTarget = internalQuery({
   args: {
     codeHash: v.string(),
@@ -638,6 +553,12 @@ export const assertPendingEmailChangeTarget = internalQuery({
         newEmail: args.newEmail,
         userId: args.userId,
         currentAccountId: passwordAccount._id,
+      });
+      await assertAuthEmailClaimAvailable(ctx, {
+        provider: "password",
+        normalizedEmail: normalizeAuthEmail(args.newEmail),
+        currentAccountId: passwordAccount._id,
+        currentUserId: args.userId,
       });
       return true;
     } catch (error) {
@@ -711,6 +632,12 @@ export const confirmPendingEmailChange = internalMutation({
       userId: user._id,
       currentAccountId: account._id,
     });
+    await assertAuthEmailClaimAvailable(ctx, {
+      provider: "password",
+      normalizedEmail: nextEmail,
+      currentAccountId: account._id,
+      currentUserId: user._id,
+    });
 
     await clearVerificationCodesForAccount(ctx, account._id);
     await ctx.db.patch(account._id, {
@@ -720,6 +647,12 @@ export const confirmPendingEmailChange = internalMutation({
     await ctx.db.patch(user._id, {
       email: nextEmail,
       emailVerificationTime: Date.now(),
+    });
+    await replaceAuthEmailClaimsForAccount(ctx, {
+      provider: "password",
+      normalizedEmail: nextEmail,
+      accountId: account._id,
+      userId: user._id,
     });
     await ctx.db.delete(pendingEmailChange._id);
 

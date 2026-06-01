@@ -13,7 +13,10 @@ Follow-up production audit:
 3. If no lowercase collision exists, migrate the mixed-case
    `providerAccountId` to lowercase and also lowercase the linked `users.email`
    value when present.
-4. If a lowercase collision exists, do not auto-migrate. Review both accounts
+4. Backfill `auth_email_claims` and `user_email_claims` with
+   `migrations/authEmailNormalization:backfillAuthEmailClaimsPage` so runtime
+   duplicate checks use indexed normalized-email lookups.
+5. If a lowercase collision exists, do not auto-migrate. Review both accounts
    manually and decide which user record should own the normalized email.
 
 The runtime fallback keeps sign-in and password reset working for exact

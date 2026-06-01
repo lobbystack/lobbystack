@@ -93,10 +93,12 @@ describe("password auth email normalization", () => {
     const legacyUserId = await seedPasswordAccount(t, {
       email: "Hello@lobbystack.com",
       password: legacyPassword,
+      createClaims: false,
     });
     const lowercaseUserId = await seedPasswordAccount(t, {
       email: "hello@lobbystack.com",
       password: lowercasePassword,
+      createClaims: false,
     });
 
     await expect(
@@ -132,10 +134,12 @@ describe("password auth email normalization", () => {
     const legacyUserId = await seedPasswordAccount(t, {
       email: "Hello@lobbystack.com",
       password: legacyPassword,
+      createClaims: false,
     });
     const lowercaseUserId = await seedPasswordAccount(t, {
       email: "hello@lobbystack.com",
       password: lowercasePassword,
+      createClaims: false,
     });
 
     await expect(
@@ -189,6 +193,22 @@ describe("password auth email normalization", () => {
       expect(account).not.toBeNull();
       expect(account?.providerAccountId).toBe("hello@lobbystack.com");
       expect((await ctx.db.get(account!.userId))?.email).toBe("hello@lobbystack.com");
+      expect(
+        await ctx.db
+          .query("auth_email_claims")
+          .withIndex("by_provider_and_normalized_email", (q) =>
+            q.eq("provider", "password").eq("normalizedEmail", "hello@lobbystack.com"),
+          )
+          .unique(),
+      ).toMatchObject({ accountId: account!._id });
+      expect(
+        await ctx.db
+          .query("user_email_claims")
+          .withIndex("by_normalized_email", (q) =>
+            q.eq("normalizedEmail", "hello@lobbystack.com"),
+          )
+          .unique(),
+      ).toMatchObject({ userId: account!.userId });
     });
   });
 
@@ -291,10 +311,12 @@ describe("password auth email normalization", () => {
     const legacyUserId = await seedPasswordAccount(t, {
       email: "Hello@lobbystack.com",
       password: "LegacyPass123!",
+      createClaims: false,
     });
     const lowercaseUserId = await seedPasswordAccount(t, {
       email: "hello@lobbystack.com",
       password: "LowercasePass123!",
+      createClaims: false,
     });
 
     await expect(
@@ -463,6 +485,7 @@ async function seedPasswordAccount(
   input: {
     email: string;
     password: string;
+    createClaims?: boolean;
   },
 ): Promise<Id<"users">> {
   const secret = await new Scrypt().hash(input.password);
@@ -472,12 +495,26 @@ async function seedPasswordAccount(
       email: input.email,
     });
 
-    await ctx.db.insert("authAccounts", {
+    const accountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
       userId,
       provider: "password",
       providerAccountId: input.email,
       secret,
     });
+
+    if (input.createClaims !== false) {
+      const normalizedEmail = input.email.trim().toLowerCase();
+      await ctx.db.insert("auth_email_claims", {
+        userId,
+        accountId,
+        provider: "password",
+        normalizedEmail,
+      });
+      await ctx.db.insert("user_email_claims", {
+        userId,
+        normalizedEmail,
+      });
+    }
 
     return userId;
   });

@@ -424,11 +424,21 @@ describe("account credential settings", () => {
         providerAccountId: "owner@example.com",
         secret: currentSecret,
       });
-      await ctx.db.insert("authAccounts", {
+      const otherAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
         userId: otherId,
         provider: "password",
         providerAccountId: "Taken@Example.com",
         secret: takenSecret,
+      });
+      await ctx.db.insert("auth_email_claims", {
+        userId: otherId,
+        accountId: otherAccountId,
+        provider: "password",
+        normalizedEmail: "taken@example.com",
+      });
+      await ctx.db.insert("user_email_claims", {
+        userId: otherId,
+        normalizedEmail: "taken@example.com",
       });
 
       return { ownerAccountId };
@@ -473,11 +483,21 @@ describe("account credential settings", () => {
         providerAccountId: "owner@example.com",
         secret: "hashed-secret",
       });
-      await ctx.db.insert("authAccounts", {
+      const otherAccountId: Id<"authAccounts"> = await ctx.db.insert("authAccounts", {
         userId: otherId,
         provider: "password",
         providerAccountId: "Taken@Example.com",
         secret: "other-hashed-secret",
+      });
+      await ctx.db.insert("auth_email_claims", {
+        userId: otherId,
+        accountId: otherAccountId,
+        provider: "password",
+        normalizedEmail: "taken@example.com",
+      });
+      await ctx.db.insert("user_email_claims", {
+        userId: otherId,
+        normalizedEmail: "taken@example.com",
       });
       await ctx.db.insert("pending_email_changes", {
         accountId: ownerAccountId,
