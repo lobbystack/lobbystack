@@ -5,6 +5,7 @@ import type { MutationCtx } from "../_generated/server";
 import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import {
+  AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY,
   assertAuthEmailClaimAvailable,
   replaceAuthEmailClaimsForAccount,
 } from "../lib/authEmailClaims";
@@ -40,6 +41,26 @@ async function hasLowercasePasswordAccountSibling(
     .unique();
 
   return Boolean(lowercaseSibling && lowercaseSibling._id !== account._id);
+}
+
+async function markAuthEmailClaimsBackfillComplete(ctx: MutationCtx): Promise<void> {
+  const completedAt = Date.now();
+  const existingState = await ctx.db
+    .query("auth_email_claim_backfill_state")
+    .withIndex("by_key", (q) =>
+      q.eq("key", AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY),
+    )
+    .unique();
+
+  if (existingState) {
+    await ctx.db.patch(existingState._id, { completedAt });
+    return;
+  }
+
+  await ctx.db.insert("auth_email_claim_backfill_state", {
+    key: AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY,
+    completedAt,
+  });
 }
 
 export const auditLegacyPasswordEmailsPage = internalMutation({
@@ -253,6 +274,10 @@ export const backfillAuthEmailClaimsPage = internalMutation({
         });
         backfilledClaims += 1;
       }
+    }
+
+    if (!args.dryRun && page.isDone) {
+      await markAuthEmailClaimsBackfillComplete(ctx);
     }
 
     return {

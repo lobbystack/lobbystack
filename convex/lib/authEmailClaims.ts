@@ -7,9 +7,12 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../_generated/server";
+import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 
 type EmailClaimReaderCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
 type EmailClaimWriterCtx = Pick<MutationCtx, "db">;
+
+export const AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY = "password_claims_backfilled";
 
 export type AuthEmailClaimAvailability = {
   authAccountClaimed: boolean;
@@ -43,6 +46,69 @@ async function getUserEmailClaim(
     .unique();
 }
 
+async function isAuthEmailClaimBackfillComplete(
+  ctx: EmailClaimReaderCtx,
+): Promise<boolean> {
+  const state = await ctx.db
+    .query("auth_email_claim_backfill_state")
+    .withIndex("by_key", (q) =>
+      q.eq("key", AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY),
+    )
+    .unique();
+
+  return state !== null;
+}
+
+async function getLegacyAuthEmailClaimAvailability(
+  ctx: EmailClaimReaderCtx,
+  input: {
+    provider: string;
+    normalizedEmail: string;
+    currentAccountId?: Id<"authAccounts">;
+    currentUserId?: Id<"users">;
+    checkAuthAccounts: boolean;
+    checkUsers: boolean;
+  },
+): Promise<AuthEmailClaimAvailability> {
+  let authAccountClaimed = false;
+  let userEmailClaimed = false;
+
+  // Backfill safety net: steady-state checks use the indexed claim tables above,
+  // but legacy documents may not have claim rows yet during rollout.
+  if (input.checkAuthAccounts) {
+    for await (const account of ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) => q.eq("provider", input.provider))) {
+      if (
+        typeof account.providerAccountId === "string" &&
+        normalizeAuthEmail(account.providerAccountId) === input.normalizedEmail &&
+        (!input.currentAccountId || account._id !== input.currentAccountId)
+      ) {
+        authAccountClaimed = true;
+        break;
+      }
+    }
+  }
+
+  if (input.checkUsers) {
+    for await (const user of ctx.db.query("users")) {
+      if (
+        typeof user.email === "string" &&
+        normalizeAuthEmail(user.email) === input.normalizedEmail &&
+        (!input.currentUserId || user._id !== input.currentUserId)
+      ) {
+        userEmailClaimed = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    authAccountClaimed,
+    userEmailClaimed,
+  };
+}
+
 export async function getAuthEmailClaimAvailability(
   ctx: EmailClaimReaderCtx,
   input: {
@@ -57,14 +123,36 @@ export async function getAuthEmailClaimAvailability(
     getUserEmailClaim(ctx, input.normalizedEmail),
   ]);
 
+  const authAccountClaimed = Boolean(
+    authClaim &&
+      (!input.currentAccountId || authClaim.accountId !== input.currentAccountId),
+  );
+  const userEmailClaimed = Boolean(
+    userClaim && (!input.currentUserId || userClaim.userId !== input.currentUserId),
+  );
+
+  if (authAccountClaimed && userEmailClaimed) {
+    return {
+      authAccountClaimed,
+      userEmailClaimed,
+    };
+  }
+
+  if (await isAuthEmailClaimBackfillComplete(ctx)) {
+    return {
+      authAccountClaimed,
+      userEmailClaimed,
+    };
+  }
+
+  const legacyAvailability = await getLegacyAuthEmailClaimAvailability(ctx, {
+    ...input,
+    checkAuthAccounts: !authAccountClaimed,
+    checkUsers: !userEmailClaimed,
+  });
   return {
-    authAccountClaimed: Boolean(
-      authClaim &&
-        (!input.currentAccountId || authClaim.accountId !== input.currentAccountId),
-    ),
-    userEmailClaimed: Boolean(
-      userClaim && (!input.currentUserId || userClaim.userId !== input.currentUserId),
-    ),
+    authAccountClaimed: authAccountClaimed || legacyAvailability.authAccountClaimed,
+    userEmailClaimed: userEmailClaimed || legacyAvailability.userEmailClaimed,
   };
 }
 

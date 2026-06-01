@@ -193,6 +193,11 @@ export default defineSchema({
     .index("by_normalized_email", ["normalizedEmail"])
     .index("by_user_id", ["userId"]),
 
+  auth_email_claim_backfill_state: defineTable({
+    key: v.string(),
+    completedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   businesses: defineTable({
     slug: v.string(),
     name: v.string(),

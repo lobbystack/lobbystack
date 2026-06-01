@@ -2,7 +2,7 @@ import { convexTest, type TestConvex } from "convex-test";
 import { Scrypt } from "lucia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import schema from "../schema";
 import { modules } from "../test.setup";
@@ -243,6 +243,7 @@ describe("password auth email normalization", () => {
     await seedPasswordAccount(t, {
       email: "Hello@lobbystack.com",
       password: "CurrentPass123!",
+      createClaims: false,
     });
 
     await expect(
@@ -262,6 +263,46 @@ describe("password auth email normalization", () => {
       expect(accounts).toHaveLength(1);
       expect(accounts[0]?.providerAccountId).toBe("Hello@lobbystack.com");
     });
+  });
+
+  it("blocks duplicates through claim rows after claim backfill completes", async () => {
+    const t = convexTest(schema, convexModules);
+    await seedPasswordAccount(t, {
+      email: "Backfill@lobbystack.com",
+      password: "CurrentPass123!",
+      createClaims: false,
+    });
+
+    await expect(
+      t.mutation(internal.migrations.authEmailNormalization.backfillAuthEmailClaimsPage, {
+        cursor: null,
+        dryRun: false,
+        numItems: 100,
+      }),
+    ).resolves.toMatchObject({
+      backfilledClaims: 1,
+      isDone: true,
+    });
+
+    await t.run(async (ctx) => {
+      expect(
+        await ctx.db
+          .query("auth_email_claim_backfill_state")
+          .withIndex("by_key", (q) => q.eq("key", "password_claims_backfilled"))
+          .unique(),
+      ).toMatchObject({ completedAt: expect.any(Number) });
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: "backfill@lobbystack.com",
+          password: "CurrentPass123!",
+        },
+      }),
+    ).rejects.toThrow("Account already exists");
   });
 
   it("creates a reset code for an uppercase email variant", async () => {
