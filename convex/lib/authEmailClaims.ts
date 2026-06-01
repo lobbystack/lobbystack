@@ -2,11 +2,11 @@ import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
 import {
-  internalMutation,
   internalQuery,
   type MutationCtx,
   type QueryCtx,
 } from "../_generated/server";
+import { observedInternalMutation as internalMutation } from "../telemetry/observedFunctions";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 
 type EmailClaimReaderCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
