@@ -15,9 +15,11 @@ Follow-up production audit:
    value when present.
 4. Backfill `auth_email_claims` and `user_email_claims` with
    `migrations/authEmailNormalization:backfillAuthEmailClaimsPage` so runtime
-   duplicate checks use indexed normalized-email lookups. The final non-dry-run
-   page records backfill completion and disables the temporary legacy scan on
-   normal auth paths.
+   duplicate checks use indexed normalized-email lookups. Pass the returned
+   `continueCursor` and `usersContinueCursor` into the next page as `cursor`
+   and `usersCursor`; the final non-dry-run page records backfill completion
+   only after both account and user pages are done, then disables the temporary
+   legacy scan on normal auth paths.
 5. If a lowercase collision exists, do not auto-migrate. Review both accounts
    manually and decide which user record should own the normalized email.
 

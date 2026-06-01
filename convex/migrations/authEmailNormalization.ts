@@ -7,6 +7,7 @@ import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import {
   AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY,
   assertAuthEmailClaimAvailable,
+  ensureUserEmailClaimForUser,
   replaceAuthEmailClaimsForAccount,
 } from "../lib/authEmailClaims";
 
@@ -61,6 +62,25 @@ async function markAuthEmailClaimsBackfillComplete(ctx: MutationCtx): Promise<vo
     key: AUTH_EMAIL_CLAIMS_BACKFILL_STATE_KEY,
     completedAt,
   });
+}
+
+async function getCurrentPasswordAccountIdForUserEmail(
+  ctx: MutationCtx,
+  user: Doc<"users"> & { email: string },
+  normalizedEmail: string,
+) {
+  const passwordAccount = await ctx.db
+    .query("authAccounts")
+    .withIndex("userIdAndProvider", (q) =>
+      q.eq("userId", user._id).eq("provider", "password"),
+    )
+    .unique();
+
+  return passwordAccount &&
+    typeof passwordAccount.providerAccountId === "string" &&
+    normalizeAuthEmail(passwordAccount.providerAccountId) === normalizedEmail
+    ? passwordAccount._id
+    : undefined;
 }
 
 export const auditLegacyPasswordEmailsPage = internalMutation({
@@ -226,21 +246,29 @@ export const normalizeLegacyPasswordEmails = internalMutation({
 export const backfillAuthEmailClaimsPage = internalMutation({
   args: {
     cursor: v.union(v.string(), v.null()),
+    usersCursor: v.optional(v.union(v.string(), v.null())),
     dryRun: v.boolean(),
     numItems: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const page = await ctx.db.query("authAccounts").paginate({
-      cursor: args.cursor,
-      numItems: getBatchSize(args.numItems),
-    });
+    const numItems = getBatchSize(args.numItems);
+    const [accountsPage, usersPage] = await Promise.all([
+      ctx.db.query("authAccounts").paginate({
+        cursor: args.cursor,
+        numItems,
+      }),
+      ctx.db.query("users").paginate({
+        cursor: args.usersCursor ?? null,
+        numItems,
+      }),
+    ]);
 
     let scannedAccounts = 0;
     let passwordAccounts = 0;
     let claimableAccounts = 0;
     let backfilledClaims = 0;
 
-    for (const account of page.page) {
+    for (const account of accountsPage.page) {
       scannedAccounts += 1;
       if (!isPasswordAccountWithEmail(account)) {
         continue;
@@ -276,18 +304,76 @@ export const backfillAuthEmailClaimsPage = internalMutation({
       }
     }
 
-    if (!args.dryRun && page.isDone) {
+    let scannedUsers = 0;
+    let userEmails = 0;
+    let claimableUserEmails = 0;
+    let backfilledUserClaims = 0;
+
+    for (const user of usersPage.page) {
+      scannedUsers += 1;
+      if (typeof user.email !== "string") {
+        continue;
+      }
+
+      userEmails += 1;
+      const normalizedEmail = normalizeAuthEmail(user.email);
+      if (!normalizedEmail) {
+        continue;
+      }
+
+      const currentAccountId = await getCurrentPasswordAccountIdForUserEmail(
+        ctx,
+        user as Doc<"users"> & { email: string },
+        normalizedEmail,
+      );
+
+      claimableUserEmails += 1;
+      await assertAuthEmailClaimAvailable(ctx, {
+        provider: "password",
+        normalizedEmail,
+        ...(currentAccountId ? { currentAccountId } : {}),
+        currentUserId: user._id,
+      });
+
+      if (!args.dryRun) {
+        const inserted = await ensureUserEmailClaimForUser(ctx, {
+          provider: "password",
+          normalizedEmail,
+          userId: user._id,
+          ...(currentAccountId ? { currentAccountId } : {}),
+        });
+        if (inserted) {
+          backfilledUserClaims += 1;
+        }
+      }
+    }
+
+    const isDone = accountsPage.isDone && usersPage.isDone;
+    if (!args.dryRun && isDone) {
       await markAuthEmailClaimsBackfillComplete(ctx);
     }
 
     return {
       dryRun: args.dryRun,
-      continueCursor: page.continueCursor,
-      isDone: page.isDone,
+      continueCursor: accountsPage.continueCursor,
+      usersContinueCursor: usersPage.continueCursor,
+      isDone,
       scannedAccounts,
       passwordAccounts,
       claimableAccounts,
       backfilledClaims,
+      scannedUsers,
+      userEmails,
+      claimableUserEmails,
+      backfilledUserClaims,
+      accounts: {
+        continueCursor: accountsPage.continueCursor,
+        isDone: accountsPage.isDone,
+      },
+      users: {
+        continueCursor: usersPage.continueCursor,
+        isDone: usersPage.isDone,
+      },
     };
   },
 });

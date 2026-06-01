@@ -305,6 +305,57 @@ describe("password auth email normalization", () => {
     ).rejects.toThrow("Account already exists");
   });
 
+  it("blocks duplicates for user emails without password accounts after claim backfill completes", async () => {
+    const t = convexTest(schema, convexModules);
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("users", {
+        email: "Standalone@lobbystack.com",
+      });
+    });
+
+    await expect(
+      t.mutation(internal.migrations.authEmailNormalization.backfillAuthEmailClaimsPage, {
+        cursor: null,
+        usersCursor: null,
+        dryRun: false,
+        numItems: 100,
+      }),
+    ).resolves.toMatchObject({
+      backfilledClaims: 0,
+      backfilledUserClaims: 1,
+      isDone: true,
+    });
+
+    await t.run(async (ctx) => {
+      expect(
+        await ctx.db
+          .query("auth_email_claim_backfill_state")
+          .withIndex("by_key", (q) => q.eq("key", "password_claims_backfilled"))
+          .unique(),
+      ).toMatchObject({ completedAt: expect.any(Number) });
+      expect(
+        await ctx.db
+          .query("user_email_claims")
+          .withIndex("by_normalized_email", (q) =>
+            q.eq("normalizedEmail", "standalone@lobbystack.com"),
+          )
+          .unique(),
+      ).toMatchObject({ normalizedEmail: "standalone@lobbystack.com" });
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: "standalone@lobbystack.com",
+          password: "CurrentPass123!",
+        },
+      }),
+    ).rejects.toThrow("Account already exists");
+  });
+
   it("creates a reset code for an uppercase email variant", async () => {
     const t = convexTest(schema, convexModules);
     const userId = await seedPasswordAccount(t, {

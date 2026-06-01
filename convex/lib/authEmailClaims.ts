@@ -236,6 +236,34 @@ export async function replaceAuthEmailClaimsForAccount(
   }
 }
 
+export async function ensureUserEmailClaimForUser(
+  ctx: EmailClaimWriterCtx,
+  input: {
+    provider: string;
+    normalizedEmail: string;
+    userId: Id<"users">;
+    currentAccountId?: Id<"authAccounts">;
+  },
+): Promise<boolean> {
+  await assertAuthEmailClaimAvailable(ctx, {
+    provider: input.provider,
+    normalizedEmail: input.normalizedEmail,
+    ...(input.currentAccountId ? { currentAccountId: input.currentAccountId } : {}),
+    currentUserId: input.userId,
+  });
+
+  const userClaim = await getUserEmailClaim(ctx, input.normalizedEmail);
+  if (userClaim) {
+    return false;
+  }
+
+  await ctx.db.insert("user_email_claims", {
+    normalizedEmail: input.normalizedEmail,
+    userId: input.userId,
+  });
+  return true;
+}
+
 export const getAvailability = internalQuery({
   args: {
     provider: v.string(),
