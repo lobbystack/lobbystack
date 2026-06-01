@@ -29,9 +29,9 @@ export function HeroSection({ children }: { children?: ReactNode }) {
             </a>
 
             <h1 className="animate-fade-up display-heading delay-100">
-              LobbyStack is your{" "}
+              Stop losing revenue to{" "}
               <span className="underline decoration-2 underline-offset-4">
-                open-source AI receptionist
+                missed calls
               </span>
               .
             </h1>
