@@ -234,7 +234,7 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
         }
 
         const result = await signInViaProvider(ctx, config.reset, {
-          params: normalizedParams,
+          params: { ...normalizedParams, email: retrieved.email },
         });
         if (result === null) {
           throw new Error("Invalid code");

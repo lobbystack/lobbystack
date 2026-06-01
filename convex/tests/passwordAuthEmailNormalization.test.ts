@@ -366,6 +366,70 @@ describe("password auth email normalization", () => {
       }),
     ).resolves.toMatchObject({ tokens: expect.any(Object) });
   });
+
+  it("verifies a reset code for an exact mixed-case legacy account", async () => {
+    const t = convexTest(schema, convexModules);
+    const currentPassword = "CurrentPass123!";
+    const newPassword = "ChangedPass123!";
+    const resetCode = "12345678";
+    const userId = await seedPasswordAccount(t, {
+      email: "Hello@lobbystack.com",
+      password: currentPassword,
+    });
+
+    await t.run(async (ctx) => {
+      const account = await ctx.db
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) =>
+          q.eq("userId", userId).eq("provider", "password"),
+        )
+        .unique();
+
+      await ctx.db.insert("authVerificationCodes", {
+        accountId: account!._id,
+        provider: "email",
+        code: await hashCode(resetCode),
+        expirationTime: Date.now() + 5 * 60 * 1000,
+        emailVerified: "hello@lobbystack.com",
+      });
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "reset-verification",
+          email: "Hello@lobbystack.com",
+          code: resetCode,
+          newPassword,
+        },
+      }),
+    ).resolves.toMatchObject({ tokens: expect.any(Object) });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signIn",
+          email: "Hello@lobbystack.com",
+          password: newPassword,
+        },
+      }),
+    ).resolves.toMatchObject({ tokens: expect.any(Object) });
+
+    await t.run(async (ctx) => {
+      const account = await ctx.db
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) =>
+          q.eq("userId", userId).eq("provider", "password"),
+        )
+        .unique();
+      const user = await ctx.db.get(userId);
+
+      expect(account?.providerAccountId).toBe("Hello@lobbystack.com");
+      expect(user?.email).toBe("hello@lobbystack.com");
+    });
+  });
 });
 
 async function seedPasswordAccount(
