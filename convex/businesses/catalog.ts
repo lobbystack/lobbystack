@@ -1,13 +1,11 @@
-import {
-  v } from "convex/values";
-import { observedInternalAction as internalAction, observedInternalMutation as internalMutation, observedMutation as mutation } from "../telemetry/observedFunctions";
+import { v } from "convex/values";
 import {
   getAuthSessionId,
   getAuthUserId,
   invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
-  } from "@convex-dev/auth/server";
+} from "@convex-dev/auth/server";
 import { internal } from "../_generated/api";
 import {
   internalQuery,
@@ -21,6 +19,7 @@ import {
   getPasswordAccountForUser,
   resolveUserForPasswordCredentials,
 } from "../lib/accountCredentials";
+import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import {
   getCurrentUser,
   requireMembership,
@@ -54,7 +53,12 @@ import {
 } from "../lib/twilioUrls";
 import { scheduleSnapshotRefresh } from "./admin";
 
-import { observedAction as action } from "../telemetry/observedFunctions";
+import {
+  observedAction as action,
+  observedInternalAction as internalAction,
+  observedInternalMutation as internalMutation,
+  observedMutation as mutation,
+} from "../telemetry/observedFunctions";
 const phoneNumberSaveArgs = {
   businessId: v.id("businesses"),
   phoneNumberId: v.optional(v.id("phone_numbers")),
@@ -95,6 +99,16 @@ type PhoneNumberWebhookSyncInput = {
 };
 
 type CredentialsWriterCtx = Pick<MutationCtx, "db">;
+
+const NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE = 100;
+
+type NormalizedPasswordEmailCollisionPage = {
+  hasCollision: boolean;
+  accountsContinueCursor: string;
+  accountsIsDone: boolean;
+  usersContinueCursor: string;
+  usersIsDone: boolean;
+};
 
 function shouldSyncSmsWebhook(input: PhoneNumberWebhookSyncInput): boolean {
   return Boolean(input.twilioPhoneSid && input.smsEnabled && input.status === "active");
@@ -213,6 +227,48 @@ async function assertPasswordEmailAvailable(
   if (duplicateUser && duplicateUser._id !== input.userId) {
     throw new Error("An account with that email already exists.");
   }
+}
+
+async function hasNormalizedPasswordEmailCollision(
+  ctx: Pick<ActionCtx, "runQuery">,
+  input: {
+    newEmail: string;
+    userId: Id<"users">;
+    currentAccountId?: Id<"authAccounts">;
+  },
+): Promise<boolean> {
+  const normalizedEmail = normalizeAuthEmail(input.newEmail);
+  let accountsCursor: string | null = null;
+  let usersCursor: string | null = null;
+  let accountsIsDone = false;
+  let usersIsDone = false;
+
+  while (!accountsIsDone || !usersIsDone) {
+    const page: NormalizedPasswordEmailCollisionPage = await ctx.runQuery(
+      internal.businesses.catalog.findNormalizedPasswordEmailCollisionPage,
+      {
+        normalizedEmail,
+        userId: input.userId,
+        ...(input.currentAccountId ? { currentAccountId: input.currentAccountId } : {}),
+        accountsCursor,
+        usersCursor,
+        scanAccounts: !accountsIsDone,
+        scanUsers: !usersIsDone,
+        numItems: NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE,
+      },
+    );
+
+    if (page.hasCollision) {
+      return true;
+    }
+
+    accountsCursor = page.accountsContinueCursor;
+    accountsIsDone = page.accountsIsDone;
+    usersCursor = page.usersContinueCursor;
+    usersIsDone = page.usersIsDone;
+  }
+
+  return false;
 }
 
 async function hashVerificationCode(code: string): Promise<string> {
@@ -464,6 +520,108 @@ export const getCurrentUserForPasswordChange = internalQuery({
   },
 });
 
+export const findNormalizedPasswordEmailCollisionPage = internalQuery({
+  args: {
+    normalizedEmail: v.string(),
+    userId: v.id("users"),
+    currentAccountId: v.optional(v.id("authAccounts")),
+    accountsCursor: v.union(v.string(), v.null()),
+    usersCursor: v.union(v.string(), v.null()),
+    scanAccounts: v.boolean(),
+    scanUsers: v.boolean(),
+    numItems: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<NormalizedPasswordEmailCollisionPage> => {
+    const numItems = args.numItems ?? NORMALIZED_EMAIL_AVAILABILITY_BATCH_SIZE;
+    const [accountsPage, usersPage] = await Promise.all([
+      args.scanAccounts
+        ? ctx.db
+            .query("authAccounts")
+            .withIndex("providerAndAccountId", (q) => q.eq("provider", "password"))
+            .paginate({
+              cursor: args.accountsCursor,
+              numItems,
+            })
+        : Promise.resolve(null),
+      args.scanUsers
+        ? ctx.db.query("users").paginate({
+            cursor: args.usersCursor,
+            numItems,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const hasAccountCollision = Boolean(
+      accountsPage?.page.some(
+        (account) =>
+          typeof account.providerAccountId === "string" &&
+          normalizeAuthEmail(account.providerAccountId) === args.normalizedEmail &&
+          account._id !== args.currentAccountId,
+      ),
+    );
+    const hasUserCollision = Boolean(
+      usersPage?.page.some(
+        (user) =>
+          typeof user.email === "string" &&
+          normalizeAuthEmail(user.email) === args.normalizedEmail &&
+          user._id !== args.userId,
+      ),
+    );
+
+    return {
+      hasCollision: hasAccountCollision || hasUserCollision,
+      accountsContinueCursor:
+        accountsPage?.continueCursor ?? args.accountsCursor ?? "",
+      accountsIsDone: accountsPage?.isDone ?? true,
+      usersContinueCursor: usersPage?.continueCursor ?? args.usersCursor ?? "",
+      usersIsDone: usersPage?.isDone ?? true,
+    };
+  },
+});
+
+export const getPendingEmailChangeAvailabilityTarget = internalQuery({
+  args: {
+    codeHash: v.string(),
+    email: v.string(),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    accountId: Id<"authAccounts">;
+    userId: Id<"users">;
+  } | null> => {
+    const pendingEmailChange = await ctx.db
+      .query("pending_email_changes")
+      .withIndex("by_code_hash", (q) => q.eq("codeHash", args.codeHash))
+      .unique();
+
+    if (!pendingEmailChange || pendingEmailChange.expirationTime < Date.now()) {
+      return null;
+    }
+
+    const nextEmail = normalizeAuthEmail(pendingEmailChange.email);
+    if (!nextEmail || nextEmail !== args.email) {
+      return null;
+    }
+
+    const account = await ctx.db.get(pendingEmailChange.accountId);
+    if (!account || account.provider !== "password") {
+      return null;
+    }
+
+    const user = await ctx.db.get(account.userId);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      accountId: account._id,
+      userId: user._id,
+    };
+  },
+});
+
 export const assertPendingEmailChangeTarget = internalQuery({
   args: {
     newEmail: v.string(),
@@ -678,6 +836,25 @@ export const changeEmail = action({
       },
     });
 
+    if (
+      await hasNormalizedPasswordEmailCollision(ctx, {
+        newEmail: nextEmail,
+        userId: user.userId,
+        currentAccountId: user.passwordAccountId,
+      })
+    ) {
+      const clearPendingEmailChangesResult: null = await ctx.runMutation(
+        (internal as any).businesses.catalog.clearPendingEmailChanges,
+        {
+          accountId: user.passwordAccountId,
+        },
+      );
+      void clearPendingEmailChangesResult;
+      return {
+        email: nextEmail,
+      };
+    }
+
     const canSendConfirmation: boolean = await ctx.runQuery(
       internal.businesses.catalog.assertPendingEmailChangeTarget,
       {
@@ -745,8 +922,27 @@ export const confirmEmailChange = action({
       throw new Error("Invalid or expired email confirmation link.");
     }
 
+    const codeHash = await hashVerificationCode(code);
+    const target = await ctx.runQuery(
+      internal.businesses.catalog.getPendingEmailChangeAvailabilityTarget,
+      {
+        codeHash,
+        email,
+      },
+    );
+    if (
+      target &&
+      (await hasNormalizedPasswordEmailCollision(ctx, {
+        newEmail: email,
+        userId: target.userId,
+        currentAccountId: target.accountId,
+      }))
+    ) {
+      throw new Error("An account with that email already exists.");
+    }
+
     const result = await ctx.runMutation(internal.businesses.catalog.confirmPendingEmailChange, {
-      codeHash: await hashVerificationCode(code),
+      codeHash,
       email,
     });
     const authCtx = ctx as unknown as Parameters<typeof invalidateSessions>[0];
