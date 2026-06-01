@@ -218,6 +218,32 @@ describe("password auth email normalization", () => {
     });
   });
 
+  it("does not create a lowercase duplicate for a mixed-case legacy account", async () => {
+    const t = convexTest(schema, convexModules);
+    await seedPasswordAccount(t, {
+      email: "Hello@lobbystack.com",
+      password: "CurrentPass123!",
+    });
+
+    await expect(
+      t.action(api.auth.signIn, {
+        provider: "password",
+        params: {
+          flow: "signUp",
+          email: "hello@lobbystack.com",
+          password: "CurrentPass123!",
+        },
+      }),
+    ).rejects.toThrow("Account already exists");
+
+    await t.run(async (ctx) => {
+      const accounts = await ctx.db.query("authAccounts").collect();
+
+      expect(accounts).toHaveLength(1);
+      expect(accounts[0]?.providerAccountId).toBe("Hello@lobbystack.com");
+    });
+  });
+
   it("creates a reset code for an uppercase email variant", async () => {
     const t = convexTest(schema, convexModules);
     const userId = await seedPasswordAccount(t, {

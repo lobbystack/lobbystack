@@ -9,9 +9,11 @@ import {
   signInViaProvider,
 } from "@convex-dev/auth/server";
 import type { DocumentByName, GenericDataModel, WithoutSystemFields } from "convex/server";
-import type { Value } from "convex/values";
+import { v, type Value } from "convex/values";
 import { Scrypt } from "lucia";
 
+import { internal } from "../_generated/api";
+import { internalQuery } from "../_generated/server";
 import { normalizeAuthEmail } from "../../packages/shared/src/auth";
 import { verifyTurnstileForSignUp } from "./turnstile";
 
@@ -19,6 +21,14 @@ type PasswordProfile<DataModel extends GenericDataModel> =
   WithoutSystemFields<DocumentByName<DataModel, "users">> & {
     email: string;
   };
+
+const NORMALIZED_EMAIL_LOOKUP_BATCH_SIZE = 100;
+
+type NormalizedPasswordAccountLookupPage = {
+  hasMatch: boolean;
+  continueCursor: string;
+  isDone: boolean;
+};
 
 function getStringParam(
   params: Partial<Record<string, Value | undefined>>,
@@ -94,6 +104,67 @@ async function retrievePasswordAccount<DataModel extends GenericDataModel>(
   return null;
 }
 
+async function hasPasswordAccountForNormalizedEmail<DataModel extends GenericDataModel>(
+  ctx: GenericActionCtxWithAuthConfig<DataModel>,
+  input: {
+    provider: string;
+    normalizedEmail: string;
+  },
+): Promise<boolean> {
+  let cursor: string | null = null;
+
+  do {
+    const page: NormalizedPasswordAccountLookupPage = await ctx.runQuery(
+      internal.lib.passwordWithTurnstile.findPasswordAccountByNormalizedEmailPage,
+      {
+        provider: input.provider,
+        normalizedEmail: input.normalizedEmail,
+        cursor,
+        numItems: NORMALIZED_EMAIL_LOOKUP_BATCH_SIZE,
+      },
+    );
+
+    if (page.hasMatch) {
+      return true;
+    }
+
+    cursor = page.continueCursor;
+    if (page.isDone) {
+      return false;
+    }
+  } while (cursor !== null);
+
+  return false;
+}
+
+export const findPasswordAccountByNormalizedEmailPage = internalQuery({
+  args: {
+    provider: v.string(),
+    normalizedEmail: v.string(),
+    cursor: v.union(v.string(), v.null()),
+    numItems: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<NormalizedPasswordAccountLookupPage> => {
+    const page = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (q) => q.eq("provider", args.provider))
+      .paginate({
+        cursor: args.cursor,
+        numItems: args.numItems ?? NORMALIZED_EMAIL_LOOKUP_BATCH_SIZE,
+      });
+
+    return {
+      hasMatch: page.page.some(
+        (account) =>
+          typeof account.providerAccountId === "string" &&
+          normalizeAuthEmail(account.providerAccountId) === args.normalizedEmail,
+      ),
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
+  },
+});
+
 export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
   config: PasswordConfig<DataModel> = {},
 ) {
@@ -147,6 +218,15 @@ export function PasswordWithTurnstile<DataModel extends GenericDataModel>(
           if (!isMissingAccountError(error)) {
             throw error;
           }
+        }
+
+        if (
+          await hasPasswordAccountForNormalizedEmail(ctx, {
+            provider,
+            normalizedEmail: email,
+          })
+        ) {
+          throw new Error("Account already exists");
         }
 
         const created = await createAccount(ctx, {
