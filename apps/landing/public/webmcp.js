@@ -111,7 +111,7 @@
               knowledgeStorageMb: 100,
             },
             description:
-              "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge storage.",
+              "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge base.",
           },
           {
             name: "Starter",
@@ -130,7 +130,7 @@
               alertSmsSegment: 0.02,
             },
             description:
-              "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge storage. Additional usage is pay-as-you-go.",
+              "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Pro",
@@ -149,7 +149,7 @@
               alertSmsSegment: 0.02,
             },
             description:
-              "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge storage. Additional usage is pay-as-you-go.",
+              "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Enterprise",

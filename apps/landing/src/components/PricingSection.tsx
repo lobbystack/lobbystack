@@ -73,7 +73,7 @@ const tiers: Tier[] = [
     highlights: [
       "150 voice minutes + pay-as-you-go",
       "1 dedicated business number",
-      "2 GB knowledge storage",
+      "2 GB knowledge base",
       "$0.20/min voice overages",
     ],
   },
@@ -97,7 +97,7 @@ const tiers: Tier[] = [
     highlights: [
       "500 voice minutes + pay-as-you-go",
       "200 alert SMS segments",
-      "10 GB knowledge storage",
+      "10 GB knowledge base",
       "Priority email support",
     ],
   },
@@ -176,7 +176,7 @@ const comparisonGroups: ComparisonGroup[] = [
         enterprise: "Custom",
       },
       {
-        feature: "Knowledge storage",
+        feature: "Knowledge base",
         free: "100 MB",
         starter: "2 GB",
         pro: "10 GB",
@@ -388,7 +388,7 @@ const comparisonGroups: ComparisonGroup[] = [
         enterprise: "Managed cloud",
       },
       {
-        feature: "Usage-based billing",
+        feature: "Usage-based overages",
         free: false,
         pro: true,
         enterprise: true,
@@ -512,12 +512,6 @@ export function PricingSection() {
                   : "border-border/60"
               }`}
             >
-              {tier.highlight && (
-                <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">
-                  Most popular
-                </div>
-              )}
-
               {/* Tier header */}
               <div className="mb-6">
                 <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
@@ -583,8 +577,9 @@ export function PricingSection() {
             Compare plans in detail
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gets the core AI receptionist. Starter and Pro give you
-            higher included usage with monthly resets and usage-based overages.
+            Every plan gives you access to all features. Starter and Pro give
+            you higher included usage with monthly resets and usage-based
+            overages.
           </p>
 
           <div
@@ -602,36 +597,31 @@ export function PricingSection() {
                 <tr className="border-b border-border/60">
                   <th
                     scope="col"
-                    className="pr-8 pb-4 text-left text-xs font-medium text-muted-foreground"
+                    className="py-4 pr-8 text-left text-xs font-medium text-muted-foreground"
                   >
                     Feature
                   </th>
                   <th
                     scope="col"
-                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
                     Free
                   </th>
                   <th
                     scope="col"
-                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
                     Starter
                   </th>
                   <th
                     scope="col"
-                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] rounded-t-xl bg-muted/60 px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
-                    <span className="inline-flex items-center gap-1.5">
-                      Pro
-                      <span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">
-                        Popular
-                      </span>
-                    </span>
+                    Pro
                   </th>
                   <th
                     scope="col"
-                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
                     Enterprise
                   </th>
@@ -671,7 +661,13 @@ export function PricingSection() {
                             row.enterprise,
                           ] as ComparisonValue[]
                         ).map((value, i) => (
-                          <td key={i} className="px-4 py-3 text-center">
+                          <td
+                            key={i}
+                            className={cn(
+                              "px-4 py-3 text-center",
+                              i === 2 && "bg-muted/60"
+                            )}
+                          >
                             <ComparisonCell value={value} />
                           </td>
                         ))}

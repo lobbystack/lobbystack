@@ -168,7 +168,7 @@
         "highlights": {
           "voiceMinutes": "150 voice minutes + pay-as-you-go",
           "phoneNumber": "Dedicated phone number",
-          "knowledgeStorage": "2 GB knowledge storage",
+          "knowledgeStorage": "2 GB knowledge base",
           "support": "Email support"
         }
       },
@@ -184,7 +184,7 @@
         "highlights": {
           "voiceMinutes": "500 voice minutes + pay-as-you-go",
           "aiSms": "Two-way AI SMS add-on",
-          "knowledgeStorage": "10 GB knowledge storage",
+          "knowledgeStorage": "10 GB knowledge base",
           "support": "Priority email support"
         }
       },
@@ -216,7 +216,7 @@
         "voiceMinutes": "Voice minutes",
         "outboundCalls": "Outbound call attempts",
         "alertSms": "Alert SMS segments",
-        "knowledgeStorage": "Knowledge storage",
+        "knowledgeStorage": "Knowledge base",
         "phoneNumbers": "Phone numbers",
         "callAnswering": "24/7 call answering",
         "callerDetails": "Caller details and message capture",
@@ -247,7 +247,7 @@
         "websiteImport": "Website knowledge import",
         "retentionGuidance": "Data retention guidance",
         "hosting": "Hosting",
-        "usageBilling": "Usage-based billing",
+        "usageBilling": "Usage-based overages",
         "support": "Support"
       },
       "values": {
