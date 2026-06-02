@@ -709,6 +709,8 @@ function PlanSection({
         ? ["pro"]
         : [];
   const showManageSubscription = status.hasCustomerPortalAccess;
+  const starterUpgradePlans = upgradePlans.filter((plan) => plan === "starter");
+  const canUpgradeToProFromCurrentPlan = upgradePlans.includes("pro");
 
   async function handleUpgrade(
     target: "starter" | "pro",
@@ -794,12 +796,12 @@ function PlanSection({
           </div>
           {(upgradePlans.length > 0 || showManageSubscription) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {upgradePlans.map((plan) =>
+              {starterUpgradePlans.map((plan) =>
                 (["monthly", "annual"] as const).map((billingInterval) => (
                   <Button
                     className="w-full sm:w-auto"
                     size="sm"
-                    variant={plan === "pro" ? "default" : "outline"}
+                    variant="outline"
                     disabled={loading === "checkout"}
                     key={`${plan}:${billingInterval}`}
                     onClick={() => void handleUpgrade(plan, billingInterval)}
@@ -809,6 +811,19 @@ function PlanSection({
                       : t(`billing.actions.${plan}.${billingInterval}`)}
                   </Button>
                 )),
+              )}
+              {canUpgradeToProFromCurrentPlan && (
+                <Button
+                  className="w-full sm:w-auto"
+                  size="sm"
+                  variant="outline"
+                  disabled={loading === "checkout"}
+                  onClick={() => void handleUpgrade("pro", "monthly")}
+                >
+                  {loading === "checkout"
+                    ? t("billing.actions.openingCheckout")
+                    : t("billing.actions.upgradeToPro")}
+                </Button>
               )}
               {showManageSubscription && (
                 <Button
