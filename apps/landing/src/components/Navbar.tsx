@@ -289,8 +289,13 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                         key={`${column.title || "column"}-${columnIndex}`}
                         className="min-w-0"
                       >
-                        <p className="px-3 pt-2 pb-1 text-sm text-muted-foreground">
-                          {column.title || " "}
+                        <p
+                          className={cn(
+                            "px-3 pt-2 pb-1 text-sm text-muted-foreground",
+                            !column.title && "invisible"
+                          )}
+                        >
+                          {column.title || solutionLabelMap[locale].trades}
                         </p>
                         {column.links.map((resourceLink) => (
                           <a
@@ -406,8 +411,13 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                           key={`${column.title || "column"}-${columnIndex}`}
                           className="flex flex-col gap-1"
                         >
-                          <p className="px-3 pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            {column.title || " "}
+                          <p
+                            className={cn(
+                              "px-3 pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase",
+                              !column.title && "invisible"
+                            )}
+                          >
+                            {column.title || solutionLabelMap[locale].trades}
                           </p>
                           {column.links.map((resourceLink) => (
                             <a
