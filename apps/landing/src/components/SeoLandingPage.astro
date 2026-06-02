@@ -33,6 +33,7 @@ const tradeSlugs = [
   "after-hours-answering-service-for-contractors",
 ]
 const isTradePage = tradeSlugs.includes(page.slug)
+const isAboutPage = page.path === "/about/"
 
 const faqJsonLd =
   page.faqs.length > 0
@@ -65,7 +66,7 @@ const faqJsonLd =
       <div
         class={cn(
           "grid gap-12 lg:items-center",
-          isTradePage
+          isTradePage || isAboutPage
             ? "mx-auto max-w-3xl text-center"
             : "lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]"
         )}
@@ -77,14 +78,14 @@ const faqJsonLd =
           <h1 class="display-heading">
             {page.h1}
           </h1>
-          <p class={cn("body-copy mt-6 max-w-[65ch] md:text-lg", isTradePage && "mx-auto")}>
+          <p class={cn("body-copy mt-6 max-w-[65ch] md:text-lg", (isTradePage || isAboutPage) && "mx-auto")}>
             {page.intro}
           </p>
 
           <div
             class={cn(
               "mt-8 flex flex-wrap items-center gap-4",
-              isTradePage && "justify-center"
+              (isTradePage || isAboutPage) && "justify-center"
             )}
           >
             <a
@@ -110,7 +111,7 @@ const faqJsonLd =
         </div>
 
         {
-          !isTradePage && (
+          !isTradePage && !isAboutPage && (
             <div
               class={cn(
                 "min-h-[300px] w-full sm:min-h-[380px] lg:min-h-[440px]",

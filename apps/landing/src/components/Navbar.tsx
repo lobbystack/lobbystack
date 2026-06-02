@@ -179,6 +179,25 @@ const tradeLinks = (locale: Locale) =>
       ] satisfies NavChildLink[])
     : []
 
+const tradeColumns = (locale: Locale): NavColumn[] => {
+  const links = tradeLinks(locale)
+
+  if (links.length === 0) {
+    return []
+  }
+
+  return [
+    {
+      title: solutionLabelMap[locale].trades,
+      links: links.slice(0, 4),
+    },
+    {
+      title: "",
+      links: links.slice(4),
+    },
+  ]
+}
+
 const solutionColumns = (locale: Locale) =>
   [
     {
@@ -189,12 +208,7 @@ const solutionColumns = (locale: Locale) =>
       title: solutionLabelMap[locale].industries,
       links: industryLinks(locale),
     },
-    locale === "en"
-      ? {
-          title: solutionLabelMap[locale].trades,
-          links: tradeLinks(locale),
-        }
-      : undefined,
+    ...tradeColumns(locale),
   ].filter(Boolean) as NavColumn[]
 
 const navLinks = (locale: Locale): NavLink[] => [
@@ -265,13 +279,18 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                       "invisible absolute top-full left-0 z-50 grid min-w-56 translate-y-2 gap-3 rounded-lg border border-border/70 bg-popover p-1.5 text-popover-foreground opacity-0 shadow-lg transition-all duration-150 group-focus-within:visible group-focus-within:translate-y-1 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-1 group-hover:opacity-100",
                       link.columns.length === 2 && "w-[31rem] grid-cols-2",
                       link.columns.length === 3 &&
-                        "w-max grid-cols-[max-content_max-content_max-content] gap-x-8"
+                        "w-max grid-cols-[max-content_max-content_max-content] gap-x-8",
+                      link.columns.length === 4 &&
+                        "w-max grid-cols-[max-content_max-content_max-content_max-content] gap-x-8"
                     )}
                   >
-                    {link.columns.map((column) => (
-                      <div key={column.title} className="min-w-0">
+                    {link.columns.map((column, columnIndex) => (
+                      <div
+                        key={`${column.title || "column"}-${columnIndex}`}
+                        className="min-w-0"
+                      >
                         <p className="px-3 pt-2 pb-1 text-sm text-muted-foreground">
-                          {column.title}
+                          {column.title || " "}
                         </p>
                         {column.links.map((resourceLink) => (
                           <a
@@ -382,10 +401,13 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                       />
                     </summary>
                     <div className="mt-1 flex flex-col gap-2 pl-3">
-                      {link.columns.map((column) => (
-                        <div key={column.title} className="flex flex-col gap-1">
+                      {link.columns.map((column, columnIndex) => (
+                        <div
+                          key={`${column.title || "column"}-${columnIndex}`}
+                          className="flex flex-col gap-1"
+                        >
                           <p className="px-3 pt-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            {column.title}
+                            {column.title || " "}
                           </p>
                           {column.links.map((resourceLink) => (
                             <a
