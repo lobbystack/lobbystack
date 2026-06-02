@@ -90,6 +90,75 @@
       "includedSmsUnlimited": "Unlimited SMS alerts",
       "includedOutboundUnlimited": "Unlimited outbound calls"
     },
+    "upgradeDialog": {
+      "title": "Upgrade plan",
+      "description": "Choose the plan that works best for your team.",
+      "billingIntervalLabel": "Billing interval",
+      "billingIntervals": {
+        "monthly": "Monthly",
+        "annual": "Annual"
+      },
+      "actions": {
+        "currentPlan": "Current plan",
+        "starter": "Start Starter",
+        "pro": "Upgrade to Pro",
+        "enterprise": "Contact us"
+      },
+      "plans": {
+        "free_cloud": {
+          "name": "Free",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "30 voice minutes included",
+            "allFeatures": "All features",
+            "bookingContacts": "Unlimited booking and contacts",
+            "support": "Community support"
+          }
+        },
+        "starter": {
+          "name": "Starter",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "150 voice minutes + pay-as-you-go",
+            "phoneNumber": "1 dedicated business number",
+            "knowledgeBase": "2 GB knowledge base",
+            "overages": "$0.20/min voice overages"
+          }
+        },
+        "pro": {
+          "name": "Pro",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "500 voice minutes + pay-as-you-go",
+            "alertSms": "200 alert SMS segments",
+            "knowledgeBase": "10 GB knowledge base",
+            "support": "Priority email support"
+          }
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "description": {
+            "monthly": "For higher volume",
+            "annual": "For higher volume"
+          },
+          "highlights": {
+            "phoneNumbers": "Multiple dedicated numbers",
+            "routing": "Multi-location routing",
+            "fallbackRules": "Custom fallback rules",
+            "support": "Dedicated implementation support"
+          }
+        }
+      }
+    },
     "usage": {
       "title": "Included usage",
       "description": "Resets on {{resetAt}}.",

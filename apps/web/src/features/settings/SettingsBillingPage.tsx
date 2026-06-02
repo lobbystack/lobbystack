@@ -27,6 +27,13 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionBlock } from "@/components/section-block";
@@ -56,6 +63,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { formatDateTime, resolveLocale } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import { useRememberedConvexQuery } from "@/lib/remembered-convex-query";
 import {
   CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
@@ -66,6 +74,7 @@ import {
 import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 
 type CheckoutReturnTarget = "starter" | "pro" | "ai_sms";
+type HostedUpgradePlan = "starter" | "pro";
 
 function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
   return value === "starter" || value === "pro" || value === "ai_sms" ? value : null;
@@ -85,6 +94,58 @@ type SettingsBillingPageProps = {
 
 type BillingTranslation = ReturnType<typeof useTranslation<"settings">>["t"];
 type BillingLocale = string;
+
+type UpgradePlanCard = {
+  slug: "free_cloud" | HostedUpgradePlan | "enterprise";
+  price: Record<BillingInterval, string>;
+  period: string;
+  highlights: string[];
+  highlighted?: boolean;
+};
+
+const upgradePlanCards: UpgradePlanCard[] = [
+  {
+    slug: "free_cloud",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
+    period: "",
+    highlights: ["voiceMinutes", "allFeatures", "bookingContacts", "support"],
+  },
+  {
+    slug: "starter",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
+    period: "/mo",
+    highlights: ["voiceMinutes", "phoneNumber", "knowledgeBase", "overages"],
+  },
+  {
+    slug: "pro",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
+    period: "/mo",
+    highlights: ["voiceMinutes", "alertSms", "knowledgeBase", "support"],
+    highlighted: true,
+  },
+  {
+    slug: "enterprise",
+    price: {
+      monthly: "Custom",
+      annual: "Custom",
+    },
+    period: "",
+    highlights: ["phoneNumbers", "routing", "fallbackRules", "support"],
+  },
+];
+
+function isHostedUpgradePlan(slug: UpgradePlanCard["slug"]): slug is HostedUpgradePlan {
+  return slug === "starter" || slug === "pro";
+}
 
 type SmsComplianceStatus =
   | "not_started"
@@ -426,6 +487,149 @@ function getPlanLabel(
   }
 }
 
+function UpgradePlanDialog({
+  availableCheckoutPlans,
+  billingInterval,
+  currentPlan,
+  loading,
+  onBillingIntervalChange,
+  onOpenChange,
+  onStartCheckout,
+  open,
+  t,
+}: {
+  availableCheckoutPlans: Array<"starter" | "pro">;
+  billingInterval: BillingInterval;
+  currentPlan: BillingPlanSlug;
+  loading: "checkout" | "portal" | null;
+  onBillingIntervalChange: (billingInterval: BillingInterval) => void;
+  onOpenChange: (open: boolean) => void;
+  onStartCheckout: (target: HostedUpgradePlan) => void;
+  open: boolean;
+  t: BillingTranslation;
+}) {
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-[72rem]">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            {t("billing.upgradeDialog.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {t("billing.upgradeDialog.description")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex justify-center">
+          <div
+            aria-label={t("billing.upgradeDialog.billingIntervalLabel")}
+            className="inline-flex rounded-full border border-border bg-muted/40 p-1"
+            role="tablist"
+          >
+            {(["monthly", "annual"] as const).map((interval) => (
+              <Button
+                aria-selected={billingInterval === interval}
+                className={cn(
+                  "h-9 rounded-full px-4",
+                  billingInterval === interval
+                    ? "bg-background text-foreground shadow-sm hover:bg-background"
+                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                key={interval}
+                onClick={() => onBillingIntervalChange(interval)}
+                role="tab"
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {upgradePlanCards.map((card) => {
+            const isCurrentPlan = currentPlan === card.slug;
+            const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
+            const isAvailable =
+              checkoutPlan !== null && availableCheckoutPlans.includes(checkoutPlan);
+            const actionLabel = isCurrentPlan
+              ? t("billing.upgradeDialog.actions.currentPlan")
+              : checkoutPlan !== null
+                ? t(`billing.upgradeDialog.actions.${checkoutPlan}`)
+                : t("billing.upgradeDialog.actions.enterprise");
+
+            return (
+              <section
+                className={cn(
+                  "flex min-h-[29rem] flex-col rounded-xl border bg-background p-5",
+                  card.highlighted
+                    ? "border-foreground/25 ring-1 ring-foreground/10"
+                    : "border-border/70",
+                )}
+                key={card.slug}
+              >
+                <div className="mb-5">
+                  <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                    {t(`billing.upgradeDialog.plans.${card.slug}.name`)}
+                  </h3>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-4xl font-semibold tracking-tight text-foreground">
+                      {card.price[billingInterval]}
+                    </span>
+                    {card.period ? (
+                      <span className="text-sm text-muted-foreground">
+                        {card.period}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    {t(
+                      `billing.upgradeDialog.plans.${card.slug}.description.${billingInterval}`,
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex-1 border-t border-border/60 pt-4">
+                  <ul className="flex flex-col gap-3">
+                    {card.highlights.map((highlight) => (
+                      <li className="flex items-start gap-2.5 text-sm" key={highlight}>
+                        <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
+                        <span>
+                          {t(
+                            `billing.upgradeDialog.plans.${card.slug}.highlights.${highlight}`,
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Button
+                  className="mt-6 w-full rounded-full"
+                  disabled={loading === "checkout" || isCurrentPlan || !isAvailable}
+                  onClick={() => {
+                    if (checkoutPlan !== null) {
+                      onStartCheckout(checkoutPlan);
+                    }
+                  }}
+                  type="button"
+                  variant={card.highlighted ? "default" : "outline"}
+                >
+                  {loading === "checkout" && checkoutPlan !== null && isAvailable
+                    ? t("billing.actions.openingCheckout")
+                    : actionLabel}
+                </Button>
+              </section>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function useBillingStatus(businessId: Id<"businesses">) {
   return useRememberedConvexQuery(api.billing.getStatus, {
     businessId,
@@ -657,6 +861,9 @@ function PlanSection({
   const startCheckout = useObservedAction(api.billing.startCheckout);
   const openPortal = useObservedAction(api.billing.openPortal);
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [upgradeBillingInterval, setUpgradeBillingInterval] =
+    useState<BillingInterval>("annual");
 
   const planLabel = getPlanLabel(status.plan, t);
   const displayedPlanMonthlyChargeCents = getDisplayedPlanMonthlyChargeCents(status);
@@ -709,8 +916,7 @@ function PlanSection({
         ? ["pro"]
         : [];
   const showManageSubscription = status.hasCustomerPortalAccess;
-  const starterUpgradePlans = upgradePlans.filter((plan) => plan === "starter");
-  const canUpgradeToProFromCurrentPlan = upgradePlans.includes("pro");
+  const canOpenUpgradeDialog = upgradePlans.length > 0;
 
   async function handleUpgrade(
     target: "starter" | "pro",
@@ -794,31 +1000,15 @@ function PlanSection({
               </div>
             </div>
           </div>
-          {(upgradePlans.length > 0 || showManageSubscription) && (
+          {(canOpenUpgradeDialog || showManageSubscription) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {starterUpgradePlans.map((plan) =>
-                (["monthly", "annual"] as const).map((billingInterval) => (
-                  <Button
-                    className="w-full sm:w-auto"
-                    size="sm"
-                    variant="outline"
-                    disabled={loading === "checkout"}
-                    key={`${plan}:${billingInterval}`}
-                    onClick={() => void handleUpgrade(plan, billingInterval)}
-                  >
-                    {loading === "checkout"
-                      ? t("billing.actions.openingCheckout")
-                      : t(`billing.actions.${plan}.${billingInterval}`)}
-                  </Button>
-                )),
-              )}
-              {canUpgradeToProFromCurrentPlan && (
+              {canOpenUpgradeDialog && (
                 <Button
                   className="w-full sm:w-auto"
                   size="sm"
                   variant="outline"
                   disabled={loading === "checkout"}
-                  onClick={() => void handleUpgrade("pro", "monthly")}
+                  onClick={() => setUpgradeDialogOpen(true)}
                 >
                   {loading === "checkout"
                     ? t("billing.actions.openingCheckout")
@@ -843,6 +1033,17 @@ function PlanSection({
           )}
         </div>
       </BorderedItem>
+      <UpgradePlanDialog
+        availableCheckoutPlans={upgradePlans}
+        billingInterval={upgradeBillingInterval}
+        currentPlan={status.plan}
+        loading={loading}
+        onBillingIntervalChange={setUpgradeBillingInterval}
+        onOpenChange={setUpgradeDialogOpen}
+        onStartCheckout={(target) => void handleUpgrade(target, upgradeBillingInterval)}
+        open={upgradeDialogOpen}
+        t={t}
+      />
     </BillingSection>
   );
 }

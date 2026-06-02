@@ -451,6 +451,136 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
   });
 
+  it("opens the upgrade pricing dialog from the single plan action", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    const upgradeButtons = screen.getAllByRole("button", {
+      name: "billing.actions.upgradeToPro",
+    });
+    expect(upgradeButtons).toHaveLength(1);
+
+    await user.click(upgradeButtons[0]!);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.title")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.description")).toBeTruthy();
+    expect(
+      screen.getByText("billing.upgradeDialog.plans.free_cloud.name"),
+    ).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.plans.starter.name")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.plans.pro.name")).toBeTruthy();
+    expect(
+      screen.getByText("billing.upgradeDialog.plans.enterprise.name"),
+    ).toBeTruthy();
+    expect(screen.getByText("$24")).toBeTruthy();
+    expect(screen.getByText("$80")).toBeTruthy();
+
+    expect(
+      screen
+        .getByRole("button", {
+          name: "billing.upgradeDialog.actions.currentPlan",
+        })
+        .getAttribute("disabled"),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", {
+          name: "billing.upgradeDialog.actions.enterprise",
+        })
+        .getAttribute("disabled"),
+    ).not.toBeNull();
+  });
+
+  it("updates dialog pricing when switching from annual to monthly", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    expect(screen.getByText("$24")).toBeTruthy();
+    expect(screen.getByText("$80")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("tab", {
+        name: "billing.upgradeDialog.billingIntervals.monthly",
+      }),
+    );
+
+    expect(screen.getByText("$30")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
+    expect(screen.queryByText("$24")).toBeNull();
+    expect(screen.queryByText("$80")).toBeNull();
+  });
+
+  it("starts Starter checkout with the selected billing interval", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/starter-annual",
+    });
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.starter",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "starter",
+      billingInterval: "annual",
+    });
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "https://example.com/starter-annual",
+    );
+  });
+
+  it("starts Pro checkout with the selected billing interval", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/pro-monthly",
+    });
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("tab", {
+        name: "billing.upgradeDialog.billingIntervals.monthly",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.pro",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "pro",
+      billingInterval: "monthly",
+    });
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "https://example.com/pro-monthly",
+    );
+  });
+
   it("shows a tooltip for the disabled enable button on the free plan", async () => {
     const user = userEvent.setup();
 
