@@ -140,7 +140,7 @@
     "popular": "Populaire",
     "enterpriseSubject": "Forfait Entreprise",
     "compareTitle": "Comparer les forfaits en détail",
-    "compareDescription": "Tous les forfaits incluent toutes les fonctionnalités. Pro offre plus d'utilisation et l'accès au module SMS IA.",
+    "compareDescription": "Tous les forfaits incluent les fonctionnalités de base. Starter et Pro ajoutent plus d'utilisation avec réinitialisation mensuelle et dépassements à l'usage.",
     "featureHeader": "Fonctionnalité",
     "tiers": {
       "free_cloud": {
@@ -150,22 +150,41 @@
         "description": "Essayez LobbyStack avec assez d'utilisation pour le voir en action.",
         "cta": "Commencer gratuitement",
         "highlights": {
-          "voiceMinutes": "10 minutes vocales incluses",
+          "voiceMinutes": "30 minutes vocales incluses",
           "phoneNumber": "Numéro dédié",
           "bookingContacts": "Réservations et contacts illimités",
           "support": "Support communautaire"
         }
       },
+      "starter": {
+        "name": "Starter",
+        "price": "30 $",
+        "period": "/mois",
+        "description": "24 $/mois effectif avec facturation annuelle. Inclut 150 minutes vocales réinitialisées chaque mois.",
+        "cta": {
+          "monthly": "Starter mensuel",
+          "annual": "Starter annuel"
+        },
+        "highlights": {
+          "voiceMinutes": "150 minutes vocales + paiement à l'usage",
+          "phoneNumber": "Numéro dédié",
+          "knowledgeStorage": "2 Go de connaissances",
+          "support": "Support par email"
+        }
+      },
       "pro": {
         "name": "Pro",
-        "price": "15 $",
+        "price": "100 $",
         "period": "/mois",
-        "description": "Tout ce qu'il faut pour exploiter une réceptionniste IA en production.",
-        "cta": "Passer à Pro",
+        "description": "80 $/mois effectif avec facturation annuelle. Plus d'utilisation incluse pour un volume d'appels croissant.",
+        "cta": {
+          "monthly": "Pro mensuel",
+          "annual": "Pro annuel"
+        },
         "highlights": {
-          "voiceMinutes": "80 minutes vocales + paiement à l'usage",
+          "voiceMinutes": "500 minutes vocales + paiement à l'usage",
           "aiSms": "Module SMS IA bidirectionnel",
-          "knowledgeStorage": "2 Go de connaissances",
+          "knowledgeStorage": "10 Go de connaissances",
           "support": "Support prioritaire par email"
         }
       },
@@ -239,26 +258,34 @@
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "10 incluses",
-            "proIncluded": "80 incluses",
+            "freeIncluded": "30 incluses",
+            "starterIncluded": "150 incluses",
+            "starterThen": "puis 0,20 $/min",
+            "proIncluded": "500 incluses",
             "proThen": "puis 0,18 $/min"
           },
           "outboundCalls": {
             "freeIncluded": "2 incluses",
-            "proIncluded": "20 incluses",
+            "starterIncluded": "20 incluses",
+            "starterThen": "puis 0,02 $/tentative",
+            "proIncluded": "100 incluses",
             "proThen": "puis 0,02 $/tentative"
           },
           "alertSms": {
             "freeIncluded": "10 inclus",
-            "proIncluded": "50 inclus",
+            "starterIncluded": "50 inclus",
+            "starterThen": "puis 0,02 $/segment",
+            "proIncluded": "200 inclus",
             "proThen": "puis 0,02 $/segment"
           },
           "knowledgeStorage": {
             "free": "100 Mo",
-            "pro": "2 Go"
+            "starter": "2 Go",
+            "pro": "10 Go"
           },
           "phoneNumbers": {
-            "free": "1 dédié",
+            "free": "Ajout après mise à niveau",
+            "starter": "1 dédié",
             "pro": "1 dédié"
           }
         },

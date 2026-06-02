@@ -9,13 +9,14 @@ import { observedMutation as mutation } from "../telemetry/observedFunctions";
 const onboardingPlanValidator = v.union(
   v.literal("free_cloud"),
   v.literal("self_host"),
+  v.literal("starter"),
   v.literal("pro"),
   v.literal("enterprise"),
 );
 
 type SelectPlanArgs = {
   businessId: Id<"businesses">;
-  plan: "free_cloud" | "self_host" | "pro" | "enterprise";
+  plan: "free_cloud" | "self_host" | "starter" | "pro" | "enterprise";
 };
 
 async function requireBusinessAtOrPastPlanStage(ctx: MutationCtx, businessId: Id<"businesses">) {
@@ -43,8 +44,8 @@ export const selectOnboardingPlan = mutation({
     await requireTenantAdminMembership(ctx, args.businessId);
     const { shouldAdvance } = await requireBusinessAtOrPastPlanStage(ctx, args.businessId);
 
-    if (args.plan === "pro") {
-      throw new Error("Start checkout before continuing with the Pro plan.");
+    if (args.plan === "starter" || args.plan === "pro") {
+      throw new Error("Start checkout before continuing with a paid hosted plan.");
     }
 
     if (args.plan === "enterprise") {

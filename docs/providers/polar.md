@@ -11,11 +11,28 @@ The integration is intentionally hosted and backend-driven:
 
 ## Products
 
-Create these Polar products:
+Create or verify these Polar products:
 
-- `Pro`
+- `LobbyStack Starter Monthly`
   - recurring monthly product
-  - mapped to `POLAR_PRO_PRODUCT_ID`
+  - `$30/month`
+  - mapped to `POLAR_STARTER_MONTHLY_PRODUCT_ID`
+  - created product ID: `fc07b74d-3dc7-4efb-9270-be74de48e187`
+- `LobbyStack Starter Annual`
+  - recurring annual product
+  - `$288/year`
+  - mapped to `POLAR_STARTER_ANNUAL_PRODUCT_ID`
+  - created product ID: `40145a2c-9cfd-491c-8cec-b6aa63b6b52f`
+- `LobbyStack Pro Monthly`
+  - recurring monthly product
+  - `$100/month`
+  - mapped to `POLAR_PRO_MONTHLY_PRODUCT_ID`
+  - created product ID: `f1e1fbeb-a0d5-4f40-bb98-b27d70a2c0d3`
+- `LobbyStack Pro Annual`
+  - recurring annual product
+  - `$960/year`
+  - mapped to `POLAR_PRO_ANNUAL_PRODUCT_ID`
+  - created product ID: `747a648b-0939-4626-967f-93941bcff296`
 - `Pro + AI SMS`
   - recurring monthly product
   - mapped to `POLAR_PRO_AI_SMS_PRODUCT_ID`
@@ -37,16 +54,22 @@ The current hosted pricing model is:
 
 - `Free`
   - no Polar subscription
-  - `10` voice minutes included
+  - `30` voice minutes included
   - `10` Alert SMS segments included
   - `2` outbound call attempts included
   - no AI SMS
   - no overages
+- `Starter`
+  - `$30/month` or `$288/year`
+  - `150` voice minutes included per month
+  - `50` Alert SMS segments included per month
+  - `20` outbound call attempts included per month
+  - overages after the included pool is consumed
 - `Pro`
-  - `$15/month`
-  - `80` voice minutes included
-  - `50` Alert SMS segments included
-  - `20` outbound call attempts included
+  - `$100/month` or `$960/year`
+  - `500` voice minutes included per month
+  - `200` Alert SMS segments included per month
+  - `100` outbound call attempts included per month
   - overages after the included pool is consumed
 - `AI SMS add-on`
   - `$5/month`
@@ -74,7 +97,10 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_SERVER`
 - `POLAR_ORGANIZATION_TOKEN`
 - `POLAR_WEBHOOK_SECRET`
-- `POLAR_PRO_PRODUCT_ID`
+- `POLAR_STARTER_MONTHLY_PRODUCT_ID`
+- `POLAR_STARTER_ANNUAL_PRODUCT_ID`
+- `POLAR_PRO_MONTHLY_PRODUCT_ID`
+- `POLAR_PRO_ANNUAL_PRODUCT_ID`
 - `POLAR_PRO_AI_SMS_PRODUCT_ID`
 - `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 - `SITE_URL`

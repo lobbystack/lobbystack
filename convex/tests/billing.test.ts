@@ -358,10 +358,10 @@ describe("billing", () => {
       hasCheckoutAccess: true,
     });
     expect(status.usage).toMatchObject({
-      voiceSecondsIncluded: 600,
+      voiceSecondsIncluded: 1_800,
       alertSmsSegmentsIncluded: 10,
       outboundCallAttemptsIncluded: 2,
-      voiceSecondsRemaining: 600,
+      voiceSecondsRemaining: 1_800,
       alertSmsSegmentsRemaining: 10,
       outboundCallAttemptsRemaining: 2,
       voiceBlocked: false,
@@ -493,7 +493,7 @@ describe("billing", () => {
       aiSmsEnabled: false,
       aiSmsReady: false,
       overagesBillable: true,
-      monthlyChargeCents: 1_500,
+      monthlyChargeCents: 10_000,
       canPurchaseAiSmsAddon: true,
     });
     expect(beforePolicy).toMatchObject({
@@ -528,7 +528,7 @@ describe("billing", () => {
       plan: "pro",
       aiSmsEnabled: true,
       aiSmsReady: false,
-      monthlyChargeCents: 2_000,
+      monthlyChargeCents: 10_500,
       canPurchaseAiSmsAddon: false,
     });
     expect(afterPolicy).toMatchObject({
@@ -756,8 +756,8 @@ describe("billing", () => {
     });
     expect(status.usage).toMatchObject({
       alertSmsSegmentsUsed: 5,
-      alertSmsSegmentsIncluded: 50,
-      alertSmsSegmentsRemaining: 45,
+      alertSmsSegmentsIncluded: 200,
+      alertSmsSegmentsRemaining: 195,
       alertSmsBlocked: false,
     });
   });
@@ -817,10 +817,10 @@ describe("billing", () => {
       alertSmsSegmentsUsed: 10,
       outboundCallAttemptsUsed: 2,
       aiSmsSegmentsUsed: 0,
-      voiceSecondsRemaining: 0,
+      voiceSecondsRemaining: 1_200,
       alertSmsSegmentsRemaining: 0,
       outboundCallAttemptsRemaining: 0,
-      voiceBlocked: true,
+      voiceBlocked: false,
       alertSmsBlocked: true,
       outboundCallAttemptsBlocked: true,
     });
@@ -831,8 +831,8 @@ describe("billing", () => {
       errorCode: "alert_sms_limit_reached",
     });
     expect(voicePolicy).toEqual({
-      allowed: false,
-      errorCode: "voice_limit_reached",
+      allowed: true,
+      errorCode: null,
     });
     expect(outboundPolicy).toEqual({
       allowed: false,
@@ -887,7 +887,7 @@ describe("billing", () => {
       errorCode: "voice_limit_reached",
     });
     expect(usageMonth).toMatchObject({
-      voiceSecondsUsed: 600,
+      voiceSecondsUsed: 1_800,
       voiceBlocked: true,
     });
   });
@@ -904,8 +904,8 @@ describe("billing", () => {
         businessId,
         periodKey: "2026-04",
         planAtSnapshot: "free_cloud",
-        voiceSecondsUsed: 600,
-        voiceSecondsIncluded: 600,
+        voiceSecondsUsed: 1_800,
+        voiceSecondsIncluded: 1_800,
         voiceBlocked: true,
         lastRecordedAt: "2026-04-12T14:00:00.000Z",
       });
@@ -992,7 +992,7 @@ describe("billing", () => {
       gatewaySessionId: "gateway-session-after-reservation",
     });
     expect(persistedState.usageMonth).toMatchObject({
-      voiceSecondsUsed: 600,
+      voiceSecondsUsed: 1_800,
       voiceBlocked: true,
     });
     expect(persistedState.usageEvents).toHaveLength(1);
@@ -1047,12 +1047,12 @@ describe("billing", () => {
       syncNeeded: false,
     });
     expect(usageState.usageMonth).toMatchObject({
-      voiceSecondsUsed: 600,
+      voiceSecondsUsed: 1_800,
       voiceBlocked: true,
       lastRecordedAt: "2026-04-12T14:00:00.000Z",
     });
     expect(usageState.usageEvent).toMatchObject({
-      quantity: 600,
+      quantity: 1_800,
       recordedAt: "2026-04-12T14:00:00.000Z",
     });
   });
@@ -1798,9 +1798,9 @@ describe("billing", () => {
       alertSmsSegmentsUsed: 55,
       outboundCallAttemptsUsed: 25,
       aiSmsSegmentsUsed: 7,
-      voiceSecondsRemaining: 0,
-      alertSmsSegmentsRemaining: 0,
-      outboundCallAttemptsRemaining: 0,
+      voiceSecondsRemaining: 24_600,
+      alertSmsSegmentsRemaining: 145,
+      outboundCallAttemptsRemaining: 75,
       voiceBlocked: false,
       alertSmsBlocked: false,
       outboundCallAttemptsBlocked: false,
@@ -2319,13 +2319,14 @@ describe("billing", () => {
         customerId: "cus_existing",
         products: ["prod_pro"],
         successUrl:
-          "https://app.example.com/settings/plan?checkout=success&checkout_target=pro",
+          "https://app.example.com/settings/plan?checkout=success&checkout_target=pro&billing_interval=monthly",
         returnUrl: "https://app.example.com/settings/plan",
         embedOrigin: "https://app.example.com",
         metadata: expect.objectContaining({
           billingKey,
           businessId: String(businessId),
           checkoutTarget: "pro",
+          billingInterval: "monthly",
         }),
       }),
     );
@@ -2510,7 +2511,6 @@ describe("billing", () => {
       { customerSession: "polar_cst_wrong_customer" },
       {
         active: true,
-        productId: "prod_pro",
         limit: 10,
       },
     );

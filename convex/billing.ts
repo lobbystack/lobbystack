@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import type {
   BillingAddonSlug,
   BillingErrorCode,
+  BillingInterval,
   BillingPlanSlug,
   BillingStatus,
   BillingTransactionKind,
@@ -26,6 +27,7 @@ import {
   billingAddonCatalog,
   billingErrorCodes,
   billingPlanCatalog,
+  getBillingPeriodChargeCents,
   getBillingMonthlyChargeCents,
   getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
@@ -54,12 +56,14 @@ import {
   getBillingSnapshot,
   getBillingUsageMonth,
   getBillingUsageSnapshotData,
+  getConfiguredBillingIntervalsForPlan,
   getConfiguredCheckoutPlans,
+  getHostedCheckoutPlanForProductId,
+  getHostedCheckoutPlanProductId,
   getNormalizedAddons,
   getPlanEntitlements,
   getPlanForBusiness,
   getProAiSmsProductId,
-  getProProductId,
   isAiSmsEnabled,
 } from "./lib/billing";
 import {
@@ -100,6 +104,10 @@ function getAlertSmsUsageSourceKey(input: {
 }
 
 type CheckoutTarget = HostedCheckoutPlanSlug | BillingAddonSlug;
+
+function isHostedCheckoutTarget(target: CheckoutTarget): target is HostedCheckoutPlanSlug {
+  return target === "starter" || target === "pro";
+}
 
 type CheckoutContext = {
   billingKey: string;
@@ -597,6 +605,7 @@ function hasPolarCustomerPortalAccess(account: Doc<"billing_accounts"> | null): 
   return Boolean(
     account.proSubscriptionId ||
       account.aiSmsSubscriptionId ||
+      account.currentPlan === "starter" ||
       account.currentPlan === "pro" ||
       getNormalizedAddons(account.activeAddons).length > 0 ||
       isActiveSubscriptionStatus(account.subscriptionState),
@@ -606,6 +615,7 @@ function hasPolarCustomerPortalAccess(account: Doc<"billing_accounts"> | null): 
 function buildBillingStatus(input: {
   billingKey: string;
   plan: BillingPlanSlug;
+  billingInterval: BillingInterval | null;
   activeAddons: Array<BillingAddonSlug>;
   aiSmsReady: boolean;
   subscriptionState: string;
@@ -636,6 +646,7 @@ function buildBillingStatus(input: {
     plan: input.plan,
     billingKey: input.billingKey,
     subscriptionState: input.subscriptionState,
+    billingInterval: input.billingInterval,
     activeAddons: input.activeAddons,
     aiSmsEnabled: isAiSmsEnabled({
       plan: input.plan,
@@ -645,7 +656,12 @@ function buildBillingStatus(input: {
     overagesBillable: billingPlanCatalog[input.plan].overagesBillable,
     monthlyChargeCents: getBillingMonthlyChargeCents({
       plan: input.plan,
+      billingInterval: input.billingInterval,
       activeAddons: input.activeAddons,
+    }),
+    billingPeriodChargeCents: getBillingPeriodChargeCents({
+      plan: input.plan,
+      billingInterval: input.billingInterval,
     }),
     billingContactEmail: input.hasBillingManagementAccess ? input.contact.email : null,
     billingContactName: input.hasBillingManagementAccess ? input.contact.name : null,
@@ -678,7 +694,7 @@ function shouldSyncUsageEvent(args: {
   activeAddons: Array<BillingAddonSlug>;
   usageKind: BillingUsageKind;
 }): boolean {
-  if (args.plan !== "pro") {
+  if (args.plan !== "starter" && args.plan !== "pro") {
     return false;
   }
 
@@ -909,9 +925,17 @@ function resolveApprovedBusinessSmsSender(input: {
     : null;
 }
 
-function getTargetProductIds(target: CheckoutTarget): Array<string> {
-  if (target === "pro") {
-    return [getProProductId()];
+function getTargetProductIds(input: {
+  target: CheckoutTarget;
+  billingInterval?: BillingInterval | null;
+}): Array<string> {
+  if (isHostedCheckoutTarget(input.target)) {
+    return [
+      getHostedCheckoutPlanProductId({
+        plan: input.target,
+        billingInterval: input.billingInterval ?? "monthly",
+      }),
+    ];
   }
 
   return [getAiSmsSetupProductId()];
@@ -1011,19 +1035,39 @@ function getPolarSubscriptionPriceId(subscription: PolarBillingSubscription): st
 function getCheckoutTargetFromMetadata(
   metadata: Record<string, string | number | boolean> | undefined,
 ): CheckoutTarget | null {
-  return metadata?.checkoutTarget === "pro" || metadata?.checkoutTarget === "ai_sms"
+  return metadata?.checkoutTarget === "starter" ||
+    metadata?.checkoutTarget === "pro" ||
+    metadata?.checkoutTarget === "ai_sms"
     ? metadata.checkoutTarget
     : null;
 }
 
-function getPolarProductIdForCheckoutTarget(target: CheckoutTarget | null): string | undefined {
+function getBillingIntervalFromMetadata(
+  metadata: Record<string, string | number | boolean> | undefined,
+): BillingInterval | null {
+  return metadata?.billingInterval === "monthly" || metadata?.billingInterval === "annual"
+    ? metadata.billingInterval
+    : null;
+}
+
+function getPolarProductIdForCheckoutTarget(input: {
+  target: CheckoutTarget | null;
+  billingInterval?: BillingInterval | null;
+}): string | undefined {
+  const { target } = input;
   if (target === "ai_sms") {
     return (
       process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim() ||
       process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim()
     );
   }
-  return process.env.POLAR_PRO_PRODUCT_ID?.trim();
+  if (target === "starter" || target === "pro") {
+    return getHostedCheckoutPlanProductId({
+      plan: target,
+      billingInterval: input.billingInterval ?? "monthly",
+    });
+  }
+  return undefined;
 }
 
 function selectMatchingPolarSubscription(
@@ -1064,6 +1108,7 @@ async function findPolarSubscriptionForCheckoutSuccess(
   checkoutContext: CheckoutContext,
   customerSessionToken?: string | null,
   activeCheckoutTarget?: CheckoutTarget | null,
+  activeBillingInterval?: BillingInterval | null,
 ): Promise<PolarSubscriptionLookupResult | null> {
   let checkout: PolarCheckout | null = null;
   if (checkoutContext.checkoutId && (!customerSessionToken || !activeCheckoutTarget)) {
@@ -1087,7 +1132,12 @@ async function findPolarSubscriptionForCheckoutSuccess(
 
   const checkoutTarget =
     activeCheckoutTarget ?? getCheckoutTargetFromMetadata(checkout?.metadata);
-  const expectedProductId = getPolarProductIdForCheckoutTarget(checkoutTarget);
+  const billingInterval =
+    activeBillingInterval ?? getBillingIntervalFromMetadata(checkout?.metadata);
+  const expectedProductId = getPolarProductIdForCheckoutTarget({
+    target: checkoutTarget,
+    billingInterval,
+  });
   const expectedCustomerId = checkout?.customerId ?? checkoutContext.polarCustomerId;
   const expectedCheckoutId = customerSessionToken
     ? null
@@ -1582,18 +1632,22 @@ export const syncSubscriptionFromWebhook = internalMutation({
       account: existingAccount,
     });
     const existingAddons = getNormalizedAddons(existingAccount?.activeAddons);
-    const isBaseProProduct = args.subscriptionProductId === process.env.POLAR_PRO_PRODUCT_ID?.trim();
+    const planProduct = getHostedCheckoutPlanForProductId(args.subscriptionProductId);
     const isProAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
-    const isProProduct = isBaseProProduct || isProAiSmsProduct;
+    const isHostedPaidPlanProduct = planProduct !== null;
+    const isBaseProProduct =
+      planProduct?.plan === "pro" &&
+      planProduct.billingInterval === "monthly" &&
+      !isProAiSmsProduct;
     const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
 
     const nextPlan: BillingPlanSlug =
-      isProProduct && subscriptionActive
-        ? "pro"
-        : isProProduct && existingPlan !== "enterprise"
+      isHostedPaidPlanProduct && subscriptionActive
+        ? planProduct.plan
+        : isHostedPaidPlanProduct && existingPlan !== "enterprise"
           ? "free_cloud"
           : existingPlan;
     const shouldRemoveAiSmsFromUpdatedProSubscription =
@@ -1612,14 +1666,17 @@ export const syncSubscriptionFromWebhook = internalMutation({
       billingKey: args.billingKey,
       currentPlan: nextPlan === "self_host" ? "free_cloud" : nextPlan,
       activeAddons: nextActiveAddons,
+      ...(isHostedPaidPlanProduct && subscriptionActive
+        ? { billingInterval: planProduct.billingInterval }
+        : {}),
       polarCustomerId: args.polarCustomerId,
       polarCustomerExternalId: args.polarCustomerExternalId,
       ...(args.billingContactEmail ? { billingContactEmail: args.billingContactEmail } : {}),
       ...(args.billingContactName ? { billingContactName: args.billingContactName } : {}),
-      ...(isProProduct ? { subscriptionState: args.subscriptionState } : {}),
-      ...(isProProduct ? { proSubscriptionId: args.subscriptionId } : {}),
-      ...(isProProduct ? { proSubscriptionProductId: args.subscriptionProductId } : {}),
-      ...(isProProduct && args.subscriptionPriceId
+      ...(isHostedPaidPlanProduct ? { subscriptionState: args.subscriptionState } : {}),
+      ...(isHostedPaidPlanProduct ? { proSubscriptionId: args.subscriptionId } : {}),
+      ...(isHostedPaidPlanProduct ? { proSubscriptionProductId: args.subscriptionProductId } : {}),
+      ...(isHostedPaidPlanProduct && args.subscriptionPriceId
         ? { proSubscriptionPriceId: args.subscriptionPriceId }
         : {}),
       ...(isLegacyAiSmsProduct ? { aiSmsSubscriptionId: args.subscriptionId } : {}),
@@ -1641,7 +1698,7 @@ export const syncSubscriptionFromWebhook = internalMutation({
       await ctx.db.insert("billing_accounts", patch);
     }
 
-    if (business?.onboardingStage === "plan" && isProProduct && subscriptionActive) {
+    if (business?.onboardingStage === "plan" && isHostedPaidPlanProduct && subscriptionActive) {
       await ctx.db.patch(args.businessId, {
         onboardingStage: "attribution",
       });
@@ -1767,6 +1824,7 @@ export const getAiSmsSubscriptionUpgradeContext = internalQuery({
     billingKey: v.string(),
     currentPlan: v.union(
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
       v.literal("self_host"),
@@ -1816,7 +1874,8 @@ export const syncCheckoutSession = internalMutation({
 export const startCheckout = action({
   args: {
     businessId: v.id("businesses"),
-    target: v.union(v.literal("pro"), v.literal("ai_sms")),
+    target: v.union(v.literal("starter"), v.literal("pro"), v.literal("ai_sms")),
+    billingInterval: v.optional(v.union(v.literal("monthly"), v.literal("annual"))),
     source: v.optional(v.union(v.literal("settings"), v.literal("onboarding"))),
   },
   returns: v.object({
@@ -1830,11 +1889,31 @@ export const startCheckout = action({
       businessId: args.businessId,
     });
 
-    if (args.target === "pro" && snapshot.plan !== "free_cloud") {
-      throw new Error("Only Free workspaces can start Pro checkout.");
+    const billingInterval = args.billingInterval ?? "monthly";
+    if (isHostedCheckoutTarget(args.target) && snapshot.plan === "enterprise") {
+      throw new Error("Enterprise billing is managed by the LobbyStack team.");
     }
-    if (args.target === "pro" && !snapshot.availableCheckoutPlans.includes("pro")) {
-      throw new Error("Pro checkout is not configured.");
+    if (args.target === "starter" && snapshot.plan !== "free_cloud") {
+      throw new Error("Starter checkout is only available from the Free plan.");
+    }
+    if (
+      args.target === "pro" &&
+      snapshot.plan !== "free_cloud" &&
+      snapshot.plan !== "starter"
+    ) {
+      throw new Error("Pro checkout is only available from Free or Starter.");
+    }
+    if (
+      isHostedCheckoutTarget(args.target) &&
+      !snapshot.availableCheckoutPlans.includes(args.target)
+    ) {
+      throw new Error(`${args.target} checkout is not configured.`);
+    }
+    if (
+      isHostedCheckoutTarget(args.target) &&
+      !getConfiguredBillingIntervalsForPlan(args.target).includes(billingInterval)
+    ) {
+      throw new Error(`${args.target} ${billingInterval} checkout is not configured.`);
     }
     if (args.target === "ai_sms" && !snapshot.canPurchaseAiSmsAddon) {
       throw new Error("AI SMS add-on is only available for eligible Pro workspaces.");
@@ -1850,6 +1929,9 @@ export const startCheckout = action({
       checkout: "success",
       checkout_target: args.target,
     });
+    if (isHostedCheckoutTarget(args.target)) {
+      checkoutSearchParams.set("billing_interval", billingInterval);
+    }
     const checkout = await createPolarClient().checkouts.create({
       customerId: customer.id,
       ...(checkoutContext.billingContactEmail
@@ -1858,7 +1940,10 @@ export const startCheckout = action({
       ...(checkoutContext.billingContactName
         ? { customerName: checkoutContext.billingContactName }
         : {}),
-      products: getTargetProductIds(args.target),
+      products: getTargetProductIds({
+        target: args.target,
+        billingInterval,
+      }),
       successUrl: new URL(
         `${checkoutReturnPath}?${checkoutSearchParams.toString()}`,
         siteUrl,
@@ -1873,6 +1958,9 @@ export const startCheckout = action({
         billingKey: checkoutContext.billingKey,
         businessId: String(args.businessId),
         checkoutTarget: args.target,
+        ...(isHostedCheckoutTarget(args.target)
+          ? { billingInterval }
+          : {}),
       },
     });
 
@@ -1890,7 +1978,8 @@ export const refreshCheckoutStatus = action({
   args: {
     businessId: v.id("businesses"),
     customerSessionToken: v.optional(v.string()),
-    target: v.optional(v.union(v.literal("pro"), v.literal("ai_sms"))),
+    target: v.optional(v.union(v.literal("starter"), v.literal("pro"), v.literal("ai_sms"))),
+    billingInterval: v.optional(v.union(v.literal("monthly"), v.literal("annual"))),
   },
   returns: v.object({
     synced: v.boolean(),
@@ -1908,6 +1997,7 @@ export const refreshCheckoutStatus = action({
       checkoutContext,
       args.customerSessionToken,
       args.target ?? null,
+      args.billingInterval ?? null,
     );
     if (!lookup) {
       return {
@@ -2018,11 +2108,12 @@ export const getSnapshotForCheckout = internalQuery({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
     activeAddons: v.array(v.union(v.literal("ai_sms"))),
-    availableCheckoutPlans: v.array(v.union(v.literal("pro"))),
+    availableCheckoutPlans: v.array(v.union(v.literal("starter"), v.literal("pro"))),
     canPurchaseAiSmsAddon: v.boolean(),
   }),
   handler: async (ctx, args) => {
@@ -2117,6 +2208,7 @@ export const getStatus = query({
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
       plan: snapshot.plan,
+      billingInterval: snapshot.account?.billingInterval ?? null,
       activeAddons: snapshot.activeAddons,
       aiSmsReady,
       subscriptionState: snapshot.account?.subscriptionState ?? "inactive",
@@ -2201,6 +2293,7 @@ export const upsertUsageEvent = internalMutation({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
@@ -2424,6 +2517,7 @@ export const recordVoiceUsage = internalMutation({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
@@ -2454,6 +2548,7 @@ export const recordAlertSmsUsage = internalMutation({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
@@ -2483,6 +2578,7 @@ export const recordAiSmsUsage = internalMutation({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
@@ -2512,6 +2608,7 @@ export const recordOutboundCallAttemptUsage = internalMutation({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),
@@ -3129,6 +3226,7 @@ export const getPricingSummary = query({
     plan: v.union(
       v.literal("self_host"),
       v.literal("free_cloud"),
+      v.literal("starter"),
       v.literal("pro"),
       v.literal("enterprise"),
     ),

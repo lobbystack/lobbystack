@@ -1,30 +1,34 @@
 ---
 title: "Plans and billing"
-description: "Understand LobbyStack plan options: Free, Pro, Enterprise, and self-host."
+description: "Understand LobbyStack plan options: Free, Starter, Pro, Enterprise, and self-host."
 ---
 
-LobbyStack supports four plan states in the app:
+LobbyStack supports five plan states in the app:
 
 - **Free** for hosted workspaces with capped included usage.
-- **Pro** for hosted workspaces with a monthly charge, included usage, and billable overages.
+- **Starter** for hosted workspaces with a monthly or annual subscription, included usage, and billable overages.
+- **Pro** for hosted workspaces with higher included usage, monthly or annual billing, and billable overages.
 - **Enterprise** for custom hosted arrangements.
 - **Self-host** for deployments that use your own providers and infrastructure.
 
 ## Hosted plans
 
-| Plan | Monthly charge | Voice minutes | Alert SMS segments | Outbound calls | Knowledge storage | Overages |
-| --- | --- | --- | --- | --- | --- | --- |
-| Free | $0 | 10 min | 10 | 2 | 100 MB | No |
-| Pro | $15/month | 80 min | 50 | 20 | 2 GB | Yes |
-| Enterprise | Custom | Custom | Custom | Custom | Custom | Custom |
+| Plan | Monthly charge | Annual charge | Voice minutes | Alert SMS segments | Outbound calls | Knowledge storage | Overages |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Free | $0 | - | 30 min | 10 | 2 | 100 MB | No |
+| Starter | $30/month | $288/year ($24/month effective) | 150 min | 50 | 20 | 2 GB | Yes |
+| Pro | $100/month | $960/year ($80/month effective) | 500 min | 200 | 100 | 10 GB | Yes |
+| Enterprise | Custom | Custom | Custom | Custom | Custom | Custom | Custom |
 
-Pro overage rates:
+Paid plan overage rates:
 
-| Usage type | Pro overage rate |
-| --- | --- |
-| Voice | $0.18 per extra minute |
-| Alert SMS | $0.02 per extra segment |
-| Outbound calls | $0.02 per extra attempt |
+| Usage type | Starter | Pro |
+| --- | --- | --- |
+| Voice | $0.20 per extra minute | $0.18 per extra minute |
+| Alert SMS | $0.02 per extra segment | $0.02 per extra segment |
+| Outbound calls | $0.02 per extra attempt | $0.02 per extra attempt |
+
+Included usage resets monthly on monthly and annual subscriptions. Unused minutes do not roll over.
 
 ## AI SMS add-on
 
@@ -51,7 +55,7 @@ Self-hosted workspaces run on your own providers and infrastructure, outside Lob
 In the dashboard, open **Settings** > **Billing** to:
 
 - See the current plan.
-- Upgrade to Pro.
+- Upgrade to Starter or Pro.
 - Manage your subscription.
 - Enable the AI SMS add-on when eligible.
 - Review recent billing transactions.

@@ -1,6 +1,6 @@
 ---
 title: "Usage and limits"
-description: "Track voice minutes, SMS segments, outbound call attempts, knowledge storage, and Pro overages."
+description: "Track voice minutes, SMS segments, outbound call attempts, knowledge storage, and paid-plan overages."
 ---
 
 The **Settings** > **Usage** page shows hosted usage for the current billing period. Usage resets at the start of each period.
@@ -17,27 +17,29 @@ The **Settings** > **Usage** page shows hosted usage for the current billing per
 
 ## Included usage
 
-| Metric | Free | Pro |
-| --- | --- | --- |
-| Voice minutes | 10 min | 80 min |
-| Alert SMS segments | 10 | 50 |
-| Outbound calls | 2 attempts | 20 attempts |
-| Knowledge storage | 100 MB | 2 GB |
-| AI SMS segments | Upgrade to Pro add-on | Metered add-on |
+| Metric | Free | Starter | Pro |
+| --- | --- | --- | --- |
+| Voice minutes | 30 min | 150 min | 500 min |
+| Alert SMS segments | 10 | 50 | 200 |
+| Outbound calls | 2 attempts | 20 attempts | 100 attempts |
+| Knowledge storage | 100 MB | 2 GB | 10 GB |
+| AI SMS segments | Upgrade to Pro add-on | Upgrade to Pro add-on | Metered add-on |
 
 ## How limits work
 
 Free hosted workspaces include a set usage pool for each billing period. When an included pool is used up, that usage type pauses until the next period or until the workspace upgrades.
 
-Pro supports billable overages for voice, alert SMS, and outbound call attempts. Knowledge storage has a fixed plan allowance; remove old content or upgrade before adding more after the allowance is full.
+Starter and Pro support billable overages for voice, alert SMS, and outbound call attempts. Knowledge storage has a fixed plan allowance; remove old content or upgrade before adding more after the allowance is full.
 
-## Pro overage rates
+## Overage rates
 
-| Usage type | Rate |
-| --- | --- |
-| Voice | $0.18 per extra minute |
-| Alert SMS | $0.02 per extra segment |
-| Outbound calls | $0.02 per extra attempt |
+| Usage type | Starter | Pro |
+| --- | --- | --- |
+| Voice | $0.20 per extra minute | $0.18 per extra minute |
+| Alert SMS | $0.02 per extra segment | $0.02 per extra segment |
+| Outbound calls | $0.02 per extra attempt | $0.02 per extra attempt |
+
+Annual subscriptions keep monthly usage resets. Unused included minutes do not roll over.
 
 AI SMS is billed separately through its add-on at $0.03 per segment.
 
@@ -54,7 +56,7 @@ AI SMS is billed separately through its add-on at $0.03 per segment.
     Check current usage, remaining quota, usage status, and reset timing.
   </Step>
   <Step title="Review pay-as-you-go usage">
-    On Pro, review estimated overage counts and cost for the current period.
+    On Starter or Pro, review estimated overage counts and cost for the current period.
   </Step>
 </Steps>
 

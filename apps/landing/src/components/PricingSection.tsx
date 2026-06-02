@@ -31,24 +31,41 @@ const tiers: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "10 voice minutes included",
-      "Dedicated phone number",
+      "30 voice minutes included",
+      "Add a dedicated number after upgrade",
       "Unlimited booking and contacts",
       "Community support",
     ],
   },
   {
-    name: "Pro",
-    price: "$15",
+    name: "Starter",
+    price: "$30",
     period: "/mo",
-    description: "Everything you need to run a production AI receptionist.",
-    cta: "Upgrade",
+    description:
+      "$24/mo effective when billed annually. Includes 150 voice minutes that reset monthly.",
+    cta: "Start Starter",
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      "150 voice minutes + pay-as-you-go",
+      "1 dedicated business number",
+      "2 GB knowledge storage",
+      "$0.20/min voice overages",
+    ],
+  },
+  {
+    name: "Pro",
+    price: "$100",
+    period: "/mo",
+    description:
+      "$80/mo effective when billed annually. More included usage for growing call volume.",
+    cta: "Go Pro",
     ctaVariant: "default" as const,
     highlight: true,
     highlights: [
-      "80 voice minutes + pay-as-you-go",
-      "50 alert SMS segments",
-      "2 GB knowledge storage",
+      "500 voice minutes + pay-as-you-go",
+      "200 alert SMS segments",
+      "10 GB knowledge storage",
       "Priority email support",
     ],
   },
@@ -84,6 +101,7 @@ type ComparisonValue =
 type ComparisonRow = {
   feature: string
   free: ComparisonValue
+  starter?: ComparisonValue
   pro: ComparisonValue
   enterprise: ComparisonValue
 }
@@ -99,31 +117,36 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         feature: "Voice minutes",
-        free: { included: "10 included" },
-        pro: { included: "80 included", then: "then $0.18/min" },
+        free: { included: "30 included" },
+        starter: { included: "150 included", then: "then $0.20/min" },
+        pro: { included: "500 included", then: "then $0.18/min" },
         enterprise: "Custom",
       },
       {
         feature: "Outbound call attempts",
         free: { included: "2 included" },
-        pro: { included: "20 included", then: "then $0.02/attempt" },
+        starter: { included: "20 included", then: "then $0.02/attempt" },
+        pro: { included: "100 included", then: "then $0.02/attempt" },
         enterprise: "Custom",
       },
       {
         feature: "Alert SMS segments",
         free: { included: "10 included" },
-        pro: { included: "50 included", then: "then $0.02/segment" },
+        starter: { included: "50 included", then: "then $0.02/segment" },
+        pro: { included: "200 included", then: "then $0.02/segment" },
         enterprise: "Custom",
       },
       {
         feature: "Knowledge storage",
         free: "100 MB",
-        pro: "2 GB",
+        starter: "2 GB",
+        pro: "10 GB",
         enterprise: "Custom",
       },
       {
         feature: "Phone numbers",
-        free: "1 dedicated",
+        free: "Upgrade to add",
+        starter: "1 dedicated",
         pro: "1 dedicated",
         enterprise: "Multiple",
       },
@@ -399,15 +422,15 @@ export function PricingSection() {
             </span>
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
-            Start free, then upgrade to Pro for $15/month plus transparent usage
-            for voice minutes, outbound calls, and SMS alerts.
+            Start free, then upgrade to Starter or Pro for more included
+            minutes, annual savings, and transparent overages.
           </p>
         </div>
       </section>
 
       {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-5xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
-        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 lg:grid-cols-4">
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -489,8 +512,8 @@ export function PricingSection() {
             Compare plans in detail
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gets the core AI receptionist. Pro gives you higher
-            included usage and priority email support.
+            Every plan gets the core AI receptionist. Starter and Pro give you
+            higher included usage with monthly resets and usage-based overages.
           </p>
 
           <div
@@ -499,9 +522,9 @@ export function PricingSection() {
             aria-label="Plan comparison table"
             tabIndex={0}
           >
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <caption className="sr-only">
-                Feature comparison across Free, Pro, and Enterprise plans.
+                Feature comparison across Free, Starter, Pro, and Enterprise plans.
               </caption>
               {/* Sticky header */}
               <thead>
@@ -514,13 +537,19 @@ export function PricingSection() {
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
                   >
                     Free
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                  >
+                    Starter
+                  </th>
+                  <th
+                    scope="col"
+                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
                   >
                     <span className="inline-flex items-center gap-1.5">
                       Pro
@@ -531,7 +560,7 @@ export function PricingSection() {
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
                   >
                     Enterprise
                   </th>
@@ -544,7 +573,7 @@ export function PricingSection() {
                     {/* Category header row */}
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground"
                       >
                         {group.category}
@@ -566,6 +595,7 @@ export function PricingSection() {
                         {(
                           [
                             row.free,
+                            row.starter ?? row.pro,
                             row.pro,
                             row.enterprise,
                           ] as ComparisonValue[]

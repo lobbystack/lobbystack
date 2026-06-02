@@ -92,9 +92,12 @@ const conversationSessionSummaryValidator = v.object({
 const billingPlanSlugValidator = v.union(
   v.literal("self_host"),
   v.literal("free_cloud"),
+  v.literal("starter"),
   v.literal("pro"),
   v.literal("enterprise"),
 );
+
+const billingIntervalValidator = v.union(v.literal("monthly"), v.literal("annual"));
 
 const billingAddonSlugValidator = v.union(v.literal("ai_sms"));
 
@@ -1152,6 +1155,7 @@ export default defineSchema({
     billingKey: v.string(),
     currentPlan: v.optional(billingPlanSlugValidator),
     activeAddons: v.optional(v.array(billingAddonSlugValidator)),
+    billingInterval: v.optional(billingIntervalValidator),
     subscriptionState: v.optional(v.string()),
     billingContactEmail: v.optional(v.string()),
     billingContactName: v.optional(v.string()),

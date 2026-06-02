@@ -110,18 +110,20 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     plan: "free_cloud",
     billingKey: "billing_key",
     subscriptionState: "inactive",
+    billingInterval: null,
     activeAddons: [],
     aiSmsEnabled: false,
     aiSmsReady: false,
     overagesBillable: false,
     monthlyChargeCents: 0,
+    billingPeriodChargeCents: 0,
     billingContactEmail: null,
     billingContactName: null,
     includedBusinessNumbers: 0,
     hasBillingManagementAccess: true,
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,
-    availableCheckoutPlans: ["pro"],
+    availableCheckoutPlans: ["starter", "pro"],
     canPurchaseAiSmsAddon: false,
     usage: {
       periodKey: "2026-04",
@@ -132,10 +134,10 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
       alertSmsSegmentsUsed: 0,
       outboundCallAttemptsUsed: 0,
       aiSmsSegmentsUsed: 0,
-      voiceSecondsIncluded: 600,
+      voiceSecondsIncluded: 1_800,
       alertSmsSegmentsIncluded: 10,
       outboundCallAttemptsIncluded: 2,
-      voiceSecondsRemaining: 600,
+      voiceSecondsRemaining: 1_800,
       alertSmsSegmentsRemaining: 10,
       outboundCallAttemptsRemaining: 2,
       voiceBlocked: false,
@@ -657,20 +659,21 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
-        monthlyChargeCents: 1_500,
+        monthlyChargeCents: 10_000,
+        billingPeriodChargeCents: 10_000,
         overagesBillable: true,
         hasCustomerPortalAccess: true,
         billingContactEmail: "raphael@example.com",
       }),
     });
 
-    expect(screen.getByText("$15")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.paygMonthlySuffix")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.includedTitle")).toBeTruthy();
-    expect(screen.getByText("80 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
-    expect(screen.getByText("20 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
-    expect(screen.getByText("50 billing.currentPlan.includedSmsLabel")).toBeTruthy();
-    expect(screen.getByText("2 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
+    expect(screen.getByText("500 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
+    expect(screen.getByText("100 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
+    expect(screen.getByText("200 billing.currentPlan.includedSmsLabel")).toBeTruthy();
+    expect(screen.getByText("10 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 

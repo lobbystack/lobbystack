@@ -1,16 +1,25 @@
 export const billingPlanSlugs = [
   "self_host",
   "free_cloud",
+  "starter",
   "pro",
   "enterprise",
 ] as const;
 export type BillingPlanSlug = (typeof billingPlanSlugs)[number];
 
-export const cloudBillingPlanSlugs = ["free_cloud", "pro", "enterprise"] as const;
+export const cloudBillingPlanSlugs = [
+  "free_cloud",
+  "starter",
+  "pro",
+  "enterprise",
+] as const;
 export type CloudBillingPlanSlug = (typeof cloudBillingPlanSlugs)[number];
 
-export const hostedCheckoutPlanSlugs = ["pro"] as const;
+export const hostedCheckoutPlanSlugs = ["starter", "pro"] as const;
 export type HostedCheckoutPlanSlug = (typeof hostedCheckoutPlanSlugs)[number];
+
+export const billingIntervals = ["monthly", "annual"] as const;
+export type BillingInterval = (typeof billingIntervals)[number];
 
 export const billingAddonSlugs = ["ai_sms"] as const;
 export type BillingAddonSlug = (typeof billingAddonSlugs)[number];
@@ -53,6 +62,8 @@ export const billingPlanCatalog = {
   self_host: {
     hostedBilling: false,
     monthlyChargeCents: 0,
+    annualChargeCents: null,
+    annualEffectiveMonthlyChargeCents: null,
     knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
@@ -66,8 +77,10 @@ export const billingPlanCatalog = {
   free_cloud: {
     hostedBilling: true,
     monthlyChargeCents: 0,
+    annualChargeCents: null,
+    annualEffectiveMonthlyChargeCents: null,
     knowledgeStorageBytes: 100 * 1024 * 1024,
-    voiceSecondsIncluded: 600,
+    voiceSecondsIncluded: 1_800,
     alertSmsSegmentsIncluded: 10,
     outboundCallAttemptsIncluded: 2,
     includedBusinessNumbers: 0,
@@ -76,13 +89,30 @@ export const billingPlanCatalog = {
     alertSmsOverageRatePerSegmentCents: null,
     outboundCallAttemptOverageRateCents: null,
   },
-  pro: {
+  starter: {
     hostedBilling: true,
-    monthlyChargeCents: 1_500,
+    monthlyChargeCents: 3_000,
+    annualChargeCents: 28_800,
+    annualEffectiveMonthlyChargeCents: 2_400,
     knowledgeStorageBytes: 2 * 1024 * 1024 * 1024,
-    voiceSecondsIncluded: 4_800,
+    voiceSecondsIncluded: 9_000,
     alertSmsSegmentsIncluded: 50,
     outboundCallAttemptsIncluded: 20,
+    includedBusinessNumbers: 1,
+    overagesBillable: true,
+    voiceOverageRatePerMinuteCents: 20,
+    alertSmsOverageRatePerSegmentCents: 2,
+    outboundCallAttemptOverageRateCents: 2,
+  },
+  pro: {
+    hostedBilling: true,
+    monthlyChargeCents: 10_000,
+    annualChargeCents: 96_000,
+    annualEffectiveMonthlyChargeCents: 8_000,
+    knowledgeStorageBytes: 10 * 1024 * 1024 * 1024,
+    voiceSecondsIncluded: 30_000,
+    alertSmsSegmentsIncluded: 200,
+    outboundCallAttemptsIncluded: 100,
     includedBusinessNumbers: 1,
     overagesBillable: true,
     voiceOverageRatePerMinuteCents: 18,
@@ -92,6 +122,8 @@ export const billingPlanCatalog = {
   enterprise: {
     hostedBilling: true,
     monthlyChargeCents: null,
+    annualChargeCents: null,
+    annualEffectiveMonthlyChargeCents: null,
     knowledgeStorageBytes: null,
     voiceSecondsIncluded: null,
     alertSmsSegmentsIncluded: null,
@@ -107,6 +139,8 @@ export const billingPlanCatalog = {
   {
     hostedBilling: boolean;
     monthlyChargeCents: number | null;
+    annualChargeCents: number | null;
+    annualEffectiveMonthlyChargeCents: number | null;
     knowledgeStorageBytes: number | null;
     voiceSecondsIncluded: number | null;
     alertSmsSegmentsIncluded: number | null;
@@ -142,9 +176,14 @@ export const billingAddonCatalog = {
 
 export function getBillingMonthlyChargeCents(input: {
   plan: BillingPlanSlug;
+  billingInterval?: BillingInterval | null;
   activeAddons?: Array<BillingAddonSlug>;
 }): number | null {
-  const baseMonthlyChargeCents = billingPlanCatalog[input.plan].monthlyChargeCents;
+  const planConfig = billingPlanCatalog[input.plan];
+  const baseMonthlyChargeCents =
+    input.billingInterval === "annual"
+      ? planConfig.annualEffectiveMonthlyChargeCents
+      : planConfig.monthlyChargeCents;
   if (baseMonthlyChargeCents === null) {
     return null;
   }
@@ -155,6 +194,17 @@ export function getBillingMonthlyChargeCents(input: {
   );
 
   return baseMonthlyChargeCents + recurringAddonChargeCents;
+}
+
+export function getBillingPeriodChargeCents(input: {
+  plan: BillingPlanSlug;
+  billingInterval?: BillingInterval | null;
+}): number | null {
+  const planConfig = billingPlanCatalog[input.plan];
+  if (input.billingInterval === "annual") {
+    return planConfig.annualChargeCents;
+  }
+  return planConfig.monthlyChargeCents;
 }
 
 export function isHostedBillingPlan(
@@ -233,11 +283,13 @@ export type BillingStatus = {
   plan: BillingPlanSlug;
   billingKey: string;
   subscriptionState: string;
+  billingInterval: BillingInterval | null;
   activeAddons: Array<BillingAddonSlug>;
   aiSmsEnabled: boolean;
   aiSmsReady: boolean;
   overagesBillable: boolean;
   monthlyChargeCents: number | null;
+  billingPeriodChargeCents: number | null;
   billingContactEmail: string | null;
   billingContactName: string | null;
   includedBusinessNumbers: number | null;

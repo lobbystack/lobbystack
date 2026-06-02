@@ -175,12 +175,13 @@ describe("OnboardingPlanPage", () => {
     const user = userEvent.setup();
     renderPlanPage();
 
-    await user.click(screen.getByRole("button", { name: /plan\.tiers\.pro\.cta/ }));
+    await user.click(screen.getByRole("button", { name: /plan\.tiers\.pro\.cta\.monthly/ }));
 
     await waitFor(() => {
       expect(startCheckoutMock).toHaveBeenCalledWith({
         businessId: "business_123",
         target: "pro",
+        billingInterval: "monthly",
         source: "onboarding",
       });
     });

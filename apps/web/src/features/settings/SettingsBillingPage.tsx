@@ -20,6 +20,7 @@ import {
   billingAddonCatalog,
 } from "../../../../../packages/shared/src/billing";
 import type {
+  BillingInterval,
   BillingPlanSlug,
   BillingStatus,
 } from "../../../../../packages/shared/src/billing";
@@ -64,10 +65,14 @@ import {
 } from "@/lib/checkout-session-token";
 import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 
-type CheckoutReturnTarget = "pro" | "ai_sms";
+type CheckoutReturnTarget = "starter" | "pro" | "ai_sms";
 
 function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
-  return value === "pro" || value === "ai_sms" ? value : null;
+  return value === "starter" || value === "pro" || value === "ai_sms" ? value : null;
+}
+
+function parseBillingInterval(value: string | null): BillingInterval | null {
+  return value === "monthly" || value === "annual" ? value : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -410,6 +415,8 @@ function getPlanLabel(
       return t("billing.planLabels.selfHost");
     case "free_cloud":
       return t("billing.planLabels.freeCloudCard");
+    case "starter":
+      return t("billing.planLabels.starterCard");
     case "pro":
       return t("billing.planLabels.proCard");
     case "enterprise":
@@ -690,16 +697,26 @@ function PlanSection({
     }),
   ];
 
-  const canUpgrade =
-    status.hasCheckoutAccess &&
-    status.availableCheckoutPlans.includes("pro") &&
-    status.plan === "free_cloud";
+  const upgradePlans: Array<"starter" | "pro"> =
+    status.hasCheckoutAccess && status.plan === "free_cloud"
+      ? status.availableCheckoutPlans.filter(
+          (plan): plan is "starter" | "pro" =>
+            plan === "starter" || plan === "pro",
+        )
+      : status.hasCheckoutAccess &&
+          status.plan === "starter" &&
+          status.availableCheckoutPlans.includes("pro")
+        ? ["pro"]
+        : [];
   const showManageSubscription = status.hasCustomerPortalAccess;
 
-  async function handleUpgrade() {
+  async function handleUpgrade(
+    target: "starter" | "pro",
+    billingInterval: BillingInterval,
+  ) {
     setLoading("checkout");
     try {
-      const result = await startCheckout({ businessId, target: "pro" });
+      const result = await startCheckout({ businessId, target, billingInterval });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
@@ -742,11 +759,13 @@ function PlanSection({
                   )}
                   {price !== null ? (
                     <span className="pb-1 text-base text-muted-foreground">
-                      {t("billing.currentPlan.monthlySuffix")}
+                      {status.billingInterval === "annual"
+                        ? t("billing.currentPlan.annualEffectiveSuffix")
+                        : t("billing.currentPlan.monthlySuffix")}
                     </span>
                   ) : null}
                 </div>
-                {status.plan === "pro" && (
+                {(status.plan === "starter" || status.plan === "pro") && (
                   <span className="text-base text-muted-foreground">
                     {t("billing.currentPlan.paygMonthlySuffix")}
                   </span>
@@ -773,20 +792,23 @@ function PlanSection({
               </div>
             </div>
           </div>
-          {(canUpgrade || showManageSubscription) && (
+          {(upgradePlans.length > 0 || showManageSubscription) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {canUpgrade && (
-                <Button
-                  className="w-full sm:w-auto"
-                  size="sm"
-                  variant="outline"
-                  disabled={loading === "checkout"}
-                  onClick={() => void handleUpgrade()}
-                >
-                  {loading === "checkout"
-                    ? t("billing.actions.openingCheckout")
-                    : t("billing.actions.upgradeToPro")}
-                </Button>
+              {upgradePlans.map((plan) =>
+                (["monthly", "annual"] as const).map((billingInterval) => (
+                  <Button
+                    className="w-full sm:w-auto"
+                    size="sm"
+                    variant={plan === "pro" ? "default" : "outline"}
+                    disabled={loading === "checkout"}
+                    key={`${plan}:${billingInterval}`}
+                    onClick={() => void handleUpgrade(plan, billingInterval)}
+                  >
+                    {loading === "checkout"
+                      ? t("billing.actions.openingCheckout")
+                      : t(`billing.actions.${plan}.${billingInterval}`)}
+                  </Button>
+                )),
               )}
               {showManageSubscription && (
                 <Button
@@ -1185,7 +1207,11 @@ function AddonsSection({
 
     setLoading("pro");
     try {
-      const result = await startCheckout({ businessId, target: "pro" });
+      const result = await startCheckout({
+        businessId,
+        target: "pro",
+        billingInterval: "monthly",
+      });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
@@ -2560,6 +2586,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
   const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
+  const billingInterval = parseBillingInterval(searchParams.get("billing_interval"));
   const hasCheckoutSessionTokenParam = searchParams.has(
     CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   );
@@ -2570,7 +2597,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
     }
 
     const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
-    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
+    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}:${billingInterval ?? "unknown"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -2584,6 +2611,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
       businessId: props.businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
       ...(checkoutTarget ? { target: checkoutTarget } : {}),
+      ...(billingInterval ? { billingInterval } : {}),
     })
       .then((result) => {
         if (!result.synced) {
@@ -2595,6 +2623,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
         nextSearchParams.delete("checkout_target");
+        nextSearchParams.delete("billing_interval");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
@@ -2604,6 +2633,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   }, [
     checkoutStatus,
     checkoutTarget,
+    billingInterval,
     hasCheckoutSessionTokenParam,
     props.businessId,
     refreshCheckoutStatus,
