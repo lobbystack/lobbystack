@@ -49,8 +49,8 @@
         "annual": "Starter annual"
       },
       "pro": {
-        "monthly": "Pro monthly",
-        "annual": "Pro annual"
+        "monthly": "Upgrade to Pro",
+        "annual": "Upgrade to Pro"
       },
       "unlockAiSms": "Unlock AI SMS",
       "manageBilling": "Manage billing",
