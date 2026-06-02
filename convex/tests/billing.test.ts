@@ -90,6 +90,10 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 
 const convexModules = modules;
+const originalStarterMonthlyProductId = process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID;
+const originalStarterAnnualProductId = process.env.POLAR_STARTER_ANNUAL_PRODUCT_ID;
+const originalProMonthlyProductId = process.env.POLAR_PRO_MONTHLY_PRODUCT_ID;
+const originalProAnnualProductId = process.env.POLAR_PRO_ANNUAL_PRODUCT_ID;
 const originalProProductId = process.env.POLAR_PRO_PRODUCT_ID;
 const originalAiSmsAddonProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
 const originalProAiSmsProductId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID;
@@ -115,6 +119,30 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (originalStarterMonthlyProductId === undefined) {
+    delete process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID;
+  } else {
+    process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID = originalStarterMonthlyProductId;
+  }
+
+  if (originalStarterAnnualProductId === undefined) {
+    delete process.env.POLAR_STARTER_ANNUAL_PRODUCT_ID;
+  } else {
+    process.env.POLAR_STARTER_ANNUAL_PRODUCT_ID = originalStarterAnnualProductId;
+  }
+
+  if (originalProMonthlyProductId === undefined) {
+    delete process.env.POLAR_PRO_MONTHLY_PRODUCT_ID;
+  } else {
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = originalProMonthlyProductId;
+  }
+
+  if (originalProAnnualProductId === undefined) {
+    delete process.env.POLAR_PRO_ANNUAL_PRODUCT_ID;
+  } else {
+    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = originalProAnnualProductId;
+  }
+
   if (originalProProductId === undefined) {
     delete process.env.POLAR_PRO_PRODUCT_ID;
   } else {
@@ -198,8 +226,9 @@ async function seedBillingAccount(
   ctx: TestContext,
   input: {
     businessId: Id<"businesses">;
-    currentPlan: "free_cloud" | "pro" | "enterprise";
+    currentPlan: "free_cloud" | "starter" | "pro" | "enterprise";
     activeAddons?: Array<"ai_sms">;
+    billingInterval?: "monthly" | "annual";
     polarCustomerId?: string;
     proSubscriptionId?: string;
     proSubscriptionProductId?: string;
@@ -210,9 +239,13 @@ async function seedBillingAccount(
     billingKey: getBillingKey(input.businessId),
     currentPlan: input.currentPlan,
     activeAddons: input.activeAddons ?? [],
-    subscriptionState: input.currentPlan === "pro" ? "active" : "inactive",
+    subscriptionState:
+      input.currentPlan === "starter" || input.currentPlan === "pro"
+        ? "active"
+        : "inactive",
     billingContactEmail: "owner@example.com",
     billingContactName: "Billing Owner",
+    ...(input.billingInterval ? { billingInterval: input.billingInterval } : {}),
     ...(input.polarCustomerId ? { polarCustomerId: input.polarCustomerId } : {}),
     ...(input.proSubscriptionId ? { proSubscriptionId: input.proSubscriptionId } : {}),
     ...(input.proSubscriptionProductId
@@ -2671,6 +2704,117 @@ describe("billing", () => {
     expect(account?.currentPlan).toBe("pro");
     expect(account?.proSubscriptionId).toBe("sub_new");
     expect(account?.checkoutId).toBe("checkout_new");
+  });
+
+  it("ignores inactive hosted plan webhooks for replaced subscriptions", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-stale-inactive-subscription-webhook",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID = "prod_starter_monthly";
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = "prod_pro_monthly";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_current_pro",
+        proSubscriptionProductId: "prod_pro_monthly",
+      });
+    });
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_expected",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_old_starter",
+      subscriptionProductId: "prod_starter_monthly",
+      subscriptionPriceId: "price_old_starter",
+      subscriptionState: "canceled",
+      currentPeriodStart: "2026-03-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-04-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.canceled",
+      lastSyncedAt: "2026-04-15T12:00:00.000Z",
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.billingInterval).toBe("monthly");
+    expect(account?.subscriptionState).toBe("active");
+    expect(account?.proSubscriptionId).toBe("sub_current_pro");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_monthly");
+  });
+
+  it("clears the billing interval when the current paid subscription becomes inactive", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-current-inactive-subscription-webhook",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        billingInterval: "annual",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_current_pro",
+        proSubscriptionProductId: "prod_pro_annual",
+      });
+    });
+
+    await t.mutation(internal.billing.syncSubscriptionFromWebhook, {
+      businessId,
+      billingKey: getBillingKey(businessId),
+      polarCustomerId: "cus_expected",
+      polarCustomerExternalId: getBillingKey(businessId),
+      billingContactEmail: "owner@example.com",
+      billingContactName: "Billing Owner",
+      subscriptionId: "sub_current_pro",
+      subscriptionProductId: "prod_pro_annual",
+      subscriptionPriceId: "price_pro_annual",
+      subscriptionState: "canceled",
+      currentPeriodStart: "2026-03-15T00:00:00.000Z",
+      currentPeriodEnd: "2026-04-15T00:00:00.000Z",
+      cancelAtPeriodEnd: false,
+      lastWebhookEventType: "subscription.canceled",
+      lastSyncedAt: "2026-04-15T12:00:00.000Z",
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+
+    expect(account?.currentPlan).toBe("free_cloud");
+    expect(account?.billingInterval).toBeUndefined();
+    expect(account?.subscriptionState).toBe("canceled");
+
+    const status = await authed.query(api.billing.getStatus, { businessId });
+    expect(status.plan).toBe("free_cloud");
+    expect(status.billingInterval).toBeNull();
+    expect(status.monthlyChargeCents).toBe(0);
+    expect(status.billingPeriodChargeCents).toBe(0);
   });
 
   it("does not sync an unscoped customer-session token into a fresh workspace", async () => {

@@ -1643,6 +1643,15 @@ export const syncSubscriptionFromWebhook = internalMutation({
     const isLegacyAiSmsProduct =
       args.subscriptionProductId === process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim();
     const subscriptionActive = isActiveSubscriptionStatus(args.subscriptionState);
+    const inactiveHostedSubscriptionIsStale =
+      isHostedPaidPlanProduct &&
+      !subscriptionActive &&
+      existingAccount?.proSubscriptionId !== undefined &&
+      existingAccount.proSubscriptionId !== args.subscriptionId;
+
+    if (inactiveHostedSubscriptionIsStale) {
+      return null;
+    }
 
     const nextPlan: BillingPlanSlug =
       isHostedPaidPlanProduct && subscriptionActive
@@ -1694,6 +1703,11 @@ export const syncSubscriptionFromWebhook = internalMutation({
 
     if (existingAccount) {
       await ctx.db.patch(existingAccount._id, patch);
+      if (isHostedPaidPlanProduct && !subscriptionActive) {
+        await ctx.db.patch(existingAccount._id, {
+          billingInterval: undefined,
+        });
+      }
     } else {
       await ctx.db.insert("billing_accounts", patch);
     }
