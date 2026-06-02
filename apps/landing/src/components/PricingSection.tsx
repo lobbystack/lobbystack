@@ -1,33 +1,49 @@
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { Check, Minus, ArrowRight } from "lucide-react"
-import { Fragment } from "react"
+import { Fragment, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
 
-const enterpriseContactHref =
-  "mailto:support@lobbystack.com?subject=LobbyStack%20enterprise%20inquiry"
-
 type Tier = {
   name: string
-  price: string
+  price: {
+    monthly: string
+    annual: string
+  }
   period: string
-  description: string
-  cta: string
-  ctaHref?: string
+  description: {
+    monthly: string
+    annual: string
+  }
+  cta: {
+    monthly: string
+    annual: string
+  }
   ctaVariant: "default" | "outline"
   highlight: boolean
   highlights: string[]
 }
 
+type BillingInterval = "monthly" | "annual"
+
 const tiers: Tier[] = [
   {
     name: "Free",
-    price: "$0",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
     period: "",
-    description: "Try LobbyStack with enough usage to see it work.",
-    cta: "Start free",
+    description: {
+      monthly: "Try LobbyStack with enough usage to see it work.",
+      annual: "Try LobbyStack with enough usage to see it work.",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
@@ -39,11 +55,19 @@ const tiers: Tier[] = [
   },
   {
     name: "Starter",
-    price: "$30",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
     period: "/mo",
-    description:
-      "$24/mo effective when billed annually. Includes 150 voice minutes that reset monthly.",
-    cta: "Start Starter",
+    description: {
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
@@ -55,11 +79,19 @@ const tiers: Tier[] = [
   },
   {
     name: "Pro",
-    price: "$100",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
     period: "/mo",
-    description:
-      "$80/mo effective when billed annually. More included usage for growing call volume.",
-    cta: "Go Pro",
+    description: {
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "default" as const,
     highlight: true,
     highlights: [
@@ -71,12 +103,21 @@ const tiers: Tier[] = [
   },
   {
     name: "Enterprise",
-    price: "Custom",
+    price: {
+      monthly: "Custom",
+      annual: "Custom",
+    },
     period: "",
-    description:
-      "For higher volume, multiple numbers, or custom deployment needs.",
-    cta: "Contact us",
-    ctaHref: enterpriseContactHref,
+    description: {
+      monthly:
+        "For higher volume, multiple numbers, or custom deployment needs.",
+      annual:
+        "For higher volume, multiple numbers, or custom deployment needs.",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
@@ -410,16 +451,16 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
 }
 
 export function PricingSection() {
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("annual")
+
   return (
     <>
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
           <h1 className="animate-fade-up display-heading-compact delay-100">
-            AI receptionist{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              pricing
-            </span>
+            Plans for businesses of every size
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
             Start free, then upgrade to Starter or Pro for more included
@@ -430,6 +471,39 @@ export function PricingSection() {
 
       {/* ── Tier cards ── */}
       <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+        <div className="animate-fade-up mb-8 flex justify-center delay-300">
+          <div
+            aria-label="Billing interval"
+            className="inline-flex rounded-full border border-border bg-input/30 p-1"
+            role="tablist"
+          >
+            {(["monthly", "annual"] as const).map((interval) => (
+              <Button
+                aria-selected={billingInterval === interval}
+                className={cn(
+                  "h-9 rounded-full px-4",
+                  billingInterval === interval
+                    ? "bg-background text-foreground shadow-sm hover:bg-background"
+                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                key={interval}
+                onClick={() => setBillingInterval(interval)}
+                role="tab"
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {interval === "monthly" ? "Monthly" : "Annual"}
+                {interval === "annual" ? (
+                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    Save 20%
+                  </span>
+                ) : null}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 lg:grid-cols-4">
           {tiers.map((tier) => (
             <div
@@ -453,7 +527,7 @@ export function PricingSection() {
                 </h3>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
-                    {tier.price}
+                    {tier.price[billingInterval]}
                   </span>
                   {tier.period && (
                     <span className="text-sm text-muted-foreground">
@@ -462,27 +536,26 @@ export function PricingSection() {
                   )}
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  {tier.description}
+                  {tier.description[billingInterval]}
                 </p>
               </div>
 
               {/* Action */}
               <a
-                href={tier.ctaHref ?? APP_SIGNUP_URL}
+                href={APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
                   "mb-6 w-full rounded-full"
                 )}
-                data-ph-signup-cta={tier.ctaHref ? undefined : true}
+                data-ph-signup-cta
                 data-ph-capture-attribute-section="pricing_plan"
                 data-ph-capture-attribute-action="pricing_cta"
-                data-ph-capture-attribute-destination={
-                  tier.ctaHref ?? APP_SIGNUP_URL
-                }
+                data-ph-capture-attribute-destination={APP_SIGNUP_URL}
                 data-ph-capture-attribute-plan={tier.name}
-                data-ph-capture-attribute-label={tier.cta}
+                data-ph-capture-attribute-billing-interval={billingInterval}
+                data-ph-capture-attribute-label={tier.cta[billingInterval]}
               >
-                {tier.cta}
+                {tier.cta[billingInterval]}
                 <ArrowRight className="ml-1 size-4" />
               </a>
 
