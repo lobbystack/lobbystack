@@ -37,8 +37,8 @@ const tiers: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Try LobbyStack with enough usage to see it work.",
-      annual: "Try LobbyStack with enough usage to see it work.",
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
     },
     cta: {
       monthly: "Start free",
@@ -48,7 +48,7 @@ const tiers: Tier[] = [
     highlight: false,
     highlights: [
       "30 voice minutes included",
-      "Add a dedicated number after upgrade",
+      "All features",
       "Unlimited booking and contacts",
       "Community support",
     ],
@@ -109,10 +109,8 @@ const tiers: Tier[] = [
     },
     period: "",
     description: {
-      monthly:
-        "For higher volume, multiple numbers, or custom deployment needs.",
-      annual:
-        "For higher volume, multiple numbers, or custom deployment needs.",
+      monthly: "For higher volume",
+      annual: "For higher volume",
     },
     cta: {
       monthly: "Start free",
@@ -464,7 +462,7 @@ export function PricingSection() {
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
             Start free, then upgrade to Starter or Pro for more included
-            minutes, annual savings, and transparent overages.
+            minutes and transparent overages.
           </p>
         </div>
       </section>
