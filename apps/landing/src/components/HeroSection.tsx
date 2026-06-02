@@ -37,9 +37,9 @@ export function HeroSection({ children }: { children?: ReactNode }) {
             </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
-              LobbyStack answers calls, qualifies leads, replies by SMS, and
-              books appointments 24/7. Use it for every inbound call, or just
-              the ones you miss when your team is busy.
+              LobbyStack answers calls, qualifies leads, and books appointments
+              24/7. Use it for every inbound call, or just the ones you miss
+              when your team is busy.
             </p>
 
             <div className="animate-fade-up mt-8 flex items-center gap-4 delay-300">
