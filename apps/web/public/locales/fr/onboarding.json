@@ -151,8 +151,8 @@
         "cta": "Commencer gratuitement",
         "highlights": {
           "voiceMinutes": "30 minutes vocales incluses",
-          "phoneNumber": "Passez à un forfait supérieur pour ajouter un numéro",
-          "bookingContacts": "Réservations et contacts illimités",
+          "phoneNumber": "1 numéro d'entreprise dédié",
+          "bookingContacts": "Toutes les fonctionnalités",
           "support": "Support communautaire"
         }
       },
@@ -167,7 +167,7 @@
         },
         "highlights": {
           "voiceMinutes": "150 minutes vocales + paiement à l'usage",
-          "phoneNumber": "Numéro dédié",
+          "phoneNumber": "50 segments SMS d'alerte",
           "knowledgeStorage": "2 Go de connaissances",
           "support": "Support par email"
         }

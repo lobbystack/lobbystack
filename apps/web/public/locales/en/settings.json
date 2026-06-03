@@ -115,7 +115,7 @@
           "highlights": {
             "voiceMinutes": "30 voice minutes included",
             "allFeatures": "All features",
-            "bookingContacts": "Unlimited booking and contacts",
+            "bookingContacts": "1 dedicated business number",
             "support": "Community support"
           }
         },
@@ -127,7 +127,7 @@
           },
           "highlights": {
             "voiceMinutes": "150 voice minutes + pay-as-you-go",
-            "phoneNumber": "1 dedicated business number",
+            "phoneNumber": "50 alert SMS segments",
             "knowledgeBase": "2 GB knowledge base",
             "overages": "$0.20/min voice overages"
           }

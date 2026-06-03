@@ -53,7 +53,7 @@ const tiers: Tier[] = [
     highlights: [
       "30 voice minutes included",
       "All features",
-      "Unlimited booking and contacts",
+      "1 dedicated business number",
       "Community support",
     ],
   },
@@ -76,7 +76,7 @@ const tiers: Tier[] = [
     highlight: false,
     highlights: [
       "150 voice minutes + pay-as-you-go",
-      "1 dedicated business number",
+      "50 alert SMS segments",
       "2 GB knowledge base",
       "$0.20/min voice overages",
     ],
