@@ -354,6 +354,7 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         key: "support",
         free: { key: "deployment.support.community" },
+        starter: { key: "deployment.support.email" },
         pro: { key: "deployment.support.priority" },
         enterprise: { key: "deployment.support.dedicated" },
       },

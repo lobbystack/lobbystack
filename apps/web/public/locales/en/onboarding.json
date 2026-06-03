@@ -302,6 +302,7 @@
           },
           "support": {
             "community": "Community",
+            "email": "Email",
             "priority": "Priority email",
             "dedicated": "Dedicated implementation"
           }

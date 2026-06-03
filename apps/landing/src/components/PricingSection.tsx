@@ -21,12 +21,16 @@ type Tier = {
     monthly: string
     annual: string
   }
+  ctaHref?: string
   ctaVariant: "default" | "outline"
   highlight: boolean
   highlights: string[]
 }
 
 type BillingInterval = "monthly" | "annual"
+
+const enterpriseContactHref =
+  "mailto:support@lobbystack.com?subject=LobbyStack%20enterprise%20inquiry"
 
 const tiers: Tier[] = [
   {
@@ -113,9 +117,10 @@ const tiers: Tier[] = [
       annual: "For higher volume",
     },
     cta: {
-      monthly: "Start free",
-      annual: "Start free",
+      monthly: "Contact us",
+      annual: "Contact us",
     },
+    ctaHref: enterpriseContactHref,
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
@@ -396,6 +401,7 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         feature: "Support",
         free: "Community",
+        starter: "Email",
         pro: "Priority email",
         enterprise: "Dedicated implementation",
       },
@@ -534,15 +540,17 @@ export function PricingSection() {
 
               {/* Action */}
               <a
-                href={APP_SIGNUP_URL}
+                href={tier.ctaHref ?? APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
                   "mb-6 w-full rounded-full"
                 )}
-                data-ph-signup-cta
+                data-ph-signup-cta={tier.ctaHref ? undefined : true}
                 data-ph-capture-attribute-section="pricing_plan"
                 data-ph-capture-attribute-action="pricing_cta"
-                data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+                data-ph-capture-attribute-destination={
+                  tier.ctaHref ?? APP_SIGNUP_URL
+                }
                 data-ph-capture-attribute-plan={tier.name}
                 data-ph-capture-attribute-billing-interval={billingInterval}
                 data-ph-capture-attribute-label={tier.cta[billingInterval]}
