@@ -2566,6 +2566,79 @@ describe("billing", () => {
     expect(account?.proSubscriptionPriceId).toBe("price_pro_annual");
   });
 
+  it("preserves AI SMS when upgrading an existing Starter subscription to Pro", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-starter-ai-sms-to-pro-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+    process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID = "prod_pro_annual_ai_sms";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        activeAddons: ["ai_sms"],
+        billingInterval: "monthly",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_starter",
+        proSubscriptionProductId: "prod_starter_ai_sms",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockResolvedValueOnce({
+      id: "sub_starter",
+      customerId: "cus_expected",
+      productId: "prod_pro_annual_ai_sms",
+      prices: [{ id: "price_pro_annual_ai_sms" }],
+      status: "active",
+      currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+      currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      checkoutId: null,
+      customer: {
+        externalId: getBillingKey(businessId),
+        email: "billing-starter-ai-sms-to-pro-upgrade@example.com",
+        name: "Billing Owner",
+      },
+      metadata: {},
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+      billingInterval: "annual",
+    });
+
+    expect(result.url).toBe("https://app.example.com/settings/plan");
+    expect(polarSubscriptionsUpdateMock).toHaveBeenCalledWith({
+      id: "sub_starter",
+      subscriptionUpdate: {
+        productId: "prod_pro_annual_ai_sms",
+        prorationBehavior: "prorate",
+      },
+    });
+    expect(polarCheckoutsCreateMock).not.toHaveBeenCalled();
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.billingInterval).toBe("annual");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_starter");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_annual_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_annual_ai_sms");
+  });
+
   it("does not create Pro checkout for a Starter account without a stored subscription", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {

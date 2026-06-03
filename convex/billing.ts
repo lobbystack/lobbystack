@@ -1411,15 +1411,22 @@ async function upgradeStarterSubscriptionToPro(
     billingContactName: string | null;
     starterSubscriptionId: string;
     billingInterval: BillingInterval;
+    activeAddons: Array<BillingAddonSlug>;
     returnUrl: string;
   },
 ): Promise<{ url: string }> {
+  const nextProductId = args.activeAddons.includes("ai_sms")
+    ? getHostedAiSmsPlanProductId({
+        plan: "pro",
+        billingInterval: args.billingInterval,
+      })
+    : getHostedCheckoutPlanProductId({
+        plan: "pro",
+        billingInterval: args.billingInterval,
+      });
   const subscription = await updatePolarSubscriptionProduct(
     args.starterSubscriptionId,
-    getHostedCheckoutPlanProductId({
-      plan: "pro",
-      billingInterval: args.billingInterval,
-    }),
+    nextProductId,
   );
 
   const subscriptionPriceId = getPolarSubscriptionPriceId(subscription);
@@ -2048,6 +2055,7 @@ export const startCheckout = action({
         billingContactName: checkoutContext.billingContactName,
         starterSubscriptionId: snapshot.proSubscriptionId,
         billingInterval,
+        activeAddons: snapshot.activeAddons,
         returnUrl: checkoutReturnUrl,
       });
     }
