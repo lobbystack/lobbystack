@@ -15,6 +15,7 @@ import type {
   BillingTransactionKind,
   BillingTransactionSummary,
   BillingUsageKind,
+  HostedCheckoutPlanIntervals,
   HostedCheckoutPlanSlug,
   SmsCapability,
   SmsSenderRole,
@@ -56,8 +57,8 @@ import {
   getBillingSnapshot,
   getBillingUsageMonth,
   getBillingUsageSnapshotData,
-  getConfiguredBillingIntervalsForPlan,
   getConfiguredCheckoutPlans,
+  getConfiguredCheckoutIntervals,
   getHostedCheckoutPlanForProductId,
   getHostedCheckoutPlanProductId,
   getNormalizedAddons,
@@ -122,6 +123,7 @@ type CheckoutSnapshot = {
   plan: BillingPlanSlug;
   activeAddons: Array<BillingAddonSlug>;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
+  availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   canPurchaseAiSmsAddon: boolean;
   proSubscriptionId: string | null;
 };
@@ -634,6 +636,7 @@ function buildBillingStatus(input: {
   hasBillingManagementAccess: boolean;
   hasCustomerPortalAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
+  availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   aiSmsAddonCheckoutConfigured: boolean;
   knowledgeStorageUsageBytes: number;
 }): BillingStatus {
@@ -683,6 +686,9 @@ function buildBillingStatus(input: {
     availableCheckoutPlans: input.hasBillingManagementAccess
       ? input.availableCheckoutPlans
       : [],
+    availableCheckoutIntervals: input.hasBillingManagementAccess
+      ? input.availableCheckoutIntervals
+      : { starter: [], pro: [] },
     canPurchaseAiSmsAddon:
       input.hasBillingManagementAccess && canPurchaseConfiguredAiSmsAddon,
     usage: {
@@ -1990,7 +1996,7 @@ export const startCheckout = action({
     }
     if (
       isHostedCheckoutTarget(args.target) &&
-      !getConfiguredBillingIntervalsForPlan(args.target).includes(billingInterval)
+      !snapshot.availableCheckoutIntervals[args.target].includes(billingInterval)
     ) {
       throw new Error(`${args.target} ${billingInterval} checkout is not configured.`);
     }
@@ -2210,6 +2216,10 @@ export const getSnapshotForCheckout = internalQuery({
     ),
     activeAddons: v.array(v.union(v.literal("ai_sms"))),
     availableCheckoutPlans: v.array(v.union(v.literal("starter"), v.literal("pro"))),
+    availableCheckoutIntervals: v.object({
+      starter: v.array(v.union(v.literal("monthly"), v.literal("annual"))),
+      pro: v.array(v.union(v.literal("monthly"), v.literal("annual"))),
+    }),
     canPurchaseAiSmsAddon: v.boolean(),
     proSubscriptionId: v.union(v.string(), v.null()),
   }),
@@ -2219,11 +2229,15 @@ export const getSnapshotForCheckout = internalQuery({
     });
     const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
     const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
+    const availableCheckoutIntervals = siteUrlConfigured
+      ? getConfiguredCheckoutIntervals()
+      : { starter: [], pro: [] };
 
     return {
       plan: snapshot.plan,
       activeAddons: snapshot.activeAddons,
       availableCheckoutPlans,
+      availableCheckoutIntervals,
       canPurchaseAiSmsAddon:
         siteUrlConfigured &&
         isAiSmsAddonCheckoutConfigured() &&
@@ -2302,6 +2316,9 @@ export const getStatus = query({
         ));
     const siteUrlConfigured = Boolean(process.env.SITE_URL?.trim());
     const availableCheckoutPlans = siteUrlConfigured ? getConfiguredCheckoutPlans() : [];
+    const availableCheckoutIntervals = siteUrlConfigured
+      ? getConfiguredCheckoutIntervals()
+      : { starter: [], pro: [] };
 
     return buildBillingStatus({
       billingKey: getBillingKey(args.businessId),
@@ -2326,6 +2343,7 @@ export const getStatus = query({
       hasBillingManagementAccess: hasManagementAccess,
       hasCustomerPortalAccess: hasPolarCustomerPortalAccess(snapshot.account),
       availableCheckoutPlans,
+      availableCheckoutIntervals,
       aiSmsAddonCheckoutConfigured:
         siteUrlConfigured && isAiSmsAddonCheckoutConfigured(),
       knowledgeStorageUsageBytes,

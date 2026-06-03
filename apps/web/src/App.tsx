@@ -312,7 +312,9 @@ function WorkspaceShell() {
   const previousBusinessIdRef = useRef<string | null>(null);
   const showUpgradeToPro =
     billingStatus?.hasCheckoutAccess === true &&
-    billingStatus.availableCheckoutPlans.length > 0 &&
+    billingStatus.availableCheckoutPlans.some(
+      (plan) => billingStatus.availableCheckoutIntervals[plan].length > 0,
+    ) &&
     billingStatus.plan === "free_cloud";
   const onboardingTarget = activeBusiness
     ? onboardingRouteForStage(activeBusiness.onboardingStage)

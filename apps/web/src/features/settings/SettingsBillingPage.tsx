@@ -710,11 +710,13 @@ function PlanSection({
     status.hasCheckoutAccess && status.plan === "free_cloud"
       ? status.availableCheckoutPlans.filter(
           (plan): plan is "starter" | "pro" =>
-            plan === "starter" || plan === "pro",
+            (plan === "starter" || plan === "pro") &&
+            status.availableCheckoutIntervals[plan].length > 0,
         )
       : status.hasCheckoutAccess &&
           status.plan === "starter" &&
-          status.availableCheckoutPlans.includes("pro")
+          status.availableCheckoutPlans.includes("pro") &&
+          status.availableCheckoutIntervals.pro.length > 0
         ? ["pro"]
         : [];
   const showManageSubscription = status.hasCustomerPortalAccess;
@@ -833,6 +835,7 @@ function PlanSection({
       </BorderedItem>
       <UpgradePlanDialog
         availableCheckoutPlans={upgradePlans}
+        availableCheckoutIntervals={status.availableCheckoutIntervals}
         billingInterval={upgradeBillingInterval}
         currentPlan={status.plan}
         loading={loading}
@@ -846,7 +849,8 @@ function PlanSection({
           );
         }}
         onOpenChange={setUpgradeDialogOpen}
-        onStartCheckout={(target) => void handleUpgrade(target, upgradeBillingInterval)}
+        onStartCheckout={(target, billingInterval) =>
+          void handleUpgrade(target, billingInterval)}
         open={upgradeDialogOpen}
         t={t}
       />
@@ -1200,7 +1204,8 @@ function AddonsSection({
   const canPurchase = status.canPurchaseAiSmsAddon;
   const canUpgradeToPro =
     status.hasCheckoutAccess &&
-    status.availableCheckoutPlans.includes("pro");
+    status.availableCheckoutPlans.includes("pro") &&
+    status.availableCheckoutIntervals.pro.includes("monthly");
   const addonMonthlyPrice = formatCents(
     billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
     locale,

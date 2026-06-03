@@ -286,6 +286,20 @@ export function getConfiguredCheckoutPlans(): Array<HostedCheckoutPlanSlug> {
   return [...configuredPlans];
 }
 
+export function getConfiguredCheckoutIntervals(): Record<
+  HostedCheckoutPlanSlug,
+  Array<BillingInterval>
+> {
+  const configuredIntervals: Record<HostedCheckoutPlanSlug, Array<BillingInterval>> = {
+    starter: [],
+    pro: [],
+  };
+  for (const mapping of getHostedCheckoutPlanProductMappings()) {
+    configuredIntervals[mapping.plan].push(mapping.billingInterval);
+  }
+  return configuredIntervals;
+}
+
 export function getConfiguredBillingIntervalsForPlan(
   plan: HostedCheckoutPlanSlug,
 ): Array<BillingInterval> {

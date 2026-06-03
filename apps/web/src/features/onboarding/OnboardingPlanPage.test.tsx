@@ -25,6 +25,10 @@ const {
 vi.mock("convex/react", () => ({
   useQuery: () => ({
     availableCheckoutPlans: ["pro"],
+    availableCheckoutIntervals: {
+      starter: [],
+      pro: ["monthly", "annual"],
+    },
   }),
 }));
 

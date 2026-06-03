@@ -387,6 +387,10 @@ describe("billing", () => {
       monthlyChargeCents: 0,
       includedBusinessNumbers: 0,
       availableCheckoutPlans: ["pro"],
+      availableCheckoutIntervals: {
+        starter: [],
+        pro: ["monthly"],
+      },
       canPurchaseAiSmsAddon: false,
       hasCheckoutAccess: true,
     });
@@ -465,11 +469,19 @@ describe("billing", () => {
 
     expect(freeStatus).toMatchObject({
       availableCheckoutPlans: ["pro"],
+      availableCheckoutIntervals: {
+        starter: [],
+        pro: ["monthly"],
+      },
       hasCheckoutAccess: true,
       canPurchaseAiSmsAddon: false,
     });
     expect(proStatus).toMatchObject({
       availableCheckoutPlans: ["pro"],
+      availableCheckoutIntervals: {
+        starter: [],
+        pro: ["monthly"],
+      },
       hasCheckoutAccess: true,
       canPurchaseAiSmsAddon: false,
     });
@@ -490,6 +502,10 @@ describe("billing", () => {
     expect(status).toMatchObject({
       plan: "free_cloud",
       availableCheckoutPlans: [],
+      availableCheckoutIntervals: {
+        starter: [],
+        pro: [],
+      },
       hasCheckoutAccess: false,
       canPurchaseAiSmsAddon: false,
     });

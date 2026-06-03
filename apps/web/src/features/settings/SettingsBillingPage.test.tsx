@@ -124,6 +124,10 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,
     availableCheckoutPlans: ["starter", "pro"],
+    availableCheckoutIntervals: {
+      starter: ["monthly", "annual"],
+      pro: ["monthly", "annual"],
+    },
     canPurchaseAiSmsAddon: false,
     usage: {
       periodKey: "2026-04",
@@ -517,6 +521,50 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     expect(screen.getByText("$100")).toBeTruthy();
     expect(screen.queryByText("$24")).toBeNull();
     expect(screen.queryByText("$80")).toBeNull();
+  });
+
+  it("only renders configured checkout intervals in the upgrade dialog", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/starter-monthly",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        availableCheckoutIntervals: {
+          starter: ["monthly"],
+          pro: ["monthly"],
+        },
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+
+    expect(screen.getByText("$30")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
+    expect(screen.queryByText("$24")).toBeNull();
+    expect(screen.queryByText("$80")).toBeNull();
+    expect(
+      screen.queryByRole("tab", {
+        name: /billing\.upgradeDialog\.billingIntervals\.annual/,
+      }),
+    ).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.starter",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "starter",
+      billingInterval: "monthly",
+    });
   });
 
   it("starts Starter checkout with the selected billing interval", async () => {

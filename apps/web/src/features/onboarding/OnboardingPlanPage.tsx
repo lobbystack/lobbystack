@@ -39,6 +39,7 @@ type OnboardingPlanPageProps = {
 };
 
 type PlanSlug = "free_cloud" | "starter" | "pro" | "enterprise";
+const allBillingIntervals: Array<BillingInterval> = ["monthly", "annual"];
 
 type TierConfig = {
   slug: PlanSlug;
@@ -420,9 +421,17 @@ export function OnboardingPlanPage({
     if (plan === "free_cloud" || plan === "enterprise") {
       return true;
     }
-    return status?.availableCheckoutPlans
-      ? status.availableCheckoutPlans.includes(plan)
+    return status
+      ? status.availableCheckoutPlans.includes(plan) &&
+          status.availableCheckoutIntervals[plan].length > 0
       : true;
+  };
+
+  const getCheckoutIntervalsForPlan = (plan: PlanSlug): Array<BillingInterval> => {
+    if (plan !== "starter" && plan !== "pro") {
+      return [];
+    }
+    return status?.availableCheckoutIntervals[plan] ?? allBillingIntervals;
   };
 
   useEffect(() => {
@@ -539,6 +548,7 @@ export function OnboardingPlanPage({
             const isUnavailable = !isPlanAvailable(tier.slug);
             const period = t(`plan.tiers.${tier.slug}.period`);
             const isPaidPlan = tier.slug === "starter" || tier.slug === "pro";
+            const checkoutIntervals = getCheckoutIntervalsForPlan(tier.slug);
 
             return (
               <section
@@ -575,7 +585,7 @@ export function OnboardingPlanPage({
 
                 <div className="mb-6 flex flex-col gap-2">
                   {isPaidPlan ? (
-                    (["monthly", "annual"] as const).map((billingInterval) => (
+                    checkoutIntervals.map((billingInterval) => (
                       <Button
                         className="w-full rounded-full"
                         disabled={Boolean(submittingPlan) || isUnavailable}

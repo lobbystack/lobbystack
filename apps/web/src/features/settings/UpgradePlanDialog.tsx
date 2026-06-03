@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type {
   BillingInterval,
   BillingPlanSlug,
+  HostedCheckoutPlanIntervals,
 } from "../../../../../packages/shared/src/billing";
 
 export type HostedUpgradePlan = "starter" | "pro";
@@ -73,6 +74,7 @@ function isHostedUpgradePlan(slug: UpgradePlanCard["slug"]): slug is HostedUpgra
 
 export function UpgradePlanDialog({
   availableCheckoutPlans,
+  availableCheckoutIntervals,
   billingInterval,
   currentPlan,
   loading,
@@ -85,6 +87,7 @@ export function UpgradePlanDialog({
   t,
 }: {
   availableCheckoutPlans: Array<"starter" | "pro">;
+  availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   billingInterval: BillingInterval;
   currentPlan: BillingPlanSlug;
   loading: "checkout" | "portal" | null;
@@ -92,10 +95,25 @@ export function UpgradePlanDialog({
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
   onContactEnterprise: () => void;
   onOpenChange: (open: boolean) => void;
-  onStartCheckout: (target: HostedUpgradePlan) => void;
+  onStartCheckout: (target: HostedUpgradePlan, billingInterval: BillingInterval) => void;
   open: boolean;
   t: BillingTranslation;
 }) {
+  const availableBillingIntervals = (["monthly", "annual"] as const).filter(
+    (interval) =>
+      availableCheckoutPlans.some((plan) =>
+        availableCheckoutIntervals[plan].includes(interval),
+      ),
+  );
+  const switcherIntervals =
+    availableBillingIntervals.length > 0
+      ? availableBillingIntervals
+      : (["monthly", "annual"] as const);
+  const fallbackBillingInterval: BillingInterval = switcherIntervals[0] ?? "monthly";
+  const selectedBillingInterval = switcherIntervals.includes(billingInterval)
+    ? billingInterval
+    : fallbackBillingInterval;
+
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-[72rem]">
@@ -114,12 +132,12 @@ export function UpgradePlanDialog({
             className="inline-flex rounded-full border border-border bg-muted/40 p-1"
             role="tablist"
           >
-            {(["monthly", "annual"] as const).map((interval) => (
+            {switcherIntervals.map((interval) => (
               <Button
-                aria-selected={billingInterval === interval}
+                aria-selected={selectedBillingInterval === interval}
                 className={cn(
                   "h-9 rounded-full px-4",
-                  billingInterval === interval
+                  selectedBillingInterval === interval
                     ? "bg-background text-foreground shadow-sm hover:bg-background"
                     : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
@@ -146,9 +164,14 @@ export function UpgradePlanDialog({
             const isCurrentPlan = currentPlan === card.slug;
             const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
             const isEnterprisePlan = card.slug === "enterprise";
+            const isSelectedIntervalAvailable =
+              checkoutPlan === null ||
+              availableCheckoutIntervals[checkoutPlan].includes(selectedBillingInterval);
             const isAvailable =
               isEnterprisePlan ||
-              (checkoutPlan !== null && availableCheckoutPlans.includes(checkoutPlan));
+              (checkoutPlan !== null &&
+                availableCheckoutPlans.includes(checkoutPlan) &&
+                isSelectedIntervalAvailable);
             const actionLabel = isCurrentPlan
               ? t("billing.upgradeDialog.actions.currentPlan")
               : checkoutPlan !== null
@@ -171,7 +194,7 @@ export function UpgradePlanDialog({
                   </h3>
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
-                      {card.price[billingInterval]}
+                      {card.price[selectedBillingInterval]}
                     </span>
                     {card.period ? (
                       <span className="text-sm text-muted-foreground">
@@ -181,7 +204,7 @@ export function UpgradePlanDialog({
                   </div>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     {t(
-                      `billing.upgradeDialog.plans.${card.slug}.description.${billingInterval}`,
+                      `billing.upgradeDialog.plans.${card.slug}.description.${selectedBillingInterval}`,
                     )}
                   </p>
                 </div>
@@ -212,7 +235,7 @@ export function UpgradePlanDialog({
                   loadingLabel={t("billing.actions.openingCheckout")}
                   onClick={() => {
                     if (checkoutPlan !== null) {
-                      onStartCheckout(checkoutPlan);
+                      onStartCheckout(checkoutPlan, selectedBillingInterval);
                     } else if (isEnterprisePlan) {
                       onContactEnterprise();
                     }

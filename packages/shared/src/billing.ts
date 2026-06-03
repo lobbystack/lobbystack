@@ -20,6 +20,10 @@ export type HostedCheckoutPlanSlug = (typeof hostedCheckoutPlanSlugs)[number];
 
 export const billingIntervals = ["monthly", "annual"] as const;
 export type BillingInterval = (typeof billingIntervals)[number];
+export type HostedCheckoutPlanIntervals = Record<
+  HostedCheckoutPlanSlug,
+  Array<BillingInterval>
+>;
 
 export const billingAddonSlugs = ["ai_sms"] as const;
 export type BillingAddonSlug = (typeof billingAddonSlugs)[number];
@@ -297,6 +301,7 @@ export type BillingStatus = {
   hasCustomerPortalAccess: boolean;
   hasCheckoutAccess: boolean;
   availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
+  availableCheckoutIntervals: HostedCheckoutPlanIntervals;
   canPurchaseAiSmsAddon: boolean;
   usage: BillingUsageSnapshot;
   recentTransactions: Array<BillingTransactionSummary>;

@@ -123,11 +123,13 @@ export function AuthenticatedLayout({
     billingStatus?.hasCheckoutAccess === true && billingStatus.plan === "free_cloud"
       ? billingStatus.availableCheckoutPlans.filter(
           (plan): plan is "starter" | "pro" =>
-            plan === "starter" || plan === "pro",
+            (plan === "starter" || plan === "pro") &&
+            billingStatus.availableCheckoutIntervals[plan].length > 0,
         )
       : billingStatus?.hasCheckoutAccess === true &&
           billingStatus.plan === "starter" &&
-          billingStatus.availableCheckoutPlans.includes("pro")
+          billingStatus.availableCheckoutPlans.includes("pro") &&
+          billingStatus.availableCheckoutIntervals.pro.length > 0
         ? ["pro"]
         : [];
 
@@ -178,6 +180,7 @@ export function AuthenticatedLayout({
       {businessId && billingStatus ? (
         <UpgradePlanDialog
           availableCheckoutPlans={upgradePlans}
+          availableCheckoutIntervals={billingStatus.availableCheckoutIntervals}
           billingInterval={upgradeBillingInterval}
           currentPlan={billingStatus.plan}
           loading={loading}
@@ -191,8 +194,8 @@ export function AuthenticatedLayout({
             );
           }}
           onOpenChange={setUpgradeDialogOpen}
-          onStartCheckout={(target) =>
-            void handleUpgrade(target, upgradeBillingInterval)}
+          onStartCheckout={(target, billingInterval) =>
+            void handleUpgrade(target, billingInterval)}
           open={upgradeDialogOpen}
           t={t}
         />
