@@ -346,6 +346,38 @@
   @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
 }
 
+.blog-copy table {
+  @apply my-10 block w-full max-w-4xl overflow-x-auto rounded-xl border border-border/70 text-left text-sm leading-6 md:text-base;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blog-copy thead {
+  @apply bg-muted/50 text-foreground;
+}
+
+.blog-copy th,
+.blog-copy td {
+  @apply min-w-40 px-4 py-3 align-top;
+}
+
+.blog-copy th {
+  @apply font-semibold;
+}
+
+.blog-copy td {
+  @apply border-t border-border/70 text-muted-foreground;
+}
+
+.blog-copy th + th,
+.blog-copy td + td {
+  @apply border-l border-border/70;
+}
+
+.blog-copy tbody tr:nth-child(even) {
+  @apply bg-muted/20;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
