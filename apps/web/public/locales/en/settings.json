@@ -93,6 +93,7 @@
     "upgradeDialog": {
       "title": "Upgrade plan",
       "description": "Choose the plan that works best for your team.",
+      "enterpriseSubject": "Enterprise plan",
       "billingIntervalLabel": "Billing interval",
       "billingIntervals": {
         "monthly": "Monthly",

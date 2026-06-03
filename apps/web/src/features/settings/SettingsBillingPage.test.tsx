@@ -490,7 +490,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
           name: "billing.upgradeDialog.actions.enterprise",
         })
         .getAttribute("disabled"),
-    ).not.toBeNull();
+    ).toBeNull();
   });
 
   it("updates dialog pricing when switching from annual to monthly", async () => {
@@ -578,6 +578,28 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
     expect(window.location.assign).toHaveBeenCalledWith(
       "https://example.com/pro-monthly",
+    );
+  });
+
+  it("opens a contact email for Enterprise without starting checkout", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.enterprise",
+      }),
+    );
+
+    expect(startCheckoutMock).not.toHaveBeenCalled();
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "mailto:hello@lobbystack.ai?subject=billing.upgradeDialog.enterpriseSubject",
     );
   });
 

@@ -494,6 +494,7 @@ function UpgradePlanDialog({
   loading,
   loadingPlan,
   onBillingIntervalChange,
+  onContactEnterprise,
   onOpenChange,
   onStartCheckout,
   open,
@@ -505,6 +506,7 @@ function UpgradePlanDialog({
   loading: "checkout" | "portal" | null;
   loadingPlan: HostedUpgradePlan | null;
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
+  onContactEnterprise: () => void;
   onOpenChange: (open: boolean) => void;
   onStartCheckout: (target: HostedUpgradePlan) => void;
   open: boolean;
@@ -554,8 +556,10 @@ function UpgradePlanDialog({
           {upgradePlanCards.map((card) => {
             const isCurrentPlan = currentPlan === card.slug;
             const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
+            const isEnterprisePlan = card.slug === "enterprise";
             const isAvailable =
-              checkoutPlan !== null && availableCheckoutPlans.includes(checkoutPlan);
+              isEnterprisePlan ||
+              (checkoutPlan !== null && availableCheckoutPlans.includes(checkoutPlan));
             const actionLabel = isCurrentPlan
               ? t("billing.upgradeDialog.actions.currentPlan")
               : checkoutPlan !== null
@@ -620,6 +624,8 @@ function UpgradePlanDialog({
                   onClick={() => {
                     if (checkoutPlan !== null) {
                       onStartCheckout(checkoutPlan);
+                    } else if (isEnterprisePlan) {
+                      onContactEnterprise();
                     }
                   }}
                   type="button"
@@ -1049,6 +1055,13 @@ function PlanSection({
         loading={loading}
         loadingPlan={loadingCheckoutPlan}
         onBillingIntervalChange={setUpgradeBillingInterval}
+        onContactEnterprise={() => {
+          window.location.assign(
+            `mailto:hello@lobbystack.ai?subject=${encodeURIComponent(
+              t("billing.upgradeDialog.enterpriseSubject"),
+            )}`,
+          );
+        }}
         onOpenChange={setUpgradeDialogOpen}
         onStartCheckout={(target) => void handleUpgrade(target, upgradeBillingInterval)}
         open={upgradeDialogOpen}
