@@ -33,11 +33,23 @@ Create or verify these Polar products:
   - `$960/year`
   - mapped to `POLAR_PRO_ANNUAL_PRODUCT_ID`
   - created product ID: `747a648b-0939-4626-967f-93941bcff296`
-- `Pro + AI SMS`
+- `LobbyStack Starter Monthly + AI SMS`
   - recurring monthly product
-  - mapped to `POLAR_PRO_AI_SMS_PRODUCT_ID`
-  - include the `$20/month` recurring price on this product
-  - include the `$0.03` metered unit price for AI SMS segments on this product
+  - mapped to `POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID`
+  - include the Starter monthly base prices and the AI SMS metered unit price
+- `LobbyStack Starter Annual + AI SMS`
+  - recurring annual Starter base product with monthly AI SMS metered usage
+  - mapped to `POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID`
+  - include the Starter annual base prices and the AI SMS metered unit price
+- `LobbyStack Pro Monthly + AI SMS`
+  - recurring monthly product
+  - mapped to `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
+  - legacy fallback env: `POLAR_PRO_AI_SMS_PRODUCT_ID`
+  - include the Pro monthly base prices and the AI SMS metered unit price
+- `LobbyStack Pro Annual + AI SMS`
+  - recurring annual Pro base product with monthly AI SMS metered usage
+  - mapped to `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
+  - include the Pro annual base prices and the AI SMS metered unit price
 - `AI SMS setup`
   - one-time purchase product
   - mapped to `POLAR_AI_SMS_SETUP_PRODUCT_ID`
@@ -101,14 +113,19 @@ Set these values in Convex and local development when billing is enabled:
 - `POLAR_STARTER_ANNUAL_PRODUCT_ID`
 - `POLAR_PRO_MONTHLY_PRODUCT_ID`
 - `POLAR_PRO_ANNUAL_PRODUCT_ID`
-- `POLAR_PRO_AI_SMS_PRODUCT_ID`
+- `POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID`
+- `POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID`
+- `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
+- `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
 - `POLAR_AI_SMS_SETUP_PRODUCT_ID`
 - `SITE_URL`
 
 `POLAR_AI_SMS_ADDON_PRODUCT_ID` is optional and only exists to recognize legacy
 separate AI SMS subscriptions from the older add-on subscription flow. New AI SMS
 enablement uses `POLAR_AI_SMS_SETUP_PRODUCT_ID` for checkout and
-`POLAR_PRO_AI_SMS_PRODUCT_ID` for the existing Pro subscription update.
+the matching `{plan, interval} + AI SMS` product for the existing paid
+subscription update. `POLAR_PRO_AI_SMS_PRODUCT_ID` is still accepted as a legacy
+fallback for `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`.
 
 For hosted Alert SMS, also configure:
 

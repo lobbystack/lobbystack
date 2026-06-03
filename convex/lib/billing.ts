@@ -83,7 +83,10 @@ export function isAiSmsEnabled(input: {
     return true;
   }
 
-  return input.plan === "pro" && input.activeAddons.includes("ai_sms");
+  return (
+    (input.plan === "starter" || input.plan === "pro") &&
+    input.activeAddons.includes("ai_sms")
+  );
 }
 
 export function getPlanEntitlements(plan: BillingPlanSlug) {
@@ -230,6 +233,8 @@ export type HostedCheckoutPlanProduct = {
   productId: string;
 };
 
+export type HostedAiSmsPlanProduct = HostedCheckoutPlanProduct;
+
 function getOptionalProductId(envName: string): string | null {
   return process.env[envName]?.trim() || null;
 }
@@ -262,6 +267,50 @@ export function getHostedCheckoutPlanProductMappings(): Array<HostedCheckoutPlan
       plan: "pro",
       billingInterval: "annual",
       productId: getOptionalProductId("POLAR_PRO_ANNUAL_PRODUCT_ID"),
+    },
+  ];
+
+  return mappings.flatMap((mapping) => {
+    return mapping.productId
+      ? [
+          {
+            plan: mapping.plan,
+            billingInterval: mapping.billingInterval,
+            productId: mapping.productId,
+          },
+        ]
+      : [];
+  });
+}
+
+export function getHostedAiSmsPlanProductMappings(): Array<HostedAiSmsPlanProduct> {
+  const proMonthlyProductId =
+    getOptionalProductId("POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID") ??
+    getOptionalProductId("POLAR_PRO_AI_SMS_PRODUCT_ID");
+  const mappings: Array<{
+    plan: HostedCheckoutPlanSlug;
+    billingInterval: BillingInterval;
+    productId: string | null;
+  }> = [
+    {
+      plan: "starter",
+      billingInterval: "monthly",
+      productId: getOptionalProductId("POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID"),
+    },
+    {
+      plan: "starter",
+      billingInterval: "annual",
+      productId: getOptionalProductId("POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID"),
+    },
+    {
+      plan: "pro",
+      billingInterval: "monthly",
+      productId: proMonthlyProductId,
+    },
+    {
+      plan: "pro",
+      billingInterval: "annual",
+      productId: getOptionalProductId("POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID"),
     },
   ];
 
@@ -331,10 +380,36 @@ export function getHostedCheckoutPlanProductId(input: {
   return mapping.productId;
 }
 
+export function getHostedAiSmsPlanProductId(input: {
+  plan: HostedCheckoutPlanSlug;
+  billingInterval: BillingInterval;
+}): string {
+  const mapping = getHostedAiSmsPlanProductMappings().find(
+    (candidate) =>
+      candidate.plan === input.plan &&
+      candidate.billingInterval === input.billingInterval,
+  );
+  if (!mapping) {
+    const envName =
+      input.plan === "starter"
+        ? input.billingInterval === "annual"
+          ? "POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID"
+          : "POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID"
+        : input.billingInterval === "annual"
+          ? "POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID"
+          : "POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID";
+    throw new Error(`${envName} is required.`);
+  }
+  return mapping.productId;
+}
+
 export function getHostedCheckoutPlanForProductId(
   productId: string,
 ): { plan: HostedCheckoutPlanSlug; billingInterval: BillingInterval } | null {
-  const mapping = getHostedCheckoutPlanProductMappings().find(
+  const mapping = [
+    ...getHostedCheckoutPlanProductMappings(),
+    ...getHostedAiSmsPlanProductMappings(),
+  ].find(
     (candidate) => candidate.productId === productId,
   );
   if (mapping) {
@@ -353,10 +428,35 @@ export function getHostedCheckoutPlanForProductId(
   return null;
 }
 
+export function isHostedAiSmsPlanProductId(productId: string): boolean {
+  const legacyProAiSmsProductId = getOptionalProductId("POLAR_PRO_AI_SMS_PRODUCT_ID");
+  return getHostedAiSmsPlanProductMappings().some(
+    (candidate) => candidate.productId === productId,
+  ) || productId === legacyProAiSmsProductId;
+}
+
 export function isAiSmsAddonCheckoutConfigured(): boolean {
   return Boolean(
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim() &&
-      process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim(),
+      getHostedAiSmsPlanProductMappings().length > 0,
+  );
+}
+
+export function isAiSmsAddonCheckoutConfiguredForPlan(input: {
+  plan: BillingPlanSlug;
+  billingInterval?: BillingInterval | null;
+}): boolean {
+  if (input.plan !== "starter" && input.plan !== "pro") {
+    return false;
+  }
+  if (!process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID?.trim()) {
+    return false;
+  }
+  const billingInterval = input.billingInterval ?? "monthly";
+  return getHostedAiSmsPlanProductMappings().some(
+    (mapping) =>
+      mapping.plan === input.plan &&
+      mapping.billingInterval === billingInterval,
   );
 }
 
@@ -384,18 +484,20 @@ export function getAiSmsSetupProductId(): string {
 }
 
 export function getProAiSmsProductId(): string {
-  const productId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim();
-  if (!productId) {
-    throw new Error("POLAR_PRO_AI_SMS_PRODUCT_ID is required.");
-  }
-  return productId;
+  return getHostedAiSmsPlanProductId({
+    plan: "pro",
+    billingInterval: "monthly",
+  });
 }
 
 export function canPurchaseAiSmsAddon(input: {
   plan: BillingPlanSlug;
   activeAddons: Array<BillingAddonSlug>;
 }): boolean {
-  return input.plan === "pro" && !input.activeAddons.includes("ai_sms");
+  return (
+    (input.plan === "starter" || input.plan === "pro") &&
+    !input.activeAddons.includes("ai_sms")
+  );
 }
 
 export function deriveCloudPlanFromProductIds(input: {
@@ -420,6 +522,7 @@ export function deriveActiveAddonsFromProductIds(
   subscriptionProductIds: Array<string>,
 ): Array<BillingAddonSlug> {
   const aiSmsProductIds = [
+    ...getHostedAiSmsPlanProductMappings().map((mapping) => mapping.productId),
     process.env.POLAR_PRO_AI_SMS_PRODUCT_ID?.trim(),
     process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID?.trim(),
   ].filter((productId): productId is string => Boolean(productId));

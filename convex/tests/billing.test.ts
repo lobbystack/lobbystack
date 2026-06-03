@@ -94,6 +94,14 @@ const originalStarterMonthlyProductId = process.env.POLAR_STARTER_MONTHLY_PRODUC
 const originalStarterAnnualProductId = process.env.POLAR_STARTER_ANNUAL_PRODUCT_ID;
 const originalProMonthlyProductId = process.env.POLAR_PRO_MONTHLY_PRODUCT_ID;
 const originalProAnnualProductId = process.env.POLAR_PRO_ANNUAL_PRODUCT_ID;
+const originalStarterMonthlyAiSmsProductId =
+  process.env.POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID;
+const originalStarterAnnualAiSmsProductId =
+  process.env.POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID;
+const originalProMonthlyAiSmsProductId =
+  process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID;
+const originalProAnnualAiSmsProductId =
+  process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID;
 const originalProProductId = process.env.POLAR_PRO_PRODUCT_ID;
 const originalAiSmsAddonProductId = process.env.POLAR_AI_SMS_ADDON_PRODUCT_ID;
 const originalProAiSmsProductId = process.env.POLAR_PRO_AI_SMS_PRODUCT_ID;
@@ -141,6 +149,34 @@ afterEach(() => {
     delete process.env.POLAR_PRO_ANNUAL_PRODUCT_ID;
   } else {
     process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = originalProAnnualProductId;
+  }
+
+  if (originalStarterMonthlyAiSmsProductId === undefined) {
+    delete process.env.POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID;
+  } else {
+    process.env.POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID =
+      originalStarterMonthlyAiSmsProductId;
+  }
+
+  if (originalStarterAnnualAiSmsProductId === undefined) {
+    delete process.env.POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID;
+  } else {
+    process.env.POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID =
+      originalStarterAnnualAiSmsProductId;
+  }
+
+  if (originalProMonthlyAiSmsProductId === undefined) {
+    delete process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID;
+  } else {
+    process.env.POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID =
+      originalProMonthlyAiSmsProductId;
+  }
+
+  if (originalProAnnualAiSmsProductId === undefined) {
+    delete process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID;
+  } else {
+    process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID =
+      originalProAnnualAiSmsProductId;
   }
 
   if (originalProProductId === undefined) {
@@ -511,10 +547,11 @@ describe("billing", () => {
     });
   });
 
-  it("enables the AI SMS add-on only for eligible Pro workspaces", async () => {
+  it("enables the AI SMS add-on for eligible paid workspaces", async () => {
     process.env.POLAR_PRO_PRODUCT_ID = "prod_pro";
     process.env.POLAR_AI_SMS_SETUP_PRODUCT_ID = "prod_ai_sms_setup";
     process.env.POLAR_PRO_AI_SMS_PRODUCT_ID = "prod_pro_ai_sms";
+    process.env.POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID = "prod_starter_ai_sms";
     process.env.SITE_URL = "https://example.com";
 
     const t = convexTest(schema, convexModules);
@@ -581,6 +618,67 @@ describe("billing", () => {
       canPurchaseAiSmsAddon: false,
     });
     expect(afterPolicy).toMatchObject({
+      allowed: false,
+      senderRole: "business_ai",
+      senderMode: "platform_phone",
+      errorCode: null,
+    });
+
+    const { authed: starterAuthed, businessId: starterBusinessId } =
+      await seedWorkspace(t, {
+        subject: "billing-starter-addon",
+        deploymentMode: "cloud",
+      });
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId: starterBusinessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_starter",
+      });
+    });
+
+    const beforeStarterAddon = await starterAuthed.query(api.billing.getStatus, {
+      businessId: starterBusinessId,
+    });
+
+    expect(beforeStarterAddon).toMatchObject({
+      plan: "starter",
+      aiSmsEnabled: false,
+      canPurchaseAiSmsAddon: true,
+    });
+
+    await t.run(async (ctx: TestContext) => {
+      const account = await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", starterBusinessId))
+        .unique();
+
+      if (!account) {
+        throw new Error("Expected starter billing account to exist.");
+      }
+
+      await ctx.db.patch(account._id, {
+        activeAddons: ["ai_sms"],
+      });
+    });
+
+    const afterStarterAddon = await starterAuthed.query(api.billing.getStatus, {
+      businessId: starterBusinessId,
+    });
+    const starterPolicy = await t.query(internal.billing.getSmsCapabilityPolicy, {
+      businessId: starterBusinessId,
+      capability: "ai",
+    });
+
+    expect(afterStarterAddon).toMatchObject({
+      plan: "starter",
+      aiSmsEnabled: true,
+      monthlyChargeCents: 3_500,
+      canPurchaseAiSmsAddon: false,
+    });
+    expect(starterPolicy).toMatchObject({
       allowed: false,
       senderRole: "business_ai",
       senderMode: "platform_phone",
@@ -3126,6 +3224,144 @@ describe("billing", () => {
     expect(account?.proSubscriptionProductId).toBe("prod_pro_ai_sms");
     expect(account?.proSubscriptionPriceId).toBe("price_pro_ai_sms");
     expect(account?.aiSmsSubscriptionId).toBeUndefined();
+  });
+
+  it("updates an existing Starter subscription after the AI SMS setup payment is confirmed", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-starter-ai-sms-setup-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_STARTER_MONTHLY_PRODUCT_ID = "prod_starter_monthly";
+    process.env.POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID = "prod_starter_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_starter",
+        proSubscriptionProductId: "prod_starter_monthly",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockResolvedValueOnce({
+      id: "sub_starter",
+      customerId: "cus_expected",
+      productId: "prod_starter_ai_sms",
+      prices: [{ id: "price_starter_ai_sms" }],
+      status: "active",
+      currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+      currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      checkoutId: null,
+      customer: {
+        externalId: getBillingKey(businessId),
+        email: "billing-starter-ai-sms-setup-upgrade@example.com",
+        name: "Billing Owner",
+      },
+      metadata: {},
+    });
+
+    const upgraded = await t.action(
+      internal.billing.upgradeAiSmsSubscriptionAfterSetupPayment,
+      { businessId },
+    );
+
+    expect(upgraded).toBe(true);
+    expect(polarSubscriptionsUpdateMock).toHaveBeenCalledWith({
+      id: "sub_starter",
+      subscriptionUpdate: {
+        productId: "prod_starter_ai_sms",
+        prorationBehavior: "prorate",
+      },
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("starter");
+    expect(account?.billingInterval).toBe("monthly");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_starter");
+    expect(account?.proSubscriptionProductId).toBe("prod_starter_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_starter_ai_sms");
+  });
+
+  it("preserves annual Pro billing when AI SMS setup upgrades the subscription", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { businessId } = await seedWorkspace(t, {
+      subject: "billing-annual-pro-ai-sms-setup-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+    process.env.POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID = "prod_pro_annual_ai_sms";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        billingInterval: "annual",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_pro_annual",
+        proSubscriptionProductId: "prod_pro_annual",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockResolvedValueOnce({
+      id: "sub_pro_annual",
+      customerId: "cus_expected",
+      productId: "prod_pro_annual_ai_sms",
+      prices: [{ id: "price_pro_annual_ai_sms" }],
+      status: "active",
+      currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+      currentPeriodEnd: new Date("2027-04-15T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      checkoutId: null,
+      customer: {
+        externalId: getBillingKey(businessId),
+        email: "billing-annual-pro-ai-sms-setup-upgrade@example.com",
+        name: "Billing Owner",
+      },
+      metadata: {},
+    });
+
+    const upgraded = await t.action(
+      internal.billing.upgradeAiSmsSubscriptionAfterSetupPayment,
+      { businessId },
+    );
+
+    expect(upgraded).toBe(true);
+    expect(polarSubscriptionsUpdateMock).toHaveBeenCalledWith({
+      id: "sub_pro_annual",
+      subscriptionUpdate: {
+        productId: "prod_pro_annual_ai_sms",
+        prorationBehavior: "prorate",
+      },
+    });
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.billingInterval).toBe("annual");
+    expect(account?.activeAddons).toEqual(["ai_sms"]);
+    expect(account?.proSubscriptionId).toBe("sub_pro_annual");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_annual_ai_sms");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_annual_ai_sms");
   });
 
   it("syncs the AI SMS upgrade when the Polar SDK rejects a successful update response", async () => {
