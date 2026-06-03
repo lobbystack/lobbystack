@@ -286,7 +286,10 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         key: "aiSms",
         free: false,
-        starter: false,
+        starter: {
+          includedKey: "notifications.aiSms.proIncluded",
+          thenKey: "notifications.aiSms.proThen",
+        },
         pro: {
           includedKey: "notifications.aiSms.proIncluded",
           thenKey: "notifications.aiSms.proThen",

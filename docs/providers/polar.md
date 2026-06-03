@@ -36,20 +36,20 @@ Create or verify these Polar products:
 - `LobbyStack Starter Monthly + AI SMS`
   - recurring monthly product
   - mapped to `POLAR_STARTER_MONTHLY_AI_SMS_PRODUCT_ID`
-  - include the Starter monthly base prices and the AI SMS metered unit price
+  - include the Starter monthly base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
 - `LobbyStack Starter Annual + AI SMS`
   - recurring annual Starter base product with monthly AI SMS metered usage
   - mapped to `POLAR_STARTER_ANNUAL_AI_SMS_PRODUCT_ID`
-  - include the Starter annual base prices and the AI SMS metered unit price
+  - include the Starter annual base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
 - `LobbyStack Pro Monthly + AI SMS`
   - recurring monthly product
   - mapped to `POLAR_PRO_MONTHLY_AI_SMS_PRODUCT_ID`
   - legacy fallback env: `POLAR_PRO_AI_SMS_PRODUCT_ID`
-  - include the Pro monthly base prices and the AI SMS metered unit price
+  - include the Pro monthly base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
 - `LobbyStack Pro Annual + AI SMS`
   - recurring annual Pro base product with monthly AI SMS metered usage
   - mapped to `POLAR_PRO_ANNUAL_AI_SMS_PRODUCT_ID`
-  - include the Pro annual base prices and the AI SMS metered unit price
+  - include the Pro annual base price, the `$5/month` AI SMS recurring price, and the AI SMS metered unit price
 - `AI SMS setup`
   - one-time purchase product
   - mapped to `POLAR_AI_SMS_SETUP_PRODUCT_ID`
