@@ -565,7 +565,7 @@ function UpgradePlanDialog({
                 className={cn(
                   "flex min-h-[29rem] flex-col rounded-xl border bg-background p-5",
                   card.highlighted
-                    ? "border-foreground/25 ring-1 ring-foreground/10"
+                    ? "border-foreground/30 bg-muted/20"
                     : "border-border/70",
                 )}
                 key={card.slug}
