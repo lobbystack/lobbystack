@@ -75,7 +75,7 @@
       "billingPeriod": "La période en cours se réinitialise le {{resetAt}}",
       "selfHostNotice": "Les espaces auto-hébergés utilisent vos propres fournisseurs. Aucune limite d'utilisation ni facturation ne s'applique.",
       "enterpriseNotice": "L'utilisation et les limites sont régies par votre entente entreprise.",
-      "freeCloudNotice": "L'utilisation est plafonnée au volume inclus chaque mois. Passez à un forfait payant pour les dépassements et des limites plus élevées.",
+      "freeCloudNotice": "Passez à un forfait payant pour les dépassements et des limites plus élevées.",
       "proNotice": "L'utilisation incluse se réinitialise chaque mois. L'utilisation supplémentaire est facturée au tarif de dépassement.",
       "monthlySuffix": "/mois",
       "annualEffectiveSuffix": "/mois, facturé annuellement",
