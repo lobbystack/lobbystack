@@ -5,7 +5,7 @@ pubDate: 2026-06-03T12:00:00-04:00
 author: "LobbyStack Team"
 category: "Guides"
 featured: true
-coverImage: "/illustrations/ai-receptionist-savings-hero.png"
+coverImage: "/illustrations/ai-receptionist-savings-hero.webp"
 ---
 
 If the phone is where new customers usually start, missed calls quietly tax the business.
