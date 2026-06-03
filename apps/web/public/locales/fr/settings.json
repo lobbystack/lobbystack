@@ -126,10 +126,11 @@
             "annual": "Par mois, facturé annuellement"
           },
           "highlights": {
-            "voiceMinutes": "150 minutes vocales + paiement à l'usage",
+            "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
             "phoneNumber": "50 segments SMS d'alerte",
             "knowledgeBase": "Base de connaissances de 2 Go",
-            "overages": "Dépassements vocaux à 0,20 $/min"
+            "overages": "Dépassements vocaux à 0,20 $/min",
+            "support": "Soutien par courriel"
           }
         },
         "pro": {
@@ -139,7 +140,7 @@
             "annual": "Par mois, facturé annuellement"
           },
           "highlights": {
-            "voiceMinutes": "500 minutes vocales + paiement à l'usage",
+            "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
             "alertSms": "200 segments SMS d'alerte",
             "knowledgeBase": "Base de connaissances de 10 Go",
             "support": "Soutien prioritaire par courriel"

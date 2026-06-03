@@ -24,7 +24,13 @@ type Tier = {
   ctaHref?: string
   ctaVariant: "default" | "outline"
   highlight: boolean
-  highlights: string[]
+  highlights: Array<
+    | string
+    | {
+        label: string
+        sublabel: string
+      }
+  >
 }
 
 type BillingInterval = "monthly" | "annual"
@@ -75,10 +81,13 @@ const tiers: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "150 voice minutes + pay-as-you-go",
+      {
+        label: "150 voice minutes included",
+        sublabel: "Then $0.20/min",
+      },
       "50 alert SMS segments",
       "2 GB knowledge base",
-      "$0.20/min voice overages",
+      "Email support",
     ],
   },
   {
@@ -99,7 +108,10 @@ const tiers: Tier[] = [
     ctaVariant: "default" as const,
     highlight: true,
     highlights: [
-      "500 voice minutes + pay-as-you-go",
+      {
+        label: "500 voice minutes included",
+        sublabel: "Then $0.18/min",
+      },
       "200 alert SMS segments",
       "10 GB knowledge base",
       "Priority email support",
@@ -562,15 +574,26 @@ export function PricingSection() {
               {/* Key highlights only */}
               <div className="flex-1 border-t border-border/50 pt-5">
                 <ul className="flex flex-col gap-2.5">
-                  {tier.highlights.map((item) => (
-                    <li key={item} className="flex items-start gap-2.5 text-sm">
-                      <Check
-                        className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
-                        aria-hidden="true"
-                      />
-                      <span>{item}</span>
-                    </li>
-                  ))}
+                  {tier.highlights.map((item) => {
+                    const label = typeof item === "string" ? item : item.label
+                    const sublabel = typeof item === "string" ? null : item.sublabel
+                    return (
+                      <li key={label} className="flex items-start gap-2.5 text-sm">
+                        <Check
+                          className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {label}
+                          {sublabel ? (
+                            <span className="block text-muted-foreground">
+                              {sublabel}
+                            </span>
+                          ) : null}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             </div>

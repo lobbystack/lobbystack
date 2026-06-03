@@ -636,7 +636,9 @@ export function OnboardingPlanPage({
                     {tier.highlightKeys.map((item) => (
                       <li className="flex items-start gap-2.5 text-sm" key={item}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" />
-                        <span>{t(`plan.tiers.${tier.slug}.highlights.${item}`)}</span>
+                        <span className="whitespace-pre-line">
+                          {t(`plan.tiers.${tier.slug}.highlights.${item}`)}
+                        </span>
                       </li>
                     ))}
                   </ul>

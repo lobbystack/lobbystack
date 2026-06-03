@@ -126,10 +126,11 @@
             "annual": "Per month, billed annually"
           },
           "highlights": {
-            "voiceMinutes": "150 voice minutes + pay-as-you-go",
+            "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
             "phoneNumber": "50 alert SMS segments",
             "knowledgeBase": "2 GB knowledge base",
-            "overages": "$0.20/min voice overages"
+            "overages": "$0.20/min voice overages",
+            "support": "Email support"
           }
         },
         "pro": {
@@ -139,7 +140,7 @@
             "annual": "Per month, billed annually"
           },
           "highlights": {
-            "voiceMinutes": "500 voice minutes + pay-as-you-go",
+            "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
             "alertSms": "200 alert SMS segments",
             "knowledgeBase": "10 GB knowledge base",
             "support": "Priority email support"

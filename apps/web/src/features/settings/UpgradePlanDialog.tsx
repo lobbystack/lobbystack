@@ -45,7 +45,7 @@ const upgradePlanCards: UpgradePlanCard[] = [
       annual: "$24",
     },
     period: "/mo",
-    highlights: ["voiceMinutes", "phoneNumber", "knowledgeBase", "overages"],
+    highlights: ["voiceMinutes", "phoneNumber", "knowledgeBase", "support"],
   },
   {
     slug: "pro",
@@ -214,7 +214,7 @@ export function UpgradePlanDialog({
                     {card.highlights.map((highlight) => (
                       <li className="flex items-start gap-2.5 text-sm" key={highlight}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
-                        <span>
+                        <span className="whitespace-pre-line">
                           {t(
                             `billing.upgradeDialog.plans.${card.slug}.highlights.${highlight}`,
                           )}
