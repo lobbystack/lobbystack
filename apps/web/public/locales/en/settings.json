@@ -95,6 +95,7 @@
       "description": "Choose the plan that works best for your team.",
       "enterpriseSubject": "Enterprise plan",
       "billingIntervalLabel": "Billing interval",
+      "annualDiscount": "Save 20%",
       "billingIntervals": {
         "monthly": "Monthly",
         "annual": "Annual"

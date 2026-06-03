@@ -547,6 +547,11 @@ function UpgradePlanDialog({
                 variant="outline"
               >
                 {t(`billing.upgradeDialog.billingIntervals.${interval}`)}
+                {interval === "annual" ? (
+                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    {t("billing.upgradeDialog.annualDiscount")}
+                  </span>
+                ) : null}
               </Button>
             ))}
           </div>
@@ -577,11 +582,11 @@ function UpgradePlanDialog({
                 key={card.slug}
               >
                 <div className="mb-5">
-                  <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                  <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
                     {t(`billing.upgradeDialog.plans.${card.slug}.name`)}
                   </h3>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-4xl font-semibold tracking-tight text-foreground">
+                    <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
                       {card.price[billingInterval]}
                     </span>
                     {card.period ? (

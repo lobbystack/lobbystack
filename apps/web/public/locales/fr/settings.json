@@ -95,6 +95,7 @@
       "description": "Choisissez le forfait qui convient le mieux à votre équipe.",
       "enterpriseSubject": "Forfait Entreprise",
       "billingIntervalLabel": "Intervalle de facturation",
+      "annualDiscount": "Économisez 20 %",
       "billingIntervals": {
         "monthly": "Mensuel",
         "annual": "Annuel"

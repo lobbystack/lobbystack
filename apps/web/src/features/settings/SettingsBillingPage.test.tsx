@@ -505,6 +505,7 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     );
     expect(screen.getByText("$24")).toBeTruthy();
     expect(screen.getByText("$80")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.annualDiscount")).toBeTruthy();
 
     await user.click(
       screen.getByRole("tab", {
