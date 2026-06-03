@@ -492,6 +492,7 @@ function UpgradePlanDialog({
   billingInterval,
   currentPlan,
   loading,
+  loadingPlan,
   onBillingIntervalChange,
   onOpenChange,
   onStartCheckout,
@@ -502,6 +503,7 @@ function UpgradePlanDialog({
   billingInterval: BillingInterval;
   currentPlan: BillingPlanSlug;
   loading: "checkout" | "portal" | null;
+  loadingPlan: HostedUpgradePlan | null;
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
   onOpenChange: (open: boolean) => void;
   onStartCheckout: (target: HostedUpgradePlan) => void;
@@ -609,6 +611,12 @@ function UpgradePlanDialog({
                 <Button
                   className="mt-6 w-full rounded-full"
                   disabled={loading === "checkout" || isCurrentPlan || !isAvailable}
+                  loading={
+                    loading === "checkout" &&
+                    checkoutPlan !== null &&
+                    checkoutPlan === loadingPlan
+                  }
+                  loadingLabel={t("billing.actions.openingCheckout")}
                   onClick={() => {
                     if (checkoutPlan !== null) {
                       onStartCheckout(checkoutPlan);
@@ -617,9 +625,7 @@ function UpgradePlanDialog({
                   type="button"
                   variant={card.highlighted ? "default" : "outline"}
                 >
-                  {loading === "checkout" && checkoutPlan !== null && isAvailable
-                    ? t("billing.actions.openingCheckout")
-                    : actionLabel}
+                  {actionLabel}
                 </Button>
               </section>
             );
@@ -861,6 +867,8 @@ function PlanSection({
   const startCheckout = useObservedAction(api.billing.startCheckout);
   const openPortal = useObservedAction(api.billing.openPortal);
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
+  const [loadingCheckoutPlan, setLoadingCheckoutPlan] =
+    useState<HostedUpgradePlan | null>(null);
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [upgradeBillingInterval, setUpgradeBillingInterval] =
     useState<BillingInterval>("annual");
@@ -923,6 +931,7 @@ function PlanSection({
     billingInterval: BillingInterval,
   ) {
     setLoading("checkout");
+    setLoadingCheckoutPlan(target);
     try {
       const result = await startCheckout({ businessId, target, billingInterval });
       window.location.assign(result.url);
@@ -930,6 +939,7 @@ function PlanSection({
       toast.error(t("billing.toast.checkoutFailed"));
     } finally {
       setLoading(null);
+      setLoadingCheckoutPlan(null);
     }
   }
 
@@ -1007,12 +1017,11 @@ function PlanSection({
                   className="w-full sm:w-auto"
                   size="sm"
                   variant="outline"
-                  disabled={loading === "checkout"}
+                  loading={loading === "checkout"}
+                  loadingLabel={t("billing.actions.openingCheckout")}
                   onClick={() => setUpgradeDialogOpen(true)}
                 >
-                  {loading === "checkout"
-                    ? t("billing.actions.openingCheckout")
-                    : t("billing.actions.upgradeToPro")}
+                  {t("billing.actions.upgradeToPro")}
                 </Button>
               )}
               {showManageSubscription && (
@@ -1038,6 +1047,7 @@ function PlanSection({
         billingInterval={upgradeBillingInterval}
         currentPlan={status.plan}
         loading={loading}
+        loadingPlan={loadingCheckoutPlan}
         onBillingIntervalChange={setUpgradeBillingInterval}
         onOpenChange={setUpgradeDialogOpen}
         onStartCheckout={(target) => void handleUpgrade(target, upgradeBillingInterval)}
@@ -1463,12 +1473,12 @@ function AddonsSection({
       size="sm"
       variant="outline"
       aria-label={t("billing.addon.aiSmsName")}
-      disabled={loading !== null || !canPurchase}
+      disabled={(loading !== null && loading !== "ai_sms") || !canPurchase}
+      loading={loading === "ai_sms"}
+      loadingLabel={t("billing.actions.openingCheckout")}
       onClick={() => void handleAddAiSms()}
     >
-      {loading === "ai_sms"
-        ? t("billing.actions.openingCheckout")
-        : t("billing.addon.enable")}
+      {t("billing.addon.enable")}
     </Button>
   );
 
