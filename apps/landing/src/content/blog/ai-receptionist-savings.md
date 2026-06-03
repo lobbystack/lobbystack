@@ -132,7 +132,7 @@ Add the revenue you expect to recover from missed calls to any answering costs y
 
 ### Does an AI receptionist recover every missed call?
 
-No. Some callers are too early, unqualified, or a poor fit. The point is to recover a realistic share of the good calls by answering faster, collecting the right details, and making the next step easy.
+No. Some callers are not ready to book, unqualified, outside your service area, or a poor fit. The point is to recover a realistic share of the good calls by answering faster, collecting the right details, and making the next step easy.
 
 ### What if most of my missed calls are spam?
 
