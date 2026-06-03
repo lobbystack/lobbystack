@@ -1,64 +1,137 @@
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
 import { Check, Minus, ArrowRight } from "lucide-react"
-import { Fragment } from "react"
+import { Fragment, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
+
+type Tier = {
+  name: string
+  price: {
+    monthly: string
+    annual: string
+  }
+  period: string
+  description: {
+    monthly: string
+    annual: string
+  }
+  cta: {
+    monthly: string
+    annual: string
+  }
+  ctaHref?: string
+  ctaVariant: "default" | "outline"
+  highlight: boolean
+  highlights: Array<
+    | string
+    | {
+        label: string
+        sublabel: string
+      }
+  >
+}
+
+type BillingInterval = "monthly" | "annual"
 
 const enterpriseContactHref =
   "mailto:support@lobbystack.com?subject=LobbyStack%20enterprise%20inquiry"
 
-type Tier = {
-  name: string
-  price: string
-  period: string
-  description: string
-  cta: string
-  ctaHref?: string
-  ctaVariant: "default" | "outline"
-  highlight: boolean
-  highlights: string[]
-}
-
 const tiers: Tier[] = [
   {
     name: "Free",
-    price: "$0",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
     period: "",
-    description: "Try LobbyStack with enough usage to see it work.",
-    cta: "Start free",
+    description: {
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "10 voice minutes included",
-      "Dedicated phone number",
-      "Unlimited booking and contacts",
+      "30 voice minutes included",
+      "All features",
+      "1 dedicated business number",
       "Community support",
     ],
   },
   {
-    name: "Pro",
-    price: "$15",
+    name: "Starter",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
     period: "/mo",
-    description: "Everything you need to run a production AI receptionist.",
-    cta: "Upgrade",
+    description: {
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      {
+        label: "150 voice minutes included",
+        sublabel: "Then $0.20/min",
+      },
+      "50 alert SMS segments",
+      "2 GB knowledge base",
+      "Email support",
+    ],
+  },
+  {
+    name: "Pro",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
+    period: "/mo",
+    description: {
+      monthly: "Per month, billed monthly",
+      annual: "Per month, billed annually",
+    },
+    cta: {
+      monthly: "Start free",
+      annual: "Start free",
+    },
     ctaVariant: "default" as const,
     highlight: true,
     highlights: [
-      "80 voice minutes + pay-as-you-go",
-      "50 alert SMS segments",
-      "2 GB knowledge storage",
+      {
+        label: "500 voice minutes included",
+        sublabel: "Then $0.18/min",
+      },
+      "200 alert SMS segments",
+      "10 GB knowledge base",
       "Priority email support",
     ],
   },
   {
     name: "Enterprise",
-    price: "Custom",
+    price: {
+      monthly: "Custom",
+      annual: "Custom",
+    },
     period: "",
-    description:
-      "For higher volume, multiple numbers, or custom deployment needs.",
-    cta: "Contact us",
+    description: {
+      monthly: "For higher volume",
+      annual: "For higher volume",
+    },
+    cta: {
+      monthly: "Contact us",
+      annual: "Contact us",
+    },
     ctaHref: enterpriseContactHref,
     ctaVariant: "outline" as const,
     highlight: false,
@@ -84,6 +157,7 @@ type ComparisonValue =
 type ComparisonRow = {
   feature: string
   free: ComparisonValue
+  starter?: ComparisonValue
   pro: ComparisonValue
   enterprise: ComparisonValue
 }
@@ -99,31 +173,36 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         feature: "Voice minutes",
-        free: { included: "10 included" },
-        pro: { included: "80 included", then: "then $0.18/min" },
+        free: { included: "30 included" },
+        starter: { included: "150 included", then: "then $0.20/min" },
+        pro: { included: "500 included", then: "then $0.18/min" },
         enterprise: "Custom",
       },
       {
         feature: "Outbound call attempts",
         free: { included: "2 included" },
-        pro: { included: "20 included", then: "then $0.02/attempt" },
+        starter: { included: "20 included", then: "then $0.02/attempt" },
+        pro: { included: "100 included", then: "then $0.02/attempt" },
         enterprise: "Custom",
       },
       {
         feature: "Alert SMS segments",
         free: { included: "10 included" },
-        pro: { included: "50 included", then: "then $0.02/segment" },
+        starter: { included: "50 included", then: "then $0.02/segment" },
+        pro: { included: "200 included", then: "then $0.02/segment" },
         enterprise: "Custom",
       },
       {
-        feature: "Knowledge storage",
+        feature: "Knowledge base",
         free: "100 MB",
-        pro: "2 GB",
+        starter: "2 GB",
+        pro: "10 GB",
         enterprise: "Custom",
       },
       {
         feature: "Phone numbers",
-        free: "1 dedicated",
+        free: "Upgrade to add",
+        starter: "1 dedicated",
         pro: "1 dedicated",
         enterprise: "Multiple",
       },
@@ -326,7 +405,7 @@ const comparisonGroups: ComparisonGroup[] = [
         enterprise: "Managed cloud",
       },
       {
-        feature: "Usage-based billing",
+        feature: "Usage-based overages",
         free: false,
         pro: true,
         enterprise: true,
@@ -334,6 +413,7 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         feature: "Support",
         free: "Community",
+        starter: "Email",
         pro: "Priority email",
         enterprise: "Dedicated implementation",
       },
@@ -387,27 +467,60 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
 }
 
 export function PricingSection() {
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("annual")
+
   return (
     <>
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
           <h1 className="animate-fade-up display-heading-compact delay-100">
-            AI receptionist{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              pricing
-            </span>
+            Plans for businesses of every size
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
-            Start free, then upgrade to Pro for $15/month plus transparent usage
-            for voice minutes, outbound calls, and SMS alerts.
+            Start free, then upgrade to Starter or Pro for more included
+            minutes and transparent overages.
           </p>
         </div>
       </section>
 
       {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-5xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
-        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+        <div className="animate-fade-up mb-8 flex justify-center delay-300">
+          <div
+            aria-label="Billing interval"
+            className="inline-flex rounded-full border border-border bg-input/30 p-1"
+            role="tablist"
+          >
+            {(["monthly", "annual"] as const).map((interval) => (
+              <Button
+                aria-selected={billingInterval === interval}
+                className={cn(
+                  "h-9 rounded-full px-4",
+                  billingInterval === interval
+                    ? "bg-background text-foreground shadow-sm hover:bg-background"
+                    : "border-transparent bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                key={interval}
+                onClick={() => setBillingInterval(interval)}
+                role="tab"
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {interval === "monthly" ? "Monthly" : "Annual"}
+                {interval === "annual" ? (
+                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    Save 20%
+                  </span>
+                ) : null}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 lg:grid-cols-4">
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -417,12 +530,6 @@ export function PricingSection() {
                   : "border-border/60"
               }`}
             >
-              {tier.highlight && (
-                <div className="absolute -top-3 left-8 rounded-full bg-foreground px-3 py-0.5 text-xs font-medium text-background">
-                  Most popular
-                </div>
-              )}
-
               {/* Tier header */}
               <div className="mb-6">
                 <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
@@ -430,7 +537,7 @@ export function PricingSection() {
                 </h3>
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
-                    {tier.price}
+                    {tier.price[billingInterval]}
                   </span>
                   {tier.period && (
                     <span className="text-sm text-muted-foreground">
@@ -439,7 +546,7 @@ export function PricingSection() {
                   )}
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  {tier.description}
+                  {tier.description[billingInterval]}
                 </p>
               </div>
 
@@ -457,24 +564,36 @@ export function PricingSection() {
                   tier.ctaHref ?? APP_SIGNUP_URL
                 }
                 data-ph-capture-attribute-plan={tier.name}
-                data-ph-capture-attribute-label={tier.cta}
+                data-ph-capture-attribute-billing-interval={billingInterval}
+                data-ph-capture-attribute-label={tier.cta[billingInterval]}
               >
-                {tier.cta}
+                {tier.cta[billingInterval]}
                 <ArrowRight className="ml-1 size-4" />
               </a>
 
               {/* Key highlights only */}
               <div className="flex-1 border-t border-border/50 pt-5">
                 <ul className="flex flex-col gap-2.5">
-                  {tier.highlights.map((item) => (
-                    <li key={item} className="flex items-start gap-2.5 text-sm">
-                      <Check
-                        className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
-                        aria-hidden="true"
-                      />
-                      <span>{item}</span>
-                    </li>
-                  ))}
+                  {tier.highlights.map((item) => {
+                    const label = typeof item === "string" ? item : item.label
+                    const sublabel = typeof item === "string" ? null : item.sublabel
+                    return (
+                      <li key={label} className="flex items-start gap-2.5 text-sm">
+                        <Check
+                          className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {label}
+                          {sublabel ? (
+                            <span className="block text-muted-foreground">
+                              {sublabel}
+                            </span>
+                          ) : null}
+                        </span>
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             </div>
@@ -489,8 +608,9 @@ export function PricingSection() {
             Compare plans in detail
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gets the core AI receptionist. Pro gives you higher
-            included usage and priority email support.
+            Every plan gives you access to all features. Starter and Pro give
+            you higher included usage with monthly resets and usage-based
+            overages.
           </p>
 
           <div
@@ -499,39 +619,40 @@ export function PricingSection() {
             aria-label="Plan comparison table"
             tabIndex={0}
           >
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <caption className="sr-only">
-                Feature comparison across Free, Pro, and Enterprise plans.
+                Feature comparison across Free, Starter, Pro, and Enterprise plans.
               </caption>
               {/* Sticky header */}
               <thead>
                 <tr className="border-b border-border/60">
                   <th
                     scope="col"
-                    className="pr-8 pb-4 text-left text-xs font-medium text-muted-foreground"
+                    className="py-4 pr-8 text-left text-xs font-medium text-muted-foreground"
                   >
                     Feature
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
                     Free
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
-                    <span className="inline-flex items-center gap-1.5">
-                      Pro
-                      <span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">
-                        Popular
-                      </span>
-                    </span>
+                    Starter
                   </th>
                   <th
                     scope="col"
-                    className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"
+                    className="w-[150px] rounded-t-xl bg-muted/60 px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
+                  >
+                    Pro
+                  </th>
+                  <th
+                    scope="col"
+                    className="w-[150px] px-4 py-4 text-center font-heading text-base font-medium tracking-[-0.03em] text-foreground"
                   >
                     Enterprise
                   </th>
@@ -544,7 +665,7 @@ export function PricingSection() {
                     {/* Category header row */}
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground"
                       >
                         {group.category}
@@ -566,11 +687,18 @@ export function PricingSection() {
                         {(
                           [
                             row.free,
+                            row.starter ?? row.pro,
                             row.pro,
                             row.enterprise,
                           ] as ComparisonValue[]
                         ).map((value, i) => (
-                          <td key={i} className="px-4 py-3 text-center">
+                          <td
+                            key={i}
+                            className={cn(
+                              "px-4 py-3 text-center",
+                              i === 2 && "bg-muted/60"
+                            )}
+                          >
                             <ComparisonCell value={value} />
                           </td>
                         ))}

@@ -20,6 +20,7 @@ import {
   billingAddonCatalog,
 } from "../../../../../packages/shared/src/billing";
 import type {
+  BillingInterval,
   BillingPlanSlug,
   BillingStatus,
 } from "../../../../../packages/shared/src/billing";
@@ -63,11 +64,19 @@ import {
   takeCheckoutSessionToken,
 } from "@/lib/checkout-session-token";
 import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
+import {
+  UpgradePlanDialog,
+  type HostedUpgradePlan,
+} from "./UpgradePlanDialog";
 
-type CheckoutReturnTarget = "pro" | "ai_sms";
+type CheckoutReturnTarget = "starter" | "pro" | "ai_sms";
 
 function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
-  return value === "pro" || value === "ai_sms" ? value : null;
+  return value === "starter" || value === "pro" || value === "ai_sms" ? value : null;
+}
+
+function parseBillingInterval(value: string | null): BillingInterval | null {
+  return value === "monthly" || value === "annual" ? value : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -410,6 +419,8 @@ function getPlanLabel(
       return t("billing.planLabels.selfHost");
     case "free_cloud":
       return t("billing.planLabels.freeCloudCard");
+    case "starter":
+      return t("billing.planLabels.starterCard");
     case "pro":
       return t("billing.planLabels.proCard");
     case "enterprise":
@@ -650,6 +661,11 @@ function PlanSection({
   const startCheckout = useObservedAction(api.billing.startCheckout);
   const openPortal = useObservedAction(api.billing.openPortal);
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
+  const [loadingCheckoutPlan, setLoadingCheckoutPlan] =
+    useState<HostedUpgradePlan | null>(null);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [upgradeBillingInterval, setUpgradeBillingInterval] =
+    useState<BillingInterval>("annual");
 
   const planLabel = getPlanLabel(status.plan, t);
   const displayedPlanMonthlyChargeCents = getDisplayedPlanMonthlyChargeCents(status);
@@ -690,21 +706,36 @@ function PlanSection({
     }),
   ];
 
-  const canUpgrade =
-    status.hasCheckoutAccess &&
-    status.availableCheckoutPlans.includes("pro") &&
-    status.plan === "free_cloud";
+  const upgradePlans: Array<"starter" | "pro"> =
+    status.hasCheckoutAccess && status.plan === "free_cloud"
+      ? status.availableCheckoutPlans.filter(
+          (plan): plan is "starter" | "pro" =>
+            (plan === "starter" || plan === "pro") &&
+            status.availableCheckoutIntervals[plan].length > 0,
+        )
+      : status.hasCheckoutAccess &&
+          status.plan === "starter" &&
+          status.availableCheckoutPlans.includes("pro") &&
+          status.availableCheckoutIntervals.pro.length > 0
+        ? ["pro"]
+        : [];
   const showManageSubscription = status.hasCustomerPortalAccess;
+  const canOpenUpgradeDialog = upgradePlans.length > 0;
 
-  async function handleUpgrade() {
+  async function handleUpgrade(
+    target: "starter" | "pro",
+    billingInterval: BillingInterval,
+  ) {
     setLoading("checkout");
+    setLoadingCheckoutPlan(target);
     try {
-      const result = await startCheckout({ businessId, target: "pro" });
+      const result = await startCheckout({ businessId, target, billingInterval });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
     } finally {
       setLoading(null);
+      setLoadingCheckoutPlan(null);
     }
   }
 
@@ -742,21 +773,18 @@ function PlanSection({
                   )}
                   {price !== null ? (
                     <span className="pb-1 text-base text-muted-foreground">
-                      {t("billing.currentPlan.monthlySuffix")}
+                      {status.billingInterval === "annual"
+                        ? t("billing.currentPlan.annualEffectiveSuffix")
+                        : t("billing.currentPlan.monthlySuffix")}
                     </span>
                   ) : null}
                 </div>
-                {status.plan === "pro" && (
+                {(status.plan === "starter" || status.plan === "pro") && (
                   <span className="text-base text-muted-foreground">
                     {t("billing.currentPlan.paygMonthlySuffix")}
                   </span>
                 )}
               </div>
-              {status.plan === "free_cloud" ? (
-                <span className="text-[15px] leading-6 text-muted-foreground">
-                  {t("billing.currentPlan.freeCloudNotice")}
-                </span>
-              ) : null}
             </div>
 
             <div className="flex flex-col gap-4">
@@ -773,19 +801,18 @@ function PlanSection({
               </div>
             </div>
           </div>
-          {(canUpgrade || showManageSubscription) && (
+          {(canOpenUpgradeDialog || showManageSubscription) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {canUpgrade && (
+              {canOpenUpgradeDialog && (
                 <Button
                   className="w-full sm:w-auto"
                   size="sm"
                   variant="outline"
-                  disabled={loading === "checkout"}
-                  onClick={() => void handleUpgrade()}
+                  loading={loading === "checkout"}
+                  loadingLabel={t("billing.actions.openingCheckout")}
+                  onClick={() => setUpgradeDialogOpen(true)}
                 >
-                  {loading === "checkout"
-                    ? t("billing.actions.openingCheckout")
-                    : t("billing.actions.upgradeToPro")}
+                  {t("billing.actions.upgradeToPro")}
                 </Button>
               )}
               {showManageSubscription && (
@@ -806,6 +833,27 @@ function PlanSection({
           )}
         </div>
       </BorderedItem>
+      <UpgradePlanDialog
+        availableCheckoutPlans={upgradePlans}
+        availableCheckoutIntervals={status.availableCheckoutIntervals}
+        billingInterval={upgradeBillingInterval}
+        currentPlan={status.plan}
+        loading={loading}
+        loadingPlan={loadingCheckoutPlan}
+        onBillingIntervalChange={setUpgradeBillingInterval}
+        onContactEnterprise={() => {
+          window.location.assign(
+            `mailto:hello@lobbystack.ai?subject=${encodeURIComponent(
+              t("billing.upgradeDialog.enterpriseSubject"),
+            )}`,
+          );
+        }}
+        onOpenChange={setUpgradeDialogOpen}
+        onStartCheckout={(target, billingInterval) =>
+          void handleUpgrade(target, billingInterval)}
+        open={upgradeDialogOpen}
+        t={t}
+      />
     </BillingSection>
   );
 }
@@ -1156,7 +1204,8 @@ function AddonsSection({
   const canPurchase = status.canPurchaseAiSmsAddon;
   const canUpgradeToPro =
     status.hasCheckoutAccess &&
-    status.availableCheckoutPlans.includes("pro");
+    status.availableCheckoutPlans.includes("pro") &&
+    status.availableCheckoutIntervals.pro.includes("monthly");
   const addonMonthlyPrice = formatCents(
     billingAddonCatalog.ai_sms.recurringMonthlyChargeCents,
     locale,
@@ -1185,7 +1234,11 @@ function AddonsSection({
 
     setLoading("pro");
     try {
-      const result = await startCheckout({ businessId, target: "pro" });
+      const result = await startCheckout({
+        businessId,
+        target: "pro",
+        billingInterval: "monthly",
+      });
       window.location.assign(result.url);
     } catch {
       toast.error(t("billing.toast.checkoutFailed"));
@@ -1221,12 +1274,12 @@ function AddonsSection({
       size="sm"
       variant="outline"
       aria-label={t("billing.addon.aiSmsName")}
-      disabled={loading !== null || !canPurchase}
+      disabled={(loading !== null && loading !== "ai_sms") || !canPurchase}
+      loading={loading === "ai_sms"}
+      loadingLabel={t("billing.actions.openingCheckout")}
       onClick={() => void handleAddAiSms()}
     >
-      {loading === "ai_sms"
-        ? t("billing.actions.openingCheckout")
-        : t("billing.addon.enable")}
+      {t("billing.addon.enable")}
     </Button>
   );
 
@@ -2560,6 +2613,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
   const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
+  const billingInterval = parseBillingInterval(searchParams.get("billing_interval"));
   const hasCheckoutSessionTokenParam = searchParams.has(
     CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   );
@@ -2570,7 +2624,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
     }
 
     const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
-    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
+    const refreshKey = `${String(props.businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}:${billingInterval ?? "unknown"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -2584,6 +2638,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
       businessId: props.businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
       ...(checkoutTarget ? { target: checkoutTarget } : {}),
+      ...(billingInterval ? { billingInterval } : {}),
     })
       .then((result) => {
         if (!result.synced) {
@@ -2595,6 +2650,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
         nextSearchParams.delete("checkout_target");
+        nextSearchParams.delete("billing_interval");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
@@ -2604,6 +2660,7 @@ export function SettingsBillingPage(props: SettingsBillingPageProps) {
   }, [
     checkoutStatus,
     checkoutTarget,
+    billingInterval,
     hasCheckoutSessionTokenParam,
     props.businessId,
     refreshCheckoutStatus,

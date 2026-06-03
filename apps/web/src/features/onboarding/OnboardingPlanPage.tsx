@@ -20,11 +20,16 @@ import {
 } from "@/lib/checkout-session-token";
 import { cn } from "@/lib/utils";
 import { useObservedAction, useObservedMutation } from "@/lib/observed-convex";
+import type { BillingInterval } from "../../../../../packages/shared/src/billing";
 
-type CheckoutReturnTarget = "pro" | "ai_sms";
+type CheckoutReturnTarget = "starter" | "pro" | "ai_sms";
 
 function parseCheckoutReturnTarget(value: string | null): CheckoutReturnTarget | null {
-  return value === "pro" || value === "ai_sms" ? value : null;
+  return value === "starter" || value === "pro" || value === "ai_sms" ? value : null;
+}
+
+function parseBillingInterval(value: string | null): BillingInterval | null {
+  return value === "monthly" || value === "annual" ? value : null;
 }
 
 type OnboardingPlanPageProps = {
@@ -33,7 +38,8 @@ type OnboardingPlanPageProps = {
   progressNavigableUntil?: number;
 };
 
-type PlanSlug = "free_cloud" | "pro" | "enterprise";
+type PlanSlug = "free_cloud" | "starter" | "pro" | "enterprise";
+const allBillingIntervals: Array<BillingInterval> = ["monthly", "annual"];
 
 type TierConfig = {
   slug: PlanSlug;
@@ -55,6 +61,7 @@ type ComparisonValue =
 type ComparisonRow = {
   key: string;
   free: ComparisonValue;
+  starter?: ComparisonValue;
   pro: ComparisonValue;
   enterprise: ComparisonValue;
 };
@@ -70,6 +77,12 @@ const tierConfigs: TierConfig[] = [
     ctaVariant: "outline",
     highlight: false,
     highlightKeys: ["voiceMinutes", "phoneNumber", "bookingContacts", "support"],
+  },
+  {
+    slug: "starter",
+    ctaVariant: "outline",
+    highlight: false,
+    highlightKeys: ["voiceMinutes", "phoneNumber", "knowledgeStorage", "support"],
   },
   {
     slug: "pro",
@@ -92,30 +105,35 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         key: "voiceMinutes",
         free: { includedKey: "usage.voiceMinutes.freeIncluded" },
+        starter: { includedKey: "usage.voiceMinutes.starterIncluded", thenKey: "usage.voiceMinutes.starterThen" },
         pro: { includedKey: "usage.voiceMinutes.proIncluded", thenKey: "usage.voiceMinutes.proThen" },
         enterprise: { key: "common.custom" },
       },
       {
         key: "outboundCalls",
         free: { includedKey: "usage.outboundCalls.freeIncluded" },
+        starter: { includedKey: "usage.outboundCalls.starterIncluded", thenKey: "usage.outboundCalls.starterThen" },
         pro: { includedKey: "usage.outboundCalls.proIncluded", thenKey: "usage.outboundCalls.proThen" },
         enterprise: { key: "common.custom" },
       },
       {
         key: "alertSms",
         free: { includedKey: "usage.alertSms.freeIncluded" },
+        starter: { includedKey: "usage.alertSms.starterIncluded", thenKey: "usage.alertSms.starterThen" },
         pro: { includedKey: "usage.alertSms.proIncluded", thenKey: "usage.alertSms.proThen" },
         enterprise: { key: "common.custom" },
       },
       {
         key: "knowledgeStorage",
         free: { key: "usage.knowledgeStorage.free" },
+        starter: { key: "usage.knowledgeStorage.starter" },
         pro: { key: "usage.knowledgeStorage.pro" },
         enterprise: { key: "common.custom" },
       },
       {
         key: "phoneNumbers",
         free: { key: "usage.phoneNumbers.free" },
+        starter: { key: "usage.phoneNumbers.starter" },
         pro: { key: "usage.phoneNumbers.pro" },
         enterprise: { key: "common.multiple" },
       },
@@ -268,6 +286,10 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         key: "aiSms",
         free: false,
+        starter: {
+          includedKey: "notifications.aiSms.proIncluded",
+          thenKey: "notifications.aiSms.proThen",
+        },
         pro: {
           includedKey: "notifications.aiSms.proIncluded",
           thenKey: "notifications.aiSms.proThen",
@@ -335,6 +357,7 @@ const comparisonGroups: ComparisonGroup[] = [
       {
         key: "support",
         free: { key: "deployment.support.community" },
+        starter: { key: "deployment.support.email" },
         pro: { key: "deployment.support.priority" },
         enterprise: { key: "deployment.support.dedicated" },
       },
@@ -394,13 +417,27 @@ export function OnboardingPlanPage({
   const checkoutRefreshKeyRef = useRef<string | null>(null);
   const checkoutStatus = searchParams.get("checkout");
   const checkoutTarget = parseCheckoutReturnTarget(searchParams.get("checkout_target"));
+  const billingInterval = parseBillingInterval(searchParams.get("billing_interval"));
   const hasCheckoutSessionTokenParam = searchParams.has(
     CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM,
   );
 
-  const proAvailable = status?.availableCheckoutPlans
-    ? status.availableCheckoutPlans.includes("pro")
-    : true;
+  const isPlanAvailable = (plan: PlanSlug): boolean => {
+    if (plan === "free_cloud" || plan === "enterprise") {
+      return true;
+    }
+    return status
+      ? status.availableCheckoutPlans.includes(plan) &&
+          status.availableCheckoutIntervals[plan].length > 0
+      : true;
+  };
+
+  const getCheckoutIntervalsForPlan = (plan: PlanSlug): Array<BillingInterval> => {
+    if (plan !== "starter" && plan !== "pro") {
+      return [];
+    }
+    return status?.availableCheckoutIntervals[plan] ?? allBillingIntervals;
+  };
 
   useEffect(() => {
     if (checkoutStatus !== "success") {
@@ -408,7 +445,7 @@ export function OnboardingPlanPage({
     }
 
     const checkoutSessionToken = takeCheckoutSessionToken(searchParams);
-    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}`;
+    const refreshKey = `${String(businessId)}:${checkoutSessionToken ?? "success"}:${checkoutTarget ?? "unknown"}:${billingInterval ?? "unknown"}`;
     if (checkoutRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -422,6 +459,7 @@ export function OnboardingPlanPage({
       businessId,
       ...(checkoutSessionToken ? { customerSessionToken: checkoutSessionToken } : {}),
       ...(checkoutTarget ? { target: checkoutTarget } : {}),
+      ...(billingInterval ? { billingInterval } : {}),
     })
       .then((result) => {
         if (!result.synced) {
@@ -433,6 +471,7 @@ export function OnboardingPlanPage({
         const nextSearchParams = new URLSearchParams(searchParams);
         nextSearchParams.delete("checkout");
         nextSearchParams.delete("checkout_target");
+        nextSearchParams.delete("billing_interval");
         nextSearchParams.delete(CHECKOUT_CUSTOMER_SESSION_TOKEN_PARAM);
         setSearchParams(nextSearchParams, { replace: true });
       })
@@ -443,13 +482,17 @@ export function OnboardingPlanPage({
     businessId,
     checkoutStatus,
     checkoutTarget,
+    billingInterval,
     hasCheckoutSessionTokenParam,
     refreshCheckoutStatus,
     searchParams,
     setSearchParams,
   ]);
 
-  async function handlePlanAction(plan: PlanSlug): Promise<void> {
+  async function handlePlanAction(
+    plan: PlanSlug,
+    billingInterval: BillingInterval = "monthly",
+  ): Promise<void> {
     if (submittingPlan) return;
     setSubmittingPlan(plan);
     setError(null);
@@ -465,14 +508,16 @@ export function OnboardingPlanPage({
         return;
       }
 
-      if (plan === "pro") {
+      if (plan === "starter" || plan === "pro") {
         captureAnalyticsEvent("web.onboarding.plan_checkout_started", {
           businessId: String(businessId),
-          plan: "pro",
+          plan,
+          billingInterval,
         });
         const result = await startCheckout({
           businessId,
-          target: "pro",
+          target: plan,
+          billingInterval,
           source: "onboarding",
         });
         if (result.url) {
@@ -502,11 +547,13 @@ export function OnboardingPlanPage({
       width="wide"
     >
       <div className="flex flex-col gap-12">
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-4">
           {tierConfigs.map((tier) => {
             const isSubmitting = submittingPlan === tier.slug;
-            const isUnavailable = tier.slug === "pro" && !proAvailable;
+            const isUnavailable = !isPlanAvailable(tier.slug);
             const period = t(`plan.tiers.${tier.slug}.period`);
+            const isPaidPlan = tier.slug === "starter" || tier.slug === "pro";
+            const checkoutIntervals = getCheckoutIntervalsForPlan(tier.slug);
 
             return (
               <section
@@ -541,29 +588,57 @@ export function OnboardingPlanPage({
                   </p>
                 </div>
 
-                <Button
-                  className="mb-6 w-full rounded-full"
-                  disabled={Boolean(submittingPlan) || isUnavailable}
-                  onClick={() => void handlePlanAction(tier.slug)}
-                  type="button"
-                  variant={tier.ctaVariant}
-                >
-                  {isSubmitting ? (
-                    <LoaderCircle className="size-4 animate-spin" />
+                <div className="mb-6 flex flex-col gap-2">
+                  {isPaidPlan ? (
+                    checkoutIntervals.map((billingInterval) => (
+                      <Button
+                        className="w-full rounded-full"
+                        disabled={Boolean(submittingPlan) || isUnavailable}
+                        key={billingInterval}
+                        onClick={() => void handlePlanAction(tier.slug, billingInterval)}
+                        type="button"
+                        variant={
+                          billingInterval === "annual" ? tier.ctaVariant : "outline"
+                        }
+                      >
+                        {isSubmitting ? (
+                          <LoaderCircle className="size-4 animate-spin" />
+                        ) : (
+                          <>
+                            {t(`plan.tiers.${tier.slug}.cta.${billingInterval}`)}
+                            <ArrowRight className="ml-1 size-4" />
+                          </>
+                        )}
+                      </Button>
+                    ))
                   ) : (
-                    <>
-                      {t(`plan.tiers.${tier.slug}.cta`)}
-                      <ArrowRight className="ml-1 size-4" />
-                    </>
+                    <Button
+                      className="w-full rounded-full"
+                      disabled={Boolean(submittingPlan) || isUnavailable}
+                      onClick={() => void handlePlanAction(tier.slug)}
+                      type="button"
+                      variant={tier.ctaVariant}
+                    >
+                      {isSubmitting ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <>
+                          {t(`plan.tiers.${tier.slug}.cta`)}
+                          <ArrowRight className="ml-1 size-4" />
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                </div>
 
                 <div className="flex-1 border-t border-border/50 pt-5">
                   <ul className="space-y-2.5">
                     {tier.highlightKeys.map((item) => (
                       <li className="flex items-start gap-2.5 text-sm" key={item}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-foreground/60" />
-                        <span>{t(`plan.tiers.${tier.slug}.highlights.${item}`)}</span>
+                        <span className="whitespace-pre-line">
+                          {t(`plan.tiers.${tier.slug}.highlights.${item}`)}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -590,10 +665,13 @@ export function OnboardingPlanPage({
                   <th className="pr-8 pb-4 text-left text-xs font-medium text-muted-foreground">
                     {t("plan.featureHeader")}
                   </th>
-                  <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
+                  <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
                     {t("plan.tiers.free_cloud.name")}
                   </th>
-                  <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
+                  <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
+                    {t("plan.tiers.starter.name")}
+                  </th>
+                  <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       {t("plan.tiers.pro.name")}
                       <span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">
@@ -601,7 +679,7 @@ export function OnboardingPlanPage({
                       </span>
                     </span>
                   </th>
-                  <th className="w-[160px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
+                  <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">
                     {t("plan.tiers.enterprise.name")}
                   </th>
                 </tr>
@@ -613,7 +691,7 @@ export function OnboardingPlanPage({
                     <tr>
                       <td
                         className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                        colSpan={4}
+                        colSpan={5}
                       >
                         {t(`plan.comparison.groups.${group.key}`)}
                       </td>
@@ -624,7 +702,7 @@ export function OnboardingPlanPage({
                         <td className="py-3 pr-8 text-foreground">
                           {t(`plan.comparison.features.${row.key}`)}
                         </td>
-                        {([row.free, row.pro, row.enterprise] as ComparisonValue[]).map(
+                        {([row.free, row.starter ?? row.pro, row.pro, row.enterprise] as ComparisonValue[]).map(
                           (value, index) => (
                             <td className="px-4 py-3 text-center" key={index}>
                               <ComparisonCell t={t} value={value} />

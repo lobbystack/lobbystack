@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -140,15 +140,14 @@ export function SignupForm({
             </div>
           ) : null}
 
-          <Button className="mt-2 h-11 w-full" disabled={isSubmitting || isSubmitDisabled} type="submit">
-            {isSubmitting ? (
-              <>
-                <LoaderCircle className="size-4 animate-spin" />
-                <span className="sr-only">{t("signup.submitting")}</span>
-              </>
-            ) : (
-              t("signup.submit")
-            )}
+          <Button
+            className="mt-2 h-11 w-full"
+            disabled={isSubmitDisabled}
+            loading={isSubmitting}
+            loadingLabel={t("signup.submitting")}
+            type="submit"
+          >
+            {t("signup.submit")}
           </Button>
         </FieldGroup>
       </form>

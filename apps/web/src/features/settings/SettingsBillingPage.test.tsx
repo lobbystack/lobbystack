@@ -110,18 +110,24 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     plan: "free_cloud",
     billingKey: "billing_key",
     subscriptionState: "inactive",
+    billingInterval: null,
     activeAddons: [],
     aiSmsEnabled: false,
     aiSmsReady: false,
     overagesBillable: false,
     monthlyChargeCents: 0,
+    billingPeriodChargeCents: 0,
     billingContactEmail: null,
     billingContactName: null,
     includedBusinessNumbers: 0,
     hasBillingManagementAccess: true,
     hasCustomerPortalAccess: false,
     hasCheckoutAccess: true,
-    availableCheckoutPlans: ["pro"],
+    availableCheckoutPlans: ["starter", "pro"],
+    availableCheckoutIntervals: {
+      starter: ["monthly", "annual"],
+      pro: ["monthly", "annual"],
+    },
     canPurchaseAiSmsAddon: false,
     usage: {
       periodKey: "2026-04",
@@ -132,10 +138,10 @@ function buildStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
       alertSmsSegmentsUsed: 0,
       outboundCallAttemptsUsed: 0,
       aiSmsSegmentsUsed: 0,
-      voiceSecondsIncluded: 600,
+      voiceSecondsIncluded: 1_800,
       alertSmsSegmentsIncluded: 10,
       outboundCallAttemptsIncluded: 2,
-      voiceSecondsRemaining: 600,
+      voiceSecondsRemaining: 1_800,
       alertSmsSegmentsRemaining: 10,
       outboundCallAttemptsRemaining: 2,
       voiceBlocked: false,
@@ -449,6 +455,203 @@ describe("SettingsBillingPage AI SMS add-on", () => {
     });
   });
 
+  it("opens the upgrade pricing dialog from the single plan action", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    const upgradeButtons = screen.getAllByRole("button", {
+      name: "billing.actions.upgradeToPro",
+    });
+    expect(upgradeButtons).toHaveLength(1);
+
+    await user.click(upgradeButtons[0]!);
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.title")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.description")).toBeTruthy();
+    expect(
+      screen.getByText("billing.upgradeDialog.plans.free_cloud.name"),
+    ).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.plans.starter.name")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.plans.pro.name")).toBeTruthy();
+    expect(
+      screen.getByText("billing.upgradeDialog.plans.enterprise.name"),
+    ).toBeTruthy();
+    expect(screen.getByText("$24")).toBeTruthy();
+    expect(screen.getByText("$80")).toBeTruthy();
+
+    expect(
+      screen
+        .getByRole("button", {
+          name: "billing.upgradeDialog.actions.currentPlan",
+        })
+        .getAttribute("disabled"),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", {
+          name: "billing.upgradeDialog.actions.enterprise",
+        })
+        .getAttribute("disabled"),
+    ).toBeNull();
+  });
+
+  it("updates dialog pricing when switching from annual to monthly", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    expect(screen.getByText("$24")).toBeTruthy();
+    expect(screen.getByText("$80")).toBeTruthy();
+    expect(screen.getByText("billing.upgradeDialog.annualDiscount")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("tab", {
+        name: "billing.upgradeDialog.billingIntervals.monthly",
+      }),
+    );
+
+    expect(screen.getByText("$30")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
+    expect(screen.queryByText("$24")).toBeNull();
+    expect(screen.queryByText("$80")).toBeNull();
+  });
+
+  it("only renders configured checkout intervals in the upgrade dialog", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/starter-monthly",
+    });
+
+    renderBillingPage({
+      status: buildStatus({
+        availableCheckoutIntervals: {
+          starter: ["monthly"],
+          pro: ["monthly"],
+        },
+      }),
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+
+    expect(screen.getByText("$30")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
+    expect(screen.queryByText("$24")).toBeNull();
+    expect(screen.queryByText("$80")).toBeNull();
+    expect(
+      screen.queryByRole("tab", {
+        name: /billing\.upgradeDialog\.billingIntervals\.annual/,
+      }),
+    ).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.starter",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "starter",
+      billingInterval: "monthly",
+    });
+  });
+
+  it("starts Starter checkout with the selected billing interval", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/starter-annual",
+    });
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.starter",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "starter",
+      billingInterval: "annual",
+    });
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "https://example.com/starter-annual",
+    );
+  });
+
+  it("starts Pro checkout with the selected billing interval", async () => {
+    const user = userEvent.setup();
+    startCheckoutMock.mockResolvedValue({
+      url: "https://example.com/pro-monthly",
+    });
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("tab", {
+        name: "billing.upgradeDialog.billingIntervals.monthly",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.pro",
+      }),
+    );
+
+    expect(startCheckoutMock).toHaveBeenCalledWith({
+      businessId,
+      target: "pro",
+      billingInterval: "monthly",
+    });
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "https://example.com/pro-monthly",
+    );
+  });
+
+  it("opens a contact email for Enterprise without starting checkout", async () => {
+    const user = userEvent.setup();
+
+    renderBillingPage({ status: buildStatus() });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.actions.upgradeToPro",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "billing.upgradeDialog.actions.enterprise",
+      }),
+    );
+
+    expect(startCheckoutMock).not.toHaveBeenCalled();
+    expect(window.location.assign).toHaveBeenCalledWith(
+      "mailto:hello@lobbystack.ai?subject=billing.upgradeDialog.enterpriseSubject",
+    );
+  });
+
   it("shows a tooltip for the disabled enable button on the free plan", async () => {
     const user = userEvent.setup();
 
@@ -657,20 +860,21 @@ describe("SettingsBillingPage AI SMS add-on", () => {
       status: buildStatus({
         plan: "pro",
         subscriptionState: "active",
-        monthlyChargeCents: 1_500,
+        monthlyChargeCents: 10_000,
+        billingPeriodChargeCents: 10_000,
         overagesBillable: true,
         hasCustomerPortalAccess: true,
         billingContactEmail: "raphael@example.com",
       }),
     });
 
-    expect(screen.getByText("$15")).toBeTruthy();
+    expect(screen.getByText("$100")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.paygMonthlySuffix")).toBeTruthy();
     expect(screen.getByText("billing.currentPlan.includedTitle")).toBeTruthy();
-    expect(screen.getByText("80 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
-    expect(screen.getByText("20 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
-    expect(screen.getByText("50 billing.currentPlan.includedSmsLabel")).toBeTruthy();
-    expect(screen.getByText("2 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
+    expect(screen.getByText("500 billing.currentPlan.includedVoiceLabel")).toBeTruthy();
+    expect(screen.getByText("100 billing.currentPlan.includedOutboundLabel")).toBeTruthy();
+    expect(screen.getByText("200 billing.currentPlan.includedSmsLabel")).toBeTruthy();
+    expect(screen.getByText("10 GB billing.currentPlan.includedStorageLabel")).toBeTruthy();
     expect(screen.getByRole("button", { name: "billing.actions.manageSubscription" })).toBeTruthy();
   });
 

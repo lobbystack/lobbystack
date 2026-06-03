@@ -875,7 +875,7 @@ async function assertWebsiteStorageCapacity(
   },
 ): Promise<void> {
   const billingSnapshot: {
-    plan: "self_host" | "free_cloud" | "pro" | "enterprise";
+    plan: "self_host" | "free_cloud" | "starter" | "pro" | "enterprise";
   } = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
     businessId: args.businessId,
   });

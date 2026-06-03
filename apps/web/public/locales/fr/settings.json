@@ -27,6 +27,8 @@
       "selfHost": "Auto-hébergé",
       "freeCloud": "Gratuit",
       "freeCloudCard": "Forfait gratuit",
+      "starter": "Starter",
+      "starterCard": "Forfait Starter",
       "pro": "Pro",
       "proCard": "Forfait Pro",
       "enterprise": "Entreprise",
@@ -42,6 +44,14 @@
     },
     "actions": {
       "upgradeToPro": "Passer à Pro",
+      "starter": {
+        "monthly": "Starter mensuel",
+        "annual": "Starter annuel"
+      },
+      "pro": {
+        "monthly": "Pro mensuel",
+        "annual": "Pro annuel"
+      },
       "unlockAiSms": "Activer les SMS IA",
       "manageBilling": "Gérer la facturation",
       "manageSubscription": "Gérer l'abonnement",
@@ -65,9 +75,9 @@
       "billingPeriod": "La période en cours se réinitialise le {{resetAt}}",
       "selfHostNotice": "Les espaces auto-hébergés utilisent vos propres fournisseurs. Aucune limite d'utilisation ni facturation ne s'applique.",
       "enterpriseNotice": "L'utilisation et les limites sont régies par votre entente entreprise.",
-      "freeCloudNotice": "L'utilisation est plafonnée au volume inclus chaque mois. Passez à Pro pour la facturation des dépassements et des limites plus élevées.",
       "proNotice": "L'utilisation incluse se réinitialise chaque mois. L'utilisation supplémentaire est facturée au tarif de dépassement.",
       "monthlySuffix": "/mois",
+      "annualEffectiveSuffix": "/mois, facturé annuellement",
       "paygMonthlySuffix": "+ utilisation à l'usage",
       "includedTitle": "Ce qui est inclus :",
       "includedStorageLabel": "stockage",
@@ -78,6 +88,78 @@
       "includedVoiceUnlimited": "Minutes vocales illimitées",
       "includedSmsUnlimited": "Alertes SMS illimitées",
       "includedOutboundUnlimited": "Appels sortants illimités"
+    },
+    "upgradeDialog": {
+      "title": "Changer de forfait",
+      "description": "Choisissez le forfait qui convient le mieux à votre équipe.",
+      "enterpriseSubject": "Forfait Entreprise",
+      "billingIntervalLabel": "Intervalle de facturation",
+      "annualDiscount": "Économisez 20 %",
+      "billingIntervals": {
+        "monthly": "Mensuel",
+        "annual": "Annuel"
+      },
+      "actions": {
+        "currentPlan": "Forfait actuel",
+        "starter": "Choisir Starter",
+        "pro": "Passer à Pro",
+        "enterprise": "Nous contacter"
+      },
+      "plans": {
+        "free_cloud": {
+          "name": "Gratuit",
+          "description": {
+            "monthly": "Par mois, facturé mensuellement",
+            "annual": "Par mois, facturé annuellement"
+          },
+          "highlights": {
+            "voiceMinutes": "30 minutes vocales incluses",
+            "allFeatures": "Toutes les fonctionnalités",
+            "bookingContacts": "1 numéro d'entreprise dédié",
+            "support": "Soutien communautaire"
+          }
+        },
+        "starter": {
+          "name": "Starter",
+          "description": {
+            "monthly": "Par mois, facturé mensuellement",
+            "annual": "Par mois, facturé annuellement"
+          },
+          "highlights": {
+            "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
+            "phoneNumber": "50 segments SMS d'alerte",
+            "knowledgeBase": "Base de connaissances de 2 Go",
+            "overages": "Dépassements vocaux à 0,20 $/min",
+            "support": "Soutien par courriel"
+          }
+        },
+        "pro": {
+          "name": "Pro",
+          "description": {
+            "monthly": "Par mois, facturé mensuellement",
+            "annual": "Par mois, facturé annuellement"
+          },
+          "highlights": {
+            "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
+            "alertSms": "200 segments SMS d'alerte",
+            "knowledgeBase": "Base de connaissances de 10 Go",
+            "support": "Soutien prioritaire par courriel"
+          }
+        },
+        "enterprise": {
+          "name": "Entreprise",
+          "description": {
+            "monthly": "Pour un volume plus élevé",
+            "annual": "Pour un volume plus élevé"
+          },
+          "highlights": {
+            "phoneNumbers": "Plusieurs numéros dédiés",
+            "routing": "Routage multi-emplacements",
+            "fallbackRules": "Règles de repli personnalisées",
+            "support": "Accompagnement dédié à l'implantation"
+          }
+        }
+      }
     },
     "usage": {
       "title": "Utilisation incluse",
@@ -122,10 +204,12 @@
       "title": "Offres hébergées",
       "description": "Les SMS d'alerte utilisent l'expéditeur partagé de Noncia en cloud hébergé. Les SMS IA restent sur le numéro du client.",
       "selfHostDescription": "Gratuit pour toujours. Produit complet, apportez vos clés IA, votre compte Twilio, vos numéros et votre conformité.",
-      "freeCloudDescription": "0 $ par mois. Aucun dépassement et aucun SMS IA.",
+      "freeCloudDescription": "0 $ par mois. Inclut 30 minutes vocales avec plafond mensuel strict.",
       "freeCloudLimits": "Inclut {{voiceMinutes}} minutes vocales, {{alertSmsSegments}} segments SMS d'alerte et {{outboundAttempts}} tentatives d'appel sortant par mois.",
-      "proDescription": "{{amount}} par mois avec un numéro d'entreprise inclus et des dépassements hébergés après le forfait inclus.",
-      "proOverages": "Dépassements Pro : {{voiceRate}} par minute vocale supplémentaire, {{alertSmsRate}} par segment SMS d'alerte supplémentaire et {{outboundAttemptRate}} par tentative d'appel sortant supplémentaire.",
+      "starterDescription": "30 $/mois ou 288 $/an. Inclut 150 minutes vocales par mois et un numéro d'entreprise.",
+      "starterOverages": "Dépassements Starter : 0,20 $ par minute vocale supplémentaire, 0,02 $ par segment SMS d'alerte et 0,02 $ par tentative d'appel sortant.",
+      "proDescription": "100 $/mois ou 960 $/an. Inclut 500 minutes vocales par mois et un numéro d'entreprise.",
+      "proOverages": "Dépassements Pro : 0,18 $ par minute vocale supplémentaire, {{alertSmsRate}} par segment SMS d'alerte supplémentaire et {{outboundAttemptRate}} par tentative d'appel sortant supplémentaire.",
       "aiSmsAddon": "Option SMS IA : {{monthly}} par mois + {{setup}} de mise en service. Les SMS IA sont facturés à {{usage}} par segment."
     },
     "addon": {

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { isValidEmailAddress } from "@/lib/auth-validation";
@@ -104,15 +104,13 @@ export function LoginForm({
             </div>
           ) : null}
 
-          <Button className="mt-2 h-11 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
-              <>
-                <LoaderCircle className="size-4 animate-spin" />
-                <span className="sr-only">{t("login.submitting")}</span>
-              </>
-            ) : (
-              t("login.submit")
-            )}
+          <Button
+            className="mt-2 h-11 w-full"
+            loading={isSubmitting}
+            loadingLabel={t("login.submitting")}
+            type="submit"
+          >
+            {t("login.submit")}
           </Button>
         </FieldGroup>
       </form>

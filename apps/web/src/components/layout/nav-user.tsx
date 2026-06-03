@@ -116,6 +116,7 @@ function LogOutAnimatedIcon({ controls }: { controls: IconAnimationControls }) {
 
 type NavUserProps = {
   onSignOut: () => void;
+  onUpgradeToPro?: () => void;
   showUpgradeToPro?: boolean;
   user: User;
   isLoading?: boolean;
@@ -123,6 +124,7 @@ type NavUserProps = {
 
 export function NavUser({
   onSignOut,
+  onUpgradeToPro,
   showUpgradeToPro = false,
   user,
   isLoading = false,
@@ -182,7 +184,13 @@ export function NavUser({
                     onFocus={() => void crownControls.start("animate")}
                     onMouseEnter={() => void crownControls.start("animate")}
                     onMouseLeave={() => void crownControls.start("normal")}
-                    render={<Link to="/settings/plan" />}
+                    {...(onUpgradeToPro
+                      ? {
+                          onClick: onUpgradeToPro,
+                        }
+                      : {
+                          render: <Link to="/settings/plan" />,
+                        })}
                   >
                     <CrownAnimatedIcon controls={crownControls} />
                     {t("sidebar.upgradeToPro")}

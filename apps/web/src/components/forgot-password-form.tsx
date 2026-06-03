@@ -3,7 +3,6 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -107,21 +106,17 @@ export function ForgotPasswordForm({
           ) : null}
 
           <div className="mt-2 flex flex-col gap-3">
-            <Button className="h-11 w-full" disabled={isSubmitting} type="submit">
-              {isSubmitting ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  <span className="sr-only">
-                    {isVerifyStep
-                      ? t("forgotPassword.verifySubmitting")
-                      : t("forgotPassword.submitting")}
-                  </span>
-                </>
-              ) : isVerifyStep ? (
-                t("forgotPassword.verifySubmit")
-              ) : (
-                t("forgotPassword.submit")
-              )}
+            <Button
+              className="h-11 w-full"
+              loading={isSubmitting}
+              loadingLabel={
+                isVerifyStep
+                  ? t("forgotPassword.verifySubmitting")
+                  : t("forgotPassword.submitting")
+              }
+              type="submit"
+            >
+              {isVerifyStep ? t("forgotPassword.verifySubmit") : t("forgotPassword.submit")}
             </Button>
 
             {isVerifyStep ? (

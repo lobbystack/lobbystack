@@ -31,6 +31,7 @@ import type { SidebarIconProps } from "@/components/layout/sidebar-types";
 
 type AppSidebarProps = {
   businessName?: string;
+  onUpgradeToPro?: () => void;
   onSignOut: () => void;
   operatorAvatar?: string;
   operatorEmail?: string;
@@ -78,6 +79,7 @@ const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
 export function AppSidebar({
   businessName,
+  onUpgradeToPro,
   onSignOut,
   operatorAvatar,
   operatorEmail,
@@ -184,6 +186,7 @@ export function AppSidebar({
         <NavUser
           isLoading={isLoading}
           onSignOut={onSignOut}
+          {...(onUpgradeToPro ? { onUpgradeToPro } : {})}
           showUpgradeToPro={showUpgradeToPro}
           user={sidebarData.user}
         />

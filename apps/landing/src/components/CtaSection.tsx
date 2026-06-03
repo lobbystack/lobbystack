@@ -8,14 +8,13 @@ export function CtaSection() {
     <section className="flex min-h-[360px] items-center bg-background py-16 md:min-h-[440px] md:py-20 lg:min-h-[500px]">
       <div className="mx-auto max-w-3xl px-6 text-center">
         <h2 className="section-heading">
-          Never miss a ready-to-book{" "}
+          Never miss another <span className="whitespace-nowrap">ready-to-book</span>{" "}
           <span className="underline decoration-2 underline-offset-4">
             caller
           </span>
         </h2>
         <p className="section-intro mx-auto max-w-[56ch]">
-          Start with 10 included voice minutes on Free, then upgrade to Pro for
-          80 included voice minutes.
+          Get started for free with 30 minutes included per month.
         </p>
         <div className="mt-8">
           <a

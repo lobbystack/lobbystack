@@ -2,14 +2,14 @@ import type { FaqItem } from "@/lib/seo"
 
 export const pricingFaqs: FaqItem[] = [
   {
-    question: "How does LobbyStack Pro pricing work?",
+    question: "How does LobbyStack paid pricing work?",
     answer:
-      "Pro is $15/month and includes 80 voice minutes, 20 outbound call attempts, and 50 alert SMS segments each month. After that, usage is billed at $0.18/minute for voice, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.",
+      "Starter is $30/month or $288/year and includes 150 voice minutes each month. Pro is $100/month or $960/year and includes 500 voice minutes each month. Starter voice overage is $0.20/minute, Pro voice overage is $0.18/minute, and alert SMS/outbound call overages are $0.02 per unit.",
   },
   {
     question: "Do spam calls or very short calls count toward usage?",
     answer:
-      "No. LobbyStack excludes spam calls and calls under 10 seconds from usage, so wrong numbers, robocalls, instant hang-ups, and pocket dials do not count against your included voice minutes or Pro overages.",
+      "No. LobbyStack excludes spam calls and calls under 10 seconds from usage, so wrong numbers, robocalls, instant hang-ups, and pocket dials do not count against your included voice minutes or paid-plan overages.",
   },
   {
     question: "Can I switch plans or cancel anytime?",
@@ -19,7 +19,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "Can I use LobbyStack for free?",
     answer:
-      "Yes. The Free tier lets you try LobbyStack without a monthly subscription. It includes 10 voice minutes, 2 outbound call attempts, 10 alert SMS segments, appointment booking, summaries, and call history.",
+      "Yes. The Free tier lets you try LobbyStack without a monthly subscription. It includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, appointment booking, summaries, and call history.",
   },
   {
     question: "What AI receptionist features are available today?",

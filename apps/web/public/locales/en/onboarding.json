@@ -140,7 +140,7 @@
     "popular": "Popular",
     "enterpriseSubject": "Enterprise plan",
     "compareTitle": "Compare plans in detail",
-    "compareDescription": "Every plan gets all features. Pro gives you higher usage and access to the AI SMS add-on.",
+    "compareDescription": "Every plan gets all core features. Starter and Pro add higher usage with monthly resets and pay-as-you-go overages.",
     "featureHeader": "Feature",
     "tiers": {
       "free_cloud": {
@@ -150,22 +150,41 @@
         "description": "Try LobbyStack with enough usage to see it work.",
         "cta": "Start free",
         "highlights": {
-          "voiceMinutes": "10 voice minutes included",
-          "phoneNumber": "Dedicated phone number",
-          "bookingContacts": "Unlimited booking and contacts",
+          "voiceMinutes": "30 voice minutes included",
+          "phoneNumber": "1 dedicated business number",
+          "bookingContacts": "All features",
           "support": "Community support"
+        }
+      },
+      "starter": {
+        "name": "Starter",
+        "price": "$30",
+        "period": "/mo",
+        "description": "$24/mo effective when billed annually. Includes 150 voice minutes that reset monthly.",
+        "cta": {
+          "monthly": "Start monthly",
+          "annual": "Start annual"
+        },
+        "highlights": {
+          "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
+          "phoneNumber": "50 alert SMS segments",
+          "knowledgeStorage": "2 GB knowledge base",
+          "support": "Email support"
         }
       },
       "pro": {
         "name": "Pro",
-        "price": "$15",
+        "price": "$100",
         "period": "/mo",
-        "description": "Everything you need to run a production AI receptionist.",
-        "cta": "Upgrade",
+        "description": "$80/mo effective when billed annually. More included usage for growing call volume.",
+        "cta": {
+          "monthly": "Go Pro monthly",
+          "annual": "Go Pro annual"
+        },
         "highlights": {
-          "voiceMinutes": "80 voice minutes + pay-as-you-go",
+          "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
           "aiSms": "Two-way AI SMS add-on",
-          "knowledgeStorage": "2 GB knowledge storage",
+          "knowledgeStorage": "10 GB knowledge base",
           "support": "Priority email support"
         }
       },
@@ -197,7 +216,7 @@
         "voiceMinutes": "Voice minutes",
         "outboundCalls": "Outbound call attempts",
         "alertSms": "Alert SMS segments",
-        "knowledgeStorage": "Knowledge storage",
+        "knowledgeStorage": "Knowledge base",
         "phoneNumbers": "Phone numbers",
         "callAnswering": "24/7 call answering",
         "callerDetails": "Caller details and message capture",
@@ -228,7 +247,7 @@
         "websiteImport": "Website knowledge import",
         "retentionGuidance": "Data retention guidance",
         "hosting": "Hosting",
-        "usageBilling": "Usage-based billing",
+        "usageBilling": "Usage-based overages",
         "support": "Support"
       },
       "values": {
@@ -239,26 +258,34 @@
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "10 included",
-            "proIncluded": "80 included",
+            "freeIncluded": "30 included",
+            "starterIncluded": "150 included",
+            "starterThen": "then $0.20/min",
+            "proIncluded": "500 included",
             "proThen": "then $0.18/min"
           },
           "outboundCalls": {
             "freeIncluded": "2 included",
-            "proIncluded": "20 included",
+            "starterIncluded": "20 included",
+            "starterThen": "then $0.02/attempt",
+            "proIncluded": "100 included",
             "proThen": "then $0.02/attempt"
           },
           "alertSms": {
             "freeIncluded": "10 included",
-            "proIncluded": "50 included",
+            "starterIncluded": "50 included",
+            "starterThen": "then $0.02/segment",
+            "proIncluded": "200 included",
             "proThen": "then $0.02/segment"
           },
           "knowledgeStorage": {
             "free": "100 MB",
-            "pro": "2 GB"
+            "starter": "2 GB",
+            "pro": "10 GB"
           },
           "phoneNumbers": {
-            "free": "1 dedicated",
+            "free": "Add after upgrade",
+            "starter": "1 dedicated",
             "pro": "1 dedicated"
           }
         },
@@ -275,6 +302,7 @@
           },
           "support": {
             "community": "Community",
+            "email": "Email",
             "priority": "Priority email",
             "dedicated": "Dedicated implementation"
           }

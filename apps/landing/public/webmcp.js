@@ -97,30 +97,51 @@
         source: urls.pricing,
         markdown: urls.pricingMarkdown,
         usageExclusions: [
-          "Spam calls do not count against included voice minutes or Pro overages.",
-          "Calls under 10 seconds do not count against included voice minutes or Pro overages.",
+          "Spam calls do not count against included voice minutes or paid-plan overages.",
+          "Calls under 10 seconds do not count against included voice minutes or paid-plan overages.",
         ],
         plans: [
           {
             name: "Free",
             priceUsdMonthly: 0,
             includedUsage: {
-              voiceMinutes: 10,
+              voiceMinutes: 30,
               outboundCallAttempts: 2,
               alertSmsSegments: 10,
               knowledgeStorageMb: 100,
             },
             description:
-              "Free includes 10 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge storage.",
+              "Free includes 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge base.",
           },
           {
-            name: "Pro",
-            priceUsdMonthly: 15,
+            name: "Starter",
+            priceUsdMonthly: 30,
+            priceUsdAnnual: 288,
+            effectivePriceUsdMonthlyAnnual: 24,
             includedUsage: {
-              voiceMinutes: 80,
+              voiceMinutes: 150,
               outboundCallAttempts: 20,
               alertSmsSegments: 50,
               knowledgeStorageGb: 2,
+            },
+            overageRatesUsd: {
+              voiceMinute: 0.2,
+              outboundCallAttempt: 0.02,
+              alertSmsSegment: 0.02,
+            },
+            description:
+              "Starter includes 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge base. Additional usage is pay-as-you-go.",
+          },
+          {
+            name: "Pro",
+            priceUsdMonthly: 100,
+            priceUsdAnnual: 960,
+            effectivePriceUsdMonthlyAnnual: 80,
+            includedUsage: {
+              voiceMinutes: 500,
+              outboundCallAttempts: 100,
+              alertSmsSegments: 200,
+              knowledgeStorageGb: 10,
             },
             overageRatesUsd: {
               voiceMinute: 0.18,
@@ -128,7 +149,7 @@
               alertSmsSegment: 0.02,
             },
             description:
-              "Pro includes 80 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge storage. Additional usage is pay-as-you-go.",
+              "Pro includes 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge base. Additional usage is pay-as-you-go.",
           },
           {
             name: "Enterprise",

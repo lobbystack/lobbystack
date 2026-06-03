@@ -536,10 +536,12 @@ ${DEFAULT_DESCRIPTION}
 
 ## Pricing Snapshot
 
-- Free: $0/month with 10 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge storage.
-- Pro: $15/month with 80 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge storage.
+- Free: $0/month with 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, and 100 MB knowledge base.
+- Starter: $30/month or $288/year ($24/month effective) with 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, and 2 GB knowledge base.
+- Pro: $100/month or $960/year ($80/month effective) with 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, and 10 GB knowledge base.
+- Starter overage: $0.20 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
 - Pro overage: $0.18 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
-- Spam calls and calls under 10 seconds are excluded from usage, so they do not count against included voice minutes or Pro overages.
+- Spam calls and calls under 10 seconds are excluded from usage, so they do not count against included voice minutes or paid-plan overages.
 - Enterprise: custom pricing for higher volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support.
 `
 
@@ -573,46 +575,50 @@ Call answering, plain-language workflows, appointment booking, appointment confi
 
 export const pricingMarkdown = `---
 title: AI Receptionist Pricing for Small Businesses
-description: Public pricing summary for LobbyStack's Free, Pro, and Enterprise plans.
+description: Public pricing summary for LobbyStack's Free, Starter, Pro, and Enterprise plans.
 url: ${absoluteUrl("/pricing/")}
 ---
 
 # LobbyStack Pricing
 
-LobbyStack has a Free plan, a Pro plan, and Enterprise options. Plans scale by usage instead of locking the basic receptionist features behind higher tiers.
+LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage instead of locking the basic receptionist features behind higher tiers.
 
 ## Plans
 
 | Plan | Price | Included usage |
 | --- | ---: | --- |
-| Free | $0/month | 10 voice minutes, 2 outbound call attempts, 10 alert SMS segments, 100 MB knowledge storage |
-| Pro | $15/month | 80 voice minutes, 20 outbound call attempts, 50 alert SMS segments, 2 GB knowledge storage |
+| Free | $0/month | 30 voice minutes, 2 outbound call attempts, 10 alert SMS segments, 100 MB knowledge base |
+| Starter | $30/month or $288/year | 150 voice minutes, 20 outbound call attempts, 50 alert SMS segments, 2 GB knowledge base |
+| Pro | $100/month or $960/year | 500 voice minutes, 100 outbound call attempts, 200 alert SMS segments, 10 GB knowledge base |
 | Enterprise | Custom | Custom volume, multiple numbers, multi-location routing, custom fallback rules, and self-hosting implementation support |
 
 ## Overage Rates
 
+- Starter voice overage: $0.20 per voice minute.
+- Starter outbound call attempts: $0.02 per attempt after the included amount.
+- Starter alert SMS segments: $0.02 per segment after the included amount.
 - Pro voice overage: $0.18 per voice minute.
 - Pro outbound call attempts: $0.02 per attempt after the included amount.
 - Pro alert SMS segments: $0.02 per segment after the included amount.
-- Spam calls and calls under 10 seconds are excluded from usage and do not count against included voice minutes or Pro overages.
+- Spam calls and calls under 10 seconds are excluded from usage and do not count against included voice minutes or paid-plan overages.
 
 ## Common Answers
 
 ### Does the Free plan include voice minutes?
 
-Yes. Free includes 10 voice minutes, 2 outbound call attempts, and 10 alert SMS segments.
+Yes. Free includes 30 voice minutes, 2 outbound call attempts, and 10 alert SMS segments.
 
-### How does Pro pricing work?
+### How do paid plans work?
 
-Pro is $15/month and includes 80 voice minutes, 20 outbound call attempts, and 50 alert SMS segments. After that, usage is pay-as-you-go at $0.18 per voice minute, $0.02 per outbound call attempt, and $0.02 per alert SMS segment.
+Starter is $30/month or $288/year and includes 150 voice minutes. Pro is $100/month or $960/year and includes 500 voice minutes. Included usage resets monthly; unused minutes do not roll over. Additional voice usage is $0.20/minute on Starter and $0.18/minute on Pro.
 
 ### Do spam calls count toward usage?
 
-No. LobbyStack excludes spam calls from usage, so wrong numbers, robocalls, and spam calls do not count against included voice minutes or Pro overages.
+No. LobbyStack excludes spam calls from usage, so wrong numbers, robocalls, and spam calls do not count against included voice minutes or paid-plan overages.
 
 ### Are calls under 10 seconds charged?
 
-No. Calls under 10 seconds are excluded from usage and do not count against included voice minutes or Pro overages.
+No. Calls under 10 seconds are excluded from usage and do not count against included voice minutes or paid-plan overages.
 `
 
 export const calculatorMarkdown = `---

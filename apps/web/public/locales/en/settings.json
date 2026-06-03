@@ -27,6 +27,8 @@
       "selfHost": "Self-host",
       "freeCloud": "Free",
       "freeCloudCard": "Free Plan",
+      "starter": "Starter",
+      "starterCard": "Starter Plan",
       "pro": "Pro",
       "proCard": "Pro Plan",
       "enterprise": "Enterprise",
@@ -42,6 +44,14 @@
     },
     "actions": {
       "upgradeToPro": "Upgrade to Pro",
+      "starter": {
+        "monthly": "Starter monthly",
+        "annual": "Starter annual"
+      },
+      "pro": {
+        "monthly": "Upgrade to Pro",
+        "annual": "Upgrade to Pro"
+      },
       "unlockAiSms": "Unlock AI SMS",
       "manageBilling": "Manage billing",
       "manageSubscription": "Manage subscription",
@@ -65,9 +75,9 @@
       "billingPeriod": "Current period resets {{resetAt}}",
       "selfHostNotice": "Self-hosted workspaces use your own providers. No usage limits or billing apply.",
       "enterpriseNotice": "Usage and limits are governed by your enterprise agreement.",
-      "freeCloudNotice": "Usage is capped at the included pool each month. Upgrade to Pro for overage billing and higher limits.",
       "proNotice": "Included usage resets monthly. Additional usage is billed at the overage rate.",
       "monthlySuffix": "/ month",
+      "annualEffectiveSuffix": "/ month, billed annually",
       "paygMonthlySuffix": "+ pay-as-you-go usage",
       "includedTitle": "What's included:",
       "includedStorageLabel": "storage",
@@ -78,6 +88,78 @@
       "includedVoiceUnlimited": "Unlimited voice minutes",
       "includedSmsUnlimited": "Unlimited SMS alerts",
       "includedOutboundUnlimited": "Unlimited outbound calls"
+    },
+    "upgradeDialog": {
+      "title": "Upgrade plan",
+      "description": "Choose the plan that works best for your team.",
+      "enterpriseSubject": "Enterprise plan",
+      "billingIntervalLabel": "Billing interval",
+      "annualDiscount": "Save 20%",
+      "billingIntervals": {
+        "monthly": "Monthly",
+        "annual": "Annual"
+      },
+      "actions": {
+        "currentPlan": "Current plan",
+        "starter": "Start Starter",
+        "pro": "Upgrade to Pro",
+        "enterprise": "Contact us"
+      },
+      "plans": {
+        "free_cloud": {
+          "name": "Free",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "30 voice minutes included",
+            "allFeatures": "All features",
+            "bookingContacts": "1 dedicated business number",
+            "support": "Community support"
+          }
+        },
+        "starter": {
+          "name": "Starter",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
+            "phoneNumber": "50 alert SMS segments",
+            "knowledgeBase": "2 GB knowledge base",
+            "overages": "$0.20/min voice overages",
+            "support": "Email support"
+          }
+        },
+        "pro": {
+          "name": "Pro",
+          "description": {
+            "monthly": "Per month, billed monthly",
+            "annual": "Per month, billed annually"
+          },
+          "highlights": {
+            "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
+            "alertSms": "200 alert SMS segments",
+            "knowledgeBase": "10 GB knowledge base",
+            "support": "Priority email support"
+          }
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "description": {
+            "monthly": "For higher volume",
+            "annual": "For higher volume"
+          },
+          "highlights": {
+            "phoneNumbers": "Multiple dedicated numbers",
+            "routing": "Multi-location routing",
+            "fallbackRules": "Custom fallback rules",
+            "support": "Dedicated implementation support"
+          }
+        }
+      }
     },
     "usage": {
       "title": "Included usage",
@@ -122,10 +204,12 @@
       "title": "Hosted offers",
       "description": "Hosted workspaces use the shared sender for alerts until AI SMS registration is approved. After approval, both alerts and AI SMS move onto the business number while billing stays split by usage type.",
       "selfHostDescription": "Free forever. Full product, bring your own AI keys, Twilio account, numbers, and compliance setup.",
-      "freeCloudDescription": "$0 per month. No overages and no AI SMS.",
+      "freeCloudDescription": "$0 per month. Includes 30 voice minutes with a hard monthly cap.",
       "freeCloudLimits": "Includes {{voiceMinutes}} voice minutes, {{alertSmsSegments}} Alert SMS segments, and {{outboundAttempts}} outbound call attempts per month.",
-      "proDescription": "{{amount}} per month with one business number included and hosted overages after the included pool is used.",
-      "proOverages": "Pro overages: {{voiceRate}} per extra voice minute, {{alertSmsRate}} per extra Alert SMS segment, and {{outboundAttemptRate}} per extra outbound call attempt.",
+      "starterDescription": "$30/month or $288/year. Includes 150 voice minutes per month and one business number.",
+      "starterOverages": "Starter overages: $0.20 per extra voice minute, $0.02 per extra Alert SMS segment, and $0.02 per extra outbound call attempt.",
+      "proDescription": "$100/month or $960/year. Includes 500 voice minutes per month and one business number.",
+      "proOverages": "Pro overages: $0.18 per extra voice minute, {{alertSmsRate}} per extra Alert SMS segment, and {{outboundAttemptRate}} per extra outbound call attempt.",
       "aiSmsAddon": "AI SMS add-on: {{monthly}} per month + {{setup}} one-time setup. AI SMS usage is billed at {{usage}} per segment."
     },
     "addon": {

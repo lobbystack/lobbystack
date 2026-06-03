@@ -166,19 +166,23 @@ export const frenchPages: FrenchPage[] = [
     path: "/pricing/",
     title: "Tarifs de réceptionniste IA pour petites entreprises",
     description:
-      "Comparez les forfaits Free, Pro et Enterprise de LobbyStack, avec minutes vocales, appels sortants, SMS et dépassements transparents.",
+      "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.",
     h1: "Tarifs de réceptionniste IA simples et transparents.",
     intro:
-      "Commencez gratuitement, puis passez à Pro à 15 $/mois avec une facturation d'usage claire pour les minutes vocales, les appels sortants et les alertes SMS.",
+      "Commencez gratuitement, puis passez à Starter ou Pro avec une facturation mensuelle ou annuelle et des dépassements transparents.",
     primaryCta: "Commencer gratuitement",
     cards: [
       {
         title: "Free",
-        body: "10 minutes vocales incluses, un numéro dédié, réservations illimitées et support communautaire.",
+        body: "30 minutes vocales incluses, réservations illimitées et support communautaire.",
+      },
+      {
+        title: "Starter",
+        body: "150 minutes vocales incluses, 50 segments SMS, 2 Go de stockage de connaissances et dépassements à 0,20 $/min.",
       },
       {
         title: "Pro",
-        body: "80 minutes vocales incluses, 50 segments SMS, 2 Go de stockage de connaissances et support prioritaire.",
+        body: "500 minutes vocales incluses, 200 segments SMS, 10 Go de stockage de connaissances et dépassements à 0,18 $/min.",
       },
       {
         title: "Enterprise",
