@@ -2382,6 +2382,106 @@ describe("billing", () => {
     ).rejects.toThrow("A paid subscription is required before opening the customer portal.");
   });
 
+  it("updates the existing Starter subscription when upgrading to Pro", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-starter-to-pro-upgrade",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_ANNUAL_PRODUCT_ID = "prod_pro_annual";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_expected",
+        proSubscriptionId: "sub_starter",
+        proSubscriptionProductId: "prod_starter_monthly",
+      });
+    });
+
+    polarSubscriptionsUpdateMock.mockResolvedValueOnce({
+      id: "sub_starter",
+      customerId: "cus_expected",
+      productId: "prod_pro_annual",
+      prices: [{ id: "price_pro_annual" }],
+      status: "active",
+      currentPeriodStart: new Date("2026-04-15T00:00:00.000Z"),
+      currentPeriodEnd: new Date("2026-05-15T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      checkoutId: null,
+      customer: {
+        externalId: getBillingKey(businessId),
+        email: "billing-starter-to-pro-upgrade@example.com",
+        name: "Billing Owner",
+      },
+      metadata: {},
+    });
+
+    const result = await authed.action(api.billing.startCheckout, {
+      businessId,
+      target: "pro",
+      billingInterval: "annual",
+    });
+
+    expect(result.url).toBe("https://app.example.com/settings/plan");
+    expect(polarSubscriptionsUpdateMock).toHaveBeenCalledWith({
+      id: "sub_starter",
+      subscriptionUpdate: {
+        productId: "prod_pro_annual",
+        prorationBehavior: "prorate",
+      },
+    });
+    expect(polarCheckoutsCreateMock).not.toHaveBeenCalled();
+
+    const account = await t.run(async (ctx: TestContext) => {
+      return await ctx.db
+        .query("billing_accounts")
+        .withIndex("by_business_id", (q) => q.eq("businessId", businessId))
+        .unique();
+    });
+    expect(account?.currentPlan).toBe("pro");
+    expect(account?.billingInterval).toBe("annual");
+    expect(account?.proSubscriptionId).toBe("sub_starter");
+    expect(account?.proSubscriptionProductId).toBe("prod_pro_annual");
+    expect(account?.proSubscriptionPriceId).toBe("price_pro_annual");
+  });
+
+  it("does not create Pro checkout for a Starter account without a stored subscription", async () => {
+    const t = convexTest(schema, convexModules);
+    const { authed, businessId } = await seedWorkspace(t, {
+      subject: "billing-starter-missing-subscription",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.POLAR_PRO_MONTHLY_PRODUCT_ID = "prod_pro_monthly";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "starter",
+        billingInterval: "monthly",
+        polarCustomerId: "cus_expected",
+      });
+    });
+
+    await expect(
+      authed.action(api.billing.startCheckout, {
+        businessId,
+        target: "pro",
+      }),
+    ).rejects.toThrow("An active Starter subscription is required before upgrading to Pro.");
+    expect(polarSubscriptionsUpdateMock).not.toHaveBeenCalled();
+    expect(polarCheckoutsCreateMock).not.toHaveBeenCalled();
+  });
+
   it("starts AI SMS checkout with the one-time setup product", async () => {
     const t = convexTest(schema, convexModules);
     const { authed, businessId } = await seedWorkspace(t, {

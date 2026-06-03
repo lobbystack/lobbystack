@@ -118,6 +118,14 @@ type CheckoutContext = {
   checkoutId: string | null;
 };
 
+type CheckoutSnapshot = {
+  plan: BillingPlanSlug;
+  activeAddons: Array<BillingAddonSlug>;
+  availableCheckoutPlans: Array<HostedCheckoutPlanSlug>;
+  canPurchaseAiSmsAddon: boolean;
+  proSubscriptionId: string | null;
+};
+
 type PolarClient = ReturnType<typeof createPolarClient>;
 type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
@@ -1358,6 +1366,57 @@ async function updateProSubscriptionForAiSmsSetupPayment(
   return true;
 }
 
+async function upgradeStarterSubscriptionToPro(
+  ctx: Pick<ActionCtx, "runMutation">,
+  args: {
+    businessId: Id<"businesses">;
+    billingKey: string;
+    billingContactEmail: string | null;
+    billingContactName: string | null;
+    starterSubscriptionId: string;
+    billingInterval: BillingInterval;
+    returnUrl: string;
+  },
+): Promise<{ url: string }> {
+  const subscription = await updatePolarSubscriptionProduct(
+    args.starterSubscriptionId,
+    getHostedCheckoutPlanProductId({
+      plan: "pro",
+      billingInterval: args.billingInterval,
+    }),
+  );
+
+  const subscriptionPriceId = getPolarSubscriptionPriceId(subscription);
+  await ctx.runMutation(internal.billing.syncSubscriptionFromWebhook, {
+    businessId: args.businessId,
+    billingKey: args.billingKey,
+    polarCustomerId: subscription.customerId,
+    polarCustomerExternalId: args.billingKey,
+    ...(subscription.customer?.email
+      ? { billingContactEmail: subscription.customer.email }
+      : args.billingContactEmail
+        ? { billingContactEmail: args.billingContactEmail }
+        : {}),
+    ...(subscription.customer?.name
+      ? { billingContactName: subscription.customer.name }
+      : args.billingContactName
+        ? { billingContactName: args.billingContactName }
+        : {}),
+    subscriptionId: subscription.id,
+    subscriptionProductId: subscription.productId,
+    ...(subscriptionPriceId ? { subscriptionPriceId } : {}),
+    subscriptionState: subscription.status,
+    currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+    currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    ...(subscription.checkoutId ? { checkoutId: subscription.checkoutId } : {}),
+    lastWebhookEventType: "subscription.updated.starter_to_pro",
+    lastSyncedAt: new Date().toISOString(),
+  });
+
+  return { url: args.returnUrl };
+}
+
 export const upgradeAiSmsSubscriptionAfterSetupPayment = internalAction({
   args: {
     businessId: v.id("businesses"),
@@ -1895,13 +1954,19 @@ export const startCheckout = action({
   returns: v.object({
     url: v.string(),
   }),
-  handler: async (ctx, args) => {
-    const checkoutContext = await ctx.runQuery(internal.billing.getCheckoutContext, {
-      businessId: args.businessId,
-    });
-    const snapshot = await ctx.runQuery(internal.billing.getSnapshotForCheckout, {
-      businessId: args.businessId,
-    });
+  handler: async (ctx, args): Promise<{ url: string }> => {
+    const checkoutContext: CheckoutContext = await ctx.runQuery(
+      internal.billing.getCheckoutContext,
+      {
+        businessId: args.businessId,
+      },
+    );
+    const snapshot: CheckoutSnapshot = await ctx.runQuery(
+      internal.billing.getSnapshotForCheckout,
+      {
+        businessId: args.businessId,
+      },
+    );
 
     const billingInterval = args.billingInterval ?? "monthly";
     if (isHostedCheckoutTarget(args.target) && snapshot.plan === "enterprise") {
@@ -1932,13 +1997,30 @@ export const startCheckout = action({
     if (args.target === "ai_sms" && !snapshot.canPurchaseAiSmsAddon) {
       throw new Error("AI SMS add-on is only available for eligible Pro workspaces.");
     }
+    const siteUrl = getBillingSiteUrl();
+    const checkoutReturnPath =
+      args.source === "onboarding" ? "/onboarding/plan" : "/settings/plan";
+    const checkoutReturnUrl = new URL(checkoutReturnPath, siteUrl).toString();
+
+    if (args.target === "pro" && snapshot.plan === "starter") {
+      if (!snapshot.proSubscriptionId) {
+        throw new Error("An active Starter subscription is required before upgrading to Pro.");
+      }
+      return await upgradeStarterSubscriptionToPro(ctx, {
+        businessId: args.businessId,
+        billingKey: checkoutContext.billingKey,
+        billingContactEmail: checkoutContext.billingContactEmail,
+        billingContactName: checkoutContext.billingContactName,
+        starterSubscriptionId: snapshot.proSubscriptionId,
+        billingInterval,
+        returnUrl: checkoutReturnUrl,
+      });
+    }
+
     const customer = await ensurePolarCustomer(ctx, {
       businessId: args.businessId,
       checkoutContext,
     });
-    const siteUrl = getBillingSiteUrl();
-    const checkoutReturnPath =
-      args.source === "onboarding" ? "/onboarding/plan" : "/settings/plan";
     const checkoutSearchParams = new URLSearchParams({
       checkout: "success",
       checkout_target: args.target,
@@ -1962,7 +2044,7 @@ export const startCheckout = action({
         `${checkoutReturnPath}?${checkoutSearchParams.toString()}`,
         siteUrl,
       ).toString(),
-      returnUrl: new URL(checkoutReturnPath, siteUrl).toString(),
+      returnUrl: checkoutReturnUrl,
       embedOrigin: siteUrl.origin,
       customerMetadata: {
         billingKey: checkoutContext.billingKey,
@@ -2129,6 +2211,7 @@ export const getSnapshotForCheckout = internalQuery({
     activeAddons: v.array(v.union(v.literal("ai_sms"))),
     availableCheckoutPlans: v.array(v.union(v.literal("starter"), v.literal("pro"))),
     canPurchaseAiSmsAddon: v.boolean(),
+    proSubscriptionId: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
     const snapshot = await getBillingSnapshot(ctx, {
@@ -2148,6 +2231,7 @@ export const getSnapshotForCheckout = internalQuery({
           plan: snapshot.plan,
           activeAddons: snapshot.activeAddons,
         }),
+      proSubscriptionId: snapshot.account?.proSubscriptionId ?? null,
     };
   },
 });
