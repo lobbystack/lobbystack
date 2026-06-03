@@ -186,6 +186,30 @@ describe("AppSidebar", () => {
     expect(upgradeLink.getAttribute("href")).toBe("/settings/plan");
   });
 
+  it("opens the upgrade callback directly when provided", async () => {
+    const user = userEvent.setup();
+    const onUpgradeToPro = vi.fn();
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            onUpgradeToPro={onUpgradeToPro}
+            operatorEmail="operator@example.com"
+            showUpgradeToPro
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /operator@example.com/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "Upgrade to Pro" }));
+
+    expect(onUpgradeToPro).toHaveBeenCalledTimes(1);
+  });
+
   it("replaces the billing action with a theme toggle", async () => {
     const user = userEvent.setup();
 

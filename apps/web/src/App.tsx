@@ -415,6 +415,7 @@ function WorkspaceShell() {
 
   return (
     <AuthenticatedLayout
+      {...(billingStatus ? { billingStatus } : {})}
       isLoading={isBootstrapLoading}
       onSignOut={() => void handleSignOut()}
       {...(businessId ? { businessId } : {})}
