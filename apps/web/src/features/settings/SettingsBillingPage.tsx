@@ -783,11 +783,6 @@ function PlanSection({
                   </span>
                 )}
               </div>
-              {status.plan === "free_cloud" ? (
-                <span className="text-[15px] leading-6 text-muted-foreground">
-                  {t("billing.currentPlan.freeCloudNotice")}
-                </span>
-              ) : null}
             </div>
 
             <div className="flex flex-col gap-4">
