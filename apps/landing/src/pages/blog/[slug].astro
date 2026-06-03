@@ -2,6 +2,7 @@
 import Layout from "@/layouts/main.astro"
 import { Navbar } from "@/components/Navbar"
 import { Footer } from "@/components/Footer"
+import { FeaturesCtaSection } from "@/components/features/FeaturesCtaSection"
 import { getCollection, render } from "astro:content"
 import {
   blogJsonLd,
@@ -12,7 +13,6 @@ import {
   plainTextFromMarkdown,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { APP_SIGNUP_URL } from "@/lib/app-links"
 
 export async function getStaticPaths() {
   const blogEntries = await getCollection("blog")
@@ -209,51 +209,9 @@ const articleBody = plainTextFromMarkdown(entry.body)
         </div>
       </div>
 
-      {/* Blog Call to Action (Editorial, Cardless) */}
-      <aside
-        class="relative mt-20 border-t border-border/40 pt-20 pb-12 text-center md:mt-24 md:pt-24"
-      >
-        <div class="relative z-10 mx-auto max-w-4xl">
-          <h2
-            class="mb-8 font-heading text-5xl leading-[1.05] font-semibold tracking-tighter text-foreground md:text-6xl lg:text-7xl"
-          >
-            Never miss a <br class="hidden sm:block" />
-            <span class="underline decoration-2 underline-offset-4"
-              >ready-to-book</span
-            > caller again.
-          </h2>
-
-          <p
-            class="mx-auto mb-14 max-w-2xl text-xl leading-relaxed font-light text-muted-foreground md:text-2xl"
-          >
-            LobbyStack answers every call, qualifies new leads, and books
-            appointments so your team can stay focused on the work.
-          </p>
-
-          <div
-            class="flex flex-col items-center justify-center gap-5 sm:flex-row"
-          >
-            <a
-              href={APP_SIGNUP_URL}
-              data-ph-signup-cta
-              data-ph-capture-attribute-section="blog_post_cta"
-              data-ph-capture-attribute-action="try_for_free"
-              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
-              class="inline-flex h-14 w-full items-center justify-center rounded-full border border-transparent bg-foreground px-10 text-base font-medium text-background transition-all duration-300 hover:scale-[1.02] hover:bg-foreground/90 sm:w-auto"
-            >
-              Start for free
-            </a>
-            <a
-              href="/#how-it-works"
-              class="inline-flex h-14 w-full items-center justify-center rounded-full border border-border/80 bg-background px-10 text-base font-medium text-foreground transition-all duration-300 hover:border-foreground hover:bg-muted/50 sm:w-auto"
-            >
-              See how it works
-            </a>
-          </div>
-        </div>
-      </aside>
     </div>
   </article>
 
+  <FeaturesCtaSection />
   <Footer />
 </Layout>
