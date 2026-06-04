@@ -12,6 +12,8 @@ import {
   shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
+  createRealtimeHoldTurnDetectionConfig,
+  createRealtimeHoldTurnDetectionUpdateEvents,
   createRealtimeTurnDetectionConfig,
   estimateRealtimeTotalCostUsd,
   getImplicitEndCallForAssistantTranscript,
@@ -51,6 +53,60 @@ describe("createRealtimeTurnDetectionConfig", () => {
       interrupt_response: true,
       idle_timeout_ms: 30_000,
     });
+  });
+
+  it("clamps idle timeout values to OpenAI Realtime bounds", () => {
+    expect(createRealtimeTurnDetectionConfig(150_000)).toMatchObject({
+      idle_timeout_ms: 30_000,
+    });
+    expect(createRealtimeTurnDetectionConfig(1_000)).toMatchObject({
+      idle_timeout_ms: 5_000,
+    });
+  });
+
+  it("omits idle timeout while an app-managed call hold is active", () => {
+    expect(createRealtimeHoldTurnDetectionConfig()).toEqual({
+      type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
+      create_response: true,
+      interrupt_response: true,
+    });
+  });
+
+  it("clears inherited turn detection before restoring hold VAD without idle timeout", () => {
+    expect(createRealtimeHoldTurnDetectionUpdateEvents()).toEqual([
+      {
+        type: "session.update",
+        session: {
+          type: "realtime",
+          audio: {
+            input: {
+              turn_detection: null,
+            },
+          },
+        },
+      },
+      {
+        type: "session.update",
+        session: {
+          type: "realtime",
+          audio: {
+            input: {
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.65,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 700,
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+          },
+        },
+      },
+    ]);
   });
 });
 

@@ -6,6 +6,8 @@ const {
   bookVoiceAppointmentMock,
   cancelVoiceAppointmentMock,
   lookupVoiceAppointmentForChangeMock,
+  recordToolExecutionFailureMock,
+  recordToolExecutionLatencyMock,
   rescheduleVoiceAppointmentMock,
   searchVoiceKnowledgeMock,
   sendVoiceAppointmentChangeOtpMock,
@@ -15,6 +17,8 @@ const {
   bookVoiceAppointmentMock: vi.fn(),
   cancelVoiceAppointmentMock: vi.fn(),
   lookupVoiceAppointmentForChangeMock: vi.fn(),
+  recordToolExecutionFailureMock: vi.fn(),
+  recordToolExecutionLatencyMock: vi.fn(),
   rescheduleVoiceAppointmentMock: vi.fn(),
   searchVoiceKnowledgeMock: vi.fn(),
   sendVoiceAppointmentChangeOtpMock: vi.fn(),
@@ -37,7 +41,16 @@ vi.mock("../convex/runtimeClient", () => ({
   verifyVoiceAppointmentForChange: verifyVoiceAppointmentForChangeMock,
 }));
 
+vi.mock("../observability/posthog", () => ({
+  recordToolExecutionFailure: recordToolExecutionFailureMock,
+  recordToolExecutionLatency: recordToolExecutionLatencyMock,
+}));
+
 import { executeVoiceTool } from "./toolExecutor";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("executeVoiceTool waitForUser", () => {
   it("returns a silent wait result for background audio turns", async () => {
@@ -579,6 +592,14 @@ describe("executeVoiceTool call control", () => {
       remainingHoldSeconds: 180,
       capped: true,
     });
+    expect(recordToolExecutionLatencyMock).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        holdRequestedDurationSeconds: 300,
+        holdGrantedDurationSeconds: 120,
+        holdCapped: true,
+      }),
+    );
   });
 
   it("reports exhausted cumulative hold budget", async () => {
@@ -605,5 +626,13 @@ describe("executeVoiceTool call control", () => {
       reason: "Caller asked for more time.",
       error: "hold_limit_reached",
     });
+    expect(recordToolExecutionLatencyMock).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        holdRequestedDurationSeconds: 30,
+        holdGrantedDurationSeconds: 0,
+        holdCapped: true,
+      }),
+    );
   });
 });

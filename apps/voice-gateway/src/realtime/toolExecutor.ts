@@ -26,6 +26,8 @@ import {
   type HoldGrantResult,
 } from "./callControl";
 
+type ToolExecutionAttributes = Record<string, string | number | boolean | undefined>;
+
 function normalizeComparable(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
 }
@@ -243,7 +245,7 @@ export async function executeVoiceTool(input: {
   };
 }): Promise<ExecutedToolResult> {
   const startedAt = Date.now();
-  const attributes = {
+  const attributes: ToolExecutionAttributes = {
     "lobbystack.business_id": input.businessId,
     ...(input.callId ? { "lobbystack.call_id": input.callId } : {}),
     ...(input.conversationId
@@ -577,6 +579,9 @@ export async function executeVoiceTool(input: {
             reason: parsed.reason,
             error: "hold_limit_reached",
           };
+          attributes.holdRequestedDurationSeconds = hold.requestedDurationSeconds;
+          attributes.holdGrantedDurationSeconds = hold.grantedDurationSeconds;
+          attributes.holdCapped = hold.capped;
           return {
             result: hold,
             hold,
@@ -591,6 +596,9 @@ export async function executeVoiceTool(input: {
           capped: grantedDurationSeconds < parsed.durationSeconds,
           reason: parsed.reason,
         };
+        attributes.holdRequestedDurationSeconds = hold.requestedDurationSeconds;
+        attributes.holdGrantedDurationSeconds = hold.grantedDurationSeconds;
+        attributes.holdCapped = hold.capped;
 
         return {
           result: hold,
