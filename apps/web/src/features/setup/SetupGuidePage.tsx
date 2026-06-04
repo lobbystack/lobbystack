@@ -116,9 +116,27 @@ function StepMarker({
     );
   }
 
+  const radius = 10.5;
+  const circumference = 2 * Math.PI * radius;
+  const segmentLength = circumference / 8;
+  const dashLength = segmentLength * 0.62;
+  const gapLength = segmentLength - dashLength;
+
   return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-foreground bg-background text-sm text-foreground">
-      {index + 1}
+    <span className="relative flex size-6 shrink-0 items-center justify-center bg-background text-sm text-foreground">
+      <svg aria-hidden="true" className="absolute inset-0 size-6" viewBox="0 0 24 24">
+        <circle
+          className="stroke-foreground"
+          cx="12"
+          cy="12"
+          fill="none"
+          r={radius}
+          strokeDasharray={`${dashLength} ${gapLength}`}
+          strokeLinecap="round"
+          strokeWidth="1.5"
+        />
+      </svg>
+      <span className="relative">{index + 1}</span>
     </span>
   );
 }
