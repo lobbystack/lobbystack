@@ -23,6 +23,19 @@
     "upgradeToPro": "Upgrade to Pro",
     "account": "Account",
     "toggleTheme": "Toggle theme",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "setupGuide": {
+      "title": "Getting started",
+      "open": "Open setup guide",
+      "progress": "{{completed}} / {{total}} completed",
+      "description": "{{completed}} of {{total}} setup steps complete.",
+      "steps": {
+        "website": "Add your website",
+        "sources": "Add more sources",
+        "calendar": "Connect your calendar",
+        "services": "Add your Services",
+        "rules": "Define Rules"
+      }
+    }
   }
 }

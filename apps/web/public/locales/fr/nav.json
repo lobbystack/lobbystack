@@ -23,6 +23,19 @@
     "upgradeToPro": "Passer à Pro",
     "account": "Compte",
     "toggleTheme": "Changer le thème",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "setupGuide": {
+      "title": "Premiers pas",
+      "open": "Ouvrir le guide de configuration",
+      "progress": "{{completed}} / {{total}} complétés",
+      "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
+      "steps": {
+        "website": "Ajouter votre site web",
+        "sources": "Ajouter plus de sources",
+        "calendar": "Connecter votre calendrier",
+        "services": "Ajouter vos services",
+        "rules": "Définir les règles"
+      }
+    }
   }
 }

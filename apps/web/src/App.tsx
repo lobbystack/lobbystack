@@ -319,6 +319,8 @@ function WorkspaceShell() {
   const onboardingTarget = activeBusiness
     ? onboardingRouteForStage(activeBusiness.onboardingStage)
     : null;
+  const showSetupGuide =
+    !isBootstrapLoading && Boolean(businessId && canManageTenant && !onboardingTarget);
   const shouldShowSetupPending =
     !isBootstrapLoading && Boolean(activeBusiness && onboardingTarget && !canManageTenant);
   const shouldBridgeOnboardingCheckoutSuccess =
@@ -430,6 +432,7 @@ function WorkspaceShell() {
           : {}
       )}
       showUpgradeToPro={showUpgradeToPro}
+      showSetupGuide={showSetupGuide}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         {isBootstrapLoading ? (

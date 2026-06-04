@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { KnowledgeActionsMenu } from "./KnowledgeActionsMenu";
@@ -97,7 +98,11 @@ vi.mock("./AddKnowledgeSheet", () => ({
 
 describe("KnowledgeActionsMenu", () => {
   it("opens upload, website, and text flows from the add knowledge dropdown", async () => {
-    render(<KnowledgeActionsMenu businessId={"business-1" as never} />);
+    render(
+      <MemoryRouter>
+        <KnowledgeActionsMenu businessId={"business-1" as never} />
+      </MemoryRouter>,
+    );
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
@@ -138,5 +143,35 @@ describe("KnowledgeActionsMenu", () => {
       }),
     );
     expect(screen.getByText("text-sheet-open")).toBeTruthy();
+  });
+
+  it("opens setup-targeted knowledge dialogs and removes the setup param", async () => {
+    function LocationProbe() {
+      const location = useLocation();
+
+      return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+    }
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/agent/knowledge?setup=upload"]}>
+        <KnowledgeActionsMenu businessId={"business-1" as never} />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("upload-sheet-open")).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe("/agent/knowledge");
+
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={["/agent/knowledge?setup=website"]}>
+        <KnowledgeActionsMenu businessId={"business-1" as never} />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("website-sheet-open")).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe("/agent/knowledge");
   });
 });

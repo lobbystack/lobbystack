@@ -11,6 +11,20 @@ const themeState = vi.hoisted(() => ({
   setTheme: vi.fn(),
 }));
 
+const setupGuideQueryState = vi.hoisted(() => ({
+  progress: undefined as
+    | {
+        steps: Array<{
+          id: "website" | "sources" | "calendar" | "services" | "rules";
+          completed: boolean;
+        }>;
+        completedSteps: number;
+        totalSteps: number;
+        allCompleted: boolean;
+      }
+    | undefined,
+}));
+
 vi.mock("next-themes", () => ({
   useTheme: () => ({
     resolvedTheme: themeState.resolvedTheme,
@@ -19,9 +33,13 @@ vi.mock("next-themes", () => ({
   }),
 }));
 
+vi.mock("convex/react", () => ({
+  useQuery: () => setupGuideQueryState.progress,
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: Record<string, number>) => {
       const translations: Record<string, string> = {
         "nav:sidebar.general": "General",
         "nav:sidebar.agent": "Agent",
@@ -37,6 +55,15 @@ vi.mock("react-i18next", () => ({
         "sidebar.account": "Account",
         "sidebar.toggleTheme": "Toggle theme",
         "sidebar.signOut": "Sign out",
+        "sidebar.setupGuide.title": "Getting started",
+        "sidebar.setupGuide.open": "Open setup guide",
+        "sidebar.setupGuide.progress": `${options?.completed ?? 0} / ${options?.total ?? 5} completed`,
+        "sidebar.setupGuide.description": `${options?.completed ?? 0} of ${options?.total ?? 5} setup steps complete.`,
+        "sidebar.setupGuide.steps.website": "Add your website",
+        "sidebar.setupGuide.steps.sources": "Add more sources",
+        "sidebar.setupGuide.steps.calendar": "Connect your calendar",
+        "sidebar.setupGuide.steps.services": "Add your Services",
+        "sidebar.setupGuide.steps.rules": "Define Rules",
         "settings:sections.integrations": "Integrations",
         "agent:sections.basicSettings.title": "AI settings",
         "agent:sections.knowledge.title": "Knowledge",
@@ -53,6 +80,7 @@ describe("AppSidebar", () => {
   beforeEach(() => {
     themeState.resolvedTheme = "dark";
     themeState.setTheme.mockReset();
+    setupGuideQueryState.progress = undefined;
     window.innerWidth = 1280;
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -81,6 +109,27 @@ describe("AppSidebar", () => {
         <div data-testid="pathname">{location.pathname}</div>
       </>
     );
+  }
+
+  function LocationProbe() {
+    const location = useLocation();
+
+    return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+  }
+
+  function setupProgress(completedIds: Array<"website" | "sources" | "calendar" | "services" | "rules">) {
+    const steps = (["website", "sources", "calendar", "services", "rules"] as const).map(
+      (id) => ({
+        id,
+        completed: completedIds.includes(id),
+      }),
+    );
+    setupGuideQueryState.progress = {
+      steps,
+      completedSteps: completedIds.length,
+      totalSteps: steps.length,
+      allCompleted: completedIds.length === steps.length,
+    };
   }
 
   it("groups Agent pages into their own section between General and Manage", () => {
@@ -233,6 +282,74 @@ describe("AppSidebar", () => {
 
     expect(themeState.setTheme).toHaveBeenCalledWith("light");
     expect(screen.getByRole("menuitem", { name: "Toggle theme" })).toBeTruthy();
+  });
+
+  it("hides the setup guide when the workspace is not eligible", () => {
+    setupProgress(["website"]);
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessId={"business-1" as any}
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="operator@example.com"
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Open setup guide" })).toBeNull();
+  });
+
+  it("hides the setup guide when all steps are complete", () => {
+    setupProgress(["website", "sources", "calendar", "services", "rules"]);
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessId={"business-1" as any}
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="operator@example.com"
+            showSetupGuide
+          />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Open setup guide" })).toBeNull();
+  });
+
+  it("shows setup guide progress and navigates to checklist targets", async () => {
+    setupProgress(["website", "services"]);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <SidebarProvider>
+          <AppSidebar
+            businessId={"business-1" as any}
+            businessName="LobbyStack"
+            onSignOut={() => {}}
+            operatorEmail="operator@example.com"
+            showSetupGuide
+          />
+          <LocationProbe />
+        </SidebarProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("2 / 5 completed")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Open setup guide" }));
+    await user.click(await screen.findByRole("button", { name: /Add more sources/i }));
+
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/agent/knowledge?setup=upload",
+    );
   });
 
   it("supports repeated mobile navigation between general, agent, and manage links", async () => {

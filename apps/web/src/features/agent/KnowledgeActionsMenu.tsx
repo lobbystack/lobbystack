@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, FileText, Globe, Plus, Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,27 @@ export function KnowledgeActionsMenu({
   businessId: Id<"businesses">;
 }) {
   const { t } = useTranslation("agent");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isWebsiteOpen, setIsWebsiteOpen] = useState(false);
   const [isTextOpen, setIsTextOpen] = useState(false);
+
+  useEffect(() => {
+    const setupTarget = searchParams.get("setup");
+    if (setupTarget !== "upload" && setupTarget !== "website") {
+      return;
+    }
+
+    if (setupTarget === "upload") {
+      setIsUploadOpen(true);
+    } else {
+      setIsWebsiteOpen(true);
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("setup");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   return (
     <>
