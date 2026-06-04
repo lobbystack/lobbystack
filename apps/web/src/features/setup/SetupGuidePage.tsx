@@ -103,10 +103,8 @@ function ProgressRing({
 
 function StepMarker({
   completed,
-  index,
 }: {
   completed: boolean;
-  index: number;
 }) {
   if (completed) {
     return (
@@ -118,12 +116,12 @@ function StepMarker({
 
   const radius = 10.5;
   const circumference = 2 * Math.PI * radius;
-  const segmentLength = circumference / 8;
+  const segmentLength = circumference / 6;
   const dashLength = segmentLength * 0.62;
   const gapLength = segmentLength - dashLength;
 
   return (
-    <span className="relative flex size-6 shrink-0 items-center justify-center bg-background text-sm text-foreground">
+    <span className="relative flex size-6 shrink-0 items-center justify-center bg-background">
       <svg aria-hidden="true" className="absolute inset-0 size-6" viewBox="0 0 24 24">
         <circle
           className="stroke-foreground"
@@ -136,7 +134,6 @@ function StepMarker({
           strokeWidth="1.5"
         />
       </svg>
-      <span className="relative">{index + 1}</span>
     </span>
   );
 }
@@ -238,11 +235,11 @@ export function SetupGuidePage({
             }}
             value={[openStepId]}
           >
-            {steps.map((step, index) => (
+            {steps.map((step) => (
               <AccordionItem key={step.id} value={step.id}>
                 <AccordionTrigger className="min-h-16 px-6">
                   <span className="flex min-w-0 items-center gap-4">
-                    <StepMarker completed={step.completed} index={index} />
+                    <StepMarker completed={step.completed} />
                     <span
                       className={
                         step.completed
