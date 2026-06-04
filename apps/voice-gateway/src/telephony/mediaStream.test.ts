@@ -63,7 +63,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
     });
   });
 
-  it("omits idle timeout while an app-managed call hold is active", () => {
+  it("clears idle timeout while an app-managed call hold is active", () => {
     expect(createRealtimeHoldTurnDetectionConfig()).toEqual({
       type: "server_vad",
       threshold: 0.65,
@@ -71,6 +71,7 @@ describe("createRealtimeTurnDetectionConfig", () => {
       silence_duration_ms: 700,
       create_response: true,
       interrupt_response: true,
+      idle_timeout_ms: null,
     });
   });
 });

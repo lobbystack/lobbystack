@@ -995,7 +995,10 @@ export function createRealtimeTurnDetectionConfig(
 }
 
 export function createRealtimeHoldTurnDetectionConfig(): Record<string, unknown> {
-  return createRealtimeTurnDetectionConfig();
+  return {
+    ...createRealtimeTurnDetectionConfig(),
+    idle_timeout_ms: null,
+  };
 }
 
 function updateRealtimeTurnDetection(socket: WebSocket, idleTimeoutMs?: number): void {
