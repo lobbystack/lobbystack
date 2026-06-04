@@ -239,7 +239,15 @@ export function SetupGuidePage({
           >
             {steps.map((step) => (
               <AccordionItem key={step.id} value={step.id}>
-                <AccordionTrigger className="min-h-16 px-6">
+                <AccordionTrigger
+                  aria-disabled={step.completed || undefined}
+                  className={
+                    step.completed
+                      ? "min-h-16 cursor-default px-6 [&_[data-icon=inline-end]]:opacity-0"
+                      : "min-h-16 px-6"
+                  }
+                  tabIndex={step.completed ? -1 : undefined}
+                >
                   <span className="flex min-w-0 items-center gap-4">
                     <StepMarker completed={step.completed} />
                     <span

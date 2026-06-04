@@ -162,9 +162,12 @@ describe("SetupGuidePage", () => {
 
     renderPage();
 
+    const completedStep = screen.getByRole("button", { name: /Add your website/i });
+    expect(completedStep.getAttribute("aria-disabled")).toBe("true");
+    expect(completedStep.className).toContain("cursor-default");
     expect(screen.getByText("Upload a document.")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: /Add your website/i }));
+    await user.click(completedStep);
 
     expect(screen.queryByText("Import your public website.")).toBeNull();
     expect(screen.getByText("Upload a document.")).toBeTruthy();
