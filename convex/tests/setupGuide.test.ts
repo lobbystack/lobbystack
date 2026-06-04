@@ -154,6 +154,34 @@ describe("setup guide progress", () => {
     ]);
   });
 
+  it("counts skipped setup steps as completed", async () => {
+    const t = createConvexHarness();
+    const subject = "setup-guide-skipped";
+    const { businessId } = await seedBusinessOwner({ t, subject });
+
+    await t.withIdentity({ subject }).mutation(api.businesses.setupGuide.skipStep, {
+      businessId,
+      stepId: "calendar",
+    });
+
+    const progress = await t.withIdentity({ subject }).query(
+      api.businesses.setupGuide.getProgress,
+      { businessId },
+    );
+    const business = await t.run((ctx) => ctx.db.get(businessId));
+
+    expect(progress.completedSteps).toBe(1);
+    expect(progress.allCompleted).toBe(false);
+    expect(progress.steps.map((step) => [step.id, step.completed])).toEqual([
+      ["website", false],
+      ["sources", false],
+      ["calendar", true],
+      ["services", false],
+      ["rules", false],
+    ]);
+    expect(business?.setupGuideSkippedSteps).toEqual(["calendar"]);
+  });
+
   it("marks the guide complete when all setup records exist", async () => {
     const t = createConvexHarness();
     const subject = "setup-guide-complete";

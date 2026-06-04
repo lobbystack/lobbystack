@@ -4,8 +4,16 @@ import { query, type QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireMembership, requireTenantAdminAccess } from "../lib/auth";
 import { resolveKnowledgeSection } from "../lib/knowledgeSections";
+import { observedMutation as mutation } from "../telemetry/observedFunctions";
 
 const setupGuideStepIds = ["website", "sources", "calendar", "services", "rules"] as const;
+const setupGuideStepIdValidator = v.union(
+  v.literal("website"),
+  v.literal("sources"),
+  v.literal("calendar"),
+  v.literal("services"),
+  v.literal("rules"),
+);
 
 type SetupGuideStepId = (typeof setupGuideStepIds)[number];
 
@@ -100,13 +108,14 @@ export const getProgress = query({
         hasActiveService(ctx, args.businessId),
         hasActiveRule(ctx, args.businessId),
       ]);
+    const skippedStepIds = new Set<SetupGuideStepId>(business?.setupGuideSkippedSteps ?? []);
 
     const steps: Array<SetupGuideStep> = [
-      { id: "website", completed: Boolean(business?.websiteUrl) },
-      { id: "sources", completed: sourcesCompleted },
-      { id: "calendar", completed: calendarCompleted },
-      { id: "services", completed: servicesCompleted },
-      { id: "rules", completed: rulesCompleted },
+      { id: "website", completed: Boolean(business?.websiteUrl) || skippedStepIds.has("website") },
+      { id: "sources", completed: sourcesCompleted || skippedStepIds.has("sources") },
+      { id: "calendar", completed: calendarCompleted || skippedStepIds.has("calendar") },
+      { id: "services", completed: servicesCompleted || skippedStepIds.has("services") },
+      { id: "rules", completed: rulesCompleted || skippedStepIds.has("rules") },
     ];
     const completedSteps = steps.filter((step) => step.completed).length;
     const totalSteps = setupGuideStepIds.length;
@@ -117,5 +126,30 @@ export const getProgress = query({
       totalSteps,
       allCompleted: completedSteps === totalSteps,
     };
+  },
+});
+
+export const skipStep = mutation({
+  args: {
+    businessId: v.id("businesses"),
+    stepId: setupGuideStepIdValidator,
+  },
+  handler: async (ctx, args) => {
+    const membership = await requireMembership(ctx, args.businessId);
+    requireTenantAdminAccess(membership.role);
+
+    const business = await ctx.db.get(args.businessId);
+    if (!business) {
+      throw new Error("Business not found");
+    }
+
+    const skippedSteps = business.setupGuideSkippedSteps ?? [];
+    if (!skippedSteps.includes(args.stepId)) {
+      await ctx.db.patch(args.businessId, {
+        setupGuideSkippedSteps: [...skippedSteps, args.stepId],
+      });
+    }
+
+    return { stepId: args.stepId };
   },
 });

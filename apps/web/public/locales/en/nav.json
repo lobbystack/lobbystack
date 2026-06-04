@@ -27,6 +27,8 @@
     "setupGuide": {
       "title": "Getting started",
       "open": "Open setup guide",
+      "skip": "Skip tutorial",
+      "skipStep": "Skip",
       "progress": "{{completed}} / {{total}} completed",
       "description": "{{completed}} of {{total}} setup steps complete.",
       "steps": {

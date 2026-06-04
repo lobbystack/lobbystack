@@ -18,9 +18,16 @@ const setupGuideQueryState = vi.hoisted(() => ({
       }
     | undefined,
 }));
+const setupGuideMutationState = vi.hoisted(() => ({
+  skipStep: vi.fn(),
+}));
 
 vi.mock("convex/react", () => ({
   useQuery: () => setupGuideQueryState.progress,
+}));
+
+vi.mock("@/lib/observed-convex", () => ({
+  useObservedMutation: () => setupGuideMutationState.skipStep,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -29,6 +36,8 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "sidebar.setupGuide.title": "Getting started",
         "sidebar.setupGuide.description": `${options?.completed ?? 0} of ${options?.total ?? 5} setup steps complete.`,
+        "sidebar.setupGuide.skip": "Skip tutorial",
+        "sidebar.setupGuide.skipStep": "Skip",
         "sidebar.setupGuide.steps.website": "Add your website",
         "sidebar.setupGuide.steps.sources": "Add more sources",
         "sidebar.setupGuide.steps.calendar": "Connect your calendar",
@@ -97,6 +106,8 @@ function renderPage() {
 describe("SetupGuidePage", () => {
   beforeEach(() => {
     setupGuideQueryState.progress = undefined;
+    setupGuideMutationState.skipStep.mockReset();
+    setupGuideMutationState.skipStep.mockResolvedValue({ stepId: "sources" });
   });
 
   it("renders the full setup checklist layout with the active incomplete step expanded", () => {
@@ -105,6 +116,7 @@ describe("SetupGuidePage", () => {
     renderPage();
 
     expect(screen.getByRole("heading", { name: "Getting started" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Skip tutorial" })).toBeTruthy();
     expect(screen.getByText("2 of 5 setup steps complete.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Add your website/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Add more sources/i })).toBeTruthy();
@@ -113,6 +125,35 @@ describe("SetupGuidePage", () => {
     expect(screen.getByRole("button", { name: /Define Rules/i })).toBeTruthy();
     expect(screen.getByText("Upload a document.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Upload document" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Skip" })).toBeTruthy();
+  });
+
+  it("leaves the setup guide when the tutorial is skipped", async () => {
+    const user = userEvent.setup();
+    setupProgress(["website", "services"]);
+
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Skip tutorial" }));
+
+    expect(screen.getByTestId("location").textContent).toBe("/");
+  });
+
+  it("marks an individual step skipped and advances to the next accordion item", async () => {
+    const user = userEvent.setup();
+    setupProgress(["website", "services"]);
+
+    renderPage();
+
+    expect(screen.getByText("Upload a document.")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Skip" }));
+
+    expect(setupGuideMutationState.skipStep).toHaveBeenCalledWith({
+      businessId: "business-1",
+      stepId: "sources",
+    });
+    expect(screen.getByText("Connect a calendar.")).toBeTruthy();
   });
 
   it.each([

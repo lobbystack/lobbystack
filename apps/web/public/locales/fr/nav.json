@@ -27,6 +27,8 @@
     "setupGuide": {
       "title": "Premiers pas",
       "open": "Ouvrir le guide de configuration",
+      "skip": "Ignorer le tutoriel",
+      "skipStep": "Ignorer",
       "progress": "{{completed}} / {{total}} complétés",
       "description": "{{completed}} étape(s) sur {{total}} complétée(s).",
       "steps": {
