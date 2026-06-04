@@ -995,19 +995,13 @@ export function createRealtimeTurnDetectionConfig(
 }
 
 export function createRealtimeHoldTurnDetectionConfig(): Record<string, unknown> {
-  return {
-    ...createRealtimeTurnDetectionConfig(),
-    idle_timeout_ms: null,
-  };
+  return createRealtimeTurnDetectionConfig();
 }
 
-function updateRealtimeTurnDetection(socket: WebSocket, idleTimeoutMs?: number): void {
-  const turnDetection =
-    idleTimeoutMs === undefined
-      ? createRealtimeHoldTurnDetectionConfig()
-      : createRealtimeTurnDetectionConfig(idleTimeoutMs);
-
-  postRealtimeEvent(socket, {
+export function createRealtimeTurnDetectionUpdateEvent(
+  turnDetection: Record<string, unknown> | null,
+): Record<string, unknown> {
+  return {
     type: "session.update",
     session: {
       type: "realtime",
@@ -1017,7 +1011,21 @@ function updateRealtimeTurnDetection(socket: WebSocket, idleTimeoutMs?: number):
         },
       },
     },
-  });
+  };
+}
+
+export function createRealtimeHoldTurnDetectionUpdateEvents(): Record<string, unknown>[] {
+  return [
+    createRealtimeTurnDetectionUpdateEvent(null),
+    createRealtimeTurnDetectionUpdateEvent(createRealtimeHoldTurnDetectionConfig()),
+  ];
+}
+
+function updateRealtimeTurnDetection(socket: WebSocket, idleTimeoutMs: number): void {
+  postRealtimeEvent(
+    socket,
+    createRealtimeTurnDetectionUpdateEvent(createRealtimeTurnDetectionConfig(idleTimeoutMs)),
+  );
 }
 
 function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
@@ -1025,7 +1033,9 @@ function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): vo
 }
 
 function disableRealtimeIdleTimeoutForHold(socket: WebSocket): void {
-  updateRealtimeTurnDetection(socket);
+  for (const event of createRealtimeHoldTurnDetectionUpdateEvents()) {
+    postRealtimeEvent(socket, event);
+  }
 }
 
 function enableCallerTurnDetectionAfterOpeningGreeting(
