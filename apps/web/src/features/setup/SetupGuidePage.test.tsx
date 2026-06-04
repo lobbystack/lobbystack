@@ -156,6 +156,20 @@ describe("SetupGuidePage", () => {
     expect(screen.getByText("Connect a calendar.")).toBeTruthy();
   });
 
+  it("keeps completed setup steps closed when clicked", async () => {
+    const user = userEvent.setup();
+    setupProgress(["website", "services"]);
+
+    renderPage();
+
+    expect(screen.getByText("Upload a document.")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: /Add your website/i }));
+
+    expect(screen.queryByText("Import your public website.")).toBeNull();
+    expect(screen.getByText("Upload a document.")).toBeTruthy();
+  });
+
   it.each([
     ["website", "Add website", "/agent/knowledge?setup=website"],
     ["sources", "Upload document", "/agent/knowledge?setup=upload"],

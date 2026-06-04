@@ -229,8 +229,10 @@ export function SetupGuidePage({
           <Accordion
             onValueChange={(value) => {
               const nextValue = value[0];
-              if (stepOrder.includes(nextValue as SetupGuideStepId)) {
-                setOpenStepId(nextValue as SetupGuideStepId);
+              const nextStep = steps.find((step) => step.id === nextValue);
+
+              if (nextStep && !nextStep.completed) {
+                setOpenStepId(nextStep.id);
               }
             }}
             value={[openStepId]}
