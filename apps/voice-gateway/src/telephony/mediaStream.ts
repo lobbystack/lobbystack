@@ -255,6 +255,8 @@ const IMPLICIT_TERMINAL_HANGUP_RETRY_DELAYS_MS = [250, 1_000, 2_500];
 const REALTIME_VAD_THRESHOLD = 0.65;
 const REALTIME_VAD_PREFIX_PADDING_MS = 300;
 const REALTIME_VAD_SILENCE_DURATION_MS = 700;
+const REALTIME_IDLE_TIMEOUT_MIN_MS = 5_000;
+const REALTIME_IDLE_TIMEOUT_MAX_MS = 30_000;
 const POST_GREETING_INPUT_GRACE_MS = 1_500;
 
 function asUnknownRecord(
@@ -964,35 +966,63 @@ function postRealtimeEvent(socket: WebSocket, payload: Record<string, unknown>):
 }
 
 export function createRealtimeTurnDetectionConfig(
-  idleTimeoutMs: number,
+  idleTimeoutMs?: number,
   options: {
     createResponse?: boolean;
     interruptResponse?: boolean;
   } = {},
 ): Record<string, unknown> {
-  return {
+  const config: Record<string, unknown> = {
     type: "server_vad",
     threshold: REALTIME_VAD_THRESHOLD,
     prefix_padding_ms: REALTIME_VAD_PREFIX_PADDING_MS,
     silence_duration_ms: REALTIME_VAD_SILENCE_DURATION_MS,
     create_response: options.createResponse ?? true,
     interrupt_response: options.interruptResponse ?? true,
-    idle_timeout_ms: idleTimeoutMs,
   };
+
+  if (idleTimeoutMs !== undefined) {
+    const finiteTimeout = Number.isFinite(idleTimeoutMs)
+      ? Math.trunc(idleTimeoutMs)
+      : NORMAL_IDLE_TIMEOUT_MS;
+    config.idle_timeout_ms = Math.min(
+      REALTIME_IDLE_TIMEOUT_MAX_MS,
+      Math.max(REALTIME_IDLE_TIMEOUT_MIN_MS, finiteTimeout),
+    );
+  }
+
+  return config;
 }
 
-function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
+export function createRealtimeHoldTurnDetectionConfig(): Record<string, unknown> {
+  return createRealtimeTurnDetectionConfig();
+}
+
+function updateRealtimeTurnDetection(socket: WebSocket, idleTimeoutMs?: number): void {
+  const turnDetection =
+    idleTimeoutMs === undefined
+      ? createRealtimeHoldTurnDetectionConfig()
+      : createRealtimeTurnDetectionConfig(idleTimeoutMs);
+
   postRealtimeEvent(socket, {
     type: "session.update",
     session: {
       type: "realtime",
       audio: {
         input: {
-          turn_detection: createRealtimeTurnDetectionConfig(idleTimeoutMs),
+          turn_detection: turnDetection,
         },
       },
     },
   });
+}
+
+function updateRealtimeIdleTimeout(socket: WebSocket, idleTimeoutMs: number): void {
+  updateRealtimeTurnDetection(socket, idleTimeoutMs);
+}
+
+function disableRealtimeIdleTimeoutForHold(socket: WebSocket): void {
+  updateRealtimeTurnDetection(socket);
 }
 
 function enableCallerTurnDetectionAfterOpeningGreeting(
@@ -2380,10 +2410,7 @@ async function handleToolCall(
       toolOutput = grant.result;
 
       if (grant.result.ok) {
-        updateRealtimeIdleTimeout(
-          openAiSocket,
-          grant.result.grantedDurationSeconds * 1000 + HOLD_EXPIRY_GRACE_MS,
-        );
+        disableRealtimeIdleTimeoutForHold(openAiSocket);
         scheduleInactivityTimer(server, openAiSocket, twilioSocket, session);
       }
     }

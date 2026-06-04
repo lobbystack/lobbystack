@@ -958,6 +958,15 @@ function inferProviderErrorKind(input: {
   const combined = `${code} ${message}`;
 
   if (
+    code === "integer_above_max_value" ||
+    code === "integer_below_min_value" ||
+    code === "invalid_value" ||
+    code === "invalid_type"
+  ) {
+    return "invalid_request";
+  }
+
+  if (
     combined.includes("insufficient_quota") ||
     combined.includes("quota_exceeded") ||
     combined.includes("quota exceeded") ||

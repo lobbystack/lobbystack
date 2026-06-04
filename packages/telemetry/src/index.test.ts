@@ -148,6 +148,26 @@ describe("telemetry redaction", () => {
     ).toBe("rate_limited");
   });
 
+  it("classifies OpenAI integer bounds errors as invalid requests before timeout wording", () => {
+    const classified = classifyProviderError({
+      provider: "openai",
+      error: {
+        code: "integer_above_max_value",
+        message:
+          "Invalid value for session.audio.input.turn_detection.idle_timeout_ms: timeout value is above the maximum.",
+      },
+    });
+
+    expect(classified).toMatchObject({
+      provider: "openai",
+      kind: "invalid_request",
+      providerErrorCode: "integer_above_max_value",
+    });
+    expect(getProviderErrorExceptionType(classified.kind)).toBe(
+      "ProviderInvalidRequestError",
+    );
+  });
+
   it("classifies 5xx and network failures as provider unavailable", () => {
     expect(
       classifyProviderError({ provider: "polar", error: { statusCode: 503 } }).kind,

@@ -12,6 +12,7 @@ import {
   shouldSystemBlockForEndCall,
 } from "../realtime/callControl";
 import {
+  createRealtimeHoldTurnDetectionConfig,
   createRealtimeTurnDetectionConfig,
   estimateRealtimeTotalCostUsd,
   getImplicitEndCallForAssistantTranscript,
@@ -50,6 +51,26 @@ describe("createRealtimeTurnDetectionConfig", () => {
       create_response: true,
       interrupt_response: true,
       idle_timeout_ms: 30_000,
+    });
+  });
+
+  it("clamps idle timeout values to OpenAI Realtime bounds", () => {
+    expect(createRealtimeTurnDetectionConfig(150_000)).toMatchObject({
+      idle_timeout_ms: 30_000,
+    });
+    expect(createRealtimeTurnDetectionConfig(1_000)).toMatchObject({
+      idle_timeout_ms: 5_000,
+    });
+  });
+
+  it("omits idle timeout while an app-managed call hold is active", () => {
+    expect(createRealtimeHoldTurnDetectionConfig()).toEqual({
+      type: "server_vad",
+      threshold: 0.65,
+      prefix_padding_ms: 300,
+      silence_duration_ms: 700,
+      create_response: true,
+      interrupt_response: true,
     });
   });
 });
