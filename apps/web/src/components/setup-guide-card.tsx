@@ -41,7 +41,7 @@ export function SetupGuideCard({
     <div className="px-2 pb-1 group-data-[collapsible=icon]:hidden">
       <Button
         aria-label={t("sidebar.setupGuide.open")}
-        className="h-auto w-full justify-start rounded-xl bg-foreground px-4 py-3 text-background shadow-sm hover:!bg-foreground hover:!text-background focus-visible:!bg-foreground focus-visible:!text-background active:!bg-foreground active:!text-background"
+        className="h-auto w-full justify-start rounded-xl bg-foreground px-4 py-3 text-background hover:!bg-foreground hover:!text-background focus-visible:!bg-foreground focus-visible:!text-background active:!bg-foreground active:!text-background"
         onClick={() => navigate("/setup-guide")}
         type="button"
         variant="ghost"
