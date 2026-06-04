@@ -35,6 +35,20 @@
         "calendar": "Connecter votre calendrier",
         "services": "Ajouter vos services",
         "rules": "Définir les règles"
+      },
+      "stepDescriptions": {
+        "website": "Importez votre site public pour que votre réceptionniste apprenne les bases.",
+        "sources": "Téléversez un document avec vos politiques, FAQ, tarifs ou autres détails utiles.",
+        "calendar": "Connectez un calendrier pour garder les disponibilités à jour.",
+        "services": "Ajoutez les services que les clients peuvent demander et réserver.",
+        "rules": "Définissez les consignes que votre réceptionniste doit suivre pendant les appels et messages."
+      },
+      "stepActions": {
+        "website": "Ajouter le site",
+        "sources": "Téléverser un document",
+        "calendar": "Connecter le calendrier",
+        "services": "Ajouter un service",
+        "rules": "Ajouter une règle"
       }
     }
   }

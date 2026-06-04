@@ -323,7 +323,7 @@ describe("AppSidebar", () => {
     expect(screen.queryByRole("button", { name: "Open setup guide" })).toBeNull();
   });
 
-  it("shows setup guide progress and navigates to checklist targets", async () => {
+  it("shows setup guide progress and navigates to the setup guide page", async () => {
     setupProgress(["website", "services"]);
     const user = userEvent.setup();
 
@@ -345,11 +345,8 @@ describe("AppSidebar", () => {
     expect(screen.getByText("2 / 5 completed")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Open setup guide" }));
-    await user.click(await screen.findByRole("button", { name: /Add more sources/i }));
 
-    expect(screen.getByTestId("location").textContent).toBe(
-      "/agent/knowledge?setup=upload",
-    );
+    expect(screen.getByTestId("location").textContent).toBe("/setup-guide");
   });
 
   it("supports repeated mobile navigation between general, agent, and manage links", async () => {

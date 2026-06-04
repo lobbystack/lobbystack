@@ -56,6 +56,7 @@ import { OnboardingVerifyPhoneCodePage } from "@/features/onboarding/OnboardingV
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
   identifyOperator,
@@ -546,6 +547,16 @@ function WorkspaceShell() {
                 )
               }
               path="/integrations"
+            />
+            <Route
+              element={
+                businessId && canManageTenant ? (
+                  <SetupGuidePage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/" />
+                )
+              }
+              path="/setup-guide"
             />
             <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
             <Route
