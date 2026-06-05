@@ -33,6 +33,7 @@ type AuthenticatedLayoutProps = {
   operatorEmail?: string;
   operatorName?: string;
   showUpgradeToPro?: boolean;
+  showSetupGuide?: boolean;
   isLoading?: boolean;
 };
 
@@ -108,6 +109,7 @@ export function AuthenticatedLayout({
   operatorEmail,
   operatorName,
   showUpgradeToPro = false,
+  showSetupGuide = false,
   isLoading = false,
 }: AuthenticatedLayoutProps) {
   const { t } = useTranslation("settings");
@@ -172,10 +174,12 @@ export function AuthenticatedLayout({
             }
           : {})}
         {...(businessName ? { businessName } : {})}
+        {...(businessId ? { businessId } : {})}
         {...(operatorAvatar ? { operatorAvatar } : {})}
         {...(operatorEmail ? { operatorEmail } : {})}
         {...(operatorName ? { operatorName } : {})}
         showUpgradeToPro={showUpgradeToPro}
+        showSetupGuide={showSetupGuide}
       />
       {businessId && billingStatus ? (
         <UpgradePlanDialog

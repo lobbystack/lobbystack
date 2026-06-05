@@ -6,6 +6,7 @@ import { NavGroup } from "@/components/layout/nav-group";
 import { NavUser } from "@/components/layout/nav-user";
 import type { SidebarData } from "@/components/layout/sidebar-types";
 import { TeamSwitcher } from "@/components/layout/team-switcher";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BlocksIcon } from "@/components/ui/blocks";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
@@ -28,8 +29,10 @@ import { WorkflowIcon } from "@/components/ui/workflow";
 import { AI_SMS_DASHBOARD_ENABLED } from "@/lib/release-flags";
 import { cn } from "@/lib/utils";
 import type { SidebarIconProps } from "@/components/layout/sidebar-types";
+import { SetupGuideCard } from "@/components/setup-guide-card";
 
 type AppSidebarProps = {
+  businessId?: Id<"businesses">;
   businessName?: string;
   onUpgradeToPro?: () => void;
   onSignOut: () => void;
@@ -37,6 +40,7 @@ type AppSidebarProps = {
   operatorEmail?: string;
   operatorName?: string;
   showUpgradeToPro?: boolean;
+  showSetupGuide?: boolean;
   isLoading?: boolean;
 };
 
@@ -79,12 +83,14 @@ const AnimatedCallsIcon = createAnimatedSidebarIcon(PhoneAnimatedIcon);
 
 export function AppSidebar({
   businessName,
+  businessId,
   onUpgradeToPro,
   onSignOut,
   operatorAvatar,
   operatorEmail,
   operatorName,
   showUpgradeToPro = false,
+  showSetupGuide = false,
   isLoading = false,
   ...props
 }: AppSidebarProps & React.ComponentProps<typeof Sidebar>) {
@@ -183,6 +189,9 @@ export function AppSidebar({
         ))}
       </SidebarContent>
       <SidebarFooter>
+        {businessId && showSetupGuide && !isLoading ? (
+          <SetupGuideCard businessId={businessId} />
+        ) : null}
         <NavUser
           isLoading={isLoading}
           onSignOut={onSignOut}

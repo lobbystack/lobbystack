@@ -258,6 +258,19 @@ export function IntegrationsPage({ businessId }: IntegrationsPageProps) {
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   const [googleSheetOpen, setGoogleSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("setup") !== "calendar") {
+      return;
+    }
+
+    setSelectedCalendarId(selectedConnectionCalendarId);
+    setGoogleSheetOpen(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("setup");
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, selectedConnectionCalendarId, setSearchParams]);
+
   useEffect(() => {
     const calendar = searchParams.get("calendar");
     const status = searchParams.get("status");

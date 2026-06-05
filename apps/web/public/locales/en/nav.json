@@ -23,6 +23,35 @@
     "upgradeToPro": "Upgrade to Pro",
     "account": "Account",
     "toggleTheme": "Toggle theme",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "setupGuide": {
+      "title": "Getting started",
+      "open": "Open setup guide",
+      "skip": "Skip tutorial",
+      "skipStep": "Skip",
+      "progress": "{{completed}} / {{total}} completed",
+      "description": "{{completed}} of {{total}} setup steps complete.",
+      "steps": {
+        "website": "Add your website",
+        "sources": "Add more sources",
+        "calendar": "Connect your calendar",
+        "services": "Add your Services",
+        "rules": "Define Rules"
+      },
+      "stepDescriptions": {
+        "website": "Import your public website so your receptionist can learn the basics.",
+        "sources": "Upload a document with policies, FAQs, pricing, or other details your receptionist should know.",
+        "calendar": "Connect a calendar so appointment times stay in sync.",
+        "services": "Add the services customers can ask about and book.",
+        "rules": "Define the instructions your receptionist should follow during calls and messages."
+      },
+      "stepActions": {
+        "website": "Add website",
+        "sources": "Upload document",
+        "calendar": "Connect calendar",
+        "services": "Add service",
+        "rules": "Add rule"
+      }
+    }
   }
 }

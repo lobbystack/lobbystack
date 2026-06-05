@@ -23,6 +23,7 @@ import type * as auth from "../auth.js";
 import type * as billing from "../billing.js";
 import type * as businesses_admin from "../businesses/admin.js";
 import type * as businesses_catalog from "../businesses/catalog.js";
+import type * as businesses_setupGuide from "../businesses/setupGuide.js";
 import type * as conversations_sessions from "../conversations/sessions.js";
 import type * as conversations_webhooks from "../conversations/webhooks.js";
 import type * as crons from "../crons.js";
@@ -136,6 +137,7 @@ declare const fullApi: ApiFromModules<{
   billing: typeof billing;
   "businesses/admin": typeof businesses_admin;
   "businesses/catalog": typeof businesses_catalog;
+  "businesses/setupGuide": typeof businesses_setupGuide;
   "conversations/sessions": typeof conversations_sessions;
   "conversations/webhooks": typeof conversations_webhooks;
   crons: typeof crons;

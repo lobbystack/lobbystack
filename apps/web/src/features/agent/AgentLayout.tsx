@@ -1,4 +1,6 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
 
@@ -7,6 +9,7 @@ import { AddKnowledgeSheet } from "./AddKnowledgeSheet";
 import { KnowledgeActionsMenu } from "./KnowledgeActionsMenu";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { getAgentSectionFromPathname } from "./sections";
+import { Button } from "@/components/ui/button";
 
 type AgentLayoutProps = {
   businessId?: Id<"businesses">;
@@ -20,6 +23,8 @@ type AgentLayoutOutletContext = {
 export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
   const { t } = useTranslation("agent");
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
   const section = getAgentSectionFromPathname(location.pathname);
   const isBasicSettingsRoute =
     location.pathname === "/agent/basic-settings" || location.pathname === "/agent";
@@ -56,14 +61,36 @@ export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
     };
   }
 
+  useEffect(() => {
+    if (section !== "rules" || searchParams.get("setup") !== "rule") {
+      return;
+    }
+
+    setIsRuleDialogOpen(true);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("setup");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, section, setSearchParams]);
+
   const headerActions =
     canManageTenant && !isBasicSettingsRoute && isKnowledgeRoute ? (
       <>
         {section === "knowledge" ? (
           <KnowledgeActionsMenu businessId={businessId} />
         ) : null}
-        {section !== "knowledge" ? (
-          <AddKnowledgeSheet businessId={businessId} section={section} />
+        {section === "rules" ? (
+          <>
+            <Button onClick={() => setIsRuleDialogOpen(true)} type="button">
+              <Plus data-icon="inline-start" />
+              {t("sections.rules.addKnowledge")}
+            </Button>
+            <AddKnowledgeSheet
+              businessId={businessId}
+              onOpenChange={setIsRuleDialogOpen}
+              open={isRuleDialogOpen}
+              section="rules"
+            />
+          </>
         ) : null}
       </>
     ) : undefined;

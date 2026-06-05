@@ -72,6 +72,13 @@ const messageMediaValidator = v.object({
 });
 
 const retentionStatusValidator = v.union(v.literal("active"), v.literal("expired"));
+const setupGuideStepIdValidator = v.union(
+  v.literal("website"),
+  v.literal("sources"),
+  v.literal("calendar"),
+  v.literal("services"),
+  v.literal("rules"),
+);
 
 const conversationSessionSummaryKindValidator = v.union(
   v.literal("booked"),
@@ -208,6 +215,7 @@ export default defineSchema({
     defaultLocale: v.optional(runtimeLocaleValidator),
     websiteUrl: v.optional(v.string()),
     onboardingStage: v.optional(v.string()),
+    setupGuideSkippedSteps: v.optional(v.array(setupGuideStepIdValidator)),
     businessType: v.string(),
     deploymentMode: v.string(),
     status: v.string(),

@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { Fragment, useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import {
   flexRender,
   getCoreRowModel,
@@ -358,12 +359,14 @@ export function AgentServicesPage({
     businessId,
   });
   const upsertService = useObservedAction(api.businesses.catalog.upsertService);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
   const [editingService, setEditingService] = useState<ServiceRow | null>(null);
+  const [isCreateServiceOpen, setIsCreateServiceOpen] = useState(false);
   const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null);
   const services = useMemo(
     () => [...(configuration?.services ?? [])].sort((left, right) => right._creationTime - left._creationTime),
@@ -526,6 +529,17 @@ export function AgentServicesPage({
     }
   }, [editingService, services]);
 
+  useEffect(() => {
+    if (searchParams.get("setup") !== "service") {
+      return;
+    }
+
+    setIsCreateServiceOpen(true);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("setup");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const emptyMessage =
     searchValue.trim().length > 0 ? t("table.empty") : t("sections.services.emptyState");
 
@@ -543,7 +557,16 @@ export function AgentServicesPage({
         </div>
         {canManageTenant ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <ServiceDialog businessId={businessId} mode="create" />
+            <Button onClick={() => setIsCreateServiceOpen(true)} type="button">
+              <Plus data-icon="inline-start" />
+              {t("sections.services.addKnowledge")}
+            </Button>
+            <ServiceDialog
+              businessId={businessId}
+              mode="create"
+              onOpenChange={setIsCreateServiceOpen}
+              open={isCreateServiceOpen}
+            />
           </div>
         ) : null}
       </div>

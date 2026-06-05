@@ -56,6 +56,7 @@ import { OnboardingVerifyPhoneCodePage } from "@/features/onboarding/OnboardingV
 import { OnboardingVerifyPhonePage } from "@/features/onboarding/OnboardingVerifyPhonePage";
 import { OnboardingWebsitePage } from "@/features/onboarding/OnboardingWebsitePage";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
+import { SetupGuidePage } from "@/features/setup/SetupGuidePage";
 import {
   captureAnalyticsEvent,
   identifyOperator,
@@ -319,6 +320,8 @@ function WorkspaceShell() {
   const onboardingTarget = activeBusiness
     ? onboardingRouteForStage(activeBusiness.onboardingStage)
     : null;
+  const showSetupGuide =
+    !isBootstrapLoading && Boolean(businessId && canManageTenant && !onboardingTarget);
   const shouldShowSetupPending =
     !isBootstrapLoading && Boolean(activeBusiness && onboardingTarget && !canManageTenant);
   const shouldBridgeOnboardingCheckoutSuccess =
@@ -430,6 +433,7 @@ function WorkspaceShell() {
           : {}
       )}
       showUpgradeToPro={showUpgradeToPro}
+      showSetupGuide={showSetupGuide}
     >
       <Main className="flex flex-1 flex-col" fixed={usesFixedMain}>
         {isBootstrapLoading ? (
@@ -543,6 +547,16 @@ function WorkspaceShell() {
                 )
               }
               path="/integrations"
+            />
+            <Route
+              element={
+                businessId && canManageTenant ? (
+                  <SetupGuidePage businessId={businessId} />
+                ) : (
+                  <Navigate replace to="/" />
+                )
+              }
+              path="/setup-guide"
             />
             <Route element={<ContactsPage {...(businessId ? { businessId } : {})} />} path="/contacts" />
             <Route
