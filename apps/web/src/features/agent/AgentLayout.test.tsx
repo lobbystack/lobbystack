@@ -68,4 +68,45 @@ describe("AgentLayout setup links", () => {
     expect(await screen.findByText("rule-dialog-open")).toBeTruthy();
     expect(screen.getByTestId("location").textContent).toBe("/agent/rules");
   });
+
+  it("keeps hook order stable when the business loads after the first render", async () => {
+    const { rerender } = render(
+      <MemoryRouter initialEntries={["/agent/rules?setup=rule"]}>
+        <Routes>
+          <Route
+            element={
+              <>
+                <AgentLayout canManageTenant />
+                <LocationProbe />
+              </>
+            }
+            path="/agent/*"
+          >
+            <Route element={<RulesOutlet />} path="rules" />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    rerender(
+      <MemoryRouter initialEntries={["/agent/rules"]}>
+        <Routes>
+          <Route
+            element={
+              <>
+                <AgentLayout businessId={"business-1" as any} canManageTenant />
+                <LocationProbe />
+              </>
+            }
+            path="/agent/*"
+          >
+            <Route element={<RulesOutlet />} path="rules" />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("rule-dialog-open")).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe("/agent/rules");
+  });
 });
