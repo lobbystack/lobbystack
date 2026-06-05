@@ -30,6 +30,17 @@ export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
     location.pathname === "/agent/basic-settings" || location.pathname === "/agent";
   const isKnowledgeRoute = section === "knowledge" || section === "services" || section === "rules";
 
+  useEffect(() => {
+    if (section !== "rules" || searchParams.get("setup") !== "rule") {
+      return;
+    }
+
+    setIsRuleDialogOpen(true);
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.delete("setup");
+    setSearchParams(nextSearchParams, { replace: true });
+  }, [searchParams, section, setSearchParams]);
+
   if (!businessId) {
     return null;
   }
@@ -60,17 +71,6 @@ export function AgentLayout({ businessId, canManageTenant }: AgentLayoutProps) {
       description: t("sections.rules.description"),
     };
   }
-
-  useEffect(() => {
-    if (section !== "rules" || searchParams.get("setup") !== "rule") {
-      return;
-    }
-
-    setIsRuleDialogOpen(true);
-    const nextSearchParams = new URLSearchParams(searchParams);
-    nextSearchParams.delete("setup");
-    setSearchParams(nextSearchParams, { replace: true });
-  }, [searchParams, section, setSearchParams]);
 
   const headerActions =
     canManageTenant && !isBasicSettingsRoute && isKnowledgeRoute ? (
