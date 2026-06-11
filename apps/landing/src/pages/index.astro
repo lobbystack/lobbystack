@@ -16,6 +16,7 @@ import { homeFaqs } from "@/lib/home-faqs"
 import {
   faqPageJsonLd,
   organizationJsonLd,
+  productJsonLd,
   softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo"
@@ -33,6 +34,7 @@ import {
       organizationJsonLd(),
       webSiteJsonLd(),
       softwareApplicationJsonLd(),
+      productJsonLd(),
       faqPageJsonLd({ path: "/", faqs: homeFaqs }),
     ],
   }}

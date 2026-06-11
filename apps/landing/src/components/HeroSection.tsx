@@ -29,11 +29,11 @@ export function HeroSection({ children }: { children?: ReactNode }) {
             </a>
 
             <h1 className="animate-fade-up display-heading delay-100">
-              Stop losing revenue to{" "}
+              LobbyStack turns{" "}
               <span className="underline decoration-2 underline-offset-4">
                 missed calls
-              </span>
-              .
+              </span>{" "}
+              into booked work.
             </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">

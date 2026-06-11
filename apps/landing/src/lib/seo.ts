@@ -2,10 +2,10 @@ export const SITE_URL = "https://lobbystack.com"
 
 export const SITE_NAME = "LobbyStack"
 
-export const DEFAULT_TITLE = "LobbyStack - Open-Source AI Receptionist"
+export const DEFAULT_TITLE = "LobbyStack | Open-Source AI Receptionist"
 
 export const DEFAULT_DESCRIPTION =
-  "Never miss a call with LobbyStack, the open-source AI receptionist. Answer questions, qualify leads, book appointments, and route urgent calls 24/7."
+  "LobbyStack is the open-source AI receptionist that answers calls, qualifies leads, books appointments, and routes urgent requests 24/7."
 
 export const DEFAULT_OG_IMAGE = "/og/index.jpg"
 
@@ -14,6 +14,18 @@ export const OG_IMAGE_WIDTH = 1200
 export const OG_IMAGE_HEIGHT = 675
 
 export const SEARCH_PATH = "/search/"
+
+const BRAND_ALIASES = [
+  "lobbystack",
+  "Lobby Stack",
+  "LobbyStack AI receptionist",
+  "LobbyStack open-source AI receptionist",
+]
+
+const BRAND_SAME_AS = [
+  "https://github.com/lobbystack",
+  "https://github.com/lobbystack/lobbystack",
+]
 
 export type JsonLd = Record<string, unknown>
 
@@ -103,6 +115,8 @@ export const organizationJsonLd = (): JsonLd => ({
   "@type": "Organization",
   "@id": absoluteUrl("/#organization"),
   name: SITE_NAME,
+  legalName: "Lobbystack Inc.",
+  alternateName: BRAND_ALIASES,
   url: absoluteUrl("/"),
   logo: {
     "@type": "ImageObject",
@@ -113,15 +127,33 @@ export const organizationJsonLd = (): JsonLd => ({
   },
   description:
     "LobbyStack is an open-source AI receptionist platform for small businesses that answers calls, books appointments, captures caller details, and routes urgent requests.",
-  sameAs: ["https://github.com/lobbystack/lobbystack"],
+  sameAs: BRAND_SAME_AS,
+  knowsAbout: [
+    "AI receptionist software",
+    "AI phone answering",
+    "appointment booking automation",
+    "missed call follow-up",
+    "self-hosted receptionist software",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@lobbystack.com",
+    url: "https://docs.lobbystack.com",
+  },
 })
 
 export const webSiteJsonLd = (): JsonLd => ({
   "@type": "WebSite",
   "@id": absoluteUrl("/#website"),
   name: SITE_NAME,
+  alternateName: BRAND_ALIASES,
   url: absoluteUrl("/"),
   description: DEFAULT_DESCRIPTION,
+  inLanguage: "en",
+  about: {
+    "@id": absoluteUrl("/#software"),
+  },
   publisher: {
     "@id": absoluteUrl("/#organization"),
   },
@@ -153,6 +185,16 @@ export const webPageJsonLd = ({
     name: title,
     url,
     description,
+    ...(path === "/"
+      ? {
+          about: {
+            "@id": absoluteUrl("/#software"),
+          },
+          mainEntity: {
+            "@id": absoluteUrl("/#product"),
+          },
+        }
+      : {}),
     isPartOf: {
       "@id": absoluteUrl("/#website"),
     },
@@ -192,14 +234,40 @@ export const softwareApplicationJsonLd = (): JsonLd => ({
   "@type": "SoftwareApplication",
   "@id": absoluteUrl("/#software"),
   name: SITE_NAME,
+  alternateName: BRAND_ALIASES,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: absoluteUrl("/"),
   image: absoluteUrl(DEFAULT_OG_IMAGE),
   description: DEFAULT_DESCRIPTION,
+  isAccessibleForFree: true,
+  keywords:
+    "LobbyStack, lobbystack, AI receptionist, open-source AI receptionist, AI phone answering, appointment scheduler",
+  brand: {
+    "@id": absoluteUrl("/#organization"),
+  },
+  creator: {
+    "@id": absoluteUrl("/#organization"),
+  },
+  maintainer: {
+    "@id": absoluteUrl("/#organization"),
+  },
   publisher: {
     "@id": absoluteUrl("/#organization"),
   },
+  sameAs: BRAND_SAME_AS,
+  softwareHelp: {
+    "@type": "CreativeWork",
+    url: "https://docs.lobbystack.com",
+  },
+  featureList: [
+    "AI phone answering",
+    "appointment booking",
+    "lead qualification",
+    "call routing",
+    "SMS and call summaries",
+    "self-hosted deployment",
+  ],
   offers: [
     {
       "@type": "Offer",
@@ -232,6 +300,33 @@ export const softwareApplicationJsonLd = (): JsonLd => ({
       availability: "https://schema.org/InStock",
     },
   ],
+})
+
+export const productJsonLd = (): JsonLd => ({
+  "@type": "Product",
+  "@id": absoluteUrl("/#product"),
+  name: SITE_NAME,
+  alternateName: BRAND_ALIASES,
+  url: absoluteUrl("/"),
+  image: absoluteUrl(DEFAULT_OG_IMAGE),
+  description: DEFAULT_DESCRIPTION,
+  category: "AI receptionist software",
+  brand: {
+    "@id": absoluteUrl("/#organization"),
+  },
+  manufacturer: {
+    "@id": absoluteUrl("/#organization"),
+  },
+  sameAs: BRAND_SAME_AS,
+  offers: {
+    "@type": "AggregateOffer",
+    url: absoluteUrl("/pricing/"),
+    priceCurrency: "USD",
+    lowPrice: "0",
+    highPrice: "100",
+    offerCount: "3",
+    availability: "https://schema.org/InStock",
+  },
 })
 
 export const breadcrumbJsonLd = (

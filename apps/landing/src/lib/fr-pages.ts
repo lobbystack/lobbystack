@@ -86,7 +86,7 @@ export const frenchPages: FrenchPage[] = [
     description:
       "Ne manquez plus d'appels avec LobbyStack, la réceptionniste IA open source qui répond, qualifie les prospects, prend des rendez-vous et route les appels urgents.",
     eyebrow: "Réceptionniste IA pour petites entreprises",
-    h1: "Arrêtez de perdre du revenu à cause des appels manqués.",
+    h1: "LobbyStack transforme les appels manqués en rendez-vous réservés.",
     intro:
       "LobbyStack répond à tous vos appels, ou seulement à ceux que vous ne pouvez pas prendre. L'IA qualifie les prospects, répond aux questions et réserve les clients directement dans votre calendrier.",
     primaryCta: "Essayer gratuitement",

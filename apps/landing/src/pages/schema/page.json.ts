@@ -6,6 +6,8 @@ import {
   breadcrumbJsonLd,
   imageObjectJsonLd,
   organizationJsonLd,
+  productJsonLd,
+  softwareApplicationJsonLd,
   webPageJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo"
@@ -16,6 +18,9 @@ export const GET = createSchemaEndpoint({
     [
       organizationJsonLd(),
       webSiteJsonLd(),
+      ...(page.path === "/"
+        ? [softwareApplicationJsonLd(), productJsonLd()]
+        : []),
       ...(page.path === "/blog/" ? [blogJsonLd()] : []),
       imageObjectJsonLd({
         path: page.path,
