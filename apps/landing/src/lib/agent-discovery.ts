@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto"
-import { DEFAULT_DESCRIPTION, SITE_URL, absoluteUrl } from "@/lib/seo"
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_URL,
+  absoluteUrl,
+} from "@/lib/seo"
 import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
 
 export const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
@@ -504,7 +509,7 @@ export const agentSkillsIndex = {
 }
 
 export const homepageMarkdown = `---
-title: LobbyStack - Open-Source AI Receptionist
+title: ${DEFAULT_TITLE}
 description: ${DEFAULT_DESCRIPTION}
 url: ${absoluteUrl("/")}
 ---

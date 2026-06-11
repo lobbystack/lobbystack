@@ -39,6 +39,12 @@
 /terms/
   X-Robots-Tag: noindex, follow
 
+/fr/privacy/
+  X-Robots-Tag: noindex, follow
+
+/fr/terms/
+  X-Robots-Tag: noindex, follow
+
 /index.md
   Content-Type: text/markdown; charset=utf-8
   X-Robots-Tag: noindex, follow

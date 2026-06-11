@@ -9,6 +9,7 @@ import { createLogger } from "vite"
 
 const SITE_URL = "https://lobbystack.com"
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY
+const NOINDEX_PATHS = new Set(["/404/", "/privacy/", "/terms/", "/search/"])
 const SEO_GRAPH_SOURCEMAP_WARN_RE =
   /Sourcemap for ".+@jdevalk[\\/+]astro-seo-graph.+?" points to missing source files/
 
@@ -62,6 +63,16 @@ const sourceForUrl = (url) => {
 
   return undefined
 }
+
+const normalizePath = (pathname) => {
+  if (!pathname || pathname === "/") return "/"
+  return pathname.endsWith("/") ? pathname : `${pathname}/`
+}
+
+const indexingPath = (pathname) =>
+  normalizePath(normalizePath(pathname).replace(/^\/fr(?=\/|$)/, "") || "/")
+
+const isNoindexPath = (pathname) => NOINDEX_PATHS.has(indexingPath(pathname))
 
 const lastmodForUrl = (url) => {
   const source = sourceForUrl(url)
@@ -153,13 +164,11 @@ export default defineConfig({
               filter: (url) => {
                 const pathname = new URL(url).pathname
                 return (
+                  !isNoindexPath(pathname) &&
                   !pathname.startsWith("/api/") &&
                   !pathname.startsWith("/schema/") &&
                   !pathname.startsWith("/.well-known/") &&
-                  !pathname.endsWith(".md") &&
-                  !["/404/", "/privacy/", "/terms/", "/search/"].includes(
-                    pathname
-                  )
+                  !pathname.endsWith(".md")
                 )
               },
             },
@@ -170,7 +179,7 @@ export default defineConfig({
       entryLimit: 1000,
       filter: (page) => {
         const pathname = new URL(page).pathname
-        return !["/404/", "/privacy/", "/terms/", "/search/"].includes(pathname)
+        return !isNoindexPath(pathname)
       },
       serialize(item) {
         item.lastmod = lastmodForUrl(item.url)

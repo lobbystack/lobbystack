@@ -21,11 +21,14 @@ jobs:
           args: >-
             --verbose
             --no-progress
+            --base-url https://lobbystack.com
             --exclude '^https://app\.lobbystack\.com/'
             --exclude '^https://voice\.lobbystack\.com/web-call/'
             --exclude '^https://voice-dev\.lobbystack\.com/web-call/'
             --exclude '^https://.*\.fly\.dev/web-call/'
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
+            --exclude '^https://www\.bls\.gov/ooh/Office-and-Administrative-Support/Receptionists\.htm$'
+            --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'
             './apps/landing/src/**/*.astro'
             './apps/landing/src/**/*.tsx'
             './apps/landing/src/content/**/*.md'
