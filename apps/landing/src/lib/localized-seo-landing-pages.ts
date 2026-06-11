@@ -42,6 +42,163 @@ const commonFaqsFr: FaqItem[] = [
   },
 ]
 
+const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
+  "/solutions/ai-phone-answering/": {
+    group: "solution",
+    slug: "ai-phone-answering",
+    path: "/solutions/ai-phone-answering/",
+    title: "Reponse telephonique IA pour petites entreprises",
+    description:
+      "Repondez aux appels entrants, capturez les details, reservez des rendez-vous et routez les demandes urgentes avec LobbyStack.",
+    eyebrow: "Reponse telephonique IA",
+    h1: "Reponse telephonique IA qui decroche quand votre equipe ne peut pas.",
+    intro:
+      "LobbyStack repond au premier signal, comprend le besoin du client, capture les details et decide de reserver, prendre un message ou transferer selon vos regles.",
+    image: "/illustrations/call-capture.webp",
+    imageAlt:
+      "Receptionniste IA LobbyStack capturant les details d'un appelant",
+    proofPoints: [
+      "Repond aux appels en direct, apres les heures et pendant les pics",
+      "Collecte coordonnees, besoin, urgence et prochaine etape",
+      "Reserve, prend un message ou transfere selon vos regles",
+    ],
+    sections: [
+      {
+        title:
+          "Transformez les appels sans reponse en prochaines etapes claires",
+        body: "Les appelants n'attendent pas toujours un rappel. LobbyStack repond rapidement, pose les bonnes questions et donne a votre equipe un resume exploitable.",
+        points: [
+          "Accueil et ton personnalises",
+          "Questions d'admission adaptees a votre entreprise",
+          "Resume d'appel, transcription et resultat visibles au meme endroit",
+        ],
+      },
+      {
+        title: "Gardez les humains pour les conversations qui comptent",
+        body: "Les appels routiniers peuvent etre traites automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent a votre equipe avec le contexte.",
+        points: [
+          "Regles de transfert configurables",
+          "Messages et rappels pour les demandes non urgentes",
+          "Historique centralise pour verifier ce qui s'est passe",
+        ],
+      },
+    ],
+    faqs: commonFaqsFr,
+    faqHeading: "Questions sur la reponse telephonique IA",
+    relatedLinks: [
+      { label: "Tarifs", href: "/pricing/" },
+      { label: "Fonctionnalites", href: "/features/" },
+      {
+        label: "Calculateur d'appels manques",
+        href: "/missed-call-revenue-calculator/",
+      },
+    ],
+  },
+  "/solutions/ai-appointment-scheduler/": {
+    group: "solution",
+    slug: "ai-appointment-scheduler",
+    path: "/solutions/ai-appointment-scheduler/",
+    title: "Planificateur de rendez-vous IA pour petites entreprises",
+    description:
+      "LobbyStack planifie les rendez-vous depuis les appels, capture les details, envoie les confirmations et route les demandes urgentes.",
+    eyebrow: "Planification de rendez-vous IA",
+    h1: "Un planificateur IA qui reserve pendant que le client est encore pret.",
+    intro:
+      "LobbyStack verifie les disponibilites, propose des creneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
+    image: "/illustrations/booking-flow.webp",
+    imageAlt:
+      "Planificateur de rendez-vous IA LobbyStack confirmant une reservation",
+    proofPoints: [
+      "Reserve pendant l'appel au lieu d'attendre un rappel",
+      "Respecte vos horaires, types de rendez-vous et consignes",
+      "Envoie confirmations et resumes a votre equipe",
+    ],
+    sections: [
+      {
+        title: "Reduisez les allers-retours de planification",
+        body: "Quand un appelant est pret, LobbyStack peut proposer les bons creneaux, confirmer le rendez-vous et capturer les details necessaires a la preparation.",
+        points: [
+          "Disponibilites connectees a votre calendrier",
+          "Questions de qualification avant la reservation",
+          "Confirmations et prochaines etapes partagees automatiquement",
+        ],
+      },
+      {
+        title: "Gardez le controle des cas particuliers",
+        body: "Si une demande sort de vos regles, LobbyStack prend les preferences, explique la suite et transmet le contexte a votre equipe.",
+        points: [
+          "Regles par service, zone ou type de rendez-vous",
+          "Fallback vers rappel ou message si besoin",
+          "Transfert des urgences selon vos consignes",
+        ],
+      },
+    ],
+    faqs: commonFaqsFr,
+    faqHeading: "Questions sur la planification IA",
+    relatedLinks: [
+      { label: "Tarifs", href: "/pricing/" },
+      { label: "Fonctionnalites", href: "/features/" },
+      {
+        label: "Reponse telephonique IA",
+        href: "/solutions/ai-phone-answering/",
+      },
+    ],
+  },
+  "/solutions/ai-receptionist-for-home-services/": {
+    group: "solution",
+    slug: "ai-receptionist-for-home-services",
+    path: "/solutions/ai-receptionist-for-home-services/",
+    title: "Receptionniste IA pour services a domicile | LobbyStack",
+    description:
+      "LobbyStack repond aux appels pour CVC, plomberie, electricite, toiture, paysagement et autres services pendant que vos equipes travaillent.",
+    eyebrow: "Services a domicile",
+    h1: "Receptionniste IA pour equipes de services a domicile.",
+    intro:
+      "Capturez les details du chantier, la zone de service, l'urgence et le besoin de planification pendant que vos equipes restent sur le terrain.",
+    image: "/illustrations/industry-bookings.webp",
+    imageAlt:
+      "Receptionniste IA LobbyStack reservant des travaux de services a domicile",
+    proofPoints: [
+      "Qualifie urgence, zone de service et type de travail",
+      "Aide les appelants a reserver ou demander un rappel",
+      "Transfere les situations critiques a la bonne personne",
+    ],
+    sections: [
+      {
+        title: "Couvrez le telephone pendant que l'equipe est sur le terrain",
+        body: "Les techniciens ne peuvent pas toujours repondre sans interrompre le travail. LobbyStack collecte les informations essentielles et garde les demandes visibles.",
+        points: [
+          "Questions adaptees aux services a domicile",
+          "Notes de travail et resume apres chaque appel",
+          "Support pour les appels apres les heures et les pics saisonniers",
+        ],
+      },
+      {
+        title: "Priorisez les bons appels plus vite",
+        body: "Les urgences, gros projets et demandes sensibles peuvent etre escalades avec contexte, tandis que les appels routiniers avancent vers un rendez-vous ou un suivi.",
+        points: [
+          "Routage par urgence ou type de demande",
+          "Reservation et confirmations selon vos regles",
+          "Historique centralise pour proprietaires, equipes et bureau",
+        ],
+      },
+    ],
+    faqs: commonFaqsFr,
+    faqHeading: "Questions sur les services a domicile",
+    relatedLinks: [
+      { label: "Tarifs", href: "/pricing/" },
+      {
+        label: "Calculateur d'appels manques",
+        href: "/missed-call-revenue-calculator/",
+      },
+      {
+        label: "Reponse apres les heures",
+        href: "/solutions/after-hours-answering-service/",
+      },
+    ],
+  },
+}
+
 const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/about/": {
     title: "A propos de LobbyStack",
@@ -261,6 +418,10 @@ export const getLocalizedSeoLandingPage = (
   locale: Locale,
   path: string
 ): SeoLandingPage | undefined => {
+  if (locale === "fr" && bespokeSolutionPagesFr[path]) {
+    return bespokeSolutionPagesFr[path]
+  }
+
   const page = seoLandingPageByPath(path)
   if (!page || locale !== "fr") return page
 
