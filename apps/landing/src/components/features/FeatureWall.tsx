@@ -1,5 +1,6 @@
 import type React from "react"
 import type { LucideIcon } from "lucide-react"
+import type { Locale } from "@/i18n"
 import {
   Pencil,
   CalendarCheck,
@@ -533,7 +534,13 @@ function FullWidthCallout() {
 
 /* ─────────────────────────── Main export ─────────────────────────── */
 
-export function FeatureWall() {
+type FeatureWallProps = {
+  locale?: Locale
+}
+
+export function FeatureWall({ locale = "en" }: FeatureWallProps) {
+  void locale
+
   return (
     <section className="section-spacing" id="feature-wall">
       <div className="mx-auto max-w-7xl px-6">

@@ -111,7 +111,14 @@ export const schemaGraph = (items: JsonLd[] = []): JsonLd => {
   }
 }
 
-export const organizationJsonLd = (): JsonLd => ({
+type LocaleInput = {
+  locale?: "en" | "fr"
+}
+
+const localeLanguage = (locale: LocaleInput["locale"] = "en") =>
+  locale === "fr" ? "fr" : "en"
+
+export const organizationJsonLd = (options: LocaleInput = {}): JsonLd => ({
   "@type": "Organization",
   "@id": absoluteUrl("/#organization"),
   name: SITE_NAME,
@@ -127,6 +134,7 @@ export const organizationJsonLd = (): JsonLd => ({
   },
   description:
     "LobbyStack is an open-source AI receptionist platform for small businesses that answers calls, books appointments, captures caller details, and routes urgent requests.",
+  inLanguage: localeLanguage(options.locale),
   sameAs: BRAND_SAME_AS,
   knowsAbout: [
     "AI receptionist software",
@@ -143,14 +151,14 @@ export const organizationJsonLd = (): JsonLd => ({
   },
 })
 
-export const webSiteJsonLd = (): JsonLd => ({
+export const webSiteJsonLd = (options: LocaleInput = {}): JsonLd => ({
   "@type": "WebSite",
   "@id": absoluteUrl("/#website"),
   name: SITE_NAME,
   alternateName: BRAND_ALIASES,
   url: absoluteUrl("/"),
   description: DEFAULT_DESCRIPTION,
-  inLanguage: "en",
+  inLanguage: localeLanguage(options.locale),
   about: {
     "@id": absoluteUrl("/#software"),
   },
@@ -170,12 +178,14 @@ export const webPageJsonLd = ({
   path,
   image = ogImagePath(path),
   type = "WebPage",
+  locale = "en",
 }: {
   title: string
   description: string
   path: string
   image?: string
   type?: "WebPage" | "CollectionPage"
+  locale?: "en" | "fr"
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -185,6 +195,7 @@ export const webPageJsonLd = ({
     name: title,
     url,
     description,
+    inLanguage: localeLanguage(locale),
     ...(path === "/"
       ? {
           about: {
@@ -207,9 +218,11 @@ export const webPageJsonLd = ({
 export const faqPageJsonLd = ({
   path,
   faqs,
+  locale = "en",
 }: {
   path: string
   faqs: FaqItem[]
+  locale?: "en" | "fr"
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -219,6 +232,7 @@ export const faqPageJsonLd = ({
     isPartOf: {
       "@id": `${url}#webpage`,
     },
+    inLanguage: localeLanguage(locale),
     mainEntity: faqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
@@ -230,7 +244,9 @@ export const faqPageJsonLd = ({
   }
 }
 
-export const softwareApplicationJsonLd = (): JsonLd => ({
+export const softwareApplicationJsonLd = (
+  options: LocaleInput = {}
+): JsonLd => ({
   "@type": "SoftwareApplication",
   "@id": absoluteUrl("/#software"),
   name: SITE_NAME,
@@ -240,6 +256,7 @@ export const softwareApplicationJsonLd = (): JsonLd => ({
   url: absoluteUrl("/"),
   image: absoluteUrl(DEFAULT_OG_IMAGE),
   description: DEFAULT_DESCRIPTION,
+  inLanguage: localeLanguage(options.locale),
   isAccessibleForFree: true,
   keywords:
     "LobbyStack, lobbystack, AI receptionist, open-source AI receptionist, AI phone answering, appointment scheduler",
@@ -302,7 +319,7 @@ export const softwareApplicationJsonLd = (): JsonLd => ({
   ],
 })
 
-export const productJsonLd = (): JsonLd => ({
+export const productJsonLd = (options: LocaleInput = {}): JsonLd => ({
   "@type": "Product",
   "@id": absoluteUrl("/#product"),
   name: SITE_NAME,
@@ -310,6 +327,7 @@ export const productJsonLd = (): JsonLd => ({
   url: absoluteUrl("/"),
   image: absoluteUrl(DEFAULT_OG_IMAGE),
   description: DEFAULT_DESCRIPTION,
+  inLanguage: localeLanguage(options.locale),
   category: "AI receptionist software",
   brand: {
     "@id": absoluteUrl("/#organization"),
@@ -367,20 +385,34 @@ export const imageObjectJsonLd = ({
   }
 }
 
-export const blogJsonLd = (): JsonLd => ({
-  "@type": "Blog",
-  "@id": absoluteUrl("/blog/#blog"),
-  name: "AI Receptionist Blog and Product Updates",
-  url: absoluteUrl("/blog/"),
-  description:
-    "Product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation.",
-  publisher: {
-    "@id": absoluteUrl("/#organization"),
-  },
-  isPartOf: {
-    "@id": absoluteUrl("/#website"),
-  },
-})
+export const blogJsonLd = ({
+  locale = "en",
+  path = "/blog/",
+}: LocaleInput & { path?: string } = {}): JsonLd => {
+  const name =
+    locale === "fr"
+      ? "Blog et mises a jour produit LobbyStack"
+      : "AI Receptionist Blog and Product Updates"
+  const description =
+    locale === "fr"
+      ? "Mises a jour produit et guides pratiques sur les receptionnistes IA, la reponse telephonique et la reservation."
+      : "Product updates and practical guides about AI receptionists, phone answering, appointment booking, and small-business call automation."
+
+  return {
+    "@type": "Blog",
+    "@id": absoluteUrl(`${normalizedPath(path)}#blog`),
+    name,
+    url: absoluteUrl(path),
+    description,
+    inLanguage: localeLanguage(locale),
+    publisher: {
+      "@id": absoluteUrl("/#organization"),
+    },
+    isPartOf: {
+      "@id": absoluteUrl("/#website"),
+    },
+  }
+}
 
 export const blogPostingJsonLd = ({
   title,
@@ -392,6 +424,7 @@ export const blogPostingJsonLd = ({
   modifiedTime,
   articleBody,
   category,
+  locale = "en",
 }: {
   title: string
   description: string
@@ -402,6 +435,7 @@ export const blogPostingJsonLd = ({
   modifiedTime: string
   articleBody?: string
   category?: string
+  locale?: "en" | "fr"
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
   const imagePath = image ?? ogImagePath(path)
@@ -419,6 +453,7 @@ export const blogPostingJsonLd = ({
     dateModified: modifiedTime,
     articleSection: category,
     articleBody,
+    inLanguage: localeLanguage(locale),
     author: {
       "@type": "Organization",
       name: author,
@@ -428,7 +463,9 @@ export const blogPostingJsonLd = ({
       "@id": absoluteUrl("/#organization"),
     },
     isPartOf: {
-      "@id": absoluteUrl("/blog/#blog"),
+      "@id": absoluteUrl(
+        `${locale === "fr" ? "/fr/blog/" : "/blog/"}#blog`
+      ),
     },
     mainEntityOfPage: {
       "@id": `${url}#webpage`,

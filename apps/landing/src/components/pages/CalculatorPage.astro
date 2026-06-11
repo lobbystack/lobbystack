@@ -1,0 +1,420 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { MissedCallCalculator } from "@/components/calculator/MissedCallCalculator"
+import { CalculatorFaq } from "@/components/calculator/CalculatorFaq"
+import { getCalculatorFaqs } from "@/lib/calculator-faqs"
+import { MissedRevenueCards } from "@/components/calculator/MissedRevenueCards"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  absoluteUrl,
+} from "@/lib/seo"
+import { assertLocale, getCopy, getRouteSeo, localizeHref, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const common = getCopy(locale).common
+const routeSeo = getRouteSeo({ locale, path: "/missed-call-revenue-calculator/" })
+const canonicalPath = localizePath(locale, "/missed-call-revenue-calculator/")
+const faqs = getCalculatorFaqs(locale).map((faq) => ({
+  question: faq.q,
+  answer: faq.a,
+}))
+
+type PageCopy = {
+  breadcrumb: string
+  h1: string
+  intro: string
+  body: string
+  measurementHeading: string
+  measurementIntro: string
+  measurementItems: Array<{ term: string; description: string }>
+  mathHeading: string
+  mathIntro: string
+  formula: string
+  mathBody: string
+  whyHeading: string
+  whyParagraphs: string[]
+  inputsHeading: string
+  inputsIntro: string
+  inputTips: string[]
+  tradeHeading: string
+  tradeIntro: string
+  tradeNotes: Array<{ trade: string; note: string }>
+  nextHeading: string
+  nextParagraphs: string[]
+  nextItems: string[]
+}
+
+const pageCopy = {
+  en: {
+    breadcrumb: "Missed Call Revenue Calculator",
+    h1: "Missed Call Revenue Calculator for Contractors",
+    intro:
+      "Estimate exactly how much revenue is slipping through the cracks when you can't answer the phone.",
+    body:
+      "This missed call revenue calculator is built for contractors and home service businesses that book work by phone. Use it to put a dollar figure on unanswered calls from homeowners, property managers, and repeat customers before those jobs go to another company.",
+    measurementHeading: "What this missed call calculator measures",
+    measurementIntro:
+      "The calculator estimates booked revenue at risk, not total call volume. It filters your missed calls down to the ones that were likely real job opportunities, then applies your booking rate and average job value.",
+    measurementItems: [
+      {
+        term: "Missed calls per week",
+        description:
+          "Use the calls your team could not answer live. Include calls missed during jobs, while driving, at lunch, after hours, and on weekends.",
+      },
+      {
+        term: "Average job value",
+        description:
+          "Use completed revenue divided by completed jobs. If your work ranges from small service calls to big installs, start with the blended average.",
+      },
+      {
+        term: "% of calls that are real jobs",
+        description:
+          "Not every missed call is a buyer. This input removes spam, vendors, wrong numbers, and existing customers who did not need a new job booked.",
+      },
+      {
+        term: "Booking rate if answered",
+        description:
+          "Use the percentage of qualified phone leads that usually turn into an appointment, estimate, dispatch, or paid job when someone answers promptly.",
+      },
+    ],
+    mathHeading: "How the math works",
+    mathIntro:
+      "We use a straightforward, conservative formula to calculate your revenue at risk. It's based on real metrics that drive contracting businesses:",
+    formula:
+      "monthly revenue at risk = missed calls per week x 4.3 x opportunity rate x booking rate x average job value",
+    mathBody:
+      "We multiply your weekly missed calls by 4.3 to get monthly calls. Then we reduce that number to only the calls that are real jobs and the percentage of those you would typically win.",
+    whyHeading: "Why missed calls turn into lost jobs",
+    whyParagraphs: [
+      "Most homeowners do not treat voicemail like a waiting room. If a pipe is leaking, an AC unit is out, or a roof needs attention, they keep calling until someone answers.",
+      "The loss is not just the call. It is the ad click, referral, truck roll, estimate, repair, installation, or recurring account that could have started with that first conversation.",
+    ],
+    inputsHeading: "How to choose realistic inputs",
+    inputsIntro:
+      "The best missed call cost estimate comes from your own numbers. If you do not have perfect reporting yet, use conservative inputs first.",
+    inputTips: [
+      "Pull missed-call counts from your phone system instead of guessing from memory.",
+      "Use the last 30 to 90 days for average job value, especially if your work is seasonal.",
+      "Keep the opportunity rate conservative if your phone gets a lot of sales calls or repeat customer questions.",
+      "If you do not know your booking rate, start lower than you think and rerun the calculator with a best-case version.",
+    ],
+    tradeHeading: "Missed call revenue by trade",
+    tradeIntro:
+      "The same formula works across home services, but the risk looks different by trade. Use these notes to pick inputs that match the way your customers buy.",
+    tradeNotes: [
+      {
+        trade: "Plumbing",
+        note: "Emergency calls often go to the first company that answers. A single missed burst-pipe call can be worth more than a full day of small service work.",
+      },
+      {
+        trade: "HVAC",
+        note: "Heat waves and cold snaps compress demand into short windows. During peak season, even a few unanswered calls can turn into booked jobs for competitors.",
+      },
+      {
+        trade: "Roofing",
+        note: "Roofing leads are usually high-value, but shoppers rarely wait long. If a storm just passed through, speed to answer matters as much as ad spend.",
+      },
+      {
+        trade: "Electrical",
+        note: "Troubleshooting calls, panel issues, and urgent repairs are hard to price from voicemail. A live answer helps collect details before the caller moves on.",
+      },
+    ],
+    nextHeading: "What to do next",
+    nextParagraphs: [
+      "Stop letting new leads go to voicemail, because they rarely leave one. LobbyStack's AI receptionist works 24/7 to plug your revenue leak.",
+      "If the calculator shows meaningful revenue at risk, the next step is to answer more calls without pulling technicians off the work they are already doing.",
+    ],
+    nextItems: [
+      "Answers every call instantly",
+      "Captures follow-up details automatically",
+      "Books appointments directly to your calendar",
+      "Takes detailed job notes and summaries",
+      "Transfers emergencies to your personal cell",
+      "Costs a fraction of a human answering service",
+    ],
+  },
+  fr: {
+    breadcrumb: "Calculateur de revenu d'appels manques",
+    h1: "Calculateur de revenu d'appels manques pour entrepreneurs",
+    intro:
+      "Estimez combien de revenu s'echappe quand vous ne pouvez pas repondre au telephone.",
+    body:
+      "Ce calculateur est concu pour les entrepreneurs et entreprises de services a domicile qui reservent par telephone. Utilisez-le pour donner une valeur aux appels sans reponse avant que ces travaux partent chez un concurrent.",
+    measurementHeading: "Ce que mesure ce calculateur d'appels manques",
+    measurementIntro:
+      "Le calculateur estime le revenu reserve a risque, pas le volume total d'appels. Il filtre vos appels manques vers les vraies opportunites, puis applique votre taux de reservation et votre valeur moyenne.",
+    measurementItems: [
+      {
+        term: "Appels manques par semaine",
+        description:
+          "Utilisez les appels que votre equipe n'a pas pu prendre en direct : chantier, conduite, diner, apres les heures et fins de semaine.",
+      },
+      {
+        term: "Valeur moyenne du travail",
+        description:
+          "Divisez le revenu termine par le nombre de travaux termines. Si vos travaux varient beaucoup, utilisez la moyenne melangee.",
+      },
+      {
+        term: "% d'appels qui sont de vrais travaux",
+        description:
+          "Tous les appels manques ne sont pas des acheteurs. Cette entree retire spam, fournisseurs, mauvais numeros et demandes non acheteuses.",
+      },
+      {
+        term: "Taux de reservation si repondu",
+        description:
+          "Utilisez le pourcentage de prospects qualifies qui deviennent normalement rendez-vous, devis, dispatch ou travail paye quand quelqu'un repond vite.",
+      },
+    ],
+    mathHeading: "Comment fonctionne le calcul",
+    mathIntro:
+      "Nous utilisons une formule simple et prudente basee sur les indicateurs qui font avancer les entreprises de services :",
+    formula:
+      "revenu mensuel a risque = appels manques par semaine x 4,3 x taux d'opportunite x taux de reservation x valeur moyenne",
+    mathBody:
+      "Nous multiplions vos appels manques hebdomadaires par 4,3 pour obtenir un volume mensuel, puis nous gardons seulement les appels qui sont de vraies opportunites et la part que vous gagnez normalement.",
+    whyHeading: "Pourquoi les appels manques deviennent des travaux perdus",
+    whyParagraphs: [
+      "La plupart des proprietaires ne traitent pas la messagerie vocale comme une salle d'attente. Si un tuyau fuit ou qu'une climatisation tombe en panne, ils appellent jusqu'a ce que quelqu'un reponde.",
+      "La perte n'est pas seulement l'appel. C'est le clic publicitaire, la reference, le devis, la reparation, l'installation ou le compte recurrent qui aurait pu commencer par cette conversation.",
+    ],
+    inputsHeading: "Comment choisir des entrees realistes",
+    inputsIntro:
+      "La meilleure estimation vient de vos propres chiffres. Si vos rapports sont incomplets, commencez par des entrees prudentes.",
+    inputTips: [
+      "Tirez les appels manques de votre systeme telephonique plutot que de deviner.",
+      "Utilisez les 30 a 90 derniers jours pour la valeur moyenne, surtout si votre travail est saisonnier.",
+      "Gardez le taux d'opportunite prudent si vous recevez beaucoup de ventes ou de questions de clients existants.",
+      "Si vous ne connaissez pas votre taux de reservation, commencez bas puis relancez un scenario optimiste.",
+    ],
+    tradeHeading: "Revenu d'appels manques par metier",
+    tradeIntro:
+      "La meme formule fonctionne dans les services a domicile, mais le risque varie selon le metier.",
+    tradeNotes: [
+      {
+        trade: "Plomberie",
+        note: "Les urgences vont souvent a la premiere entreprise qui repond. Un appel manque pour un tuyau eclate peut valoir plus qu'une journee de petits travaux.",
+      },
+      {
+        trade: "CVC",
+        note: "Les vagues de chaleur et de froid concentrent la demande. En haute saison, quelques appels sans reponse peuvent remplir le calendrier d'un concurrent.",
+      },
+      {
+        trade: "Toiture",
+        note: "Les prospects toiture sont souvent de grande valeur, mais ils attendent rarement longtemps apres une tempete.",
+      },
+      {
+        trade: "Electricite",
+        note: "Les appels de depannage et les reparations urgentes sont difficiles a comprendre depuis une boite vocale. Une reponse en direct capture les details.",
+      },
+    ],
+    nextHeading: "Que faire ensuite",
+    nextParagraphs: [
+      "Arretez de laisser les nouveaux prospects tomber en messagerie vocale, car ils laissent rarement un message. La receptionniste IA LobbyStack travaille 24/7 pour colmater cette fuite.",
+      "Si le calculateur montre un revenu significatif a risque, l'etape suivante est de repondre a plus d'appels sans retirer vos techniciens du travail en cours.",
+    ],
+    nextItems: [
+      "Repond instantanement a chaque appel",
+      "Capture automatiquement les details de suivi",
+      "Reserve directement dans votre calendrier",
+      "Prend des notes et resumes detailles",
+      "Transfere les urgences vers votre telephone",
+      "Coute une fraction d'un service de reponse humaine",
+    ],
+  },
+} satisfies Record<Locale, PageCopy>
+
+const t = pageCopy[locale]
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: common.home, path: localizePath(locale, "/") },
+        { name: t.breadcrumb, path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: routeSeo?.title,
+        url: absoluteUrl(canonicalPath),
+        description: routeSeo?.description,
+        inLanguage: locale,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs, locale }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+
+  <main id="main-content">
+    <section class="mx-auto max-w-7xl px-4 pt-24 pb-8 sm:pt-32 sm:pb-12">
+      <div class="max-w-3xl">
+        <h1
+          class="mb-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl"
+        >
+          {t.h1}
+        </h1>
+        <p class="text-xl leading-relaxed text-muted-foreground">{t.intro}</p>
+        <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
+          {t.body}
+        </p>
+      </div>
+
+      <MissedCallCalculator locale={locale} client:load />
+    </section>
+
+    <section class="pt-12 pb-16 sm:pt-16 sm:pb-24" id="how-it-works">
+      <div class="mx-auto max-w-4xl px-4">
+        <div class="flex flex-col gap-16">
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              {t.measurementHeading}
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">
+              {t.measurementIntro}
+            </p>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                t.measurementItems.map((item) => (
+                  <article class="rounded-2xl border border-border/70 bg-background p-6">
+                    <h3 class="text-base font-semibold text-foreground">
+                      {item.term}
+                    </h3>
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </article>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2
+              id="how-the-math-works"
+              class="text-3xl font-semibold tracking-tight text-foreground"
+            >
+              {t.mathHeading}
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">{t.mathIntro}</p>
+            <div
+              class="overflow-x-auto rounded-2xl border border-border/70 bg-background p-6 font-mono text-sm sm:text-base"
+            >
+              {t.formula}
+            </div>
+            <p class="leading-relaxed text-muted-foreground">{t.mathBody}</p>
+          </div>
+
+          <MissedRevenueCards locale={locale} />
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              {t.whyHeading}
+            </h2>
+            {t.whyParagraphs.map((paragraph) => (
+              <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
+            ))}
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              {t.inputsHeading}
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">{t.inputsIntro}</p>
+            <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                t.inputTips.map((tip) => (
+                  <li class="rounded-2xl border border-border/70 bg-background p-5 text-sm leading-relaxed text-muted-foreground">
+                    {tip}
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
+
+          <div class="flex flex-col gap-6">
+            <h2 class="text-3xl font-semibold tracking-tight text-foreground">
+              {t.tradeHeading}
+            </h2>
+            <p class="leading-relaxed text-muted-foreground">{t.tradeIntro}</p>
+            <div class="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background">
+              {
+                t.tradeNotes.map((item) => (
+                  <article class="grid gap-3 p-6 sm:grid-cols-[9rem_1fr] sm:gap-6">
+                    <h3 class="font-semibold text-foreground">{item.trade}</h3>
+                    <p class="text-sm leading-relaxed text-muted-foreground">
+                      {item.note}
+                    </p>
+                  </article>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-6 pt-8">
+            <h2
+              id="what-to-do-next"
+              class="text-3xl font-semibold tracking-tight text-foreground"
+            >
+              {t.nextHeading}
+            </h2>
+            {t.nextParagraphs.map((paragraph) => (
+              <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
+            ))}
+            <ul class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {
+                t.nextItems.map((item) => (
+                  <li class="flex items-start gap-3">
+                    <div class="mt-2 size-2 shrink-0 rounded-full bg-primary" />
+                    <span class="text-muted-foreground">{item}</span>
+                  </li>
+                ))
+              }
+            </ul>
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+              <a
+                href="https://app.lobbystack.com/signup?source=calculator"
+                class="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+              >
+                {common.tryFree}
+              </a>
+              <a
+                href={localizeHref(locale, "/pricing/")}
+                class="inline-flex h-12 items-center justify-center rounded-full border border-border px-8 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {common.seePricing}
+              </a>
+            </div>
+          </div>
+
+          <CalculatorFaq locale={locale} />
+        </div>
+      </div>
+    </section>
+
+    <CtaSection locale={locale} />
+  </main>
+
+  <Footer locale={locale} />
+</Layout>

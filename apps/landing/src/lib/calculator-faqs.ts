@@ -1,3 +1,5 @@
+import type { Locale } from "@/i18n"
+
 export const calculatorFaqs = [
   {
     q: "What is a missed call revenue calculator?",
@@ -40,3 +42,49 @@ export const calculatorFaqs = [
     a: "No. These are estimates for planning purposes. However, if an AI receptionist answers a call that would have otherwise gone to voicemail, and successfully books that lead, that is definitively recovered revenue.",
   },
 ]
+
+export const calculatorFaqsFr = [
+  {
+    q: "Qu'est-ce qu'un calculateur de revenu d'appels manques ?",
+    a: "Un calculateur de revenu d'appels manques estime le travail reserve qui peut etre a risque quand des appels restent sans reponse. Il part de vos appels manques, filtre les vraies opportunites, applique votre taux de reservation et multiplie par votre valeur moyenne.",
+  },
+  {
+    q: "Quelle est la precision de ce calculateur ?",
+    a: "Il est precis si vos entrees le sont. La formule multiplie vos appels manques par vos taux de conversion historiques pour montrer ce que vous laissez potentiellement sur la table.",
+  },
+  {
+    q: "Combien un seul appel manque peut-il couter ?",
+    a: "Cela depend du metier et du travail. Une demande d'entretien paysager peut valoir des mois de revenu recurrent, tandis qu'un appel de plomberie, CVC, toiture ou electricite peut representer une reparation ou installation importante.",
+  },
+  {
+    q: "Est-ce que cela inclut les appels apres les heures ?",
+    a: "Oui. Si le telephone sonne le soir et que personne ne repond, c'est un appel manque. Dans les metiers d'urgence, ces appels ont souvent une valeur moyenne plus elevee.",
+  },
+  {
+    q: "Quelle valeur dois-je utiliser pour la valeur moyenne ?",
+    a: "Prenez les revenus des 30 derniers jours et divisez-les par le nombre de travaux termines. Si vous faites de petits appels de service et de grosses installations, utilisez une moyenne melangee.",
+  },
+  {
+    q: "Et si je ne connais pas mon taux de reservation ?",
+    a: "Commencez avec une estimation prudente et relancez le calculateur avec un second scenario. Comparez par exemple 25 % et 50 % pour voir la sensibilite de votre revenu.",
+  },
+  {
+    q: "Dois-je inclure les appels de spam ou fournisseurs ?",
+    a: "Non, sauf si vous baissez le taux d'opportunite pour les compenser. Le calculateur estime le revenu de vrais travaux perdus, pas le bruit.",
+  },
+  {
+    q: "Une receptionniste IA remplace-t-elle mon ou ma responsable de bureau ?",
+    a: "Non. LobbyStack gere le travail repetitif de premiere ligne : questions courantes, details d'accueil et reservation. Votre equipe garde les cas complexes.",
+  },
+  {
+    q: "Est-ce pareil qu'un calculateur de ROI de service de reponse ?",
+    a: "C'est proche. Ce calculateur montre le revenu a risque. Pour penser au ROI, comparez ce montant avec le cout d'un service humain ou d'une receptionniste IA.",
+  },
+  {
+    q: "Le revenu recupere est-il garanti ?",
+    a: "Non. Ce sont des estimations de planification. Mais lorsqu'une receptionniste IA repond a un appel qui serait alle en messagerie et reserve le prospect, c'est bien du revenu recupere.",
+  },
+]
+
+export const getCalculatorFaqs = (locale: Locale = "en") =>
+  locale === "fr" ? calculatorFaqsFr : calculatorFaqs

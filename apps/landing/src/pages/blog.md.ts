@@ -1,11 +1,10 @@
 import type { APIRoute } from "astro"
-import { getCollection } from "astro:content"
+import { blogCanonicalSlug, getBlogPosts } from "@/lib/blog"
 import { markdownResponse } from "@/lib/markdown-response"
 import { absoluteUrl } from "@/lib/seo"
 
 export const GET: APIRoute = async () => {
-  const posts = await getCollection("blog")
-  posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  const posts = await getBlogPosts("en")
 
   const markdown = `# AI Receptionist Blog and Product Updates
 
@@ -16,7 +15,7 @@ Product updates and practical notes on AI phone answering, missed-call recovery,
 ${posts
   .map(
     (post) =>
-      `- [${post.data.title}](${absoluteUrl(`/blog/${post.id}/`)}) - ${post.data.description}`
+      `- [${post.data.title}](${absoluteUrl(`/blog/${blogCanonicalSlug(post)}/`)}) - ${post.data.description}`
   )
   .join("\n")}
 `

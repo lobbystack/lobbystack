@@ -1,9 +1,5 @@
 ---
-import LocalizedPage from "@/components/LocalizedPage.astro"
-import { frenchPageByPath } from "@/lib/fr-pages"
-
-const page = frenchPageByPath("/")
-if (!page) throw new Error("Missing French homepage")
+import HomePage from "@/components/pages/HomePage.astro"
 ---
 
-<LocalizedPage page={page} />
+<HomePage locale="fr" />

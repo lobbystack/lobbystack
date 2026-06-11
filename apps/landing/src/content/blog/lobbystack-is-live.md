@@ -6,6 +6,8 @@ author: "LobbyStack Team"
 category: "Product updates"
 featured: true
 coverImage: "/illustrations/lobbystack-is-live-hero.webp"
+locale: "en"
+canonicalSlug: "lobbystack-is-live"
 ---
 
 Most small businesses do not lose customers because they do bad work. They lose them because the phone rang while everyone was already doing the work.

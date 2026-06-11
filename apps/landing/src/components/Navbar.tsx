@@ -146,38 +146,36 @@ const industryLinks = (locale: Locale) =>
   ] satisfies NavChildLink[]
 
 const tradeLinks = (locale: Locale) =>
-  locale === "en"
-    ? ([
-        {
-          label: solutionLabelMap[locale].plumbers,
-          href: "/solutions/ai-receptionist-for-plumbers/",
-        },
-        {
-          label: solutionLabelMap[locale].hvac,
-          href: "/solutions/ai-receptionist-for-hvac/",
-        },
-        {
-          label: solutionLabelMap[locale].electricians,
-          href: "/solutions/ai-receptionist-for-electricians/",
-        },
-        {
-          label: solutionLabelMap[locale].garageDoor,
-          href: "/solutions/ai-receptionist-for-garage-door-repair/",
-        },
-        {
-          label: solutionLabelMap[locale].applianceRepair,
-          href: "/solutions/ai-receptionist-for-appliance-repair/",
-        },
-        {
-          label: solutionLabelMap[locale].restoration,
-          href: "/solutions/ai-receptionist-for-restoration-companies/",
-        },
-        {
-          label: solutionLabelMap[locale].locksmiths,
-          href: "/solutions/ai-receptionist-for-locksmiths/",
-        },
-      ] satisfies NavChildLink[])
-    : []
+  [
+    {
+      label: solutionLabelMap[locale].plumbers,
+      href: "/solutions/ai-receptionist-for-plumbers/",
+    },
+    {
+      label: solutionLabelMap[locale].hvac,
+      href: "/solutions/ai-receptionist-for-hvac/",
+    },
+    {
+      label: solutionLabelMap[locale].electricians,
+      href: "/solutions/ai-receptionist-for-electricians/",
+    },
+    {
+      label: solutionLabelMap[locale].garageDoor,
+      href: "/solutions/ai-receptionist-for-garage-door-repair/",
+    },
+    {
+      label: solutionLabelMap[locale].applianceRepair,
+      href: "/solutions/ai-receptionist-for-appliance-repair/",
+    },
+    {
+      label: solutionLabelMap[locale].restoration,
+      href: "/solutions/ai-receptionist-for-restoration-companies/",
+    },
+    {
+      label: solutionLabelMap[locale].locksmiths,
+      href: "/solutions/ai-receptionist-for-locksmiths/",
+    },
+  ] satisfies NavChildLink[]
 
 const tradeColumns = (locale: Locale): NavColumn[] => {
   const links = tradeLinks(locale)

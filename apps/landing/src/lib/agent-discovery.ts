@@ -28,6 +28,8 @@ export const DISCOVERY_API_ANCHOR = absoluteUrl("/api")
 
 export const markdownAlternatePath = (pathname: string) => {
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`
+  const localePrefix = normalized.startsWith("/fr/") || normalized === "/fr/" ? "/fr" : ""
+  const basePath = normalized.replace(/^\/fr(?=\/|$)/, "") || "/"
 
   const alternates: Record<string, string> = {
     "/compare/ai-receptionist-vs-virtual-receptionist/":
@@ -43,15 +45,16 @@ export const markdownAlternatePath = (pathname: string) => {
     "/docs/api/": "/docs/api.md",
   }
 
-  if (alternates[normalized]) return alternates[normalized]
-  const seoLandingPage = seoLandingPageByPath(normalized)
+  if (alternates[basePath]) return `${localePrefix}${alternates[basePath]}`
+  const seoLandingPage = seoLandingPageByPath(basePath)
   if (
     seoLandingPage?.group === "company" ||
     seoLandingPage?.group === "solution" ||
     seoLandingPage?.group === "comparison"
   )
-    return `${normalized.slice(0, -1)}.md`
-  if (normalized.startsWith("/blog/")) return `${normalized.slice(0, -1)}.md`
+    return `${localePrefix}${basePath.slice(0, -1)}.md`
+  if (basePath.startsWith("/blog/"))
+    return `${localePrefix}${basePath.slice(0, -1)}.md`
 
   return undefined
 }

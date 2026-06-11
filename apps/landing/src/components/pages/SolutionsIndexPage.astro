@@ -1,0 +1,456 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import { ArrowRight } from "lucide-react"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const common = getCopy(locale).common
+const canonicalPath = localizePath(locale, "/solutions/")
+const seo = getRouteSeo({ locale, path: "/solutions/" })
+
+const pageCopy = {
+  en: {
+    imageAlt:
+      "LobbyStack AI receptionist solutions for phone answering and appointment booking",
+    h1: "AI receptionist solutions",
+    intro:
+      "Choose the LobbyStack call workflow that matches how your business answers phones, books appointments, routes calls, and follows up with customers.",
+    capabilityPrefix: "These pages use the same product capabilities listed on the",
+    featuresPage: "features page",
+    capabilitySuffix:
+      ": call answering, appointment booking, transfers, notifications, summaries, transcripts, outbound follow-up, and call history.",
+    tradeHeading: "AI receptionist for your trade",
+    tradeIntro:
+      "LobbyStack handles the call patterns that matter most in each trade: emergency screening, intake questions, booking, and after-hours routing.",
+    comparisonsHeading: "Comparisons",
+    comparisonsIntro:
+      "Not sure whether an AI receptionist is right for your situation? These comparisons break down the tradeoffs honestly.",
+    workflowHeading: "One phone layer for multiple business workflows",
+    workflowBody:
+      "LobbyStack can answer calls, step in when your team is unavailable, book appointments, collect caller details, route requests, and send summaries based on the rules you set.",
+    serviceTeams: "For service teams",
+    serviceTeamsBody:
+      "Capture job details, service area, urgency, and scheduling needs, then notify the right person with a clear summary.",
+    appointmentBusinesses: "For appointment businesses",
+    appointmentBusinessesBody:
+      "Let callers book, receive confirmation texts, reschedule when your rules allow it, or request a callback.",
+    ctaHeading: "Start with your busiest call path",
+    ctaBody:
+      "Try LobbyStack on the calls your team misses most often, then expand to after-hours coverage, scheduling, transfers, and follow-up as your workflow matures.",
+    viewFeatures: "View features",
+    contractorAfterHours: "Contractor after-hours",
+    solutions: [
+      {
+        title: "AI phone answering",
+        href: "/solutions/ai-phone-answering/",
+        description:
+          "Answer calls, capture caller details, book appointments, and route requests based on your rules.",
+      },
+      {
+        title: "AI appointment scheduler",
+        href: "/solutions/ai-appointment-scheduler/",
+        description:
+          "Turn booking calls into scheduled appointments with confirmations and team notifications.",
+      },
+      {
+        title: "Home services",
+        href: "/solutions/ai-receptionist-for-home-services/",
+        description:
+          "Book HVAC, plumbing, electrical, roofing, landscaping, and other service calls while crews work.",
+      },
+      {
+        title: "After-hours answering",
+        href: "/solutions/after-hours-answering-service/",
+        description:
+          "Cover calls when your team is busy, closed, or unavailable without staffing another shift.",
+      },
+      {
+        title: "Dental offices",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+        description:
+          "Answer patient calls, book appointments, handle routine questions, and route urgent calls by your rules.",
+      },
+      {
+        title: "Salons and spas",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+        description:
+          "Book clients, answer service questions, and handle reschedules while providers stay with clients.",
+      },
+      {
+        title: "Self-hosted AI receptionist",
+        href: "/solutions/self-hosted-ai-receptionist/",
+        description:
+          "Run LobbyStack on infrastructure you control when your team needs deployment and data-control flexibility.",
+      },
+      {
+        title: "Open-source AI receptionist",
+        href: "/solutions/open-source-ai-receptionist/",
+        description:
+          "Audit the call handling logic, customize prompts and routing, and deploy on your own infrastructure.",
+      },
+    ],
+    trades: [
+      { title: "Plumbers", href: "/solutions/ai-receptionist-for-plumbers/" },
+      { title: "HVAC", href: "/solutions/ai-receptionist-for-hvac/" },
+      {
+        title: "Electricians",
+        href: "/solutions/ai-receptionist-for-electricians/",
+      },
+      {
+        title: "Garage door repair",
+        href: "/solutions/ai-receptionist-for-garage-door-repair/",
+      },
+      {
+        title: "Appliance repair",
+        href: "/solutions/ai-receptionist-for-appliance-repair/",
+      },
+      {
+        title: "Restoration",
+        href: "/solutions/ai-receptionist-for-restoration-companies/",
+      },
+      { title: "Locksmiths", href: "/solutions/ai-receptionist-for-locksmiths/" },
+    ],
+    comparisons: [
+      {
+        title: "AI receptionist vs virtual receptionist",
+        href: "/compare/ai-receptionist-vs-virtual-receptionist/",
+        description:
+          "Understand when AI, human, or a hybrid approach fits your call answering needs.",
+      },
+      {
+        title: "AI receptionist vs voicemail",
+        href: "/compare/ai-receptionist-vs-voicemail/",
+        description:
+          "See how an AI receptionist captures revenue that voicemail loses.",
+      },
+    ],
+  },
+  fr: {
+    imageAlt:
+      "Solutions de receptionniste IA LobbyStack pour reponse telephonique et rendez-vous",
+    h1: "Solutions de receptionniste IA",
+    intro:
+      "Choisissez le flux d'appels LobbyStack qui correspond a votre facon de repondre, reserver, router et suivre les clients.",
+    capabilityPrefix:
+      "Ces pages utilisent les memes capacites produit que la",
+    featuresPage: "page fonctionnalites",
+    capabilitySuffix:
+      " : reponse aux appels, rendez-vous, transferts, notifications, resumes, transcriptions, suivis sortants et historique.",
+    tradeHeading: "Receptionniste IA pour votre metier",
+    tradeIntro:
+      "LobbyStack gere les schemas d'appels importants pour chaque metier : urgence, prise d'information, reservation et routage apres les heures.",
+    comparisonsHeading: "Comparaisons",
+    comparisonsIntro:
+      "Vous ne savez pas si une receptionniste IA convient a votre situation ? Ces comparaisons expliquent les compromis clairement.",
+    workflowHeading: "Une seule couche telephonique pour plusieurs flux metier",
+    workflowBody:
+      "LobbyStack peut repondre, intervenir quand votre equipe est indisponible, reserver, collecter les details, router les demandes et envoyer les resumes selon vos regles.",
+    serviceTeams: "Pour equipes de service",
+    serviceTeamsBody:
+      "Capturez les details du chantier, la zone, l'urgence et les besoins de planification, puis notifiez la bonne personne avec un resume clair.",
+    appointmentBusinesses: "Pour entreprises sur rendez-vous",
+    appointmentBusinessesBody:
+      "Laissez les appelants reserver, recevoir une confirmation, deplacer un rendez-vous selon vos regles ou demander un rappel.",
+    ctaHeading: "Commencez par votre flux d'appels le plus charge",
+    ctaBody:
+      "Essayez LobbyStack sur les appels que votre equipe manque le plus souvent, puis etendez aux appels apres les heures, a la planification, aux transferts et aux suivis.",
+    viewFeatures: "Voir les fonctionnalites",
+    contractorAfterHours: "Apres les heures pour entrepreneurs",
+    solutions: [
+      {
+        title: "Reponse telephonique IA",
+        href: "/solutions/ai-phone-answering/",
+        description:
+          "Repondez aux appels, capturez les details, reservez des rendez-vous et routez les demandes selon vos regles.",
+      },
+      {
+        title: "Planificateur de rendez-vous IA",
+        href: "/solutions/ai-appointment-scheduler/",
+        description:
+          "Transformez les appels de reservation en rendez-vous confirmes avec notifications pour l'equipe.",
+      },
+      {
+        title: "Services a domicile",
+        href: "/solutions/ai-receptionist-for-home-services/",
+        description:
+          "Reservez des interventions CVC, plomberie, electricite, toiture, paysagement et autres services pendant que les equipes travaillent.",
+      },
+      {
+        title: "Reponse apres les heures",
+        href: "/solutions/after-hours-answering-service/",
+        description:
+          "Couvrez les appels quand votre equipe est occupee, fermee ou indisponible sans ajouter un quart de travail.",
+      },
+      {
+        title: "Cabinets dentaires",
+        href: "/solutions/ai-receptionist-for-dental-offices/",
+        description:
+          "Repondez aux patients, prenez des rendez-vous, traitez les questions courantes et routez les urgences selon vos regles.",
+      },
+      {
+        title: "Salons et spas",
+        href: "/solutions/ai-receptionist-for-salons-and-spas/",
+        description:
+          "Reservez les clients, repondez aux questions de service et gerez les changements de rendez-vous pendant que les prestataires restent avec les clients.",
+      },
+      {
+        title: "Receptionniste IA auto-hebergee",
+        href: "/solutions/self-hosted-ai-receptionist/",
+        description:
+          "Executez LobbyStack sur votre propre infrastructure lorsque vous avez besoin de controle sur le deploiement et les donnees.",
+      },
+      {
+        title: "Receptionniste IA open source",
+        href: "/solutions/open-source-ai-receptionist/",
+        description:
+          "Auditez la logique d'appel, personnalisez les consignes et le routage, puis deployez sur votre infrastructure.",
+      },
+    ],
+    trades: [
+      { title: "Plombiers", href: "/solutions/ai-receptionist-for-plumbers/" },
+      { title: "CVC", href: "/solutions/ai-receptionist-for-hvac/" },
+      {
+        title: "Electriciens",
+        href: "/solutions/ai-receptionist-for-electricians/",
+      },
+      {
+        title: "Portes de garage",
+        href: "/solutions/ai-receptionist-for-garage-door-repair/",
+      },
+      {
+        title: "Electromenagers",
+        href: "/solutions/ai-receptionist-for-appliance-repair/",
+      },
+      {
+        title: "Restauration",
+        href: "/solutions/ai-receptionist-for-restoration-companies/",
+      },
+      { title: "Serruriers", href: "/solutions/ai-receptionist-for-locksmiths/" },
+    ],
+    comparisons: [
+      {
+        title: "IA vs receptionniste virtuelle",
+        href: "/compare/ai-receptionist-vs-virtual-receptionist/",
+        description:
+          "Comprenez quand l'IA, l'humain ou une approche hybride convient a vos besoins de reponse telephonique.",
+      },
+      {
+        title: "IA vs messagerie vocale",
+        href: "/compare/ai-receptionist-vs-voicemail/",
+        description:
+          "Voyez comment une receptionniste IA capture le revenu que la messagerie vocale laisse filer.",
+      },
+    ],
+  },
+}[locale]
+---
+
+<Layout
+  seo={{
+    ...seo,
+    canonicalPath,
+    locale,
+    image: "/illustrations/industry-bookings.webp",
+    imageAlt: pageCopy.imageAlt,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: common.home, path: localizePath(locale, "/") },
+        { name: locale === "fr" ? "Solutions" : "Solutions", path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: seo?.title,
+        url: absoluteUrl(canonicalPath),
+        description: seo?.description,
+        inLanguage: locale,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main class="min-h-screen bg-background text-foreground">
+    <section class="mx-auto max-w-7xl px-6 py-20 md:py-28">
+      <div class="mx-auto max-w-3xl text-center">
+        <h1 class="display-heading">{pageCopy.h1}</h1>
+        <p class="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
+          {pageCopy.intro}
+        </p>
+        <p
+          class="mx-auto mt-4 max-w-[58ch] text-sm leading-relaxed text-muted-foreground"
+        >
+          {pageCopy.capabilityPrefix} <a
+            href={localizeHref(locale, "/features/")}
+            class="font-medium text-foreground underline underline-offset-4"
+            >{pageCopy.featuresPage}</a
+          >{pageCopy.capabilitySuffix}
+        </p>
+      </div>
+
+      <div class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {
+          pageCopy.solutions.map((solution) => (
+            <a
+              href={localizeHref(locale, solution.href)}
+              class="group flex min-h-56 flex-col rounded-2xl border border-border/70 bg-background p-6 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-colors hover:bg-muted/40"
+            >
+              <h2 class="text-xl font-medium tracking-tight text-foreground">
+                {solution.title}
+              </h2>
+              <p class="mt-4 text-sm leading-relaxed text-muted-foreground">
+                {solution.description}
+              </p>
+              <span class="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-foreground">
+                {common.viewSolution}
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="border-t border-border/40 bg-muted/15 py-20 md:py-24">
+      <div class="mx-auto max-w-7xl px-6">
+        <h2 class="section-heading text-center">{pageCopy.tradeHeading}</h2>
+        <p class="body-copy mx-auto mt-6 max-w-[58ch] text-center">
+          {pageCopy.tradeIntro}
+        </p>
+        <div class="mt-12 flex flex-wrap justify-center gap-3">
+          {
+            pageCopy.trades.map((trade) => (
+              <a
+                href={localizeHref(locale, trade.href)}
+                class="inline-flex h-10 items-center rounded-full border border-border/70 bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {trade.title}
+              </a>
+            ))
+          }
+          <a
+            href={localizeHref(locale, "/solutions/after-hours-answering-service-for-contractors/")}
+            class="inline-flex h-10 items-center rounded-full border border-border/70 bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {pageCopy.contractorAfterHours}
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-20 md:py-24">
+      <div class="mx-auto max-w-7xl px-6">
+        <h2 class="section-heading text-center">{pageCopy.comparisonsHeading}</h2>
+        <p class="body-copy mx-auto mt-6 max-w-[58ch] text-center">
+          {pageCopy.comparisonsIntro}
+        </p>
+        <div class="mx-auto mt-12 grid max-w-3xl gap-6">
+          {
+            pageCopy.comparisons.map((comparison) => (
+              <a
+                href={localizeHref(locale, comparison.href)}
+                class="group flex flex-col rounded-2xl border border-border/70 bg-background p-6 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-colors hover:bg-muted/40"
+              >
+                <h3 class="text-lg font-medium tracking-tight text-foreground">
+                  {comparison.title}
+                </h3>
+                <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {comparison.description}
+                </p>
+                <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground">
+                  {common.readComparison}
+                  <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+                </span>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="border-t border-border/40 bg-muted/15 py-20 md:py-24">
+      <div
+        class="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center"
+      >
+        <div>
+          <h2 class="section-heading text-left">{pageCopy.workflowHeading}</h2>
+          <p class="body-copy mt-5 max-w-[58ch]">
+            {pageCopy.workflowBody}
+          </p>
+          <a
+            href={localizeHref(locale, "/features/")}
+            class="mt-6 inline-flex text-sm font-medium text-foreground underline underline-offset-4"
+          >
+            {common.seeFullFeatureList}
+          </a>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="rounded-2xl border border-border/70 bg-background p-6">
+            <h3 class="font-medium tracking-tight">{pageCopy.serviceTeams}</h3>
+            <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {pageCopy.serviceTeamsBody}
+            </p>
+          </div>
+          <div class="rounded-2xl border border-border/70 bg-background p-6">
+            <h3 class="font-medium tracking-tight">
+              {pageCopy.appointmentBusinesses}
+            </h3>
+            <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {pageCopy.appointmentBusinessesBody}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-6 py-20 text-center md:py-24">
+      <h2 class="section-heading">{pageCopy.ctaHeading}</h2>
+      <p class="section-intro mx-auto mt-5 max-w-[58ch]">
+        {pageCopy.ctaBody}
+      </p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href={localizeHref(locale, "/pricing/")}
+          class={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}
+        >
+          {common.seePricing}
+          <ArrowRight className="ml-1 size-4" />
+        </a>
+        <a
+          href={localizeHref(locale, "/features/")}
+          class="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {pageCopy.viewFeatures}
+        </a>
+      </div>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>
+

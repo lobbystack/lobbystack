@@ -1,11 +1,25 @@
 ---
-import LocalizedPage from "@/components/LocalizedPage.astro"
-import { frenchPageByPath, frenchStaticPaths } from "@/lib/fr-pages"
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import {
+  getLocalizedSeoLandingPage,
+  localizedSeoLandingPages,
+} from "@/lib/localized-seo-landing-pages"
 import { normalizedPath } from "@/lib/seo"
 
 export function getStaticPaths() {
-  return frenchStaticPaths
-    .filter((path) => path !== "/")
+  const explicitFrenchRoutes = new Set([
+    "/",
+    "/features/",
+    "/pricing/",
+    "/solutions/",
+    "/solutions/ai-phone-answering/",
+    "/solutions/ai-appointment-scheduler/",
+    "/solutions/ai-receptionist-for-home-services/",
+  ])
+
+  return localizedSeoLandingPages("fr")
+    .map((page) => page.path)
+    .filter((path) => !explicitFrenchRoutes.has(path))
     .map((path) => ({
       params: { slug: path.replace(/^\/|\/$/g, "") },
       props: { path },
@@ -13,8 +27,8 @@ export function getStaticPaths() {
 }
 
 const path = normalizedPath(Astro.props.path)
-const page = frenchPageByPath(path)
-if (!page) throw new Error(`Missing French page for ${path}`)
+const page = getLocalizedSeoLandingPage("fr", path)
+if (!page) throw new Error(`Missing shared SEO page for French path ${path}`)
 ---
 
-<LocalizedPage page={page} />
+<SeoLandingPage page={page} locale="fr" />

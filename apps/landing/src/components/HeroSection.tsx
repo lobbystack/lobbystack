@@ -2,10 +2,38 @@ import { buttonVariants } from "@/components/ui/button"
 import { GithubIcon } from "@/components/GithubIcon"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
 import { cn } from "@/lib/utils"
+import { getCopy, type Locale } from "@/i18n"
 import { ArrowRight } from "lucide-react"
 import type { ReactNode } from "react"
 
-export function HeroSection({ children }: { children?: ReactNode }) {
+type HeroSectionProps = {
+  children?: ReactNode
+  locale?: Locale
+}
+
+const heroCopy = {
+  en: {
+    github: "Star us on GitHub",
+    h1Start: "LobbyStack turns",
+    h1Emphasis: "missed calls",
+    h1End: "into booked work.",
+    body:
+      "LobbyStack answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
+  },
+  fr: {
+    github: "Soutenez-nous sur GitHub",
+    h1Start: "LobbyStack transforme les",
+    h1Emphasis: "appels manques",
+    h1End: "en rendez-vous reserves.",
+    body:
+      "LobbyStack repond aux appels, qualifie les prospects et reserve des rendez-vous 24/7. Utilisez-le pour tous les appels entrants, ou seulement ceux que votre equipe manque quand elle est occupee.",
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
+  const copy = getCopy(locale)
+  const localCopy = heroCopy[locale]
+
   return (
     <section
       className="relative grid min-h-[calc(100svh-4rem)] items-center overflow-hidden"
@@ -24,22 +52,20 @@ export function HeroSection({ children }: { children?: ReactNode }) {
               data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
             >
               <GithubIcon className="size-4" />
-              Star us on GitHub
+              {localCopy.github}
               <ArrowRight className="size-4" />
             </a>
 
             <h1 className="animate-fade-up display-heading delay-100">
-              LobbyStack turns{" "}
+              {localCopy.h1Start}{" "}
               <span className="underline decoration-2 underline-offset-4">
-                missed calls
+                {localCopy.h1Emphasis}
               </span>{" "}
-              into booked work.
+              {localCopy.h1End}
             </h1>
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
-              LobbyStack answers calls, qualifies leads, and books appointments
-              24/7. Use it for every inbound call, or just the ones you miss
-              when your team is busy.
+              {localCopy.body}
             </p>
 
             <div className="animate-fade-up mt-8 flex items-center gap-4 delay-300">
@@ -54,14 +80,14 @@ export function HeroSection({ children }: { children?: ReactNode }) {
                 data-ph-capture-attribute-action="try_for_free"
                 data-ph-capture-attribute-destination={APP_SIGNUP_URL}
               >
-                Try for free
+                {copy.common.tryFree}
                 <ArrowRight className="ml-1 size-4" />
               </a>
             </div>
 
             {/* Micro-copy */}
             <p className="animate-fade-up fine-print mt-5 delay-400">
-              No credit card required
+              {copy.common.noCreditCard}
             </p>
           </div>
 

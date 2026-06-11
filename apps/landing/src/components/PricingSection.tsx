@@ -1,5 +1,6 @@
 import { Button, buttonVariants } from "@/components/ui/button"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
+import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { Fragment, useState } from "react"
@@ -466,9 +467,49 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
   )
 }
 
-export function PricingSection() {
+type PricingSectionProps = {
+  locale?: Locale
+}
+
+const pricingSectionCopy = {
+  en: {
+    heading: "Plans for businesses of every size",
+    intro:
+      "Start free, then upgrade to Starter or Pro for more included minutes and transparent overages.",
+    monthly: "Monthly",
+    annual: "Annual",
+    save: "Save 20%",
+    compareHeading: "Compare plans in detail",
+    compareIntro:
+      "Every plan gives you access to all features. Starter and Pro give you higher included usage with monthly resets and usage-based overages.",
+    billingLabel: "Billing interval",
+    tableLabel: "Plan comparison table",
+    caption:
+      "Feature comparison across Free, Starter, Pro, and Enterprise plans.",
+    feature: "Feature",
+  },
+  fr: {
+    heading: "Des forfaits pour entreprises de toute taille",
+    intro:
+      "Commencez gratuitement, puis passez a Starter ou Pro pour plus de minutes incluses et des depassements transparents.",
+    monthly: "Mensuel",
+    annual: "Annuel",
+    save: "Economisez 20 %",
+    compareHeading: "Comparer les forfaits en detail",
+    compareIntro:
+      "Tous les forfaits donnent acces a toutes les fonctionnalites. Starter et Pro ajoutent plus d'usage inclus avec remise a zero mensuelle et depassements a l'usage.",
+    billingLabel: "Intervalle de facturation",
+    tableLabel: "Tableau de comparaison des forfaits",
+    caption:
+      "Comparaison des fonctionnalites entre les forfaits Free, Starter, Pro et Enterprise.",
+    feature: "Fonctionnalite",
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+export function PricingSection({ locale = "en" }: PricingSectionProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("annual")
+  const copy = pricingSectionCopy[locale]
 
   return (
     <>
@@ -476,11 +517,10 @@ export function PricingSection() {
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
           <h1 className="animate-fade-up display-heading-compact delay-100">
-            Plans for businesses of every size
+            {copy.heading}
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
-            Start free, then upgrade to Starter or Pro for more included
-            minutes and transparent overages.
+            {copy.intro}
           </p>
         </div>
       </section>
@@ -489,7 +529,7 @@ export function PricingSection() {
       <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <div className="animate-fade-up mb-8 flex justify-center delay-300">
           <div
-            aria-label="Billing interval"
+            aria-label={copy.billingLabel}
             className="inline-flex rounded-full border border-border bg-input/30 p-1"
             role="tablist"
           >
@@ -509,10 +549,10 @@ export function PricingSection() {
                 type="button"
                 variant="outline"
               >
-                {interval === "monthly" ? "Monthly" : "Annual"}
+                {interval === "monthly" ? copy.monthly : copy.annual}
                 {interval === "annual" ? (
                   <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    Save 20%
+                    {copy.save}
                   </span>
                 ) : null}
               </Button>
@@ -605,23 +645,21 @@ export function PricingSection() {
       <section className="bg-background" id="compare">
         <div className="mx-auto max-w-5xl px-6 pt-10 pb-12 md:pt-12 md:pb-14 lg:pt-14 lg:pb-16">
           <h2 className="mb-4 text-center font-heading text-2xl leading-tight font-medium tracking-[-0.04em] md:text-3xl">
-            Compare plans in detail
+            {copy.compareHeading}
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gives you access to all features. Starter and Pro give
-            you higher included usage with monthly resets and usage-based
-            overages.
+            {copy.compareIntro}
           </p>
 
           <div
             className="overflow-x-auto"
             role="region"
-            aria-label="Plan comparison table"
+            aria-label={copy.tableLabel}
             tabIndex={0}
           >
             <table className="w-full min-w-[860px] text-sm">
               <caption className="sr-only">
-                Feature comparison across Free, Starter, Pro, and Enterprise plans.
+                {copy.caption}
               </caption>
               {/* Sticky header */}
               <thead>
@@ -630,7 +668,7 @@ export function PricingSection() {
                     scope="col"
                     className="py-4 pr-8 text-left text-xs font-medium text-muted-foreground"
                   >
-                    Feature
+                    {copy.feature}
                   </th>
                   <th
                     scope="col"

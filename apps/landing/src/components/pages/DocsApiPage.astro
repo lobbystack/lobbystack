@@ -1,0 +1,220 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const routeSeo = getRouteSeo({ locale, path: "/docs/api/" })
+const canonicalPath = localizePath(locale, "/docs/api/")
+
+const pageCopy = {
+  en: {
+    h1: "Public API documentation",
+    intro:
+      "LobbyStack exposes a small public discovery surface so agents can find documentation, status, OpenAPI metadata, skills, and machine-readable usage preferences without scraping the site.",
+    note:
+      "These public discovery endpoints do not require authentication. OAuth metadata will be published on the app host when protected APIs expose real authorization endpoints.",
+    cards: [
+      {
+        title: "API catalog",
+        body: "RFC 9727 linkset for public API and discovery resources.",
+        href: "/.well-known/api-catalog",
+      },
+      {
+        title: "OpenAPI",
+        body: "JSON description of the public discovery endpoints.",
+        href: "/openapi.json",
+      },
+      {
+        title: "Status",
+        body: "Lightweight public health signal for automated clients.",
+        href: "/api/status",
+      },
+    ],
+    endpoints: "Discovery endpoints",
+    requestExamples: "Request examples",
+    tableHeaders: ["Endpoint", "Content type", "Purpose"],
+    rows: [
+      ["/.well-known/api-catalog", "application/linkset+json", "API catalog linkset."],
+      ["/openapi.json", "application/vnd.oai.openapi+json", "OpenAPI service description."],
+      ["/llms.txt", "text/plain", "Compact product, feature, pricing, and discovery context for LLMs."],
+      ["/feed.xml", "application/rss+xml", "Full-content RSS feed for blog discovery."],
+      ["/schemamap.xml", "application/xml", "Structured-data endpoint discovery map."],
+      ["/schema/page.json", "application/ld+json", "JSON-LD graph for public pages."],
+      ["/schema/post.json", "application/ld+json", "JSON-LD graph for blog posts."],
+      ["/index.md", "text/markdown", "Homepage summary in markdown."],
+      ["/features.md", "text/markdown", "Feature summary in markdown."],
+      ["/pricing.md", "text/markdown", "Pricing, included usage, usage rules, and overage rates in markdown."],
+      ["/.well-known/agent-skills/index.json", "application/json", "Agent skills discovery index."],
+      ["/.well-known/mcp/server-card.json", "application/json", "MCP server card."],
+    ],
+    examples: ["Markdown negotiation", "API catalog"],
+  },
+  fr: {
+    h1: "Documentation API publique",
+    intro:
+      "LobbyStack expose une petite surface de decouverte publique pour que les agents trouvent la documentation, le statut, les metadonnees OpenAPI, les skills et les preferences lisibles par machine sans scraper le site.",
+    note:
+      "Ces endpoints publics ne demandent pas d'authentification. Les metadonnees OAuth seront publiees sur l'hote applicatif quand les API protegees exposeront de vrais endpoints d'autorisation.",
+    cards: [
+      {
+        title: "Catalogue API",
+        body: "Linkset RFC 9727 pour les ressources publiques d'API et de decouverte.",
+        href: "/.well-known/api-catalog",
+      },
+      {
+        title: "OpenAPI",
+        body: "Description JSON des endpoints publics de decouverte.",
+        href: "/openapi.json",
+      },
+      {
+        title: "Statut",
+        body: "Signal de sante public leger pour les clients automatises.",
+        href: "/api/status",
+      },
+    ],
+    endpoints: "Endpoints de decouverte",
+    requestExamples: "Exemples de requetes",
+    tableHeaders: ["Endpoint", "Type de contenu", "Objectif"],
+    rows: [
+      ["/.well-known/api-catalog", "application/linkset+json", "Linkset du catalogue API."],
+      ["/openapi.json", "application/vnd.oai.openapi+json", "Description OpenAPI du service."],
+      ["/llms.txt", "text/plain", "Contexte compact produit, fonctionnalites, tarifs et decouverte pour les LLM."],
+      ["/feed.xml", "application/rss+xml", "Flux RSS complet pour la decouverte du blog."],
+      ["/schemamap.xml", "application/xml", "Carte de decouverte des donnees structurees."],
+      ["/schema/page.json", "application/ld+json", "Graphe JSON-LD des pages publiques."],
+      ["/schema/post.json", "application/ld+json", "Graphe JSON-LD des articles de blog."],
+      ["/fr/index.md", "text/markdown", "Resume de la page d'accueil en markdown."],
+      ["/fr/features.md", "text/markdown", "Resume des fonctionnalites en markdown."],
+      ["/fr/pricing.md", "text/markdown", "Tarifs, usage inclus, regles et depassements en markdown."],
+      ["/.well-known/agent-skills/index.json", "application/json", "Index de decouverte des agent skills."],
+      ["/.well-known/mcp/server-card.json", "application/json", "Carte serveur MCP."],
+    ],
+    examples: ["Negociation markdown", "Catalogue API"],
+  },
+} satisfies Record<
+  Locale,
+  {
+    h1: string
+    intro: string
+    note: string
+    cards: Array<{ title: string; body: string; href: string }>
+    endpoints: string
+    requestExamples: string
+    tableHeaders: [string, string, string]
+    rows: Array<[string, string, string]>
+    examples: [string, string]
+  }
+>
+
+const t = pageCopy[locale]
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: t.h1, path: canonicalPath },
+      ]),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" class="bg-background text-foreground">
+    <section class="mx-auto max-w-5xl px-6 py-20 sm:py-24">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">
+          {t.h1}
+        </h1>
+        <p class="mt-5 text-lg leading-8 text-muted-foreground">
+          {t.intro}
+        </p>
+        <p class="mt-4 leading-7 text-muted-foreground">
+          {t.note}
+        </p>
+      </div>
+
+      <div class="mt-12 grid gap-6 md:grid-cols-3">
+        {
+          t.cards.map((card) => (
+            <a
+              href={card.href}
+              class="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+            >
+              <h2 class="text-base font-semibold">{card.title}</h2>
+              <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                {card.body}
+              </p>
+            </a>
+          ))
+        }
+      </div>
+
+      <section class="mt-16">
+        <h2 class="text-2xl font-semibold">{t.endpoints}</h2>
+        <div class="mt-6 overflow-x-auto rounded-lg border">
+          <table class="w-full border-collapse text-left text-sm">
+            <thead class="bg-muted/70 text-muted-foreground">
+              <tr>
+                {
+                  t.tableHeaders.map((header) => (
+                    <th class="px-4 py-3 font-medium">{header}</th>
+                  ))
+                }
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              {
+                t.rows.map((row) => (
+                  <tr>
+                    <td class="px-4 py-3 font-mono text-xs">{row[0]}</td>
+                    <td class="px-4 py-3 font-mono text-xs">{row[1]}</td>
+                    <td class="px-4 py-3 text-muted-foreground">{row[2]}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mt-16">
+        <h2 class="text-2xl font-semibold">{t.requestExamples}</h2>
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
+          <div class="rounded-lg border bg-card p-5">
+            <h3 class="text-base font-semibold">{t.examples[0]}</h3>
+            <pre
+              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl(locale === "fr" ? "/fr/" : "/")} \
+  -H "Accept: text/markdown"</code></pre>
+          </div>
+          <div class="rounded-lg border bg-card p-5">
+            <h3 class="text-base font-semibold">{t.examples[1]}</h3>
+            <pre
+              class="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>curl {absoluteUrl("/.well-known/api-catalog")} \
+  -H "Accept: application/linkset+json"</code></pre>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>

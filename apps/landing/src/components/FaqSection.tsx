@@ -1,15 +1,22 @@
 import { FaqAccordion } from "@/components/FaqAccordion"
-import { homeFaqs } from "@/lib/home-faqs"
+import { getHomeFaqs } from "@/lib/home-faqs"
+import { getCopy, type Locale } from "@/i18n"
 
-export function FaqSection() {
+type FaqSectionProps = {
+  locale?: Locale
+}
+
+export function FaqSection({ locale = "en" }: FaqSectionProps) {
+  const copy = getCopy(locale)
+
   return (
     <section className="section-spacing" id="faq">
       <div className="mx-auto max-w-3xl px-6">
         <div className="mb-12 text-center">
-          <h2 className="section-heading">Common questions</h2>
+          <h2 className="section-heading">{copy.common.commonQuestions}</h2>
         </div>
 
-        <FaqAccordion faqs={homeFaqs} />
+        <FaqAccordion faqs={getHomeFaqs(locale)} />
       </div>
     </section>
   )

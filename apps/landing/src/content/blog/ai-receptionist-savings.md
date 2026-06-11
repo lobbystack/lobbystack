@@ -6,6 +6,8 @@ author: "LobbyStack Team"
 category: "Guides"
 featured: true
 coverImage: "/illustrations/ai-receptionist-savings-hero.webp"
+locale: "en"
+canonicalSlug: "ai-receptionist-savings"
 ---
 
 If the phone is where new customers usually start, missed calls quietly tax the business. The cost shows up later, in empty calendar slots, slower weeks, and customers who booked with someone else before you had a chance to call back.
