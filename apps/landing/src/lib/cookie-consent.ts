@@ -66,7 +66,11 @@ export function writeCookieConsent(
   const consent = createCookieConsent(analytics)
 
   if (storage) {
-    storage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent))
+    try {
+      storage.setItem(COOKIE_CONSENT_STORAGE_KEY, JSON.stringify(consent))
+    } catch {
+      // Storage can reject writes in private browsing or quota-limited contexts.
+    }
   }
 
   emitCookieConsentChanged(consent)

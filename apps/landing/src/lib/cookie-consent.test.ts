@@ -61,6 +61,23 @@ describe("landing cookie consent helpers", () => {
     })
   })
 
+  it("returns consent when browser storage rejects writes", () => {
+    const storage = {
+      getItem: vi.fn(() => null),
+      removeItem: vi.fn(),
+      setItem: vi.fn(() => {
+        throw new Error("storage blocked")
+      }),
+    }
+
+    const consent = writeCookieConsent(false, storage)
+
+    expect(consent).toMatchObject({
+      analytics: false,
+      version: 1,
+    })
+  })
+
   it("ignores malformed stored consent", () => {
     expect(parseCookieConsent("not json")).toBeNull()
     expect(parseCookieConsent(JSON.stringify({ analytics: true }))).toBeNull()
