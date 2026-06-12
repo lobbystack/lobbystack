@@ -45,11 +45,6 @@ export function initializePostHog() {
   }
 
   if (isInitialized) {
-    const posthogWithOptIn = posthog as typeof posthog & {
-      opt_in_capturing?: () => void
-    }
-
-    posthogWithOptIn.opt_in_capturing?.()
     return true
   }
 
