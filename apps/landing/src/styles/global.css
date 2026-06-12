@@ -215,26 +215,18 @@
 
 .display-heading {
   @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.055em] md:text-5xl lg:text-[4rem];
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .display-heading-compact {
   @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.055em] md:text-5xl lg:text-[3.5rem];
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .section-heading {
   @apply font-heading text-3xl leading-[1.08] font-medium tracking-[-0.045em] md:text-4xl lg:text-[2.75rem];
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .section-intro {
   @apply mt-4 max-w-[65ch] text-base leading-relaxed text-muted-foreground md:text-lg;
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .eyebrow-label {
@@ -243,14 +235,10 @@
 
 .card-heading {
   @apply font-heading text-2xl leading-tight font-medium tracking-[-0.035em];
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .body-copy {
   @apply text-base leading-relaxed text-muted-foreground;
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .fine-print {
@@ -259,8 +247,6 @@
 
 .legal-copy {
   @apply space-y-10 text-sm leading-7 text-muted-foreground md:text-base;
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 .legal-copy section {
@@ -297,8 +283,19 @@
 
 .blog-copy {
   @apply text-base leading-8 text-muted-foreground md:text-lg md:leading-9;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+}
+
+.display-heading,
+.display-heading-compact,
+.section-heading,
+.section-intro,
+.card-heading,
+.body-copy,
+.legal-copy,
+.blog-copy {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .blog-copy > * + * {

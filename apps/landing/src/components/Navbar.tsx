@@ -315,7 +315,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                             data-ph-capture-attribute-label={resourceLink.label}
                             className="flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                           >
-                            <span className="min-w-0 break-words">
+                            <span className="min-w-0">
                               {resourceLink.label}
                             </span>
                             {resourceLink.external && (
@@ -439,7 +439,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                               }
                               className="flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                             >
-                              <span className="min-w-0 break-words">
+                              <span className="min-w-0">
                                 {resourceLink.label}
                               </span>
                               {resourceLink.external && (
