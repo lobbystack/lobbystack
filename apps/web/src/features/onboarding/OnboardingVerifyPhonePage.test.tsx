@@ -75,6 +75,7 @@ describe("OnboardingVerifyPhonePage", () => {
     });
     expect(regionPicker).toBe(prefix);
     expect(prefix?.className).toContain("data-[size=default]:h-11");
+    expect(prefix?.className).not.toContain("border-r-0");
     expect(callingCode?.textContent).toBe("+1");
     expect(prefix?.querySelector("svg")).toBeTruthy();
     expect(phoneInput.placeholder).toBe("(555) 123-4567");

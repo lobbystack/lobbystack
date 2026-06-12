@@ -139,7 +139,7 @@ export function OnboardingVerifyPhonePage({
               <Select onValueChange={handleCountryChange} value={selectedCountry}>
                 <SelectTrigger
                   aria-label={t("verifyPhone.fields.region")}
-                  className="h-11 w-20 shrink-0 rounded-l-4xl rounded-r-none border-r-0 px-4 font-medium text-muted-foreground data-[size=default]:h-11"
+                  className="h-11 w-20 shrink-0 rounded-l-4xl rounded-r-none px-4 font-medium text-muted-foreground data-[size=default]:h-11"
                   data-phone-country-prefix
                 >
                   <span data-phone-country-calling-code>
