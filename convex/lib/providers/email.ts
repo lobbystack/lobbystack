@@ -86,13 +86,16 @@ export async function sendTransactionalEmail(
   const email = renderTransactionalEmail(input);
   const resend = new Resend((components as any).resend, resendOptions);
 
-  const messageId = await resend.sendEmail(ctx, {
-    from: fromAddress,
-    to: input.to,
-    subject: input.subject || email.subject,
-    html: email.html,
-    text: email.text,
-  });
+  const messageId = await resend.sendEmail(
+    ctx as Parameters<typeof resend.sendEmail>[0],
+    {
+      from: fromAddress,
+      to: input.to,
+      subject: input.subject || email.subject,
+      html: email.html,
+      text: email.text,
+    },
+  );
 
   return { messageId: String(messageId) };
 }

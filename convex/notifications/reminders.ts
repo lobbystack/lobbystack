@@ -511,9 +511,13 @@ export const deliverScheduledNotification = internalAction({
     if (!result.ok) {
       return null;
     }
-    await retrier.run(ctx, internal.notifications.reminders.deliverNotification, {
-      notificationId: args.notificationId,
-    });
+    await retrier.run(
+      ctx as unknown as Parameters<typeof retrier.run>[0],
+      internal.notifications.reminders.deliverNotification,
+      {
+        notificationId: args.notificationId,
+      },
+    );
     return null;
   },
 });

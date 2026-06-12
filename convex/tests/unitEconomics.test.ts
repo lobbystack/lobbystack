@@ -1,4 +1,5 @@
 import { convexTest, type TestConvex } from "convex-test";
+import type { FunctionArgs } from "convex/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { api, internal } from "../_generated/api";
@@ -7,21 +8,24 @@ import schema from "../schema";
 import { modules } from "../test.setup";
 
 type ConvexHarness = TestConvex<typeof schema>;
+type AuthenticatedConvexHarness = ReturnType<ConvexHarness["withIdentity"]>;
 type TestRunCtx = Parameters<Parameters<ConvexHarness["run"]>[0]>[0];
+type RefreshMonthArgs = FunctionArgs<typeof api.unitEconomics.refreshMonth>;
+type RefreshMonthState = NonNullable<RefreshMonthArgs["state"]>;
 
 const convexModules = modules;
 const originalMonthlyConvexCost = process.env.UNIT_ECONOMICS_MONTHLY_CONVEX_COST_USD;
 const originalMonthlyFlyCost = process.env.UNIT_ECONOMICS_MONTHLY_FLY_COST_USD;
 
 async function refreshMonthUntilDone(
-  authed: { mutation: (ref: unknown, args: unknown) => Promise<any> },
+  authed: AuthenticatedConvexHarness,
   businessId: Id<"businesses">,
   monthKey?: string,
 ) {
-  let state: Record<string, unknown> | undefined;
+  let state: RefreshMonthState | undefined;
 
   for (let attempt = 0; attempt < 200; attempt += 1) {
-    const result = await authed.mutation(api.unitEconomics.refreshMonth as unknown, {
+    const result = await authed.mutation(api.unitEconomics.refreshMonth, {
       businessId,
       ...(monthKey ? { monthKey } : {}),
       ...(state ? { state } : {}),

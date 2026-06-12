@@ -143,7 +143,10 @@ export const streamPreviewResponse = httpAction(async (ctx, request) => {
       }
     }
     try {
-      await persistentTextStreaming.deleteStream(ctx, body.streamId);
+      await persistentTextStreaming.deleteStream(
+        ctx as unknown as Parameters<typeof persistentTextStreaming.deleteStream>[0],
+        body.streamId,
+      );
     } catch (error) {
       if (!isMissingOrInvalidComponentReferenceError(error)) {
         throw error;
