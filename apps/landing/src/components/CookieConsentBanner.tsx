@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/item"
 import {
   COOKIE_PREFERENCES_TRIGGER_SELECTOR,
-  clearCookieConsent,
   clearPostHogClientStorage,
   readCookieConsent,
   writeCookieConsent,
@@ -69,7 +68,6 @@ export function CookieConsentBanner({
         target.closest(COOKIE_PREFERENCES_TRIGGER_SELECTOR)
       ) {
         event.preventDefault()
-        clearCookieConsent()
         setIsVisible(true)
       }
     }
