@@ -131,13 +131,13 @@ Méfiez-vous aussi des promesses trop brillantes. La [FTC a déjà rappelé](htt
 
 Il existe un chemin entre « tout développer soi-même » et « faire confiance à une boîte noire ».
 
-Vous pouvez partir d'un [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) et l'auto-héberger lorsque vous avez besoin de plus de contrôle. C'est précisément l'espace que LobbyStack occupe.
+Vous pouvez partir d'un [réceptionniste IA open source](/fr/solutions/open-source-ai-receptionist/) et l'auto-héberger lorsque vous avez besoin de plus de contrôle. C'est précisément l'espace que LobbyStack occupe.
 
 LobbyStack est un réceptionniste IA open source pour les entreprises qui dépendent des appels, réservations, demandes de prix, SMS et suivis rapides. Il offre une base fonctionnelle pour répondre aux appels, utiliser les connaissances de l'entreprise, prendre des rendez-vous, transférer à une personne, produire des résumés et configurer des règles sans commencer par un dépôt vide.
 
 Le mot important est « base ». L'open source ne supprime pas la maintenance. Il vous donne la possibilité de l'assumer vous-même.
 
-Avec un [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/), vous pouvez :
+Avec un [réceptionniste IA auto-hébergé](/fr/solutions/self-hosted-ai-receptionist/), vous pouvez :
 
 - exécuter le système sur votre propre infrastructure ;
 - inspecter comment les appels sont traités ;
@@ -228,7 +228,7 @@ Si votre flux est courant et que vous devez répondre aux appels maintenant, ess
 
 Si votre flux est inhabituel, réglementé ou assez important pour être possédé, regardez sérieusement l'open source avant de repartir de zéro.
 
-Pour commencer concrètement, consultez [les fonctionnalités de LobbyStack](/fr/features/), comparez [les tarifs](/fr/pricing/), puis regardez les options [réceptionniste IA open source](/solutions/open-source-ai-receptionist/) et [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/). Si vous êtes encore au stade de l'évaluation des fournisseurs, ce guide sur [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) vous aidera à tester les produits avec de vrais scénarios d'appel.
+Pour commencer concrètement, consultez [les fonctionnalités de LobbyStack](/fr/features/), comparez [les tarifs](/fr/pricing/), puis regardez les options [réceptionniste IA open source](/fr/solutions/open-source-ai-receptionist/) et [réceptionniste IA auto-hébergé](/fr/solutions/self-hosted-ai-receptionist/). Si vous êtes encore au stade de l'évaluation des fournisseurs, ce guide sur [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) vous aidera à tester les produits avec de vrais scénarios d'appel.
 
 La version courte :
 
