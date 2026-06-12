@@ -43,6 +43,7 @@ describe("phone helpers", () => {
     expect(getPhonePlaceholder("en-US")).toBe("(555) 123-4567");
     expect(getPhonePlaceholder("fr-CA")).toBe("(555) 123-4567");
     expect(getPhonePlaceholder("fr-FR", { defaultCountry: "FR" })).toBe("06 12 34 56 78");
+    expect(getPhonePlaceholder("en-US", { defaultCountry: "GB" })).toBe("07123 456789");
   });
 
   it("falls back to the raw value when parsing fails", () => {

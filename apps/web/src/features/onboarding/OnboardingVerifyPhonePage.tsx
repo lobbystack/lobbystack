@@ -22,7 +22,6 @@ import {
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { OnboardingShell } from "@/features/onboarding/components/OnboardingShell";
 import { getSafeOnboardingErrorMessage } from "@/features/onboarding/onboardingErrors";
@@ -136,15 +135,18 @@ export function OnboardingVerifyPhonePage({
             <FieldLabel htmlFor="onboarding-phone">
               {t("verifyPhone.fields.mobileNumber")}
             </FieldLabel>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)]">
+            <div className="flex min-w-0">
               <Select onValueChange={handleCountryChange} value={selectedCountry}>
                 <SelectTrigger
                   aria-label={t("verifyPhone.fields.region")}
-                  className="h-11 w-full"
+                  className="h-11 shrink-0 rounded-l-4xl rounded-r-none border-r-0 px-4 font-medium text-muted-foreground"
+                  data-phone-country-prefix
                 >
-                  <SelectValue />
+                  <span data-phone-country-calling-code>
+                    {selectedCountryOption?.callingCode ?? ""}
+                  </span>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-72">
                   <SelectGroup>
                     {countryOptions.map((option) => (
                       <SelectItem key={option.code} value={option.code}>
@@ -155,24 +157,16 @@ export function OnboardingVerifyPhonePage({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <div className="flex min-w-0">
-                <span
-                  className="flex h-11 shrink-0 items-center rounded-l-4xl rounded-r-none border border-input bg-input/30 px-4 text-sm font-medium text-muted-foreground"
-                  data-slot="phone-country-prefix"
-                >
-                  {selectedCountryOption?.callingCode ?? ""}
-                </span>
-                <PhoneInput
-                  autoFocus
-                  className="h-11 rounded-l-none border-l-0"
-                  containerClassName="min-w-0 flex-1"
-                  country={selectedCountry}
-                  id="onboarding-phone"
-                  onChange={handlePhoneChange}
-                  onRawValueChange={handleRawPhoneChange}
-                  value={phone}
-                />
-              </div>
+              <PhoneInput
+                autoFocus
+                className="h-11 rounded-l-none border-l-0"
+                containerClassName="min-w-0 flex-1"
+                country={selectedCountry}
+                id="onboarding-phone"
+                onChange={handlePhoneChange}
+                onRawValueChange={handleRawPhoneChange}
+                value={phone}
+              />
             </div>
             <FieldDescription>{t("verifyPhone.hint")}</FieldDescription>
           </Field>

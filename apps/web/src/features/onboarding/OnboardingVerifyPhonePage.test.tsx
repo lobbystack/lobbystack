@@ -67,13 +67,19 @@ describe("OnboardingVerifyPhonePage", () => {
     const phoneInput = screen.getByLabelText(
       "verifyPhone.fields.mobileNumber",
     ) as HTMLInputElement;
-    const prefix = container.querySelector('[data-slot="phone-country-prefix"]');
+    const prefix = container.querySelector("[data-phone-country-prefix]");
+    const callingCode = container.querySelector("[data-phone-country-calling-code]");
 
-    expect(screen.getByRole("combobox", { name: "verifyPhone.fields.region" })).toBeTruthy();
-    expect(prefix?.textContent).toBe("+1");
+    const regionPicker = screen.getByRole("combobox", {
+      name: "verifyPhone.fields.region",
+    });
+    expect(regionPicker).toBe(prefix);
+    expect(callingCode?.textContent).toBe("+1");
+    expect(prefix?.querySelector("svg")).toBeTruthy();
     expect(phoneInput.placeholder).toBe("(555) 123-4567");
     expect(phoneInput.placeholder).not.toContain("+1");
     expect(phoneInput.value).not.toContain("+1");
+    expect(screen.queryByText("US")).toBeNull();
   });
 
   it("submits the E.164 phone number after national-format entry", async () => {
@@ -98,5 +104,29 @@ describe("OnboardingVerifyPhonePage", () => {
       });
     });
     expect(navigateMock).toHaveBeenCalledWith("/onboarding/verify-phone/code");
+  });
+
+  it("changes country from the calling-code prefix picker", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <OnboardingVerifyPhonePage
+        businessId={"business-1" as never}
+        onSignOut={() => {}}
+      />,
+    );
+
+    const regionPicker = screen.getByRole("combobox", {
+      name: "verifyPhone.fields.region",
+    });
+    await user.click(regionPicker);
+    await user.click(await screen.findByText("United Kingdom"));
+
+    expect(
+      container.querySelector("[data-phone-country-calling-code]")?.textContent,
+    ).toBe("+44");
+    expect(
+      (screen.getByLabelText("verifyPhone.fields.mobileNumber") as HTMLInputElement)
+        .placeholder,
+    ).toBe("07123 456789");
   });
 });

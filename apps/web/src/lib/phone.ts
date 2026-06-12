@@ -112,6 +112,8 @@ export function getPhonePlaceholder(
       return "(555) 123-4567";
     case "FR":
       return "06 12 34 56 78";
+    case "GB":
+      return "07123 456789";
     default:
       return "555 123 4567";
   }

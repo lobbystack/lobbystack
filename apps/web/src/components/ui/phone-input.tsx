@@ -60,7 +60,6 @@ export function PhoneInput({
       <PhoneNumberInput
         {...props}
         autoComplete={props.autoComplete ?? "tel"}
-        defaultCountry={resolvedDefaultCountry as Country}
         disabled={disabled}
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}
@@ -69,6 +68,7 @@ export function PhoneInput({
         placeholder={resolvedPlaceholder}
         type={props.type ?? "tel"}
         {...(country !== undefined ? { country } : {})}
+        {...(country === undefined ? { defaultCountry: resolvedDefaultCountry as Country } : {})}
         {...(value !== undefined ? { value } : {})}
       />
     </div>
