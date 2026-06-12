@@ -11,6 +11,9 @@ const {
   polarCustomersListMock,
   polarCustomersUpdateMock,
   polarEventsIngestMock,
+  polarMembersCreateMock,
+  polarMembersListMock,
+  polarMembersUpdateMock,
   polarSubscriptionsGetMock,
   polarSubscriptionsListMock,
   polarSubscriptionsUpdateMock,
@@ -23,6 +26,9 @@ const {
   polarCustomersListMock: vi.fn(),
   polarCustomersUpdateMock: vi.fn(),
   polarEventsIngestMock: vi.fn(),
+  polarMembersCreateMock: vi.fn(),
+  polarMembersListMock: vi.fn(),
+  polarMembersUpdateMock: vi.fn(),
   polarSubscriptionsGetMock: vi.fn(),
   polarSubscriptionsListMock: vi.fn(),
   polarSubscriptionsUpdateMock: vi.fn(),
@@ -58,6 +64,11 @@ vi.mock("@polar-sh/sdk", () => ({
       },
       events: {
         ingest: polarEventsIngestMock,
+      },
+      members: {
+        createMember: polarMembersCreateMock,
+        listMembers: polarMembersListMock,
+        updateMember: polarMembersUpdateMock,
       },
       orders: {
         invoice: vi.fn(),
@@ -3526,16 +3537,174 @@ describe("billing", () => {
     const status = await authed.query(api.billing.getStatus, { businessId });
     expect(status.hasCustomerPortalAccess).toBe(true);
 
+    polarMembersListMock.mockResolvedValueOnce(
+      polarListPages([
+        [
+          {
+            id: "mem_legacy_owner",
+            customerId: "cus_legacy",
+            email: "billing-legacy-paid-portal@example.com",
+            name: "Billing Owner",
+            externalId: null,
+            role: "owner",
+          },
+        ],
+      ]),
+    );
     polarCustomerSessionsCreateMock.mockResolvedValueOnce({
       customerPortalUrl: "https://polar.sh/customer-portal/session",
     });
 
     const portal = await authed.action(api.billing.openPortal, { businessId });
     expect(portal.url).toBe("https://polar.sh/customer-portal/session");
+    expect(polarMembersListMock).toHaveBeenCalledWith({
+      customerId: "cus_legacy",
+      limit: 100,
+    });
     expect(polarCustomerSessionsCreateMock).toHaveBeenCalledWith({
       customerId: "cus_legacy",
+      memberId: "mem_legacy_owner",
       returnUrl: "https://app.example.com/settings/plan",
     });
+  });
+
+  it("creates a Polar billing member before opening the customer portal", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-created-portal-member",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_created_member",
+      });
+    });
+
+    polarMembersListMock.mockResolvedValueOnce(polarListPages([[]]));
+    polarMembersCreateMock.mockResolvedValueOnce({
+      id: "mem_created",
+      customerId: "cus_created_member",
+      email: "billing-created-portal-member@example.com",
+      name: "Billing Owner",
+      externalId: String(userId),
+      role: "billing_manager",
+    });
+    polarCustomerSessionsCreateMock.mockResolvedValueOnce({
+      customerPortalUrl: "https://polar.sh/customer-portal/session-created",
+    });
+
+    const portal = await authed.action(api.billing.openPortal, { businessId });
+
+    expect(portal.url).toBe("https://polar.sh/customer-portal/session-created");
+    expect(polarMembersCreateMock).toHaveBeenCalledWith({
+      customerId: "cus_created_member",
+      email: "billing-created-portal-member@example.com",
+      name: "Billing Owner",
+      externalId: String(userId),
+      role: "billing_manager",
+    });
+    expect(polarCustomerSessionsCreateMock).toHaveBeenCalledWith({
+      customerId: "cus_created_member",
+      externalMemberId: String(userId),
+      returnUrl: "https://app.example.com/settings/plan",
+    });
+  });
+
+  it("promotes reused Polar members before opening the customer portal", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-promote-portal-member",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_promote_member",
+      });
+    });
+
+    polarMembersListMock.mockResolvedValueOnce(
+      polarListPages([
+        [
+          {
+            id: "mem_regular",
+            customerId: "cus_promote_member",
+            email: "billing-promote-portal-member@example.com",
+            name: "Billing Owner",
+            externalId: String(userId),
+            role: "member",
+          },
+        ],
+      ]),
+    );
+    polarMembersUpdateMock.mockResolvedValueOnce({
+      id: "mem_regular",
+      customerId: "cus_promote_member",
+      email: "billing-promote-portal-member@example.com",
+      name: "Billing Owner",
+      externalId: String(userId),
+      role: "billing_manager",
+    });
+    polarCustomerSessionsCreateMock.mockResolvedValueOnce({
+      customerPortalUrl: "https://polar.sh/customer-portal/session-promoted",
+    });
+
+    const portal = await authed.action(api.billing.openPortal, { businessId });
+
+    expect(portal.url).toBe("https://polar.sh/customer-portal/session-promoted");
+    expect(polarMembersUpdateMock).toHaveBeenCalledWith({
+      id: "mem_regular",
+      memberUpdate: {
+        role: "billing_manager",
+      },
+    });
+    expect(polarCustomerSessionsCreateMock).toHaveBeenCalledWith({
+      customerId: "cus_promote_member",
+      externalMemberId: String(userId),
+      returnUrl: "https://app.example.com/settings/plan",
+    });
+  });
+
+  it("does not create a portal member with another billing contact's email", async () => {
+    const t = convexTest(schema, convexModules);
+    registerPolarComponent(t as unknown as Parameters<typeof registerPolarComponent>[0]);
+    const { authed, businessId, userId } = await seedWorkspace(t, {
+      subject: "billing-portal-member-no-email",
+      deploymentMode: "cloud",
+    });
+
+    process.env.POLAR_ORGANIZATION_TOKEN = "polar-test-token";
+    process.env.SITE_URL = "https://app.example.com";
+
+    await t.run(async (ctx: TestContext) => {
+      await ctx.db.patch(userId, { email: undefined });
+      await seedBillingAccount(ctx, {
+        businessId,
+        currentPlan: "pro",
+        polarCustomerId: "cus_no_member_email",
+      });
+    });
+
+    polarMembersListMock.mockResolvedValueOnce(polarListPages([[]]));
+
+    await expect(authed.action(api.billing.openPortal, { businessId })).rejects.toThrow(
+      "A billing member email is required before opening the customer portal.",
+    );
+    expect(polarMembersCreateMock).not.toHaveBeenCalled();
+    expect(polarCustomerSessionsCreateMock).not.toHaveBeenCalled();
   });
 
   it("requires admin access for billing checkout and portal actions", async () => {
