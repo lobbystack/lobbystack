@@ -25,15 +25,14 @@ const homeSectionsCopy = {
       },
     ],
     connected: {
-      imageAlt: "Business knowledge sources connected to LobbyStack answer routing",
+      imageAlt:
+        "Business knowledge sources connected to LobbyStack answer routing",
       heading: "Answers from everything your business knows",
-      body:
-        "Import your website, PDFs, documents, spreadsheets, service lists, policies, and FAQs so LobbyStack can answer with the same context your team uses every day.",
+      body: "Import your website, PDFs, documents, spreadsheets, service lists, policies, and FAQs so LobbyStack can answer with the same context your team uses every day.",
     },
     quality: {
       heading: "AI receptionist for teams who care about response quality",
-      body:
-        "Cover the phone without giving up the details, judgment, and follow through that customers notice.",
+      body: "Cover the phone without giving up the details, judgment, and follow through that customers notice.",
       toolCards: [
         {
           title: "A receptionist that picks up when you need it to",
@@ -63,8 +62,7 @@ const homeSectionsCopy = {
     },
     workflow: {
       heading: "Launch your AI receptionist in minutes",
-      body:
-        "Set up the receptionist once, then refine how it answers, books, routes, and summarizes as your business grows.",
+      body: "Set up the receptionist once, then refine how it answers, books, routes, and summarizes as your business grows.",
       steps: [
         {
           title: "Connect your phone",
@@ -90,8 +88,7 @@ const homeSectionsCopy = {
     },
     control: {
       heading: "Keep control of every call",
-      body:
-        "LobbyStack handles routine conversations, but your team decides what it knows, what it can do, and when the call should come back to a person.",
+      body: "LobbyStack handles routine conversations, but your team decides what it knows, what it can do, and when the call should come back to a person.",
       imageAlt:
         "LobbyStack dashboard with call metrics, action required, upcoming appointments, and recent calls",
       cards: [
@@ -111,8 +108,7 @@ const homeSectionsCopy = {
     },
     pricing: {
       heading: "Start free. Upgrade when calls grow.",
-      body:
-        "Try LobbyStack with starter usage, then move to predictable Pro pricing when you are ready for production call coverage.",
+      body: "Try LobbyStack with starter usage, then move to predictable Pro pricing when you are ready for production call coverage.",
       badge: "Most Popular",
       viewDetails: "View pricing details",
       note: "No credit card required to start.",
@@ -139,157 +135,149 @@ const homeSectionsCopy = {
     },
     openSource: {
       heading: "Proudly open-source, self-hosted",
-      body:
-        "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
+      body: "Host LobbyStack on your own server. Own your customer data and stay fully compliant with regulatory standards.",
       cta: "View on GitHub",
     },
   },
   fr: {
     extensionCards: [
       {
-        title: "Transformez les appels sans reponse en rendez-vous",
+        title: "Transformez les appels sans réponse en rendez-vous",
         description:
-          "LobbyStack repond quand votre equipe ne peut pas, capture le besoin de l'appelant et l'aide a reserver ou demander un rappel.",
+          "LobbyStack répond quand votre équipe ne peut pas décrocher, comprend le besoin de l’appelant et l’aide à réserver ou à demander un rappel.",
         cta: "Voir le fonctionnement",
         href: "#how-it-works",
         image: "/illustrations/missed-calls-v4.webp",
-        alt: "Appels manques organises dans un flux de capture LobbyStack",
+        alt: "Appels manqués organisés dans un parcours de prise en charge LobbyStack",
       },
       {
-        title: "Envoyez les bons appels a votre equipe",
+        title: "Envoyez les bons appels à la bonne personne",
         description:
-          "LobbyStack peut traiter les appels courants, prendre un message ou router les conversations urgentes avec les details et le motif de l'appel.",
-        cta: "Definir les regles",
+          "LobbyStack traite les appels courants, prend un message ou transfère les conversations urgentes avec les détails et le motif de l’appel.",
+        cta: "Définir les règles",
         href: "#control",
         image: "/illustrations/calls-need-person.webp",
-        alt: "Resume d'appel LobbyStack avec routage et contexte de rendez-vous",
+        alt: "Résumé d’appel LobbyStack avec transfert et contexte de rendez-vous",
       },
     ],
     connected: {
       imageAlt:
-        "Sources de connaissances metier connectees au routage de reponse LobbyStack",
-      heading: "Des reponses tirees de tout ce que votre entreprise sait",
-      body:
-        "Importez votre site, vos PDF, documents, feuilles de calcul, services, politiques et FAQ afin que LobbyStack reponde avec le meme contexte que votre equipe.",
+        "Sources de connaissances métier connectées à la réception téléphonique LobbyStack",
+      heading: "Des réponses fondées sur ce que votre entreprise sait déjà",
+      body: "Importez votre site, vos PDF, documents, feuilles de calcul, services, politiques et FAQ pour que LobbyStack réponde avec le même contexte que votre équipe.",
     },
     quality: {
       heading:
-        "Une receptionniste IA pour les equipes qui soignent la qualite de reponse",
-      body:
-        "Couvrez le telephone sans perdre les details, le jugement et le suivi que les clients remarquent.",
+        "Une réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
+      body: "Couvrez le téléphone sans perdre les détails, le jugement et le suivi que vos clients remarquent.",
       toolCards: [
         {
-          title: "Une receptionniste qui decroche quand vous en avez besoin",
+          title: "Une réceptionniste qui décroche quand vous en avez besoin",
           description:
-            "Laissez LobbyStack repondre a chaque appel, ou intervenir seulement quand votre equipe est occupee, fermee ou indisponible.",
-          cta: "Reponse",
+            "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible.",
+          cta: "Réponse",
           image: "/illustrations/call-capture.webp",
-          alt: "Illustration de capture d'appel LobbyStack",
+          alt: "Illustration de prise d’appel LobbyStack",
         },
         {
-          title: "Des rendez-vous reserves sans aller-retour",
+          title: "Des rendez-vous pris sans allers-retours",
           description:
-            "Proposez des creneaux disponibles, confirmez les rendez-vous et envoyez les details de suivi sans echanges manuels.",
-          cta: "Reservation",
+            "Proposez des créneaux disponibles, confirmez les rendez-vous et envoyez les informations de suivi sans échanges manuels.",
+          cta: "Réservation",
           image: "/illustrations/booking-flow.webp",
-          alt: "Illustration du flux de reservation LobbyStack",
+          alt: "Illustration de la prise de rendez-vous LobbyStack",
         },
         {
-          title: "Transfert humain quand l'appel l'exige",
+          title: "Transfert humain quand l’appel l’exige",
           description:
-            "Routez les appels urgents ou inhabituels vers une personne avec le motif, les coordonnees et le contexte de conversation.",
+            "Transférez les appels urgents ou inhabituels vers une personne avec le motif, les coordonnées et le contexte de la conversation.",
           cta: "Transfert",
           image: "/illustrations/human-handoff.webp",
-          alt: "Transfert LobbyStack d'un appel entrant vers un membre de l'equipe",
+          alt: "Transfert LobbyStack d’un appel entrant vers un membre de l’équipe",
         },
       ],
     },
     workflow: {
-      heading: "Lancez votre receptionniste IA en quelques minutes",
-      body:
-        "Configurez la receptionniste une fois, puis affinez ses reponses, reservations, routages et resumes au fil de votre croissance.",
+      heading: "Lancez votre réceptionniste IA en quelques minutes",
+      body: "Configurez-la une première fois, puis ajustez ses réponses, ses rendez-vous, ses transferts et ses résumés au fil de votre croissance.",
       steps: [
         {
-          title: "Connectez votre telephone",
+          title: "Connectez votre téléphone",
           description:
-            "Utilisez un nouveau numero local ou transferez les appels du numero que vos clients composent deja.",
+            "Utilisez un nouveau numéro local ou transférez les appels depuis le numéro que vos clients composent déjà.",
         },
         {
           title: "Ajoutez vos connaissances",
           description:
-            "Importez votre site, fichiers, services, FAQ, horaires, politiques et les details que les appelants demandent le plus.",
+            "Importez votre site, vos fichiers, vos services, vos FAQ, vos horaires, vos politiques et les détails que les appelants demandent souvent.",
         },
         {
-          title: "Definissez les regles",
+          title: "Définissez les règles",
           description:
-            "Decidez quand LobbyStack doit repondre, reserver, prendre un message ou passer l'appel a une personne.",
+            "Décidez quand LobbyStack doit répondre, réserver, prendre un message ou passer l’appel à une personne.",
         },
         {
           title: "Passez en production",
           description:
-            "LobbyStack commence a repondre, aider les clients et envoyer confirmations et resumes automatiquement.",
+            "LobbyStack commence à répondre, aider les clients et envoyer confirmations et résumés automatiquement.",
         },
       ],
     },
     control: {
-      heading: "Gardez le controle de chaque appel",
-      body:
-        "LobbyStack gere les conversations courantes, mais votre equipe decide ce qu'il sait, ce qu'il peut faire et quand l'appel doit revenir a une personne.",
+      heading: "Gardez le contrôle de chaque appel",
+      body: "LobbyStack gère les conversations courantes, mais votre équipe décide ce qu’il sait, ce qu’il peut faire et quand l’appel doit revenir à une personne.",
       imageAlt:
-        "Tableau de bord LobbyStack avec indicateurs d'appels, actions requises, rendez-vous a venir et appels recents",
+        "Tableau de bord LobbyStack avec indicateurs d’appels, actions requises, rendez-vous à venir et appels récents",
       cards: [
         {
-          title: "Controlez ce que votre receptionniste IA peut dire",
+          title: "Contrôlez ce que votre réceptionniste IA peut dire",
           description:
-            "Mettez a jour services, prix, politiques, FAQ et consignes des que votre entreprise change, sans attendre un developpeur.",
+            "Mettez à jour services, prix, politiques, FAQ et consignes dès que votre entreprise change, sans attendre un développeur.",
           icon: Pencil,
         },
         {
-          title: "Revoyez chaque appel au meme endroit",
+          title: "Revoyez chaque appel au même endroit",
           description:
-            "Consultez enregistrements, transcriptions, resumes, appelants, reservations et prochaines etapes sans fouiller dans les messages vocaux.",
+            "Consultez enregistrements, transcriptions, résumés, appelants, rendez-vous et prochaines étapes sans fouiller dans les messages vocaux.",
           icon: History,
         },
       ],
     },
     pricing: {
-      heading: "Commencez gratuitement. Evoluez quand les appels augmentent.",
-      body:
-        "Essayez LobbyStack avec l'usage de depart, puis passez a une tarification Pro previsible quand vous etes pret pour la couverture en production.",
+      heading:
+        "Commencez gratuitement. Passez au forfait supérieur quand les appels augmentent.",
+      body: "Essayez LobbyStack avec le volume de départ, puis passez à un forfait Pro prévisible quand vous êtes prêt à couvrir vos appels en production.",
       badge: "Le plus populaire",
-      viewDetails: "Voir le detail des tarifs",
+      viewDetails: "Voir le détail des tarifs",
       note: "Aucune carte bancaire requise pour commencer.",
       plans: [
         {
           name: "Free",
           price: "$0",
           description:
-            "Minutes vocales de depart, appels sortants, alertes SMS, reservation, resumes et historique d'appels.",
+            "Minutes vocales de départ, appels sortants, alertes SMS, prise de rendez-vous, résumés et historique d’appels.",
         },
         {
           name: "Pro",
           price: "$15/mo",
           description:
-            "Limites incluses plus elevees, facturation a l'usage et support prioritaire par courriel.",
+            "Limites incluses plus élevées, facturation à l’usage et support prioritaire par courriel.",
         },
         {
           name: "Enterprise",
           price: "Sur mesure",
           description:
-            "Volume superieur, plusieurs numeros, routage multi-sites, regles de secours personnalisees et accompagnement auto-heberge.",
+            "Volume supérieur, plusieurs numéros, routage multi-sites, règles de secours personnalisées et accompagnement pour l’auto-hébergement.",
         },
       ],
     },
     openSource: {
-      heading: "Open source, pret pour l'auto-hebergement",
-      body:
-        "Hebergez LobbyStack sur votre propre serveur. Gardez la maitrise de vos donnees client et de vos exigences de conformite.",
+      heading: "Open source, prêt pour l’auto-hébergement",
+      body: "Hébergez LobbyStack sur votre propre serveur. Gardez la maîtrise de vos données client et de vos exigences de conformité.",
       cta: "Voir sur GitHub",
     },
   },
 }
-
-
 
 type LocalizedProps = {
   locale?: Locale
@@ -299,10 +287,7 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
   const sectionCopy = homeSectionsCopy[locale]
 
   return (
-    <section
-      className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20"
-      id="missed-calls"
-    >
+    <section className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20" id="missed-calls">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid gap-6 lg:grid-cols-2">
           {sectionCopy.extensionCards.map((card) => (
@@ -322,12 +307,8 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
                 />
               </div>
               <div className="p-8 md:p-10">
-                <h3 className="card-heading">
-                  {card.title}
-                </h3>
-                <p className="body-copy mt-5">
-                  {card.description}
-                </p>
+                <h3 className="card-heading">{card.title}</h3>
+                <p className="body-copy mt-5">{card.description}</p>
                 <div className="mt-6">
                   <a
                     href={card.href}
@@ -366,12 +347,8 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
             />
           </div>
           <div className="flex flex-col justify-center p-8 md:p-12 lg:p-16">
-            <h2 className="section-heading">
-              {sectionCopy.heading}
-            </h2>
-            <p className="section-intro">
-              {sectionCopy.body}
-            </p>
+            <h2 className="section-heading">{sectionCopy.heading}</h2>
+            <p className="section-intro">{sectionCopy.body}</p>
             <div className="mt-8">
               <a
                 href={APP_SIGNUP_URL}
@@ -399,19 +376,15 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
     <section className="section-spacing" id="phone-tools">
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-3xl">
-          <h2 className="section-heading">
-            {sectionCopy.heading}
-          </h2>
-          <p className="section-intro">
-            {sectionCopy.body}
-          </p>
+          <h2 className="section-heading">{sectionCopy.heading}</h2>
+          <p className="section-intro">{sectionCopy.body}</p>
         </div>
 
         <div className="mt-16 flex flex-col gap-16 md:gap-24">
           {sectionCopy.toolCards.map((card, index) => (
             <article
               key={card.title}
-              className={`flex flex-col gap-8 md:gap-12 lg:gap-16 items-center ${
+              className={`flex flex-col items-center gap-8 md:gap-12 lg:gap-16 ${
                 index % 2 === 1 ? "md:flex-row-reverse" : "md:flex-row"
               }`}
             >
@@ -427,12 +400,8 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
                 />
               </div>
               <div className="w-full flex-1 md:py-8">
-                <span className="eyebrow-label mb-4 block">
-                  {card.cta}
-                </span>
-                <h3 className="card-heading md:text-3xl">
-                  {card.title}
-                </h3>
+                <span className="eyebrow-label mb-4 block">{card.cta}</span>
+                <h3 className="card-heading md:text-3xl">{card.title}</h3>
                 <p className="body-copy mt-5 max-w-[65ch] md:text-lg">
                   {card.description}
                 </p>
@@ -452,19 +421,15 @@ function WorkflowSection({ locale = "en" }: LocalizedProps) {
     <section className="section-spacing" id="workflow">
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-3xl">
-          <h2 className="section-heading">
-            {sectionCopy.heading}
-          </h2>
-          <p className="section-intro">
-            {sectionCopy.body}
-          </p>
+          <h2 className="section-heading">{sectionCopy.heading}</h2>
+          <p className="section-intro">{sectionCopy.body}</p>
         </div>
 
         <div className="mt-14 grid grid-cols-1 border-y border-border/70 md:grid-cols-2 lg:grid-cols-4">
           {sectionCopy.steps.map((step, index) => (
             <article
               key={step.title}
-              className="border-b border-border/70 py-8 last:border-b-0 md:px-8 md:[&:nth-child(2n)]:border-l lg:border-b-0 lg:border-l lg:first:border-l-0 lg:[&:nth-child(2n)]:border-l"
+              className="border-b border-border/70 py-8 last:border-b-0 md:px-8 lg:border-b-0 lg:border-l lg:first:border-l-0 md:[&:nth-child(2n)]:border-l lg:[&:nth-child(2n)]:border-l"
             >
               <div className="font-mono text-sm font-medium text-muted-foreground">
                 {String(index + 1).padStart(2, "0")}
@@ -491,9 +456,7 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
-          <p className="section-intro mx-auto">
-            {sectionCopy.body}
-          </p>
+          <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
         <div className="mt-14 overflow-hidden rounded-[1.35rem] border border-border/70 bg-background">
@@ -517,15 +480,14 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
                 className="flex min-h-[260px] flex-col rounded-[1.35rem] border border-border/70 bg-background p-8 md:p-10"
               >
                 <div className="flex size-12 items-center justify-center rounded-xl border border-border/70 bg-background shadow-sm">
-                  <Icon className="size-5 text-foreground/80" aria-hidden="true" />
+                  <Icon
+                    className="size-5 text-foreground/80"
+                    aria-hidden="true"
+                  />
                 </div>
                 <div className="mt-8">
-                  <h3 className="card-heading">
-                    {card.title}
-                  </h3>
-                  <p className="body-copy mt-5">
-                    {card.description}
-                  </p>
+                  <h3 className="card-heading">{card.title}</h3>
+                  <p className="body-copy mt-5">{card.description}</p>
                 </div>
               </article>
             )
@@ -543,17 +505,13 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
     <section className="section-spacing" id="pricing-preview">
       <div className="mx-auto max-w-7xl px-6">
         <div className="max-w-3xl">
-          <h2 className="section-heading">
-            {sectionCopy.heading}
-          </h2>
-          <p className="section-intro">
-            {sectionCopy.body}
-          </p>
+          <h2 className="section-heading">{sectionCopy.heading}</h2>
+          <p className="section-intro">{sectionCopy.body}</p>
         </div>
 
         <div className="mt-16 grid gap-6 lg:grid-cols-3">
           {sectionCopy.plans.map((plan, index) => {
-            const isPro = index === 1;
+            const isPro = index === 1
             return (
               <article
                 key={plan.name}
@@ -565,9 +523,7 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="card-heading">
-                      {plan.name}
-                    </h3>
+                    <h3 className="card-heading">{plan.name}</h3>
                     {isPro && (
                       <span className="inline-flex rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
                         {sectionCopy.badge}
@@ -577,13 +533,14 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
                   <p className="mt-4 font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
                     {plan.price}
                   </p>
-                  <p className="body-copy mt-5">
-                    {plan.description}
-                  </p>
-                  <Check className={`mt-6 size-5 ${isPro ? "text-foreground" : "text-foreground/70"}`} aria-hidden="true" />
+                  <p className="body-copy mt-5">{plan.description}</p>
+                  <Check
+                    className={`mt-6 size-5 ${isPro ? "text-foreground" : "text-foreground/70"}`}
+                    aria-hidden="true"
+                  />
                 </div>
               </article>
-            );
+            )
           })}
         </div>
 
@@ -598,9 +555,7 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
             {sectionCopy.viewDetails}
             <ArrowRight className="size-4" />
           </a>
-          <p className="text-sm text-muted-foreground">
-            {sectionCopy.note}
-          </p>
+          <p className="text-sm text-muted-foreground">{sectionCopy.note}</p>
         </div>
       </div>
     </section>
@@ -615,9 +570,7 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
-          <p className="section-intro mx-auto">
-            {sectionCopy.body}
-          </p>
+          <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
         <div className="mt-10 flex justify-center">

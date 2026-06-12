@@ -14,7 +14,14 @@ import {
   webSiteJsonLd,
   absoluteUrl,
 } from "@/lib/seo"
-import { assertLocale, getCopy, getRouteSeo, localizeHref, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -22,7 +29,10 @@ interface Props {
 
 const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
 const common = getCopy(locale).common
-const routeSeo = getRouteSeo({ locale, path: "/missed-call-revenue-calculator/" })
+const routeSeo = getRouteSeo({
+  locale,
+  path: "/missed-call-revenue-calculator/",
+})
 const canonicalPath = localizePath(locale, "/missed-call-revenue-calculator/")
 const faqs = getCalculatorFaqs(locale).map((faq) => ({
   question: faq.q,
@@ -60,8 +70,7 @@ const pageCopy = {
     h1: "Missed Call Revenue Calculator for Contractors",
     intro:
       "Estimate exactly how much revenue is slipping through the cracks when you can't answer the phone.",
-    body:
-      "This missed call revenue calculator is built for contractors and home service businesses that book work by phone. Use it to put a dollar figure on unanswered calls from homeowners, property managers, and repeat customers before those jobs go to another company.",
+    body: "This missed call revenue calculator is built for contractors and home service businesses that book work by phone. Use it to put a dollar figure on unanswered calls from homeowners, property managers, and repeat customers before those jobs go to another company.",
     measurementHeading: "What this missed call calculator measures",
     measurementIntro:
       "The calculator estimates booked revenue at risk, not total call volume. It filters your missed calls down to the ones that were likely real job opportunities, then applies your booking rate and average job value.",
@@ -144,91 +153,90 @@ const pageCopy = {
     ],
   },
   fr: {
-    breadcrumb: "Calculateur de revenu d'appels manques",
-    h1: "Calculateur de revenu d'appels manques pour entrepreneurs",
+    breadcrumb: "Calculateur de revenu d’appels manqués",
+    h1: "Calculateur de revenu perdu par appels manqués pour entrepreneurs",
     intro:
-      "Estimez combien de revenu s'echappe quand vous ne pouvez pas repondre au telephone.",
-    body:
-      "Ce calculateur est concu pour les entrepreneurs et entreprises de services a domicile qui reservent par telephone. Utilisez-le pour donner une valeur aux appels sans reponse avant que ces travaux partent chez un concurrent.",
-    measurementHeading: "Ce que mesure ce calculateur d'appels manques",
+      "Estimez les revenus qui vous échappent quand vous ne pouvez pas répondre au téléphone.",
+    body: "Ce calculateur est conçu pour les entrepreneurs et entreprises de services à domicile qui réservent par téléphone. Utilisez-le pour donner une valeur aux appels sans réponse avant que ces travaux partent chez un concurrent.",
+    measurementHeading: "Ce que mesure ce calculateur d’appels manqués",
     measurementIntro:
-      "Le calculateur estime le revenu reserve a risque, pas le volume total d'appels. Il filtre vos appels manques vers les vraies opportunites, puis applique votre taux de reservation et votre valeur moyenne.",
+      "Le calculateur estime le revenu à risque, pas le volume total d’appels. Il filtre vos appels manqués pour ne garder que les vraies occasions d’affaires, puis applique votre taux de réservation et votre valeur moyenne.",
     measurementItems: [
       {
-        term: "Appels manques par semaine",
+        term: "Appels manqués par semaine",
         description:
-          "Utilisez les appels que votre equipe n'a pas pu prendre en direct : chantier, conduite, diner, apres les heures et fins de semaine.",
+          "Utilisez les appels que votre équipe n’a pas pu prendre en direct : chantier, conduite, dîner, hors horaires et fin de semaine.",
       },
       {
-        term: "Valeur moyenne du travail",
+        term: "Valeur moyenne d’un travail",
         description:
-          "Divisez le revenu termine par le nombre de travaux termines. Si vos travaux varient beaucoup, utilisez la moyenne melangee.",
+          "Divisez les revenus terminés par le nombre de travaux terminés. Si vos travaux varient beaucoup, utilisez une moyenne simple et prudente.",
       },
       {
-        term: "% d'appels qui sont de vrais travaux",
+        term: "% d’appels qui sont de vraies occasions",
         description:
-          "Tous les appels manques ne sont pas des acheteurs. Cette entree retire spam, fournisseurs, mauvais numeros et demandes non acheteuses.",
+          "Tous les appels manqués ne sont pas des acheteurs. Cette entrée retire spam, fournisseurs, mauvais numéros et demandes sans achat.",
       },
       {
-        term: "Taux de reservation si repondu",
+        term: "Taux de réservation quand l’appel est pris",
         description:
-          "Utilisez le pourcentage de prospects qualifies qui deviennent normalement rendez-vous, devis, dispatch ou travail paye quand quelqu'un repond vite.",
+          "Utilisez le pourcentage de prospects qualifiés qui deviennent normalement rendez-vous, devis, intervention ou travail payé quand quelqu’un répond vite.",
       },
     ],
     mathHeading: "Comment fonctionne le calcul",
     mathIntro:
-      "Nous utilisons une formule simple et prudente basee sur les indicateurs qui font avancer les entreprises de services :",
+      "Nous utilisons une formule simple et prudente basée sur les indicateurs qui comptent pour les entreprises de services :",
     formula:
-      "revenu mensuel a risque = appels manques par semaine x 4,3 x taux d'opportunite x taux de reservation x valeur moyenne",
+      "revenu mensuel à risque = appels manqués par semaine x 4,3 x taux d’occasion x taux de réservation x valeur moyenne",
     mathBody:
-      "Nous multiplions vos appels manques hebdomadaires par 4,3 pour obtenir un volume mensuel, puis nous gardons seulement les appels qui sont de vraies opportunites et la part que vous gagnez normalement.",
-    whyHeading: "Pourquoi les appels manques deviennent des travaux perdus",
+      "Nous multiplions vos appels manqués hebdomadaires par 4,3 pour obtenir un volume mensuel, puis nous gardons seulement les appels qui sont de vraies occasions et la part que vous gagnez normalement.",
+    whyHeading: "Pourquoi les appels manqués deviennent des travaux perdus",
     whyParagraphs: [
-      "La plupart des proprietaires ne traitent pas la messagerie vocale comme une salle d'attente. Si un tuyau fuit ou qu'une climatisation tombe en panne, ils appellent jusqu'a ce que quelqu'un reponde.",
-      "La perte n'est pas seulement l'appel. C'est le clic publicitaire, la reference, le devis, la reparation, l'installation ou le compte recurrent qui aurait pu commencer par cette conversation.",
+      "La plupart des propriétaires ne traitent pas la messagerie vocale comme une salle d’attente. Si un tuyau fuit ou qu’une climatisation tombe en panne, ils appellent jusqu’à ce que quelqu’un réponde.",
+      "La perte n’est pas seulement l’appel. C’est le clic publicitaire, la référence, le devis, la réparation, l’installation ou le compte récurrent qui aurait pu commencer par cette conversation.",
     ],
-    inputsHeading: "Comment choisir des entrees realistes",
+    inputsHeading: "Comment choisir des entrées réalistes",
     inputsIntro:
-      "La meilleure estimation vient de vos propres chiffres. Si vos rapports sont incomplets, commencez par des entrees prudentes.",
+      "La meilleure estimation vient de vos propres chiffres. Si vos rapports sont incomplets, commencez par des entrées prudentes.",
     inputTips: [
-      "Tirez les appels manques de votre systeme telephonique plutot que de deviner.",
-      "Utilisez les 30 a 90 derniers jours pour la valeur moyenne, surtout si votre travail est saisonnier.",
-      "Gardez le taux d'opportunite prudent si vous recevez beaucoup de ventes ou de questions de clients existants.",
-      "Si vous ne connaissez pas votre taux de reservation, commencez bas puis relancez un scenario optimiste.",
+      "Tirez les appels manqués de votre système téléphonique plutôt que de deviner.",
+      "Utilisez les 30 à 90 derniers jours pour la valeur moyenne, surtout si votre travail est saisonnier.",
+      "Gardez le taux d’occasion prudent si vous recevez beaucoup de ventes ou de questions de clients existants.",
+      "Si vous ne connaissez pas votre taux de réservation, commencez bas puis relancez un scénario optimiste.",
     ],
-    tradeHeading: "Revenu d'appels manques par metier",
+    tradeHeading: "Revenu d’appels manqués par métier",
     tradeIntro:
-      "La meme formule fonctionne dans les services a domicile, mais le risque varie selon le metier.",
+      "La même formule fonctionne dans les services à domicile, mais le risque varie selon le métier.",
     tradeNotes: [
       {
         trade: "Plomberie",
-        note: "Les urgences vont souvent a la premiere entreprise qui repond. Un appel manque pour un tuyau eclate peut valoir plus qu'une journee de petits travaux.",
+        note: "Les urgences vont souvent à la première entreprise qui répond. Un appel manqué pour un tuyau éclaté peut valoir plus qu’une journée de petits travaux.",
       },
       {
         trade: "CVC",
-        note: "Les vagues de chaleur et de froid concentrent la demande. En haute saison, quelques appels sans reponse peuvent remplir le calendrier d'un concurrent.",
+        note: "Les vagues de chaleur et de froid concentrent la demande. En haute saison, quelques appels sans réponse peuvent remplir le calendrier d’un concurrent.",
       },
       {
         trade: "Toiture",
-        note: "Les prospects toiture sont souvent de grande valeur, mais ils attendent rarement longtemps apres une tempete.",
+        note: "Les prospects toiture sont souvent de grande valeur, mais ils attendent rarement longtemps après une tempête.",
       },
       {
-        trade: "Electricite",
-        note: "Les appels de depannage et les reparations urgentes sont difficiles a comprendre depuis une boite vocale. Une reponse en direct capture les details.",
+        trade: "Électricité",
+        note: "Les appels de dépannage et les réparations urgentes sont difficiles à comprendre depuis une boîte vocale. Une réponse en direct permet de collecter les détails.",
       },
     ],
     nextHeading: "Que faire ensuite",
     nextParagraphs: [
-      "Arretez de laisser les nouveaux prospects tomber en messagerie vocale, car ils laissent rarement un message. La receptionniste IA LobbyStack travaille 24/7 pour colmater cette fuite.",
-      "Si le calculateur montre un revenu significatif a risque, l'etape suivante est de repondre a plus d'appels sans retirer vos techniciens du travail en cours.",
+      "Arrêtez de laisser les nouveaux prospects tomber en messagerie vocale, car ils laissent rarement un message. La réceptionniste IA LobbyStack travaille 24/7 pour colmater cette fuite.",
+      "Si le calculateur montre un revenu significatif à risque, l’étape suivante est de répondre à plus d’appels sans retirer vos techniciens du travail en cours.",
     ],
     nextItems: [
-      "Repond instantanement a chaque appel",
-      "Capture automatiquement les details de suivi",
-      "Reserve directement dans votre calendrier",
-      "Prend des notes et resumes detailles",
-      "Transfere les urgences vers votre telephone",
-      "Coute une fraction d'un service de reponse humaine",
+      "Répond instantanément à chaque appel",
+      "Collecte automatiquement les détails de suivi",
+      "Réserve directement dans votre calendrier",
+      "Prend des notes et résumés détaillés",
+      "Transfère les urgences vers votre téléphone",
+      "Coûte une fraction d’un service de réponse humaine",
     ],
   },
 } satisfies Record<Locale, PageCopy>
@@ -276,7 +284,9 @@ const t = pageCopy[locale]
           {t.h1}
         </h1>
         <p class="text-xl leading-relaxed text-muted-foreground">{t.intro}</p>
-        <p class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
+        <p
+          class="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground"
+        >
           {t.body}
         </p>
       </div>
@@ -332,9 +342,11 @@ const t = pageCopy[locale]
             <h2 class="text-3xl font-semibold tracking-tight text-foreground">
               {t.whyHeading}
             </h2>
-            {t.whyParagraphs.map((paragraph) => (
-              <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
-            ))}
+            {
+              t.whyParagraphs.map((paragraph) => (
+                <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
+              ))
+            }
           </div>
 
           <div class="flex flex-col gap-6">
@@ -358,7 +370,9 @@ const t = pageCopy[locale]
               {t.tradeHeading}
             </h2>
             <p class="leading-relaxed text-muted-foreground">{t.tradeIntro}</p>
-            <div class="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background">
+            <div
+              class="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background"
+            >
               {
                 t.tradeNotes.map((item) => (
                   <article class="grid gap-3 p-6 sm:grid-cols-[9rem_1fr] sm:gap-6">
@@ -379,9 +393,11 @@ const t = pageCopy[locale]
             >
               {t.nextHeading}
             </h2>
-            {t.nextParagraphs.map((paragraph) => (
-              <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
-            ))}
+            {
+              t.nextParagraphs.map((paragraph) => (
+                <p class="leading-relaxed text-muted-foreground">{paragraph}</p>
+              ))
+            }
             <ul class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {
                 t.nextItems.map((item) => (

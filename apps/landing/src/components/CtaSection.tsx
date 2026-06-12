@@ -17,7 +17,7 @@ const ctaCopy = {
   },
   fr: {
     headingStart: "Ne manquez plus aucun",
-    headingMiddle: "appel pret a reserver",
+    headingMiddle: "appel prêt à réserver",
     headingEnd: "",
     body: "Commencez gratuitement avec 30 minutes incluses par mois.",
   },
@@ -39,9 +39,7 @@ export function CtaSection({ locale = "en" }: CtaSectionProps) {
             </span>
           )}
         </h2>
-        <p className="section-intro mx-auto max-w-[56ch]">
-          {localCopy.body}
-        </p>
+        <p className="section-intro mx-auto max-w-[56ch]">{localCopy.body}</p>
         <div className="mt-8">
           <a
             href={APP_SIGNUP_URL}
@@ -58,7 +56,9 @@ export function CtaSection({ locale = "en" }: CtaSectionProps) {
             <ArrowRight className="ml-1 size-4" />
           </a>
         </div>
-        <p className="fine-print mt-3">{copy.common.noCreditCardCancelAnytime}</p>
+        <p className="fine-print mt-3">
+          {copy.common.noCreditCardCancelAnytime}
+        </p>
       </div>
     </section>
   )

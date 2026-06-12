@@ -28,31 +28,34 @@ const copy = {
     ],
   },
   fr: {
-    heading: "Pourquoi les entrepreneurs perdent du revenu",
+    heading: "Pourquoi les entrepreneurs perdent des revenus",
     reasons: [
       {
         title: "Sur le chantier",
         description:
-          "Quand vous etes sous une maison, sur un toit ou avec des outils, vous ne pouvez pas repondre au telephone de facon sure et professionnelle.",
+          "Quand vous êtes sous une maison, sur un toit ou avec des outils, vous ne pouvez pas répondre au téléphone de façon sûre et professionnelle.",
       },
       {
         title: "Avec un client",
         description:
-          "Prendre un appel devant un client nuit a la confiance. Ignorer l'appel peut toutefois perdre un nouveau prospect.",
+          "Prendre un appel devant un client nuit à la confiance. L’ignorer peut toutefois vous faire perdre un nouveau prospect.",
       },
       {
         title: "Entre deux travaux",
         description:
-          "Si vous conduisez, vous ne pouvez pas noter correctement le nom, l'adresse et les details du travail.",
+          "Si vous conduisez, vous ne pouvez pas noter correctement le nom, l’adresse et les détails du travail.",
       },
       {
-        title: "Apres les heures et fins de semaine",
+        title: "Hors horaires et fins de semaine",
         description:
-          "Les urgences arrivent 24/7. Si un tuyau eclate le soir et que vous ne repondez pas, le client appelle le prochain resultat.",
+          "Les urgences arrivent 24/7. Si un tuyau éclate le soir et que vous ne répondez pas, le client appelle le prochain résultat.",
       },
     ],
   },
-} satisfies Record<Locale, { heading: string; reasons: Array<{ title: string; description: string }> }>
+} satisfies Record<
+  Locale,
+  { heading: string; reasons: Array<{ title: string; description: string }> }
+>
 
 export function MissedRevenueCards({ locale = "en" }: { locale?: Locale }) {
   const t = copy[locale]

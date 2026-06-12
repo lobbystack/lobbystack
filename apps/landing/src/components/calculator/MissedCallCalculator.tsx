@@ -57,32 +57,33 @@ const copy = {
     },
   },
   fr: {
-    inputsHeading: "Entrees du calculateur de revenu d'appels manques",
-    trade: "Metier / Industrie",
-    selectTrade: "Selectionner un metier",
-    missedCalls: "Appels manques par semaine",
+    inputsHeading: "Entrées du calculateur de revenu d’appels manqués",
+    trade: "Métier / secteur",
+    selectTrade: "Sélectionner un métier",
+    missedCalls: "Appels manqués par semaine",
     missedCallsHint: (max: number) =>
-      `Utilisez 0 a ${max} appels manques par semaine.`,
-    averageJobValue: "Valeur moyenne du travail ($)",
+      `Utilisez une valeur entre 0 et ${max} appels manqués par semaine.`,
+    averageJobValue: "Valeur moyenne d’un travail ($)",
     averageJobValueHint: (value: string) =>
-      `Estimez jusqu'a ${value} par travail.`,
-    opportunityRate: "% d'appels qui sont de vrais travaux",
-    bookingRate: "Taux de reservation si l'appel est repondu",
-    monthlyRevenue: "Revenu mensuel a risque",
+      `Estimez jusqu’à ${value} par travail.`,
+    opportunityRate: "% d’appels qui sont de vraies occasions",
+    bookingRate: "Taux de réservation quand l’appel est pris",
+    monthlyRevenue: "Revenu mensuel à risque",
     yearlyResult: (yearly: string, jobs: string) => (
       <>
-        Cela represente <strong>{yearly}</strong> par an, soit environ{" "}
+        Cela représente <strong>{yearly}</strong> par an, soit environ{" "}
         <strong>{jobs} travaux perdus</strong> chaque mois.
       </>
     ),
     tryFree: "Essayer LobbyStack gratuitement",
-    estimateNote: "Ce sont des estimations. Les resultats reels peuvent varier.",
+    estimateNote:
+      "Ce sont des estimations. Les résultats réels peuvent varier.",
     tradeLabels: {
-      Custom: "Personnalise",
-      "General Contractor": "Entrepreneur general",
+      Custom: "Personnalisé",
+      "General Contractor": "Entrepreneur général",
       HVAC: "CVC",
       Plumbing: "Plomberie",
-      Electrical: "Electricite",
+      Electrical: "Électricité",
       Roofing: "Toiture",
       Landscaping: "Paysagement",
     },

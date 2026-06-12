@@ -154,8 +154,8 @@ const tiersFr: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Par mois, facture mensuellement",
-      annual: "Par mois, facture annuellement",
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
     },
     cta: {
       monthly: "Commencer gratuitement",
@@ -165,8 +165,8 @@ const tiersFr: Tier[] = [
     highlight: false,
     highlights: [
       "30 minutes vocales incluses",
-      "Toutes les fonctionnalites",
-      "1 numero professionnel dedie",
+      "Toutes les fonctionnalités",
+      "1 numéro professionnel dédié",
       "Support communautaire",
     ],
   },
@@ -178,8 +178,8 @@ const tiersFr: Tier[] = [
     },
     period: "/mois",
     description: {
-      monthly: "Par mois, facture mensuellement",
-      annual: "Par mois, facture annuellement",
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
     },
     cta: {
       monthly: "Commencer gratuitement",
@@ -205,8 +205,8 @@ const tiersFr: Tier[] = [
     },
     period: "/mois",
     description: {
-      monthly: "Par mois, facture mensuellement",
-      annual: "Par mois, facture annuellement",
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
     },
     cta: {
       monthly: "Commencer gratuitement",
@@ -232,8 +232,8 @@ const tiersFr: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Pour les volumes eleves",
-      annual: "Pour les volumes eleves",
+      monthly: "Pour les volumes élevés",
+      annual: "Pour les volumes élevés",
     },
     cta: {
       monthly: "Nous contacter",
@@ -243,10 +243,10 @@ const tiersFr: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      "Plusieurs numeros dedies",
+      "Plusieurs numéros dédiés",
       "Routage multi-sites",
-      "Regles de secours personnalisees",
-      "Accompagnement dedie a l'implementation",
+      "Règles de secours personnalisées",
+      "Accompagnement dédié à l’implémentation",
     ],
   },
 ]
@@ -566,37 +566,37 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: "Sur mesure",
       },
       {
-        feature: "Numeros de telephone",
-        free: "Mise a niveau requise",
-        starter: "1 dedie",
-        pro: "1 dedie",
+        feature: "Numéros de téléphone",
+        free: "Forfait supérieur requis",
+        starter: "1 dédié",
+        pro: "1 dédié",
         enterprise: "Plusieurs",
       },
     ],
   },
   {
-    category: "Receptionniste principale",
+    category: "Réceptionniste IA",
     rows: [
       {
-        feature: "Reponse aux appels 24/7",
+        feature: "Réponse aux appels 24/7",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Capture des details et messages",
+        feature: "Collecte des détails et messages",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Reponses depuis la base de connaissances",
+        feature: "Réponses depuis la base de connaissances",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Flux de travail en langage naturel",
+        feature: "Consignes en langage naturel",
         free: true,
         pro: true,
         enterprise: true,
@@ -614,7 +614,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Appels simultanes illimites",
+        feature: "Appels simultanés illimités",
         free: true,
         pro: true,
         enterprise: true,
@@ -628,13 +628,13 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Reservation et suivi",
+    category: "Rendez-vous et suivi",
     rows: [
       {
         feature: "Prise de rendez-vous",
-        free: "Illimitee",
-        pro: "Illimitee",
-        enterprise: "Illimitee",
+        free: "Illimitée",
+        pro: "Illimitée",
+        enterprise: "Illimitée",
       },
       {
         feature: "SMS de confirmation de rendez-vous",
@@ -643,19 +643,19 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Integration Google Calendar",
+        feature: "Intégration Google Calendar",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Integration Outlook",
+        feature: "Intégration Outlook",
         free: true,
         pro: true,
         enterprise: true,
       },
       {
-        feature: "Suivi des appels manques",
+        feature: "Suivi des appels manqués",
         free: true,
         pro: true,
         enterprise: true,
@@ -684,7 +684,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Reponse apres les heures",
+        feature: "Réponse hors horaires",
         free: true,
         pro: true,
         enterprise: true,
@@ -696,7 +696,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Regles de secours et d'escalade personnalisees",
+        feature: "Règles de secours et d’escalade personnalisées",
         free: false,
         pro: false,
         enterprise: true,
@@ -721,19 +721,19 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Donnees et tableau de bord",
+    category: "Données et tableau de bord",
     rows: [
       {
-        feature: "Resumes et transcriptions d'appels",
-        free: "Illimites",
-        pro: "Illimites",
-        enterprise: "Illimites",
+        feature: "Résumés et transcriptions d’appels",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
       },
       {
         feature: "Historique et enregistrements d'appels",
-        free: "Illimites",
-        pro: "Illimites",
-        enterprise: "Illimites",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
       },
       {
         feature: "Profils et notes d'appelants",
@@ -743,9 +743,9 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Contacts",
-        free: "Illimites",
-        pro: "Illimites",
-        enterprise: "Illimites",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
       },
       {
         feature: "Import de connaissances depuis le site web",
@@ -754,7 +754,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
         enterprise: true,
       },
       {
-        feature: "Conseils de conservation des donnees",
+        feature: "Conseils de conservation des données",
         free: false,
         pro: false,
         enterprise: true,
@@ -762,26 +762,26 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     ],
   },
   {
-    category: "Hebergement et support",
+    category: "Hébergement et support",
     rows: [
       {
-        feature: "Hebergement",
-        free: "Cloud gere",
-        pro: "Cloud gere",
-        enterprise: "Cloud gere",
+        feature: "Hébergement",
+        free: "Cloud géré",
+        pro: "Cloud géré",
+        enterprise: "Cloud géré",
       },
       {
-        feature: "Depassements a l'usage",
+        feature: "Dépassements à l’usage",
         free: false,
         pro: true,
         enterprise: true,
       },
       {
         feature: "Support",
-        free: "Communaute",
+        free: "Communauté",
         starter: "Courriel",
         pro: "Courriel prioritaire",
-        enterprise: "Implementation dediee",
+        enterprise: "Implémentation dédiée",
       },
     ],
   },
@@ -871,18 +871,18 @@ const pricingSectionCopy = {
   fr: {
     heading: "Des forfaits pour entreprises de toute taille",
     intro:
-      "Commencez gratuitement, puis passez a Starter ou Pro pour plus de minutes incluses et des depassements transparents.",
+      "Commencez gratuitement, puis passez à Starter ou Pro pour plus de minutes incluses et des dépassements transparents.",
     monthly: "Mensuel",
     annual: "Annuel",
-    save: "Economisez 20 %",
-    compareHeading: "Comparer les forfaits en detail",
+    save: "Économisez 20 %",
+    compareHeading: "Comparer les forfaits en détail",
     compareIntro:
-      "Tous les forfaits donnent acces a toutes les fonctionnalites. Starter et Pro ajoutent plus d'usage inclus avec remise a zero mensuelle et depassements a l'usage.",
+      "Tous les forfaits donnent accès aux mêmes fonctionnalités. Starter et Pro ajoutent plus de volume inclus, avec remise à zéro mensuelle et dépassements facturés à l’usage.",
     billingLabel: "Intervalle de facturation",
     tableLabel: "Tableau de comparaison des forfaits",
     caption:
-      "Comparaison des fonctionnalites entre les forfaits Free, Starter, Pro et Enterprise.",
-    feature: "Fonctionnalite",
+      "Comparaison des fonctionnalités entre les forfaits Free, Starter, Pro et Enterprise.",
+    feature: "Fonctionnalité",
     included: "Inclus",
     notIncluded: "Non inclus",
   },

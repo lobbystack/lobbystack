@@ -26,19 +26,19 @@ type SeoLandingPageOverride = Partial<
 
 const commonFaqsFr: FaqItem[] = [
   {
-    question: "Puis-je personnaliser l'accueil et le ton ?",
+    question: "Puis-je personnaliser l’accueil et le ton ?",
     answer:
-      "Oui. Vous definissez les consignes, les services, les regles d'escalade, les reponses autorisees et les situations qui doivent revenir a une personne.",
+      "Oui. Vous définissez les consignes, les services, les règles d’escalade, les réponses autorisées et les situations qui doivent revenir à une personne.",
   },
   {
-    question: "Que se passe-t-il si l'appel depasse ce que l'IA sait faire ?",
+    question: "Que se passe-t-il si l’appel dépasse ce que l’IA sait faire ?",
     answer:
-      "LobbyStack peut poser des questions de clarification, prendre un message, planifier un rappel ou transferer l'appel selon vos regles.",
+      "LobbyStack peut poser des questions de clarification, prendre un message, planifier un rappel ou transférer l’appel selon vos règles.",
   },
   {
     question: "Puis-je commencer gratuitement ?",
     answer:
-      "Oui. Le forfait gratuit inclut des minutes vocales de depart pour tester le flux avant de passer en production.",
+      "Oui. Le forfait gratuit inclut des minutes vocales de départ pour tester votre accueil avant de passer en production.",
   },
 ]
 
@@ -47,49 +47,49 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     group: "solution",
     slug: "ai-phone-answering",
     path: "/solutions/ai-phone-answering/",
-    title: "Reponse telephonique IA pour petites entreprises",
+    title: "Réponse téléphonique IA pour petites entreprises",
     description:
-      "Repondez aux appels entrants, capturez les details, reservez des rendez-vous et routez les demandes urgentes avec LobbyStack.",
-    eyebrow: "Reponse telephonique IA",
-    h1: "Reponse telephonique IA qui decroche quand votre equipe ne peut pas.",
+      "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes urgentes avec LobbyStack.",
+    eyebrow: "Réponse téléphonique IA",
+    h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
     intro:
-      "LobbyStack repond au premier signal, comprend le besoin du client, capture les details et decide de reserver, prendre un message ou transferer selon vos regles.",
+      "LobbyStack répond dès la première sonnerie, comprend le besoin du client, collecte les détails et décide de planifier, prendre un message ou transférer selon vos règles.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
-      "Receptionniste IA LobbyStack capturant les details d'un appelant",
+      "Réceptionniste IA LobbyStack collectant les détails d’un appelant",
     proofPoints: [
-      "Repond aux appels en direct, apres les heures et pendant les pics",
-      "Collecte coordonnees, besoin, urgence et prochaine etape",
-      "Reserve, prend un message ou transfere selon vos regles",
+      "Répond aux appels en direct, hors horaires et pendant les pics",
+      "Collecte coordonnées, besoin, urgence et prochaine étape",
+      "Planifie, prend un message ou transfère selon vos règles",
     ],
     sections: [
       {
         title:
-          "Transformez les appels sans reponse en prochaines etapes claires",
-        body: "Les appelants n'attendent pas toujours un rappel. LobbyStack repond rapidement, pose les bonnes questions et donne a votre equipe un resume exploitable.",
+          "Transformez les appels sans réponse en prochaines étapes claires",
+        body: "Les appelants n’attendent pas toujours un rappel. LobbyStack répond rapidement, pose les bonnes questions et donne à votre équipe un résumé exploitable.",
         points: [
-          "Accueil et ton personnalises",
-          "Questions d'admission adaptees a votre entreprise",
-          "Resume d'appel, transcription et resultat visibles au meme endroit",
+          "Accueil et ton personnalisés",
+          "Questions d’accueil adaptées à votre entreprise",
+          "Résumé d’appel, transcription et résultat visibles au même endroit",
         ],
       },
       {
         title: "Gardez les humains pour les conversations qui comptent",
-        body: "Les appels routiniers peuvent etre traites automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent a votre equipe avec le contexte.",
+        body: "Les appels courants peuvent être traités automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent à votre équipe avec le contexte.",
         points: [
-          "Regles de transfert configurables",
+          "Règles de transfert configurables",
           "Messages et rappels pour les demandes non urgentes",
-          "Historique centralise pour verifier ce qui s'est passe",
+          "Historique centralisé pour vérifier ce qui s’est passé",
         ],
       },
     ],
     faqs: commonFaqsFr,
-    faqHeading: "Questions sur la reponse telephonique IA",
+    faqHeading: "Questions sur la réponse téléphonique IA",
     relatedLinks: [
       { label: "Tarifs", href: "/pricing/" },
-      { label: "Fonctionnalites", href: "/features/" },
+      { label: "Fonctionnalités", href: "/features/" },
       {
-        label: "Calculateur d'appels manques",
+        label: "Calculateur d’appels manqués",
         href: "/missed-call-revenue-calculator/",
       },
     ],
@@ -100,34 +100,34 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-appointment-scheduler/",
     title: "Planificateur de rendez-vous IA pour petites entreprises",
     description:
-      "LobbyStack planifie les rendez-vous depuis les appels, capture les details, envoie les confirmations et route les demandes urgentes.",
+      "LobbyStack planifie les rendez-vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
     eyebrow: "Planification de rendez-vous IA",
-    h1: "Un planificateur IA qui reserve pendant que le client est encore pret.",
+    h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
-      "LobbyStack verifie les disponibilites, propose des creneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
-      "Planificateur de rendez-vous IA LobbyStack confirmant une reservation",
+      "Planificateur de rendez-vous IA LobbyStack confirmant une réservation",
     proofPoints: [
-      "Reserve pendant l'appel au lieu d'attendre un rappel",
+      "Réserve pendant l’appel au lieu d’attendre un rappel",
       "Respecte vos horaires, types de rendez-vous et consignes",
-      "Envoie confirmations et resumes a votre equipe",
+      "Envoie confirmations et résumés à votre équipe",
     ],
     sections: [
       {
-        title: "Reduisez les allers-retours de planification",
-        body: "Quand un appelant est pret, LobbyStack peut proposer les bons creneaux, confirmer le rendez-vous et capturer les details necessaires a la preparation.",
+        title: "Réduisez les allers-retours de planification",
+        body: "Quand un appelant est prêt, LobbyStack peut proposer les bons créneaux, confirmer le rendez-vous et recueillir les détails nécessaires à la préparation.",
         points: [
-          "Disponibilites connectees a votre calendrier",
-          "Questions de qualification avant la reservation",
-          "Confirmations et prochaines etapes partagees automatiquement",
+          "Disponibilités connectées à votre calendrier",
+          "Questions de qualification avant la réservation",
+          "Confirmations et prochaines étapes partagées automatiquement",
         ],
       },
       {
-        title: "Gardez le controle des cas particuliers",
-        body: "Si une demande sort de vos regles, LobbyStack prend les preferences, explique la suite et transmet le contexte a votre equipe.",
+        title: "Gardez le contrôle des cas particuliers",
+        body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et transmet le contexte à votre équipe.",
         points: [
-          "Regles par service, zone ou type de rendez-vous",
+          "Règles par service, zone ou type de rendez-vous",
           "Fallback vers rappel ou message si besoin",
           "Transfert des urgences selon vos consignes",
         ],
@@ -139,7 +139,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       { label: "Tarifs", href: "/pricing/" },
       { label: "Fonctionnalites", href: "/features/" },
       {
-        label: "Reponse telephonique IA",
+        label: "Réponse téléphonique IA",
         href: "/solutions/ai-phone-answering/",
       },
     ],
@@ -148,51 +148,51 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     group: "solution",
     slug: "ai-receptionist-for-home-services",
     path: "/solutions/ai-receptionist-for-home-services/",
-    title: "Receptionniste IA pour services a domicile | LobbyStack",
+    title: "Réceptionniste IA pour services à domicile | LobbyStack",
     description:
-      "LobbyStack repond aux appels pour CVC, plomberie, electricite, toiture, paysagement et autres services pendant que vos equipes travaillent.",
-    eyebrow: "Services a domicile",
-    h1: "Receptionniste IA pour equipes de services a domicile.",
+      "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+    eyebrow: "Services à domicile",
+    h1: "Une réceptionniste IA pour les équipes de services à domicile.",
     intro:
-      "Capturez les details du chantier, la zone de service, l'urgence et le besoin de planification pendant que vos equipes restent sur le terrain.",
+      "Recueillez les détails du chantier, la zone de service, l’urgence et le besoin de planification pendant que vos équipes restent sur le terrain.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
-      "Receptionniste IA LobbyStack reservant des travaux de services a domicile",
+      "Réceptionniste IA LobbyStack planifiant des travaux de services à domicile",
     proofPoints: [
       "Qualifie urgence, zone de service et type de travail",
-      "Aide les appelants a reserver ou demander un rappel",
-      "Transfere les situations critiques a la bonne personne",
+      "Aide les appelants à réserver ou demander un rappel",
+      "Transfère les situations critiques à la bonne personne",
     ],
     sections: [
       {
-        title: "Couvrez le telephone pendant que l'equipe est sur le terrain",
-        body: "Les techniciens ne peuvent pas toujours repondre sans interrompre le travail. LobbyStack collecte les informations essentielles et garde les demandes visibles.",
+        title: "Couvrez le téléphone pendant que l’équipe est sur le terrain",
+        body: "Les techniciens ne peuvent pas toujours répondre sans interrompre le travail. LobbyStack collecte les informations essentielles et garde les demandes visibles.",
         points: [
-          "Questions adaptees aux services a domicile",
-          "Notes de travail et resume apres chaque appel",
-          "Support pour les appels apres les heures et les pics saisonniers",
+          "Questions adaptées aux services à domicile",
+          "Notes de travail et résumé après chaque appel",
+          "Support pour les appels hors horaires et les pics saisonniers",
         ],
       },
       {
         title: "Priorisez les bons appels plus vite",
-        body: "Les urgences, gros projets et demandes sensibles peuvent etre escalades avec contexte, tandis que les appels routiniers avancent vers un rendez-vous ou un suivi.",
+        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez-vous ou un suivi.",
         points: [
-          "Routage par urgence ou type de demande",
-          "Reservation et confirmations selon vos regles",
-          "Historique centralise pour proprietaires, equipes et bureau",
+          "Transfert par urgence ou type de demande",
+          "Réservation et confirmations selon vos règles",
+          "Historique centralisé pour propriétaires, équipes et bureau",
         ],
       },
     ],
     faqs: commonFaqsFr,
-    faqHeading: "Questions sur les services a domicile",
+    faqHeading: "Questions sur les services à domicile",
     relatedLinks: [
       { label: "Tarifs", href: "/pricing/" },
       {
-        label: "Calculateur d'appels manques",
+        label: "Calculateur d’appels manqués",
         href: "/missed-call-revenue-calculator/",
       },
       {
-        label: "Reponse apres les heures",
+        label: "Réponse hors horaires",
         href: "/solutions/after-hours-answering-service/",
       },
     ],
@@ -201,214 +201,214 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
 
 const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/about/": {
-    title: "A propos de LobbyStack",
+    title: "À propos de LobbyStack",
     description:
-      "LobbyStack construit une receptionniste IA calme et fiable pour aider les petites entreprises a ne plus manquer d'appels prets a reserver.",
-    eyebrow: "A propos",
-    h1: "Une receptionniste IA concue pour les exploitants, pas pour les demos tape-a-l'oeil.",
+      "LobbyStack construit une réceptionniste IA calme et fiable pour aider les petites entreprises à ne plus manquer d’appels prêts à réserver.",
+    eyebrow: "À propos",
+    h1: "Une réceptionniste IA conçue pour les exploitants, pas pour les démos tape-à-l’œil.",
     intro:
-      "LobbyStack existe pour donner aux petites entreprises une couverture telephonique fiable sans ajouter de complexite operationnelle.",
+      "LobbyStack existe pour donner aux petites entreprises une couverture téléphonique fiable sans ajouter de complexité opérationnelle.",
   },
   "/solutions/ai-phone-answering/": {
-    title: "Reponse telephonique IA pour petites entreprises",
+    title: "Réponse téléphonique IA pour petites entreprises",
     description:
-      "Repondez aux appels entrants, capturez les details, reservez des rendez-vous et routez les demandes avec LobbyStack.",
-    eyebrow: "Reponse telephonique IA",
-    h1: "Reponse telephonique IA qui decroche quand votre equipe ne peut pas.",
+      "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes avec LobbyStack.",
+    eyebrow: "Réponse téléphonique IA",
+    h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
     intro:
-      "LobbyStack repond au premier signal, comprend le besoin du client, capture les details et decide de reserver, prendre un message ou transferer selon vos regles.",
-    faqHeading: "Questions sur la reponse telephonique IA",
+      "LobbyStack répond dès la première sonnerie, comprend le besoin du client, collecte les détails et décide de planifier, prendre un message ou transférer selon vos règles.",
+    faqHeading: "Questions sur la réponse téléphonique IA",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-appointment-scheduler/": {
     title: "Planificateur de rendez-vous IA",
     description:
-      "Reservez des rendez-vous par telephone avec confirmations, rappels et notifications d'equipe.",
+      "Planifiez des rendez-vous par téléphone avec confirmations, rappels et notifications d’équipe.",
     eyebrow: "Planification de rendez-vous IA",
-    h1: "Un planificateur IA qui reserve pendant que le client est encore pret.",
+    h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
-      "LobbyStack verifie les disponibilites, propose des creneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
     faqHeading: "Questions sur la planification IA",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-home-services/": {
-    title: "Receptionniste IA pour services a domicile",
+    title: "Réceptionniste IA pour services à domicile",
     description:
-      "Couvrez les appels pour CVC, plomberie, electricite, toiture, paysagement et autres metiers de service.",
-    eyebrow: "Services a domicile",
-    h1: "Receptionniste IA pour equipes de services a domicile.",
+      "Couvrez les appels pour CVC, plomberie, électricité, toiture, paysagement et autres métiers de service.",
+    eyebrow: "Services à domicile",
+    h1: "Une réceptionniste IA pour les équipes de services à domicile.",
     intro:
-      "Capturez les details du chantier, la zone de service, l'urgence et le besoin de planification pendant que vos equipes restent sur le terrain.",
-    faqHeading: "Questions sur les services a domicile",
+      "Recueillez les détails du chantier, la zone de service, l’urgence et le besoin de planification pendant que vos équipes restent sur le terrain.",
+    faqHeading: "Questions sur les services à domicile",
     faqs: commonFaqsFr,
   },
   "/solutions/after-hours-answering-service/": {
-    title: "Service de reponse apres les heures d'ouverture",
+    title: "Service de réponse en dehors des heures d’ouverture",
     description:
-      "Couvrez les appels du soir, du week-end et des periodes chargees avec une receptionniste IA disponible 24/7.",
-    eyebrow: "Apres les heures",
-    h1: "Reponse apres les heures d'ouverture sans recruter une autre equipe.",
+      "Couvrez les appels du soir, du week-end et des périodes chargées avec une réceptionniste IA disponible 24/7.",
+    eyebrow: "Hors horaires",
+    h1: "Répondez en dehors des heures d’ouverture sans recruter une autre équipe.",
     intro:
-      "LobbyStack repond quand votre entreprise est fermee, capture le besoin, reserve quand c'est possible et transfere les urgences selon vos regles.",
-    faqHeading: "Questions sur la reponse apres les heures",
+      "LobbyStack répond quand votre entreprise est fermée, comprend le besoin, planifie quand c’est possible et transfère les urgences selon vos règles.",
+    faqHeading: "Questions sur la réponse hors horaires",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-dental-offices/": {
-    title: "Receptionniste IA pour cabinets dentaires",
+    title: "Réceptionniste IA pour cabinets dentaires",
     description:
-      "Repondez aux patients, prenez des rendez-vous, gerez les questions courantes et routez les urgences dentaires.",
+      "Répondez aux patients, prenez des rendez-vous, gérez les questions courantes et transférez les urgences dentaires.",
     eyebrow: "Cabinets dentaires",
-    h1: "Receptionniste IA pour cabinets dentaires occupes.",
+    h1: "Une réceptionniste IA pour cabinets dentaires occupés.",
     intro:
-      "LobbyStack aide les patients a reserver, donne les reponses autorisees et route les situations urgentes vers votre equipe.",
+      "LobbyStack aide les patients à réserver, donne les réponses autorisées et transfère les situations urgentes vers votre équipe.",
     faqHeading: "Questions sur les cabinets dentaires",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-salons-and-spas/": {
-    title: "Receptionniste IA pour salons et spas",
+    title: "Réceptionniste IA pour salons et spas",
     description:
-      "Reservez les clients, repondez aux questions de service et gerez les changements de rendez-vous pendant que l'equipe reste avec les clients.",
+      "Réservez les clients, répondez aux questions de service et gérez les changements de rendez-vous pendant que l’équipe reste avec les clients.",
     eyebrow: "Salons et spas",
-    h1: "Receptionniste IA pour salons, spas et equipes en rendez-vous.",
+    h1: "Une réceptionniste IA pour salons, spas et équipes en rendez-vous.",
     intro:
-      "LobbyStack repond aux appels de reservation, explique les services, collecte les details et applique vos regles de changement ou d'annulation.",
+      "LobbyStack répond aux appels de réservation, explique les services, collecte les détails et applique vos règles de changement ou d’annulation.",
     faqHeading: "Questions sur les salons et spas",
     faqs: commonFaqsFr,
   },
   "/solutions/self-hosted-ai-receptionist/": {
-    title: "Receptionniste IA auto-hebergee",
+    title: "Réceptionniste IA auto-hébergée",
     description:
-      "Executez LobbyStack sur votre propre infrastructure lorsque vous avez besoin de controle sur le deploiement et les donnees.",
-    eyebrow: "Auto-hebergement",
-    h1: "Receptionniste IA auto-hebergee pour equipes qui veulent garder le controle.",
+      "Exécutez LobbyStack sur votre propre infrastructure lorsque vous avez besoin de contrôle sur le déploiement et les données.",
+    eyebrow: "Auto-hébergement",
+    h1: "Une réceptionniste IA auto-hébergée pour les équipes qui veulent garder le contrôle.",
     intro:
-      "LobbyStack est open source et peut etre deploye sur une infrastructure que votre equipe controle, avec une separation claire entre logiciel, donnees et fournisseurs.",
-    faqHeading: "Questions sur l'auto-hebergement",
+      "LobbyStack est open source et peut être déployé sur une infrastructure que votre équipe contrôle, avec une séparation claire entre logiciel, données et fournisseurs.",
+    faqHeading: "Questions sur l’auto-hébergement",
     faqs: commonFaqsFr,
   },
   "/solutions/open-source-ai-receptionist/": {
-    title: "Receptionniste IA open source | LobbyStack",
+    title: "Réceptionniste IA open source | LobbyStack",
     description:
-      "Decouvrez une receptionniste IA open source que votre equipe peut inspecter, heberger et adapter a vos besoins operationnels.",
+      "Découvrez une réceptionniste IA open source que votre équipe peut inspecter, héberger et adapter à vos besoins opérationnels.",
     eyebrow: "Open source",
-    h1: "Receptionniste IA open source pour entreprises qui veulent garder le controle.",
+    h1: "Une réceptionniste IA open source pour les entreprises qui veulent garder le contrôle.",
     intro:
-      "LobbyStack combine une experience hebergee rapide avec une base open source inspectable pour les equipes qui veulent comprendre et controler leur accueil telephonique.",
+      "LobbyStack combine une expérience hébergée rapide avec une base open source inspectable pour les équipes qui veulent comprendre et contrôler leur accueil téléphonique.",
     faqHeading: "Questions sur l'open source",
     faqs: commonFaqsFr,
-    ctaHeading: "Essayez une receptionniste IA que vous pouvez inspecter",
+    ctaHeading: "Essayez une réceptionniste IA que vous pouvez inspecter",
     ctaBody:
-      "Commencez avec LobbyStack Cloud ou discutez avec nous d'un deploiement auto-heberge.",
+      "Commencez avec LobbyStack Cloud ou discutez avec nous d’un déploiement auto-hébergé.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },
   "/solutions/ai-receptionist-for-plumbers/": {
-    title: "Receptionniste IA pour plombiers | LobbyStack",
+    title: "Réceptionniste IA pour plombiers | LobbyStack",
     description:
-      "Repondez aux appels de plomberie, qualifiez les urgences, capturez les details et routez les demandes importantes.",
+      "Répondez aux appels de plomberie, qualifiez les urgences, collectez les détails et transférez les demandes importantes.",
     eyebrow: "Plomberie",
-    h1: "Receptionniste IA pour plombiers qui ne peuvent pas manquer les urgences.",
+    h1: "Une réceptionniste IA pour plombiers qui ne peuvent pas manquer les urgences.",
     intro:
-      "LobbyStack aide les entreprises de plomberie a repondre plus vite, collecter les symptomes, la zone et l'urgence, puis transferer ou reserver selon vos regles.",
+      "LobbyStack aide les entreprises de plomberie à répondre plus vite, collecter les symptômes, la zone et l’urgence, puis transférer ou planifier selon vos règles.",
     faqHeading: "Questions pour plombiers",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-hvac/": {
-    title: "Receptionniste IA pour entreprises CVC | LobbyStack",
+    title: "Réceptionniste IA pour entreprises CVC | LobbyStack",
     description:
-      "Capturez les appels CVC pendant les pics saisonniers, repondez aux questions courantes et routez les urgences.",
+      "Couvrez les appels CVC pendant les pics saisonniers, répondez aux questions courantes et transférez les urgences.",
     eyebrow: "CVC",
-    h1: "Receptionniste IA pour equipes CVC pendant les saisons chargees.",
+    h1: "Une réceptionniste IA pour équipes CVC pendant les saisons chargées.",
     intro:
-      "LobbyStack repond aux appels de chauffage et climatisation, collecte les informations utiles et aide les clients a obtenir le bon prochain pas.",
+      "LobbyStack répond aux appels de chauffage et climatisation, collecte les informations utiles et aide les clients à obtenir la bonne prochaine étape.",
     faqHeading: "Questions pour CVC",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-electricians/": {
-    title: "Receptionniste IA pour electriciens | LobbyStack",
+    title: "Réceptionniste IA pour électriciens | LobbyStack",
     description:
-      "Repondez aux demandes electriques, capturez les details de depannage et transferez les situations urgentes.",
-    eyebrow: "Electricite",
-    h1: "Receptionniste IA pour electriciens occupes sur le terrain.",
+      "Répondez aux demandes électriques, collectez les détails de dépannage et transférez les situations urgentes.",
+    eyebrow: "Électricité",
+    h1: "Une réceptionniste IA pour électriciens occupés sur le terrain.",
     intro:
-      "LobbyStack collecte le probleme, l'adresse, l'urgence et les coordonnees pendant que votre equipe reste concentree sur le travail en cours.",
-    faqHeading: "Questions pour electriciens",
+      "LobbyStack collecte le problème, l’adresse, l’urgence et les coordonnées pendant que votre équipe reste concentrée sur le travail en cours.",
+    faqHeading: "Questions pour électriciens",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-garage-door-repair/": {
-    title: "Receptionniste IA pour reparation de portes de garage",
+    title: "Réceptionniste IA pour réparation de portes de garage",
     description:
-      "Capturez les demandes de reparation de portes de garage, qualifiez les urgences et reservez les visites.",
+      "Recueillez les demandes de réparation de portes de garage, qualifiez les urgences et planifiez les visites.",
     eyebrow: "Portes de garage",
-    h1: "Receptionniste IA pour reparateurs de portes de garage.",
+    h1: "Une réceptionniste IA pour réparateurs de portes de garage.",
     intro:
-      "LobbyStack repond quand les clients appellent pour une porte bloquee, un ressort casse ou une demande de devis, puis collecte les details pour votre equipe.",
+      "LobbyStack répond quand les clients appellent pour une porte bloquée, un ressort cassé ou une demande de devis, puis collecte les détails pour votre équipe.",
     faqHeading: "Questions sur les portes de garage",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-appliance-repair/": {
-    title: "Receptionniste IA pour reparation d'electromenagers",
+    title: "Réceptionniste IA pour réparation d’électroménagers",
     description:
-      "Repondez aux appels de reparation, capturez l'appareil, la marque, le symptome et le meilleur creneau.",
-    eyebrow: "Electromenagers",
-    h1: "Receptionniste IA pour equipes de reparation d'electromenagers.",
+      "Répondez aux appels de réparation, notez l’appareil, la marque, le symptôme et le meilleur créneau.",
+    eyebrow: "Électroménagers",
+    h1: "Une réceptionniste IA pour équipes de réparation d’électroménagers.",
     intro:
-      "LobbyStack collecte les informations qui evitent les rappels inutiles et aide les clients a avancer vers un rendez-vous.",
-    faqHeading: "Questions sur la reparation d'electromenagers",
+      "LobbyStack collecte les informations qui évitent les rappels inutiles et aide les clients à avancer vers un rendez-vous.",
+    faqHeading: "Questions sur la réparation d’électroménagers",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-restoration-companies/": {
-    title: "Receptionniste IA pour entreprises de restauration",
+    title: "Réceptionniste IA pour entreprises de restauration",
     description:
-      "Repondez vite aux appels de degats d'eau, incendie, moisissure et autres situations sensibles.",
+      "Répondez vite aux appels de dégâts d’eau, incendie, moisissure et autres situations sensibles.",
     eyebrow: "Restauration",
-    h1: "Receptionniste IA pour entreprises de restauration qui gerent l'urgence.",
+    h1: "Une réceptionniste IA pour entreprises de restauration qui gèrent l’urgence.",
     intro:
-      "LobbyStack capture le type de dommage, l'emplacement, l'urgence et les coordonnees pour aider votre equipe a prioriser les bons appels.",
+      "LobbyStack note le type de dommage, l’emplacement, l’urgence et les coordonnées pour aider votre équipe à prioriser les bons appels.",
     faqHeading: "Questions sur la restauration",
     faqs: commonFaqsFr,
   },
   "/solutions/ai-receptionist-for-locksmiths/": {
-    title: "Receptionniste IA pour serruriers | LobbyStack",
+    title: "Réceptionniste IA pour serruriers | LobbyStack",
     description:
-      "Repondez aux appels de serrurerie, qualifiez les urgences et routez les demandes avec contexte.",
+      "Répondez aux appels de serrurerie, qualifiez les urgences et transférez les demandes avec contexte.",
     eyebrow: "Serrurerie",
-    h1: "Receptionniste IA pour serruriers disponibles quand les clients sont bloques.",
+    h1: "Une réceptionniste IA pour serruriers disponibles quand les clients sont bloqués.",
     intro:
-      "LobbyStack collecte la situation, l'adresse, le niveau d'urgence et les coordonnees afin que votre equipe sache quand intervenir.",
+      "LobbyStack collecte la situation, l’adresse, le niveau d’urgence et les coordonnées afin que votre équipe sache quand intervenir.",
     faqHeading: "Questions pour serruriers",
     faqs: commonFaqsFr,
   },
   "/solutions/after-hours-answering-service-for-contractors/": {
-    title: "Service de reponse apres les heures pour entrepreneurs",
+    title: "Service de réponse hors horaires pour entrepreneurs",
     description:
-      "Couvrez les appels du soir, du week-end et des periodes chargees pour les entrepreneurs et services a domicile.",
-    eyebrow: "Apres les heures",
-    h1: "Reponse apres les heures pour entrepreneurs qui veulent proteger les bons appels.",
+      "Couvrez les appels du soir, du week-end et des périodes chargées pour les entrepreneurs et services à domicile.",
+    eyebrow: "Hors horaires",
+    h1: "Réponse hors horaires pour entrepreneurs qui veulent protéger les bons appels.",
     intro:
-      "LobbyStack repond quand votre equipe est fermee, collecte le besoin et transfere les urgences selon vos regles.",
-    faqHeading: "Questions apres les heures",
+      "LobbyStack répond quand votre équipe est fermée, comprend le besoin et transfère les urgences selon vos règles.",
+    faqHeading: "Questions hors horaires",
     faqs: commonFaqsFr,
   },
   "/compare/ai-receptionist-vs-virtual-receptionist/": {
-    title: "Receptionniste IA vs receptionniste virtuelle | LobbyStack",
+    title: "Réceptionniste IA vs réceptionniste virtuelle | LobbyStack",
     description:
-      "Comparez la couverture IA, les services de receptionniste virtuelle et les modeles hybrides pour repondre aux appels.",
+      "Comparez la couverture IA, les services de réceptionniste virtuelle et les modèles hybrides pour répondre aux appels.",
     eyebrow: "Comparaison",
-    h1: "Receptionniste IA vs receptionniste virtuelle",
+    h1: "Réceptionniste IA vs réceptionniste virtuelle",
     intro:
-      "Comprenez quand l'IA, l'humain ou une approche hybride convient le mieux a votre volume d'appels, a votre budget et a votre experience client.",
+      "Comprenez quand l’IA, l’humain ou une approche hybride convient le mieux à votre volume d’appels, à votre budget et à votre expérience client.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },
   "/compare/ai-receptionist-vs-voicemail/": {
-    title: "Receptionniste IA vs messagerie vocale | LobbyStack",
+    title: "Réceptionniste IA vs messagerie vocale | LobbyStack",
     description:
-      "Comparez une receptionniste IA et la messagerie vocale pour comprendre comment capturer plus d'appels prets a reserver.",
+      "Comparez une réceptionniste IA et la messagerie vocale pour comprendre comment capter plus d’appels prêts à réserver.",
     eyebrow: "Comparaison",
-    h1: "Receptionniste IA vs messagerie vocale",
+    h1: "Réceptionniste IA vs messagerie vocale",
     intro:
-      "Voyez comment une receptionniste IA peut repondre, qualifier et reserver pendant que la messagerie vocale laisse souvent partir les bons appelants.",
+      "Voyez comment une réceptionniste IA peut répondre, qualifier et réserver pendant que la messagerie vocale laisse souvent partir les bons appelants.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },

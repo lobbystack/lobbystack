@@ -17,16 +17,14 @@ const heroCopy = {
     h1Start: "LobbyStack turns",
     h1Emphasis: "missed calls",
     h1End: "into booked work.",
-    body:
-      "LobbyStack answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
+    body: "LobbyStack answers calls, qualifies leads, and books appointments 24/7. Use it for every inbound call, or just the ones you miss when your team is busy.",
   },
   fr: {
     github: "Soutenez-nous sur GitHub",
     h1Start: "LobbyStack transforme les",
-    h1Emphasis: "appels manques",
-    h1End: "en rendez-vous reserves.",
-    body:
-      "LobbyStack repond aux appels, qualifie les prospects et reserve des rendez-vous 24/7. Utilisez-le pour tous les appels entrants, ou seulement ceux que votre equipe manque quand elle est occupee.",
+    h1Emphasis: "appels manqués",
+    h1End: "en rendez-vous.",
+    body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez-vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

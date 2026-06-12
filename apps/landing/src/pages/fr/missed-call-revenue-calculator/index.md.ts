@@ -2,33 +2,33 @@ import type { APIRoute } from "astro"
 import { markdownResponse } from "@/lib/markdown-response"
 import { absoluteUrl } from "@/lib/seo"
 
-const markdown = `# Calculateur de revenu d'appels manques
+const markdown = `# Calculateur de revenu d’appels manqués
 
-Estimez le revenu hebdomadaire, mensuel et annuel a risque lorsque votre entreprise manque des appels prets a reserver.
+Estimez le revenu hebdomadaire, mensuel et annuel à risque lorsque votre entreprise manque des appels prêts à réserver.
 
 ## Formule
 
 \`\`\`text
-revenu mensuel a risque = appels manques par semaine x 4,3 x taux d'opportunite x taux de reservation x valeur moyenne
+revenu mensuel à risque = appels manqués par semaine x 4,3 x taux d’occasion x taux de réservation x valeur moyenne
 \`\`\`
 
-## Entrees
+## Entrées
 
-- Appels manques par semaine.
-- Valeur moyenne du travail.
-- Pourcentage d'appels qui sont de vraies opportunites.
-- Taux de reservation quand quelqu'un repond.
+- Appels manqués par semaine.
+- Valeur moyenne d’un travail.
+- Pourcentage d’appels qui sont de vraies occasions.
+- Taux de réservation quand quelqu’un répond.
 
-## Prochaine etape
+## Prochaine étape
 
-Si le revenu a risque est significatif, utilisez une receptionniste IA pour repondre, qualifier, reserver et transferer les appels pendant que votre equipe reste sur le travail en cours.
+Si le revenu à risque est significatif, utilisez une réceptionniste IA pour répondre, qualifier, réserver et transférer les appels pendant que votre équipe reste sur le travail en cours.
 `
 
 export const GET: APIRoute = () =>
   markdownResponse({
     markdown,
     canonical: absoluteUrl("/fr/missed-call-revenue-calculator/"),
-    title: "Calculateur de revenu perdu par appels manques | LobbyStack",
+    title: "Calculateur de revenu perdu par appels manqués | LobbyStack",
     description:
-      "Estimez le revenu hebdomadaire, mensuel et annuel a risque lorsque votre entreprise manque des appels prets a reserver.",
+      "Estimez le revenu hebdomadaire, mensuel et annuel à risque lorsque votre entreprise manque des appels prêts à réserver.",
   })

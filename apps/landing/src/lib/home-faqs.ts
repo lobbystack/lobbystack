@@ -32,29 +32,30 @@ export const homeFaqs: FaqItem[] = [
 export const homeFaqsFr: FaqItem[] = [
   {
     question:
-      "Puis-je personnaliser l'accueil et le ton de ma receptionniste IA ?",
+      "Puis-je personnaliser l’accueil et le ton de ma réceptionniste IA ?",
     answer:
-      "Oui. LobbyStack vous permet de personnaliser l'accueil, le ton, les consignes metier et les regles de traitement des appels afin que votre receptionniste IA reste alignée avec votre marque.",
+      "Oui. LobbyStack vous permet de personnaliser l’accueil, le ton, les consignes métier et les règles de traitement des appels afin que votre réceptionniste IA reste alignée avec votre marque.",
   },
   {
-    question: "Que se passe-t-il si un appelant demande quelque chose d'inhabituel ?",
+    question:
+      "Que se passe-t-il si un appelant demande quelque chose d’inhabituel ?",
     answer:
-      "Vous definissez le comportement de secours. LobbyStack peut prendre un message, proposer de joindre votre equipe, envoyer un SMS de suivi ou planifier un rappel.",
+      "Vous définissez le comportement de secours. LobbyStack peut prendre un message, proposer de joindre votre équipe, envoyer un SMS de suivi ou planifier un rappel.",
   },
   {
-    question: "LobbyStack peut-il reserver directement dans mon calendrier ?",
+    question: "LobbyStack peut-il planifier directement dans mon calendrier ?",
     answer:
-      "Oui. LobbyStack peut verifier les disponibilites, proposer des creneaux, reserver le rendez-vous et envoyer les details de confirmation a l'appelant.",
+      "Oui. LobbyStack peut vérifier les disponibilités, proposer des créneaux, planifier le rendez-vous et envoyer les détails de confirmation à l’appelant.",
   },
   {
-    question: "La receptionniste IA peut-elle m'envoyer un resume d'appel ?",
+    question: "La réceptionniste IA peut-elle m’envoyer un résumé d’appel ?",
     answer:
-      "Oui. Vous pouvez recevoir un resume par SMS ou courriel apres l'appel avec les coordonnees de l'appelant, le motif, le resultat et la prochaine etape.",
+      "Oui. Vous pouvez recevoir un résumé par SMS ou courriel après l’appel avec les coordonnées de l’appelant, le motif, le résultat et la prochaine étape.",
   },
   {
-    question: "Quels appels doivent encore revenir a une personne ?",
+    question: "Quels appels doivent encore revenir à une personne ?",
     answer:
-      "LobbyStack convient tres bien aux questions courantes, reservations, prises d'information et qualifications de prospects. Les negociations complexes, situations sensibles, cas urgents et depannages specialises peuvent etre transferes a votre equipe.",
+      "LobbyStack convient très bien aux questions courantes, prises de rendez-vous, collectes d’information et qualifications de prospects. Les négociations complexes, situations sensibles, cas urgents et dépannages spécialisés peuvent être transférés à votre équipe.",
   },
 ]
 

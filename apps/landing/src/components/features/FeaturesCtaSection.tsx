@@ -12,20 +12,16 @@ const featuresCtaCopy = {
   en: {
     headingStart: "Stop letting missed calls decide your",
     headingEmphasis: "revenue",
-    body:
-      "Let LobbyStack answer, qualify, quote, book, follow up, and notify your team day or night.",
+    body: "Let LobbyStack answer, qualify, quote, book, follow up, and notify your team day or night.",
   },
   fr: {
-    headingStart: "Ne laissez plus les appels manques decider de votre",
-    headingEmphasis: "revenu",
-    body:
-      "Laissez LobbyStack repondre, qualifier, deviser, reserver, suivre et notifier votre equipe jour et nuit.",
+    headingStart: "Ne laissez plus les appels manqués décider de votre",
+    headingEmphasis: "chiffre d’affaires",
+    body: "LobbyStack répond, qualifie, planifie, relance et prévient votre équipe, même le soir et la fin de semaine.",
   },
 } satisfies Record<Locale, Record<string, string>>
 
-export function FeaturesCtaSection({
-  locale = "en",
-}: FeaturesCtaSectionProps) {
+export function FeaturesCtaSection({ locale = "en" }: FeaturesCtaSectionProps) {
   const common = getCopy(locale).common
   const copy = featuresCtaCopy[locale]
 
@@ -38,9 +34,7 @@ export function FeaturesCtaSection({
             {copy.headingEmphasis}
           </span>
         </h2>
-        <p className="section-intro mx-auto max-w-xl">
-          {copy.body}
-        </p>
+        <p className="section-intro mx-auto max-w-xl">{copy.body}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
             href={APP_SIGNUP_URL}
@@ -64,7 +58,7 @@ export function FeaturesCtaSection({
             className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             {common.viewPricing}
-        </a>
+          </a>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           {common.noCreditCardCancelAnytime}

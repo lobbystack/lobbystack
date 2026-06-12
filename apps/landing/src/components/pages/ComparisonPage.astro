@@ -12,7 +12,13 @@ import {
   webPageJsonLd,
 } from "@/lib/seo"
 import { ArrowRight } from "lucide-react"
-import { assertLocale, getCopy, localizeHref, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -84,80 +90,78 @@ const localized = {
       "A lead from Google Business Profile is ready to schedule now, but they will call the next result if they hit voicemail.",
       "A small team wants professional phone coverage without hiring another receptionist or committing to an expensive answering service.",
     ],
-    note:
-      "More head-to-head comparisons are on the way. If there is a specific tool or approach you would like to see compared, let us know at",
+    note: "More head-to-head comparisons are on the way. If there is a specific tool or approach you would like to see compared, let us know at",
     ctaHeading: "Ready to try LobbyStack yourself?",
     ctaBody:
       "Comparisons help you decide. Demos let you experience it. Start for free and see how LobbyStack handles actual calls to your business.",
     viewFeatures: "View features",
   },
   fr: {
-    title: "Guide comparatif des receptionnistes IA",
+    title: "Guide comparatif des réceptionnistes IA",
     description:
-      "Comparez la receptionniste IA LobbyStack a la messagerie vocale, aux receptionnistes virtuelles et a d'autres options de reponse telephonique.",
+      "Comparez la réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
     breadcrumb: "Comparaison",
     eyebrow: "Guide comparatif",
     h1Prefix: "Comment LobbyStack se compare aux",
     h1Highlight: "alternatives",
     intro:
-      "Chaque entreprise a besoin d'une reponse telephonique fiable. La bonne approche depend de votre volume d'appels, de votre budget et de l'importance de convertir chaque appelant en reservation.",
+      "Chaque entreprise a besoin d’une réponse téléphonique fiable. La bonne approche dépend de votre volume d’appels, de votre budget et de l’importance de convertir chaque appelant en rendez-vous.",
     comparisons: [
       {
-        title: "Receptionniste IA vs messagerie vocale",
+        title: "Réceptionniste IA vs messagerie vocale",
         href: "/compare/ai-receptionist-vs-voicemail/",
         bestFor:
-          "Entreprises qui perdent des appelants prets a reserver apres les heures ou pendant les periodes chargees.",
+          "Entreprises qui perdent des appelants prêts à réserver hors horaires ou pendant les périodes chargées.",
         description:
-          "Voyez comment une receptionniste IA capture le revenu que la messagerie vocale laisse partir. Un appel sans reponse peut etre une reservation qu'un bip ne conclura jamais.",
+          "Voyez comment une réceptionniste IA capte les revenus que la messagerie vocale laisse partir. Un appel sans réponse peut être un rendez-vous qu’un bip ne conclura jamais.",
       },
       {
-        title: "IA vs receptionniste virtuelle",
+        title: "IA vs réceptionniste virtuelle",
         href: "/compare/ai-receptionist-vs-virtual-receptionist/",
         bestFor:
           "Exploitants qui comparent un service humain avec une couverture IA et des transferts.",
         description:
-          "Comprenez quand l'IA, l'humain ou une approche hybride correspond a vos besoins. Comparez disponibilite, cout a l'echelle et experience appelant.",
+          "Comprenez quand l’IA, l’humain ou une approche hybride correspond à vos besoins. Comparez disponibilité, coûts à l’échelle et expérience d’appel.",
       },
     ],
-    bestFor: "Ideal pour :",
+    bestFor: "Idéal pour :",
     context: [
-      "Les options de reponse telephonique se ressemblent jusqu'au moment ou un client appelle au mauvais moment. La messagerie vocale enregistre. Un service humain peut aider, mais le cout et la disponibilite dependent d'agents actifs. LobbyStack repond immediatement, collecte les bons details, reserve et transfere les urgences avec contexte.",
-      "Ces comparaisons se concentrent sur les questions que les petites entreprises posent vraiment : les appelants attendront-ils ? Est-ce que cela reserve ? Que se passe-t-il apres les heures ? Le cout est-il previsible ? Quand une personne doit-elle reprendre la main ?",
+      "Les options de réponse téléphonique se ressemblent jusqu’au moment où un client appelle au mauvais moment. La messagerie vocale enregistre. Un service humain peut aider, mais le coût et la disponibilité dépendent d’agents actifs. LobbyStack répond immédiatement, collecte les bons détails, planifie les rendez-vous et transfère les urgences avec contexte.",
+      "Ces comparaisons se concentrent sur les questions que les petites entreprises posent vraiment : les appelants attendront-ils ? Est-ce que l’outil peut prendre un rendez-vous ? Que se passe-t-il hors horaires ? Le coût est-il prévisible ? Quand une personne doit-elle reprendre la main ?",
     ],
-    criteriaHeading: "Comment comparer les options de reponse telephonique",
+    criteriaHeading: "Comment comparer les options de réponse téléphonique",
     criteriaIntro:
-      "La bonne couverture depend moins de l'etiquette IA, humaine ou messagerie vocale que de ce qui se passe pendant les deux premieres minutes de l'appel.",
+      "La bonne couverture dépend moins de l’étiquette IA, humaine ou messagerie vocale que de ce qui se passe pendant les deux premières minutes de l’appel.",
     decisionFactors: [
       {
-        title: "Disponibilite",
-        body: "Si des clients appellent apres les heures, les fins de semaine ou pendant que votre equipe sert deja quelqu'un, l'option doit repondre immediatement sans ajouter du personnel.",
+        title: "Disponibilité",
+        body: "Si des clients appellent hors horaires, la fin de semaine ou pendant que votre équipe sert déjà quelqu’un, l’option doit répondre immédiatement sans ajouter du personnel.",
       },
       {
-        title: "Vitesse de reservation",
-        body: "Pour les services, la meilleure option transforme l'appel en rendez-vous confirme avant que la personne cherche un autre fournisseur.",
+        title: "Vitesse de réservation",
+        body: "Pour les services, la meilleure option transforme l’appel en rendez-vous confirmé avant que la personne cherche un autre fournisseur.",
       },
       {
-        title: "Controle des couts",
-        body: "Certaines options semblent peu cheres jusqu'a ce que le volume augmente. Comparez cout mensuel, minutes, spam et occasions perdues.",
+        title: "Contrôle des coûts",
+        body: "Certaines options semblent peu chères jusqu’à ce que le volume augmente. Comparez coût mensuel, minutes, appels indésirables et occasions perdues.",
       },
       {
-        title: "Securite des escalades",
-        body: "Les appels routiniers peuvent etre automatises, mais les appels urgents ou sensibles doivent revenir a une personne avec contexte.",
+        title: "Sécurité des escalades",
+        body: "Les appels courants peuvent être automatisés, mais les appels urgents ou sensibles doivent revenir à une personne avec contexte.",
       },
     ],
     situationsHeading: "Situations couvertes par ces comparaisons",
     scenarios: [
-      "Un proprietaire appelle apres la fermeture parce qu'un tuyau a eclate, une prise etincelle ou une porte de garage ne s'ouvre plus.",
-      "Un patient, client ou prospect veut reserver pendant que votre accueil est deja au telephone.",
-      "Un prospect Google Business Profile est pret a planifier, mais appellera le resultat suivant s'il tombe sur la messagerie.",
-      "Une petite equipe veut une couverture professionnelle sans embaucher une autre receptionniste ni signer un service couteux.",
+      "Un propriétaire appelle après la fermeture parce qu’un tuyau a éclaté, une prise étincelle ou une porte de garage ne s’ouvre plus.",
+      "Un patient, client ou prospect veut réserver pendant que votre accueil est déjà au téléphone.",
+      "Un prospect Google Business Profile est prêt à planifier, mais appellera le résultat suivant s’il tombe sur la messagerie.",
+      "Une petite équipe veut une couverture professionnelle sans embaucher une autre réceptionniste ni signer un service coûteux.",
     ],
-    note:
-      "D'autres comparaisons detaillees arrivent. Si vous voulez comparer un outil ou une approche precise, ecrivez-nous a",
-    ctaHeading: "Pret a essayer LobbyStack vous-meme ?",
+    note: "D’autres comparaisons détaillées arrivent. Si vous voulez comparer un outil ou une approche précise, écrivez-nous à",
+    ctaHeading: "Prêt à essayer LobbyStack vous-même ?",
     ctaBody:
-      "Les comparaisons aident a decider. Les essais permettent de sentir le produit. Commencez gratuitement et voyez comment LobbyStack gere de vrais appels.",
-    viewFeatures: "Voir les fonctionnalites",
+      "Les comparaisons aident à décider. Les essais permettent de sentir le produit. Commencez gratuitement et voyez comment LobbyStack gère de vrais appels.",
+    viewFeatures: "Voir les fonctionnalités",
   },
 } satisfies Record<Locale, Record<string, unknown>>
 
@@ -193,7 +197,7 @@ const t = localized[locale] as (typeof localized)["en"]
       <div class="pb-8 md:pb-12">
         <div class="mx-auto max-w-4xl text-center">
           <p class="eyebrow-label">{t.eyebrow}</p>
-          <h1 class="mx-auto mt-5 display-heading max-w-[18ch]">
+          <h1 class="display-heading mx-auto mt-5 max-w-[18ch]">
             {t.h1Prefix}{" "}
             <span class="underline decoration-2 underline-offset-4">
               {t.h1Highlight}
@@ -233,7 +237,7 @@ const t = localized[locale] as (typeof localized)["en"]
                 </span>
                 <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-foreground" />
               </div>
-              <h2 class="mt-6 card-heading text-foreground">
+              <h2 class="card-heading mt-6 text-foreground">
                 {comparison.title}
               </h2>
               <p class="mt-4 text-sm leading-relaxed text-muted-foreground md:text-base">
@@ -251,11 +255,13 @@ const t = localized[locale] as (typeof localized)["en"]
 
     <section class="mx-auto max-w-5xl px-6 pt-20 md:pt-24">
       <div class="grid gap-8 md:grid-cols-2 md:gap-12">
-        {t.context.map((paragraph) => (
-          <p class="text-base leading-relaxed text-muted-foreground md:text-lg">
-            {paragraph}
-          </p>
-        ))}
+        {
+          t.context.map((paragraph) => (
+            <p class="text-base leading-relaxed text-muted-foreground md:text-lg">
+              {paragraph}
+            </p>
+          ))
+        }
       </div>
     </section>
 
@@ -319,7 +325,9 @@ const t = localized[locale] as (typeof localized)["en"]
       </p>
     </section>
 
-    <section class="mt-20 border-t border-border/40 bg-muted/15 py-20 md:mt-24 md:py-24">
+    <section
+      class="mt-20 border-t border-border/40 bg-muted/15 py-20 md:mt-24 md:py-24"
+    >
       <div class="mx-auto max-w-3xl px-6 text-center">
         <h2 class="section-heading">{t.ctaHeading}</h2>
         <p class="section-intro mx-auto max-w-[58ch]">{t.ctaBody}</p>

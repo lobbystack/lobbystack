@@ -42,50 +42,54 @@ const featureGridCopy = {
     ],
   },
   fr: {
-    headingStart: "Gerez chaque appel, prospect et reservation",
+    headingStart:
+      "Répondez à chaque appel, qualifiez chaque demande et prenez les rendez-vous",
     headingEmphasis: "automatiquement",
     intro:
-      "Repondez aux questions, qualifiez les nouveaux clients, reservez des rendez-vous, capturez les details de suivi et routez les appels urgents avec contexte.",
+      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez-vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
     imageAlt:
-      "Fonctionnalites de la receptionniste IA LobbyStack : reponse aux appels, rendez-vous, qualification, transferts et resumes",
+      "Fonctionnalités de la réceptionniste IA LobbyStack : réponse aux appels, rendez-vous, qualification, transferts et résumés",
     features: [
       {
-        title: "Repond a chaque appel",
+        title: "Répond à chaque appel",
         description:
-          "LobbyStack peut repondre a tous les appels, ou seulement quand vous etes indisponible. Il repond aux questions complexes, capture les details et garde la conversation active.",
+          "LobbyStack peut répondre à tous les appels ou seulement quand vous êtes indisponible. Il répond aux questions, collecte les détails importants et garde la conversation utile.",
         icon: Phone,
       },
       {
-        title: "Reserve des rendez-vous",
+        title: "Planifie les rendez-vous",
         description:
-          "Connectez votre calendrier et LobbyStack verifiera les disponibilites, proposera des creneaux, reservera les rendez-vous et enverra les confirmations automatiquement.",
+          "Connectez votre calendrier : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez-vous et envoie la confirmation.",
         icon: CalendarCheck,
       },
       {
-        title: "Capture chaque detail",
+        title: "Collecte les bonnes informations",
         description:
-          "LobbyStack collecte les noms, coordonnees, besoins, horaires et prochaines etapes afin que votre equipe puisse suivre avec contexte.",
+          "LobbyStack note le nom, les coordonnées, le besoin, le délai et la prochaine étape pour que votre équipe reprenne avec le contexte.",
         icon: ClipboardList,
       },
       {
-        title: "Transfere quand necessaire",
+        title: "Transfère quand il le faut",
         description:
-          "Lorsqu'un client a besoin d'une personne, LobbyStack peut transferer l'appel ou prendre un message clair avec les details et le motif de l'appel.",
+          "Lorsqu’un client doit parler à quelqu’un, LobbyStack transfère l’appel ou prend un message clair avec les détails et le motif.",
         icon: ArrowRightLeft,
       },
     ],
   },
-} satisfies Record<Locale, {
-  headingStart: string
-  headingEmphasis: string
-  intro: string
-  imageAlt: string
-  features: Array<{
-    title: string
-    description: string
-    icon: typeof Phone
-  }>
-}>
+} satisfies Record<
+  Locale,
+  {
+    headingStart: string
+    headingEmphasis: string
+    intro: string
+    imageAlt: string
+    features: Array<{
+      title: string
+      description: string
+      icon: typeof Phone
+    }>
+  }
+>
 
 type FeatureGridProps = {
   locale?: Locale
@@ -105,9 +109,7 @@ export function FeatureGrid({ locale = "en" }: FeatureGridProps) {
               {copy.headingEmphasis}
             </span>
           </h2>
-          <p className="section-intro mx-auto">
-            {copy.intro}
-          </p>
+          <p className="section-intro mx-auto">{copy.intro}</p>
         </div>
 
         {/* Bento layout: 4 features around a central image */}

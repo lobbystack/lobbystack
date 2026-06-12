@@ -9,83 +9,83 @@ export const fr = {
     startFree: "Commencer gratuitement",
     contactUs: "Nous contacter",
     noCreditCard: "Aucune carte bancaire requise",
-    cancelAnytime: "Annulation possible a tout moment",
+    cancelAnytime: "Annulation possible à tout moment",
     noCreditCardCancelAnytime:
-      "Aucune carte bancaire requise. Annulation possible a tout moment.",
-    commonQuestions: "Questions frequentes",
-    relatedResources: "Ressources liees",
-    featured: "A la une",
+      "Aucune carte bancaire requise. Annulation possible à tout moment.",
+    commonQuestions: "Questions fréquentes",
+    relatedResources: "Ressources liées",
+    featured: "À la une",
     latestBlogPosts: "Derniers articles",
     productResources: "Ressources produit",
     readComparison: "Lire la comparaison",
     viewSolution: "Voir la solution",
-    seeFullFeatureList: "Voir toutes les fonctionnalites",
+    seeFullFeatureList: "Voir toutes les fonctionnalités",
   },
   routes: {
     "/": {
-      title: "LobbyStack | Receptionniste IA open source",
+      title: "LobbyStack | Réceptionniste IA open source",
       description:
-        "LobbyStack est la receptionniste IA open source qui repond aux appels, qualifie les prospects, reserve des rendez-vous et route les demandes urgentes 24/7.",
+        "LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez-vous et transfère les urgences 24/7.",
     },
     "/features/": {
-      title: "Fonctionnalites de receptionniste IA",
+      title: "Fonctionnalités de réceptionniste IA",
       description:
-        "Decouvrez les fonctionnalites LobbyStack pour la reponse telephonique IA, les SMS, la prise de rendez-vous, le routage, la qualification et les resumes.",
+        "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez-vous, envoyer des SMS, transférer les urgences et produire des résumés.",
     },
     "/pricing/": {
-      title: "Tarifs de receptionniste IA pour petites entreprises",
+      title: "Tarifs de réceptionniste IA pour petites entreprises",
       description:
-        "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et depassements transparents.",
+        "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.",
     },
     "/solutions/": {
-      title: "Solutions de receptionniste IA | LobbyStack",
+      title: "Solutions de réceptionniste IA | LobbyStack",
       description:
-        "Explorez les solutions LobbyStack pour la reponse telephonique, la planification, les appels apres les heures, les services a domicile, les cabinets dentaires, les salons et l'auto-hebergement.",
+        "Explorez les solutions LobbyStack pour répondre au téléphone, prendre des rendez-vous, couvrir les appels en dehors des heures d’ouverture, servir les entreprises de services, cabinets dentaires, salons et équipes auto-hébergées.",
     },
     "/solutions/ai-phone-answering/": {
-      title: "Reponse telephonique IA pour petites entreprises",
+      title: "Réponse téléphonique IA pour petites entreprises",
       description:
-        "Repondez aux appels entrants, capturez les details, reservez des rendez-vous et routez les demandes urgentes avec LobbyStack.",
+        "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes urgentes avec LobbyStack.",
     },
     "/solutions/ai-appointment-scheduler/": {
       title: "Planificateur de rendez-vous IA pour petites entreprises",
       description:
-        "LobbyStack planifie les rendez-vous depuis les appels, capture les details, envoie les confirmations et route les demandes urgentes.",
+        "LobbyStack planifie les rendez-vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
     },
     "/solutions/ai-receptionist-for-home-services/": {
-      title: "Receptionniste IA pour services a domicile | LobbyStack",
+      title: "Réceptionniste IA pour services à domicile | LobbyStack",
       description:
-        "LobbyStack repond aux appels pour CVC, plomberie, electricite, toiture, paysagement et autres services pendant que vos equipes travaillent.",
+        "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
     },
     "/missed-call-revenue-calculator/": {
-      title: "Calculateur de revenu perdu par appels manques | LobbyStack",
+      title: "Calculateur de revenu perdu par appels manqués | LobbyStack",
       description:
-        "Estimez le revenu hebdomadaire, mensuel et annuel a risque lorsque votre entreprise manque des appels prets a reserver.",
+        "Estimez le revenu hebdomadaire, mensuel et annuel à risque lorsque votre entreprise manque des appels prêts à réserver.",
     },
     "/comparison/": {
-      title: "Guide comparatif des receptionnistes IA",
+      title: "Guide comparatif des réceptionnistes IA",
       description:
-        "Comparez la receptionniste IA LobbyStack a la messagerie vocale, aux receptionnistes virtuelles et a d'autres options de reponse telephonique.",
+        "Comparez la réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
     },
     "/blog/": {
-      title: "Blog et mises a jour produit LobbyStack",
+      title: "Blog et mises à jour produit LobbyStack",
       description:
-        "Lisez les mises a jour produit et les guides pratiques sur les receptionnistes IA, la reponse telephonique, la prise de rendez-vous et l'automatisation des appels.",
+        "Lisez les mises à jour produit et les guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez-vous et l’automatisation des appels.",
     },
     "/docs/api/": {
       title: "Documentation API publique LobbyStack",
       description:
-        "Ressources de decouverte lisibles par machine pour agents et integrateurs visitant LobbyStack.",
+        "Ressources de découverte lisibles par machine pour les agents et intégrateurs qui visitent LobbyStack.",
     },
     "/privacy/": {
-      title: "Politique de confidentialite - LobbyStack",
+      title: "Politique de confidentialité - LobbyStack",
       description:
-        "Politique de confidentialite de LobbyStack, couvrant appels, SMS, consentement, rendez-vous, comptes, facturation, analytique et support.",
+        "Politique de confidentialité de LobbyStack, couvrant appels, SMS, consentement, rendez-vous, comptes, facturation, analytique et support.",
     },
     "/terms/": {
       title: "Conditions d'utilisation - LobbyStack",
       description:
-        "Conditions d'utilisation de LobbyStack, plateforme de receptionniste IA pour appels, SMS, reservation, routage et suivis.",
+        "Conditions d’utilisation de LobbyStack, plateforme de réceptionniste IA pour appels, SMS, prise de rendez-vous, routage et suivis.",
     },
     "/search/": {
       title: "Recherche - LobbyStack",
@@ -95,7 +95,7 @@ export const fr = {
     "/404/": {
       title: "Page introuvable - LobbyStack",
       description:
-        "La page LobbyStack demandee est introuvable. Lancez une recherche ou revenez a l'accueil.",
+        "La page LobbyStack demandée est introuvable. Lancez une recherche ou revenez à l’accueil.",
     },
   },
 } satisfies LandingMessages

@@ -8,7 +8,13 @@ import {
   organizationJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -24,8 +30,7 @@ const pageCopy = {
     h1: "Public API documentation",
     intro:
       "LobbyStack exposes a small public discovery surface so agents can find documentation, status, OpenAPI metadata, skills, and machine-readable usage preferences without scraping the site.",
-    note:
-      "These public discovery endpoints do not require authentication. OAuth metadata will be published on the app host when protected APIs expose real authorization endpoints.",
+    note: "These public discovery endpoints do not require authentication. OAuth metadata will be published on the app host when protected APIs expose real authorization endpoints.",
     cards: [
       {
         title: "API catalog",
@@ -47,62 +52,149 @@ const pageCopy = {
     requestExamples: "Request examples",
     tableHeaders: ["Endpoint", "Content type", "Purpose"],
     rows: [
-      ["/.well-known/api-catalog", "application/linkset+json", "API catalog linkset."],
-      ["/openapi.json", "application/vnd.oai.openapi+json", "OpenAPI service description."],
-      ["/llms.txt", "text/plain", "Compact product, feature, pricing, and discovery context for LLMs."],
-      ["/feed.xml", "application/rss+xml", "Full-content RSS feed for blog discovery."],
-      ["/schemamap.xml", "application/xml", "Structured-data endpoint discovery map."],
-      ["/schema/page.json", "application/ld+json", "JSON-LD graph for public pages."],
-      ["/schema/post.json", "application/ld+json", "JSON-LD graph for blog posts."],
+      [
+        "/.well-known/api-catalog",
+        "application/linkset+json",
+        "API catalog linkset.",
+      ],
+      [
+        "/openapi.json",
+        "application/vnd.oai.openapi+json",
+        "OpenAPI service description.",
+      ],
+      [
+        "/llms.txt",
+        "text/plain",
+        "Compact product, feature, pricing, and discovery context for LLMs.",
+      ],
+      [
+        "/feed.xml",
+        "application/rss+xml",
+        "Full-content RSS feed for blog discovery.",
+      ],
+      [
+        "/schemamap.xml",
+        "application/xml",
+        "Structured-data endpoint discovery map.",
+      ],
+      [
+        "/schema/page.json",
+        "application/ld+json",
+        "JSON-LD graph for public pages.",
+      ],
+      [
+        "/schema/post.json",
+        "application/ld+json",
+        "JSON-LD graph for blog posts.",
+      ],
       ["/index.md", "text/markdown", "Homepage summary in markdown."],
       ["/features.md", "text/markdown", "Feature summary in markdown."],
-      ["/pricing.md", "text/markdown", "Pricing, included usage, usage rules, and overage rates in markdown."],
-      ["/.well-known/agent-skills/index.json", "application/json", "Agent skills discovery index."],
-      ["/.well-known/mcp/server-card.json", "application/json", "MCP server card."],
+      [
+        "/pricing.md",
+        "text/markdown",
+        "Pricing, included usage, usage rules, and overage rates in markdown.",
+      ],
+      [
+        "/.well-known/agent-skills/index.json",
+        "application/json",
+        "Agent skills discovery index.",
+      ],
+      [
+        "/.well-known/mcp/server-card.json",
+        "application/json",
+        "MCP server card.",
+      ],
     ],
     examples: ["Markdown negotiation", "API catalog"],
   },
   fr: {
     h1: "Documentation API publique",
     intro:
-      "LobbyStack expose une petite surface de decouverte publique pour que les agents trouvent la documentation, le statut, les metadonnees OpenAPI, les skills et les preferences lisibles par machine sans scraper le site.",
-    note:
-      "Ces endpoints publics ne demandent pas d'authentification. Les metadonnees OAuth seront publiees sur l'hote applicatif quand les API protegees exposeront de vrais endpoints d'autorisation.",
+      "LobbyStack expose une petite surface de découverte publique afin que les agents trouvent la documentation, le statut, les métadonnées OpenAPI, les skills et les préférences lisibles par machine sans scraper le site.",
+    note: "Ces endpoints publics ne demandent pas d’authentification. Les métadonnées OAuth seront publiées sur l’hôte applicatif lorsque les API protégées exposeront de vrais endpoints d’autorisation.",
     cards: [
       {
         title: "Catalogue API",
-        body: "Linkset RFC 9727 pour les ressources publiques d'API et de decouverte.",
+        body: "Linkset RFC 9727 pour les ressources publiques d’API et de découverte.",
         href: "/.well-known/api-catalog",
       },
       {
         title: "OpenAPI",
-        body: "Description JSON des endpoints publics de decouverte.",
+        body: "Description JSON des endpoints publics de découverte.",
         href: "/openapi.json",
       },
       {
         title: "Statut",
-        body: "Signal de sante public leger pour les clients automatises.",
+        body: "Signal de santé public léger pour les clients automatisés.",
         href: "/api/status",
       },
     ],
-    endpoints: "Endpoints de decouverte",
-    requestExamples: "Exemples de requetes",
+    endpoints: "Endpoints de découverte",
+    requestExamples: "Exemples de requêtes",
     tableHeaders: ["Endpoint", "Type de contenu", "Objectif"],
     rows: [
-      ["/.well-known/api-catalog", "application/linkset+json", "Linkset du catalogue API."],
-      ["/openapi.json", "application/vnd.oai.openapi+json", "Description OpenAPI du service."],
-      ["/llms.txt", "text/plain", "Contexte compact produit, fonctionnalites, tarifs et decouverte pour les LLM."],
-      ["/feed.xml", "application/rss+xml", "Flux RSS complet pour la decouverte du blog."],
-      ["/schemamap.xml", "application/xml", "Carte de decouverte des donnees structurees."],
-      ["/schema/page.json", "application/ld+json", "Graphe JSON-LD des pages publiques."],
-      ["/schema/post.json", "application/ld+json", "Graphe JSON-LD des articles de blog."],
-      ["/fr/index.md", "text/markdown", "Resume de la page d'accueil en markdown."],
-      ["/fr/features.md", "text/markdown", "Resume des fonctionnalites en markdown."],
-      ["/fr/pricing.md", "text/markdown", "Tarifs, usage inclus, regles et depassements en markdown."],
-      ["/.well-known/agent-skills/index.json", "application/json", "Index de decouverte des agent skills."],
-      ["/.well-known/mcp/server-card.json", "application/json", "Carte serveur MCP."],
+      [
+        "/.well-known/api-catalog",
+        "application/linkset+json",
+        "Linkset du catalogue API.",
+      ],
+      [
+        "/openapi.json",
+        "application/vnd.oai.openapi+json",
+        "Description OpenAPI du service.",
+      ],
+      [
+        "/llms.txt",
+        "text/plain",
+        "Contexte compact produit, fonctionnalités, tarifs et découverte pour les LLM.",
+      ],
+      [
+        "/feed.xml",
+        "application/rss+xml",
+        "Flux RSS complet pour la découverte du blog.",
+      ],
+      [
+        "/schemamap.xml",
+        "application/xml",
+        "Carte de découverte des données structurées.",
+      ],
+      [
+        "/schema/page.json",
+        "application/ld+json",
+        "Graphe JSON-LD des pages publiques.",
+      ],
+      [
+        "/schema/post.json",
+        "application/ld+json",
+        "Graphe JSON-LD des articles de blog.",
+      ],
+      [
+        "/fr/index.md",
+        "text/markdown",
+        "Résumé de la page d’accueil en markdown.",
+      ],
+      [
+        "/fr/features.md",
+        "text/markdown",
+        "Résumé des fonctionnalités en markdown.",
+      ],
+      [
+        "/fr/pricing.md",
+        "text/markdown",
+        "Tarifs, volume inclus, règles et dépassements en markdown.",
+      ],
+      [
+        "/.well-known/agent-skills/index.json",
+        "application/json",
+        "Index de découverte des agent skills.",
+      ],
+      [
+        "/.well-known/mcp/server-card.json",
+        "application/json",
+        "Carte serveur MCP.",
+      ],
     ],
-    examples: ["Negociation markdown", "Catalogue API"],
+    examples: ["Négociation markdown", "Catalogue API"],
   },
 } satisfies Record<
   Locale,

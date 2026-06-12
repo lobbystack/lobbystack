@@ -1,8 +1,8 @@
 ---
-title: "Comment choisir une receptionniste IA"
-description: "Apprenez a choisir une receptionniste IA avec une liste de verification pratique pour les fonctionnalites, les tarifs, la qualite d'appel et les integrations."
+title: "Comment choisir une réceptionniste IA"
+description: "Apprenez à choisir une réceptionniste IA avec une liste de vérification pratique pour les fonctionnalités, les tarifs, la qualité d'appel et les intégrations."
 pubDate: 2026-06-03T13:00:00-04:00
-author: "Equipe LobbyStack"
+author: "Équipe LobbyStack"
 category: "Guides"
 featured: false
 coverImage: "/illustrations/how-to-choose-an-ai-receptionist-hero.webp"
@@ -10,71 +10,71 @@ locale: "fr"
 canonicalSlug: "how-to-choose-an-ai-receptionist"
 ---
 
-Choisir une **receptionniste IA** devient plus simple quand on arrete de chercher le produit qui sonne le plus humain et qu'on pose une question plus operationnelle : que doit-il se passer a la fin d'un bon appel ?
+Choisir une **réceptionniste IA** devient plus simple quand on arrête de chercher le produit qui sonne le plus humain et qu'on pose une question plus opérationnelle : que doit-il se passer à la fin d'un bon appel ?
 
-Pour une entreprise de services, la bonne reponse est souvent un rendez-vous reserve, un prospect qualifie, un transfert urgent, un message propre ou une personne qui a obtenu sa reponse sans attendre un rappel.
+Pour une entreprise de services, la bonne réponse est souvent un rendez-vous pris, un prospect qualifié, un transfert urgent, un message propre ou une personne qui a obtenu sa réponse sans attendre un rappel.
 
-## Commencer par les appels que vous recevez deja
+## Commencer par les appels que vous recevez déjà
 
-Ne commencez pas par les demos de fournisseurs. Commencez par votre propre telephone.
+Ne commencez pas par les démos de fournisseurs. Commencez par votre propre téléphone.
 
 Prenez deux a quatre semaines de journaux d'appels et classez-les :
 
 - nouveau client ;
 - client existant ;
-- reservation de rendez-vous ;
+- réservation de rendez-vous ;
 - changement ou annulation ;
 - question de prix ;
 - demande urgente ;
 - plainte ;
-- fournisseur, vente, spam ou mauvais numero ;
+- fournisseur, vente, spam ou mauvais numéro ;
 - appel interne.
 
-Ce tri change toute la decision. Un salon qui recoit surtout des demandes de reservation n'a pas les memes besoins qu'une entreprise CVC qui recoit des urgences apres les heures.
+Ce tri change toute la décision. Un salon qui reçoit surtout des demandes de réservation n'a pas les mêmes besoins qu'une entreprise CVC qui reçoit des urgences hors horaires.
 
-## Definir ce qu'un bon appel doit produire
+## Définir ce qu'un bon appel doit produire
 
-Pour chaque type d'appel important, notez le resultat voulu.
+Pour chaque type d'appel important, notez le résultat voulu.
 
-| Type d'appel | Bon resultat |
-| --- | --- |
-| Nouveau prospect | Nom, besoin, zone, urgence et prochaine etape |
-| Demande de reservation | Creneau valide, reservation, confirmation et notes |
-| Question de prix | Reponse approuvee ou rappel de prix |
-| Urgence | Transfert ou alerte immediate |
-| Plainte | Contexte capture et routage humain |
+| Type d'appel           | Bon résultat                                       |
+| ---------------------- | -------------------------------------------------- |
+| Nouveau prospect       | Nom, besoin, zone, urgence et prochaine étape      |
+| Demande de réservation | Créneau valide, réservation, confirmation et notes |
+| Question de prix       | Réponse approuvée ou rappel de prix                |
+| Urgence                | Transfert ou alerte immédiate                      |
+| Plainte                | Contexte collecté et transfert humain              |
 
-Cette etape evite d'acheter un produit qui repond au telephone sans terminer le travail.
+Cette étape évite d'acheter un produit qui répond au téléphone sans terminer le travail.
 
-## Comparer les fonctionnalites qui changent le resultat
+## Comparer les fonctionnalités qui changent le résultat
 
-Presque tous les fournisseurs disent offrir 24/7, voix naturelle, reservation et resumes. La question utile est : comment ces fonctions se comportent-elles dans votre entreprise ?
+Presque tous les fournisseurs disent offrir 24/7, voix naturelle, réservation et résumés. La question utile est : comment ces fonctions se comportent-elles dans votre entreprise ?
 
-Testez la qualite d'appel depuis un mobile, dans un endroit bruyant, avec des interruptions, une correction, une adresse donnee dans le desordre ou deux questions dans la meme phrase.
+Testez la qualité d'appel depuis un mobile, dans un endroit bruyant, avec des interruptions, une correction, une adresse donnée dans le désordre ou deux questions dans la même phrase.
 
 Demandez aussi :
 
-- d'ou viennent les faits de l'entreprise ;
+- d'où viennent les faits de l'entreprise ;
 - qui peut approuver et modifier la base de connaissances ;
-- comment l'IA gere les sujets interdits ou incertains ;
-- si elle peut reserver sur une vraie disponibilite ;
-- quels champs elle lit et ecrit dans vos integrations ;
-- comment elle transfere un appel urgent avec contexte.
+- comment l'IA gère les sujets interdits ou incertains ;
+- si elle peut réserver sur une vraie disponibilité ;
+- quels champs elle lit et écrit dans vos intégrations ;
+- comment elle transfère un appel urgent avec contexte.
 
-## Verifier les garde-fous
+## Vérifier les garde-fous
 
-Une bonne receptionniste IA doit savoir quand ne pas improviser. Elle doit pouvoir dire qu'elle n'est pas sure, prendre les details, alerter l'equipe ou transferer selon vos regles.
+Une bonne réceptionniste IA doit savoir quand ne pas improviser. Elle doit pouvoir dire qu'elle n'est pas sûre, prendre les détails, alerter l'équipe ou transférer selon vos règles.
 
-C'est essentiel pour les prix, les zones de service, les politiques, les questions de sante ou juridiques, les urgences et tout sujet qui pourrait frustrer un client si la reponse est fausse.
+C'est essentiel pour les prix, les zones de service, les politiques, les questions de santé ou juridiques, les urgences et tout sujet qui pourrait frustrer un client si la réponse est fausse.
 
 ## Lire les tarifs comme un exploitant
 
-Le forfait le moins cher n'est pas toujours le cout le plus bas. Comparez les minutes incluses, les appels sortants, les SMS, le stockage, les appels de spam, les appels simultanes, les depassements et le cout d'une occasion manquee.
+Le forfait le moins cher n'est pas toujours le coût le plus bas. Comparez les minutes incluses, les appels sortants, les SMS, le stockage, les appels de spam, les appels simultanés, les dépassements et le coût d'une occasion manquée.
 
-Avec LobbyStack, les appels de spam et les appels de moins de 10 secondes ne comptent pas contre les minutes. Les plans payants incluent les memes fonctions de base et augmentent surtout selon l'usage.
+Avec LobbyStack, les appels de spam et les appels de moins de 10 secondes ne comptent pas contre les minutes. Les plans payants incluent les mêmes fonctions de base et évoluent surtout selon l'usage.
 
 ## Faire un essai avec de vrais appels
 
-Avant de deployer, creez un script de test a partir de vos vrais appels : question facile, demande de prix, reservation, urgence, client fache, mauvais numero et appel qui doit etre transfere.
+Avant de déployer, créez un script de test à partir de vos vrais appels : question facile, demande de prix, réservation, urgence, client fâché, mauvais numéro et appel qui doit être transféré.
 
-Le bon choix n'est pas seulement celui qui sonne bien. C'est celui qui obtient le bon resultat, garde vos donnees inspectables et laisse votre equipe reprendre la main quand l'appel le merite.
+Le bon choix n'est pas seulement celui qui sonne bien. C'est celui qui obtient le bon résultat, garde vos données inspectables et laisse votre équipe reprendre la main quand l'appel le mérite.

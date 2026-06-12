@@ -26,35 +26,38 @@ const includedCopy = {
     ],
   },
   fr: {
-    headingStart: "Chaque forfait inclut la receptionniste",
-    headingEmphasis: "complete",
+    headingStart: "Toute la réceptionniste IA,",
+    headingEmphasis: "dès le premier forfait",
     intro:
-      "Les forfaits evoluent selon l'usage, sans bloquer les fonctions essentielles derriere les niveaux superieurs.",
+      "Les forfaits évoluent avec votre volume d’appels. Les fonctions essentielles restent incluses.",
     label: "Inclus dans chaque forfait",
     features: [
-      "Reponse aux appels",
-      "Flux en langage naturel",
+      "Réponse aux appels",
+      "Consignes en langage naturel",
       "Prise de rendez-vous",
       "SMS de confirmation",
       "Appels sortants",
       "Transferts",
-      "Resumes d'appels",
-      "Notifications courriel",
+      "Résumés d’appels",
+      "Notifications par courriel",
       "Notifications SMS",
       "Filtrage du spam",
       "Appels de moins de 10 secondes exclus",
-      "Appels simultanes illimites",
+      "Appels simultanés illimités",
       "Base de connaissances",
-      "Tableau de bord et historique",
+      "Tableau de bord et historique d’appels",
     ],
   },
-} satisfies Record<Locale, {
-  headingStart: string
-  headingEmphasis: string
-  intro: string
-  label: string
-  features: string[]
-}>
+} satisfies Record<
+  Locale,
+  {
+    headingStart: string
+    headingEmphasis: string
+    intro: string
+    label: string
+    features: string[]
+  }
+>
 
 type IncludedOnEveryPlanProps = {
   locale?: Locale

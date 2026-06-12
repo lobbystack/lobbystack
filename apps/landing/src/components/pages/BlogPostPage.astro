@@ -15,7 +15,13 @@ import {
   plainTextFromMarkdown,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getCopy, localizeHref, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   entry: BlogEntry
@@ -23,7 +29,9 @@ interface Props {
 }
 
 const { entry } = Astro.props
-const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale ?? entry.data.locale)
+const locale = assertLocale(
+  Astro.props.locale ?? Astro.currentLocale ?? entry.data.locale
+)
 const copy = getCopy(locale)
 const { Content } = await render(entry)
 const allPosts = await getBlogPosts(locale)
@@ -43,7 +51,7 @@ const pageCopy = {
     helpCenter: "Read the help center",
   },
   fr: {
-    titleSuffix: "Blog Receptionniste IA",
+    titleSuffix: "Blog Réceptionniste IA",
     comparePricing: "Comparer les tarifs LobbyStack",
     setup: "Voir comment fonctionne la configuration",
     helpCenter: "Lire le centre d'aide",

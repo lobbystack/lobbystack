@@ -33,28 +33,29 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Comment fonctionnent les forfaits payants LobbyStack ?",
     answer:
-      "Starter coute 30 $/mois ou 288 $/an et inclut 150 minutes vocales chaque mois. Pro coute 100 $/mois ou 960 $/an et inclut 500 minutes vocales. Les depassements vocaux sont de 0,20 $/min en Starter et 0,18 $/min en Pro; les SMS d'alerte et appels sortants supplementaires sont factures 0,02 $ par unite.",
+      "Starter coûte 30 $/mois ou 288 $/an et inclut 150 minutes vocales chaque mois. Pro coûte 100 $/mois ou 960 $/an et inclut 500 minutes vocales. Les dépassements vocaux sont de 0,20 $/min en Starter et 0,18 $/min en Pro; les SMS d’alerte et appels sortants supplémentaires sont facturés 0,02 $ par unité.",
   },
   {
-    question: "Les appels spam ou tres courts comptent-ils dans l'usage ?",
+    question:
+      "Les appels indésirables ou très courts comptent-ils dans l’usage ?",
     answer:
-      "Non. LobbyStack exclut les appels spam et les appels de moins de 10 secondes de l'usage, afin que les mauvais numeros, robocalls, raccrochages instantanes et appels accidentels ne consomment pas vos minutes incluses.",
+      "Non. LobbyStack exclut les appels indésirables et les appels de moins de 10 secondes de l’usage, afin que les mauvais numéros, appels automatisés, raccrochages instantanés et appels accidentels ne consomment pas vos minutes incluses.",
   },
   {
-    question: "Puis-je changer de forfait ou annuler a tout moment ?",
+    question: "Puis-je changer de forfait ou annuler à tout moment ?",
     answer:
-      "Oui. Vous pouvez mettre a niveau, retrograder ou annuler depuis les reglages de facturation. En cas de retrogradation, votre forfait actuel reste actif jusqu'a la fin de la periode. Il n'y a pas de frais d'annulation.",
+      "Oui. Vous pouvez passer à un forfait supérieur, revenir à un forfait inférieur ou annuler depuis les réglages de facturation. Si vous changez de forfait, votre forfait actuel reste actif jusqu’à la fin de la période. Il n’y a pas de frais d’annulation.",
   },
   {
     question: "Puis-je utiliser LobbyStack gratuitement ?",
     answer:
-      "Oui. Le forfait Free vous permet d'essayer LobbyStack sans abonnement mensuel. Il inclut 30 minutes vocales, 2 tentatives d'appels sortants, 10 segments SMS d'alerte, la prise de rendez-vous, les resumes et l'historique des appels.",
+      "Oui. Le forfait Free vous permet d’essayer LobbyStack sans abonnement mensuel. Il inclut 30 minutes vocales, 2 tentatives d’appels sortants, 10 segments SMS d’alerte, la prise de rendez-vous, les résumés et l’historique des appels.",
   },
   {
     question:
-      "Quelles fonctionnalites de receptionniste IA sont disponibles aujourd'hui ?",
+      "Quelles fonctionnalités de réceptionniste IA sont disponibles aujourd’hui ?",
     answer:
-      "LobbyStack peut repondre aux appels, capturer les details de l'appelant, repondre aux questions depuis votre base de connaissances, qualifier les prospects, reserver des rendez-vous, router les urgences, envoyer des resumes par courriel et prendre en charge enregistrements, transcriptions, Google Calendar, Outlook et conversations multilingues.",
+      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez-vous, transférer les urgences, envoyer des résumés par courriel et prendre en charge les enregistrements, transcriptions, Google Calendar, Outlook et conversations multilingues.",
   },
 ]
 

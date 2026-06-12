@@ -9,7 +9,13 @@ import {
   organizationJsonLd,
   webSiteJsonLd,
 } from "@/lib/seo"
-import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizePath,
+  type Locale,
+} from "@/i18n"
 
 interface Props {
   locale?: Locale
@@ -21,7 +27,9 @@ const routeSeo = getRouteSeo({ locale, path: "/blog/" })
 const allPosts = await getBlogPosts(locale)
 const featuredPost = allPosts.find((p) => p.data.featured) || allPosts[0]
 const regularPosts = featuredPost
-  ? allPosts.filter((p) => blogCanonicalSlug(p) !== blogCanonicalSlug(featuredPost))
+  ? allPosts.filter(
+      (p) => blogCanonicalSlug(p) !== blogCanonicalSlug(featuredPost)
+    )
   : allPosts
 const canonicalPath = localizePath(locale, "/blog/")
 
@@ -33,10 +41,10 @@ const pageCopy = {
       "Product updates and practical notes on AI phone answering, missed-call recovery, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.",
   },
   fr: {
-    eyebrow: "Dernieres nouvelles",
-    h1: "Blog et mises a jour produit sur les receptionnistes IA",
+    eyebrow: "Dernières nouvelles",
+    h1: "Blog et mises à jour produit sur les réceptionnistes IA",
     intro:
-      "Mises a jour produit et notes pratiques sur la reponse telephonique IA, la recuperation d'appels manques, la planification, le routage, le suivi des prospects et l'infrastructure open source.",
+      "Mises à jour produit et notes pratiques sur la réponse téléphonique IA, la récupération d’appels manqués, la planification, les transferts, le suivi des prospects et l’infrastructure open source.",
   },
 } satisfies Record<Locale, { eyebrow: string; h1: string; intro: string }>
 
