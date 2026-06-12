@@ -15,7 +15,7 @@ const featuresCtaCopy = {
     body: "Let LobbyStack answer, qualify, quote, book, follow up, and notify your team day or night.",
   },
   fr: {
-    headingStart: "Ne laissez plus les appels manqués décider de votre",
+    headingStart: "Ne laissez plus les appels manqués décider votre",
     headingEmphasis: "chiffre d’affaires",
     body: "LobbyStack répond, qualifie, planifie, relance et prévient votre équipe, même le soir et la fin de semaine.",
   },

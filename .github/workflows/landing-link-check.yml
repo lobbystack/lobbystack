@@ -29,6 +29,7 @@ jobs:
             --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
             --exclude '^https://www\.bls\.gov/ooh/Office-and-Administrative-Support/Receptionists\.htm$'
             --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'
+            --exclude '^https://openai\.com/api/pricing/$'
             './apps/landing/src/**/*.astro'
             './apps/landing/src/**/*.tsx'
             './apps/landing/src/content/**/*.md'
