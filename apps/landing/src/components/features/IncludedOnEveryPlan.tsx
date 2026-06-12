@@ -26,7 +26,7 @@ const includedCopy = {
     ],
   },
   fr: {
-    headingStart: "Toute la réceptionniste IA,",
+    headingStart: "Tout ce qu’il faut pour votre réceptionniste IA,",
     headingEmphasis: "dès le premier forfait",
     intro:
       "Les forfaits évoluent avec votre volume d’appels. Les fonctions essentielles restent incluses.",

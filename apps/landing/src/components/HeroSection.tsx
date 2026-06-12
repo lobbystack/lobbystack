@@ -23,7 +23,7 @@ const heroCopy = {
     github: "Soutenez-nous sur GitHub",
     h1Start: "LobbyStack transforme",
     h1Emphasis: "appels manqués",
-    h1End: "En rendez‑vous.",
+    h1End: "en rendez‑vous.",
     body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
   },
 } satisfies Record<Locale, Record<string, string>>
@@ -61,7 +61,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
               >
                 <span className="block">{localCopy.h1Start}</span>
                 <span className="block">
-                  Les{" "}
+                  les{" "}
                   <span className="underline decoration-2 underline-offset-4">
                     {localCopy.h1Emphasis}
                   </span>

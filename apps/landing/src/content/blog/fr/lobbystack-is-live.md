@@ -1,6 +1,6 @@
 ---
 title: "LobbyStack est lancé"
-description: "LobbyStack est maintenant lancé : une réceptionniste IA open source qui répond aux appels, prend des rendez‑vous, suit les prospects et laisse les équipes garder le contrôle."
+description: "LobbyStack est maintenant lancé : un réceptionniste IA open source qui répond aux appels, prend des rendez‑vous, suit les prospects et laisse les équipes garder le contrôle."
 pubDate: 2026-05-13T12:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Mises à jour produit"
@@ -14,7 +14,7 @@ La plupart des petites entreprises ne perdent pas de clients parce qu'elles trav
 
 Aujourd'hui, [LobbyStack](https://lobbystack.com/fr/) est lancé.
 
-LobbyStack est une **réceptionniste IA open source** pour les entreprises qui dépendent des appels, des rendez‑vous, des devis et d'un suivi rapide. Elle répond quand votre équipe est occupée, fermée, en déplacement ou déjà avec un autre client.
+LobbyStack est un **réceptionniste IA open source** pour les entreprises qui dépendent des appels, des rendez‑vous, des devis et d'un suivi rapide. Il répond quand votre équipe est occupée, fermée, en déplacement ou déjà avec un autre client.
 
 L'objectif n'est pas de rendre le support téléphonique futuriste. Il est plus simple : **un bon appel ne devrait pas devenir une occasion manquée parce qu'il arrive au mauvais moment.**
 
@@ -36,13 +36,13 @@ Quand un appelant atteint LobbyStack, il peut :
 
 Les anciennes options ne suffisaient pas. Un menu téléphonique est peu cher, mais les clients le subissent. La messagerie vocale est familière, mais elle demande au client de faire l'effort et d'attendre. Un service de réponse humaine peut aider, mais il peut devenir cher, difficile à personnaliser et déconnecté des détails dont votre équipe a besoin.
 
-Les petites entreprises ont besoin d'une réceptionniste qui connaît l'entreprise, suit les consignes, réserve pendant que l'appelant est encore intéressé et sait laisser une personne reprendre le relais.
+Les petites entreprises ont besoin d'un réceptionniste qui connaît l'entreprise, suit les consignes, réserve pendant que l'appelant est encore intéressé et sait laisser une personne reprendre le relais.
 
 ## Ce qui le rend different
 
 LobbyStack n'est pas un chatbot collé à un numéro de téléphone. C'est une pile de réception pour les appels qui doivent produire un résultat.
 
-Vous ajoutez les connaissances que la réceptionniste doit utiliser : services, prix, horaires, politiques, lieux, consignes, FAQ et détails que les appelants demandent souvent. Vous pouvez aussi dire ce qu'elle ne doit pas dire, quand ne pas réserver, quand transférer et quand planifier un rappel.
+Vous ajoutez les connaissances que le réceptionniste doit utiliser : services, prix, horaires, politiques, lieux, consignes, FAQ et détails que les appelants demandent souvent. Vous pouvez aussi dire ce qu'il ne doit pas dire, quand ne pas réserver, quand transférer et quand planifier un rappel.
 
 Cette approche donne le contrôle à l'entreprise plutôt qu'à la magie.
 

@@ -48,7 +48,7 @@ const featureGridCopy = {
     intro:
       "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
     imageAlt:
-      "Fonctionnalités de la réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
+      "Fonctionnalités du réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
     features: [
       {
         title: "Répond à chaque appel",

@@ -4,13 +4,13 @@ import { absoluteUrl } from "@/lib/seo"
 
 const markdown = `---
 title: LobbyStack | Réceptionniste IA open source
-description: LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.
+description: LobbyStack est le réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.
 url: ${absoluteUrl("/fr/")}
 ---
 
 # LobbyStack
 
-LobbyStack est une réceptionniste IA open source pour les petites entreprises qui dépendent des appels, des rendez‑vous et d’un suivi rapide.
+LobbyStack est un réceptionniste IA open source pour les petites entreprises qui dépendent des appels, des rendez‑vous et d’un suivi rapide.
 
 ## Ce que fait LobbyStack
 
@@ -35,5 +35,5 @@ export const GET: APIRoute = () =>
     canonical: absoluteUrl("/fr/"),
     title: "LobbyStack | Réceptionniste IA open source",
     description:
-      "LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
+      "LobbyStack est le réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
   })

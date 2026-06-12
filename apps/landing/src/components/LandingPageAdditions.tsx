@@ -168,7 +168,7 @@ const homeSectionsCopy = {
     },
     quality: {
       heading:
-        "Une réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
+        "Un réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
       body: "Couvrez le téléphone sans perdre les détails, le jugement et le suivi que vos clients remarquent.",
       toolCards: [
         {

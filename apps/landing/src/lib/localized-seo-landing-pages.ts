@@ -152,7 +152,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     description:
       "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
     eyebrow: "Services à domicile",
-    h1: "Une réceptionniste IA pour les équipes de services à domicile.",
+    h1: "Un réceptionniste IA pour les équipes de services à domicile.",
     intro:
       "Recueillez les détails du chantier, la zone de service, l’urgence et le besoin de planification pendant que vos équipes restent sur le terrain.",
     image: "/illustrations/industry-bookings.webp",
@@ -203,9 +203,9 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/about/": {
     title: "À propos de LobbyStack",
     description:
-      "LobbyStack construit une réceptionniste IA calme et fiable pour aider les petites entreprises à ne plus manquer d’appels prêts à réserver.",
+      "LobbyStack construit un réceptionniste IA calme et fiable pour aider les petites entreprises à ne plus manquer d’appels prêts à réserver.",
     eyebrow: "À propos",
-    h1: "Une réceptionniste IA conçue pour les exploitants, pas pour les démos tape-à-l’œil.",
+    h1: "Un réceptionniste IA conçu pour les exploitants, pas pour les démos tape-à-l’œil.",
     intro:
       "LobbyStack existe pour donner aux petites entreprises une couverture téléphonique fiable sans ajouter de complexité opérationnelle.",
   },
@@ -236,7 +236,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Couvrez les appels pour CVC, plomberie, électricité, toiture, paysagement et autres métiers de service.",
     eyebrow: "Services à domicile",
-    h1: "Une réceptionniste IA pour les équipes de services à domicile.",
+    h1: "Un réceptionniste IA pour les équipes de services à domicile.",
     intro:
       "Recueillez les détails du chantier, la zone de service, l’urgence et le besoin de planification pendant que vos équipes restent sur le terrain.",
     faqHeading: "Questions sur les services à domicile",
@@ -245,7 +245,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/solutions/after-hours-answering-service/": {
     title: "Service de réponse en dehors des heures d’ouverture",
     description:
-      "Couvrez les appels du soir, du week-end et des périodes chargées avec une réceptionniste IA disponible 24/7.",
+      "Couvrez les appels du soir, du week-end et des périodes chargées avec un réceptionniste IA disponible 24/7.",
     eyebrow: "Hors horaires",
     h1: "Répondez en dehors des heures d’ouverture sans recruter une autre équipe.",
     intro:
@@ -258,7 +258,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez aux patients, prenez des rendez‑vous, gérez les questions courantes et transférez les urgences dentaires.",
     eyebrow: "Cabinets dentaires",
-    h1: "Une réceptionniste IA pour cabinets dentaires occupés.",
+    h1: "Un réceptionniste IA pour cabinets dentaires occupés.",
     intro:
       "LobbyStack aide les patients à réserver, donne les réponses autorisées et transfère les situations urgentes vers votre équipe.",
     faqHeading: "Questions sur les cabinets dentaires",
@@ -269,18 +269,18 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Réservez les clients, répondez aux questions de service et gérez les changements de rendez‑vous pendant que l’équipe reste avec les clients.",
     eyebrow: "Salons et spas",
-    h1: "Une réceptionniste IA pour salons, spas et équipes en rendez‑vous.",
+    h1: "Un réceptionniste IA pour salons, spas et équipes en rendez‑vous.",
     intro:
       "LobbyStack répond aux appels de réservation, explique les services, collecte les détails et applique vos règles de changement ou d’annulation.",
     faqHeading: "Questions sur les salons et spas",
     faqs: commonFaqsFr,
   },
   "/solutions/self-hosted-ai-receptionist/": {
-    title: "Réceptionniste IA auto-hébergée",
+    title: "Réceptionniste IA auto-hébergé",
     description:
       "Exécutez LobbyStack sur votre propre infrastructure lorsque vous avez besoin de contrôle sur le déploiement et les données.",
     eyebrow: "Auto-hébergement",
-    h1: "Une réceptionniste IA auto-hébergée pour les équipes qui veulent garder le contrôle.",
+    h1: "Un réceptionniste IA auto-hébergé pour les équipes qui veulent garder le contrôle.",
     intro:
       "LobbyStack est open source et peut être déployé sur une infrastructure que votre équipe contrôle, avec une séparation claire entre logiciel, données et fournisseurs.",
     faqHeading: "Questions sur l’auto-hébergement",
@@ -289,14 +289,14 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/solutions/open-source-ai-receptionist/": {
     title: "Réceptionniste IA open source | LobbyStack",
     description:
-      "Découvrez une réceptionniste IA open source que votre équipe peut inspecter, héberger et adapter à vos besoins opérationnels.",
+      "Découvrez un réceptionniste IA open source que votre équipe peut inspecter, héberger et adapter à vos besoins opérationnels.",
     eyebrow: "Open source",
-    h1: "Une réceptionniste IA open source pour les entreprises qui veulent garder le contrôle.",
+    h1: "Un réceptionniste IA open source pour les entreprises qui veulent garder le contrôle.",
     intro:
       "LobbyStack combine une expérience hébergée rapide avec une base open source inspectable pour les équipes qui veulent comprendre et contrôler leur accueil téléphonique.",
     faqHeading: "Questions sur l'open source",
     faqs: commonFaqsFr,
-    ctaHeading: "Essayez une réceptionniste IA que vous pouvez inspecter",
+    ctaHeading: "Essayez un réceptionniste IA que vous pouvez inspecter",
     ctaBody:
       "Commencez avec LobbyStack Cloud ou discutez avec nous d’un déploiement auto-hébergé.",
     ctaPrimaryLabel: "Essayer gratuitement",
@@ -307,7 +307,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez aux appels de plomberie, qualifiez les urgences, collectez les détails et transférez les demandes importantes.",
     eyebrow: "Plomberie",
-    h1: "Une réceptionniste IA pour plombiers qui ne peuvent pas manquer les urgences.",
+    h1: "Un réceptionniste IA pour plombiers qui ne peuvent pas manquer les urgences.",
     intro:
       "LobbyStack aide les entreprises de plomberie à répondre plus vite, collecter les symptômes, la zone et l’urgence, puis transférer ou planifier selon vos règles.",
     faqHeading: "Questions pour plombiers",
@@ -318,7 +318,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Couvrez les appels CVC pendant les pics saisonniers, répondez aux questions courantes et transférez les urgences.",
     eyebrow: "CVC",
-    h1: "Une réceptionniste IA pour équipes CVC pendant les saisons chargées.",
+    h1: "Un réceptionniste IA pour équipes CVC pendant les saisons chargées.",
     intro:
       "LobbyStack répond aux appels de chauffage et climatisation, collecte les informations utiles et aide les clients à obtenir la bonne prochaine étape.",
     faqHeading: "Questions pour CVC",
@@ -329,7 +329,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez aux demandes électriques, collectez les détails de dépannage et transférez les situations urgentes.",
     eyebrow: "Électricité",
-    h1: "Une réceptionniste IA pour électriciens occupés sur le terrain.",
+    h1: "Un réceptionniste IA pour électriciens occupés sur le terrain.",
     intro:
       "LobbyStack collecte le problème, l’adresse, l’urgence et les coordonnées pendant que votre équipe reste concentrée sur le travail en cours.",
     faqHeading: "Questions pour électriciens",
@@ -340,7 +340,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Recueillez les demandes de réparation de portes de garage, qualifiez les urgences et planifiez les visites.",
     eyebrow: "Portes de garage",
-    h1: "Une réceptionniste IA pour réparateurs de portes de garage.",
+    h1: "Un réceptionniste IA pour réparateurs de portes de garage.",
     intro:
       "LobbyStack répond quand les clients appellent pour une porte bloquée, un ressort cassé ou une demande de devis, puis collecte les détails pour votre équipe.",
     faqHeading: "Questions sur les portes de garage",
@@ -351,7 +351,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez aux appels de réparation, notez l’appareil, la marque, le symptôme et le meilleur créneau.",
     eyebrow: "Électroménagers",
-    h1: "Une réceptionniste IA pour équipes de réparation d’électroménagers.",
+    h1: "Un réceptionniste IA pour équipes de réparation d’électroménagers.",
     intro:
       "LobbyStack collecte les informations qui évitent les rappels inutiles et aide les clients à avancer vers un rendez‑vous.",
     faqHeading: "Questions sur la réparation d’électroménagers",
@@ -362,7 +362,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez vite aux appels de dégâts d’eau, incendie, moisissure et autres situations sensibles.",
     eyebrow: "Restauration",
-    h1: "Une réceptionniste IA pour entreprises de restauration qui gèrent l’urgence.",
+    h1: "Un réceptionniste IA pour entreprises de restauration qui gèrent l’urgence.",
     intro:
       "LobbyStack note le type de dommage, l’emplacement, l’urgence et les coordonnées pour aider votre équipe à prioriser les bons appels.",
     faqHeading: "Questions sur la restauration",
@@ -373,7 +373,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     description:
       "Répondez aux appels de serrurerie, qualifiez les urgences et transférez les demandes avec contexte.",
     eyebrow: "Serrurerie",
-    h1: "Une réceptionniste IA pour serruriers disponibles quand les clients sont bloqués.",
+    h1: "Un réceptionniste IA pour serruriers disponibles quand les clients sont bloqués.",
     intro:
       "LobbyStack collecte la situation, l’adresse, le niveau d’urgence et les coordonnées afin que votre équipe sache quand intervenir.",
     faqHeading: "Questions pour serruriers",
@@ -404,11 +404,11 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/compare/ai-receptionist-vs-voicemail/": {
     title: "Réceptionniste IA vs messagerie vocale | LobbyStack",
     description:
-      "Comparez une réceptionniste IA et la messagerie vocale pour comprendre comment capter plus d’appels prêts à réserver.",
+      "Comparez un réceptionniste IA et la messagerie vocale pour comprendre comment capter plus d’appels prêts à réserver.",
     eyebrow: "Comparaison",
     h1: "Réceptionniste IA vs messagerie vocale",
     intro:
-      "Voyez comment une réceptionniste IA peut répondre, qualifier et réserver pendant que la messagerie vocale laisse souvent partir les bons appelants.",
+      "Voyez comment un réceptionniste IA peut répondre, qualifier et réserver pendant que la messagerie vocale laisse souvent partir les bons appelants.",
     ctaPrimaryLabel: "Essayer gratuitement",
     ctaSecondaryLabel: "Voir les tarifs",
   },

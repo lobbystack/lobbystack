@@ -1,6 +1,6 @@
 ---
-title: "Comment choisir une réceptionniste IA"
-description: "Apprenez à choisir une réceptionniste IA avec une liste de vérification pratique pour les fonctionnalités, les tarifs, la qualité d'appel et les intégrations."
+title: "Comment choisir un réceptionniste IA"
+description: "Apprenez à choisir un réceptionniste IA avec une liste de vérification pratique pour les fonctionnalités, les tarifs, la qualité d'appel et les intégrations."
 pubDate: 2026-06-03T13:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Guides"
@@ -10,7 +10,7 @@ locale: "fr"
 canonicalSlug: "how-to-choose-an-ai-receptionist"
 ---
 
-Choisir une **réceptionniste IA** devient plus simple quand on arrête de chercher le produit qui sonne le plus humain et qu'on pose une question plus opérationnelle : que doit-il se passer à la fin d'un bon appel ?
+Choisir un **réceptionniste IA** devient plus simple quand on arrête de chercher le produit qui sonne le plus humain et qu'on pose une question plus opérationnelle : que doit-il se passer à la fin d'un bon appel ?
 
 Pour une entreprise de services, la bonne réponse est souvent un rendez‑vous pris, un prospect qualifié, un transfert urgent, un message propre ou une personne qui a obtenu sa réponse sans attendre un rappel.
 
@@ -63,7 +63,7 @@ Demandez aussi :
 
 ## Vérifier les garde-fous
 
-Une bonne réceptionniste IA doit savoir quand ne pas improviser. Elle doit pouvoir dire qu'elle n'est pas sûre, prendre les détails, alerter l'équipe ou transférer selon vos règles.
+Un bon réceptionniste IA doit savoir quand ne pas improviser. Il doit pouvoir dire qu'il n'est pas sûr, prendre les détails, alerter l'équipe ou transférer selon vos règles.
 
 C'est essentiel pour les prix, les zones de service, les politiques, les questions de santé ou juridiques, les urgences et tout sujet qui pourrait frustrer un client si la réponse est fausse.
 

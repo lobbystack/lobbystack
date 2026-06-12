@@ -79,7 +79,7 @@ const solutionLabelMap = {
     afterHours: "Réponse hors horaires",
     dental: "Cabinets dentaires",
     salons: "Salons et spas",
-    selfHosted: "Réceptionniste IA auto-hébergée",
+    selfHosted: "Réceptionniste IA auto-hébergé",
     trades: "Métiers",
     plumbers: "Plombiers",
     hvac: "CVC",

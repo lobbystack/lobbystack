@@ -25,7 +25,7 @@ export const fr = {
     "/": {
       title: "LobbyStack | Réceptionniste IA open source",
       description:
-        "LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
+        "LobbyStack est le réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
     },
     "/features/": {
       title: "Fonctionnalités de réceptionniste IA",
@@ -40,7 +40,7 @@ export const fr = {
     "/solutions/": {
       title: "Solutions de réceptionniste IA | LobbyStack",
       description:
-        "Explorez les solutions LobbyStack pour répondre au téléphone, prendre des rendez‑vous, couvrir les appels en dehors des heures d’ouverture, servir les entreprises de services, cabinets dentaires, salons et équipes auto-hébergées.",
+        "Explorez les solutions LobbyStack pour répondre au téléphone, prendre des rendez‑vous, couvrir les appels hors horaires et servir les équipes de services.",
     },
     "/solutions/ai-phone-answering/": {
       title: "Réponse téléphonique IA pour petites entreprises",
@@ -65,7 +65,7 @@ export const fr = {
     "/comparison/": {
       title: "Guide comparatif des réceptionnistes IA",
       description:
-        "Comparez la réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
+        "Comparez le réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
     },
     "/blog/": {
       title: "Blog et mises à jour produit LobbyStack",

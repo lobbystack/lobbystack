@@ -73,16 +73,16 @@ export const calculatorFaqsFr = [
     a: "Non, sauf si vous baissez le taux d’occasion d’affaires pour les compenser. Le calculateur estime le revenu de vrais travaux perdus, pas le bruit.",
   },
   {
-    q: "Une réceptionniste IA remplace-t-elle mon ou ma responsable de bureau ?",
+    q: "Un réceptionniste IA remplace-t-il mon ou ma responsable de bureau ?",
     a: "Non. LobbyStack gère le travail répétitif de première ligne : questions courantes, détails d’accueil et prise de rendez‑vous. Votre équipe garde les cas complexes.",
   },
   {
     q: "Est-ce pareil qu’un calculateur de ROI pour service de réponse ?",
-    a: "C’est proche. Ce calculateur montre le revenu à risque. Pour réfléchir au ROI, comparez ce montant au coût d’un service humain ou d’une réceptionniste IA.",
+    a: "C’est proche. Ce calculateur montre le revenu à risque. Pour réfléchir au ROI, comparez ce montant au coût d’un service humain ou d’un réceptionniste IA.",
   },
   {
     q: "Le revenu récupéré est-il garanti ?",
-    a: "Non. Ce sont des estimations pour vous aider à décider. Mais lorsqu’une réceptionniste IA répond à un appel qui serait allé en messagerie et réussit à réserver le prospect, c’est bien du revenu récupéré.",
+    a: "Non. Ce sont des estimations pour vous aider à décider. Mais lorsqu’un réceptionniste IA répond à un appel qui serait allé en messagerie et réussit à réserver le prospect, c’est bien du revenu récupéré.",
   },
 ]
 

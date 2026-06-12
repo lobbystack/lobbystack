@@ -32,7 +32,7 @@ export const homeFaqs: FaqItem[] = [
 export const homeFaqsFr: FaqItem[] = [
   {
     question:
-      "Puis-je personnaliser l’accueil et le ton de ma réceptionniste IA ?",
+      "Puis-je personnaliser l’accueil et le ton de mon réceptionniste IA ?",
     answer:
       "Oui. LobbyStack vous permet de personnaliser l’accueil, le ton, les consignes métier et les règles de traitement des appels afin que votre réceptionniste IA reste alignée avec votre marque.",
   },
@@ -48,7 +48,7 @@ export const homeFaqsFr: FaqItem[] = [
       "Oui. LobbyStack peut vérifier les disponibilités, proposer des créneaux, planifier le rendez‑vous et envoyer les détails de confirmation à l’appelant.",
   },
   {
-    question: "La réceptionniste IA peut-elle m’envoyer un résumé d’appel ?",
+    question: "Le réceptionniste IA peut-il m’envoyer un résumé d’appel ?",
     answer:
       "Oui. Vous pouvez recevoir un résumé par SMS ou courriel après l’appel avec les coordonnées de l’appelant, le motif, le résultat et la prochaine étape.",
   },

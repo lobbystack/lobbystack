@@ -21,7 +21,7 @@ revenu mensuel à risque = appels manqués par semaine x 4,3 x taux d’occasion
 
 ## Prochaine étape
 
-Si le revenu à risque est significatif, utilisez une réceptionniste IA pour répondre, qualifier, réserver et transférer les appels pendant que votre équipe reste sur le travail en cours.
+Si le revenu à risque est significatif, utilisez un réceptionniste IA pour répondre, qualifier, réserver et transférer les appels pendant que votre équipe reste sur le travail en cours.
 `
 
 export const GET: APIRoute = () =>
