@@ -29,7 +29,7 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "convex": "^1.37.0",
+    "convex": "^1.41.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
     "i18next": "^25.8.18",

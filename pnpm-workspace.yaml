@@ -5,6 +5,7 @@ packages:
 
 overrides:
   "@hono/node-server": 1.19.13
+  "@auth/core": 0.41.1
   "@xmldom/xmldom": 0.8.13
   axios: 1.17.0
   basic-ftp: 5.3.1

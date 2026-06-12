@@ -366,10 +366,17 @@ function getCapturedAgentRequest(): CapturedAgentRequest {
 }
 
 async function executeCapturedTool<T>(
-  tool: { execute: (args: unknown, options: unknown) => Promise<unknown> },
+  t: TestConvex<typeof schema>,
+  tool: {
+    ctx?: unknown;
+    execute: (args: unknown, options: unknown) => Promise<unknown>;
+  },
   args: unknown = {},
 ): Promise<T> {
-  return (await tool.execute(args, {} as any)) as T;
+  return await t.action(async (ctx) => {
+    tool.ctx = ctx;
+    return (await tool.execute(args, {} as any)) as T;
+  });
 }
 
 function mockAgentToUseCurrentAppointmentTool(locale: "en" | "fr" = "en"): void {
@@ -1721,7 +1728,7 @@ describe("SMS scheduling flow", () => {
       requestedDate?: string;
       requestedTimeLabel?: string;
       offeredSlots?: Array<{ startsAt: string; isoDate: string; displayTime: string }>;
-    }>(request.tools.findAppointmentAvailability!, {
+    }>(t, request.tools.findAppointmentAvailability!, {
       serviceName: "Initial Consultation",
       requestedDateText: "March 17",
       requestedTimeText: "1h30",
@@ -1790,7 +1797,7 @@ describe("SMS scheduling flow", () => {
           formattedStart: string;
         };
       };
-    }>(request.tools.getCurrentAppointment!);
+    }>(t, request.tools.getCurrentAppointment!);
 
     expect(toolResult.handled).toBe(true);
     expect(toolResult.currentAppointmentLookup).toMatchObject({
@@ -1843,7 +1850,7 @@ describe("SMS scheduling flow", () => {
         changeSupported: boolean;
         appointmentCount?: number;
       };
-    }>(request.tools.getAppointmentChangeStatus!);
+    }>(t, request.tools.getAppointmentChangeStatus!);
 
     expect(toolResult.handled).toBe(true);
     expect(toolResult.appointmentChangeStatus).toMatchObject({
@@ -1884,7 +1891,7 @@ describe("SMS scheduling flow", () => {
         hasConfirmedAppointment: boolean;
         changeSupported: false;
       };
-    }>(request.tools.getAppointmentChangeStatus!);
+    }>(t, request.tools.getAppointmentChangeStatus!);
 
     expect(toolResult).toMatchObject({
       handled: true,
@@ -1938,7 +1945,7 @@ describe("SMS scheduling flow", () => {
       replyText?: string;
       bookedAppointmentId?: Id<"appointments">;
       requestedDate?: string;
-    }>(request.tools.bookAppointmentSlot!, {
+    }>(t, request.tools.bookAppointmentSlot!, {
       selectedStartsAt: "2026-03-17T14:00:00.000Z",
       confirmSelection: true,
     });
@@ -2005,7 +2012,7 @@ describe("SMS scheduling flow", () => {
       bookedAppointmentId?: Id<"appointments">;
       requestedDate?: string;
       requestedTimeLabel?: string;
-    }>(request.tools.bookAppointmentSlot!, {
+    }>(t, request.tools.bookAppointmentSlot!, {
       selectedStartsAt: "2026-03-17T14:00:00.000Z",
       confirmSelection: true,
     });
@@ -2079,7 +2086,7 @@ describe("SMS scheduling flow", () => {
     const request = getCapturedAgentRequest();
     const toolResult = await executeCapturedTool<{
       handled: boolean;
-    }>(request.tools.bookAppointmentSlot!, {
+    }>(t, request.tools.bookAppointmentSlot!, {
       selectedStartsAt: "2026-03-17T15:00:00.000Z",
     });
 
@@ -2148,7 +2155,7 @@ describe("SMS scheduling flow", () => {
       pendingConfirmation?: boolean;
       bookedAppointmentId?: Id<"appointments">;
       requestedTimeLabel?: string;
-    }>(request.tools.bookAppointmentSlot!, {
+    }>(t, request.tools.bookAppointmentSlot!, {
       selectedTimeText: "1h30",
     });
 
@@ -2393,7 +2400,7 @@ describe("SMS scheduling flow", () => {
       replyText?: string;
       pendingConfirmation?: boolean;
       offeredSlots?: Array<{ startsAt: string }>;
-    }>(request.tools.bookAppointmentSlot!, {
+    }>(t, request.tools.bookAppointmentSlot!, {
       selectedStartsAt: "2026-03-17T14:00:00.000Z",
     });
 
@@ -4232,6 +4239,7 @@ describe("SMS scheduling flow", () => {
 
     const request = getCapturedAgentRequest();
     const toolResult = await executeCapturedTool<{ handled: boolean; replyText?: string }>(
+      t,
       request.tools.getCurrentAppointment!,
     );
 
@@ -4281,6 +4289,7 @@ describe("SMS scheduling flow", () => {
 
     const request = getCapturedAgentRequest();
     const toolResult = await executeCapturedTool<{ handled: boolean; replyText?: string }>(
+      t,
       request.tools.bookAppointmentSlot!,
     );
 
@@ -4345,6 +4354,7 @@ describe("SMS scheduling flow", () => {
 
     const request = getCapturedAgentRequest();
     const toolResult = await executeCapturedTool<{ handled: boolean; replyText?: string }>(
+      t,
       request.tools.bookAppointmentSlot!,
       {
         confirmSelection: true,
