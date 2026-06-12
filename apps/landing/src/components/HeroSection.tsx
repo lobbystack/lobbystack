@@ -21,9 +21,9 @@ const heroCopy = {
   },
   fr: {
     github: "Soutenez-nous sur GitHub",
-    h1Start: "LobbyStack transforme les",
+    h1Start: "LobbyStack transforme",
     h1Emphasis: "appels manqués",
-    h1End: "en rendez‑vous.",
+    h1End: "En rendez‑vous.",
     body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
   },
 } satisfies Record<Locale, Record<string, string>>
@@ -38,7 +38,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
       id="hero"
     >
       <div className="mx-auto w-full max-w-7xl px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
-        <div className="grid min-w-0 items-center gap-6 md:gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
             <a
               href="https://github.com/lobbystack/lobbystack"
@@ -54,13 +54,29 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
               <ArrowRight className="size-4" />
             </a>
 
-            <h1 className="animate-fade-up display-heading delay-100">
-              {localCopy.h1Start}{" "}
-              <span className="underline decoration-2 underline-offset-4">
-                {localCopy.h1Emphasis}
-              </span>{" "}
-              {localCopy.h1End}
-            </h1>
+            {locale === "fr" ? (
+              <h1
+                aria-label="LobbyStack transforme les appels manqués en rendez‑vous."
+                className="animate-fade-up display-heading delay-100"
+              >
+                <span className="block">{localCopy.h1Start}</span>
+                <span className="block">
+                  Les{" "}
+                  <span className="underline decoration-2 underline-offset-4">
+                    {localCopy.h1Emphasis}
+                  </span>
+                </span>
+                <span className="block">{localCopy.h1End}</span>
+              </h1>
+            ) : (
+              <h1 className="animate-fade-up display-heading delay-100">
+                {localCopy.h1Start}{" "}
+                <span className="underline decoration-2 underline-offset-4">
+                  {localCopy.h1Emphasis}
+                </span>{" "}
+                {localCopy.h1End}
+              </h1>
+            )}
 
             <p className="animate-fade-up body-copy mt-6 max-w-[65ch] delay-200 md:text-lg">
               {localCopy.body}
@@ -89,7 +105,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
             </p>
           </div>
 
-          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center delay-500 md:max-w-[30rem] lg:max-w-none lg:justify-end">
+          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center delay-500 md:max-w-[30rem] xl:max-w-none xl:justify-end">
             {children}
           </div>
         </div>
