@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   COOKIE_CONSENT_STORAGE_KEY,
   clearCookieConsent,
+  clearPostHogClientStorage,
   createCookieConsent,
   hasAnalyticsConsent,
   parseCookieConsent,
@@ -23,6 +24,10 @@ function createStorage() {
     }),
   }
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe("landing cookie consent helpers", () => {
   it("treats missing consent as undecided", () => {
@@ -81,5 +86,28 @@ describe("landing cookie consent helpers", () => {
     clearCookieConsent(storage)
 
     expect(readCookieConsent(storage)).toBeNull()
+  })
+
+  it("ignores blocked browser storage when clearing PostHog storage", () => {
+    const blockedWindow = {
+      location: { hostname: "lobbystack.com" },
+    }
+
+    Object.defineProperties(blockedWindow, {
+      localStorage: {
+        get() {
+          throw new Error("localStorage blocked")
+        },
+      },
+      sessionStorage: {
+        get() {
+          throw new Error("sessionStorage blocked")
+        },
+      },
+    })
+
+    vi.stubGlobal("window", blockedWindow)
+
+    expect(() => clearPostHogClientStorage()).not.toThrow()
   })
 })

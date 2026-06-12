@@ -45,6 +45,15 @@ export function initializePostHog() {
   }
 
   if (isInitialized) {
+    const posthogWithOptIn = posthog as typeof posthog & {
+      has_opted_out_capturing?: () => boolean
+      opt_in_capturing?: (options?: { captureEventName?: false }) => void
+    }
+
+    if (posthogWithOptIn.has_opted_out_capturing?.()) {
+      posthogWithOptIn.opt_in_capturing?.({ captureEventName: false })
+    }
+
     return true
   }
 

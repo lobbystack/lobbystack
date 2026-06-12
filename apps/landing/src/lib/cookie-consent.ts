@@ -110,8 +110,8 @@ export function clearPostHogClientStorage() {
     return
   }
 
-  removePostHogStorageKeys(window.localStorage)
-  removePostHogStorageKeys(window.sessionStorage)
+  removePostHogStorageKeysFromBrowser("localStorage")
+  removePostHogStorageKeysFromBrowser("sessionStorage")
   expirePostHogCookies()
 }
 
@@ -150,6 +150,16 @@ function removePostHogStorageKeys(storage: Storage) {
     }
   } catch {
     // Storage may be unavailable in private browsing or hardened contexts.
+  }
+}
+
+function removePostHogStorageKeysFromBrowser(
+  storageName: "localStorage" | "sessionStorage"
+) {
+  try {
+    removePostHogStorageKeys(window[storageName])
+  } catch {
+    // Reading the storage property itself can throw in hardened browsers.
   }
 }
 
