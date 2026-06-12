@@ -73,7 +73,7 @@ The bigger cost is usually the human time around the system:
 - Who handles provider outages, token limits, slow audio, and weird carrier behavior?
 - Who documents compliance choices around recording, consent, and data retention?
 
-Compliance is not a footnote either. The [FCC's AI voice TCPA ruling](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) confirmed that TCPA restrictions on artificial or prerecorded voice include AI-generated human voices, which matters for outbound calls, reminders, and automated follow-up. Healthcare, dental, therapy, and similar businesses also need to think about ePHI, vendor agreements, and safeguards; [HHS cloud guidance](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/index.html) is a useful starting point for understanding those responsibilities.
+Compliance is not a footnote either. The [FCC's AI voice TCPA ruling](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) confirmed that TCPA restrictions on artificial or prerecorded voice include AI-generated human voices, which matters for outbound calls, reminders, and automated follow-up. Healthcare, dental, therapy, and similar businesses also need to think about ePHI, vendor agreements, and safeguards; [HHS cloud guidance](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/) is a useful starting point for understanding those responsibilities.
 
 ### When it makes sense to build AI receptionist software
 
@@ -203,7 +203,7 @@ This is often the most misunderstood option. It is not free, because your time i
 
 Use your own call volume too. A business that gets 40 short calls a month has a different answer than a multi-location team taking hundreds of booking, dispatch, and after-hours calls. If missed calls are the main reason you are considering this, run the numbers with the [missed call revenue calculator](/missed-call-revenue-calculator/) before spending money either way.
 
-It also helps to compare against human coverage. The [Bureau of Labor Statistics](https://www.bls.gov/ooh/office-and-administrative-support/receptionists.htm) lists 2024 median receptionist pay at $37,230/year, or $17.90/hour, before payroll taxes, benefits, hiring, training, and coverage gaps. That number is useful, but it should not be abused. A good human receptionist does far more than answer routine calls. The real question is which calls need a person and which calls need a fast, accurate first step.
+It also helps to compare against human coverage. The [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) lists 2024 median receptionist pay at $37,230/year, or $17.90/hour, before payroll taxes, benefits, hiring, training, and coverage gaps. That number is useful, but it should not be abused. A good human receptionist does far more than answer routine calls. The real question is which calls need a person and which calls need a fast, accurate first step.
 
 ## How to decide
 

@@ -73,7 +73,7 @@ Le coût le plus important est souvent le temps humain autour du système :
 - Qui gère les pannes fournisseur, limites d'usage, lenteurs audio et comportements téléphoniques bizarres ?
 - Qui documente les choix de consentement, d'enregistrement et de conservation des données ?
 
-La conformité ne doit pas être traitée comme une note de bas de page. La décision de la [FCC sur les voix IA et le TCPA](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) rappelle que les voix artificielles ou préenregistrées peuvent être visées par les règles sur les appels automatisés, surtout pour les rappels, relances et appels sortants. Pour la santé, le dentaire, la thérapie et d'autres secteurs sensibles, les questions de données, d'accords fournisseurs et de mesures de protection deviennent centrales ; le guide du [HHS sur l'infonuagique et la HIPAA](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/index.html) donne un bon point de départ.
+La conformité ne doit pas être traitée comme une note de bas de page. La décision de la [FCC sur les voix IA et le TCPA](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) rappelle que les voix artificielles ou préenregistrées peuvent être visées par les règles sur les appels automatisés, surtout pour les rappels, relances et appels sortants. Pour la santé, le dentaire, la thérapie et d'autres secteurs sensibles, les questions de données, d'accords fournisseurs et de mesures de protection deviennent centrales ; le guide du [HHS sur l'infonuagique et la HIPAA](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/) donne un bon point de départ.
 
 ### Quand créer son réceptionniste IA a du sens
 
@@ -203,7 +203,7 @@ C'est souvent l'option la plus mal comprise. Elle n'est pas gratuite, parce que 
 
 Ajoutez votre propre volume d'appels. Une entreprise qui reçoit 40 appels courts par mois ne prendra pas la même décision qu'une équipe multi-sites qui gère des centaines d'appels de réservation, répartition et urgence. Si les appels manqués sont le point de départ de votre réflexion, utilisez le [calculateur de revenus perdus](/fr/missed-call-revenue-calculator/) avant de choisir.
 
-Il est aussi utile de comparer avec une couverture humaine. Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/office-and-administrative-support/receptionists.htm) indiquait en 2024 un salaire médian de 37 230 $ US par an, ou 17,90 $ US de l'heure, avant charges, avantages, recrutement, formation et absences. Ce chiffre aide à cadrer le budget, mais il ne veut pas dire qu'une IA remplace tout le travail d'une bonne personne à l'accueil. La vraie question est : quels appels nécessitent un jugement humain, et lesquels ont surtout besoin d'une première étape rapide et fiable ?
+Il est aussi utile de comparer avec une couverture humaine. Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) indiquait en 2024 un salaire médian de 37 230 $ US par an, ou 17,90 $ US de l'heure, avant charges, avantages, recrutement, formation et absences. Ce chiffre aide à cadrer le budget, mais il ne veut pas dire qu'une IA remplace tout le travail d'une bonne personne à l'accueil. La vraie question est : quels appels nécessitent un jugement humain, et lesquels ont surtout besoin d'une première étape rapide et fiable ?
 
 ## Comment décider
 

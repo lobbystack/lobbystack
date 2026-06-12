@@ -73,7 +73,7 @@ The bigger cost is usually the human time around the system:
 - Who handles provider outages, token limits, slow audio, and weird carrier behavior?
 - Who documents compliance choices around recording, consent, and data retention?
 
-Compliance is not a footnote either. The [FCC's AI voice TCPA ruling](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) confirmed that TCPA restrictions on artificial or prerecorded voice include AI-generated human voices, which matters for outbound calls, reminders, and automated follow-up. Healthcare, dental, therapy, and similar businesses also need to think about ePHI, vendor agreements, and safeguards; [HHS cloud guidance](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/index.html) is a useful starting point for understanding those responsibilities.
+Compliance is not a footnote either. The [FCC's AI voice TCPA ruling](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) confirmed that TCPA restrictions on artificial or prerecorded voice include AI-generated human voices, which matters for outbound calls, reminders, and automated follow-up. Healthcare, dental, therapy, and similar businesses also need to think about ePHI, vendor agreements, and safeguards; [HHS cloud guidance](https://www.hhs.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/) is a useful starting point for understanding those responsibilities.
 
 ### When it makes sense to build AI receptionist software
 
