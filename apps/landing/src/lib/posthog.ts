@@ -94,9 +94,9 @@ export function disablePostHog() {
       stopSessionRecording?: () => void
     }
 
-    posthogWithOptOut.opt_out_capturing?.()
     posthogWithOptOut.stopSessionRecording?.()
     posthog.reset()
+    posthogWithOptOut.opt_out_capturing?.()
   }
 
   clearPostHogClientStorage()
