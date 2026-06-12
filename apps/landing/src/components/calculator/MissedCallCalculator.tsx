@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react"
+import { useState, type ChangeEvent, type ReactNode } from "react"
 import { buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { Locale } from "@/i18n"
 
 const MAX_MISSED_CALLS_PER_WEEK = 500
 const MAX_AVERAGE_JOB_VALUE = 1_000_000
@@ -25,12 +26,95 @@ const TRADES = {
   Landscaping: { jobValue: 1200, calls: 10, oppRate: 60, bookRate: 35 },
 }
 
+const copy = {
+  en: {
+    inputsHeading: "Missed call revenue inputs",
+    trade: "Trade / Industry",
+    selectTrade: "Select a trade",
+    missedCalls: "Missed calls per week",
+    missedCallsHint: (max: number) => `Use 0 to ${max} missed calls per week.`,
+    averageJobValue: "Average job value ($)",
+    averageJobValueHint: (value: string) => `Estimate up to ${value} per job.`,
+    opportunityRate: "% of calls that are real jobs",
+    bookingRate: "Booking rate if answered",
+    monthlyRevenue: "Monthly Revenue at Risk",
+    yearlyResult: (yearly: string, jobs: string) => (
+      <>
+        That&apos;s <strong>{yearly}</strong> per year, representing roughly{" "}
+        <strong>{jobs} lost jobs</strong> every month.
+      </>
+    ),
+    tryFree: "Try LobbyStack free",
+    estimateNote: "These are estimates. Actual results may vary.",
+    tradeLabels: {
+      Custom: "Custom",
+      "General Contractor": "General Contractor",
+      HVAC: "HVAC",
+      Plumbing: "Plumbing",
+      Electrical: "Electrical",
+      Roofing: "Roofing",
+      Landscaping: "Landscaping",
+    },
+  },
+  fr: {
+    inputsHeading: "Entrées du calculateur de revenu d’appels manqués",
+    trade: "Métier / secteur",
+    selectTrade: "Sélectionner un métier",
+    missedCalls: "Appels manqués par semaine",
+    missedCallsHint: (max: number) =>
+      `Utilisez une valeur entre 0 et ${max} appels manqués par semaine.`,
+    averageJobValue: "Valeur moyenne d’un travail ($)",
+    averageJobValueHint: (value: string) =>
+      `Estimez jusqu’à ${value} par travail.`,
+    opportunityRate: "% d’appels qui sont de vraies occasions",
+    bookingRate: "Taux de réservation quand l’appel est pris",
+    monthlyRevenue: "Revenu mensuel à risque",
+    yearlyResult: (yearly: string, jobs: string) => (
+      <>
+        Cela représente <strong>{yearly}</strong> par an, soit environ{" "}
+        <strong>{jobs} travaux perdus</strong> chaque mois.
+      </>
+    ),
+    tryFree: "Essayer LobbyStack gratuitement",
+    estimateNote:
+      "Ce sont des estimations. Les résultats réels peuvent varier.",
+    tradeLabels: {
+      Custom: "Personnalisé",
+      "General Contractor": "Entrepreneur général",
+      HVAC: "CVC",
+      Plumbing: "Plomberie",
+      Electrical: "Électricité",
+      Roofing: "Toiture",
+      Landscaping: "Paysagement",
+    },
+  },
+} satisfies Record<
+  Locale,
+  {
+    inputsHeading: string
+    trade: string
+    selectTrade: string
+    missedCalls: string
+    missedCallsHint: (max: number) => string
+    averageJobValue: string
+    averageJobValueHint: (value: string) => string
+    opportunityRate: string
+    bookingRate: string
+    monthlyRevenue: string
+    yearlyResult: (yearly: string, jobs: string) => ReactNode
+    tryFree: string
+    estimateNote: string
+    tradeLabels: Record<keyof typeof TRADES, string>
+  }
+>
+
 function clampNumber(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min
   return Math.min(Math.max(value, min), max)
 }
 
-export function MissedCallCalculator() {
+export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
+  const t = copy[locale]
   const [trade, setTrade] = useState<keyof typeof TRADES>("Custom")
   const [calls, setCalls] = useState(TRADES["Custom"].calls)
   const [jobValue, setJobValue] = useState(TRADES["Custom"].jobValue)
@@ -55,7 +139,7 @@ export function MissedCallCalculator() {
   const revenueAtRiskYearly = revenueAtRiskMonthly * 12
 
   const formatCurrency = (val: number) =>
-    new Intl.NumberFormat("en-US", {
+    new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-US", {
       style: "currency",
       currency: "USD",
       maximumFractionDigits: 0,
@@ -76,21 +160,21 @@ export function MissedCallCalculator() {
           aria-labelledby="calculator-inputs-heading"
         >
           <h2 id="calculator-inputs-heading" className="sr-only">
-            Missed call revenue inputs
+            {t.inputsHeading}
           </h2>
           <div>
             <label id="trade-label" className="mb-2 block text-sm font-medium">
-              Trade / Industry
+              {t.trade}
             </label>
             <Select value={trade} onValueChange={handleTradeChange}>
               <SelectTrigger className="w-full" aria-labelledby="trade-label">
-                <SelectValue placeholder="Select a trade" />
+                <SelectValue placeholder={t.selectTrade} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   {Object.keys(TRADES).map((t) => (
                     <SelectItem key={t} value={t}>
-                      {t}
+                      {copy[locale].tradeLabels[t as keyof typeof TRADES]}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -104,7 +188,7 @@ export function MissedCallCalculator() {
                 htmlFor="missed-calls"
                 className="mb-2 block text-sm font-medium"
               >
-                Missed calls per week
+                {t.missedCalls}
               </label>
               <Input
                 id="missed-calls"
@@ -123,7 +207,7 @@ export function MissedCallCalculator() {
                 id="missed-calls-hint"
                 className="mt-2 text-xs text-muted-foreground"
               >
-                Use 0 to {MAX_MISSED_CALLS_PER_WEEK} missed calls per week.
+                {t.missedCallsHint(MAX_MISSED_CALLS_PER_WEEK)}
               </p>
             </div>
             <div>
@@ -131,7 +215,7 @@ export function MissedCallCalculator() {
                 htmlFor="average-job-value"
                 className="mb-2 block text-sm font-medium"
               >
-                Average job value ($)
+                {t.averageJobValue}
               </label>
               <Input
                 id="average-job-value"
@@ -150,7 +234,7 @@ export function MissedCallCalculator() {
                 id="average-job-value-hint"
                 className="mt-2 text-xs text-muted-foreground"
               >
-                Estimate up to {formatCurrency(MAX_AVERAGE_JOB_VALUE)} per job.
+                {t.averageJobValueHint(formatCurrency(MAX_AVERAGE_JOB_VALUE))}
               </p>
             </div>
           </div>
@@ -162,7 +246,7 @@ export function MissedCallCalculator() {
                   id="opportunity-rate-label"
                   className="text-sm font-medium"
                 >
-                  % of calls that are real jobs
+                  {t.opportunityRate}
                 </label>
                 <span className="text-sm text-muted-foreground">
                   {oppRate}%
@@ -184,7 +268,7 @@ export function MissedCallCalculator() {
             <div>
               <div className="mb-2 flex justify-between">
                 <label id="booking-rate-label" className="text-sm font-medium">
-                  Booking rate if answered
+                  {t.bookingRate}
                 </label>
                 <span className="text-sm text-muted-foreground">
                   {bookRate}%
@@ -210,15 +294,16 @@ export function MissedCallCalculator() {
         <Card className="sticky top-24 flex flex-col gap-4 bg-background p-6 sm:p-8">
           <div className="flex flex-col gap-2" aria-live="polite">
             <h3 className="text-sm font-medium text-muted-foreground">
-              Monthly Revenue at Risk
+              {t.monthlyRevenue}
             </h3>
-            <div className="text-4xl font-semibold tracking-tight break-words text-foreground sm:text-5xl">
+            <div className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               {formatCurrency(revenueAtRiskMonthly)}
             </div>
             <p className="pt-2 text-sm text-muted-foreground">
-              That&apos;s <strong>{formatCurrency(revenueAtRiskYearly)}</strong>{" "}
-              per year, representing roughly{" "}
-              <strong>{jobsAtRisk.toFixed(1)} lost jobs</strong> every month.
+              {t.yearlyResult(
+                formatCurrency(revenueAtRiskYearly),
+                jobsAtRisk.toFixed(1)
+              )}
             </p>
           </div>
 
@@ -230,10 +315,10 @@ export function MissedCallCalculator() {
                 className: "w-full text-base",
               })}
             >
-              Try LobbyStack free
+              {t.tryFree}
             </a>
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              These are estimates. Actual results may vary.
+              {t.estimateNote}
             </p>
           </div>
         </Card>

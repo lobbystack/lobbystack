@@ -1,0 +1,246 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import {
+  Hero as PhoneHero,
+  Problem as PhoneProblem,
+  Solution as PhoneSolution,
+  UseCases as PhoneUseCases,
+  HowItWorks as PhoneHowItWorks,
+  Comparison as PhoneComparison,
+} from "@/components/solutions/ai-phone-answering/SectionsPart1"
+import {
+  BusinessFit as PhoneBusinessFit,
+  Capabilities as PhoneCapabilities,
+  RevenueTieIn as PhoneRevenueTieIn,
+  OpenSource as PhoneOpenSource,
+} from "@/components/solutions/ai-phone-answering/SectionsPart2"
+import { SolutionCta as PhoneCta } from "@/components/solutions/ai-phone-answering/SectionsPart3"
+import { SolutionFaq as PhoneFaq } from "@/components/solutions/ai-phone-answering/SolutionFaq"
+import {
+  Hero as SchedulerHero,
+  Problem as SchedulerProblem,
+  Solution as SchedulerSolution,
+  UseCases as SchedulerUseCases,
+  HowItWorks as SchedulerHowItWorks,
+  Comparison as SchedulerComparison,
+} from "@/components/solutions/ai-appointment-scheduler/SectionsPart1"
+import {
+  BusinessFit as SchedulerBusinessFit,
+  Capabilities as SchedulerCapabilities,
+  RevenueTieIn as SchedulerRevenueTieIn,
+  OpenSource as SchedulerOpenSource,
+} from "@/components/solutions/ai-appointment-scheduler/SectionsPart2"
+import { SolutionCta as SchedulerCta } from "@/components/solutions/ai-appointment-scheduler/SectionsPart3"
+import { SolutionFaq as SchedulerFaq } from "@/components/solutions/ai-appointment-scheduler/SolutionFaq"
+import {
+  Hero as HomeHero,
+  Problem as HomeProblem,
+  Solution as HomeSolution,
+  UseCases as HomeUseCases,
+  HowItWorks as HomeHowItWorks,
+  Comparison as HomeComparison,
+} from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart1"
+import {
+  BusinessFit as HomeBusinessFit,
+  Capabilities as HomeCapabilities,
+  RevenueTieIn as HomeRevenueTieIn,
+  OpenSource as HomeOpenSource,
+} from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart2"
+import { SolutionCta as HomeCta } from "@/components/solutions/ai-receptionist-for-home-services/SectionsPart3"
+import { SolutionFaq as HomeFaq } from "@/components/solutions/ai-receptionist-for-home-services/SolutionFaq"
+import { aiPhoneAnsweringFaqs } from "@/lib/solution-faqs"
+import { appointmentSchedulerFaqs } from "@/lib/appointment-scheduler-faqs"
+import { homeServicesFaqs } from "@/lib/home-services-faqs"
+import { getLocalizedSeoLandingPage } from "@/lib/localized-seo-landing-pages"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  type FaqItem,
+} from "@/lib/seo"
+import { assertLocale, localizePath, type Locale } from "@/i18n"
+
+type BespokeSolutionKind = "phone" | "scheduler" | "homeServices"
+
+interface Props {
+  kind: BespokeSolutionKind
+  locale?: Locale
+}
+
+const { kind } = Astro.props
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+
+const variants = {
+  phone: {
+    path: "/solutions/ai-phone-answering/",
+    title: "AI Phone Answering Service for Small Businesses | LobbyStack",
+    description:
+      "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
+    image: "/illustrations/call-capture.webp",
+    imageAlt: "LobbyStack AI phone answering service capturing caller details",
+    breadcrumb:
+      locale === "fr" ? "Réponse téléphonique IA" : "AI Phone Answering",
+    faqs: aiPhoneAnsweringFaqs,
+    fr: {
+      title: "Réponse téléphonique IA pour petites entreprises",
+      description:
+        "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+    },
+  },
+  scheduler: {
+    path: "/solutions/ai-appointment-scheduler/",
+    title: "AI Appointment Scheduler for Small Businesses | LobbyStack",
+    description:
+      "LobbyStack schedules appointments from phone calls, captures caller details, sends confirmations, and routes urgent requests to your team.",
+    image: "/illustrations/booking-flow.webp",
+    imageAlt: "LobbyStack AI appointment scheduler booking a caller",
+    breadcrumb:
+      locale === "fr" ? "Planification IA" : "AI Appointment Scheduler",
+    faqs: appointmentSchedulerFaqs,
+    fr: {
+      title: "Planificateur de rendez‑vous IA pour petites entreprises",
+      description:
+        "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+    },
+  },
+  homeServices: {
+    path: "/solutions/ai-receptionist-for-home-services/",
+    title: "AI Receptionist for Home Services | LobbyStack",
+    description:
+      "LobbyStack answers calls for HVAC, plumbing, electrical, roofing, landscaping, and other home services teams while crews are on the job.",
+    image: "/illustrations/industry-bookings.webp",
+    imageAlt:
+      "LobbyStack AI receptionist booking home services jobs from phone calls",
+    breadcrumb:
+      locale === "fr"
+        ? "Services à domicile"
+        : "AI Receptionist for Home Services",
+    faqs: homeServicesFaqs,
+    fr: {
+      title: "Réceptionniste IA pour services à domicile | LobbyStack",
+      description:
+        "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+    },
+  },
+} satisfies Record<
+  BespokeSolutionKind,
+  {
+    path: string
+    title: string
+    description: string
+    image: string
+    imageAlt: string
+    breadcrumb: string
+    faqs: FaqItem[]
+    fr: { title: string; description: string }
+  }
+>
+
+const variant = variants[kind]
+const localizedPage = getLocalizedSeoLandingPage(locale, variant.path)
+const title =
+  localizedPage?.title ?? (locale === "fr" ? variant.fr.title : variant.title)
+const description =
+  localizedPage?.description ??
+  (locale === "fr" ? variant.fr.description : variant.description)
+const canonicalPath = localizePath(locale, variant.path)
+const homeLabel = locale === "fr" ? "Accueil" : "Home"
+---
+
+<Layout
+  seo={{
+    title,
+    description,
+    canonicalPath,
+    locale,
+    image: variant.image,
+    imageAlt: variant.imageAlt,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: homeLabel, path: localizePath(locale, "/") },
+        { name: "Solutions", path: localizePath(locale, "/solutions/") },
+        { name: variant.breadcrumb, path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: title,
+        url: absoluteUrl(canonicalPath),
+        description,
+        inLanguage: locale,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs: variant.faqs, locale }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+
+  <main id="main-content">
+    {
+      kind === "phone" && (
+        <>
+          <PhoneHero />
+          <PhoneProblem />
+          <PhoneSolution />
+          <PhoneUseCases />
+          <PhoneHowItWorks />
+          <PhoneComparison />
+          <PhoneBusinessFit />
+          <PhoneCapabilities />
+          <PhoneRevenueTieIn />
+          <PhoneOpenSource />
+          <PhoneFaq />
+          <PhoneCta />
+        </>
+      )
+    }
+    {
+      kind === "scheduler" && (
+        <>
+          <SchedulerHero />
+          <SchedulerProblem />
+          <SchedulerSolution />
+          <SchedulerUseCases />
+          <SchedulerHowItWorks />
+          <SchedulerComparison />
+          <SchedulerBusinessFit />
+          <SchedulerCapabilities />
+          <SchedulerRevenueTieIn />
+          <SchedulerOpenSource />
+          <SchedulerFaq />
+          <SchedulerCta />
+        </>
+      )
+    }
+    {
+      kind === "homeServices" && (
+        <>
+          <HomeHero />
+          <HomeProblem />
+          <HomeSolution />
+          <HomeUseCases />
+          <HomeHowItWorks />
+          <HomeComparison />
+          <HomeBusinessFit />
+          <HomeCapabilities />
+          <HomeRevenueTieIn />
+          <HomeOpenSource />
+          <HomeFaq />
+          <HomeCta />
+        </>
+      )
+    }
+  </main>
+
+  <Footer locale={locale} />
+</Layout>

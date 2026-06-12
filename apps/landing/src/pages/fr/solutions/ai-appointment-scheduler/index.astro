@@ -1,0 +1,12 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { getLocalizedSeoLandingPage } from "@/lib/localized-seo-landing-pages"
+
+const page = getLocalizedSeoLandingPage(
+  "fr",
+  "/solutions/ai-appointment-scheduler/"
+)
+if (!page) throw new Error("Missing French appointment scheduler page")
+---
+
+<SeoLandingPage page={page} locale="fr" />

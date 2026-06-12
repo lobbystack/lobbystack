@@ -63,6 +63,7 @@ const graphItems = [
     description,
     path: pagePath,
     image: pageImage,
+    locale,
     type:
       pagePath === "/blog/" || pagePath === "/solutions/"
         ? "CollectionPage"
@@ -154,6 +155,7 @@ Astro.response.headers.set("Content-Signal", CONTENT_SIGNAL)
       ogImageWidth={imageWidth}
       ogImageHeight={imageHeight}
       siteName={SITE_NAME}
+      locale={locale === "fr" ? "fr_FR" : "en_US"}
       twitter={{ card: "summary_large_image" }}
       author={seo?.author}
       article={pageType === "article"

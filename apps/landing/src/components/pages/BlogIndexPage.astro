@@ -1,0 +1,185 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { getBlogPosts, blogCanonicalSlug, blogPath } from "@/lib/blog"
+import {
+  blogJsonLd,
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const routeSeo = getRouteSeo({ locale, path: "/blog/" })
+const allPosts = await getBlogPosts(locale)
+const featuredPost = allPosts.find((p) => p.data.featured) || allPosts[0]
+const regularPosts = featuredPost
+  ? allPosts.filter(
+      (p) => blogCanonicalSlug(p) !== blogCanonicalSlug(featuredPost)
+    )
+  : allPosts
+const canonicalPath = localizePath(locale, "/blog/")
+
+const pageCopy = {
+  en: {
+    eyebrow: "Latest news",
+    h1: "AI receptionist blog and product updates",
+    intro:
+      "Product updates and practical notes on AI phone answering, missed-call recovery, appointment scheduling, call routing, lead follow-up, and open-source receptionist infrastructure.",
+  },
+  fr: {
+    eyebrow: "Dernières nouvelles",
+    h1: "Blog et mises à jour produit sur les réceptionnistes IA",
+    intro:
+      "Mises à jour produit et notes pratiques sur la réponse téléphonique IA, la récupération d’appels manqués, la planification, les transferts, le suivi des prospects et l’infrastructure open source.",
+  },
+} satisfies Record<Locale, { eyebrow: string; h1: string; intro: string }>
+
+const dateLocale = locale === "fr" ? "fr-FR" : "en-US"
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      blogJsonLd({ locale, path: canonicalPath }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: "Blog", path: canonicalPath },
+      ]),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+
+  <main
+    id="main-content"
+    class="min-h-screen bg-background pb-24 text-foreground"
+  >
+    <header class="px-6 pt-24 pb-16 text-center">
+      <div class="mx-auto max-w-7xl">
+        <span class="eyebrow-label mb-4 block">{pageCopy[locale].eyebrow}</span>
+        <h1 class="display-heading">{pageCopy[locale].h1}</h1>
+        <p class="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
+          {pageCopy[locale].intro}
+        </p>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-7xl px-6">
+      {
+        featuredPost && (
+          <section class="mb-16">
+            <a href={blogPath(featuredPost, locale)} class="group block">
+              <div class="flex flex-col gap-8 rounded-2xl border border-border/50 bg-card p-4 md:p-6 lg:flex-row lg:gap-12 lg:p-8">
+                <div class="order-2 flex flex-1 flex-col py-4 lg:order-1 lg:py-8">
+                  <time
+                    class="mb-4 block text-xs font-medium text-muted-foreground"
+                    datetime={featuredPost.data.pubDate.toISOString()}
+                  >
+                    {featuredPost.data.pubDate.toLocaleDateString(dateLocale, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </time>
+                  <h2 class="section-heading mb-4 transition-colors group-hover:text-primary">
+                    {featuredPost.data.title}
+                  </h2>
+                  <p class="body-copy mb-8 flex-1 md:text-lg">
+                    {featuredPost.data.description}
+                  </p>
+                </div>
+
+                <div class="relative order-1 aspect-[16/9] w-full overflow-hidden rounded-xl border border-border/30 bg-muted shadow-sm lg:order-2 lg:aspect-auto lg:w-[60%]">
+                  {featuredPost.data.coverImage && (
+                    <img
+                      src={featuredPost.data.coverImage}
+                      alt={featuredPost.data.title}
+                      width="1672"
+                      height="941"
+                      class="h-full w-full object-cover"
+                      decoding="async"
+                      fetchpriority="high"
+                    />
+                  )}
+                  <div class="absolute top-4 right-4 rounded-full border border-border bg-background/95 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
+                    {copy.common.featured}
+                  </div>
+                </div>
+              </div>
+            </a>
+          </section>
+        )
+      }
+
+      <section>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {
+            regularPosts.map((post) => (
+              <a href={blogPath(post, locale)} class="group block">
+                <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card">
+                  <div class="aspect-[16/9] w-full overflow-hidden border-b border-border/30 bg-muted shadow-sm">
+                    {post.data.coverImage ? (
+                      <img
+                        src={post.data.coverImage}
+                        alt={post.data.title}
+                        width="1672"
+                        height="941"
+                        class="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div class="flex h-full w-full items-center justify-center bg-muted">
+                        <span class="font-heading text-4xl text-muted-foreground/30">
+                          LobbyStack
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div class="flex flex-1 flex-col p-6">
+                    <time
+                      class="mb-3 block text-xs font-medium text-muted-foreground"
+                      datetime={post.data.pubDate.toISOString()}
+                    >
+                      {post.data.pubDate.toLocaleDateString(dateLocale, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </time>
+                    <h3 class="mb-4 font-heading text-xl leading-tight font-medium tracking-[-0.03em] transition-colors group-hover:text-primary">
+                      {post.data.title}
+                    </h3>
+                  </div>
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <Footer locale={locale} />
+</Layout>

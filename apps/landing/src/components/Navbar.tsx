@@ -74,9 +74,9 @@ const solutionLabelMap = {
     solutions: "Solutions",
     industries: "Industries",
     aiPhoneAnswering: "Réponse téléphonique IA",
-    aiAppointmentScheduler: "Planification de rendez-vous IA",
+    aiAppointmentScheduler: "Planification de rendez‑vous IA",
     homeServices: "Services à domicile",
-    afterHours: "Réponse après les heures d'ouverture",
+    afterHours: "Réponse hors horaires",
     dental: "Cabinets dentaires",
     salons: "Salons et spas",
     selfHosted: "Réceptionniste IA auto-hébergé",
@@ -146,38 +146,36 @@ const industryLinks = (locale: Locale) =>
   ] satisfies NavChildLink[]
 
 const tradeLinks = (locale: Locale) =>
-  locale === "en"
-    ? ([
-        {
-          label: solutionLabelMap[locale].plumbers,
-          href: "/solutions/ai-receptionist-for-plumbers/",
-        },
-        {
-          label: solutionLabelMap[locale].hvac,
-          href: "/solutions/ai-receptionist-for-hvac/",
-        },
-        {
-          label: solutionLabelMap[locale].electricians,
-          href: "/solutions/ai-receptionist-for-electricians/",
-        },
-        {
-          label: solutionLabelMap[locale].garageDoor,
-          href: "/solutions/ai-receptionist-for-garage-door-repair/",
-        },
-        {
-          label: solutionLabelMap[locale].applianceRepair,
-          href: "/solutions/ai-receptionist-for-appliance-repair/",
-        },
-        {
-          label: solutionLabelMap[locale].restoration,
-          href: "/solutions/ai-receptionist-for-restoration-companies/",
-        },
-        {
-          label: solutionLabelMap[locale].locksmiths,
-          href: "/solutions/ai-receptionist-for-locksmiths/",
-        },
-      ] satisfies NavChildLink[])
-    : []
+  [
+    {
+      label: solutionLabelMap[locale].plumbers,
+      href: "/solutions/ai-receptionist-for-plumbers/",
+    },
+    {
+      label: solutionLabelMap[locale].hvac,
+      href: "/solutions/ai-receptionist-for-hvac/",
+    },
+    {
+      label: solutionLabelMap[locale].electricians,
+      href: "/solutions/ai-receptionist-for-electricians/",
+    },
+    {
+      label: solutionLabelMap[locale].garageDoor,
+      href: "/solutions/ai-receptionist-for-garage-door-repair/",
+    },
+    {
+      label: solutionLabelMap[locale].applianceRepair,
+      href: "/solutions/ai-receptionist-for-appliance-repair/",
+    },
+    {
+      label: solutionLabelMap[locale].restoration,
+      href: "/solutions/ai-receptionist-for-restoration-companies/",
+    },
+    {
+      label: solutionLabelMap[locale].locksmiths,
+      href: "/solutions/ai-receptionist-for-locksmiths/",
+    },
+  ] satisfies NavChildLink[]
 
 const tradeColumns = (locale: Locale): NavColumn[] => {
   const links = tradeLinks(locale)
@@ -317,7 +315,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                             data-ph-capture-attribute-label={resourceLink.label}
                             className="flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                           >
-                            <span className="min-w-0 break-words">
+                            <span className="min-w-0">
                               {resourceLink.label}
                             </span>
                             {resourceLink.external && (
@@ -441,7 +439,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                               }
                               className="flex min-w-0 items-center justify-between gap-4 rounded-md px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none"
                             >
-                              <span className="min-w-0 break-words">
+                              <span className="min-w-0">
                                 {resourceLink.label}
                               </span>
                               {resourceLink.external && (

@@ -1,0 +1,70 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { HeroSection } from "@/components/HeroSection"
+import { LobbyStackHeroVoiceDemo } from "@/components/web-voice/LobbyStackWebVoiceWidget"
+import { FeatureGrid } from "@/components/FeatureGrid"
+import {
+  ProductExtensionSection,
+  LandingPageAdditions,
+} from "@/components/LandingPageAdditions"
+import { FaqSection } from "@/components/FaqSection"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import { getHomeFaqs } from "@/lib/home-faqs"
+import {
+  faqPageJsonLd,
+  organizationJsonLd,
+  productJsonLd,
+  softwareApplicationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import { assertLocale, getRouteSeo, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const canonicalPath = localizePath(locale, "/")
+const seo = getRouteSeo({ locale, path: "/" })
+---
+
+<Layout
+  seo={{
+    ...seo,
+    canonicalPath,
+    locale,
+    image: "/og/lobbystack-og.webp",
+    imageAlt:
+      locale === "fr"
+        ? "Tableau de bord de réceptionniste IA open source LobbyStack et logo produit"
+        : "LobbyStack open-source AI receptionist dashboard and product logo",
+    imageWidth: 1200,
+    imageHeight: 630,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      softwareApplicationJsonLd({ locale }),
+      productJsonLd({ locale }),
+      faqPageJsonLd({
+        path: canonicalPath,
+        faqs: getHomeFaqs(locale),
+        locale,
+      }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content">
+    <HeroSection locale={locale}>
+      <LobbyStackHeroVoiceDemo client:idle />
+    </HeroSection>
+    <ProductExtensionSection locale={locale} />
+    <FeatureGrid locale={locale} />
+    <LandingPageAdditions locale={locale} />
+    <FaqSection locale={locale} />
+    <CtaSection locale={locale} />
+  </main>
+  <Footer locale={locale} />
+</Layout>

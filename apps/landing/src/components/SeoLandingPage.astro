@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils"
 import { ArrowRight, Check } from "lucide-react"
 import { LightModeDashboardMockup } from "@/components/solutions/LightModeDashboardMockup"
 import {
+  assertLocale,
+  getCopy,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+import {
   breadcrumbJsonLd,
   faqPageJsonLd,
   organizationJsonLd,
@@ -18,9 +25,13 @@ import {
 
 interface Props {
   page: SeoLandingPage
+  locale?: Locale
 }
 
 const { page } = Astro.props
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const canonicalPath = localizePath(locale, page.path)
 
 const tradeSlugs = [
   "ai-receptionist-for-plumbers",
@@ -37,29 +48,34 @@ const isAboutPage = page.path === "/about/"
 
 const faqJsonLd =
   page.faqs.length > 0
-    ? faqPageJsonLd({ path: page.path, faqs: page.faqs })
+    ? faqPageJsonLd({ path: canonicalPath, faqs: page.faqs, locale })
     : undefined
+const reassurance =
+  locale === "fr"
+    ? "Aucune carte bancaire requise. Fonctionne avec votre numero professionnel actuel."
+    : "No credit card required. Works with your existing business number."
 ---
 
 <Layout
   seo={{
     title: page.title,
     description: page.description,
-    canonicalPath: page.path,
+    canonicalPath,
+    locale,
     image: page.image,
     imageAlt: page.imageAlt,
     jsonLd: [
-      organizationJsonLd(),
-      webSiteJsonLd(),
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
       breadcrumbJsonLd([
-        { name: "Home", path: "/" },
-        { name: page.eyebrow, path: page.path },
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: page.eyebrow, path: canonicalPath },
       ]),
       ...(faqJsonLd ? [faqJsonLd] : []),
     ],
   }}
 >
-  <Navbar />
+  <Navbar locale={locale} />
   <main id="main-content" class="min-h-screen bg-background text-foreground">
     <!-- Hero Section -->
     <section class="mx-auto max-w-7xl px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
@@ -78,7 +94,12 @@ const faqJsonLd =
           <h1 class="display-heading">
             {page.h1}
           </h1>
-          <p class={cn("body-copy mt-6 max-w-[65ch] md:text-lg", (isTradePage || isAboutPage) && "mx-auto")}>
+          <p
+            class={cn(
+              "body-copy mt-6 max-w-[65ch] md:text-lg",
+              (isTradePage || isAboutPage) && "mx-auto"
+            )}
+          >
             {page.intro}
           </p>
 
@@ -95,18 +116,18 @@ const faqJsonLd =
                 "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
               )}
             >
-              Try for free
+              {page.ctaPrimaryLabel ?? copy.common.tryFree}
               <ArrowRight className="ml-1 size-4" />
             </a>
             <a
-              href="/pricing/"
+              href={localizeHref(locale, "/pricing/")}
               class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
             >
-              See pricing
+              {page.ctaSecondaryLabel ?? copy.common.seePricing}
             </a>
           </div>
           <p class="mt-4 text-xs text-muted-foreground">
-            No credit card required. Works with your existing business number.
+            {reassurance}
           </p>
         </div>
 
@@ -144,139 +165,259 @@ const faqJsonLd =
         }
       </div>
 
-    <!-- Proof Points / Benefits -->
-    <div
-      class="mt-16 grid gap-6 py-12 sm:grid-cols-3"
-    >
-      {
-        page.proofPoints.map((point) => (
-          <div class="flex items-start gap-3.5">
-            <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
-              <Check
-                className="size-3.5 text-foreground/80"
-                strokeWidth={2.5}
-              />
+      <!-- Proof Points / Benefits -->
+      <div class="mt-16 grid gap-6 py-12 sm:grid-cols-3">
+        {
+          page.proofPoints.map((point) => (
+            <div class="flex items-start gap-3.5">
+              <div class="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
+                <Check
+                  className="size-3.5 text-foreground/80"
+                  strokeWidth={2.5}
+                />
+              </div>
+              <p class="text-sm leading-relaxed font-medium text-muted-foreground">
+                {point}
+              </p>
             </div>
-            <p class="text-sm leading-relaxed font-medium text-muted-foreground">
-              {point}
-            </p>
-          </div>
-        ))
-      }
-    </div>
-  </section>
+          ))
+        }
+      </div>
+    </section>
 
-  <!-- At-a-Glance Comparison Table for Comparison Pages -->
-  {
-    page.group === "comparison" && (
-      <section class="border-t border-border/40 bg-background py-16 md:py-20">
-        <div class="mx-auto max-w-4xl px-6">
-          <h2 class="section-heading mb-10 text-center">
-            At-a-glance comparison
-          </h2>
-          <div class="overflow-x-auto rounded-xl border border-border/70 shadow-[0_10px_30px_rgba(0,0,0,0.01)]">
-            {page.slug === "ai-receptionist-vs-virtual-receptionist" ? (
-              <table class="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr class="border-b border-border bg-muted/30">
-                    <th class="p-4 font-semibold text-foreground">Operational Factor</th>
-                    <th class="p-4 font-semibold text-foreground">AI Receptionist (LobbyStack)</th>
-                    <th class="p-4 font-semibold text-foreground">Virtual Answering Service</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-border/60">
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Pricing & Budgeting</td>
-                    <td class="p-4 text-muted-foreground">Predictable monthly flat rate with large included minute packages</td>
-                    <td class="p-4 text-muted-foreground">Per-minute or tiered fees that can create volatile monthly budgets</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Line Concurrency</td>
-                    <td class="p-4 text-muted-foreground">Unlimited simultaneous calls handled instantly with no hold times</td>
-                    <td class="p-4 text-muted-foreground">One call per agent, resulting in holding queues during call spikes</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Direct CRM Scheduling</td>
-                    <td class="p-4 text-muted-foreground">Seamless live booking following complex calendar constraints</td>
-                    <td class="p-4 text-muted-foreground">Basic message taking or manual entry requiring later confirmation</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Response Speed</td>
-                    <td class="p-4 text-muted-foreground">Instant greeting (under 1 sec) on the first ring, 24/7/365</td>
-                    <td class="p-4 text-muted-foreground">Variable call center answering delays and busy hour queues</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Robocall Screening</td>
-                    <td class="p-4 text-muted-foreground">Automated robocall screening blocks spam before using voice minutes</td>
-                    <td class="p-4 text-muted-foreground">Answering staff manually handle spam, often billed as active time</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Escalations & Handoffs</td>
-                    <td class="p-4 text-muted-foreground">Warm transfer to your phone with live SMS/email summaries & transcript</td>
-                    <td class="p-4 text-muted-foreground">Static email message delivery or blind, contextless call routing</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Setup & Deployment</td>
-                    <td class="p-4 text-muted-foreground">Fast self-serve setup with business rules, knowledge, and calendar context</td>
-                    <td class="p-4 text-muted-foreground">1 to 2 weeks for custom script setup and agent training</td>
-                  </tr>
-                </tbody>
-              </table>
-            ) : (
-              <table class="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr class="border-b border-border bg-muted/30">
-                    <th class="p-4 font-semibold text-foreground">Answering Characteristic</th>
-                    <th class="p-4 font-semibold text-foreground">AI Receptionist (LobbyStack)</th>
-                    <th class="p-4 font-semibold text-foreground">Standard Business Voicemail</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-border/60">
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Caller Experience</td>
-                    <td class="p-4 text-muted-foreground">Interactive natural dialogue: asks questions and resolves issues</td>
-                    <td class="p-4 text-muted-foreground">Passive 'record-and-wait' beep: forces callers into phone tag</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Lead Drop-Off Rate</td>
-                    <td class="p-4 text-muted-foreground">Keeps callers actively engaged and committed during the conversation</td>
-                    <td class="p-4 text-muted-foreground">Many cold prospects hang up without leaving useful audio</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Intake & Qualification</td>
-                    <td class="p-4 text-muted-foreground">Collects location, urgency, symptoms, and verified contact info</td>
-                    <td class="p-4 text-muted-foreground">Unstructured messages, often missing critical contact or job details</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Direct Appointment Booking</td>
-                    <td class="p-4 text-muted-foreground">Secures firm bookings on your live calendar immediately on-call</td>
-                    <td class="p-4 text-muted-foreground">Impossible; requires multiple manual callback attempts to schedule</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Emergency Screening</td>
-                    <td class="p-4 text-muted-foreground">Identifies critical issues and initiates immediate warm transfers</td>
-                    <td class="p-4 text-muted-foreground">Sits quietly in an inbox until someone manually checks it hours later</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Spam & Answering Filtering</td>
-                    <td class="p-4 text-muted-foreground">Blocks robocalls, dialer spam, and persistent unsolicited telemarketers</td>
-                    <td class="p-4 text-muted-foreground">Fills your inbox with automated telemarketer or dialer recordings</td>
-                  </tr>
-                  <tr>
-                    <td class="p-4 font-medium text-foreground">Operational Cost</td>
-                    <td class="p-4 text-muted-foreground">Starts at $0/mo (free plan); premium plans pay for themselves with 1 saved job</td>
-                    <td class="p-4 text-muted-foreground">Free, but has a massive hidden cost in lost ready-to-book opportunities</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
+    <!-- At-a-Glance Comparison Table for Comparison Pages -->
+    {
+      page.group === "comparison" && (
+        <section class="border-t border-border/40 bg-background py-16 md:py-20">
+          <div class="mx-auto max-w-4xl px-6">
+            <h2 class="section-heading mb-10 text-center">
+              At-a-glance comparison
+            </h2>
+            <div class="overflow-x-auto rounded-xl border border-border/70 shadow-[0_10px_30px_rgba(0,0,0,0.01)]">
+              {page.slug === "ai-receptionist-vs-virtual-receptionist" ? (
+                <table class="w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-border bg-muted/30">
+                      <th class="p-4 font-semibold text-foreground">
+                        Operational Factor
+                      </th>
+                      <th class="p-4 font-semibold text-foreground">
+                        AI Receptionist (LobbyStack)
+                      </th>
+                      <th class="p-4 font-semibold text-foreground">
+                        Virtual Answering Service
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border/60">
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Pricing & Budgeting
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Predictable monthly flat rate with large included minute
+                        packages
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Per-minute or tiered fees that can create volatile
+                        monthly budgets
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Line Concurrency
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Unlimited simultaneous calls handled instantly with no
+                        hold times
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        One call per agent, resulting in holding queues during
+                        call spikes
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Direct CRM Scheduling
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Seamless live booking following complex calendar
+                        constraints
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Basic message taking or manual entry requiring later
+                        confirmation
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Response Speed
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Instant greeting (under 1 sec) on the first ring,
+                        24/7/365
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Variable call center answering delays and busy hour
+                        queues
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Robocall Screening
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Automated robocall screening blocks spam before using
+                        voice minutes
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Answering staff manually handle spam, often billed as
+                        active time
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Escalations & Handoffs
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Warm transfer to your phone with live SMS/email
+                        summaries & transcript
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Static email message delivery or blind, contextless call
+                        routing
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Setup & Deployment
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Fast self-serve setup with business rules, knowledge,
+                        and calendar context
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        1 to 2 weeks for custom script setup and agent training
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <table class="w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr class="border-b border-border bg-muted/30">
+                      <th class="p-4 font-semibold text-foreground">
+                        Answering Characteristic
+                      </th>
+                      <th class="p-4 font-semibold text-foreground">
+                        AI Receptionist (LobbyStack)
+                      </th>
+                      <th class="p-4 font-semibold text-foreground">
+                        Standard Business Voicemail
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-border/60">
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Caller Experience
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Interactive natural dialogue: asks questions and
+                        resolves issues
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Passive 'record-and-wait' beep: forces callers into
+                        phone tag
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Lead Drop-Off Rate
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Keeps callers actively engaged and committed during the
+                        conversation
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Many cold prospects hang up without leaving useful audio
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Intake & Qualification
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Collects location, urgency, symptoms, and verified
+                        contact info
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Unstructured messages, often missing critical contact or
+                        job details
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Direct Appointment Booking
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Secures firm bookings on your live calendar immediately
+                        on-call
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Impossible; requires multiple manual callback attempts
+                        to schedule
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Emergency Screening
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Identifies critical issues and initiates immediate warm
+                        transfers
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Sits quietly in an inbox until someone manually checks
+                        it hours later
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Spam & Answering Filtering
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Blocks robocalls, dialer spam, and persistent
+                        unsolicited telemarketers
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Fills your inbox with automated telemarketer or dialer
+                        recordings
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="p-4 font-medium text-foreground">
+                        Operational Cost
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Starts at $0/mo (free plan); premium plans pay for
+                        themselves with 1 saved job
+                      </td>
+                      <td class="p-4 text-muted-foreground">
+                        Free, but has a massive hidden cost in lost
+                        ready-to-book opportunities
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
-    )
-  }
+        </section>
+      )
+    }
 
-  <!-- Alternating Solution Tour Sections -->
+    <!-- Alternating Solution Tour Sections -->
     <section class="border-t border-border/40 bg-muted/15 py-20 md:py-28">
       <div class="mx-auto max-w-7xl space-y-20 px-6 md:space-y-32">
         {
@@ -381,24 +522,24 @@ const faqJsonLd =
         </p>
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href={page.ctaPrimaryHref ?? APP_SIGNUP_URL}
+            href={localizeHref(locale, page.ctaPrimaryHref ?? APP_SIGNUP_URL)}
             class={cn(
               buttonVariants({ size: "lg" }),
               "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
             )}
           >
-            {page.ctaPrimaryLabel ?? "Try for free"}
+            {page.ctaPrimaryLabel ?? copy.common.tryFree}
             <ArrowRight className="ml-1 size-4" />
           </a>
           <a
-            href={page.ctaSecondaryHref ?? "/pricing/"}
+            href={localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/")}
             class="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
           >
-            {page.ctaSecondaryLabel ?? "View pricing"}
+            {page.ctaSecondaryLabel ?? copy.common.viewPricing}
           </a>
         </div>
         <p class="text-xs text-muted-foreground">
-          No credit card required. Cancel anytime.
+          {copy.common.noCreditCardCancelAnytime}
         </p>
       </div>
     </section>
@@ -411,13 +552,13 @@ const faqJsonLd =
         class="flex flex-col justify-between gap-6 md:flex-row md:items-center"
       >
         <h3 class="text-xs font-semibold tracking-wider text-muted-foreground">
-          Related resources
+          {copy.common.relatedResources}
         </h3>
         <div class="flex flex-wrap gap-3">
           {
             page.relatedLinks.map((link) => (
               <a
-                href={link.href}
+                href={localizeHref(locale, link.href)}
                 class="inline-flex h-9 items-center rounded-full border border-border/70 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
               >
                 {link.label}
@@ -428,5 +569,5 @@ const faqJsonLd =
       </div>
     </section>
   </main>
-  <Footer />
+  <Footer locale={locale} />
 </Layout>

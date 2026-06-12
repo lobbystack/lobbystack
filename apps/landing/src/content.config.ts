@@ -13,6 +13,8 @@ const blogCollection = defineCollection({
     coverImage: z.string().optional(),
     category: z.string().optional(),
     featured: z.boolean().default(false),
+    locale: z.enum(["en", "fr"]).default("en"),
+    canonicalSlug: z.string().optional(),
   }),
 })
 

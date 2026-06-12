@@ -1,0 +1,69 @@
+---
+import FuzzyRedirect from "@jdevalk/astro-seo-graph/FuzzyRedirect.astro"
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { assertLocale, getRouteSeo, localizeHref, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const routeSeo = getRouteSeo({ locale, path: "/404/" })
+const copy = {
+  en: {
+    h1: "Page not found",
+    body: "The page may have moved, or the URL may have a typo.",
+    home: "Go home",
+    search: "Search",
+  },
+  fr: {
+    h1: "Page introuvable",
+    body: "La page a peut-être été déplacée, ou l’URL contient une faute.",
+    home: "Retour à l’accueil",
+    search: "Recherche",
+  },
+} satisfies Record<Locale, Record<string, string>>
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath: locale === "fr" ? "/fr/404/" : "/404/",
+    locale,
+    noindex: true,
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" class="min-h-screen bg-background text-foreground">
+    <section
+      class="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center"
+    >
+      <p class="eyebrow-label">404</p>
+      <h1 class="display-heading-compact mt-4">{copy[locale].h1}</h1>
+      <p class="body-copy mt-5 max-w-[60ch] md:text-lg">
+        {copy[locale].body}
+      </p>
+      <div class="mt-8 text-base font-medium text-foreground">
+        <FuzzyRedirect />
+      </div>
+      <div class="mt-10 flex flex-col gap-3 sm:flex-row">
+        <a
+          href={localizeHref(locale, "/")}
+          class="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-6 text-sm font-medium text-background"
+        >
+          {copy[locale].home}
+        </a>
+        <a
+          href={localizeHref(locale, "/search/")}
+          class="inline-flex h-11 items-center justify-center rounded-full border border-border/70 px-6 text-sm font-medium"
+        >
+          {copy[locale].search}
+        </a>
+      </div>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>

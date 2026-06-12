@@ -1,6 +1,6 @@
 import { createSchemaEndpoint } from "@jdevalk/astro-seo-graph"
 import type { GraphEntity } from "@jdevalk/seo-graph-core"
-import { getCollection } from "astro:content"
+import { blogCanonicalSlug, getBlogPosts } from "@/lib/blog"
 import {
   blogJsonLd,
   blogPostingJsonLd,
@@ -13,9 +13,9 @@ import {
 } from "@/lib/seo"
 
 export const GET = createSchemaEndpoint({
-  entries: () => getCollection("blog"),
+  entries: () => getBlogPosts("en"),
   mapper: (post) => {
-    const path = `/blog/${post.id}/`
+    const path = `/blog/${blogCanonicalSlug(post)}/`
     const publishedTime = post.data.pubDate.toISOString()
 
     return [

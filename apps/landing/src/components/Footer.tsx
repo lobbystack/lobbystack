@@ -57,7 +57,10 @@ const footerSections = (locale: Locale) => {
     {
       title: copy.resources,
       links: [
-        { label: copy.helpCenter, href: "https://docs.lobbystack.com/introduction" },
+        {
+          label: copy.helpCenter,
+          href: "https://docs.lobbystack.com/introduction",
+        },
         { label: copy.comparison, href: "/comparison/" },
         { label: copy.blog, href: "/blog/" },
         {
@@ -135,7 +138,7 @@ export function Footer({ locale = "en" }: FooterProps) {
                       data-ph-capture-attribute-action="navigate"
                       data-ph-capture-attribute-destination={link.href}
                       data-ph-capture-attribute-label={link.label}
-                      className="text-sm break-words text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
                     >
                       {link.label}
                     </a>
@@ -145,7 +148,6 @@ export function Footer({ locale = "en" }: FooterProps) {
             </div>
           ))}
         </div>
-
       </div>
 
       <Separator className="my-8" />

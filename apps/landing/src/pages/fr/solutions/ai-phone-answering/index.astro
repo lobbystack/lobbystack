@@ -1,0 +1,9 @@
+---
+import SeoLandingPage from "@/components/SeoLandingPage.astro"
+import { getLocalizedSeoLandingPage } from "@/lib/localized-seo-landing-pages"
+
+const page = getLocalizedSeoLandingPage("fr", "/solutions/ai-phone-answering/")
+if (!page) throw new Error("Missing French AI phone answering page")
+---
+
+<SeoLandingPage page={page} locale="fr" />

@@ -6,6 +6,8 @@ author: "LobbyStack Team"
 category: "Guides"
 featured: false
 coverImage: "/illustrations/how-to-choose-an-ai-receptionist-hero.webp"
+locale: "en"
+canonicalSlug: "how-to-choose-an-ai-receptionist"
 ---
 
 Choosing an **AI receptionist** gets easier once you stop asking which product sounds the most human and start asking a duller question: what should happen at the end of a good call?

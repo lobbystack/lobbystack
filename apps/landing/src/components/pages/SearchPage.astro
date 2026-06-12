@@ -1,0 +1,67 @@
+---
+import Layout from "@/layouts/main.astro"
+import Search from "astro-pagefind/components/Search.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/lib/seo"
+import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const routeSeo = getRouteSeo({ locale, path: "/search/" })
+const canonicalPath = localizePath(locale, "/search/")
+const pageCopy = {
+  en: {
+    h1: "Search LobbyStack",
+    placeholder: "Search product pages, pricing, and posts",
+  },
+  fr: {
+    h1: "Rechercher dans LobbyStack",
+    placeholder: "Rechercher pages produit, tarifs et articles",
+  },
+} satisfies Record<Locale, { h1: string; placeholder: string }>
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    locale,
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: routeSeo?.title ?? pageCopy[locale].h1, path: canonicalPath },
+      ]),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main class="min-h-screen bg-background text-foreground" data-pagefind-ignore>
+    <section class="mx-auto max-w-4xl px-6 py-20 sm:py-24">
+      <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">
+        {pageCopy[locale].h1}
+      </h1>
+      <div class="mt-8">
+        <Search
+          className="lobbystack-search"
+          configOptions={{
+            "excerpt-length": 24,
+          }}
+          searchboxOptions={{
+            placeholder: pageCopy[locale].placeholder,
+            "show-sub-results": true,
+          }}
+        />
+      </div>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>

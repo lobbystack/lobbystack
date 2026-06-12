@@ -1,0 +1,70 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { PricingSection } from "@/components/PricingSection"
+import { PricingFaqSection } from "@/components/pricing/PricingFaqSection"
+import { CtaSection } from "@/components/CtaSection"
+import { Footer } from "@/components/Footer"
+import { getPricingFaqs } from "@/lib/pricing-faqs"
+import {
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  absoluteUrl,
+  webSiteJsonLd,
+} from "@/lib/seo"
+import { assertLocale, getCopy, getRouteSeo, localizePath, type Locale } from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const canonicalPath = localizePath(locale, "/pricing/")
+const seo = getRouteSeo({ locale, path: "/pricing/" })
+---
+
+<Layout
+  seo={{
+    ...seo,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      softwareApplicationJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: locale === "fr" ? "Tarifs" : "Pricing", path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: seo?.title,
+        url: absoluteUrl(canonicalPath),
+        description: seo?.description,
+        inLanguage: locale,
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({
+        path: canonicalPath,
+        faqs: getPricingFaqs(locale),
+        locale,
+      }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main>
+    <PricingSection client:load locale={locale} />
+    <PricingFaqSection locale={locale} />
+    <CtaSection locale={locale} />
+  </main>
+  <Footer locale={locale} />
+</Layout>
+

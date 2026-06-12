@@ -1,0 +1,307 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/lib/seo"
+import {
+  assertLocale,
+  getCopy,
+  getRouteSeo,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+
+type LegalKind = "privacy" | "terms"
+
+interface Props {
+  kind: LegalKind
+  locale?: Locale
+}
+
+const { kind } = Astro.props
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const copy = getCopy(locale)
+const basePath = kind === "privacy" ? "/privacy/" : "/terms/"
+const canonicalPath = localizePath(locale, basePath)
+const routeSeo = getRouteSeo({ locale, path: basePath })
+
+const legalCopy = {
+  fr: {
+    privacy: {
+      updated: "Dernière mise à jour : 11 mai 2026",
+      h1: "Politique de confidentialité",
+      intro:
+        "Cette Politique explique comment Lobbystack Inc. collecte, utilise, divulgue et protège les renseignements personnels lorsque vous visitez notre site, utilisez LobbyStack Cloud, communiquez par appels ou SMS alimentés par LobbyStack, contactez le support ou interagissez avec nos services.",
+      notice:
+        "Avis de langue : cette traduction française est fournie pour faciliter la lecture. En cas de conflit, la version anglaise contrôle, sauf exigence contraire de la loi applicable.",
+      nav: [
+        ["scope", "Portée"],
+        ["collect", "Informations"],
+        ["sms", "Consentement SMS"],
+        ["use", "Utilisation"],
+        ["share", "Partage"],
+        ["retention", "Conservation"],
+        ["rights", "Droits"],
+        ["contact", "Contact"],
+      ],
+      sections: [
+        {
+          id: "scope",
+          title: "1. Portée et notre rôle",
+          paragraphs: [
+            "LobbyStack fournit une plateforme de réceptionniste IA pour entreprises couvrant appels, SMS, rendez‑vous, routage, résumés, accueil client, réponses fondées sur la connaissance et flux de travail connexes.",
+            "Nous pouvons traiter des renseignements personnels comme responsable pour notre site, nos comptes, notre facturation, notre sécurité, notre support et nos opérations marketing. Nous pouvons aussi traiter des renseignements pour le compte de clients professionnels qui utilisent LobbyStack avec leurs propres appelants, clients, patients ou prospects.",
+          ],
+        },
+        {
+          id: "collect",
+          title: "2. Informations que nous collectons",
+          paragraphs: [
+            "Nous collectons des informations de compte et d’entreprise, comme noms, adresses courriel, numéros de téléphone, noms d’entreprise, rôles, paramètres, utilisateurs autorisés, préférences de support et contacts de facturation.",
+            "LobbyStack peut traiter numéros de téléphone, identifiants d’appel, métadonnées, enregistrements, transcriptions, résumés, messages SMS, états d’opt-in et opt-out, dossiers de consentement, profils de contacts, rendez‑vous, notes, décisions de routage et résultats d’escalade.",
+            "Les clients peuvent téléverser ou connecter des informations d’entreprise, FAQ, services, prix, horaires, politiques, calendriers, documents, scripts, règles et autres matériaux utilisés pour configurer le réceptionniste IA.",
+          ],
+        },
+        {
+          id: "sms",
+          title: "3. Consentement SMS et confidentialité des messages",
+          paragraphs: [
+            "LobbyStack prend en charge des SMS opérationnels et conversationnels non marketing, comme réponses aux demandes, confirmations de rendez‑vous, suivis d’appels manqués, rappels, mises à jour de service et messages de support. La fréquence varie. Des frais de message et de données peuvent s’appliquer.",
+            "Les destinataires peuvent répondre STOP pour se désabonner et HELP pour obtenir de l’aide lorsque pris en charge, ou contacter support@lobbystack.com.",
+            "Nous ne vendons, louons ni partageons les données d’opt-in SMS ou de consentement avec des tiers ou affiliés pour leur marketing ou promotion.",
+          ],
+        },
+        {
+          id: "use",
+          title: "4. Comment nous utilisons les informations",
+          paragraphs: [
+            "Nous utilisons les renseignements personnels pour fournir, exploiter, sécuriser, maintenir et améliorer LobbyStack; répondre aux appels; traiter les SMS; produire des résumés; acheminer des demandes; soutenir les rendez‑vous; gérer comptes, authentification, facturation, taxes, plans, usage et support.",
+            "Nous utilisons aussi ces informations pour traiter les opt-in et opt-out, respecter les exigences de télécommunications, prévenir spam, abus, fraude et incidents de sécurité, communiquer sur le service et respecter nos obligations légales, contractuelles, fournisseur, opérateur et comptables.",
+          ],
+        },
+        {
+          id: "share",
+          title: "5. Comment nous divulguons les informations",
+          paragraphs: [
+            "Nous divulguons les informations seulement lorsque nécessaire, notamment à des fournisseurs de téléphonie, SMS, transporteurs, numéros, modèles IA, traitement vocal, hébergement, base de données, stockage, infrastructure, surveillance, sécurité, paiement, facturation, support, communication, analytique et intégrations connectées.",
+            "Nous pouvons aussi divulguer des informations à des conseillers professionnels, auditeurs, assureurs et autorités légales ou réglementaires lorsque requis.",
+          ],
+        },
+        {
+          id: "retention",
+          title: "6. Conservation et sécurité",
+          paragraphs: [
+            "Nous conservons les informations aussi longtemps que nécessaire pour fournir les services, respecter nos obligations, résoudre les litiges, appliquer les accords, maintenir la sécurité et répondre aux exigences légales.",
+            "Nous utilisons des mesures techniques, administratives et organisationnelles raisonnables pour protéger les informations, notamment contrôle d’accès, journalisation, chiffrement lorsque approprié et restrictions internes.",
+          ],
+        },
+        {
+          id: "rights",
+          title: "7. Vos droits et choix",
+          paragraphs: [
+            "Selon votre lieu, vous pouvez avoir le droit de demander accès, correction, suppression, portabilité, opposition ou limitation de certains traitements. Vous pouvez aussi contrôler certains cookies et communications.",
+            "Si une entreprise utilise LobbyStack pour communiquer avec vous, contactez d’abord cette entreprise pour les demandes relatives à ses propres pratiques.",
+          ],
+        },
+        {
+          id: "contact",
+          title: "8. Nous contacter",
+          paragraphs: [
+            "Pour toute question sur cette Politique ou nos pratiques de confidentialité, contactez support@lobbystack.com.",
+          ],
+        },
+      ],
+    },
+    terms: {
+      updated: "Dernière mise à jour : 11 mai 2026",
+      h1: "Conditions d’utilisation",
+      intro:
+        "Ces Conditions régissent l’accès et l’utilisation des services hébergés, sites, forfaits payants, support, infrastructure gérée et flux de réceptionniste IA de LobbyStack.",
+      notice:
+        "Avis de langue : cette traduction française est fournie pour faciliter la lecture. En cas de conflit, la version anglaise contrôle, sauf exigence contraire de la loi applicable.",
+      nav: [
+        ["agreement", "Accord"],
+        ["service", "Service"],
+        ["accounts", "Comptes"],
+        ["communications", "SMS et appels"],
+        ["ai", "Limites IA"],
+        ["billing", "Facturation"],
+        ["data", "Données"],
+        ["risk", "Risques"],
+        ["law", "Droit"],
+        ["contact", "Contact"],
+      ],
+      sections: [
+        {
+          id: "agreement",
+          title: "1. Acceptation des Conditions",
+          paragraphs: [
+            "Ces Conditions constituent un accord légal entre vous et Lobbystack Inc. En accédant à notre site, en créant un compte, en utilisant le service hébergé, en achetant un forfait ou en activant un module, vous acceptez ces Conditions.",
+            "Si vous utilisez LobbyStack pour une entreprise ou organisation, vous déclarez avoir l’autorité de lier cette entité.",
+          ],
+        },
+        {
+          id: "service",
+          title: "2. Le service LobbyStack",
+          paragraphs: [
+            "LobbyStack est une plateforme de réceptionniste IA pour appels, SMS, réservation, routage, résumés, capture de contacts, base de connaissances, suivis et communications connexes.",
+            "Nous pouvons améliorer, modifier, suspendre ou interrompre des parties du service. Certaines fonctionnalités peuvent être en bêta, limitées par des fournisseurs, des approbations, des plafonds d’usage ou des régions.",
+          ],
+        },
+        {
+          id: "accounts",
+          title: "3. Comptes, utilisateurs et responsabilités client",
+          paragraphs: [
+            "Vous êtes responsable de la sécurité des identifiants, de la gestion des utilisateurs, de l’exactitude des informations de compte et de facturation, et de toute activité sous votre compte.",
+            "Vous êtes responsable de configurer LobbyStack pour votre entreprise, notamment faits, services, prix, horaires, lieux, scripts, règles d’escalade, calendriers, connaissances, numéros de transfert et procédures humaines.",
+          ],
+        },
+        {
+          id: "communications",
+          title: "4. Voix, SMS et conformité télécom",
+          paragraphs: [
+            "Les appels et SMS sont soumis aux règles des transporteurs, lois de télécommunications, lois anti-spam, conditions fournisseurs, enregistrements de campagnes, filtrage, disponibilité des numéros et restrictions d’usage.",
+            "Vous êtes responsable d’obtenir et documenter tous les consentements requis avant d’envoyer des appels ou messages via LobbyStack et de respecter les demandes de retrait.",
+          ],
+        },
+        {
+          id: "ai",
+          title: "5. Limites de l'IA et revue humaine",
+          paragraphs: [
+            "LobbyStack utilise l’intelligence artificielle et l’automatisation. Les sorties IA peuvent être incomplètes, inexactes, retardées ou inadaptées à un usage particulier.",
+            "LobbyStack ne remplace pas les services d’urgence, les conseils professionnels médicaux, juridiques, financiers ou de sécurité, ni le jugement humain pour les situations sensibles.",
+          ],
+        },
+        {
+          id: "billing",
+          title: "6. Forfaits, facturation, taxes et remboursements",
+          paragraphs: [
+            "Les forfaits payants, modules, frais de configuration, frais d’usage, frais mesurés et taxes sont décrits au paiement, dans l’application ou dans une commande applicable.",
+            "Vous nous autorisez, ainsi que notre processeur de paiement, à débiter votre méthode de paiement pour les montants dus. Sauf obligation légale ou accord écrit, les frais ne sont pas remboursables.",
+          ],
+        },
+        {
+          id: "data",
+          title: "7. Contenu client, données et propriété intellectuelle",
+          paragraphs: [
+            "Vous conservez la propriété de votre contenu professionnel, données clients, enregistrements, transcriptions, messages, connaissances, rendez‑vous et autres contenus soumis au service.",
+            "Vous accordez à LobbyStack les droits nécessaires pour héberger, traiter, transmettre, afficher, analyser, sécuriser et utiliser ce contenu afin de fournir et améliorer le service.",
+          ],
+        },
+        {
+          id: "risk",
+          title: "8. Allocation des risques",
+          paragraphs: [
+            "Le service est fourni selon les conditions applicables et peut dépendre de réseaux, fournisseurs et intégrations tiers. Vous devez tester et surveiller les flux importants avant utilisation en production.",
+          ],
+        },
+        {
+          id: "law",
+          title: "9. Droit applicable",
+          paragraphs: [
+            "Le droit applicable, les restrictions, limitations et procédures de résolution des litiges sont décrits dans la version anglaise complète des Conditions, qui contrôle sauf exigence contraire de la loi applicable.",
+          ],
+        },
+        {
+          id: "contact",
+          title: "10. Contact",
+          paragraphs: [
+            "Pour toute question, contactez support@lobbystack.com.",
+          ],
+        },
+      ],
+    },
+  },
+} satisfies Record<
+  "fr",
+  Record<
+    LegalKind,
+    {
+      updated: string
+      h1: string
+      intro: string
+      notice: string
+      nav: Array<[string, string]>
+      sections: Array<{ id: string; title: string; paragraphs: string[] }>
+    }
+  >
+>
+
+const t = legalCopy.fr[kind]
+---
+
+<Layout
+  seo={{
+    title: routeSeo?.title,
+    description: routeSeo?.description,
+    canonicalPath,
+    noindex: true,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: copy.common.home, path: localizePath(locale, "/") },
+        { name: t.h1, path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: routeSeo?.title,
+        url: absoluteUrl(canonicalPath),
+        description: routeSeo?.description,
+        inLanguage: locale,
+      },
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" class="bg-background text-foreground">
+    <section class="border-b border-border/60">
+      <div class="mx-auto max-w-4xl px-6 py-16 md:py-20">
+        <p class="text-sm font-medium text-muted-foreground">{t.updated}</p>
+        <h1 class="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+          {t.h1}
+        </h1>
+        <p
+          class="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+        >
+          {t.intro}
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          {t.notice}
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+    >
+      <aside class="hidden md:block">
+        <nav class="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          {
+            t.nav.map(([id, label]) => (
+              <a class="block hover:text-foreground" href={`#${id}`}>
+                {label}
+              </a>
+            ))
+          }
+        </nav>
+      </aside>
+
+      <article class="legal-copy max-w-none">
+        {
+          t.sections.map((section) => (
+            <section id={section.id}>
+              <h2>{section.title}</h2>
+              {section.paragraphs.map((paragraph) => (
+                <p>{paragraph}</p>
+              ))}
+            </section>
+          ))
+        }
+      </article>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>

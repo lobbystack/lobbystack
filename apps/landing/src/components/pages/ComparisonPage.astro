@@ -1,0 +1,353 @@
+---
+import Layout from "@/layouts/main.astro"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+import { APP_SIGNUP_URL } from "@/lib/app-links"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  breadcrumbJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  webPageJsonLd,
+} from "@/lib/seo"
+import { ArrowRight } from "lucide-react"
+import {
+  assertLocale,
+  getCopy,
+  localizeHref,
+  localizePath,
+  type Locale,
+} from "@/i18n"
+
+interface Props {
+  locale?: Locale
+}
+
+const locale = assertLocale(Astro.props.locale ?? Astro.currentLocale)
+const common = getCopy(locale).common
+const canonicalPath = localizePath(locale, "/comparison/")
+
+const localized = {
+  en: {
+    title: "AI Receptionist Comparison Guide",
+    description:
+      "Compare LobbyStack AI receptionist against voicemail, virtual receptionists, and more. Understand which call answering approach works best for your business.",
+    breadcrumb: "Comparison",
+    eyebrow: "Comparison guide",
+    h1Prefix: "How LobbyStack compares to",
+    h1Highlight: "alternatives",
+    intro:
+      "Every business needs reliable call answering. The right approach depends on your call volume, budget, and how much you value converting every caller into a booking. These comparisons help you decide.",
+    comparisons: [
+      {
+        title: "AI receptionist vs voicemail",
+        href: "/compare/ai-receptionist-vs-voicemail/",
+        bestFor:
+          "Businesses losing ready-to-book callers after hours or during busy periods.",
+        description:
+          "See how an AI receptionist captures revenue that voicemail loses. Every unanswered call is a booking or a lead that a recording cannot close.",
+      },
+      {
+        title: "AI vs virtual receptionist",
+        href: "/compare/ai-receptionist-vs-virtual-receptionist/",
+        bestFor:
+          "Operators comparing human answering services against AI coverage and handoff.",
+        description:
+          "Understand when AI, human, or a hybrid approach fits your call answering needs. Compare availability, cost scaling, and caller experience.",
+      },
+    ],
+    bestFor: "Best for:",
+    context: [
+      "Most phone-answering choices sound similar until a customer calls at the wrong moment. Voicemail records a message. A human answering service can help, but cost and availability depend on active agents. LobbyStack uses an AI receptionist to answer immediately, collect the right details, book appointments, and transfer urgent calls back to your team with context.",
+      "These comparisons focus on the questions small businesses actually ask before switching: Will callers wait? Can it book appointments? What happens after hours? How predictable is the cost? When should a human take over? Use this guide as the starting point, then read the detailed pages for the tradeoffs behind each alternative.",
+    ],
+    criteriaHeading: "How to compare call answering options",
+    criteriaIntro:
+      "The right phone coverage depends less on whether the solution is AI, human, or voicemail, and more on what happens during the first two minutes of a call. A useful comparison should follow the caller from first ring to final outcome.",
+    decisionFactors: [
+      {
+        title: "Availability",
+        body: "If callers reach you after hours, on weekends, or while your team is already serving customers, the main question is whether the alternative can answer immediately without adding staff.",
+      },
+      {
+        title: "Booking speed",
+        body: "For service businesses, the best option is the one that turns the call into a confirmed appointment before the caller starts looking for another provider.",
+      },
+      {
+        title: "Cost control",
+        body: "Some answering options look inexpensive until call volume grows. Compare monthly cost, minute charges, spam handling, and the cost of missed opportunities.",
+      },
+      {
+        title: "Escalation safety",
+        body: "Routine calls should be handled automatically, but urgent, sensitive, or high-value calls need a clear path back to a human with context attached.",
+      },
+    ],
+    situationsHeading: "Common situations these comparisons cover",
+    scenarios: [
+      "A homeowner calls after closing because a pipe burst, an outlet is sparking, or a garage door will not open.",
+      "A patient, client, or customer wants to book while your front desk is already on another call.",
+      "A lead from Google Business Profile is ready to schedule now, but they will call the next result if they hit voicemail.",
+      "A small team wants professional phone coverage without hiring another receptionist or committing to an expensive answering service.",
+    ],
+    note: "More head-to-head comparisons are on the way. If there is a specific tool or approach you would like to see compared, let us know at",
+    ctaHeading: "Ready to try LobbyStack yourself?",
+    ctaBody:
+      "Comparisons help you decide. Demos let you experience it. Start for free and see how LobbyStack handles actual calls to your business.",
+    viewFeatures: "View features",
+  },
+  fr: {
+    title: "Guide comparatif des réceptionnistes IA",
+    description:
+      "Comparez le réceptionniste IA LobbyStack à la messagerie vocale, aux réceptionnistes virtuelles et à d’autres options de réponse téléphonique.",
+    breadcrumb: "Comparaison",
+    eyebrow: "Guide comparatif",
+    h1Prefix: "Comment LobbyStack se compare aux",
+    h1Highlight: "alternatives",
+    intro:
+      "Chaque entreprise a besoin d’une réponse téléphonique fiable. La bonne approche dépend de votre volume d’appels, de votre budget et de l’importance de convertir chaque appelant en rendez‑vous.",
+    comparisons: [
+      {
+        title: "Réceptionniste IA vs messagerie vocale",
+        href: "/compare/ai-receptionist-vs-voicemail/",
+        bestFor:
+          "Entreprises qui perdent des appelants prêts à réserver hors horaires ou pendant les périodes chargées.",
+        description:
+          "Voyez comment un réceptionniste IA capte les revenus que la messagerie vocale laisse partir. Un appel sans réponse peut être un rendez‑vous qu’un bip ne conclura jamais.",
+      },
+      {
+        title: "IA vs réceptionniste virtuelle",
+        href: "/compare/ai-receptionist-vs-virtual-receptionist/",
+        bestFor:
+          "Exploitants qui comparent un service humain avec une couverture IA et des transferts.",
+        description:
+          "Comprenez quand l’IA, l’humain ou une approche hybride correspond à vos besoins. Comparez disponibilité, coûts à l’échelle et expérience d’appel.",
+      },
+    ],
+    bestFor: "Idéal pour :",
+    context: [
+      "Les options de réponse téléphonique se ressemblent jusqu’au moment où un client appelle au mauvais moment. La messagerie vocale enregistre. Un service humain peut aider, mais le coût et la disponibilité dépendent d’agents actifs. LobbyStack répond immédiatement, collecte les bons détails, planifie les rendez‑vous et transfère les urgences avec contexte.",
+      "Ces comparaisons se concentrent sur les questions que les petites entreprises posent vraiment : les appelants attendront-ils ? Est-ce que l’outil peut prendre un rendez‑vous ? Que se passe-t-il hors horaires ? Le coût est-il prévisible ? Quand une personne doit-elle reprendre la main ?",
+    ],
+    criteriaHeading: "Comment comparer les options de réponse téléphonique",
+    criteriaIntro:
+      "La bonne couverture dépend moins de l’étiquette IA, humaine ou messagerie vocale que de ce qui se passe pendant les deux premières minutes de l’appel.",
+    decisionFactors: [
+      {
+        title: "Disponibilité",
+        body: "Si des clients appellent hors horaires, la fin de semaine ou pendant que votre équipe sert déjà quelqu’un, l’option doit répondre immédiatement sans ajouter du personnel.",
+      },
+      {
+        title: "Vitesse de réservation",
+        body: "Pour les services, la meilleure option transforme l’appel en rendez‑vous confirmé avant que la personne cherche un autre fournisseur.",
+      },
+      {
+        title: "Contrôle des coûts",
+        body: "Certaines options semblent peu chères jusqu’à ce que le volume augmente. Comparez coût mensuel, minutes, appels indésirables et occasions perdues.",
+      },
+      {
+        title: "Sécurité des escalades",
+        body: "Les appels courants peuvent être automatisés, mais les appels urgents ou sensibles doivent revenir à une personne avec contexte.",
+      },
+    ],
+    situationsHeading: "Situations couvertes par ces comparaisons",
+    scenarios: [
+      "Un propriétaire appelle après la fermeture parce qu’un tuyau a éclaté, une prise étincelle ou une porte de garage ne s’ouvre plus.",
+      "Un patient, client ou prospect veut réserver pendant que votre accueil est déjà au téléphone.",
+      "Un prospect Google Business Profile est prêt à planifier, mais appellera le résultat suivant s’il tombe sur la messagerie.",
+      "Une petite équipe veut une couverture professionnelle sans embaucher une autre réceptionniste ni signer un service coûteux.",
+    ],
+    note: "D’autres comparaisons détaillées arrivent. Si vous voulez comparer un outil ou une approche précise, écrivez-nous à",
+    ctaHeading: "Prêt à essayer LobbyStack vous-même ?",
+    ctaBody:
+      "Les comparaisons aident à décider. Les essais permettent de sentir le produit. Commencez gratuitement et voyez comment LobbyStack gère de vrais appels.",
+    viewFeatures: "Voir les fonctionnalités",
+  },
+} satisfies Record<Locale, Record<string, unknown>>
+
+const t = localized[locale] as (typeof localized)["en"]
+---
+
+<Layout
+  seo={{
+    title: t.title,
+    description: t.description,
+    canonicalPath,
+    locale,
+    jsonLd: [
+      organizationJsonLd({ locale }),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: common.home, path: localizePath(locale, "/") },
+        { name: t.breadcrumb, path: canonicalPath },
+      ]),
+      webPageJsonLd({
+        title: t.title,
+        description: t.description,
+        path: canonicalPath,
+        type: "CollectionPage",
+        locale,
+      }),
+    ],
+  }}
+>
+  <Navbar locale={locale} />
+  <main id="main-content" class="min-h-screen bg-background text-foreground">
+    <section class="mx-auto max-w-7xl px-6 pt-20 md:pt-28">
+      <div class="pb-8 md:pb-12">
+        <div class="mx-auto max-w-4xl text-center">
+          <p class="eyebrow-label">{t.eyebrow}</p>
+          <h1 class="display-heading mx-auto mt-5 max-w-[18ch]">
+            {t.h1Prefix}{" "}
+            <span class="underline decoration-2 underline-offset-4">
+              {t.h1Highlight}
+            </span>
+          </h1>
+          <p class="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
+            {t.intro}
+          </p>
+          <div class="mt-8">
+            <a
+              href={APP_SIGNUP_URL}
+              class={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}
+              data-ph-signup-cta
+              data-ph-capture-attribute-section="comparison_hero"
+              data-ph-capture-attribute-action="try_for_free"
+              data-ph-capture-attribute-destination={APP_SIGNUP_URL}
+            >
+              {common.tryFree}
+              <ArrowRight className="ml-1 size-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-6 pt-16 md:pt-20">
+      <div class="grid gap-6 md:grid-cols-2">
+        {
+          t.comparisons.map((comparison, i) => (
+            <a
+              href={localizeHref(locale, comparison.href)}
+              class="group flex flex-col rounded-2xl border border-border/70 bg-background p-8 transition-colors hover:bg-muted/30 md:p-10"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <span class="font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                  0{i + 1}
+                </span>
+                <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-foreground" />
+              </div>
+              <h2 class="card-heading mt-6 text-foreground">
+                {comparison.title}
+              </h2>
+              <p class="mt-4 text-sm leading-relaxed text-muted-foreground md:text-base">
+                {comparison.description}
+              </p>
+              <p class="mt-6 border-t border-border/60 pt-5 text-sm leading-relaxed text-muted-foreground">
+                <span class="font-medium text-foreground">{t.bestFor}</span>{" "}
+                {comparison.bestFor}
+              </p>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-6 pt-20 md:pt-24">
+      <div class="grid gap-8 md:grid-cols-2 md:gap-12">
+        {
+          t.context.map((paragraph) => (
+            <p class="text-base leading-relaxed text-muted-foreground md:text-lg">
+              {paragraph}
+            </p>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-6 pt-20 md:pt-24">
+      <div class="grid gap-12 lg:grid-cols-12 lg:gap-16">
+        <div class="lg:col-span-5">
+          <h2 class="section-heading text-left">{t.criteriaHeading}</h2>
+          <p class="body-copy mt-5 max-w-[52ch] md:text-lg">
+            {t.criteriaIntro}
+          </p>
+        </div>
+        <div class="grid gap-8 sm:grid-cols-2 lg:col-span-7">
+          {
+            t.decisionFactors.map((factor, i) => (
+              <div class="border-t border-border/70 pt-6">
+                <div class="flex items-baseline gap-3">
+                  <span class="font-mono text-xs font-medium tracking-wider text-muted-foreground">
+                    0{i + 1}
+                  </span>
+                  <h3 class="text-base font-medium tracking-tight text-foreground">
+                    {factor.title}
+                  </h3>
+                </div>
+                <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  {factor.body}
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-4xl px-6 pt-20 md:pt-24">
+      <div class="border-t border-border/40 pt-16 md:pt-20">
+        <h2 class="section-heading text-center">{t.situationsHeading}</h2>
+        <div class="mt-10 grid gap-4 sm:grid-cols-2">
+          {
+            t.scenarios.map((scenario) => (
+              <div class="flex gap-3 rounded-xl border border-border/60 bg-background p-5">
+                <span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground/25" />
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                  {scenario}
+                </p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-2xl px-6 pt-16 text-center md:pt-20">
+      <p class="text-sm leading-relaxed text-muted-foreground">
+        {t.note}{" "}
+        <a
+          href="mailto:support@lobbystack.com"
+          class="font-medium text-foreground underline underline-offset-4"
+        >
+          support@lobbystack.com
+        </a>.
+      </p>
+    </section>
+
+    <section
+      class="mt-20 border-t border-border/40 bg-muted/15 py-20 md:mt-24 md:py-24"
+    >
+      <div class="mx-auto max-w-3xl px-6 text-center">
+        <h2 class="section-heading">{t.ctaHeading}</h2>
+        <p class="section-intro mx-auto max-w-[58ch]">{t.ctaBody}</p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a
+            href={localizeHref(locale, "/pricing/")}
+            class={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}
+          >
+            {common.seePricing}
+            <ArrowRight className="ml-1 size-4" />
+          </a>
+          <a
+            href={localizeHref(locale, "/features/")}
+            class="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {t.viewFeatures}
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer locale={locale} />
+</Layout>

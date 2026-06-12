@@ -28,7 +28,9 @@ viteLogger.warnOnce = (message, options) => {
 }
 
 const sourceForUrl = (url) => {
-  const pathname = new URL(url).pathname.replace(/^\/fr(?=\/|$)/, "") || "/"
+  const originalPathname = new URL(url).pathname
+  const isFrench = originalPathname.startsWith("/fr/")
+  const pathname = originalPathname.replace(/^\/fr(?=\/|$)/, "") || "/"
 
   if (pathname === "/") return "src/pages/index.astro"
   if (pathname === "/features/") return "src/pages/features.astro"
@@ -41,7 +43,10 @@ const sourceForUrl = (url) => {
   if (pathname === "/comparison/") return "src/pages/comparison.astro"
   if (pathname === "/about/") return "src/pages/about.astro"
   if (pathname.startsWith("/blog/")) {
-    return `src/content/blog/${pathname.replace(/^\/blog\/|\/$/g, "")}.md`
+    const slug = pathname.replace(/^\/blog\/|\/$/g, "")
+    return isFrench
+      ? `src/content/blog/fr/${slug}.md`
+      : `src/content/blog/${slug}.md`
   }
 
   const solutionSources = {

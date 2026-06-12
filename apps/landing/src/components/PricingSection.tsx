@@ -1,5 +1,6 @@
 import { Button, buttonVariants } from "@/components/ui/button"
 import { APP_SIGNUP_URL } from "@/lib/app-links"
+import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { Fragment, useState } from "react"
@@ -144,6 +145,117 @@ const tiers: Tier[] = [
   },
 ]
 
+const tiersFr: Tier[] = [
+  {
+    name: "Free",
+    price: {
+      monthly: "$0",
+      annual: "$0",
+    },
+    period: "",
+    description: {
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
+    },
+    cta: {
+      monthly: "Commencer gratuitement",
+      annual: "Commencer gratuitement",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      "30 minutes vocales incluses",
+      "Toutes les fonctionnalités",
+      "1 numéro professionnel dédié",
+      "Support communautaire",
+    ],
+  },
+  {
+    name: "Starter",
+    price: {
+      monthly: "$30",
+      annual: "$24",
+    },
+    period: "/mois",
+    description: {
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
+    },
+    cta: {
+      monthly: "Commencer gratuitement",
+      annual: "Commencer gratuitement",
+    },
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      {
+        label: "150 minutes vocales incluses",
+        sublabel: "Puis 0,20 $/min",
+      },
+      "50 segments SMS d'alerte",
+      "Base de connaissances de 2 Go",
+      "Support par courriel",
+    ],
+  },
+  {
+    name: "Pro",
+    price: {
+      monthly: "$100",
+      annual: "$80",
+    },
+    period: "/mois",
+    description: {
+      monthly: "Par mois, facturé mensuellement",
+      annual: "Par mois, facturé annuellement",
+    },
+    cta: {
+      monthly: "Commencer gratuitement",
+      annual: "Commencer gratuitement",
+    },
+    ctaVariant: "default" as const,
+    highlight: true,
+    highlights: [
+      {
+        label: "500 minutes vocales incluses",
+        sublabel: "Puis 0,18 $/min",
+      },
+      "200 segments SMS d'alerte",
+      "Base de connaissances de 10 Go",
+      "Support prioritaire par courriel",
+    ],
+  },
+  {
+    name: "Enterprise",
+    price: {
+      monthly: "Sur mesure",
+      annual: "Sur mesure",
+    },
+    period: "",
+    description: {
+      monthly: "Pour les volumes élevés",
+      annual: "Pour les volumes élevés",
+    },
+    cta: {
+      monthly: "Nous contacter",
+      annual: "Nous contacter",
+    },
+    ctaHref: enterpriseContactHref,
+    ctaVariant: "outline" as const,
+    highlight: false,
+    highlights: [
+      "Plusieurs numéros dédiés",
+      "Routage multi-sites",
+      "Règles de secours personnalisées",
+      "Accompagnement dédié à l’implémentation",
+    ],
+  },
+]
+
+const tiersByLocale = {
+  en: tiers,
+  fr: tiersFr,
+} satisfies Record<Locale, Tier[]>
+
 /* ─── Comparison table data ─── */
 
 type ComparisonValue =
@@ -167,7 +279,7 @@ type ComparisonGroup = {
   rows: ComparisonRow[]
 }
 
-const comparisonGroups: ComparisonGroup[] = [
+const comparisonGroupsEn: ComparisonGroup[] = [
   {
     category: "Usage & limits",
     rows: [
@@ -421,9 +533,276 @@ const comparisonGroups: ComparisonGroup[] = [
   },
 ]
 
+const comparisonGroupsFr: ComparisonGroup[] = [
+  {
+    category: "Usage et limites",
+    rows: [
+      {
+        feature: "Minutes vocales",
+        free: { included: "30 incluses" },
+        starter: { included: "150 incluses", then: "puis 0,20 $/min" },
+        pro: { included: "500 incluses", then: "puis 0,18 $/min" },
+        enterprise: "Sur mesure",
+      },
+      {
+        feature: "Tentatives d'appels sortants",
+        free: { included: "2 incluses" },
+        starter: { included: "20 incluses", then: "puis 0,02 $/tentative" },
+        pro: { included: "100 incluses", then: "puis 0,02 $/tentative" },
+        enterprise: "Sur mesure",
+      },
+      {
+        feature: "Segments SMS d'alerte",
+        free: { included: "10 inclus" },
+        starter: { included: "50 inclus", then: "puis 0,02 $/segment" },
+        pro: { included: "200 inclus", then: "puis 0,02 $/segment" },
+        enterprise: "Sur mesure",
+      },
+      {
+        feature: "Base de connaissances",
+        free: "100 Mo",
+        starter: "2 Go",
+        pro: "10 Go",
+        enterprise: "Sur mesure",
+      },
+      {
+        feature: "Numéros de téléphone",
+        free: "Forfait supérieur requis",
+        starter: "1 dédié",
+        pro: "1 dédié",
+        enterprise: "Plusieurs",
+      },
+    ],
+  },
+  {
+    category: "Réceptionniste IA",
+    rows: [
+      {
+        feature: "Réponse aux appels 24/7",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Collecte des détails et messages",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Réponses depuis la base de connaissances",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Consignes en langage naturel",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Filtrage du spam",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Appels de moins de 10 s exclus de la facturation",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Appels simultanés illimités",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Support multilingue",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Rendez-vous et suivi",
+    rows: [
+      {
+        feature: "Prise de rendez‑vous",
+        free: "Illimitée",
+        pro: "Illimitée",
+        enterprise: "Illimitée",
+      },
+      {
+        feature: "SMS de confirmation de rendez‑vous",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Intégration Google Calendar",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Intégration Outlook",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Suivi des appels manqués",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Appels sortants",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Routage et transferts",
+    rows: [
+      {
+        feature: "Transfert des appels urgents",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Transferts d'appel",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Réponse hors horaires",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Routage multi-sites",
+        free: false,
+        pro: false,
+        enterprise: true,
+      },
+      {
+        feature: "Règles de secours et d’escalade personnalisées",
+        free: false,
+        pro: false,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Notifications et messagerie",
+    rows: [
+      {
+        feature: "Notifications par courriel",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Notifications SMS",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Données et tableau de bord",
+    rows: [
+      {
+        feature: "Résumés et transcriptions d’appels",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
+      },
+      {
+        feature: "Historique et enregistrements d'appels",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
+      },
+      {
+        feature: "Profils et notes d'appelants",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Contacts",
+        free: "Illimités",
+        pro: "Illimités",
+        enterprise: "Illimités",
+      },
+      {
+        feature: "Import de connaissances depuis le site web",
+        free: true,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Conseils de conservation des données",
+        free: false,
+        pro: false,
+        enterprise: true,
+      },
+    ],
+  },
+  {
+    category: "Hébergement et support",
+    rows: [
+      {
+        feature: "Hébergement",
+        free: "Cloud géré",
+        pro: "Cloud géré",
+        enterprise: "Cloud géré",
+      },
+      {
+        feature: "Dépassements à l’usage",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        feature: "Support",
+        free: "Communauté",
+        starter: "Courriel",
+        pro: "Courriel prioritaire",
+        enterprise: "Implémentation dédiée",
+      },
+    ],
+  },
+]
+
+const comparisonGroupsByLocale = {
+  en: comparisonGroupsEn,
+  fr: comparisonGroupsFr,
+} satisfies Record<Locale, ComparisonGroup[]>
+
 /* ─────────────────────────── Components ─────────────────────────── */
 
-function ComparisonCell({ value }: { value: ComparisonValue }) {
+function ComparisonCell({
+  includedLabel,
+  notIncludedLabel,
+  value,
+}: {
+  includedLabel: string
+  notIncludedLabel: string
+  value: ComparisonValue
+}) {
   if (typeof value === "boolean") {
     return value ? (
       <span className="inline-flex items-center justify-center">
@@ -431,7 +810,7 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
           className="mx-auto size-4 text-foreground/60"
           aria-hidden="true"
         />
-        <span className="sr-only">Included</span>
+        <span className="sr-only">{includedLabel}</span>
       </span>
     ) : (
       <span className="inline-flex items-center justify-center">
@@ -439,7 +818,7 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
           className="mx-auto size-4 text-muted-foreground/30"
           aria-hidden="true"
         />
-        <span className="sr-only">Not included</span>
+        <span className="sr-only">{notIncludedLabel}</span>
       </span>
     )
   }
@@ -466,9 +845,55 @@ function ComparisonCell({ value }: { value: ComparisonValue }) {
   )
 }
 
-export function PricingSection() {
+type PricingSectionProps = {
+  locale?: Locale
+}
+
+const pricingSectionCopy = {
+  en: {
+    heading: "Plans for businesses of every size",
+    intro:
+      "Start free, then upgrade to Starter or Pro for more included minutes and transparent overages.",
+    monthly: "Monthly",
+    annual: "Annual",
+    save: "Save 20%",
+    compareHeading: "Compare plans in detail",
+    compareIntro:
+      "Every plan gives you access to all features. Starter and Pro give you higher included usage with monthly resets and usage-based overages.",
+    billingLabel: "Billing interval",
+    tableLabel: "Plan comparison table",
+    caption:
+      "Feature comparison across Free, Starter, Pro, and Enterprise plans.",
+    feature: "Feature",
+    included: "Included",
+    notIncluded: "Not included",
+  },
+  fr: {
+    heading: "Des forfaits pour entreprises de toute taille",
+    intro:
+      "Commencez gratuitement, puis passez à Starter ou Pro pour plus de minutes incluses et des dépassements transparents.",
+    monthly: "Mensuel",
+    annual: "Annuel",
+    save: "Économisez 20 %",
+    compareHeading: "Comparer les forfaits en détail",
+    compareIntro:
+      "Tous les forfaits donnent accès aux mêmes fonctionnalités. Starter et Pro ajoutent plus de volume inclus, avec remise à zéro mensuelle et dépassements facturés à l’usage.",
+    billingLabel: "Intervalle de facturation",
+    tableLabel: "Tableau de comparaison des forfaits",
+    caption:
+      "Comparaison des fonctionnalités entre les forfaits Free, Starter, Pro et Enterprise.",
+    feature: "Fonctionnalité",
+    included: "Inclus",
+    notIncluded: "Non inclus",
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+export function PricingSection({ locale = "en" }: PricingSectionProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("annual")
+  const copy = pricingSectionCopy[locale]
+  const localizedTiers = tiersByLocale[locale]
+  const localizedComparisonGroups = comparisonGroupsByLocale[locale]
 
   return (
     <>
@@ -476,20 +901,19 @@ export function PricingSection() {
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-6 pt-16 pb-8 text-center md:pt-20 md:pb-10 lg:pb-12">
           <h1 className="animate-fade-up display-heading-compact delay-100">
-            Plans for businesses of every size
+            {copy.heading}
           </h1>
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] delay-200 md:text-lg">
-            Start free, then upgrade to Starter or Pro for more included
-            minutes and transparent overages.
+            {copy.intro}
           </p>
         </div>
       </section>
 
       {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-6xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+      <section className="mx-auto max-w-7xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <div className="animate-fade-up mb-8 flex justify-center delay-300">
           <div
-            aria-label="Billing interval"
+            aria-label={copy.billingLabel}
             className="inline-flex rounded-full border border-border bg-input/30 p-1"
             role="tablist"
           >
@@ -509,10 +933,10 @@ export function PricingSection() {
                 type="button"
                 variant="outline"
               >
-                {interval === "monthly" ? "Monthly" : "Annual"}
+                {interval === "monthly" ? copy.monthly : copy.annual}
                 {interval === "annual" ? (
                   <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    Save 20%
+                    {copy.save}
                   </span>
                 ) : null}
               </Button>
@@ -520,11 +944,11 @@ export function PricingSection() {
           </div>
         </div>
 
-        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 lg:grid-cols-4">
-          {tiers.map((tier) => (
+        <div className="animate-fade-up grid gap-6 delay-300 md:grid-cols-2 xl:grid-cols-4">
+          {localizedTiers.map((tier) => (
             <div
               key={tier.name}
-              className={`relative flex flex-col rounded-2xl border bg-background p-8 ${
+              className={`relative flex min-w-0 flex-col rounded-2xl border bg-background p-6 ${
                 tier.highlight
                   ? "border-foreground/20 ring-1 ring-foreground/10"
                   : "border-border/60"
@@ -555,7 +979,7 @@ export function PricingSection() {
                 href={tier.ctaHref ?? APP_SIGNUP_URL}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
-                  "mb-6 w-full rounded-full"
+                  "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
                 )}
                 data-ph-signup-cta={tier.ctaHref ? undefined : true}
                 data-ph-capture-attribute-section="pricing_plan"
@@ -567,8 +991,8 @@ export function PricingSection() {
                 data-ph-capture-attribute-billing-interval={billingInterval}
                 data-ph-capture-attribute-label={tier.cta[billingInterval]}
               >
-                {tier.cta[billingInterval]}
-                <ArrowRight className="ml-1 size-4" />
+                <span className="min-w-0">{tier.cta[billingInterval]}</span>
+                <ArrowRight className="size-4 shrink-0" />
               </a>
 
               {/* Key highlights only */}
@@ -576,9 +1000,13 @@ export function PricingSection() {
                 <ul className="flex flex-col gap-2.5">
                   {tier.highlights.map((item) => {
                     const label = typeof item === "string" ? item : item.label
-                    const sublabel = typeof item === "string" ? null : item.sublabel
+                    const sublabel =
+                      typeof item === "string" ? null : item.sublabel
                     return (
-                      <li key={label} className="flex items-start gap-2.5 text-sm">
+                      <li
+                        key={label}
+                        className="flex items-start gap-2.5 text-sm"
+                      >
                         <Check
                           className="mt-0.5 size-3.5 shrink-0 text-foreground/60"
                           aria-hidden="true"
@@ -605,24 +1033,20 @@ export function PricingSection() {
       <section className="bg-background" id="compare">
         <div className="mx-auto max-w-5xl px-6 pt-10 pb-12 md:pt-12 md:pb-14 lg:pt-14 lg:pb-16">
           <h2 className="mb-4 text-center font-heading text-2xl leading-tight font-medium tracking-[-0.04em] md:text-3xl">
-            Compare plans in detail
+            {copy.compareHeading}
           </h2>
           <p className="mx-auto mb-12 max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-            Every plan gives you access to all features. Starter and Pro give
-            you higher included usage with monthly resets and usage-based
-            overages.
+            {copy.compareIntro}
           </p>
 
           <div
             className="overflow-x-auto"
             role="region"
-            aria-label="Plan comparison table"
+            aria-label={copy.tableLabel}
             tabIndex={0}
           >
             <table className="w-full min-w-[860px] text-sm">
-              <caption className="sr-only">
-                Feature comparison across Free, Starter, Pro, and Enterprise plans.
-              </caption>
+              <caption className="sr-only">{copy.caption}</caption>
               {/* Sticky header */}
               <thead>
                 <tr className="border-b border-border/60">
@@ -630,7 +1054,7 @@ export function PricingSection() {
                     scope="col"
                     className="py-4 pr-8 text-left text-xs font-medium text-muted-foreground"
                   >
-                    Feature
+                    {copy.feature}
                   </th>
                   <th
                     scope="col"
@@ -660,7 +1084,7 @@ export function PricingSection() {
               </thead>
 
               <tbody>
-                {comparisonGroups.map((group) => (
+                {localizedComparisonGroups.map((group) => (
                   <Fragment key={group.category}>
                     {/* Category header row */}
                     <tr>
@@ -699,7 +1123,11 @@ export function PricingSection() {
                               i === 2 && "bg-muted/60"
                             )}
                           >
-                            <ComparisonCell value={value} />
+                            <ComparisonCell
+                              includedLabel={copy.included}
+                              notIncludedLabel={copy.notIncluded}
+                              value={value}
+                            />
                           </td>
                         ))}
                       </tr>
