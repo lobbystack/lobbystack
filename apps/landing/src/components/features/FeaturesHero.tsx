@@ -34,7 +34,7 @@ const featuresHeroCopy = {
   fr: {
     h1Start: "Tout ce qu’il faut pour",
     h1Emphasis: "répondre, qualifier et réserver",
-    body: "LobbyStack prend les appels, qualifie les demandes, planifie les rendez-vous et transmet les bonnes informations à votre équipe, sans menu téléphonique ni scénarios impossibles à maintenir.",
+    body: "LobbyStack prend les appels, qualifie les demandes, planifie les rendez‑vous et transmet les bonnes informations à votre équipe, sans menu téléphonique ni scénarios impossibles à maintenir.",
     workflowLabel: "Décrivez vos règles",
     workflowText:
       "Si quelqu’un demande un devis, demandez le service, l’adresse, le délai souhaité et le budget. Donnez la fourchette approuvée pour les demandes standards. Si le prix doit être confirmé, planifiez un rappel et joignez le résumé à l’équipe.",

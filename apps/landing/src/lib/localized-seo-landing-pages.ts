@@ -49,7 +49,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-phone-answering/",
     title: "Réponse téléphonique IA pour petites entreprises",
     description:
-      "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes urgentes avec LobbyStack.",
+      "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
     eyebrow: "Réponse téléphonique IA",
     h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
     intro:
@@ -98,25 +98,25 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     group: "solution",
     slug: "ai-appointment-scheduler",
     path: "/solutions/ai-appointment-scheduler/",
-    title: "Planificateur de rendez-vous IA pour petites entreprises",
+    title: "Planificateur de rendez‑vous IA pour petites entreprises",
     description:
-      "LobbyStack planifie les rendez-vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
-    eyebrow: "Planification de rendez-vous IA",
+      "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+    eyebrow: "Planification de rendez‑vous IA",
     h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
-      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez‑vous et envoie les informations de suivi sans aller-retour manuel.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
-      "Planificateur de rendez-vous IA LobbyStack confirmant une réservation",
+      "Planificateur de rendez‑vous IA LobbyStack confirmant une réservation",
     proofPoints: [
       "Réserve pendant l’appel au lieu d’attendre un rappel",
-      "Respecte vos horaires, types de rendez-vous et consignes",
+      "Respecte vos horaires, types de rendez‑vous et consignes",
       "Envoie confirmations et résumés à votre équipe",
     ],
     sections: [
       {
         title: "Réduisez les allers-retours de planification",
-        body: "Quand un appelant est prêt, LobbyStack peut proposer les bons créneaux, confirmer le rendez-vous et recueillir les détails nécessaires à la préparation.",
+        body: "Quand un appelant est prêt, LobbyStack peut proposer les bons créneaux, confirmer le rendez‑vous et recueillir les détails nécessaires à la préparation.",
         points: [
           "Disponibilités connectées à votre calendrier",
           "Questions de qualification avant la réservation",
@@ -127,7 +127,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
         title: "Gardez le contrôle des cas particuliers",
         body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et transmet le contexte à votre équipe.",
         points: [
-          "Règles par service, zone ou type de rendez-vous",
+          "Règles par service, zone ou type de rendez‑vous",
           "Fallback vers rappel ou message si besoin",
           "Transfert des urgences selon vos consignes",
         ],
@@ -175,7 +175,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Priorisez les bons appels plus vite",
-        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez-vous ou un suivi.",
+        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez‑vous ou un suivi.",
         points: [
           "Transfert par urgence ou type de demande",
           "Réservation et confirmations selon vos règles",
@@ -212,7 +212,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/solutions/ai-phone-answering/": {
     title: "Réponse téléphonique IA pour petites entreprises",
     description:
-      "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes avec LobbyStack.",
+      "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes avec LobbyStack.",
     eyebrow: "Réponse téléphonique IA",
     h1: "Une réponse téléphonique IA qui décroche quand votre équipe ne peut pas.",
     intro:
@@ -221,13 +221,13 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     faqs: commonFaqsFr,
   },
   "/solutions/ai-appointment-scheduler/": {
-    title: "Planificateur de rendez-vous IA",
+    title: "Planificateur de rendez‑vous IA",
     description:
-      "Planifiez des rendez-vous par téléphone avec confirmations, rappels et notifications d’équipe.",
-    eyebrow: "Planification de rendez-vous IA",
+      "Planifiez des rendez‑vous par téléphone avec confirmations, rappels et notifications d’équipe.",
+    eyebrow: "Planification de rendez‑vous IA",
     h1: "Un planificateur IA qui réserve pendant que le client est encore prêt.",
     intro:
-      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez-vous et envoie les informations de suivi sans aller-retour manuel.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, confirme les rendez‑vous et envoie les informations de suivi sans aller-retour manuel.",
     faqHeading: "Questions sur la planification IA",
     faqs: commonFaqsFr,
   },
@@ -256,7 +256,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/solutions/ai-receptionist-for-dental-offices/": {
     title: "Réceptionniste IA pour cabinets dentaires",
     description:
-      "Répondez aux patients, prenez des rendez-vous, gérez les questions courantes et transférez les urgences dentaires.",
+      "Répondez aux patients, prenez des rendez‑vous, gérez les questions courantes et transférez les urgences dentaires.",
     eyebrow: "Cabinets dentaires",
     h1: "Une réceptionniste IA pour cabinets dentaires occupés.",
     intro:
@@ -267,9 +267,9 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
   "/solutions/ai-receptionist-for-salons-and-spas/": {
     title: "Réceptionniste IA pour salons et spas",
     description:
-      "Réservez les clients, répondez aux questions de service et gérez les changements de rendez-vous pendant que l’équipe reste avec les clients.",
+      "Réservez les clients, répondez aux questions de service et gérez les changements de rendez‑vous pendant que l’équipe reste avec les clients.",
     eyebrow: "Salons et spas",
-    h1: "Une réceptionniste IA pour salons, spas et équipes en rendez-vous.",
+    h1: "Une réceptionniste IA pour salons, spas et équipes en rendez‑vous.",
     intro:
       "LobbyStack répond aux appels de réservation, explique les services, collecte les détails et applique vos règles de changement ou d’annulation.",
     faqHeading: "Questions sur les salons et spas",
@@ -353,7 +353,7 @@ const frOverrides: Record<string, SeoLandingPageOverride> = {
     eyebrow: "Électroménagers",
     h1: "Une réceptionniste IA pour équipes de réparation d’électroménagers.",
     intro:
-      "LobbyStack collecte les informations qui évitent les rappels inutiles et aide les clients à avancer vers un rendez-vous.",
+      "LobbyStack collecte les informations qui évitent les rappels inutiles et aide les clients à avancer vers un rendez‑vous.",
     faqHeading: "Questions sur la réparation d’électroménagers",
     faqs: commonFaqsFr,
   },

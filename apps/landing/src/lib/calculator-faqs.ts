@@ -74,7 +74,7 @@ export const calculatorFaqsFr = [
   },
   {
     q: "Une réceptionniste IA remplace-t-elle mon ou ma responsable de bureau ?",
-    a: "Non. LobbyStack gère le travail répétitif de première ligne : questions courantes, détails d’accueil et prise de rendez-vous. Votre équipe garde les cas complexes.",
+    a: "Non. LobbyStack gère le travail répétitif de première ligne : questions courantes, détails d’accueil et prise de rendez‑vous. Votre équipe garde les cas complexes.",
   },
   {
     q: "Est-ce pareil qu’un calculateur de ROI pour service de réponse ?",

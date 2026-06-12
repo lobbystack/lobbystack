@@ -45,7 +45,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "LobbyStack peut-il planifier directement dans mon calendrier ?",
     answer:
-      "Oui. LobbyStack peut vérifier les disponibilités, proposer des créneaux, planifier le rendez-vous et envoyer les détails de confirmation à l’appelant.",
+      "Oui. LobbyStack peut vérifier les disponibilités, proposer des créneaux, planifier le rendez‑vous et envoyer les détails de confirmation à l’appelant.",
   },
   {
     question: "La réceptionniste IA peut-elle m’envoyer un résumé d’appel ?",
@@ -55,7 +55,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Quels appels doivent encore revenir à une personne ?",
     answer:
-      "LobbyStack convient très bien aux questions courantes, prises de rendez-vous, collectes d’information et qualifications de prospects. Les négociations complexes, situations sensibles, cas urgents et dépannages spécialisés peuvent être transférés à votre équipe.",
+      "LobbyStack convient très bien aux questions courantes, prises de rendez‑vous, collectes d’information et qualifications de prospects. Les négociations complexes, situations sensibles, cas urgents et dépannages spécialisés peuvent être transférés à votre équipe.",
   },
 ]
 

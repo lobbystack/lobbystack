@@ -1,6 +1,6 @@
 ---
 title: "LobbyStack est lancé"
-description: "LobbyStack est maintenant lancé : une réceptionniste IA open source qui répond aux appels, prend des rendez-vous, suit les prospects et laisse les équipes garder le contrôle."
+description: "LobbyStack est maintenant lancé : une réceptionniste IA open source qui répond aux appels, prend des rendez‑vous, suit les prospects et laisse les équipes garder le contrôle."
 pubDate: 2026-05-13T12:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Mises à jour produit"
@@ -14,7 +14,7 @@ La plupart des petites entreprises ne perdent pas de clients parce qu'elles trav
 
 Aujourd'hui, [LobbyStack](https://lobbystack.com/fr/) est lancé.
 
-LobbyStack est une **réceptionniste IA open source** pour les entreprises qui dépendent des appels, des rendez-vous, des devis et d'un suivi rapide. Elle répond quand votre équipe est occupée, fermée, en déplacement ou déjà avec un autre client.
+LobbyStack est une **réceptionniste IA open source** pour les entreprises qui dépendent des appels, des rendez‑vous, des devis et d'un suivi rapide. Elle répond quand votre équipe est occupée, fermée, en déplacement ou déjà avec un autre client.
 
 L'objectif n'est pas de rendre le support téléphonique futuriste. Il est plus simple : **un bon appel ne devrait pas devenir une occasion manquée parce qu'il arrive au mauvais moment.**
 
@@ -26,7 +26,7 @@ Quand un appelant atteint LobbyStack, il peut :
 
 - répondre aux questions à partir de vos connaissances d'entreprise ;
 - collecter le nom, le numéro, le besoin, la zone et l'urgence ;
-- prendre des rendez-vous selon votre disponibilité ;
+- prendre des rendez‑vous selon votre disponibilité ;
 - envoyer des confirmations et des résumés ;
 - transférer les appels urgents avec contexte ;
 - relancer les appels manqués, demandes de devis et rappels ;

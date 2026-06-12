@@ -74,7 +74,7 @@ const solutionLabelMap = {
     solutions: "Solutions",
     industries: "Industries",
     aiPhoneAnswering: "Réponse téléphonique IA",
-    aiAppointmentScheduler: "Planification de rendez-vous IA",
+    aiAppointmentScheduler: "Planification de rendez‑vous IA",
     homeServices: "Services à domicile",
     afterHours: "Réponse hors horaires",
     dental: "Cabinets dentaires",

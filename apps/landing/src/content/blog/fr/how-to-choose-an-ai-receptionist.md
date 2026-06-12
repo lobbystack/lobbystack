@@ -12,7 +12,7 @@ canonicalSlug: "how-to-choose-an-ai-receptionist"
 
 Choisir une **réceptionniste IA** devient plus simple quand on arrête de chercher le produit qui sonne le plus humain et qu'on pose une question plus opérationnelle : que doit-il se passer à la fin d'un bon appel ?
 
-Pour une entreprise de services, la bonne réponse est souvent un rendez-vous pris, un prospect qualifié, un transfert urgent, un message propre ou une personne qui a obtenu sa réponse sans attendre un rappel.
+Pour une entreprise de services, la bonne réponse est souvent un rendez‑vous pris, un prospect qualifié, un transfert urgent, un message propre ou une personne qui a obtenu sa réponse sans attendre un rappel.
 
 ## Commencer par les appels que vous recevez déjà
 
@@ -22,7 +22,7 @@ Prenez deux a quatre semaines de journaux d'appels et classez-les :
 
 - nouveau client ;
 - client existant ;
-- réservation de rendez-vous ;
+- réservation de rendez‑vous ;
 - changement ou annulation ;
 - question de prix ;
 - demande urgente ;

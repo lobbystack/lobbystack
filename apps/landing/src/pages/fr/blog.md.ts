@@ -25,6 +25,6 @@ ${posts
     canonical: absoluteUrl("/fr/blog/"),
     title: "Blog et mises à jour produit LobbyStack",
     description:
-      "Mises à jour produit et guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez-vous et l’automatisation des appels.",
+      "Mises à jour produit et guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez‑vous et l’automatisation des appels.",
   })
 }

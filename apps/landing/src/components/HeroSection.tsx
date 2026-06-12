@@ -23,8 +23,8 @@ const heroCopy = {
     github: "Soutenez-nous sur GitHub",
     h1Start: "LobbyStack transforme les",
     h1Emphasis: "appels manqués",
-    h1End: "en rendez-vous.",
-    body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez-vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
+    h1End: "en rendez‑vous.",
+    body: "LobbyStack répond au téléphone, qualifie les demandes et planifie des rendez‑vous 24/7. Activez-le pour tous vos appels ou seulement quand votre équipe est occupée.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

@@ -20,7 +20,7 @@ Une réceptionniste à temps plein peut être très utile, mais le salaire, les 
 
 La plupart des entreprises n'ont pas besoin de remplacer une personne. Elles ont besoin de couvrir les trous : midi, soirs, fins de semaine, appels simultanés, moments où le propriétaire est déjà sur un chantier ou avec un client.
 
-Les services de réponse humaine peuvent aider, mais ils facturent souvent à la minute. Une réceptionniste IA couvre plutôt le travail répétable : questions courantes, qualification, prise de rendez-vous, collecte des coordonnées et transfert des cas qui méritent une personne.
+Les services de réponse humaine peuvent aider, mais ils facturent souvent à la minute. Une réceptionniste IA couvre plutôt le travail répétable : questions courantes, qualification, prise de rendez‑vous, collecte des coordonnées et transfert des cas qui méritent une personne.
 
 ## Compter ensuite les appels que vous perdez
 
@@ -70,7 +70,7 @@ Une réceptionniste IA aide à :
 - répondre avant la messagerie vocale ;
 - poser des questions d'accueil cohérentes ;
 - capturer le nom, le numéro, le besoin et le meilleur moment ;
-- réserver les rendez-vous simples quand vos règles le permettent ;
+- réserver les rendez‑vous simples quand vos règles le permettent ;
 - envoyer un résumé de l'appel ;
 - transférer les urgences différemment des demandes routinières ;
 - relancer pendant que le client est encore intéressé.

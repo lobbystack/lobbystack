@@ -25,12 +25,12 @@ export const fr = {
     "/": {
       title: "LobbyStack | Réceptionniste IA open source",
       description:
-        "LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez-vous et transfère les urgences 24/7.",
+        "LobbyStack est la réceptionniste IA open source qui répond aux appels, qualifie les demandes, planifie des rendez‑vous et transfère les urgences 24/7.",
     },
     "/features/": {
       title: "Fonctionnalités de réceptionniste IA",
       description:
-        "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez-vous, envoyer des SMS, transférer les urgences et produire des résumés.",
+        "Découvrez les fonctionnalités LobbyStack pour répondre au téléphone, qualifier les demandes, prendre des rendez‑vous, envoyer des SMS, transférer les urgences et produire des résumés.",
     },
     "/pricing/": {
       title: "Tarifs de réceptionniste IA pour petites entreprises",
@@ -40,17 +40,17 @@ export const fr = {
     "/solutions/": {
       title: "Solutions de réceptionniste IA | LobbyStack",
       description:
-        "Explorez les solutions LobbyStack pour répondre au téléphone, prendre des rendez-vous, couvrir les appels en dehors des heures d’ouverture, servir les entreprises de services, cabinets dentaires, salons et équipes auto-hébergées.",
+        "Explorez les solutions LobbyStack pour répondre au téléphone, prendre des rendez‑vous, couvrir les appels en dehors des heures d’ouverture, servir les entreprises de services, cabinets dentaires, salons et équipes auto-hébergées.",
     },
     "/solutions/ai-phone-answering/": {
       title: "Réponse téléphonique IA pour petites entreprises",
       description:
-        "Répondez aux appels entrants, collectez les détails, prenez des rendez-vous et transférez les demandes urgentes avec LobbyStack.",
+        "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
     },
     "/solutions/ai-appointment-scheduler/": {
-      title: "Planificateur de rendez-vous IA pour petites entreprises",
+      title: "Planificateur de rendez‑vous IA pour petites entreprises",
       description:
-        "LobbyStack planifie les rendez-vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+        "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
     },
     "/solutions/ai-receptionist-for-home-services/": {
       title: "Réceptionniste IA pour services à domicile | LobbyStack",
@@ -70,7 +70,7 @@ export const fr = {
     "/blog/": {
       title: "Blog et mises à jour produit LobbyStack",
       description:
-        "Lisez les mises à jour produit et les guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez-vous et l’automatisation des appels.",
+        "Lisez les mises à jour produit et les guides pratiques sur les réceptionnistes IA, la réponse téléphonique, la prise de rendez‑vous et l’automatisation des appels.",
     },
     "/docs/api/": {
       title: "Documentation API publique LobbyStack",
@@ -80,12 +80,12 @@ export const fr = {
     "/privacy/": {
       title: "Politique de confidentialité - LobbyStack",
       description:
-        "Politique de confidentialité de LobbyStack, couvrant appels, SMS, consentement, rendez-vous, comptes, facturation, analytique et support.",
+        "Politique de confidentialité de LobbyStack, couvrant appels, SMS, consentement, rendez‑vous, comptes, facturation, analytique et support.",
     },
     "/terms/": {
       title: "Conditions d'utilisation - LobbyStack",
       description:
-        "Conditions d’utilisation de LobbyStack, plateforme de réceptionniste IA pour appels, SMS, prise de rendez-vous, routage et suivis.",
+        "Conditions d’utilisation de LobbyStack, plateforme de réceptionniste IA pour appels, SMS, prise de rendez‑vous, routage et suivis.",
     },
     "/search/": {
       title: "Recherche - LobbyStack",

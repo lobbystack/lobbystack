@@ -43,12 +43,12 @@ const featureGridCopy = {
   },
   fr: {
     headingStart:
-      "Répondez à chaque appel, qualifiez chaque demande et prenez les rendez-vous",
+      "Répondez à chaque appel, qualifiez chaque demande et prenez les rendez‑vous",
     headingEmphasis: "automatiquement",
     intro:
-      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez-vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
+      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
     imageAlt:
-      "Fonctionnalités de la réceptionniste IA LobbyStack : réponse aux appels, rendez-vous, qualification, transferts et résumés",
+      "Fonctionnalités de la réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
     features: [
       {
         title: "Répond à chaque appel",
@@ -57,9 +57,9 @@ const featureGridCopy = {
         icon: Phone,
       },
       {
-        title: "Planifie les rendez-vous",
+        title: "Planifie les rendez‑vous",
         description:
-          "Connectez votre calendrier : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez-vous et envoie la confirmation.",
+          "Connectez votre calendrier : LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation.",
         icon: CalendarCheck,
       },
       {

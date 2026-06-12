@@ -49,13 +49,13 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Puis-je utiliser LobbyStack gratuitement ?",
     answer:
-      "Oui. Le forfait Free vous permet d’essayer LobbyStack sans abonnement mensuel. Il inclut 30 minutes vocales, 2 tentatives d’appels sortants, 10 segments SMS d’alerte, la prise de rendez-vous, les résumés et l’historique des appels.",
+      "Oui. Le forfait Free vous permet d’essayer LobbyStack sans abonnement mensuel. Il inclut 30 minutes vocales, 2 tentatives d’appels sortants, 10 segments SMS d’alerte, la prise de rendez‑vous, les résumés et l’historique des appels.",
   },
   {
     question:
       "Quelles fonctionnalités de réceptionniste IA sont disponibles aujourd’hui ?",
     answer:
-      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez-vous, transférer les urgences, envoyer des résumés par courriel et prendre en charge les enregistrements, transcriptions, Google Calendar, Outlook et conversations multilingues.",
+      "LobbyStack peut répondre aux appels, collecter les détails de l’appelant, répondre aux questions depuis votre base de connaissances, qualifier les prospects, planifier des rendez‑vous, transférer les urgences, envoyer des résumés par courriel et prendre en charge les enregistrements, transcriptions, Google Calendar, Outlook et conversations multilingues.",
   },
 ]
 

@@ -308,9 +308,9 @@ const largeCardsFr: FeatureCard[] = [
     visual: "workflow",
   },
   {
-    title: "Prenez le rendez-vous pendant que le client est encore disponible",
+    title: "Prenez le rendez‑vous pendant que le client est encore disponible",
     description:
-      "LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez-vous et envoie la confirmation avant que l’appelant passe à un autre fournisseur.",
+      "LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie la confirmation avant que l’appelant passe à un autre fournisseur.",
     icon: CalendarCheck,
     size: "large",
     visual: "calendar",
@@ -326,7 +326,7 @@ const largeCardsFr: FeatureCard[] = [
   {
     title: "Relancez au lieu de perdre le prospect",
     description:
-      "LobbyStack peut appeler pour les rappels, confirmations, relances de devis, rappels de rendez-vous et appels manqués.",
+      "LobbyStack peut appeler pour les rappels, confirmations, relances de devis, rappels de rendez‑vous et appels manqués.",
     icon: PhoneOutgoing,
     size: "large",
     visual: "outbound",
@@ -405,14 +405,14 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "SMS de confirmation",
     description:
-      "Après la prise de rendez-vous, LobbyStack envoie au client un SMS avec les détails.",
+      "Après la prise de rendez‑vous, LobbyStack envoie au client un SMS avec les détails.",
     icon: MessageSquareText,
     size: "medium",
   },
   {
-    title: "Déplacements de rendez-vous",
+    title: "Déplacements de rendez‑vous",
     description:
-      "Les clients peuvent déplacer un rendez-vous lorsque vos règles le permettent, sans attendre un rappel.",
+      "Les clients peuvent déplacer un rendez‑vous lorsque vos règles le permettent, sans attendre un rappel.",
     icon: CalendarClock,
     size: "medium",
   },
@@ -424,9 +424,9 @@ const mediumCardsFr: FeatureCard[] = [
     size: "medium",
   },
   {
-    title: "Rappels de rendez-vous",
+    title: "Rappels de rendez‑vous",
     description:
-      "Rappelez les rendez-vous à venir pour réduire les oublis et les absences.",
+      "Rappelez les rendez‑vous à venir pour réduire les oublis et les absences.",
     icon: Bell,
     size: "medium",
   },
@@ -447,14 +447,14 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Notifications courriel et SMS",
     description:
-      "Envoyez rendez-vous, demandes de devis, alertes urgentes, transferts manqués et prospects importants à la bonne personne.",
+      "Envoyez rendez‑vous, demandes de devis, alertes urgentes, transferts manqués et prospects importants à la bonne personne.",
     icon: Mail,
     size: "medium",
   },
   {
     title: "Récapitulatif quotidien",
     description:
-      "Recevez chaque jour un résumé des rendez-vous, demandes de devis, appels manqués, appels filtrés et suivis.",
+      "Recevez chaque jour un résumé des rendez‑vous, demandes de devis, appels manqués, appels filtrés et suivis.",
     icon: BarChart3,
     size: "medium",
   },
@@ -468,7 +468,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Règles par service",
     description:
-      "Définissez des consignes différentes selon le service, la zone, le membre d’équipe, le type de rendez-vous ou le type de prospect.",
+      "Définissez des consignes différentes selon le service, la zone, le membre d’équipe, le type de rendez‑vous ou le type de prospect.",
     icon: Layers,
     size: "medium",
   },
@@ -496,7 +496,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Complétion des dossiers",
     description:
-      "Appelez les clients pour recueillir les informations manquantes avant un rendez-vous, une estimation ou un rappel.",
+      "Appelez les clients pour recueillir les informations manquantes avant un rendez‑vous, une estimation ou un rappel.",
     icon: ClipboardList,
     size: "medium",
   },
@@ -517,28 +517,28 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Historique des appels",
     description:
-      "Voyez chaque appel, appelant, résultat, résumé, rendez-vous, transfert et suivi.",
+      "Voyez chaque appel, appelant, résultat, résumé, rendez‑vous, transfert et suivi.",
     icon: History,
     size: "medium",
   },
   {
     title: "Statut des prospects",
     description:
-      "Suivez les appels devenus prospects qualifiés, demandes de devis, rendez-vous ou rappels.",
+      "Suivez les appels devenus prospects qualifiés, demandes de devis, rendez‑vous ou rappels.",
     icon: Target,
     size: "medium",
   },
   {
-    title: "Activité des rendez-vous",
+    title: "Activité des rendez‑vous",
     description:
-      "Consultez les prises de rendez-vous, déplacements, annulations et SMS de confirmation.",
+      "Consultez les prises de rendez‑vous, déplacements, annulations et SMS de confirmation.",
     icon: CalendarDays,
     size: "medium",
   },
   {
     title: "Occasions de revenu",
     description:
-      "Repérez les appels transformés en rendez-vous, devis, rappels ou prospects à forte valeur.",
+      "Repérez les appels transformés en rendez‑vous, devis, rappels ou prospects à forte valeur.",
     icon: TrendingUp,
     size: "medium",
   },
@@ -625,7 +625,7 @@ const featureWallCopy = {
       outbound: [
         { label: "Rappel d’un appel manqué", status: "En file" },
         { label: "Relance de devis", status: "Planifiée" },
-        { label: "Rappel de rendez-vous", status: "Envoyé" },
+        { label: "Rappel de rendez‑vous", status: "Envoyé" },
         { label: "Dossier à compléter", status: "En attente" },
       ],
       routing: [

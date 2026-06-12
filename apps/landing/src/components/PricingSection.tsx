@@ -631,13 +631,13 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     category: "Rendez-vous et suivi",
     rows: [
       {
-        feature: "Prise de rendez-vous",
+        feature: "Prise de rendez‑vous",
         free: "Illimitée",
         pro: "Illimitée",
         enterprise: "Illimitée",
       },
       {
-        feature: "SMS de confirmation de rendez-vous",
+        feature: "SMS de confirmation de rendez‑vous",
         free: true,
         pro: true,
         enterprise: true,

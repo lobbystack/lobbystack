@@ -34,7 +34,7 @@ const includedCopy = {
     features: [
       "Réponse aux appels",
       "Consignes en langage naturel",
-      "Prise de rendez-vous",
+      "Prise de rendez‑vous",
       "SMS de confirmation",
       "Appels sortants",
       "Transferts",

@@ -142,7 +142,7 @@ const homeSectionsCopy = {
   fr: {
     extensionCards: [
       {
-        title: "Transformez les appels sans réponse en rendez-vous",
+        title: "Transformez les appels sans réponse en rendez‑vous",
         description:
           "LobbyStack répond quand votre équipe ne peut pas décrocher, comprend le besoin de l’appelant et l’aide à réserver ou à demander un rappel.",
         cta: "Voir le fonctionnement",
@@ -157,7 +157,7 @@ const homeSectionsCopy = {
         cta: "Définir les règles",
         href: "#control",
         image: "/illustrations/calls-need-person.webp",
-        alt: "Résumé d’appel LobbyStack avec transfert et contexte de rendez-vous",
+        alt: "Résumé d’appel LobbyStack avec transfert et contexte de rendez‑vous",
       },
     ],
     connected: {
@@ -180,12 +180,12 @@ const homeSectionsCopy = {
           alt: "Illustration de prise d’appel LobbyStack",
         },
         {
-          title: "Des rendez-vous pris sans allers-retours",
+          title: "Des rendez‑vous pris sans allers-retours",
           description:
-            "Proposez des créneaux disponibles, confirmez les rendez-vous et envoyez les informations de suivi sans échanges manuels.",
+            "Proposez des créneaux disponibles, confirmez les rendez‑vous et envoyez les informations de suivi sans échanges manuels.",
           cta: "Réservation",
           image: "/illustrations/booking-flow.webp",
-          alt: "Illustration de la prise de rendez-vous LobbyStack",
+          alt: "Illustration de la prise de rendez‑vous LobbyStack",
         },
         {
           title: "Transfert humain quand l’appel l’exige",
@@ -199,7 +199,7 @@ const homeSectionsCopy = {
     },
     workflow: {
       heading: "Lancez votre réceptionniste IA en quelques minutes",
-      body: "Configurez-la une première fois, puis ajustez ses réponses, ses rendez-vous, ses transferts et ses résumés au fil de votre croissance.",
+      body: "Configurez-la une première fois, puis ajustez ses réponses, ses rendez‑vous, ses transferts et ses résumés au fil de votre croissance.",
       steps: [
         {
           title: "Connectez votre téléphone",
@@ -227,7 +227,7 @@ const homeSectionsCopy = {
       heading: "Gardez le contrôle de chaque appel",
       body: "LobbyStack gère les conversations courantes, mais votre équipe décide ce qu’il sait, ce qu’il peut faire et quand l’appel doit revenir à une personne.",
       imageAlt:
-        "Tableau de bord LobbyStack avec indicateurs d’appels, actions requises, rendez-vous à venir et appels récents",
+        "Tableau de bord LobbyStack avec indicateurs d’appels, actions requises, rendez‑vous à venir et appels récents",
       cards: [
         {
           title: "Contrôlez ce que votre réceptionniste IA peut dire",
@@ -238,7 +238,7 @@ const homeSectionsCopy = {
         {
           title: "Revoyez chaque appel au même endroit",
           description:
-            "Consultez enregistrements, transcriptions, résumés, appelants, rendez-vous et prochaines étapes sans fouiller dans les messages vocaux.",
+            "Consultez enregistrements, transcriptions, résumés, appelants, rendez‑vous et prochaines étapes sans fouiller dans les messages vocaux.",
           icon: History,
         },
       ],
@@ -255,7 +255,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "Minutes vocales de départ, appels sortants, alertes SMS, prise de rendez-vous, résumés et historique d’appels.",
+            "Minutes vocales de départ, appels sortants, alertes SMS, prise de rendez‑vous, résumés et historique d’appels.",
         },
         {
           name: "Pro",
