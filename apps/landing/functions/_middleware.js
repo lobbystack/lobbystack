@@ -36,6 +36,7 @@ const TRANSLATED_PATHS = new Set([
   "/blog/lobbystack-is-live/",
   "/blog/ai-receptionist-savings/",
   "/blog/how-to-choose-an-ai-receptionist/",
+  "/blog/build-or-buy-ai-receptionist/",
   "/docs/api/",
   "/privacy/",
   "/terms/",
