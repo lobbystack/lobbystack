@@ -115,6 +115,9 @@ type CheckoutContext = {
   billingKey: string;
   billingContactEmail: string | null;
   billingContactName: string | null;
+  billingMemberExternalId: string;
+  billingMemberEmail: string | null;
+  billingMemberName: string | null;
   polarCustomerId: string | null;
   polarCustomerExternalId: string | null;
   checkoutId: string | null;
@@ -133,6 +136,7 @@ type CheckoutSnapshot = {
 type PolarClient = ReturnType<typeof createPolarClient>;
 type PolarCheckout = Awaited<ReturnType<PolarClient["checkouts"]["get"]>>;
 type PolarCustomer = Awaited<ReturnType<PolarClient["customers"]["create"]>>;
+type PolarMember = Awaited<ReturnType<PolarClient["members"]["createMember"]>>;
 type PolarSubscription = Awaited<ReturnType<PolarClient["subscriptions"]["get"]>>;
 
 type PolarBillingSubscription = {
@@ -983,6 +987,15 @@ function getPolarCustomerExternalId(customer: PolarCustomer): string | null {
   return externalId && externalId.length > 0 ? externalId : null;
 }
 
+function normalizeEmail(email: string | null): string | null {
+  const trimmed = email?.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+function canManagePolarBilling(member: PolarMember): boolean {
+  return member.role === "owner" || member.role === "billing_manager";
+}
+
 async function findPolarCustomerByEmail(
   client: PolarClient,
   email: string,
@@ -1037,6 +1050,88 @@ async function recoverExistingPolarCustomer(
     });
     return null;
   }
+}
+
+async function listPolarCustomerMembers(
+  client: PolarClient,
+  customerId: string,
+): Promise<Array<PolarMember>> {
+  const members: Array<PolarMember> = [];
+  const pages = await client.members.listMembers({
+    customerId,
+    limit: 100,
+  });
+
+  for await (const page of pages) {
+    members.push(...page.result.items);
+  }
+
+  return members;
+}
+
+async function ensurePolarMemberCanManageBilling(
+  client: PolarClient,
+  member: PolarMember,
+): Promise<void> {
+  if (canManagePolarBilling(member)) {
+    return;
+  }
+
+  await client.members.updateMember({
+    id: member.id,
+    memberUpdate: {
+      role: "billing_manager",
+    },
+  });
+}
+
+async function ensurePolarCustomerPortalMember(
+  client: PolarClient,
+  args: {
+    customerId: string;
+    memberExternalId: string;
+    memberEmail: string | null;
+    memberName: string | null;
+  },
+): Promise<
+  | {
+      externalMemberId: string;
+    }
+  | {
+      memberId: string;
+    }
+> {
+  const members = await listPolarCustomerMembers(client, args.customerId);
+  const existingByExternalId = members.find(
+    (member) => member.externalId === args.memberExternalId,
+  );
+  if (existingByExternalId) {
+    await ensurePolarMemberCanManageBilling(client, existingByExternalId);
+    return { externalMemberId: args.memberExternalId };
+  }
+
+  const normalizedMemberEmail = normalizeEmail(args.memberEmail);
+  const existingByEmail = normalizedMemberEmail
+    ? members.find((member) => normalizeEmail(member.email) === normalizedMemberEmail)
+    : null;
+  if (existingByEmail) {
+    await ensurePolarMemberCanManageBilling(client, existingByEmail);
+    return { memberId: existingByEmail.id };
+  }
+
+  if (!args.memberEmail) {
+    throw new Error("A billing member email is required before opening the customer portal.");
+  }
+
+  await client.members.createMember({
+    customerId: args.customerId,
+    email: args.memberEmail,
+    ...(args.memberName ? { name: args.memberName } : {}),
+    externalId: args.memberExternalId,
+    role: "billing_manager",
+  });
+
+  return { externalMemberId: args.memberExternalId };
 }
 
 type PolarSubscriptionLookupResult = {
@@ -1275,12 +1370,23 @@ async function ensurePolarCustomer(
   }
 
   const client = createPolarClient();
+  const ownerEmail = args.checkoutContext.billingMemberEmail;
+  const ownerName = args.checkoutContext.billingMemberName;
   let customer: PolarCustomer;
   try {
     customer = await client.customers.create({
       type: "team",
       externalId: args.checkoutContext.billingKey,
       email: args.checkoutContext.billingContactEmail,
+      ...(ownerEmail
+        ? {
+            owner: {
+              email: ownerEmail,
+              ...(ownerName ? { name: ownerName } : {}),
+              externalId: args.checkoutContext.billingMemberExternalId,
+            },
+          }
+        : {}),
       ...(args.checkoutContext.billingContactName
         ? { name: args.checkoutContext.billingContactName }
         : {}),
@@ -1903,6 +2009,9 @@ export const getCheckoutContext = internalQuery({
     billingKey: v.string(),
     billingContactEmail: v.union(v.string(), v.null()),
     billingContactName: v.union(v.string(), v.null()),
+    billingMemberExternalId: v.string(),
+    billingMemberEmail: v.union(v.string(), v.null()),
+    billingMemberName: v.union(v.string(), v.null()),
     polarCustomerId: v.union(v.string(), v.null()),
     polarCustomerExternalId: v.union(v.string(), v.null()),
     checkoutId: v.union(v.string(), v.null()),
@@ -1917,11 +2026,15 @@ export const getCheckoutContext = internalQuery({
       currentUser,
       account,
     });
+    const currentUserName = currentUser.displayName ?? currentUser.name ?? null;
 
     return {
       billingKey: getBillingKey(args.businessId),
       billingContactEmail: contact.email,
       billingContactName: contact.name,
+      billingMemberExternalId: String(currentUser._id),
+      billingMemberEmail: currentUser.email ?? null,
+      billingMemberName: currentUserName ?? contact.name,
       polarCustomerId: account?.polarCustomerId ?? null,
       polarCustomerExternalId: account?.polarCustomerExternalId ?? null,
       checkoutId: account?.checkoutId ?? null,
@@ -2225,8 +2338,16 @@ export const openPortal = action({
       checkoutContext,
     });
     const siteUrl = getBillingSiteUrl();
-    const session = await createPolarClient().customerSessions.create({
+    const polarClient = createPolarClient();
+    const portalMember = await ensurePolarCustomerPortalMember(polarClient, {
       customerId: customer.id,
+      memberExternalId: checkoutContext.billingMemberExternalId,
+      memberEmail: checkoutContext.billingMemberEmail,
+      memberName: checkoutContext.billingMemberName,
+    });
+    const session = await polarClient.customerSessions.create({
+      customerId: customer.id,
+      ...portalMember,
       returnUrl: new URL("/settings/plan", siteUrl).toString(),
     });
 
