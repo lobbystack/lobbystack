@@ -11,6 +11,7 @@ type PhoneInputProps = Omit<
   "defaultValue" | "onChange" | "value"
 > & {
   containerClassName?: string;
+  country?: Country;
   defaultCountry?: Country;
   locale?: string | null;
   onChange?: (value?: string) => void;
@@ -40,6 +41,7 @@ PhoneNumberTextInput.displayName = "PhoneNumberTextInput";
 
 export function PhoneInput({
   containerClassName,
+  country,
   defaultCountry,
   disabled,
   locale,
@@ -48,7 +50,7 @@ export function PhoneInput({
   value,
   ...props
 }: PhoneInputProps) {
-  const resolvedDefaultCountry = defaultCountry ?? getDefaultPhoneCountry(locale);
+  const resolvedDefaultCountry = country ?? defaultCountry ?? getDefaultPhoneCountry(locale);
   const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
     defaultCountry: resolvedDefaultCountry,
   });
@@ -66,6 +68,7 @@ export function PhoneInput({
         onRawValueChange={onRawValueChange}
         placeholder={resolvedPlaceholder}
         type={props.type ?? "tel"}
+        {...(country !== undefined ? { country } : {})}
         {...(value !== undefined ? { value } : {})}
       />
     </div>

@@ -6,10 +6,12 @@ import { describe, expect, it } from "vitest";
 import { PhoneInput } from "@/components/ui/phone-input";
 
 function PhoneInputHarness({
+  country,
   defaultCountry = "US",
   locale = "en-US",
 }: {
-  defaultCountry?: "US" | "CA" | "FR";
+  country?: "US" | "CA" | "FR" | "GB";
+  defaultCountry?: "US" | "CA" | "FR" | "GB";
   locale?: string;
 }) {
   const [value, setValue] = React.useState<string | undefined>();
@@ -22,6 +24,7 @@ function PhoneInputHarness({
         locale={locale}
         onChange={setValue}
         value={value}
+        {...(country !== undefined ? { country } : {})}
       />
       <output data-testid="phone-value">{value ?? ""}</output>
     </div>
@@ -46,6 +49,15 @@ describe("PhoneInput", () => {
     await user.type(screen.getByRole("textbox", { name: "Phone" }), "612345678");
 
     expect(screen.getByTestId("phone-value").textContent).toBe("+33612345678");
+  });
+
+  it("uses the configured fixed country for parsing", async () => {
+    const user = userEvent.setup();
+
+    render(<PhoneInputHarness country="GB" defaultCountry="US" locale="en-US" />);
+    await user.type(screen.getByRole("textbox", { name: "Phone" }), "7911123456");
+
+    expect(screen.getByTestId("phone-value").textContent).toBe("+447911123456");
   });
 
   it("clears back to an empty value", async () => {

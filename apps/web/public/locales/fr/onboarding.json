@@ -77,10 +77,8 @@
     "title": "Vérifions votre identité",
     "description": "",
     "fields": {
-      "mobileNumber": "Numéro de mobile"
-    },
-    "placeholders": {
-      "mobileNumber": "+1 555 123 4567"
+      "mobileNumber": "Numéro de mobile",
+      "region": "Région"
     },
     "hint": "Utilisez un numéro de mobile personnel qui peut recevoir des SMS.",
     "sendCode": "Envoyer le code",
